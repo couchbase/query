@@ -1,0 +1,67 @@
+/***************
+ *  unql 2013  *
+ ***************/
+unql-stmt ::=  'EXPLAIN'? select-stmt
+
+/*
+ *  select
+ */
+
+select-stmt ::= select-core ('ORDER' 'BY' ordering-term (',' ordering-term)*)? ('LIMIT' int ('OFFSET' int)?)?
+select-core ::= 'SELECT' ('DISTINCT' | 'UNIQUE')? result-expr-list ('FROM' data-source)? ('WHERE' expr)? ('GROUP' 'BY' expr (',' expr )* ('HAVING' expr)?)?
+data-source ::= path (AS identifier)? ('OVER' data-source)?
+path ::= identifier ('[' int ']')? ('.' path)?
+ordering-term ::= expr ('ASC' | 'DESC')?
+result-expr ::= (path '.')? '*' | expr ('AS' identifier)?
+result-expr-list ::= result-expr (',' result-expr-list)*
+
+/*
+ *  expressions
+ */
+expr ::= literal-value | identifier | case-expr | collection-expr | logical-term | comparison-term | arithmetic-term | string-term | function | nested-expr | '(' expr ')'
+logical-term ::= expr 'AND' expr | expr 'OR' expr | 'NOT' expr
+case-expr ::= 'CASE' 'WHEN' expr 'THEN' expr ('WHEN' expr 'THEN' expr)* ('ELSE' expr)? 'END'
+collection-expr ::= ('ANY' | 'ALL') expr 'OVER' path 'AS' identifier
+comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'LIKE' expr | expr 'NOT' 'LIKE' expr | expr 'IS' 'NULL' | expr 'IS' 'NOT' 'NULL' | expr 'IS' 'MISSING' | expr 'IS' 'NOT' 'MISSING' | expr 'IS' 'VALUED' | expr 'IS' 'NOT' 'VALUED'
+arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr |'-' expr
+string-term ::= expr '||' expr
+nested-expr ::= expr '.' expr | expr '[' expr ']'
+
+/*
+ *  functions
+ */
+function ::= function-name '(' ((path '.')? '*' | ('DISTINCT' | 'UNIQUE')? expr (',' expr)*)? ')'
+function-name ::= identifier
+
+/*
+ *  identifiers
+ */
+identifier ::= unescaped-identifier | escaped-identifier
+unescaped-identifier ::= [a-zA-Z_$]  ( [0-9a-zA-Z_$] )*
+escaped-identifier ::= '`' chars '`'
+
+/*
+ *  literal JSON (with nested expressions instead of values)
+ */
+literal-value ::= string | number | object | array | 'TRUE' | 'FALSE' | 'NULL'
+object ::= '{' '}' |  '{' members '}'
+members ::= pair | pair ',' members
+pair ::= string ':' expr
+array ::= '[' ']' | '[' elements ']'
+elements ::= expr | expr ',' elements
+
+/**
+ *  low level
+ **/
+string ::= '"' '"' | '"' chars '"'
+chars ::= char chars?
+char ::= unicode-character | '\' ('\' | '\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' hex-digit hex-digit hex-digit hex-digit )
+number ::= int | int frac | int exp | int frac exp
+int ::= digit | non-zero-digit digits | '-' digit | '-' non-zero-digit digits
+frac ::= '.' digits
+exp ::= e digits
+digits ::= digit | digit digits
+non-zero-digit ::= [1-9]
+digit ::= [0-9]
+e ::= 'e' | 'e+' | 'e-' | 'E' | 'E+' | 'E-'
+hex-digit ::= [0-9a-fA-F]

@@ -1,0 +1,666 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <meta content="Railroad Diagram Generator 1.25.661" name="generator"><style type="text/css">
+    ::-moz-selection
+    {
+      color: #FFFCF0;
+      background: #4D3D00;
+    }
+    ::selection
+    {
+      color: #FFFCF0;
+      background: #4D3D00;
+    }      
+    .ebnf a
+    {
+      text-decoration: none;
+    }
+    .ebnf a:hover
+    {
+      color: #1A1400;
+      text-decoration: underline;
+    }    
+    .signature
+    {
+      color: #806600;
+      font-size: 11px;
+      text-align: right;
+    }
+    body
+    {
+      font: normal 12px Verdana, sans-serif;
+      color: #4D3D00;
+      background: #FFFCF0;
+    }
+    a:link, a:visited
+    {
+      color: #4D3D00;
+    }
+    a:link.signature, a:visited.signature
+    {
+      color: #806600;
+    }
+    a.button, #tabs li a
+    {
+      padding: 0.25em 0.5em;
+      border: 1px solid #806600;
+      background: #F1E8C6;
+      color: #806600;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    a:hover, #tabs li a:hover
+    {
+      color: #1A1400;
+      background: #FFF5CC;
+      border-color: #1A1400;       
+    }     
+    #tabs
+    {
+      padding: 3px 10px;
+      margin-left: 0;
+      margin-top: 58px;
+      border-bottom: 1px solid #4D3D00;
+    }  
+    #tabs li
+    {
+      list-style: none;
+      margin-left: 5px;
+      display: inline;
+    }
+    #tabs li a
+    {     
+      border-bottom: 1px solid #4D3D00;
+    }
+    #tabs li a.active
+    {
+      color: #4D3D00;
+      background: #FFFCF0;
+      border-color: #4D3D00;
+      border-bottom: 1px solid #FFFCF0;
+      outline: none;
+    }
+    #divs div
+    {
+      display: none;
+      overflow:auto;
+    }
+    #divs div.active
+    {
+      display: block;
+    }
+    #text
+    {
+      border-color: #806600;
+      background: #FFFEFA;
+      color: #1A1400;
+    }
+    td.time
+    {
+      vertical-align: top;
+    }
+    span.time
+    {
+      font-size: 9px;
+      visibility: hidden;
+    }
+    td.time:hover span.time
+    {
+      visibility: visible;
+    }
+    div.download
+    {
+      display:none;
+      background:#FFFCF0;
+      position:absolute;
+      right:34px;
+      top:94px;
+      padding:10px;
+      border:1px dotted #4D3D00;
+    }
+    #divs div.ebnf, div.ebnf
+    {
+      display: block;
+      padding-left: 16px;
+      padding-top: 2px; 
+      padding-bottom: 2px; 
+      background:#FFF5CC;
+    }
+  </style></head>
+   <body>
+      <p style="font-size: 14px; font-weight:bold"><a name="unql-stmt">unql-stmt:</a></p><img border="0" height="52" src="diagram/unql-stmt.png" usemap="#unql-stmt.map" width="286"><map name="unql-stmt.map">
+         <area coords="167,1,257,33" href="#select-stmt" shape="rect" title="select-stmt"></map><p>
+         <div class="ebnf"><pre><a href="#unql-stmt" title="unql-stmt">unql-stmt</a>
+         ::= 'EXPLAIN'? <a href="#select-stmt" title="select-stmt">select-stmt</a></pre></div>
+      </p>
+      <p>no references</p><br><p style="font-size: 14px; font-weight:bold"><a name="select-stmt">select-stmt:</a></p><img border="0" height="112" src="diagram/select-stmt.png" usemap="#select-stmt.map" width="858"><map name="select-stmt.map">
+         <area coords="29,45,117,77" href="#select-core" shape="rect" title="select-core">
+         <area coords="321,45,427,77" href="#ordering-term" shape="rect" title="ordering-term">
+         <area coords="585,45,621,77" href="#int" shape="rect" title="int">
+         <area coords="753,45,789,77" href="#int" shape="rect" title="int"></map><p>
+         <div class="ebnf"><pre><a href="#select-stmt" title="select-stmt">select-stmt</a>
+         ::= <a href="#select-core" title="select-core">select-core</a> ( 'ORDER' 'BY' <a href="#ordering-term" title="ordering-term">ordering-term</a> ( ',' <a href="#ordering-term" title="ordering-term">ordering-term</a> )* )? ( 'LIMIT' <a href="#int" title="int">int</a> ( 'OFFSET' <a href="#int" title="int">int</a> )? )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#unql-stmt" title="unql-stmt">unql-stmt</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="select-core">select-core:</a></p><img border="0" height="238" src="diagram/select-core.png" usemap="#select-core.map" width="830"><map name="select-core.map">
+         <area coords="265,1,377,33" href="#result-expr-list" shape="rect" title="result-expr-list">
+         <area coords="495,1,591,33" href="#data-source" shape="rect" title="data-source">
+         <area coords="739,1,787,33" href="#expr" shape="rect" title="expr">
+         <area coords="511,171,559,203" href="#expr" shape="rect" title="expr">
+         <area coords="713,171,761,203" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#select-core" title="select-core">select-core</a>
+         ::= 'SELECT' ( 'DISTINCT' | 'UNIQUE' )? <a href="#result-expr-list" title="result-expr-list">result-expr-list</a> ( 'FROM' <a href="#data-source" title="data-source">data-source</a> )? ( 'WHERE' <a href="#expr" title="expr">expr</a> )? ( 'GROUP' 'BY' <a href="#expr" title="expr">expr</a> ( ',' <a href="#expr" title="expr">expr</a> )* ( 'HAVING' <a href="#expr" title="expr">expr</a> )? )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#select-stmt" title="select-stmt">select-stmt</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="data-source">data-source:</a></p><img border="0" height="52" src="diagram/data-source.png" usemap="#data-source.map" width="528"><map name="data-source.map">
+         <area coords="29,1,77,33" href="#path" shape="rect" title="path">
+         <area coords="117,1,153,33" href="#AS" shape="rect" title="AS">
+         <area coords="173,1,247,33" href="#identifier" shape="rect" title="identifier">
+         <area coords="383,1,479,33" href="#data-source" shape="rect" title="data-source"></map><p>
+         <div class="ebnf"><pre><a href="#data-source" title="data-source">data-source</a>
+         ::= <a href="#path" title="path">path</a> ( <a href="#AS" title="AS">AS</a> <a href="#identifier" title="identifier">identifier</a> )? ( 'OVER' <a href="#data-source" title="data-source">data-source</a> )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#data-source" title="data-source">data-source</a></li>
+            <li><a href="#select-core" title="select-core">select-core</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="path">path:</a></p><img border="0" height="52" src="diagram/path.png" usemap="#path.map" width="472"><map name="path.map">
+         <area coords="29,1,103,33" href="#identifier" shape="rect" title="identifier">
+         <area coords="189,1,225,33" href="#int" shape="rect" title="int">
+         <area coords="375,1,423,33" href="#path" shape="rect" title="path"></map><p>
+         <div class="ebnf"><pre><a href="#path" title="path">path</a>     ::= <a href="#identifier" title="identifier">identifier</a> ( '[' <a href="#int" title="int">int</a> ']' )? ( '.' <a href="#path" title="path">path</a> )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#collection-expr" title="collection-expr">collection-expr</a></li>
+            <li><a href="#data-source" title="data-source">data-source</a></li>
+            <li><a href="#function" title="function">function</a></li>
+            <li><a href="#path" title="path">path</a></li>
+            <li><a href="#result-expr" title="result-expr">result-expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="ordering-term">ordering-term:</a></p><img border="0" height="96" src="diagram/ordering-term.png" usemap="#ordering-term.map" width="222"><map name="ordering-term.map">
+         <area coords="29,1,77,33" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#ordering-term" title="ordering-term">ordering-term</a>
+         ::= <a href="#expr" title="expr">expr</a> ( 'ASC' | 'DESC' )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#select-stmt" title="select-stmt">select-stmt</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="result-expr">result-expr:</a></p><img border="0" height="118" src="diagram/result-expr.png" usemap="#result-expr.map" width="338"><map name="result-expr.map">
+         <area coords="69,1,117,33" href="#path" shape="rect" title="path">
+         <area coords="49,67,97,99" href="#expr" shape="rect" title="expr">
+         <area coords="195,67,269,99" href="#identifier" shape="rect" title="identifier"></map><p>
+         <div class="ebnf"><pre><a href="#result-expr" title="result-expr">result-expr</a>
+         ::= ( <a href="#path" title="path">path</a> '.' )? '*'
+           | <a href="#expr" title="expr">expr</a> ( 'AS' <a href="#identifier" title="identifier">identifier</a> )?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#result-expr-list" title="result-expr-list">result-expr-list</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="result-expr-list">result-expr-list:</a></p><img border="0" height="68" src="diagram/result-expr-list.png" usemap="#result-expr-list.map" width="402"><map name="result-expr-list.map">
+         <area coords="29,17,117,49" href="#result-expr" shape="rect" title="result-expr">
+         <area coords="221,17,333,49" href="#result-expr-list" shape="rect" title="result-expr-list"></map><p>
+         <div class="ebnf"><pre><a href="#result-expr-list" title="result-expr-list">result-expr-list</a>
+         ::= <a href="#result-expr" title="result-expr">result-expr</a> ( ',' <a href="#result-expr-list" title="result-expr-list">result-expr-list</a> )*</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#result-expr-list" title="result-expr-list">result-expr-list</a></li>
+            <li><a href="#select-core" title="select-core">select-core</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="expr">expr:</a></p><img border="0" height="476" src="diagram/expr.png" usemap="#expr.map" width="238"><map name="expr.map">
+         <area coords="49,1,143,33" href="#literal-value" shape="rect" title="literal-value">
+         <area coords="49,45,123,77" href="#identifier" shape="rect" title="identifier">
+         <area coords="49,89,131,121" href="#case-expr" shape="rect" title="case-expr">
+         <area coords="49,133,159,165" href="#collection-expr" shape="rect" title="collection-expr">
+         <area coords="49,177,141,209" href="#logical-term" shape="rect" title="logical-term">
+         <area coords="49,221,175,253" href="#comparison-term" shape="rect" title="comparison-term">
+         <area coords="49,265,165,297" href="#arithmetic-term" shape="rect" title="arithmetic-term">
+         <area coords="49,309,139,341" href="#string-term" shape="rect" title="string-term">
+         <area coords="49,353,119,385" href="#function" shape="rect" title="function">
+         <area coords="49,397,145,429" href="#nested-expr" shape="rect" title="nested-expr">
+         <area coords="95,441,143,473" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#expr" title="expr">expr</a>     ::= <a href="#literal-value" title="literal-value">literal-value</a>
+           | <a href="#identifier" title="identifier">identifier</a>
+           | <a href="#case-expr" title="case-expr">case-expr</a>
+           | <a href="#collection-expr" title="collection-expr">collection-expr</a>
+           | <a href="#logical-term" title="logical-term">logical-term</a>
+           | <a href="#comparison-term" title="comparison-term">comparison-term</a>
+           | <a href="#arithmetic-term" title="arithmetic-term">arithmetic-term</a>
+           | <a href="#string-term" title="string-term">string-term</a>
+           | <a href="#function" title="function">function</a>
+           | <a href="#nested-expr" title="nested-expr">nested-expr</a>
+           | '(' <a href="#expr" title="expr">expr</a> ')'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#arithmetic-term" title="arithmetic-term">arithmetic-term</a></li>
+            <li><a href="#case-expr" title="case-expr">case-expr</a></li>
+            <li><a href="#collection-expr" title="collection-expr">collection-expr</a></li>
+            <li><a href="#comparison-term" title="comparison-term">comparison-term</a></li>
+            <li><a href="#elements" title="elements">elements</a></li>
+            <li><a href="#expr" title="expr">expr</a></li>
+            <li><a href="#function" title="function">function</a></li>
+            <li><a href="#logical-term" title="logical-term">logical-term</a></li>
+            <li><a href="#nested-expr" title="nested-expr">nested-expr</a></li>
+            <li><a href="#ordering-term" title="ordering-term">ordering-term</a></li>
+            <li><a href="#pair" title="pair">pair</a></li>
+            <li><a href="#result-expr" title="result-expr">result-expr</a></li>
+            <li><a href="#select-core" title="select-core">select-core</a></li>
+            <li><a href="#string-term" title="string-term">string-term</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="logical-term">logical-term:</a></p><img border="0" height="124" src="diagram/logical-term.png" usemap="#logical-term.map" width="282"><map name="logical-term.map">
+         <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
+         <area coords="185,1,233,33" href="#expr" shape="rect" title="expr">
+         <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
+         <area coords="177,45,225,77" href="#expr" shape="rect" title="expr">
+         <area coords="117,89,165,121" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#logical-term" title="logical-term">logical-term</a>
+         ::= <a href="#expr" title="expr">expr</a> 'AND' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> 'OR' <a href="#expr" title="expr">expr</a>
+           | 'NOT' <a href="#expr" title="expr">expr</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="case-expr">case-expr:</a></p><img border="0" height="96" src="diagram/case-expr.png" usemap="#case-expr.map" width="694"><map name="case-expr.map">
+         <area coords="205,45,253,77" href="#expr" shape="rect" title="expr">
+         <area coords="349,45,397,77" href="#expr" shape="rect" title="expr">
+         <area coords="529,45,577,77" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#case-expr" title="case-expr">case-expr</a>
+         ::= 'CASE' 'WHEN' <a href="#expr" title="expr">expr</a> 'THEN' <a href="#expr" title="expr">expr</a> ( 'WHEN' <a href="#expr" title="expr">expr</a> 'THEN' <a href="#expr" title="expr">expr</a> )* ( 'ELSE' <a href="#expr" title="expr">expr</a> )? 'END'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="collection-expr">collection-expr:</a></p><img border="0" height="80" src="diagram/collection-expr.png" usemap="#collection-expr.map" width="510"><map name="collection-expr.map">
+         <area coords="137,1,185,33" href="#expr" shape="rect" title="expr">
+         <area coords="281,1,329,33" href="#path" shape="rect" title="path">
+         <area coords="407,1,481,33" href="#identifier" shape="rect" title="identifier"></map><p>
+         <div class="ebnf"><pre><a href="#collection-expr" title="collection-expr">collection-expr</a>
+         ::= ( 'ANY' | 'ALL' ) <a href="#expr" title="expr">expr</a> 'OVER' <a href="#path" title="path">path</a> 'AS' <a href="#identifier" title="identifier">identifier</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="comparison-term">comparison-term:</a></p><img border="0" height="696" src="diagram/comparison-term.png" usemap="#comparison-term.map" width="368"><map name="comparison-term.map">
+         <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
+         <area coords="167,1,215,33" href="#expr" shape="rect" title="expr">
+         <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
+         <area coords="177,45,225,77" href="#expr" shape="rect" title="expr">
+         <area coords="49,89,97,121" href="#expr" shape="rect" title="expr">
+         <area coords="171,89,219,121" href="#expr" shape="rect" title="expr">
+         <area coords="49,133,97,165" href="#expr" shape="rect" title="expr">
+         <area coords="177,133,225,165" href="#expr" shape="rect" title="expr">
+         <area coords="49,177,97,209" href="#expr" shape="rect" title="expr">
+         <area coords="167,177,215,209" href="#expr" shape="rect" title="expr">
+         <area coords="49,221,97,253" href="#expr" shape="rect" title="expr">
+         <area coords="177,221,225,253" href="#expr" shape="rect" title="expr">
+         <area coords="49,265,97,297" href="#expr" shape="rect" title="expr">
+         <area coords="167,265,215,297" href="#expr" shape="rect" title="expr">
+         <area coords="49,309,97,341" href="#expr" shape="rect" title="expr">
+         <area coords="177,309,225,341" href="#expr" shape="rect" title="expr">
+         <area coords="49,353,97,385" href="#expr" shape="rect" title="expr">
+         <area coords="187,353,235,385" href="#expr" shape="rect" title="expr">
+         <area coords="49,397,97,429" href="#expr" shape="rect" title="expr">
+         <area coords="255,397,303,429" href="#expr" shape="rect" title="expr">
+         <area coords="49,441,97,473" href="#expr" shape="rect" title="expr">
+         <area coords="49,485,97,517" href="#expr" shape="rect" title="expr">
+         <area coords="49,529,97,561" href="#expr" shape="rect" title="expr">
+         <area coords="49,573,97,605" href="#expr" shape="rect" title="expr">
+         <area coords="49,617,97,649" href="#expr" shape="rect" title="expr">
+         <area coords="49,661,97,693" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#comparison-term" title="comparison-term">comparison-term</a>
+         ::= <a href="#expr" title="expr">expr</a> '=' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '==' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '!=' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '&lt;&gt;' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '&gt;' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '&gt;=' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '&lt;' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '&lt;=' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> 'LIKE' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> 'NOT' 'LIKE' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> 'IS' 'NULL'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'NULL'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'MISSING'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'MISSING'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'VALUED'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'VALUED'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="arithmetic-term">arithmetic-term:</a></p><img border="0" height="256" src="diagram/arithmetic-term.png" usemap="#arithmetic-term.map" width="268"><map name="arithmetic-term.map">
+         <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
+         <area coords="167,1,215,33" href="#expr" shape="rect" title="expr">
+         <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
+         <area coords="163,45,211,77" href="#expr" shape="rect" title="expr">
+         <area coords="49,89,97,121" href="#expr" shape="rect" title="expr">
+         <area coords="165,89,213,121" href="#expr" shape="rect" title="expr">
+         <area coords="49,133,97,165" href="#expr" shape="rect" title="expr">
+         <area coords="165,133,213,165" href="#expr" shape="rect" title="expr">
+         <area coords="49,177,97,209" href="#expr" shape="rect" title="expr">
+         <area coords="171,177,219,209" href="#expr" shape="rect" title="expr">
+         <area coords="95,221,143,253" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#arithmetic-term" title="arithmetic-term">arithmetic-term</a>
+         ::= <a href="#expr" title="expr">expr</a> '+' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '-' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '*' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '/' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '%' <a href="#expr" title="expr">expr</a>
+           | '-' <a href="#expr" title="expr">expr</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="string-term">string-term:</a></p><img border="0" height="36" src="diagram/string-term.png" usemap="#string-term.map" width="226"><map name="string-term.map">
+         <area coords="29,1,77,33" href="#expr" shape="rect" title="expr">
+         <area coords="149,1,197,33" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#string-term" title="string-term">string-term</a>
+         ::= <a href="#expr" title="expr">expr</a> '||' <a href="#expr" title="expr">expr</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="nested-expr">nested-expr:</a></p><img border="0" height="80" src="diagram/nested-expr.png" usemap="#nested-expr.map" width="306"><map name="nested-expr.map">
+         <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
+         <area coords="161,1,209,33" href="#expr" shape="rect" title="expr">
+         <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
+         <area coords="163,45,211,77" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#nested-expr" title="nested-expr">nested-expr</a>
+         ::= <a href="#expr" title="expr">expr</a> '.' <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> '[' <a href="#expr" title="expr">expr</a> ']'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="function">function:</a></p><img border="0" height="222" src="diagram/function.png" usemap="#function.map" width="554"><map name="function.map">
+         <area coords="29,1,139,33" href="#function-name" shape="rect" title="function-name">
+         <area coords="245,1,293,33" href="#path" shape="rect" title="path">
+         <area coords="391,111,439,143" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#function" title="function">function</a> ::= <a href="#function-name" title="function-name">function-name</a> '(' ( ( <a href="#path" title="path">path</a> '.' )? '*' | ( 'DISTINCT' | 'UNIQUE' )? <a href="#expr" title="expr">expr</a> ( ',' <a href="#expr" title="expr">expr</a> )* )? ')'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="function-name">function-name:</a></p><img border="0" height="36" src="diagram/function-name.png" usemap="#function-name.map" width="132"><map name="function-name.map">
+         <area coords="29,1,103,33" href="#identifier" shape="rect" title="identifier"></map><p>
+         <div class="ebnf"><pre><a href="#function-name" title="function-name">function-name</a>
+         ::= <a href="#identifier" title="identifier">identifier</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#function" title="function">function</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="identifier">identifier:</a></p><img border="0" height="80" src="diagram/identifier.png" usemap="#identifier.map" width="246"><map name="identifier.map">
+         <area coords="49,1,197,33" href="#unescaped-identifier" shape="rect" title="unescaped-identifier">
+         <area coords="49,45,181,77" href="#escaped-identifier" shape="rect" title="escaped-identifier"></map><p>
+         <div class="ebnf"><pre><a href="#identifier" title="identifier">identifier</a>
+         ::= <a href="#unescaped-identifier" title="unescaped-identifier">unescaped-identifier</a>
+           | <a href="#escaped-identifier" title="escaped-identifier">escaped-identifier</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#collection-expr" title="collection-expr">collection-expr</a></li>
+            <li><a href="#data-source" title="data-source">data-source</a></li>
+            <li><a href="#expr" title="expr">expr</a></li>
+            <li><a href="#function-name" title="function-name">function-name</a></li>
+            <li><a href="#path" title="path">path</a></li>
+            <li><a href="#result-expr" title="result-expr">result-expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="unescaped-identifier">unescaped-identifier:</a></p><img border="0" height="244" src="diagram/unescaped-identifier.png" width="358"><p>
+         <div class="ebnf"><pre><a href="#unescaped-identifier" title="unescaped-identifier">unescaped-identifier</a>
+         ::= [a-zA-Z_$] [0-9a-zA-Z_$]*</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#identifier" title="identifier">identifier</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="escaped-identifier">escaped-identifier:</a></p><img border="0" height="36" src="diagram/escaped-identifier.png" usemap="#escaped-identifier.map" width="208"><map name="escaped-identifier.map">
+         <area coords="77,1,131,33" href="#chars" shape="rect" title="chars"></map><p>
+         <div class="ebnf"><pre><a href="#escaped-identifier" title="escaped-identifier">escaped-identifier</a>
+         ::= '`' <a href="#chars" title="chars">chars</a> '`'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#identifier" title="identifier">identifier</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="literal-value">literal-value:</a></p><img border="0" height="300" src="diagram/literal-value.png" usemap="#literal-value.map" width="166"><map name="literal-value.map">
+         <area coords="49,1,105,33" href="#string" shape="rect" title="string">
+         <area coords="49,45,117,77" href="#number" shape="rect" title="number">
+         <area coords="49,89,107,121" href="#object" shape="rect" title="object">
+         <area coords="49,133,101,165" href="#array" shape="rect" title="array"></map><p>
+         <div class="ebnf"><pre><a href="#literal-value" title="literal-value">literal-value</a>
+         ::= <a href="#string" title="string">string</a>
+           | <a href="#number" title="number">number</a>
+           | <a href="#object" title="object">object</a>
+           | <a href="#array" title="array">array</a>
+           | 'TRUE'
+           | 'FALSE'
+           | 'NULL'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#expr" title="expr">expr</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="object">object:</a></p><img border="0" height="80" src="diagram/object.png" usemap="#object.map" width="272"><map name="object.map">
+         <area coords="97,45,175,77" href="#members" shape="rect" title="members"></map><p>
+         <div class="ebnf"><pre><a href="#object" title="object">object</a>   ::= '{' '}'
+           | '{' <a href="#members" title="members">members</a> '}'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#literal-value" title="literal-value">literal-value</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="members">members:</a></p><img border="0" height="80" src="diagram/members.png" usemap="#members.map" width="284"><map name="members.map">
+         <area coords="49,1,93,33" href="#pair" shape="rect" title="pair">
+         <area coords="49,45,93,77" href="#pair" shape="rect" title="pair">
+         <area coords="157,45,235,77" href="#members" shape="rect" title="members"></map><p>
+         <div class="ebnf"><pre><a href="#members" title="members">members</a>  ::= <a href="#pair" title="pair">pair</a>
+           | <a href="#pair" title="pair">pair</a> ',' <a href="#members" title="members">members</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#members" title="members">members</a></li>
+            <li><a href="#object" title="object">object</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="pair">pair:</a></p><img border="0" height="36" src="diagram/pair.png" usemap="#pair.map" width="226"><map name="pair.map">
+         <area coords="29,1,85,33" href="#string" shape="rect" title="string">
+         <area coords="149,1,197,33" href="#expr" shape="rect" title="expr"></map><p>
+         <div class="ebnf"><pre><a href="#pair" title="pair">pair</a>     ::= <a href="#string" title="string">string</a> ':' <a href="#expr" title="expr">expr</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#members" title="members">members</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="array">array:</a></p><img border="0" height="80" src="diagram/array.png" usemap="#array.map" width="268"><map name="array.map">
+         <area coords="95,45,173,77" href="#elements" shape="rect" title="elements"></map><p>
+         <div class="ebnf"><pre><a href="#array" title="array">array</a>    ::= '[' ']'
+           | '[' <a href="#elements" title="elements">elements</a> ']'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#literal-value" title="literal-value">literal-value</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="elements">elements:</a></p><img border="0" height="80" src="diagram/elements.png" usemap="#elements.map" width="288"><map name="elements.map">
+         <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
+         <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
+         <area coords="161,45,239,77" href="#elements" shape="rect" title="elements"></map><p>
+         <div class="ebnf"><pre><a href="#elements" title="elements">elements</a> ::= <a href="#expr" title="expr">expr</a>
+           | <a href="#expr" title="expr">expr</a> ',' <a href="#elements" title="elements">elements</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#array" title="array">array</a></li>
+            <li><a href="#elements" title="elements">elements</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="string">string:</a></p><img border="0" height="80" src="diagram/string.png" usemap="#string.map" width="244"><map name="string.map">
+         <area coords="95,45,149,77" href="#chars" shape="rect" title="chars"></map><p>
+         <div class="ebnf"><pre><a href="#string" title="string">string</a>   ::= '"' '"'
+           | '"' <a href="#chars" title="chars">chars</a> '"'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#literal-value" title="literal-value">literal-value</a></li>
+            <li><a href="#pair" title="pair">pair</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="chars">chars:</a></p><img border="0" height="52" src="diagram/chars.png" usemap="#chars.map" width="218"><map name="chars.map">
+         <area coords="29,1,75,33" href="#char" shape="rect" title="char">
+         <area coords="115,1,169,33" href="#chars" shape="rect" title="chars"></map><p>
+         <div class="ebnf"><pre><a href="#chars" title="chars">chars</a>    ::= <a href="#char" title="char">char</a> <a href="#chars" title="chars">chars</a>?</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#chars" title="chars">chars</a></li>
+            <li><a href="#escaped-identifier" title="escaped-identifier">escaped-identifier</a></li>
+            <li><a href="#string" title="string">string</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="char">char:</a></p><img border="0" height="432" src="diagram/char.png" usemap="#char.map" width="590"><map name="char.map">
+         <area coords="49,1,181,33" href="#unicode-character" shape="rect" title="unicode-character">
+         <area coords="165,397,239,429" href="#hex-digit" shape="rect" title="hex-digit">
+         <area coords="259,397,333,429" href="#hex-digit" shape="rect" title="hex-digit">
+         <area coords="353,397,427,429" href="#hex-digit" shape="rect" title="hex-digit">
+         <area coords="447,397,521,429" href="#hex-digit" shape="rect" title="hex-digit"></map><p>
+         <div class="ebnf"><pre><a href="#char" title="char">char</a>     ::= <a href="#unicode-character" title="unicode-character">unicode-character</a>
+           | '\' ( '\' | '\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' <a href="#hex-digit" title="hex-digit">hex-digit</a> <a href="#hex-digit" title="hex-digit">hex-digit</a> <a href="#hex-digit" title="hex-digit">hex-digit</a> <a href="#hex-digit" title="hex-digit">hex-digit</a> )</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#chars" title="chars">chars</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="number">number:</a></p><img border="0" height="168" src="diagram/number.png" usemap="#number.map" width="258"><map name="number.map">
+         <area coords="49,1,85,33" href="#int" shape="rect" title="int">
+         <area coords="49,45,85,77" href="#int" shape="rect" title="int">
+         <area coords="105,45,147,77" href="#frac" shape="rect" title="frac">
+         <area coords="49,89,85,121" href="#int" shape="rect" title="int">
+         <area coords="105,89,147,121" href="#exp" shape="rect" title="exp">
+         <area coords="49,133,85,165" href="#int" shape="rect" title="int">
+         <area coords="105,133,147,165" href="#frac" shape="rect" title="frac">
+         <area coords="167,133,209,165" href="#exp" shape="rect" title="exp"></map><p>
+         <div class="ebnf"><pre><a href="#number" title="number">number</a>   ::= <a href="#int" title="int">int</a>
+           | <a href="#int" title="int">int</a> <a href="#frac" title="frac">frac</a>
+           | <a href="#int" title="int">int</a> <a href="#exp" title="exp">exp</a>
+           | <a href="#int" title="int">int</a> <a href="#frac" title="frac">frac</a> <a href="#exp" title="exp">exp</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#literal-value" title="literal-value">literal-value</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="int">int:</a></p><img border="0" height="168" src="diagram/int.png" usemap="#int.map" width="326"><map name="int.map">
+         <area coords="49,1,95,33" href="#digit" shape="rect" title="digit">
+         <area coords="49,45,157,77" href="#non-zero-digit" shape="rect" title="non-zero-digit">
+         <area coords="177,45,231,77" href="#digits" shape="rect" title="digits">
+         <area coords="95,89,141,121" href="#digit" shape="rect" title="digit">
+         <area coords="95,133,203,165" href="#non-zero-digit" shape="rect" title="non-zero-digit">
+         <area coords="223,133,277,165" href="#digits" shape="rect" title="digits"></map><p>
+         <div class="ebnf"><pre><a href="#int" title="int">int</a>      ::= <a href="#digit" title="digit">digit</a>
+           | <a href="#non-zero-digit" title="non-zero-digit">non-zero-digit</a> <a href="#digits" title="digits">digits</a>
+           | '-' <a href="#digit" title="digit">digit</a>
+           | '-' <a href="#non-zero-digit" title="non-zero-digit">non-zero-digit</a> <a href="#digits" title="digits">digits</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#number" title="number">number</a></li>
+            <li><a href="#path" title="path">path</a></li>
+            <li><a href="#select-stmt" title="select-stmt">select-stmt</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="frac">frac:</a></p><img border="0" height="36" src="diagram/frac.png" usemap="#frac.map" width="156"><map name="frac.map">
+         <area coords="73,1,127,33" href="#digits" shape="rect" title="digits"></map><p>
+         <div class="ebnf"><pre><a href="#frac" title="frac">frac</a>     ::= '.' <a href="#digits" title="digits">digits</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#number" title="number">number</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="exp">exp:</a></p><img border="0" height="36" src="diagram/exp.png" usemap="#exp.map" width="160"><map name="exp.map">
+         <area coords="29,1,57,33" href="#e" shape="rect" title="e">
+         <area coords="77,1,131,33" href="#digits" shape="rect" title="digits"></map><p>
+         <div class="ebnf"><pre><a href="#exp" title="exp">exp</a>      ::= <a href="#e" title="e">e</a> <a href="#digits" title="digits">digits</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#number" title="number">number</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="digits">digits:</a></p><img border="0" height="80" src="diagram/digits.png" usemap="#digits.map" width="218"><map name="digits.map">
+         <area coords="49,1,95,33" href="#digit" shape="rect" title="digit">
+         <area coords="49,45,95,77" href="#digit" shape="rect" title="digit">
+         <area coords="115,45,169,77" href="#digits" shape="rect" title="digits"></map><p>
+         <div class="ebnf"><pre><a href="#digits" title="digits">digits</a>   ::= <a href="#digit" title="digit">digit</a>
+           | <a href="#digit" title="digit">digit</a> <a href="#digits" title="digits">digits</a></pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#digits" title="digits">digits</a></li>
+            <li><a href="#exp" title="exp">exp</a></li>
+            <li><a href="#frac" title="frac">frac</a></li>
+            <li><a href="#int" title="int">int</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="non-zero-digit">non-zero-digit:</a></p><img border="0" height="36" src="diagram/non-zero-digit.png" width="118"><p>
+         <div class="ebnf"><pre><a href="#non-zero-digit" title="non-zero-digit">non-zero-digit</a>
+         ::= [1-9]</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#int" title="int">int</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="digit">digit:</a></p><img border="0" height="36" src="diagram/digit.png" width="118"><p>
+         <div class="ebnf"><pre><a href="#digit" title="digit">digit</a>    ::= [0-9]</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#digits" title="digits">digits</a></li>
+            <li><a href="#int" title="int">int</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="e">e:</a></p><img border="0" height="256" src="diagram/e.png" width="136"><p>
+         <div class="ebnf"><pre><a href="#e" title="e">e</a>        ::= 'e'
+           | 'e+'
+           | 'e-'
+           | 'E'
+           | 'E+'
+           | 'E-'</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#exp" title="exp">exp</a></li>
+         </ul>
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="hex-digit">hex-digit:</a></p><img border="0" height="124" src="diagram/hex-digit.png" width="158"><p>
+         <div class="ebnf"><pre><a href="#hex-digit" title="hex-digit">hex-digit</a>
+         ::= [0-9a-fA-F]</pre></div>
+      </p>
+      <p>referenced by:
+         <ul>
+            <li><a href="#char" title="char">char</a></li>
+         </ul>
+      </p><br><hr>
+      <p>
+         <table border="0" class="signature">
+            <tr>
+               <td style="width: 100%">&nbsp;</td>
+               <td valign="top">
+                  <nobr class="signature">... generated by <a class="signature" href="http://railroad.my28msec.com/" name="Railroad-Diagram-Generator" title="http://railroad.my28msec.com/">Railroad Diagram Generator</a></nobr>
+               </td>
+               <td><img border="0" height="16" src="diagram/.png" width="16"></td>
+            </tr>
+         </table>
+      </p>
+   </body>
+</html>
