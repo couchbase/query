@@ -1,0 +1,21 @@
+/****************
+ *  n1ql dml    *
+ ****************/
+
+/*
+ *  dataset
+ */
+
+dataset ::= path (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
+
+/*
+ *  dml
+ */
+
+update ::= 'UPDATE' dataset ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' expr)? ('RETURNING' expr (',' expr)*)?
+
+delete ::= 'DELETE' 'FROM' dataset ('WHERE' expr)? ('RETURNING' expr (',' expr)*)?
+
+insert-values ::= 'INSERT' 'INTO' dataset ('WHERE' expr)? 'VALUES' '(' expr (',' expr)* ')' ('RETURNING' expr (',' expr)*)?
+
+insert-select ::= 'INSERT' 'INTO' (pool-name ':')? bucket-name select ('RETURNING' expr (',' expr)*)?

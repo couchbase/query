@@ -8,7 +8,7 @@
 
 N1QL is a query language for Couchbase, and is a continuation of
 [UNQL](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/unql-2013.md).
-This documents was branched from the UNQL spec, and retains much of
+This document was branched from the UNQL spec, and retains much of
 that content verbatim.
 
 The language attempts to satisfy these [requirements](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/requirements.md).
@@ -516,7 +516,7 @@ First, the input collections is deteremined by the right-hand side expression in
 
 For example, consider a document containing a nested array of addresses objects:
 
-    ... WHERE ANY address.city = "Mountain View" OVER addresses a
+    ... WHERE ANY a.city = "Mountain View" OVER addresses a
 
 This would evaluate to TRUE if any of the addresses have the field `city` = `Mountain View`
 

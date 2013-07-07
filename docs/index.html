@@ -336,7 +336,7 @@
          <ul>
             <li><a href="#expr" title="expr">expr</a></li>
          </ul>
-      </p><br><p style="font-size: 14px; font-weight:bold"><a name="comparison-term">comparison-term:</a></p><img border="0" height="784" src="diagram/comparison-term.png" usemap="#comparison-term.map" width="522"><map name="comparison-term.map">
+      </p><br><p style="font-size: 14px; font-weight:bold"><a name="comparison-term">comparison-term:</a></p><img border="0" height="872" src="diagram/comparison-term.png" usemap="#comparison-term.map" width="522"><map name="comparison-term.map">
          <area coords="49,1,97,33" href="#expr" shape="rect" title="expr">
          <area coords="167,1,215,33" href="#expr" shape="rect" title="expr">
          <area coords="49,45,97,77" href="#expr" shape="rect" title="expr">
@@ -368,7 +368,9 @@
          <area coords="49,617,97,649" href="#expr" shape="rect" title="expr">
          <area coords="49,661,97,693" href="#expr" shape="rect" title="expr">
          <area coords="49,705,97,737" href="#expr" shape="rect" title="expr">
-         <area coords="49,749,97,781" href="#expr" shape="rect" title="expr"></map><p>
+         <area coords="49,749,97,781" href="#expr" shape="rect" title="expr">
+         <area coords="49,793,97,825" href="#expr" shape="rect" title="expr">
+         <area coords="49,837,97,869" href="#expr" shape="rect" title="expr"></map><p>
          <div class="ebnf"><pre><a href="#comparison-term" title="comparison-term">comparison-term</a>
          ::= <a href="#expr" title="expr">expr</a> '=' <a href="#expr" title="expr">expr</a>
            | <a href="#expr" title="expr">expr</a> '==' <a href="#expr" title="expr">expr</a>
@@ -387,7 +389,9 @@
            | <a href="#expr" title="expr">expr</a> 'IS' 'MISSING'
            | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'MISSING'
            | <a href="#expr" title="expr">expr</a> 'IS' 'VALUED'
-           | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'VALUED'</pre></div>
+           | <a href="#expr" title="expr">expr</a> 'IS' 'NOT' 'VALUED'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'ARRAY'
+           | <a href="#expr" title="expr">expr</a> 'IS' 'SCALAR'</pre></div>
       </p>
       <p>referenced by:
          <ul>

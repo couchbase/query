@@ -24,7 +24,7 @@ pool-name ::= identifier
 expr ::= literal-value | identifier | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | function | nested-expr | subquery-expr | collection-expr | '(' expr ')'
 logical-term ::= expr 'AND' expr | expr 'OR' expr | 'NOT' expr
 case-expr ::= 'CASE' 'WHEN' expr 'THEN' expr ('WHEN' expr 'THEN' expr)* ('ELSE' expr)? 'END'
-comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'BETWEEN' expr 'AND' expr | expr 'NOT' 'BETWEEN' expr 'AND' expr | expr 'LIKE' expr | expr 'NOT' 'LIKE' expr | expr 'IS' 'NULL' | expr 'IS' 'NOT' 'NULL' | expr 'IS' 'MISSING' | expr 'IS' 'NOT' 'MISSING' | expr 'IS' 'VALUED' | expr 'IS' 'NOT' 'VALUED'
+comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'BETWEEN' expr 'AND' expr | expr 'NOT' 'BETWEEN' expr 'AND' expr | expr 'LIKE' expr | expr 'NOT' 'LIKE' expr | expr 'IS' 'NULL' | expr 'IS' 'NOT' 'NULL' | expr 'IS' 'MISSING' | expr 'IS' 'NOT' 'MISSING' | expr 'IS' 'VALUED' | expr 'IS' 'NOT' 'VALUED' | expr 'IS' 'ARRAY' | expr 'IS' 'SCALAR'
 arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | expr 'DIV' expr | '-' expr
 concatenation-term ::= expr '||' expr
 nested-expr ::= expr '.' expr | expr '[' expr ']'
