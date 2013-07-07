@@ -11,7 +11,7 @@ N1QL is a query language for Couchbase, and is a continuation of
 This documents was branched from the UNQL spec, and retains much of
 that content verbatim.
 
-This language attempts to satisfy these [requirements](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/requirements.md).
+The language attempts to satisfy these [requirements](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/requirements.md).
 
 This document describes the syntax and semantics of the SELECT statement in the language.
 
@@ -70,7 +70,7 @@ Another usage of the FROM clause specifies a path within a bucket.  In this form
 
 In this example, a bucket named `organizations` contains documents describing each organization.  Each organization document has a field namd `address` which is an object.  Using this syntax each address object becomes the input to the query.
 
-Finally, the most complex usage of the FROM clause allows for path joins within a document.  This feature is sometimes referred to as `OVER`, `FLATTEN` or `UNNEST`.  Conceptually, a document containing a nested array can have each of the members of this array joined with the document.  Each of these joined objectes become the input to the query.  If an element referenced along the OVER path is a scalar value, it will be treated like a single-element array.  If it is NULL or MISSING, then this document will not contribute any candidate objects to the rest of the query.  For example:
+Finally, the most complex usage of the FROM clause allows for path joins within a document.  This feature is sometimes referred to as `OVER`, `FLATTEN` or `UNNEST`.  Conceptually, a document containing a nested array can have each of the members of this array joined with the document.  Each of these joined objectes become the input to the query.  If an element referenced along the OVER path is a scalar value instead of an array, it will be treated like a single-element array.  If it is NULL or MISSING, then this document will not contribute any candidate objects to the rest of the query.  For example:
 
     FROM organizations o OVER o.employees e
 
@@ -98,7 +98,7 @@ Would result in two objects forming the input for the execution of the query:
       "employee": e2
     }
 
-As the right hand side of a OVER is another data source, these OVERs may be chained together.  However, the OVER argument must always be a subpath referring to the immediate preceding expression.  The following is a valid usage of multiple OVERs.
+As the right hand side of OVER is another data source, OVERs may be chained together.  However, the OVER right-hand argument must always be a subpath relative to the immediate preceding expression.  The following is a valid usage of multiple OVERs.
 
     FROM organization o OVER o.employees e OVER e.addresses a
 
@@ -110,7 +110,11 @@ It is important to understand that the following two FROM clauses have different
 
 The first clause would make the input to the query be the array of employees.  The second clause would iterate over the employees array and join each element to the organization, and then make the resulting joined objects the inputs to the query.
 
-NOTE: Path joining over array-valued members is only done in the FROM clause.  It is not done for nested expressions in the SELECT list, WHERE clause, etc.
+NOTE: Path joining and expansion over array-valued members is only done in the FROM clause.  It is not done for nested expressions in the SELECT list, WHERE clause, etc.
+
+##### Joins
+
+Joins have their normal meaning from SQL.
 
 #### Filtering
 
@@ -128,11 +132,11 @@ Final projection of evaluated result expressions is as follows:
 
 1.  If the result expression list included '*', the result object is the original item returned from the FROM clause.  Otherwise the result object starts empty.
 2.  If the result expression list includes `<path>.*`, the path is evaluated.  If the result of this evaluation is an object, all the key/value pairs within this object are added to the result object.  If the result is not an object, nothing is added to the result object.
-3.  For each remaining expression in the result expression list.  If an AS clause was specified, that identifier is used as the key in the result object and the value is the evaluated expression.  If no AS clause was specified, a default name is generated for the key.
+3.  For each remaining expression in the result expression list.  If an alias was specified, that identifier is used as the key in the result object and the value is the evaluated expression.  If no alias was specified, a default name is generated for the key.
 
 Specifying the same identifier more than once in the result expression list, or using an identifer that conflicts with a field in the document returned by '*' is allowed, but it is only guaranteed that one value with that key is returned.  If duplicate key names are detected in the projection, a warning is returned along with the query results.
 
-Returning complex object and arrays is possible by specifying literal JSON in the projection expression.
+Returning complex object and arrays is possible by specifying literal JSON constructors in the projection expression.
 
 See Appendix 6 for some example projections.
 
@@ -154,7 +158,7 @@ ordering-term:
 
 ![](diagram/ordering-term.png)
 
-### ORDER BY and LIMIT/OFFSET
+### ORDER BY, LIMIT, and OFFSET
 
 If no ORDER BY clause is specified, the order in which the result objects are returned is undefined.
 
@@ -171,9 +175,9 @@ As ORDER BY expressions can evaluate to any JSON value, it must define an orderi
 * array (element by element comparison, longer arrays sort after)
 * object (key/value by key/value comparison, keys are examined in sorted order using the normal ordering for strings, larger objects sort after)
 
-The LIMIT clause imposes an upper bound on the number of objects returned by the SELECT statement.  The LIMIT clause must be an integer.
+A LIMIT clause imposes an upper bound on the number of objects returned by the SELECT statement.  The LIMIT value must be an integer.
 
-An OFFSET clause can optionally follow a LIMIT clause.  When specified, this many rows are omitted from the result prior to enforcing the specified LIMIT.  The OFFSET clause must be an integer.
+An OFFSET clause specifies a number of objects to be skipped. If a LIMIT clause is also present, the OFFSET is applied prior to the LIMIT.  The OFFSET value must be an integer.
 
 ## Expressions
 
@@ -185,11 +189,11 @@ literal-value:
 
 The full specification for literal values can be found in Appendix 5.
 
-identfier:
+identifier:
 
 ![](diagram/identifier.png)
 
-An identifier can either be escaped or unescaped.  Unescaped identifiers cannot support the full range of idenfiers allowed in a JSON document, but do support the most common ones with a simpler syntax.  Escaped identifiers are surrounded with backticks and support all identifiers allowed in JSON.  Using the backtick character within an escaped identifier can be accomplised by use two consecutive backtick characters.
+An identifier can either be escaped or unescaped.  Unescaped identifiers cannot support the full range of idenfiers allowed in a JSON document, but do support the most common ones with a simpler syntax.  Escaped identifiers are surrounded with backticks and support all identifiers allowed in JSON.  Using the backtick character within an escaped identifier can be accomplised by using two consecutive backtick characters.
 
 unescaped-identfier:
 
@@ -512,7 +516,7 @@ First, the input collections is deteremined by the right-hand side expression in
 
 For example, consider a document containing a nested array of addresses objects:
 
-    ... WHERE ANY address.city = "Mountain View" OVER addresses AS address
+    ... WHERE ANY address.city = "Mountain View" OVER addresses a
 
 This would evaluate to TRUE if any of the addresses have the field `city` = `Mountain View`
 
@@ -520,13 +524,13 @@ first-expr:
 
 ![](diagram/first-expr.png)
 
-FIRST expressions are similar to collection predicates, but instead of returning a boolean truth value, they return the first actual value of evaluating the left-hand side expression OVER the elements of the right-hand side.  An optional IF clause can be used to filter the elements of the right-hand side before evaluating the left-hand expression.
+FIRST expressions are similar to collection predicates, but instead of returning a boolean truth value, they return the first actual value of evaluating the left-hand side expression OVER the elements of the right-hand side.  An optional IF clause filters the elements of the right-hand side before evaluating the left-hand expression.
 
 comprehension:
 
 ![](diagram/comprehension.png)
 
-Comprehensions are similar to FIRST expressions.  Instead of returning the first actual value from the left-hand side expression, comprehensions return an array containing the results of evaluating the left-hand side expression OVER the elements of the right-hand side.  An optional IF clause can be used to filter the elements of the right-hand side before evaluating the left-hand expression.
+Comprehensions are similar to FIRST expressions.  Instead of returning the first actual value from the left-hand side expression, comprehensions return an array containing the results of evaluating the left-hand side expression OVER the elements of the right-hand side.  An optional IF clause filters the elements of the right-hand side before evaluating the left-hand expression.
 
 ## Expression Evaluation
 
@@ -538,7 +542,7 @@ During some phases of executing a query the evaluated value must be considered i
 * HAVING clause
 * any application of BOOLEAN logic (AND, OR, NOT)
 
-When interpretting a non-boolean value in a boolean context, the same rules used by JavaScript are followed.
+When interpreting a non-boolean value in a boolean context, the same rules used by JavaScript are followed.
 
 See [ECMAScript Language Specification Chapter 11 Section 9](http://ecma-international.org/ecma-262/5.1/#sec-11.9)
 
@@ -636,7 +640,7 @@ MIN(expr) - min returns the minimum value of all values in the group.  The minim
 
 MAX(expr) - max returns the maximum values of all values in the group.  The maximum value is the last value that would be returned from an ORDER BY  on the same expression.  max returns NULL if there are no non-NULL, non-MISSING values
 
-For, AVG, and SUM, any row where the result of the expression is non-numieric is also eliminated.
+For, AVG, and SUM, any row where the result of the expression is non-numeric is also eliminated.
 
 ## Appendix 3 - Operator Precedence
 
@@ -914,6 +918,11 @@ Diagrams were generated by [Railroad Diagram Generator](http://railroad.my28msec
     * Made AS optional everywhere
     * Generalized concatenation to include arrays
     * Added DIV for integer division
+    * Detached OFFSET from LIMIT
+* 2013-07-06 - Cosmetics
+    * Fixed some spelling
+    * Clarified some prose
+    * Added (non-)description of joins
 
 ### Open Issues
 
