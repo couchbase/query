@@ -1,0 +1,80 @@
+/****************
+ *  n1ql select *
+ ****************/
+
+/*
+ *  select
+ */
+
+select ::= select-core ('ORDER' 'BY' ordering-term (',' ordering-term)*)? ('LIMIT' int)? ('OFFSET' int)?
+select-core ::= 'SELECT' ('DISTINCT')? result-expr-list ('FROM' from-term)? ('WHERE' expr)? ('GROUP' 'BY' expr (',' expr )* ('HAVING' expr)?)?
+from-term ::= path (('AS')? alias)? | '(' select ')' ('AS')? alias | from-term ('OVER' subpath (('AS')? alias)?)+ | from-term (join-type)? 'JOIN' from-term 'ON' expr
+join-type ::= 'INNER' | ('LEFT' | 'RIGHT' | 'FULL') ('OUTER')?
+path ::= (pool-name ':')? subpath
+subpath ::= identifier ('[' int ']')? ('.' subpath)?
+ordering-term ::= expr ('ASC' | 'DESC')?
+result-expr ::= (path '.')? '*' | expr (('AS')? alias)?
+result-expr-list ::= result-expr (',' result-expr-list)*
+alias ::= identifier
+pool-name ::= identifier
+
+/*
+ *  expressions
+ */
+expr ::= literal-value | identifier | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | function | nested-expr | subquery-expr | collection-expr | '(' expr ')'
+logical-term ::= expr 'AND' expr | expr 'OR' expr | 'NOT' expr
+case-expr ::= 'CASE' 'WHEN' expr 'THEN' expr ('WHEN' expr 'THEN' expr)* ('ELSE' expr)? 'END'
+comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'BETWEEN' expr 'AND' expr | expr 'NOT' 'BETWEEN' expr 'AND' expr | expr 'LIKE' expr | expr 'NOT' 'LIKE' expr | expr 'IS' 'NULL' | expr 'IS' 'NOT' 'NULL' | expr 'IS' 'MISSING' | expr 'IS' 'NOT' 'MISSING' | expr 'IS' 'VALUED' | expr 'IS' 'NOT' 'VALUED'
+arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | expr 'DIV' expr | '-' expr
+concatenation-term ::= expr '||' expr
+nested-expr ::= expr '.' expr | expr '[' expr ']'
+subquery-expr ::= '(' select ')'
+
+/*
+ *  functions
+ */
+function ::= function-name '(' ('DISTINCT')? ((path '.')? '*' | expr (',' expr)*)? ')'
+function-name ::= identifier
+
+/*
+ *  collections
+ */
+collection-expr ::= existential-expr | in-expr | collection-predicate | first-expr | comprehension
+existential-expr ::= 'EXISTS' '(' select ')'
+in-expr ::= expr ('NOT')? 'IN' expr
+collection-predicate ::= ('ANY' | 'ALL') expr 'OVER' expr (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
+first-expr ::= 'FIRST' expr 'OVER' expr (('AS')? alias1)? ('IF' expr1)? ('OVER' subpath (('AS')? aliasN)? ('IF' exprN)?)*
+comprehension ::= '[' expr 'OVER' expr (('AS')? alias1)? ('IF' expr1)? ('OVER' subpath (('AS')? aliasN)? ('IF' exprN)?)* ']'
+
+/*
+ *  identifiers
+ */
+identifier ::= unescaped-identifier | escaped-identifier
+unescaped-identifier ::= [a-zA-Z_$]  ( [0-9a-zA-Z_$] )*
+escaped-identifier ::= '`' chars '`'
+
+/*
+ *  literal JSON (with nested expressions instead of values)
+ */
+literal-value ::= string | number | object | array | 'TRUE' | 'FALSE' | 'NULL'
+object ::= '{' '}' |  '{' members '}'
+members ::= pair | pair ',' members
+pair ::= string ':' expr
+array ::= '[' ']' | '[' elements ']'
+elements ::= expr | expr ',' elements
+
+/**
+ *  low level
+ **/
+string ::= '"' '"' | '"' chars '"'
+chars ::= char chars?
+char ::= unicode-character | '\' ('\' | '\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' hex-digit hex-digit hex-digit hex-digit )
+number ::= int | int frac | int exp | int frac exp
+int ::= digit | non-zero-digit digits | '-' digit | '-' non-zero-digit digits
+frac ::= '.' digits
+exp ::= e digits
+digits ::= digit | digit digits
+non-zero-digit ::= [1-9]
+digit ::= [0-9]
+e ::= 'e' | 'e+' | 'e-' | 'E' | 'E+' | 'E-'
+hex-digit ::= [0-9a-fA-F]
