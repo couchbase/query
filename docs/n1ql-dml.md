@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-07-07
+* Modified: 2013-07-08
 
 ## Summary
 
@@ -40,11 +40,11 @@ update:
 ## DELETE
 
 The DELETE statement can delete entire documents or fragments within
-documents.  However, when deleting fragments, the DELETE statement
-does not UNSET fields in the containing object.  Array-valued fields
-are left as empty arrays, and scalar-valued fields are set to NULL.
-In other words, DELETE is always schema-safe for containing objects
-(unless NULL is a schema violation).
+documents.  When deleting fragments, the DELETE statement does not
+UNSET fields in the containing object.  Array-valued fields are left
+as empty arrays, and scalar-valued fields are set to NULL.  In other
+words, DELETE is always schema-safe for containing objects (unless
+NULL is a schema violation).
 
 delete:
 
@@ -96,6 +96,7 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Datasets
     * WHERE clauses in INSERT statements
     * RETURNING clauses
+* 2013-07-08 - Added to open issues
 
 ### Open Issues
 
@@ -110,3 +111,16 @@ scalar-terminated paths sets the field to NULL.  Is this consistent?
 into scalar-terminated paths converts the field to an array.  Should
 it be disallowed instead?  DELETE and INSERT should behave somewhat
 inversely, and certainly predictably and intuitively.
+
+1.  Should we provide UPDATE-APPEND?  This would be similar to
+INSERT-VALUES over array-valued datasets.  INSERT seems to be closer
+to the spirit of N1NF, i.e. embedded datasets are first-class
+entities.
+
+1.  Should we provide UPDATE SET VALUE() = expr for mutating entire
+documents?  It would violate the nice property that function calls are
+always read-only.
+
+1.  Should we require that datasets terminate in an array-valued
+field?  This would clarify / simplify most of the issues above.  Ditto
+for SELECT.

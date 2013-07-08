@@ -7,14 +7,13 @@
  */
 
 select ::= select-core ('ORDER' 'BY' ordering-term (',' ordering-term)*)? ('LIMIT' int)? ('OFFSET' int)?
-select-core ::= 'SELECT' ('DISTINCT')? result-expr-list ('FROM' from-term)? ('WHERE' expr)? ('GROUP' 'BY' expr (',' expr )* ('HAVING' expr)?)?
+select-core ::= 'SELECT' ('DISTINCT')? result-expr (',' result-expr)* ('FROM' from-term)? ('WHERE' expr)? ('GROUP' 'BY' expr (',' expr )* ('HAVING' expr)?)?
 from-term ::= path (('AS')? alias)? | '(' select ')' ('AS')? alias | from-term ('OVER' subpath (('AS')? alias)?)+ | from-term (join-type)? 'JOIN' from-term 'ON' expr
 join-type ::= 'INNER' | ('LEFT' | 'RIGHT' | 'FULL') ('OUTER')?
 path ::= (pool-name ':')? subpath
 subpath ::= identifier ('[' int ']')? ('.' subpath)?
 ordering-term ::= expr ('ASC' | 'DESC')?
 result-expr ::= (path '.')? '*' | expr (('AS')? alias)?
-result-expr-list ::= result-expr (',' result-expr-list)*
 alias ::= identifier
 pool-name ::= identifier
 
@@ -33,7 +32,7 @@ subquery-expr ::= '(' select ')'
 /*
  *  functions
  */
-function ::= function-name '(' ('DISTINCT')? ((path '.')? '*' | expr (',' expr)*)? ')'
+function ::= function-name '(' (('DISTINCT')? ((path '.')? '*' | expr (',' expr)*))? ')'
 function-name ::= identifier
 
 /*
