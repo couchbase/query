@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-07-08
+* Modified: 2013-07-12
 
 ## Summary
 
@@ -26,6 +26,14 @@ will be mutated within each document.
 dataset:
 
 ![](diagram/dataset.png)
+
+## Result sets
+
+N1QL DML statements are defined to return result sets in the same
+format as the SELECT statement.  If no RETURNING clause is specified,
+the result set is the empty array.  If a RETURNING clause is
+specified, it defines the fields of the JSON objects in the result
+set.
 
 ## UPDATE
 
@@ -97,6 +105,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * WHERE clauses in INSERT statements
     * RETURNING clauses
 * 2013-07-08 - Added to open issues
+* 2013-07-12 - Result sets
+    * DML statements return result sets (same as SELECT)
 
 ### Open Issues
 
