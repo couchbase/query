@@ -77,3 +77,9 @@ non-zero-digit ::= [1-9]
 digit ::= [0-9]
 e ::= 'e' | 'e+' | 'e-' | 'E' | 'E+' | 'E-'
 hex-digit ::= [0-9a-fA-F]
+
+/**
+ *  comments
+ **/
+block-comment ::= '/*' ((text)? newline)* '*/'
+line-comment ::= ('--' | '//') (text)? newline

@@ -1053,6 +1053,18 @@ SELECT {"thename": name} AS custom_obj
       }
     }
 
+## Appendix 7 - Comments
+
+N1QL supports both block comments and line comments.
+
+block-comment:
+
+![](diagram/block-comment.png)
+
+line-comment:
+
+![](diagram/line-comment.png)
+
 ## About this Document
 
 The
@@ -1088,6 +1100,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Clarified that escaped identifiers can overlap with keywords
     * Streamlined grammar for functions and result-exprs
     * Added to open issues
+* 2013-07-13 - Comments
+    * Added Appendix 7 on comments
 
 ### Open Issues
 
