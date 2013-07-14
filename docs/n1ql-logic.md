@@ -18,7 +18,7 @@ statements in the language.  These are sometimes called procedural or
 compound statements in other datqbase systems.  DDL for stored
 programs (procedures and functions) is defined in a separate spec.
 
-N1QL logic statements can be submitted ad-hoc or embedded in stored
+N1QL logic statements can be submitted directly or embedded in stored
 programs.
 
 ## Motivation
@@ -41,7 +41,7 @@ the query language:
   provide logic capabilities that are actively used.
 * N1QL borrows features from [The Go Programming
   Language](http://golang.org) and other newer programming languages.
-  These features may distinguish N1QL from other procedural database
+  These features distinguish N1QL from other procedural database
   languages.
 
 ## Data types
@@ -51,8 +51,8 @@ application programming languages such as C, Java, and Python.  As
 such, N1QL has a type system.
 
 In N1QL logic, variables are strongly but dynamically typed.  This
-means that variables aren't tied to specific types, but runtime values
-do have specific data types.
+means that variables aren't tied to specific data types, but runtime
+values do have specific data types.
 
 The N1QL runtime data types are:
 
@@ -67,8 +67,8 @@ The N1QL runtime data types are:
 N1QL aims to be more streamlined than other database procedural
 languages by treating prepared statements, cursors, ranges (and
 possibly functions) as first-class data types that can be used in
-expressions, assignments, function calls, etc.  This minimizes the
-need for special syntax.
+expressions, assignments, function calls, etc.  This reduces the need
+for special syntax.
 
 ## Termination
 
@@ -99,7 +99,7 @@ stmt:
 
 #### Expressions
 
-Several statements below use:
+Several statements below use *mexpr* and *lexpr*:
 
 * *mexpr*: all in-memory expression types (all expressions excluding
   cursors or other objects which retain network or other non-memory
@@ -112,7 +112,7 @@ Mexpr and lexpr are specified later in this document, under
 
 ### Begin
 
-A BEGIN statement creates an explicit block for scoping.
+A BEGIN statement creates an explicit block.
 
 begin:
 
@@ -177,6 +177,8 @@ ctrl:
 
 ### If
 
+This is the standard IF-THEN-ELSEIF-ELSE form.
+
 if:
 
 ![](diagram/if.png)
@@ -191,7 +193,7 @@ case:
 
 #### Full case
 
-Full-case is equivalent to IF-THEN-ELSEIF.
+Full-case is equivalent to IF-THEN-ELSEIF-ELSE.
 
 full-case:
 
@@ -294,8 +296,8 @@ return:
 ### Deliver
 
 DELIVER is a concurrency construct borrowed from golang.  It randomly
-selects a send or receive operation and performs, or blocks until an
-operation is available.  DELIVER is called SELECT in golang.
+selects a send or receive operation and performs it, or blocks until
+an operation is available.  DELIVER is called SELECT in golang.
 
 deliver:
 
@@ -370,8 +372,8 @@ lexpr:
 #### Prepare
 
 PREPARE evaluates to a prepared statement.  Its argument may be a
-query string-valued mexpr.  In either case, a special syntax is used
-to identify embedded query parameters.
+query or a string-valued mexpr.  In either case, a special syntax is
+used to identify embedded query parameters.
 
 The arguments to USING introduce names to be used as query parameters.
 
@@ -424,6 +426,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-14 - First meaningful (non-stub) checkin
     * Logic inspired by RDBMS stored procedures, and by [The Go
       Programming Language](http://golang.org).
+* 2013-07-14 - Cosmetics
+    * Typos, wording.
 
 ### Open Issues
 
@@ -432,7 +436,7 @@ eventually disappear.
 
 1. Should we provide first-class functions and closures?  Likely yes.
 
-1. Should USING accept values, name=value pairs, or both?
+1. Should EXECUTE ... USING accept values, name=value pairs, or both?
 
 1. Do we need syntax for embedded query parameters in PREPARE
    expressions, e.g. a leading colon (:)?
