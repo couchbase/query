@@ -11,7 +11,12 @@ N1QL is a query language for Couchbase, and is a continuation of
 This document builds on the [N1QL Select
 spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md).
 
-This document describes the syntax and semantics of the DML statements in the language.
+This document describes the syntax and semantics of the DML statements
+in the language.
+
+dml-stmt:
+
+![](diagram/dml-stmt.png)
 
 ## Datasets
 
@@ -87,7 +92,7 @@ insert-select:
 ## About this Document
 
 The
-[grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.ebnf)
+[grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.ebnf)
 forming the basis of this document is written in a [W3C dialect of
 EBNF](http://www.w3.org/TR/REC-xml/#sec-notation).
 
@@ -107,6 +112,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-08 - Added to open issues
 * 2013-07-12 - Result sets
     * DML statements return result sets (same as SELECT)
+* 2013-07-12 - EBNF
+    * Added EBNF for dml-stmt
 
 ### Open Issues
 

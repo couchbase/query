@@ -11,6 +11,7 @@ dataset ::= path (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
 /*
  *  dml
  */
+dml-stmt ::= update | delete | insert-values | insert-select
 
 update ::= 'UPDATE' dataset ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' expr)? ('RETURNING' expr (',' expr)*)?
 
