@@ -13,7 +13,7 @@ block ::= (terminated-stmt)+
 /*
  *  stmt
  */
-stmt ::= decl | begin | init | assign | unset | sendop | ctrl | lexpr
+stmt ::= begin | decl | init | assign | unset | sendop | ctrl | lexpr
 
 begin ::= 'BEGIN' block 'END'
 
@@ -51,9 +51,9 @@ loop ::= (label)? (while | for)
 
 while ::= 'WHILE' mexpr 'DO' block 'END'
 
-for ::= for-coll | for-map
+for ::= for-iter | for-map
 
-for-coll ::= 'FOR' var 'IN' (mexpr | cursor) 'DO' block 'END'
+for-iter ::= 'FOR' var 'IN' (mexpr | cursor) 'DO' block 'END'
 
 for-map ::= 'FOR' key-var ',' val-var 'IN' mexpr 'DO' block 'END'
 
@@ -85,12 +85,12 @@ rcvexpr ::= '<-' mexpr
 
 first ::= 'FIRST' cursor
 
+lexpr ::= mexpr | prepare | cursor
+
+prepare ::= 'PREPARE' (query | mexpr) ('USING' var (',' var)*)?
+
 cursor ::= query | execute
 
 query ::= select | dml-stmt
 
 execute ::= 'EXECUTE' mexpr ('USING' mexpr (',' mexpr)*)?
-
-prepared ::= 'PREPARE' (query | mexpr)
-
-lexpr ::= mexpr | cursor | prepared
