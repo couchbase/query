@@ -1,0 +1,96 @@
+/****************
+ *  n1ql logic    *
+ ****************/
+
+/*
+ *  block
+ */
+terminated-stmt ::= stmt (';' | newline)
+
+block ::= (terminated-stmt)+
+
+
+/*
+ *  stmt
+ */
+stmt ::= decl | begin | init | assign | unset | sendop | ctrl | lexpr
+
+begin ::= 'BEGIN' block 'END'
+
+decl ::= 'DECLARE' var (',' var)* (':=' lexpr (',' lexpr)*)?
+
+var ::= identifier
+
+init ::= var (',' var)* '::=' lexpr (',' lexpr)*
+
+assign ::= var (',' var)* ':=' lexpr (',' lexpr)*
+
+sendop ::= var '<-' mexpr
+
+unset ::= 'UNSET' mexpr '.' subpath
+
+
+/*
+ *  ctrl
+ */
+ctrl ::= if | case | loop | break | continue | pass | return | deliver | defer
+
+if ::= 'IF' mexpr 'THEN' block ('ELSEIF' mexpr 'THEN' block)* ('ELSE' block)? 'END'
+
+case ::= full-case | searched-case
+
+full-case ::= 'CASE' ('WHEN' mexpr 'THEN' block)+ ('ELSE' block)? 'END'
+
+searched-case ::= 'CASE' mexpr ('WHEN' mexpr 'THEN' block)+ ('ELSE' block)? 'END'
+
+label ::= label-name ':'
+
+label-name ::= identifier
+
+loop ::= (label)? (while | for)
+
+while ::= 'WHILE' mexpr 'DO' block 'END'
+
+for ::= for-coll | for-map
+
+for-coll ::= 'FOR' var 'IN' (mexpr | cursor) 'DO' block 'END'
+
+for-map ::= 'FOR' key-var ',' val-var 'IN' mexpr 'DO' block 'END'
+
+key-var ::= var
+
+val-var ::= var
+
+break ::= 'BREAK' (label-name)?
+
+continue ::= 'CONTINUE' (label-name)?
+
+pass ::= 'PASS'
+
+return ::= 'RETURN' (lexpr (',' lexpr)*)?
+
+deliver ::= 'DELIVER' ('WHEN' commop 'THEN' block)+ ('ELSE' block)? 'END'
+
+commop ::= sendop | rcvop
+
+rcvop ::= var (',' var)? (':=' | '::=') rcvexpr
+
+
+/*
+ *  expr
+ */
+mexpr ::= expr | rcvexpr | first
+
+rcvexpr ::= '<-' mexpr
+
+first ::= 'FIRST' cursor
+
+cursor ::= query | execute
+
+query ::= select | dml-stmt
+
+execute ::= 'EXECUTE' mexpr ('USING' mexpr (',' mexpr)*)?
+
+prepared ::= 'PREPARE' (query | mexpr)
+
+lexpr ::= mexpr | cursor | prepared
