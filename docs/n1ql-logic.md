@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-logic](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-logic.md)
-* Modified: 2013-07-14
+* Modified: 2013-07-15
 
 ## Summary
 
@@ -15,7 +15,7 @@ spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md).
 
 This document describes the syntax and semantics of the logic
 statements in the language.  These are sometimes called procedural or
-compound statements in other datqbase systems.  DDL for stored
+compound statements in other database systems.  DDL for stored
 programs (procedures and functions) is defined in a separate spec.
 
 N1QL logic statements can be submitted directly or embedded in stored
@@ -30,31 +30,32 @@ the query language:
   down into the database.  This could be to reduce network traffic, to
   leverage database hardware, and to avoid complexities and risks of
   managing connections, connectivity, etc.
-* We could (and might) also embed host languages in the database
-  server to get similar logic capabilities.  However, application
-  developers would still be left with the impedance mismatches between
-  the query language and the host language (our host language bindings
-  might mitigate this).  By providing logic statements in the query
-  language, it is very natural and convenient for application
-  developers to combine queries and logic.
-* These capabilities are well validated.  All major database systems
-  provide logic capabilities that are actively used.
+* We could (and might) also embed host languages like Javascript and
+  Lua in the database server to get similar logic capabilities.
+  However, application developers would still be left with the
+  impedance mismatches between the query language and the host
+  language (our host language bindings might mitigate this).  By
+  providing N1QL logic statements in the query language, it becomes
+  natural and convenient for application developers to combine queries
+  and logic.
+* These logic-in-QL capabilities are well validated.  All major
+  database systems provide logic capabilities that are actively used.
 * N1QL borrows features from [The Go Programming
   Language](http://golang.org) and other newer programming languages.
   These features distinguish N1QL from other procedural database
-  languages.
+  languages, and may offer unique benefits to Couchbase users.
 
 ## Data types
 
-N1QL logic is similar to RDBMS stored procedure languages and to 3GL
-application programming languages such as C, Java, and Python.  As
-such, N1QL has a type system.
+N1QL logic is similar to RDBMS stored procedure languages and to
+languages such as C, Java, Python, and Javascript.  As such, N1QL has
+a type system.
 
-In N1QL logic, variables are strongly but dynamically typed.  This
-means that variables aren't tied to specific data types, but runtime
-values do have specific data types.
+In N1QL, variables are strongly but dynamically typed.  This means
+that variables aren't tied to specific data types, but runtime values
+do have specific data types.
 
-The N1QL runtime data types are:
+The N1QL data types are:
 
 * JSON value (primitive, object, or array)
 * Blob (uninterpreted and / or encoded byte sequence)
@@ -72,10 +73,10 @@ for special syntax.
 
 ## Termination
 
-N1QL statements are terminated by an optional semicolon or a newline
-(similar to golang). A semicolon termination is explicit. If the
-semicolon is omitted and a newline appears where a statement could
-end, the semicolon is inferred and the statement is concluded.
+N1QL statements are terminated by a semicolon or a newline (similar to
+golang). A semicolon termination is explicit. If the semicolon is
+omitted and a newline appears where a statement could end, the
+semicolon is inferred and the statement is concluded.
 
 terminated-stmt:
 
@@ -102,7 +103,7 @@ stmt:
 Several statements below use *mexpr* and *lexpr*:
 
 * *mexpr*: all in-memory expression types (all expressions excluding
-  cursors or other objects which retain network or other non-memory
+  cursors or other objects that retain network or other non-memory
   dependencies or resources)
 * *lexpr*: all expression types in N1QL logic, including mexpr and
   cursor.
@@ -146,8 +147,8 @@ init:
 ### Assignment
 
 An assignment statement assigns values to one or more variables that
-have already been declared.  Like golang, multiple variables are
-supported.
+have already been declared and are visible in the current scope.  Like
+golang, multiple variables are supported.
 
 assign:
 
@@ -273,7 +274,7 @@ continue:
 
 ### Pass
 
-A PASS statement does nothing; it is a noop. It is useful in places
+A PASS statement does nothing; it is a no-op. It is useful in places
 where at least one statement is required (e.g. in blocks).  PASS is
 borrowed from Python.  A NULL expression can also be used to
 equivalent effect.
@@ -325,12 +326,12 @@ rcvop:
 
 ## Expressions
 
-N1QL Logic uses a superset of the expressions used by N1QL Select and
-N1QL DML.
+N1QL Logic uses a superset of the expression types used by N1QL Select
+and N1QL DML.
 
 ### Memory expressions
 
-Memory expressions include all expressions that don't retain
+Memory expressions include all expressions that do not retain
 non-memory dependencies or resources.
 
 mexpr:
@@ -347,15 +348,13 @@ rcvexpr:
 
 #### First
 
-FIRST returns the first result of a cursor.
+FIRST returns the first result of a cursor, or NULL if the cursor's
+result set is empty.
 
 FIRST is equivalent to the SQL constructs SELECT ... INTO and UPDATE /
 INSERT / DELETE ... RETURNING INTO.  N1QL aims to be more streamlined
-by defining an expression instead of alternate syntax for query
+by providing FIRST expressions instead of alternate syntax for query
 statements.
-
-If the cursor returns an empty result set, the FIRST evaluates to
-NULL.
 
 first:
 
@@ -427,6 +426,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Logic inspired by RDBMS stored procedures, and by [The Go
       Programming Language](http://golang.org).
 * 2013-07-14 - Cosmetics
+    * Typos, wording.
+* 2013-07-15 - Cosmetics
     * Typos, wording.
 
 ### Open Issues
