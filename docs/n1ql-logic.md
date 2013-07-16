@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-logic](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-logic.md)
-* Modified: 2013-07-15
+* Modified: 2013-07-16
 
 ## Summary
 
@@ -30,6 +30,7 @@ the query language:
   down into the database.  This could be to reduce network traffic, to
   leverage database hardware, and to avoid complexities and risks of
   managing connections, connectivity, etc.
+
 * We could (and might) also embed host languages like Javascript and
   Lua in the database server to get similar logic capabilities.
   However, application developers would still be left with the
@@ -38,8 +39,10 @@ the query language:
   providing N1QL logic statements in the query language, it becomes
   natural and convenient for application developers to combine queries
   and logic.
+
 * These logic-in-QL capabilities are well validated.  All major
   database systems provide logic capabilities that are actively used.
+
 * N1QL borrows features from [The Go Programming
   Language](http://golang.org) and other newer programming languages.
   These features distinguish N1QL from other procedural database
@@ -47,13 +50,12 @@ the query language:
 
 ## Data types
 
-N1QL logic is similar to RDBMS stored procedure languages and to
-languages such as C, Java, Python, and Javascript.  As such, N1QL has
-a type system.
+N1QL has a type system, as do RDBMS procedural languages and languages
+such as C, Java, Python, and Javascript.
 
 In N1QL, variables are strongly but dynamically typed.  This means
-that variables aren't tied to specific data types, but runtime values
-do have specific data types.
+that variables are not statically tied to specific data types, but
+runtime values do have specific data types.
 
 The N1QL data types are:
 
@@ -332,7 +334,8 @@ and N1QL DML.
 ### Memory expressions
 
 Memory expressions include all expressions that do not retain
-non-memory dependencies or resources.
+non-memory dependencies or resources (e.g. cursors are excluded
+because they retain network resources).
 
 mexpr:
 
@@ -374,7 +377,7 @@ PREPARE evaluates to a prepared statement.  Its argument may be a
 query or a string-valued mexpr.  In either case, a special syntax is
 used to identify embedded query parameters.
 
-The arguments to USING introduce names to be used as query parameters.
+The arguments to USING introduce names of query parameters.
 
 prepare:
 
@@ -429,6 +432,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Typos, wording.
 * 2013-07-15 - Cosmetics
     * Typos, wording.
+* 2013-07-15 - Cosmetics
+    * Spacing, wording.
 
 ### Open Issues
 
