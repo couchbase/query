@@ -252,7 +252,7 @@ literal-value:
 
 The full specification for literal values can be found in Appendix 5.
 
-### Indentifier
+### Identifier
 
 identifier:
 
@@ -286,7 +286,7 @@ If the current context is the document:
     	"name": "n1ql"
     }
 
-Then the indentifier *name* would evaluate to the value n1ql.
+Then the identifier *name* would evaluate to the value n1ql.
 
 #### Case-sensitivity of identifiers
 
