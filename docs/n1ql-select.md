@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-07-15
+* Modified: 2013-07-16
 
 ## Summary
 
@@ -252,6 +252,8 @@ literal-value:
 
 The full specification for literal values can be found in Appendix 5.
 
+### Indentifier
+
 identifier:
 
 ![](diagram/identifier.png)
@@ -267,11 +269,11 @@ backtick characters.
 Keywords cannot be escaped; therefore, escaped identifiers can overlap
 with keywords.
 
-unescaped-identfier:
+unescaped-identifier:
 
 ![](diagram/unescaped-identifier.png)
 
-escaped-identfier:
+escaped-identifier:
 
 ![](diagram/escaped-identifier.png)
 
@@ -285,6 +287,26 @@ If the current context is the document:
     }
 
 Then the indentifier *name* would evaluate to the value n1ql.
+
+#### Case-sensitivity of identifiers
+
+Aliases are always case-insensitive.
+
+Field names within documents use the following case-sensitivity rules.
+
+* fieldname and \`fieldname\` use default behavior (see below)
+* \`fieldname\`i uses case-insensitive only
+* \`fieldname\`s uses case-sensitive only
+
+Default behavior:
+
+1. do a case-sensitive match
+2. if no match is found, do a case-insensitive match
+
+If a case-insensitive match finds more than one matching field,
+warnings or errors are generated.
+
+### Nested
 
 nested-expr:
 
@@ -307,6 +329,8 @@ Consider the following object:
 
  The expression `revisions[0]` evaluates to the value `2013`.
 
+### Case
+
 case-expr:
 
 ![](diagram/case-expr.png)
@@ -317,6 +341,8 @@ expression is the THEN expression.  If not, subsequent WHEN clauses
 are evaluated in the same manner.  If none of the WHEN clauses
 evaluate to TRUE, then the result of the expression is the ELSE
 expression.  If no ELSE expression was provided, the result is NULL.
+
+### Logical
 
 logical-term:
 
@@ -722,77 +748,122 @@ the beer datasource against the specified object literal.
 Function names are case in-sensitive.  The following functions are
 defined:
 
-CEIL(value) - if value is numeric, returns the smallest integer not less than the value.  otherwise, NULL.
+CEIL(value) - if value is numeric, returns the smallest integer not
+less than the value.  otherwise, NULL.
 
-FLOOR(value) - if value is numeric, returns the largest integer not greater than the value.  otherwise, NULL.
+FLOOR(value) - if value is numeric, returns the largest integer not
+greater than the value.  otherwise, NULL.
 
-GREATEST(expr, expr, ...) - returns the largest value of all the expressions.  if all values are NULL or MISSING returns NULL.
+GREATEST(expr, expr, ...) - returns the largest value of all the
+expressions.  if all values are NULL or MISSING returns NULL.
 
 IFMISSING(expr1, expr2, ...) - returns the first non-MISSING value
 
-IFMISSINGORNULL(expr1, expr2, ...) - returns the first non-NULL, non-MISSING value
+IFMISSINGORNULL(expr1, expr2, ...) - returns the first non-NULL,
+non-MISSING value
 
 IFNULL(epxr1, expr2, ...) - returns the first non-NULL value
 
 META() - returns the meta data for the document in the current context
 
-MISSINGIF(value1, value2) - if value1 = value 2, return MISSING, otherwise value1
+MISSINGIF(value1, value2) - if value1 = value 2, return MISSING,
+otherwise value1
 
-LEAST(expr, expr, ...) - returns the smallest non-NULL, non-MISSING of all the expressions.  if all valus are NULL or MISSING returns NULL.
+LEAST(expr, expr, ...) - returns the smallest non-NULL, non-MISSING of
+all the expressions.  if all valus are NULL or MISSING returns NULL.
 
-LENGTH(expr) - Returns the length of the value after evaluting the expression.  The exact meaning of length depends on the type of the value:
+LENGTH(expr) - Returns the length of the value after evaluting the
+expression.  The exact meaning of length depends on the type of the
+value:
 
 * string - the length of the string
 * array - the number of items in the array
 * object - the number of key/value pairs in the object
 * anything else - null
 
-LOWER(expr) - if expr is a string, the string is returned in all lower case.  otherwise NULL.
+LOWER(expr) - if expr is a string, the string is returned in all lower
+case.  otherwise NULL.
 
-LTRIM(expr, character set) - remove the longest string containing only the characters in the specified character set starting at the beginning
+LTRIM(expr, character set) - remove the longest string containing only
+the characters in the specified character set starting at the
+beginning
 
-NULLIF(value1, value2) - if value1 = value 2, return NULL, otherwise value1
+NULLIF(value1, value2) - if value1 = value 2, return NULL, otherwise
+value1
 
-ROUND(value) - if value is numeric, rounds to the nearest integer.  otherwise NULL.  same as ROUND(value, 0)
+ROUND(value) - if value is numeric, rounds to the nearest integer.
+otherwise NULL.  same as ROUND(value, 0)
 
-ROUND(value, digits) - if digits is an integer and value is numeric, rounds the value the specified number of digits. otherwise, NULL.
+ROUND(value, digits) - if digits is an integer and value is numeric,
+rounds the value the specified number of digits to the right of the
+decimal point (left if digits is negative). Otherwise, NULL.
 
-RTRIM(expr, character set) - remove the longest string containing only the characters in the specified character set starting at the end
+RTRIM(expr, character set) - remove the longest string containing only
+the characters in the specified character set starting at the end
 
-SUBSTR(value, position) - if value is a string and position is numeric returns a substring from the position to the end of the string.  string positions always start with 1.  if position is 0, it behaves as if you specified 1.  if position is a positive integer, characters are counted from the begining of the string.  if position is negative, characters are counted from the end of the string.  if value is not a string or position is not an integer, returns NULL.
+SUBSTR(value, position) - if value is a string and position is numeric
+returns a substring from the position to the end of the string.
+string positions always start with 1.  if position is 0, it behaves as
+if you specified 1.  if position is a positive integer, characters are
+counted from the begining of the string.  if position is negative,
+characters are counted from the end of the string.  if value is not a
+string or position is not an integer, returns NULL.
 
-SUBSTR(value, position, length) - if length is a positive integer behaves identical to SUBSTR(value, position) but only returns at most length characters.  otherwise NULL.
+SUBSTR(value, position, length) - if length is a positive integer
+behaves identical to SUBSTR(value, position) but only returns at most
+length characters.  otherwise NULL.
 
-TRIM(expr, character set) - synonym for LTRIM(RTRIM(expr, character set), character set)
+TRIM(expr, character set) - synonym for LTRIM(RTRIM(expr, character
+set), character set)
 
-TRUNC(value) - if the value is numeric, truncates towards zero.  otherwise NULL.  same as TRUNC(value, 0)
+TRUNC(value) - if the value is numeric, truncates towards zero.
+Otherwise NULL.  same as TRUNC(value, 0)
 
-TRUNC(value, digits) - if digits is an integer and value is numeric, truncates to the specific number of digits.  otherwise, NULL.
+TRUNC(value, digits) - if digits is an integer and value is numeric,
+truncates to the specific number of digits to the right of the decimal
+point (left if digits is negative).  Otherwise, NULL.
 
-UPPER(expr) - if expr is a string, the string is return in all upper case.  otherwise NULL.
+UPPER(expr) - if expr is a string, the string is return in all upper
+case.  Otherwise NULL.
 
 VALUE() - returns the full value for the item in the current context
 
 ### Aggregate Functions
 
-There are 5 aggregate functions, SUM, AVG, COUNT, MIN, and MAX.  Aggregate functions can only be used in SELECT, HAVING, and ORDER BY clauses.  When aggregate functions are used in expressions in these clauses, the query will operate as an aggregate query.  Aggregate functions take one argument, the value over which to compute the aggregate function.  The COUNT function can also take '*' as its argument.
+There are 5 aggregate functions, SUM, AVG, COUNT, MIN, and MAX.
+Aggregate functions can only be used in SELECT, HAVING, and ORDER BY
+clauses.  When aggregate functions are used in expressions in these
+clauses, the query will operate as an aggregate query.  Aggregate
+functions take one argument, the value over which to compute the
+aggregate function.  The COUNT function can also take '*' as its
+argument.
 
 #### Null/Missing/Non-numeric Elimination
 
 If the argument the aggregate function is '*' all rows are considered.
-If the argument to the aggregate function is anything else, then if the result of evaluating the expression is Null or Missing, that row is eliminated.
+If the argument to the aggregate function is anything else, then if
+the result of evaluating the expression is Null or Missing, that row
+is eliminated.
 
 COUNT(expr) - always returns 0 or a positive integer
 
-MIN(expr) - min returns the minimum value of all values in the group.  The minimum value is the first non-NULL, non-MISSING value that would result from an ORDER BY on the same expression.  min returns NULL if there are no non-NULL, non-MISSING values.
+MIN(expr) - min returns the minimum value of all values in the group.
+The minimum value is the first non-NULL, non-MISSING value that would
+result from an ORDER BY on the same expression.  min returns NULL if
+there are no non-NULL, non-MISSING values.
 
-MAX(expr) - max returns the maximum values of all values in the group.  The maximum value is the last value that would be returned from an ORDER BY  on the same expression.  max returns NULL if there are no non-NULL, non-MISSING values
+MAX(expr) - max returns the maximum values of all values in the group.
+The maximum value is the last value that would be returned from an
+ORDER BY on the same expression.  max returns NULL if there are no
+non-NULL, non-MISSING values
 
-For, AVG, and SUM, any row where the result of the expression is non-numeric is also eliminated.
+For AVG, and SUM, any row where the result of the expression is
+non-numeric is also eliminated.
 
 ## Appendix 3 - Operator Precedence
 
-The following operators are supported by N1QL.  The list is ordered from highest to lowest precedence.
+The following operators are supported by N1QL.  The list is ordered
+from highest to lowest precedence.
 
 * CASE/WHEN/THEN/ELSE/END
 * . 
@@ -818,8 +889,11 @@ the highest precedence)
 The following rules are the same as defined by
 [json.org](http://json.org/) with two changes:
 
-1.  In standard JSON arrays and objects only contain nested values.  In N1QL, literal arrays and objects can contain nested expressions.
-1.  In standard JSON "true", "false" and "null" are case-sensitive.  In N1QL, to be consistent with other keywords, they are defined to be case-insensitive.
+1. In standard JSON arrays and objects only contain nested values.  In
+   N1QL, literal arrays and objects can contain nested expressions.
+1. In standard JSON "true", "false" and "null" are case-sensitive.  In
+   N1QL, to be consistent with other keywords, they are defined to be
+   case-insensitive.
 
 literal-value:
 
@@ -1104,6 +1178,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added Appendix 7 on comments
 * 2013-07-15 - Added Open Issue
     * Added open issue on default aliases in results / projections
+* 2013-07-16 - Case-sensitivity and rounding
+    * Specified syntax for case-sensitivity of field names
+    * Specified behavior of ROUND() and TRUNC() functions
 
 ### Open Issues
 
