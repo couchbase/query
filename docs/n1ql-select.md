@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-07-16
+* Modified: 2013-07-17
 
 ## Summary
 
@@ -294,17 +294,17 @@ Aliases are always case-insensitive.
 
 Field names within documents use the following case-sensitivity rules.
 
-* fieldname and \`fieldname\` use default behavior (see below)
-* \`fieldname\`i uses case-insensitive only
-* \`fieldname\`s uses case-sensitive only
+* *fieldname* and *\`fieldname\`* use nearest-case matching (see below)
+* *\`fieldname\`i* uses case-insensitive matching only
+* *\`fieldname\`s* uses case-sensitive matching only
 
-Default behavior:
+##### Nearest-case matching
 
-1. do a case-sensitive match
-2. if no match is found, do a case-insensitive match
+1. do a case-sensitive match; if found, the matching is completed
+2. if no case-sensitive match is found, do a case-insensitive match
 
-If a case-insensitive match finds more than one matching field,
-warnings or errors are generated.
+If a case-insensitive or nearest-case match finds more than one
+matching field, a match is not made and warnings are generated.
 
 ### Nested
 
@@ -1181,6 +1181,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-16 - Case-sensitivity and rounding
     * Specified syntax for case-sensitivity of field names
     * Specified behavior of ROUND() and TRUNC() functions
+* 2013-07-17 - Case-sensitivity
+    * Renamed default case-sensitivity to nearest-case matching
+    * On duplicate matches, no match is made and warnings are generated
 
 ### Open Issues
 
