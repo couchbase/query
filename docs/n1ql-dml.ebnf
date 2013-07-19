@@ -11,12 +11,22 @@ dataset ::= path (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
 /*
  *  dml
  */
-dml-stmt ::= update | delete | insert-values | insert-select
+dml-stmt ::= update | delete | insert-values | insert-select | merge
 
-update ::= 'UPDATE' dataset ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' expr)? ('RETURNING' expr (',' expr)*)?
+update ::= 'UPDATE' dataset ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
 
-delete ::= 'DELETE' 'FROM' dataset ('WHERE' expr)? ('RETURNING' expr (',' expr)*)?
+delete ::= 'DELETE' 'FROM' dataset ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
 
-insert-values ::= 'INSERT' 'INTO' dataset ('WHERE' expr)? 'VALUES' '(' expr (',' expr)* ')' ('RETURNING' expr (',' expr)*)?
+insert-values ::= 'INSERT' 'INTO' dataset 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
 
 insert-select ::= 'INSERT' 'INTO' (pool-name ':')? bucket-name select ('RETURNING' expr (',' expr)*)?
+
+merge ::= 'MERGE' 'INTO' dataset 'USING' merge-source 'ON' '(' cond ')' (merge-update)? (merge-delete)? (merge-insert)? ('RETURNING' expr (',' expr)*)?
+
+merge-source ::= path (('AS')? alias)? | '(' select ')' ('AS')? alias | merge-source ('OVER' subpath (('AS')? alias)?)+
+
+merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' cond)?
+
+merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' ('WHERE' cond)?
+
+merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)?

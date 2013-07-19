@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-logic](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-logic.md)
-* Modified: 2013-07-16
+* Modified: 2013-07-19
 
 ## Summary
 
@@ -102,15 +102,15 @@ stmt:
 
 #### Expressions
 
-Several statements below use *mexpr* and *lexpr*:
+Several statements below use *mexpr*, *mcond*, and *lexpr*:
 
-* *mexpr*: all in-memory expression types (all expressions excluding
-  cursors or other objects that retain network or other non-memory
-  dependencies or resources)
+* *mexpr* and *mcond*: all in-memory expression types (all expressions
+  excluding cursors or other objects that retain network or other
+  non-memory dependencies or resources)
 * *lexpr*: all expression types in N1QL logic, including mexpr and
   cursor.
 
-Mexpr and lexpr are specified later in this document, under
+Mexpr, mcond, and lexpr are specified later in this document, under
 "Expressions".
 
 ### Begin
@@ -341,6 +341,10 @@ mexpr:
 
 ![](diagram/mexpr.png)
 
+mcond:
+
+![](diagram/mcond.png)
+
 #### Receive expr
 
 Receive a value and optional status from a channel.
@@ -432,8 +436,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Typos, wording.
 * 2013-07-15 - Cosmetics
     * Typos, wording.
-* 2013-07-15 - Cosmetics
+* 2013-07-16 - Cosmetics
     * Spacing, wording.
+* 2013-07-19 - mcond
+    * Added mcond to EBNF diagrams
 
 ### Open Issues
 

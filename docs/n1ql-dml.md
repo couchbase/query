@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-07-12
+* Modified: 2013-07-19
 
 ## Summary
 
@@ -89,6 +89,57 @@ insert-select:
 
 ![](diagram/insert-select.png)
 
+## MERGE
+
+MERGE performs upserts, including deletes, on documents and fragments.
+
+merge:
+
+![](diagram/merge.png)
+
+merge-source:
+
+![](diagram/merge-source.png)
+
+### MERGE-UPDATE
+
+The MERGE-UPDATE clause has the additional ability to UNSET fields,
+which removes the entire field, including its name, from the
+containing object.
+
+merge-update:
+
+![](diagram/merge-update.png)
+
+### MERGE-DELETE
+
+The MERGE-DELETE clause can delete entire documents or fragments
+within documents.  When deleting fragments, the DELETE statement does
+not UNSET fields in the containing object.  Array-valued fields are
+left as empty arrays, and scalar-valued fields are set to NULL.  In
+other words, MERGE-DELETE is always schema-safe for containing objects
+(unless NULL is a schema violation).
+
+merge-delete:
+
+![](diagram/merge-delete.png)
+
+### MERGE-INSERT
+
+MERGE-INSERT inserts documents or fragments specified in its VALUES
+clause.
+
+If the dataset identifies a bucket, each expr in VALUES is inserted as
+a new document in that bucket.
+
+If the dataset identifies a path within documents, the expr VALUES are
+evaluated in the context of each document and inserted as fragments at
+that location within each matching document.
+
+merge-insert:
+
+![](diagram/merge-insert.png)
+
 ## About this Document
 
 The
@@ -114,6 +165,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * DML statements return result sets (same as SELECT)
 * 2013-07-12 - EBNF
     * Added EBNF for dml-stmt
+* 2013-07-19 - Merge, Insert-Values, cond
+    * Added MERGE statement for upserts, based on input from prod mgmt
+    * Moved WHERE clause in INSERT-VALUES syntax
+    * Added cond to EBNF diagrams
 
 ### Open Issues
 

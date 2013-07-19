@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-07-17
+* Modified: 2013-07-19
 
 ## Summary
 
@@ -247,6 +247,10 @@ LIMIT.  The OFFSET value must be an integer.
 expr:
 
 ![](diagram/expr.png)
+
+cond:
+
+![](diagram/cond.png)
 
 literal-value:
 
@@ -1184,6 +1188,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-17 - Case-sensitivity
     * Renamed default case-sensitivity to nearest-case matching
     * On duplicate matches, no match is made and warnings are generated
+* 2013-07-19 - cond
+    * Added cond to EBNF diagrams
 
 ### Open Issues
 

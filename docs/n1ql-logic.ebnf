@@ -35,11 +35,11 @@ unset ::= 'UNSET' mexpr '.' subpath
  */
 ctrl ::= if | case | loop | break | continue | pass | return | deliver | defer
 
-if ::= 'IF' mexpr 'THEN' block ('ELSEIF' mexpr 'THEN' block)* ('ELSE' block)? 'END'
+if ::= 'IF' mcond 'THEN' block ('ELSEIF' mcond 'THEN' block)* ('ELSE' block)? 'END'
 
 case ::= full-case | searched-case
 
-full-case ::= 'CASE' ('WHEN' mexpr 'THEN' block)+ ('ELSE' block)? 'END'
+full-case ::= 'CASE' ('WHEN' mcond 'THEN' block)+ ('ELSE' block)? 'END'
 
 searched-case ::= 'CASE' mexpr ('WHEN' mexpr 'THEN' block)+ ('ELSE' block)? 'END'
 
@@ -49,7 +49,7 @@ label-name ::= identifier
 
 loop ::= (label)? (while | for)
 
-while ::= 'WHILE' mexpr 'DO' block 'END'
+while ::= 'WHILE' mcond 'DO' block 'END'
 
 for ::= for-iter | for-map
 
@@ -80,6 +80,8 @@ rcvop ::= var (',' var)? (':=' | '::=') rcvexpr
  *  expr
  */
 mexpr ::= expr | rcvexpr | first
+
+mcond ::= mexpr
 
 rcvexpr ::= '<-' mexpr
 
