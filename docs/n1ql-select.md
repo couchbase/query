@@ -1145,7 +1145,7 @@ line-comment:
 
 ## Appendix 8 - JOIN result objects
 
-### When doing a document join such as
+### Internal FROM structure
 
 SELECT ... FROM contacts AS contact OVER children AS child
 
@@ -1167,12 +1167,12 @@ We agree that there is an internal structure like:
 }
 }
 
-### What should SELECT * produce?
+### SELECT *
 
 We agree that it should NOT flatten the top-level fields, instead it
 should return that internal representation shown above.
 
-### What should SELECT child.* produce?
+### SELECT child.*
 
 There was no debate, this should return:
 
@@ -1181,7 +1181,7 @@ There was no debate, this should return:
     "age": 17
 }
 
-### What should SELECT name produce?
+### SELECT name
 
 There was agreement that this should produce a semantic error.
 
@@ -1192,7 +1192,7 @@ queries, the implementation can convert informal names (omitting
 bucket/alias) into formal names (containing the bucket/alias).  This
 will mean no conversions or special rules at data lookup time.
 
-### What should SELECT VALUE() FROM contacts AS contact OVER children AS child produce?
+### SELECT VALUE() FROM contacts AS contact OVER children AS child
 
 Agreement that it should produce:
 
@@ -1200,7 +1200,7 @@ Agreement that it should produce:
 "$1": <output from star>
 }
 
-### What should SELECT VALUE(contact) FROM contacts AS contact OVER children AS child
+### SELECT VALUE(contact) FROM contacts AS contact OVER children AS child
 
 Agreement that it should produce:
 
@@ -1210,7 +1210,7 @@ Agreement that it should produce:
 }
 }
 
-### What should SELECT VALUE(contact.name) ....produce?
+### SELECT VALUE(contact.name) ...
 
 Agreement that it should produce: (this is because VALUE() is defined
 to work on all different data types already)
@@ -1219,12 +1219,12 @@ to work on all different data types already)
 "$1": "marty"
 }
 
-### What should SELECT META() FROM contacts AS contact OVER children AS child produce?
+### SELECT META() FROM contacts AS contact OVER children AS child
 
 Agreement that it should produce semantic error.  Part of the
 reasoning, is that if we look ahead to future joins of the form:
 
-SELECT ... FROM AS A.... AS B
+SELECT ... FROM AS A ... AS B
 
 META(A) - a's meta
 META(B) - b's meta
@@ -1237,7 +1237,7 @@ non-join queries.  JOIN queries must provide 1 argument, where that
 argument is the bucket/alias name.  Otherwise semantic error is
 returned.
 
-### What should SELECT * FROM contacts.children[0] OVER friends return?
+### SELECT * FROM contacts.children[0] OVER friends
 
 Agreement that it should be semantic error.  For now it is safest to
 simply inform the user they must provide an explicit alias.  We can
