@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-07-19
+* Modified: 2013-07-23
 
 ## Summary
 
@@ -1143,6 +1143,106 @@ line-comment:
 
 ![](diagram/line-comment.png)
 
+## Appendix 8 - JOIN result objects
+
+### When doing a document join such as
+
+SELECT ... FROM contacts AS contact OVER children AS child
+
+We agree that there is an internal structure like:
+
+{
+"contact": {
+  "name": "marty",
+  "children": [
+    {
+    
+...
+    }
+  ]
+},
+"child": {
+  "name": "gerald"
+  "age": 17
+}
+}
+
+### What should SELECT * produce?
+
+We agree that it should NOT flatten the top-level fields, instead it
+should return that internal representation shown above.
+
+### What should SELECT child.* produce?
+
+There was no debate, this should return:
+
+{
+   "name": "gerald",
+    "age": 17
+}
+
+### What should SELECT name produce?
+
+There was agreement that this should produce a semantic error.
+
+At this point we can summarize that queries involving a JOIN must
+prefix all property access with bucket/alias names.  Omitting the
+prefix in those queries is a semantic error.  Further, for non-JOIN
+queries, the implementation can convert informal names (omitting
+bucket/alias) into formal names (containing the bucket/alias).  This
+will mean no conversions or special rules at data lookup time.
+
+### What should SELECT VALUE() FROM contacts AS contact OVER children AS child produce?
+
+Agreement that it should produce:
+
+{
+"$1": <output from star>
+}
+
+### What should SELECT VALUE(contact) FROM contacts AS contact OVER children AS child
+
+Agreement that it should produce:
+
+{
+"$1": {
+  contents of contact
+}
+}
+
+### What should SELECT VALUE(contact.name) ....produce?
+
+Agreement that it should produce: (this is because VALUE() is defined
+to work on all different data types already)
+
+{
+"$1": "marty"
+}
+
+### What should SELECT META() FROM contacts AS contact OVER children AS child produce?
+
+Agreement that it should produce semantic error.  Part of the
+reasoning, is that if we look ahead to future joins of the form:
+
+SELECT ... FROM AS A.... AS B
+
+META(A) - a's meta
+META(B) - b's meta
+META() - semantic error?
+
+Here it seems clear that META() should just be an error.
+
+In summary, the 0 argument version of META() is only valid for
+non-join queries.  JOIN queries must provide 1 argument, where that
+argument is the bucket/alias name.  Otherwise semantic error is
+returned.
+
+### What should SELECT * FROM contacts.children[0] OVER friends return?
+
+Agreement that it should be semantic error.  For now it is safest to
+simply inform the user they must provide an explicit alias.  We can
+always improve this later.
+
 ## About this Document
 
 The
@@ -1190,6 +1290,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * On duplicate matches, no match is made and warnings are generated
 * 2013-07-19 - cond
     * Added cond to EBNF diagrams
+* 2013-07-23 - JOIN result objects
+    * Added Appendix on JOIN result objects
 
 ### Open Issues
 
