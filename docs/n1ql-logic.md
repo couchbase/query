@@ -8,10 +8,11 @@
 
 N1QL is a query language for Couchbase, and is a continuation of
 [UNQL](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/unql-2013.md).
-This document builds on the [N1QL Select
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-and the [N1QL DML
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md).
+This document builds on the [N1QL
+Select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
+and [N1QL
+DML](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
+specs.
 
 This document describes the syntax and semantics of the logic
 statements in the language.  These are sometimes called procedural or

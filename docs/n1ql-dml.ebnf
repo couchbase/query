@@ -11,9 +11,9 @@ dataset ::= path (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
 /*
  *  dml
  */
-dml-stmt ::= update | delete | insert-values | insert-select | merge
+dml-stmt ::= update | delete | insert-values | insert-select | merge | truncate
 
-update ::= 'UPDATE' dataset ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
+update ::= 'UPDATE' dataset (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)) (',' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)))* ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
 
 delete ::= 'DELETE' 'FROM' dataset ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
 
@@ -25,8 +25,12 @@ merge ::= 'MERGE' 'INTO' dataset 'USING' merge-source 'ON' '(' cond ')' (merge-u
 
 merge-source ::= path (('AS')? alias)? | '(' select ')' ('AS')? alias | merge-source ('OVER' subpath (('AS')? alias)?)+
 
-merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' ('SET' subpath '=' expr (',' subpath '=' expr)* (',' 'UNSET' subpath (',' subpath)*)? | 'UNSET' subpath (',' subpath)*) ('WHERE' cond)?
+merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)) (',' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)))* ('WHERE' cond)?
 
 merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' ('WHERE' cond)?
 
 merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)?
+
+truncate ::= 'TRUNCATE' ('BUCKET')? (pool-name ':')? bucket-name
+
+bucket-name ::= identifier

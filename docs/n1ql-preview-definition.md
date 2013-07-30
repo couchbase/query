@@ -1,0 +1,211 @@
+# N1QL Preview&mdash;Language Definition
+
+* Status: DRAFT/PROPOSAL
+* Latest: [n1ql-preview-definition](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-definition.md)
+* Modified: 2013-07-25
+
+## Introduction
+
+## Background
+
+[N1NF](https://en.wikipedia.org/wiki/Database_normalization#Non-first_normal_form_.28NF.C2.B2_or_N1NF.29)
+
+## Document Model
+
+## SELECT Statement
+
+### SELECT Clause
+
+#### DISTINCT
+
+### FROM Clause
+
+### WHERE Clause
+
+### GROUP BY Clause
+
+### HAVING Clause
+
+### ORDER BY Clause
+
+### LIMIT Clause
+
+### OFFSET Clause
+
+## EXPLAIN Statement
+
+## Operators
+
+## Functions
+
+### Aggregate Functions
+
+## Tokens
+
+### Identifiers
+
+#### Case Matching
+
+### Literals
+
+## Reserved Words
+
+1. ALL
+1. ALTER
+1. ANALYZE
+1. AND
+1. ANY
+1. APPEND
+1. ARRAY
+1. AS
+1. ASC
+1. AVG
+1. BEGIN
+1. BETWEEN
+1. BITMAP
+1. BREAK
+1. BUCKET
+1. BY
+1. CASE
+1. CHANNEL
+1. CLOSE
+1. CLUSTER
+1. COMMIT
+1. COND
+1. CONTINUE
+1. COPY
+1. COUNT
+1. CREATE
+1. CURSOR
+1. DECLARE
+1. DEFER
+1. DELETE
+1. DELIVER
+1. DESC
+1. DIAGNOSTICS
+1. DISABLE
+1. DISTINCT
+1. DO
+1. DOCUMENT
+1. DROP
+1. ELSE
+1. ELSE
+1. ELSEIF
+1. ENABLE
+1. END
+1. ERROR
+1. EXCEPT
+1. EXCEPTION
+1. EXECUTE
+1. EXISTS
+1. EXPLAIN
+1. FALSE
+1. FETCH
+1. FIELD
+1. FIRST
+1. FOR
+1. FOUND
+1. FROM
+1. FULL
+1. FUNCTION
+1. GET
+1. GO
+1. GREATEST
+1. GROUP
+1. HASH
+1. HAVING
+1. ID
+1. IF
+1. IMPORT
+1. IN
+1. INDEX
+1. INNER
+1. INSERT
+1. INTO
+1. IS
+1. JOIN
+1. KEY
+1. LEAST
+1. LEFT
+1. LENGTH
+1. LIMIT
+1. LOWER
+1. LTRIM
+1. MAP
+1. MATCHED
+1. MATERIALIZED
+1. MAX
+1. MERGE
+1. META
+1. MIN
+1. MISSING
+1. NATURAL
+1. NEW
+1. NEXT
+1. NODE
+1. NOT
+1. NOTFOUND
+1. NOTICE
+1. NULL
+1. OBJECT
+1. OFFSET
+1. OLD
+1. ON
+1. OPEN
+1. OR
+1. ORDER
+1. OTHERS
+1. OUT
+1. OUTER
+1. OVER
+1. PARTITION
+1. PASS
+1. PLAN
+1. POOL
+1. PREPARE
+1. PROCEDURE
+1. PUT
+1. RAISE
+1. RANGE
+1. RECEIVE
+1. REF
+1. RENAME
+1. REPLACE
+1. RETURN
+1. RETURNING
+1. RIGHT
+1. ROLLBACK
+1. ROUTINE
+1. ROWCOUNT
+1. RTRIM
+1. SATISFIES
+1. SCALAR
+1. SCHEMA
+1. SELECT
+1. SEND
+1. SET
+1. SNAPSHOT
+1. SOME
+1. STATE
+1. STATISTICS
+1. SUM
+1. THEN
+1. TRANSACTION
+1. TRIGGER
+1. TRIM
+1. TRUE
+1. UNIQUE
+1. UNSET
+1. UPDATE
+1. UPPER
+1. UPSERT
+1. USING
+1. VALUE
+1. VALUED
+1. VALUES
+1. VIEW
+1. WARNING
+1. WHEN
+1. WHERE
+1. WHILE
+1. WORK

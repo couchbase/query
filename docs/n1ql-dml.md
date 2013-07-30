@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-07-19
+* Modified: 2013-07-30
 
 ## Summary
 
@@ -42,9 +42,12 @@ set.
 
 ## UPDATE
 
-The UPDATE statement has the additional ability to UNSET fields, which
-removes the entire field, including its name, from the containing
-object.
+The UPDATE statement has two additional clauses: UNSET and RENAME.
+
+UNSET removes the entire field, including its name, from the
+containing object.
+
+RENAME renames the field in the containing object.
 
 update:
 
@@ -140,6 +143,19 @@ merge-insert:
 
 ![](diagram/merge-insert.png)
 
+## TRUNCATE
+
+TRUNCATE deletes all the documents in a bucket. It cannot be rolled
+back.
+
+truncate:
+
+![](diagram/truncate.png)
+
+bucket-name:
+
+![](diagram/bucket-name.png)
+
 ## About this Document
 
 The
@@ -169,6 +185,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added MERGE statement for upserts, based on input from prod mgmt
     * Moved WHERE clause in INSERT-VALUES syntax
     * Added cond to EBNF diagrams
+* 2013-07-30 - Update-Rename, Truncate
+    * Added UPDATE-RENAME clause
+    * Added TRUNCATE statement
 
 ### Open Issues
 
