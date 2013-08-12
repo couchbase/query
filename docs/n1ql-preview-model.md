@@ -77,7 +77,8 @@ us informally summarize the principal relational normal forms.
   simply contain a single *Address* attribute, because a 1NF attribute
   must be atomic and cannot be decomposable into components. Thus
   *Customer\_Address* would need to contain attributes such as
-  *Street\_Address*, *City*, *Zip*, and *State.*
+  *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*, *Zip*, and
+  *State.*
 
   The practical rules for ensuring 1NF are:
 
@@ -151,9 +152,28 @@ candidate key.
   table. Unlike a candidate key, a superkey does not need to be a
   *minimal* set of attributes. Every candidate key is also a superkey.
 
-* **Third normal form (3NF)** requires that a table be in 2NF and...
+* **Third normal form (3NF)** requires that a table be in 2NF and that
+  every non-prime attribute be directly dependent on every superkey
+  and completely independent of every other non-key attribute. As
+  Wikipedia quotes Bill Kent: "Every non-key attribute must provide a
+  fact about the key, the whole key, and nothing but the key (so help
+  me Codd)."
 
-Foo
+  To obey 1NF, we created a *Customer\_Address* table and included the
+  attributes *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*,
+  *Zip*, and *State.* But this table contains a violation of
+  3NF. *Zip* always determines *State*, and *Zip* and *State* are both
+  non-primary attributes. Therefore, the non-primary attribute *State*
+  is dependent on the non-key attribute *Zip*, which is a violation of
+  3NF. We would need to create a separate *Zip* table with mappings
+  from zip codes to states.
+
+  The practical rules for ensuring 3NF are:
+    * Ensure 1NF and 2NF
+    * Remove attributes that are not directly dependent on the primary
+      key
+
+Logical independence.
 
 * tuples and relations (sets)
 * candidate keys
