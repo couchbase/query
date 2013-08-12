@@ -31,6 +31,6 @@ merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' ('WHERE' cond)?
 
 merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)?
 
-truncate ::= 'TRUNCATE' ('BUCKET')? (pool-name ':')? bucket-name
+truncate ::= 'TRUNCATE' 'BUCKET' (pool-name ':')? bucket-name
 
 bucket-name ::= identifier

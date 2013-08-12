@@ -146,7 +146,7 @@ merge-insert:
 ## TRUNCATE
 
 TRUNCATE deletes all the documents in a bucket. It cannot be rolled
-back.
+back, and it cannot be called within or participate in transactions.
 
 truncate:
 
@@ -188,6 +188,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-30 - Update-Rename, Truncate
     * Added UPDATE-RENAME clause
     * Added TRUNCATE statement
+* 2013-07-30 - Truncate
+    * Required BUCKET after TRUNCATE, to make it more self-documenting
+    * Clarified that TRUNCATE does not participate in transactions
 
 ### Open Issues
 
