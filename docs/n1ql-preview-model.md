@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-11
+* Modified: 2013-08-12
 
 ## Introduction
 
@@ -36,9 +36,9 @@ data model. In database formalism, the Couchbase data model is called
 Non-First Normal Form, or N1NF. This model is a superset of the
 relational data model, which requires data normalization to First
 Normal Form (1NF) and advocates further normalization to Third Normal
-Form (3NF). We briefly summarize the relational model and its
-normalization principles, and then proceeed to the Couchbase N1NF
-model and its encoding in JSON documents.
+Form (3NF). We summarize the relational model and its normalization
+principles, and then proceeed to the Couchbase N1NF model and its
+encoding in JSON documents.
 
 ### Relational model and normalization
 
@@ -49,15 +49,14 @@ value. All the rows of a given table have the same attributes. If a
 row does not have a value for a given attribute, that attribute is
 assigned the special value NULL.
 
-For illustration, let us use an example data set from a shopping cart
+For illustration, we use an example data set from a shopping cart
 application. The data set contains the following artifacts:
 
 * *Customer* (identity, addresses, payment methods)
-* *Product* (title, code, description, unit price, reviews)
+* *Product* (title, code, description, unit price)
 * *Shopping Cart* (customer, shipping address, payment method, line items)
 
-Before considering a relational representation of this data set, let
-us informally summarize the principal relational normal forms.
+Let us review the principal relational normal forms.
 
 * **First normal form (1NF)** requires that each attribute of every
   row contain only a single, atomic value. An attribute cannot contain
@@ -170,21 +169,66 @@ candidate key.
 
   The practical rules for ensuring 3NF are:
     * Ensure 1NF and 2NF
-    * Remove attributes that are not directly dependent on the primary
-      key
+    * Remove attributes that are not directly and exclusively
+      dependent on the primary key
 
-Logical independence.
+#### Benefits
 
-* tuples and relations (sets)
-* candidate keys
-* 1st, 2nd, 3rd normal forms
-* logical independence, access paths, history
-* joins, indexes (inverted entries)
-* normalization practice
-* updates vs. reads
-* data warehouses, analytics
-* relationship tables
-* schemas
+The relational model and its normalization principles achieved several
+benefits. Data duplication was minimized, which enhanced data
+consistency and compactness of storage. Data updates could be granular
+and authoritative. And a high degree of physical indepedence was
+ensured by the model: because data was normalized into discrete and
+directly accessible tables, no single traversal path or object
+composition was favored to the exclusion of others.
+
+#### Costs
+
+The costs of the relational model in performance and complexity arose
+primarily from one cause: **The relational model did not model the
+intrinsic structure of most data, and instead forced users to choose
+between normalization, consistency, and mandatory joins on the one
+hand; and denormalization, duplication, and update anomalies on the
+other.**
+
+Our example data set has three independent artifacts: *Customer,
+Product, and Shopping Cart.* The relational model would force us to
+introduce at least two additional tables: *Customer\_Address* and
+*Shopping\_Cart\_Line\_Item.* Note that:
+
+* *Customer\_Address* and *Shopping\_Cart\_Line\_Item* belong to
+  *Customer* and *Shopping\_Cart*, respectively, and have no
+  independent existence of their own.
+* In applications, *Customer* is almost always loaded and displayed
+  with its addresses, and *Shopping\_Cart* is almost always loaded and
+  displayed with its line items. The expense and complexity of these
+  joins is incurred on almost every query.
+* These two additional tables, and the attendant joins, were
+  introduced solely to satisfy the relational model. **There was no
+  application, domain, or user impetus to perform this
+  decomposition.**
+
+A good indicator that a table has no independent existence and was
+introduced to satisfy the relational model is if the table would be
+defined with cascading delete on a single parent table if referential
+integrity were in use. Such decomposition does not model the intrinsic
+structure of the data.
+
+The relational model did not recognize composite objects, which are
+ubiquitous in real-world data. The expense and complexity of joins was
+the same for both independent and dependent relationships. And the
+cost of object traversal and assembly was the same for both the
+intrinsic, preponderant traversal path, and alternate, occasional
+traversal paths.
+
+Many relational systems recognized these costs and their cause in the
+relational model itself, and they attempted to mitigate this by adding
+some support for nested objects, multi-valued attributes, and other
+features sometimes called "object-relational." But these additions
+were outside the relational model, and the resulting combination
+lacked the coherence and completeness of a model designed from
+inception to address these limitations. The next section presents that
+model.
 
 ### The Couchbase model and non-first normal form
 
@@ -242,27 +286,18 @@ Logical independence.
 * fragment-oriented indexing
 * scale-out, distribution, scatter-gather
 * ACID semantics undergoing definition, design, tradeoffs
+* deterministic vs. non-deterministic
+    * persistence
+    * consistency
+* trade off failure rate vs. determinism
 
 ## Conclusion
-
-## Sample dataset
-
-* Shopping cart
-* Products, quantities, prices
-* Customer master
-    * Addresses
-    * Payment methods
-    * Phone numbers
-    * Sales history 
-* Product master
-    * Images
-    * Reviews
 
 ## About this document
 
 ### Document history
 
-* 2013-08-11 - Initial version
+* 2013-08-12 - Initial version
 
 ### Open issues
 
