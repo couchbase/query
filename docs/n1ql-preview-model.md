@@ -1,8 +1,10 @@
 # The Couchbase Query Model&mdash;A Preview
 
+Gerald Sangudi
+
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-12
+* Modified: 2013-08-18
 
 ## Introduction
 
@@ -18,9 +20,9 @@ the overall Couchbase approach, and not a specific feature set
 associated with a product release or point in time.
 
 The remaining sections discuss the Couchbase data model; the Couchbase
-query model; Couchbase's new query language N1QL (pronounced
-"nickel"), which is the first flavor and implementation of the
-Couchbase query model; and query semantics at scale.
+query model; the new query language N1QL (pronounced "nickel"), which
+is the first flavor and implementation of the Couchbase query model;
+and query semantics at scale.
 
 ## Data model
 
@@ -78,6 +80,11 @@ Let us review the principal relational normal forms.
   *Customer\_Address* would need to contain attributes such as
   *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*, *Zip*, and
   *State.*
+
+  Similarly, multiple line items per shopping cart could not be stored
+  in the *Shopping\_Cart* table. Instead, we would create a separate
+  *Shopping\_Cart\_Line\_Item* table, with attributes including
+  *Line\_Item\_Id, Shopping\_Cart\_Id, Product\_Id,* and *Quantity.*
 
   The practical rules for ensuring 1NF are:
 
@@ -205,41 +212,130 @@ introduce at least two additional tables: *Customer\_Address* and
   joins is incurred on almost every query.
 * These two additional tables, and the attendant joins, were
   introduced solely to satisfy the relational model. **There was no
-  application, domain, or user impetus to perform this
-  decomposition.**
+  application, domain, or user impetus for this decomposition.**
 
 A good indicator that a table has no independent existence and was
 introduced to satisfy the relational model is if the table would be
-defined with cascading delete on a single parent table if referential
-integrity were in use. Such decomposition does not model the intrinsic
-structure of the data.
+defined with cascading delete on a single parent table under
+referential integrity. Such decomposition of constituent parts does
+not model the intrinsic structure of data.
 
 The relational model did not recognize composite objects, which are
 ubiquitous in real-world data. The expense and complexity of joins was
 the same for both independent and dependent relationships. And the
 cost of object traversal and assembly was the same for both the
-intrinsic, preponderant traversal path, and alternate, occasional
-traversal paths.
+preponderant traversal path and rarely used traversal paths.
 
-Many relational systems recognized these costs and their cause in the
-relational model itself, and they attempted to mitigate this by adding
-some support for nested objects, multi-valued attributes, and other
-features sometimes called "object-relational." But these additions
-were outside the relational model, and the resulting combination
-lacked the coherence and completeness of a model designed from
-inception to address these limitations. The next section presents that
-model.
+Many relational systems recognized these costs in the relational
+model, and attempted to mitigate these costs by adding some support
+for nested objects, multi-valued attributes, and other features
+sometimes called "object-relational." But these additions were outside
+the relational model, and the resulting combination lacked the
+coherence and completeness of a data model designed from inception to
+avoid these limitations. The next section presents that data model.
 
-### The Couchbase model and non-first normal form
+### Couchbase data model and non-first normal form
 
-* generalized algebra / model (Garani)
-* generalization / relaxation of relational model
-* Business Normal Form, natural data modeling
-* rectangles and triangles
-* use cases
-* good vs. bad normalization
-* dependent vs. independent relationships
-* schemaless to schemaful
+The Couchbase data model is non-first normal form (N1NF) with
+first-class nesting and domain-oriented normalization. As N1NF, the
+Couchbase data model is also a proper superset and generalization of
+the relational model. Let us examine each of its qualities.
+
+#### Non-first normal form (N1NF)
+
+Non-first normal form (N1NF) generalizes the two main constraints of
+first-normal form (1NF):
+
+* Attributes may contain tuples as values, i.e. attribute values are
+  not required to be atomic. This is called nesting.
+* Attributes may contain multiple values, i.e. attribute are not
+  required to single-valued.
+
+These two qualities provide the ability to naturally model the
+structure of real-world data and objects. Dependent and component
+objects are modeled as nested tuples. And multi-valued attributes are
+modeled directly.
+
+Returning to our shopping cart example, we can now remove the
+artificial decomposition and joins required by the relational
+model. We can embed the *Customer\_Address* and
+*Shopping\_Cart\_Line\_Item* data directly in the *Customer* and
+*Shopping\_Cart* tables, respectively.
+
+In the *Customer* table, we add an attribute *Addresses*. This is a
+multi-valued attribute, and each of its values is a tuple with the
+attributes from the *Customer\_Address* table: *Address\_Id,
+Street\_Address, City, Zip,* and *State.*
+
+In the *Shopping\_Cart* table, we add an attribute *Line\_Items*. This
+is a multi-valued attribute, and each of its values is a tuple with
+attributes from the *Shopping\_Cart\_Line\_Item* table, including
+*Line\_Item\_Id, Product\_Id,* and *Quantity.*
+
+Now, *Customer* and *Shopping\_Cart* objects can be retrieved with or
+without addresses and line items, respectively, but never requiring
+joins. The choice is simply whether or not to include the *Addresses*
+and *Line\_Items* attributes, respectively, in the retrieval.
+
+#### First-class nesting
+
+In the Couchbase data model, nested tuples can be referenced and
+queried in the same manner as top-level objects. We call this
+first-class nesting. With first-class nesting, the Couchbase data
+model combines the benefits of N1NF and 1NF.
+
+As discussed, N1NF provides natural modeling of object structure and
+avoids artificial decompositions and joins. In our shopping cart
+example, that means embedding address and line items in the *Customer*
+and *Shopping\_Cart* tables, respectively.
+
+1NF does incur the costs of artificial decomposition and joins, but it
+offers at least one benefit. It allows us to access dependent objects
+directly, without reference to the corresponding parent objects. This
+is a form of physical data independence. For example, if we needed to
+analyze the geographical distribution of customer addresses, without
+reference to actual customers, we could do so using only the
+*Customer\_Address* table. Likewise, if we needed to analyze the
+distribution of products in line items, we could do so using only the
+*Shopping\_Cart\_Line\_Item* table.
+
+With first-class nesting, the Couchbase data model allows us to
+reference nested objects. We can reference and query the
+*Customer.Addresses* and *Shopping\_Cart.Line\_Items* attributes in
+the same manner as top-level objects. As such, we can directly perform
+both computations enabled by 1NF above: analyzing the geographical
+distribution of customer addresses, and analyzing the distribution of
+products in line items.
+
+At the same time, we retain the benefits of N1NF: we can retrieve
+customers with their addresses and shopping carts with their line
+items, all without any joins.
+
+#### Domain-oriented normalization
+
+Domain-oriented normalization is the normalization of data based only
+on domain semantics and object independence, and not on artificial
+constraints imposed by the data model. It separates beneficial
+normalization from detractive normalization.
+
+Domain-oriented normalization can be used to achieve the same data
+consistency, data de-duplication, and anomaly avoidance as the
+relational normal forms.
+
+In our shopping cart example, we have described how the Couchbase data
+model allows customer addresses and shopping cart line items to be
+embedded in their respective parent objects. This does not introduce
+denormalization or data duplication, because the parent information is
+not repeated.
+
+Furthermore, *Customer* and *Product* information is not embedded in
+*Shopping\_Cart*, because these entities are intrinsically independent
+in the semantics of the domain. A *Customer* exists independently of
+the shopping carts he or she activates, and a *Product* exists
+independently of the shopping carts that reference it.
+
+A Couchbase application data model with domain-oriented normalization
+is considered to be in domain normal form (or business normal form).
 
 ### Documents and fragments
 
@@ -256,40 +352,54 @@ model.
 
 ## Query model
 
-* generalization / relaxation of relational query semantics (SQL)
+* generalization / relaxation of relational queries (SQL)
+* rectangles and triangles
 * single dataspace
 * document boundaries as physical, not logical
 * document as optimized access path
 * fragments as first-class queryable objects; same as top-level documents
 * fragment-oriented QL: paths, DML, vectors + scalars, etc.
-* NULL vs. MISSING
-* collections exprs: ANY / ALL / FIRST / comprehensions
+* collection exprs: ANY / ALL / FIRST / ARRAY
 * document JOINs: OVER
 * cross-document JOINs (good vs. bad JOINs)
+
+More.
+
+* FROM: Sourcing
+* WHERE: Filtering
+* GROUP BY: Grouping and aggregating
+* HAVING: Group filtering
+* SELECT: Projecting
+* ORDER BY: Ordering
+* LIMIT / OFFSET: Paginating
+
+More:
+
+* Expressions
+* Functions
+* Object construction and transformation
+* Traversal
+* Path joins
+* Addressing
+* Joining
 
 ## Query language
 
 * SQL-like flavor; others
 * JSON expressions and return values
 * paths
-* FROM OVER
-* ANY / ALL OVER
 * DML upcoming
 * fragment-oriented QL: paths, DML, vectors + scalars, etc.
-* NULL vs. MISSING
-* collections exprs: ANY / ALL / FIRST / comprehensions
+* collection exprs: ANY / ALL / FIRST / ARRAY
 * document JOINs: OVER
 * cross-document JOINs (good vs. bad JOINs)
 
 ## Query semantics at scale
 
-* fragment-oriented indexing
-* scale-out, distribution, scatter-gather
-* ACID semantics undergoing definition, design, tradeoffs
-* deterministic vs. non-deterministic
-    * persistence
-    * consistency
-* trade off failure rate vs. determinism
+* fragment indexing
+* scatter-gather
+* ACID and determinism
+* trade-off of failure vs. determinism
 
 ## Conclusion
 
@@ -297,7 +407,7 @@ model.
 
 ### Document history
 
-* 2013-08-12 - Initial version
+* 2013-08-18 - Initial version
 
 ### Open issues
 
