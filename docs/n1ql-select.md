@@ -1298,20 +1298,19 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 This meta-section records open issues in this document, and will
 eventually disappear.
 
-1. Review truth values for IS/IS NOT NULL/MISSING/VALUED - There is ongoing discussion about what the correct truth value should be.  Here are some of the points being discussed:
-  *  Should IS/IS NOT NULL (the most familiar to SQL users) just do what you want, even if that deviates from the natural language meaning of the words
-  *  Should IS/IS NOT versions of the operators always imply opposite truth values
-  *  As currently defined, IS/IS NOT VALUED is not needed as its truth values are the same as IS NOT/IS NULL (respecitvely)
+1. NULL / MISSING. Merge NULL and MISSING as follows: retain IS [ NOT
+   ] MISSING, but treat NULL and MISSING as identical in all other
+   respects (except sorting?). Remove some other references to
+   MISSING. Remove IS [ NOT ] VALUED.
 
 1. Document handling of NaN and +/- infinity as these may arise during
    expression evaluation and cannot be represented in standard JSON.
 
-1. EXISTS as currently defined returns TRUE for MISSING fields (which
-   return rows with empty objects).
+1. Add [*] operator for array traversal.
 
-1. Should we require that datasets terminate in an array-valued field?
-   This would clarify / simplify most of the issues above.  Ditto for
-   DML.
+1. Collection expressions: Add IN; support non-path exprs
+   * ANY / ALL expr OVER ident IN expr
+   * FIRST / ARRAY expr OVER ident IN expr [ WHEN expr ]
 
-1. We need exhaustive rules for generating default aliases in result
-   objects and projections.
+1. FROM OVER:
+   * FROM path [ [ AS ] alias ] (OVER ident IN subpath)*
