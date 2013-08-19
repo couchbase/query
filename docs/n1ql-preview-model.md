@@ -20,9 +20,9 @@ Couchbase approach, and not a specific feature set associated with a
 product release or point in time.
 
 The following sections discuss the Couchbase data model; the Couchbase
-query model; the new query language N1QL (pronounced "nickel"), which
-is the first flavor and incarnation of the Couchbase query model; and
-query semantics at scale.
+query model; and the new query language N1QL (pronounced "nickel"),
+which is the first flavor and incarnation of the Couchbase query
+model.
 
 ## Data model
 
@@ -547,7 +547,7 @@ additional expressions and functions from the Couchbase query model.
 
 This section is not a complete or authoritative reference. The syntax
 presented here is meant to illustrate the style and highlight some
-features of the language.
+non-relational features of the language.
 
 ### Statement format
 
@@ -559,11 +559,11 @@ The format of a N1QL query statement is:
 
     [ FROM from-term ]
 
-    [ WHERE expression ]
+    [ WHERE predicate ]
 
-    [ GROUP BY expression, ... [ HAVING expression, ... ] ]
+    [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
 
-    [ ORDER BY expression, ... ]
+    [ ORDER BY expression [ ASC | DESC ], ... ]
 
     [ LIMIT integer-constant ]
 
@@ -575,29 +575,29 @@ or, beginning with the FROM clause:
 
     FROM from-term
 
-    [ WHERE expression ]
+    [ WHERE predicate ]
 
-    [ GROUP BY expression, ... [ HAVING expression, ... ] ]
+    [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
 
     SELECT select-list
 
-    [ ORDER BY expression, ... ]
+    [ ORDER BY expression [ ASC | DESC ], ... ]
 
     [ LIMIT integer-constant ]
 
     [ OFFSET integer-constant ]
 
-The select-list constructs result objects from specific expressions
+The *select-list* constructs result objects from specific expressions
 and wildcards.
 
     select-list:
 
     ( '*' | path '.' '*' | expression [ [ AS ] alias ] ), ...
 
-In the next syntax box, we show the in-document version of from-term,
-which is limited to a single bucket reference, and leave the
-cross-document version to a future paper. The recursive use of
-from-term means that OVER...IN clauses can be chained.
+In the next syntax box, we show the in-document version of
+*from-term,* which is limited to a single bucket reference, and leave
+the cross-document version to a future paper. The recursive use of
+*from-term* means that OVER...IN clauses can be chained.
 
     from-term:
 
@@ -605,32 +605,160 @@ from-term means that OVER...IN clauses can be chained.
     |
     from-term OVER name IN subpath
 
-In from-term, path begins with a bucket reference optionally followed
-by a chain of attribute names and literal array subscripts. Subpath is
-a path that begins with the alias, name, or trailing identifier of a
-preceding term.
+In *from-term, path* begins with a bucket reference optionally
+followed by a chain of attribute names and literal array
+subscripts. *Subpath* is a *path* that begins with the *alias, name,*
+or trailing identifier of a preceding term.
 
-### Highlights
+### In-document joins
 
-* paths
-* fragment-oriented QL: paths, vectors + scalars, etc.
-* in-document JOINs: OVER
-* Expressions
-* Functions
-* IS [ NOT ] MISSING
-* path expressions
-* collection exprs: ANY / ALL / FIRST / ARRAY
-* JSON expressions and return values
-* Object construction and transformation
+An in-document join creates new source objects from the cross-product
+of its left- and right-hand side fragments. Each new source object
+contains one nested value from the left-hand-side fragment (before
+OVER) and one nested value from the right-hand-side fragment.
 
-## Query semantics at scale
+When the left-hand-side fragment is a parent or ancestor of the
+right-hand-side fragment, the in-document join amounts to an unnesting
+of the right-hand-side fragment.
 
-* fragment indexing
-* scatter-gather
-* ACID and determinism
-* trade-off of failure vs. determinism
+Examples.
+
+### Non-relational expressions
+
+We now highlight some non-relational expressions in N1QL.
+
+#### IS [ NOT ] MISSING
+
+In the Couchbase data model, documents in a bucket are not required to
+have the same set of attributes. The IS [ NOT ] MISSING operator is
+provided to test whether an expressing (typically attribute or
+attribute path) is present in the processing context.
+
+Examples.
+
+#### Path expressions
+
+Nested values of arbitrary depth can be referenced directly as
+expressions, separately from the use of attribute paths in the FROM
+clause.
+
+Examples.
+
+#### Arrays
+
+Array concatenation (same syntax as strings).
+
+    expression || expression
+
+Examples.
+
+Array length (same syntax as strings).
+
+    LENGTH(expression)
+
+Examples.
+
+Array subscripting.
+
+    expression[expression]
+
+Array slicing.
+
+    expression[expression:expression]
+
+    expression[expression:]
+
+    expression[:expression]
+
+Examples.
+
+#### Collection expressions
+
+To leverage the multi-valued attributes of the Couchbase N1NF data
+model, a special set of collection expressions are provided. In the
+boxes below, collection is an array-valued subpath or expression.
+
+The existential quantifier over arrays tests whether any array element
+matches a predicate.
+
+    ANY predicate OVER name IN collection
+
+Examples.
+
+The universal quantifier over arrays tests whether all array elements
+match a predicate.
+
+    ALL predicate OVER name IN collection
+
+Examples.
+
+The selector over arrays returns a single expression using an array
+and optional predicate.
+
+    FIRST expression OVER name IN collection [ WHEN predicate ]
+
+Examples.
+
+The mapper over arrays constructs a new expression array using an
+array and optional predicate.
+
+    ARRAY expression OVER name IN collection [ WHEN predicate ]
+
+Examples.
+
+#### Object expressions
+
+A powerful feature of N1QL is the ability to construct arbitrary
+object expressions. N1QL uses JSON syntax for this purpose. These
+object expressions can be used in any expression context in N1QL, but
+their biggest impact is when projected in the SELECT clause to
+transform result objects into arbitrary shapes as needed.
+
+Array constructors.
+
+    [ expression, ... ]
+
+Examples.
+
+Object constructors.
+
+    { name : expression, ... }
+
+Examples.
+
+#### Functions
+
+* META(): Returns metadata of the current document, including primary key
+
+* VALUE(): Returns raw value of the current context
+
+* BASE64_VALUE(): Returns nase64 enconding of raw value; this is
+  useful for non-JSON values
+
+* ARRAY_AGG(): An aggreagate function that constructs an array from an
+  expression over the input objects to each group
 
 ## Conclusion
+
+This paper has previewed the Couchbase query model.
+
+Beginning with the data model, we reviewed the relational model and
+its normalization principles. We reviewed non-first normal form (N1NF)
+as a superset and generalization of the relational model. We presented
+the Couchbase data model as N1NF with first-class nesting and
+domain-oriented normalization. We discussed domain-oriented
+normalization as preserving beneficial, intrinsic normalization while
+discarding detractive, artificial normalization. We noted the logical
+artifacts and the JSON encoding of the Couchbase data model.
+
+We presented the Couchbase query model by analogy to the relational
+query model, and by enumerating and describing the stages of the
+Couchbase query processing pipeline.
+
+Finally, we introduced the query language N1QL as the first flavor and
+incarnation of the Couchbase query model. We diagrammed the query
+statement format, and highlighted some non-relational features of the
+language.
 
 ## About this document
 
