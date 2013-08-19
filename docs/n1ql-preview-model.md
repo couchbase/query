@@ -4,7 +4,7 @@ by Gerald Sangudi
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-18
+* Modified: 2013-08-19
 
 ## Introduction
 
@@ -380,42 +380,143 @@ query.
 
 ### JSON
 
-* JSON as contemporary encoding of N1NF; cite others (XML, OODB, network / graph DB, see Garani)
-* text and binary reprensentations possible
-* user-friendly, compact, flexible, expressive, impedance match
+JSON, or JavaScript Object Notation, is the physical text-based
+encoding used by Couchbase. Although it originated in a non-database
+context, JSON turns out to be a notation for encoding N1NF data. It
+provides objects, attributes, atomic values, NULL, nested objects
+(tuples), and array-valued (multi-valued) attributes.
 
 ## Query model
 
-* generalization / relaxation of relational queries (SQL)
-* rectangles and triangles
-* single dataspace
-* document boundaries as physical, not logical
-* document as optimized access path
-* fragments as first-class queryable objects; same as top-level documents
-* fragment-oriented QL: paths, DML, vectors + scalars, etc.
-* collection exprs: ANY / ALL / FIRST / ARRAY
-* document JOINs: OVER
-* cross-document JOINs (good vs. bad JOINs)
+Just as the Couchbase data model is a superset and generalization of
+the relational data model, so too is the Couchbase query model a
+superset and generalization of the relational query model as embodied
+in the SQL query language.
 
-More.
+The relational data and query models work with tables, which are
+2-dimensional and can be visualized as rectangles. The Couchbase data
+and query models work with both rectangles and triangles, which is how
+nested objects of arbitrary depth can be visualized.
 
-* FROM: Sourcing
-* WHERE: Filtering
-* GROUP BY: Grouping and aggregating
-* HAVING: Group filtering
-* SELECT: Projecting
-* ORDER BY: Ordering
-* LIMIT / OFFSET: Paginating
+In relational systems, rows are considered to be units of direct
+access; once a row is obtained, its individual attributes are directly
+accessible for use in expressions, joins, projections, and more. In
+Couchbase, documents are the analogous units of direct
+access&mdash;once a document is obtained, its attributes, fragments,
+and metadata are accessible for use in all aspects of query
+processing.
 
-More:
+If relational queries express row-oriented processing, then Couchbase
+queries express fragment-oriented processing. Documents can be
+considered a special case of top-level fragments that provide direct
+and optimized access to all their contained fragments. For this
+reason, the Couchbase query model makes a distinction between
+in-document joins (between fragments in the same document) and
+cross-document joins (across documents).
 
-* Expressions
-* Functions
-* Object construction and transformation
-* Traversal
-* Path joins
-* Addressing
-* Joining
+The output of a relational query is a set of rows, as is a relational
+table. This makes relational queries composable. The output of a
+Couchbase query is a set of documents, as is a Couchbase bucket. This
+makes Couchbase queries composable as well.
+
+We now present the Couchbase query model by enumerating the stages of
+the query processing pipeline. Not surprisingly, the stages are the
+same as in a relational system; but within each stage, the
+capabilities are generalized to mirror the generalization of the
+Couchbase data model.
+
+### Pipeline
+
+A query is a declarative specification of a selection and
+transformation of data. The Couchbase query model provides the
+following pipeline stages for expressing queries. Only the projecting
+stage is mandatory; the sourcing stage is needed to access stored
+data.
+
+#### Sourcing
+
+In the sourcing stage, a data source is constructed from one or more
+terms, which are logical artifacts in the database. If a term is a
+bucket, it refers to all the documents in that bucket. If the term is
+an attribute path within a bucket, it refers to all the fragments
+reachable by traversing that attribute path within each document in
+that bucket.
+
+Terms can be combined using in-document and cross-document joins. The
+output of the sourcing stage is a single data source, be it a single
+term or the result of one or more joins.
+
+#### Filtering
+
+In the filtering stage, objects from the data source are filtered
+using a filter expression.
+
+As we will see below, Couchbase queries provide some additional
+expressions beyond the standard relational ones&mdash;testing for
+missing attributes; expressions involving arrays (multi-valued
+attributes); object constructors; and others.
+
+#### Grouping and aggregating
+
+In the grouping and aggregating stage, input objects are consolidated
+into groups based on one or more attribute values. A single output
+object is generated for each group.
+
+Within each group, aggregate expressions can also be generated and
+output over the input objects in the group. These aggregate
+expressions can include counts, sums, statistical measures, and
+arbitrary combinations of these.
+
+Couchbase queries provide additional aggregate expressions for
+constructing arrays from the input objects in each group.
+
+#### Group filtering
+
+The group filtering stage has, as a prerequisite, the grouping and
+aggregating stage. The group filtering stage receives the output of
+the grouping and aggregating stage, and filters groups based on a
+filter expression. This filter expression can involve the aggregate
+expressions generated in the grouping and aggregating stage.
+
+#### Projecting
+
+In the projecting stage, output objects are defined. These output
+objects can contain arbitrary expressions on the objects from the
+preceding stage.
+
+In addition to the standard attribute and expression projection in
+relational queries, Couchbase queries provide projection of arbitrary
+nested objects; construction of new nested objects of arbitrary shape;
+array construction; metadata and raw-value expressions; and all the
+additional expressions in Couchbase queries.
+
+#### Ordering
+
+In the ordering stage, output objects are sorted based on expressions
+and predefined collations. A list of ordering expressions can be
+specified, with each expression specified to sort in ascending or
+descending order.
+
+Without an ordering stage, Couchbase queries are not guaranteed to
+return results in any particular order.
+
+The ordering stage is essentially equivalent to the corresponding
+relational stage, except for the availability of additional
+expressions in Couchbase.
+
+#### Paginating
+
+Paginating is provided via two stages, skipping and limiting.
+Together, they provide the ability to specify a "page" of results for
+retrieval. Paginating is mostly useful in conjunction with ordering.
+
+The skipping stage skips and discards a fixed number of result objects
+from the beginning of the result list. The limiting stage limits the
+number of result objects to a fixed maximum. Skipping is applied
+before limiting.
+
+The skipping and limiting stages are equivalent to the corresponding
+relational stages.
 
 ## Query language
 
@@ -427,6 +528,16 @@ More:
 * collection exprs: ANY / ALL / FIRST / ARRAY
 * document JOINs: OVER
 * cross-document JOINs (good vs. bad JOINs)
+
+### Highlights
+
+* Expressions
+* Functions
+* Object construction and transformation
+* Traversal
+* Path joins
+* Addressing
+* Joining
 
 ## Query semantics at scale
 
@@ -441,7 +552,7 @@ More:
 
 ### Document history
 
-* 2013-08-18 - Initial version
+* 2013-08-19 - Initial version
 
 ### Open issues
 
