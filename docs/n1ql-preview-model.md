@@ -365,6 +365,12 @@ Like tables, buckets are the basic unit of collection and
 querying. Every document is contained in a single bucket, and every
 data-accessing query references one or more buckets.
 
+Buckets should be used to organize data into logical collections. In
+our shopping cart example, we created three separate buckets, for
+customers, products, and shopping carts, respectively. These three
+types of objects are logically distinct, and there are no scenarios or
+queries that would treat them as one.
+
 #### Fragments
 
 Fragments are nested values within documents. Trivially, a document
@@ -374,9 +380,15 @@ Every attribute value in a document is a fragment. This includes both
 atomic-valued and tuple-valued attributes, and both single-valued and
 multi-valued attributes.
 
-With first-class nesting, every path, or a chain of attribute
-traversals, is queryable. Hence, every fragment is retrievable by
-query.
+With first-class nesting, every attribute path, or a chain of
+attribute traversals, is queryable. Hence, every fragment is
+retrievable by query.
+
+In our shopping cart example, every bucket or attribute path would
+reference a set of fragments: *Customer, Customer.Name,
+Customer.Addresses, Customer.Addresses.Zip, Product,
+Product.UnitPrice, Shopping\_Cart, Shopping\_Cart.Customer\_Id,
+Shopping\_Cart.Line\_Items, Shopping\_Cart.Line\_Items.Quantity,* etc.
 
 ### JSON
 
@@ -390,48 +402,47 @@ provides objects, attributes, atomic values, NULL, nested objects
 
 Just as the Couchbase data model is a superset and generalization of
 the relational data model, so too is the Couchbase query model a
-superset and generalization of the relational query model as embodied
-in the SQL query language.
+superset and generalization of the relational query model embodied in
+the SQL query language.
 
-The relational data and query models work with tables, which are
-2-dimensional and can be visualized as rectangles. The Couchbase data
-and query models work with both rectangles and triangles, which is how
-nested objects of arbitrary depth can be visualized.
+The relational query model works with tables, which are 2-dimensional
+and can be visualized as rectangles. The Couchbase query model works
+with both 2-dimensional data and nested objects of arbitrary depth,
+which can be visualized as triangles. Thus the Couchbase query model
+is said to work with both rectangles and triangles.
 
-In relational systems, rows are considered to be units of direct
-access; once a row is obtained, its individual attributes are directly
-accessible for use in expressions, joins, projections, and more. In
-Couchbase, documents are the analogous units of direct
-access&mdash;once a document is obtained, its attributes, fragments,
-and metadata are accessible for use in all aspects of query
-processing.
+In relational systems, rows are units of direct access&mdash;once a
+row is obtained, its individual attributes are directly accessible for
+use in expressions, joins, projections, and more. In Couchbase,
+documents are the analogous units of direct access&mdash;once a
+document is obtained, its attributes, fragments, and metadata are
+accessible for use in all aspects of query processing.
 
 If relational queries express row-oriented processing, then Couchbase
 queries express fragment-oriented processing. Documents can be
 considered a special case of top-level fragments that provide direct
-and optimized access to all their contained fragments. For this
-reason, the Couchbase query model makes a distinction between
-in-document joins (between fragments in the same document) and
-cross-document joins (across documents).
+and optimized access to all their contained fragments. To highlight
+this optimized in-document access, the Couchbase query model makes a
+distinction between in-document joins (among fragments in the same
+document) and cross-document joins (across documents).
 
-The output of a relational query is a set of rows, as is a relational
-table. This makes relational queries composable. The output of a
-Couchbase query is a set of documents, as is a Couchbase bucket. This
-makes Couchbase queries composable as well.
+The output of a relational query is a set of rows, just like a stored
+relational table. This makes relational queries composable. The output
+of a Couchbase query is a set of documents, just like a stored
+Couchbase bucket. This makes Couchbase queries composable as well.
 
 We now present the Couchbase query model by enumerating the stages of
 the query processing pipeline. Not surprisingly, the stages are the
-same as in a relational system; but within each stage, the
-capabilities are generalized to mirror the generalization of the
-Couchbase data model.
+same as in relational queries; but within each stage, the capabilities
+are expanded to mirror the generalization of the Couchbase data model.
 
 ### Pipeline
 
-A query is a declarative specification of a selection and
-transformation of data. The Couchbase query model provides the
-following pipeline stages for expressing queries. Only the projecting
-stage is mandatory; the sourcing stage is needed to access stored
-data.
+A query is a declarative specification of a selection, transformation,
+and retrieval of data. The Couchbase query model provides the
+following pipeline stages for expressing queries. Most of these stages
+are optional; the projecting stage is always required, and the
+sourcing stage is required for accessing stored data.
 
 #### Sourcing
 
@@ -451,48 +462,50 @@ term or the result of one or more joins.
 In the filtering stage, objects from the data source are filtered
 using a filter expression.
 
-As we will see below, Couchbase queries provide some additional
-expressions beyond the standard relational ones&mdash;testing for
-missing attributes; expressions involving arrays (multi-valued
-attributes); object constructors; and others.
+Couchbase queries provide additional expressions beyond the relational
+ones&mdash;testing for missing attributes (in addition to NULL
+testing); expressions involving arrays (multi-valued attributes);
+object constructors; and more.
 
 #### Grouping and aggregating
 
 In the grouping and aggregating stage, input objects are consolidated
-into groups based on one or more attribute values. A single output
-object is generated for each group.
+into groups based on zero or more attribute expressions (zero to group
+all input objects together). A single output object is generated for
+each group.
 
-Within each group, aggregate expressions can also be generated and
-output over the input objects in the group. These aggregate
-expressions can include counts, sums, statistical measures, and
-arbitrary combinations of these.
+Within each group, aggregate expressions can be generated and output
+over the input objects in the group. These aggregate expressions can
+include counts, sums, statistical measures, and arbitrary combinations
+of these.
 
 Couchbase queries provide additional aggregate expressions for
-constructing arrays from the input objects in each group.
+constructing arrays from expressions on the input objects in each
+group.
 
 #### Group filtering
 
 The group filtering stage has, as a prerequisite, the grouping and
 aggregating stage. The group filtering stage receives the output of
-the grouping and aggregating stage, and filters groups based on a
-filter expression. This filter expression can involve the aggregate
+the grouping and aggregating stage and filters those groups based on a
+filter expression. The filter expression can involve the aggregate
 expressions generated in the grouping and aggregating stage.
 
 #### Projecting
 
-In the projecting stage, output objects are defined. These output
+In the projecting stage, result objects are defined. These result
 objects can contain arbitrary expressions on the objects from the
 preceding stage.
 
-In addition to the standard attribute and expression projection in
-relational queries, Couchbase queries provide projection of arbitrary
-nested objects; construction of new nested objects of arbitrary shape;
-array construction; metadata and raw-value expressions; and all the
+In addition to the attribute and expression projections of relational
+queries, Couchbase queries provide projection of arbitrary nested
+objects; construction of new nested objects of arbitrary shape; array
+construction; metadata and raw-value expressions; and all the
 additional expressions in Couchbase queries.
 
 #### Ordering
 
-In the ordering stage, output objects are sorted based on expressions
+In the ordering stage, result objects are sorted based on expressions
 and predefined collations. A list of ordering expressions can be
 specified, with each expression specified to sort in ascending or
 descending order.
@@ -520,24 +533,95 @@ relational stages.
 
 ## Query language
 
-* SQL-like flavor; others
-* JSON expressions and return values
-* paths
-* DML upcoming
-* fragment-oriented QL: paths, DML, vectors + scalars, etc.
-* collection exprs: ANY / ALL / FIRST / ARRAY
-* document JOINs: OVER
-* cross-document JOINs (good vs. bad JOINs)
+We now introduce the query language N1QL (pronounced "nickel") as the
+first flavor and incarnation of the Couchbase query model. To state
+the obvious, the name N1QL is an homage to N1NF. Given this paper's
+focus on queries, only the query features of N1QL are highlighted
+here, while data modification features are not included.
+
+The salient features of N1QL queries include a SQL-like flavor; the
+option to begin query statements with either SELECT or FROM; JSON
+syntax for object constructors and expressions; attribute paths for
+referencing fragments; a special syntax for in-document joins; and
+additional expressions and functions from the Couchbase query model.
+
+This section is not a complete or authoritative reference. The syntax
+presented here is meant to illustrate the style and highlight some
+features of the language.
+
+### Statement format
+
+The format of a N1QL query statement is:
+
+    select-query-statement:
+
+    SELECT select-list
+
+    [ FROM from-term ]
+
+    [ WHERE expression ]
+
+    [ GROUP BY expression, ... [ HAVING expression, ... ] ]
+
+    [ ORDER BY expression, ... ]
+
+    [ LIMIT integer-constant ]
+
+    [ OFFSET integer-constant ]
+  
+or, beginning with the FROM clause:
+
+    from-query-statement:
+
+    FROM from-term
+
+    [ WHERE expression ]
+
+    [ GROUP BY expression, ... [ HAVING expression, ... ] ]
+
+    SELECT select-list
+
+    [ ORDER BY expression, ... ]
+
+    [ LIMIT integer-constant ]
+
+    [ OFFSET integer-constant ]
+
+The select-list constructs result objects from specific expressions
+and wildcards.
+
+    select-list:
+
+    ( '*' | path '.' '*' | expression [ [ AS ] alias ] ), ...
+
+In the next syntax box, we show the in-document version of from-term,
+which is limited to a single bucket reference, and leave the
+cross-document version to a future paper. The recursive use of
+from-term means that OVER...IN clauses can be chained.
+
+    from-term:
+
+    path [ [ AS ] alias ]
+    |
+    from-term OVER name IN subpath
+
+In from-term, path begins with a bucket reference optionally followed
+by a chain of attribute names and literal array subscripts. Subpath is
+a path that begins with the alias, name, or trailing identifier of a
+preceding term.
 
 ### Highlights
 
+* paths
+* fragment-oriented QL: paths, vectors + scalars, etc.
+* in-document JOINs: OVER
 * Expressions
 * Functions
+* IS [ NOT ] MISSING
+* path expressions
+* collection exprs: ANY / ALL / FIRST / ARRAY
+* JSON expressions and return values
 * Object construction and transformation
-* Traversal
-* Path joins
-* Addressing
-* Joining
 
 ## Query semantics at scale
 
