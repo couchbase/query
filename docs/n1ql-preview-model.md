@@ -4,7 +4,7 @@ by Gerald Sangudi
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-19
+* Modified: 2013-08-20
 
 ## Introduction
 
@@ -13,11 +13,11 @@ document-oriented database. The Couchbase query model aims to meet the
 query needs of Couchbase users and applications at scale.
 
 This paper previews the Couchbase approach to querying. It is written
-for readers who are familiar with Couchbase and with database concepts
-in general. This paper is a conceptual overview, and not a tutorial,
-reference manual, or explication of syntax. It presents the overall
-Couchbase approach, and not a specific feature set associated with a
-product release or point in time.
+for readers who are familiar with database concepts. This paper is a
+conceptual overview, and not a tutorial, reference manual, or
+explication of syntax. It presents the overall Couchbase approach, and
+not a specific feature set associated with a product release or point
+in time.
 
 The following sections discuss the Couchbase data model; the Couchbase
 query model; and the new query language N1QL (pronounced "nickel"),
@@ -52,7 +52,7 @@ row does not have a known value for a given attribute, that attribute
 is assigned the special value NULL.
 
 For illustration, we use an example data set from a shopping cart
-application. The data set contains the following tables:
+application. The data set contains the following objects:
 
 * *Customer* (identity, addresses, payment methods)
 * *Product* (title, code, description, unit price)
@@ -64,7 +64,7 @@ Let us consider the principal relational normal forms.
   row contain only a single, atomic value. An attribute cannot contain
   a nested tuple, because a tuple is not atomic (it contains
   attributes). And an attribute cannot contain multiple atomic
-  values. Examples of a valid attribute value would be a single
+  values. Examples of a valid attribute value would include a single
   number, string, or date.
 
   Suppose we want to support multiple shipping addresses per
@@ -662,14 +662,6 @@ Array subscripting.
 
     expression[expression]
 
-Array slicing.
-
-    expression[expression:expression]
-
-    expression[expression:]
-
-    expression[:expression]
-
 Examples.
 
 #### Collection expressions
@@ -765,6 +757,7 @@ language.
 ### Document history
 
 * 2013-08-19 - Initial version
+* 2013-08-20 - Removed array slicing
 
 ### Open issues
 
