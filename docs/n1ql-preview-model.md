@@ -673,28 +673,28 @@ boxes below, collection is an array-valued subpath or expression.
 The existential quantifier over arrays tests whether any array element
 matches a predicate.
 
-    ANY predicate OVER name IN collection
+    ANY predicate OVER name IN collection END
 
 Examples.
 
 The universal quantifier over arrays tests whether all array elements
 match a predicate.
 
-    ALL predicate OVER name IN collection
+    ALL predicate OVER name IN collection END
 
 Examples.
 
 The selector over arrays returns a single expression using an array
 and optional predicate.
 
-    FIRST expression OVER name IN collection [ WHEN predicate ]
+    FIRST expression OVER name IN collection [ WHEN predicate ] END
 
 Examples.
 
 The mapper over arrays constructs a new expression array using an
 array and optional predicate.
 
-    ARRAY expression OVER name IN collection [ WHEN predicate ]
+    ARRAY expression OVER name IN collection [ WHEN predicate ] END
 
 Examples.
 
