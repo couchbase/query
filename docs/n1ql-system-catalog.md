@@ -2,7 +2,7 @@
 
 * Status: OPERATIVE
 * Latest: [n1ql-system-catalog](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-system-catalog.md)
-* Modified: 2013-08-24
+* Modified: 2013-08-27
 
 ## Summary
 
@@ -27,7 +27,7 @@ code. This should be transparent to queries.
 
 ## Structure
 
-The system catalog is a pool. The pool is called **sys_catalog.**
+The system catalog is a pool. The pool is called **system.**
 
 There is a bucket for each type of artifact. The bucket names are
 plural (which is not recommended database practice) in order to avoid
@@ -39,6 +39,9 @@ be added over time (maybe counts, maybe index uniqueness, etc.).
 Other artifacts will also be added (e.g. database views, stored
 procedures, built-in functions). Built-in functions will be added
 shortly.
+
+The **dual** bucket has been added for evaluating constant
+expressions.
 
 ## Sites
 
@@ -75,6 +78,11 @@ The bucket is called **indexes.**
 * **index_key:** array of string
 * **index_type:** string
 
+## Dual
+
+The bucket is called **dual.** It contains a single entry with no
+attributes.
+
 ## About this Document
 
 ### Document History
@@ -82,7 +90,10 @@ The bucket is called **indexes.**
 * 2013-08-22 - Initial version
 * 2013-08-24 - Names
     * Lowercased names.
-    * Changed cb\_catalog to sys\_catalog. 
+    * Changed **cb\_catalog** to **sys\_catalog.**
+* 2013-08-27 - Dual
+    * Added **dual** bucket.
+    * Changed **sys\_catalog** to **system.**
 
 ### Open Issues
 
