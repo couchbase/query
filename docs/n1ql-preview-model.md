@@ -1,46 +1,46 @@
-# The Couchbase Query Model&mdash;A Preview
+# N1QL from Couchbase&mdash;A Preview of the Query Model
 
 by Gerald Sangudi
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-20
+* Modified: 2013-08-30
 
 ## Introduction
 
 Couchbase is the leading next-generation, high-performance, scale-out,
-document-oriented database. The Couchbase query model aims to meet the
-query needs of Couchbase users and applications at scale.
+document-oriented database. N1QL (pronounced "nickel") is a new query
+language from Couchbase. N1QL aims to meet the query needs of
+Couchbase users and applications at scale, and to offer a sound
+abstraction for next-generation databases and their users.
 
-This paper previews the Couchbase approach to querying. It is written
-for readers who are familiar with database concepts. This paper is a
-conceptual overview, and not a tutorial, reference manual, or
-explication of syntax. It presents the overall Couchbase approach, and
-not a specific feature set associated with a product release or point
-in time.
+This paper previews the N1QL query model, which underlies the query
+language. It is written for readers who are familiar with database
+concepts. This paper is a conceptual overview, and not a tutorial,
+reference manual, or explication of syntax. It presents the overall
+N1QL approach, and focuses on the subset of features available in a
+preview release from Couchbase.
 
-The following sections discuss the Couchbase data model; the Couchbase
-query model; and the new query language N1QL (pronounced "nickel"),
-which is the first flavor and incarnation of the Couchbase query
-model.
+The following sections discuss N1QL in terms of the data model; the
+query model; and the query language, which is a flavor and incarnation
+of the query model.
 
 ## Data model
 
 The data model, or how data is organized, is a defining characteristic
-of any database. Couchbase is both a key-value and document-oriented
-database. Every data value in Couchbase is associated with an
+of any database. Couchbase, and any N1QL database, is both a key-value
+and document-oriented database. Every data value is associated with an
 immutable primary key. For data values that have structure and are not
-opaque, those values are encoded as JSON documents, with each document
-mapped to a primary key.
+opaque, those values are encoded as documents (JSON or equivalent),
+with each document mapped to a primary key.
 
-We start with the conceptual basis of the Couchbase data model. In
-database formalism, the Couchbase data model is based on Non-First
-Normal Form, or N1NF. This model is a superset and generalization of
-the relational model, which requires data normalization to First
-Normal Form (1NF) and advocates further normalization to Third Normal
-Form (3NF). We examine the relational model and its normalization
-principles, and then proceeed to the Couchbase N1NF model and its
-encoding in JSON documents.
+We start with the conceptual basis of the N1QL data model. In database
+formalism, the data model is based on Non-First Normal Form, or N1NF
+(hence the name N1QL). This model is a superset and generalization of
+the relational model. The relational model requires data normalization
+to First Normal Form (1NF) and advocates further normalization to
+Third Normal Form (3NF). We examine the relational model and its
+normalization principles, and then proceeed to the N1QL data model.
 
 ### Relational model and normalization
 
@@ -58,40 +58,47 @@ application. The data set contains the following objects:
 * *Product* (title, code, description, unit price)
 * *Shopping Cart* (customer, shipping address, payment method, line items)
 
-Let us consider the principal relational normal forms.
+We now discuss the principal relational normal forms. This discussion
+serves as background for understanding the differences between N1QL
+and the relational model. You may skim this discussion and continue to
+the benefits and costs of the relational model, or you may read it
+closely as an explanation or refresher.
 
-* **First normal form (1NF)** requires that each attribute of every
-  row contain only a single, atomic value. An attribute cannot contain
-  a nested tuple, because a tuple is not atomic (it contains
-  attributes). And an attribute cannot contain multiple atomic
-  values. Examples of a valid attribute value would include a single
-  number, string, or date.
+#### First normal form
 
-  Suppose we want to support multiple shipping addresses per
-  customer. Because a 1NF attribute can only store a single value per
-  row, we would be unable to store addresses in the *Customer* table,
-  and would need to create a separate *Customer\_Address* table.
+**First normal form (1NF)** requires that each attribute of every row
+contain only a single, atomic value. An attribute cannot contain a
+nested tuple, because a tuple is not atomic (it contains
+attributes). And an attribute cannot contain multiple atomic
+values. Examples of a valid attribute value would include a single
+number, string, or date.
 
-  Suppose also that we want to store multiple components per address,
-  such as zip code and state, in order to analyze the geographical
-  distribution of customers. Then the *Customer\_Address* table cannot
-  simply contain a single *Address* attribute, because a 1NF attribute
-  must be atomic and cannot be decomposable into components. Thus
-  *Customer\_Address* would need to contain attributes such as
-  *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*, *Zip*, and
-  *State.*
+Suppose we want to support multiple shipping addresses per
+customer. Because a 1NF attribute can only store a single value per
+row, we would be unable to store addresses in the *Customer* table,
+and would need to create a separate *Customer\_Address* table.
 
-  Similarly, multiple line items per shopping cart could not be stored
-  in the *Shopping\_Cart* table. Instead, we would create a separate
-  *Shopping\_Cart\_Line\_Item* table, with attributes including
-  *Line\_Item\_Id, Shopping\_Cart\_Id, Product\_Id,* and *Quantity.*
+Suppose also that we want to store multiple components per address,
+such as zip code and state, in order to analyze the geographical
+distribution of customers. Then the *Customer\_Address* table cannot
+simply contain a single *Address* attribute, because a 1NF attribute
+must be atomic and cannot be decomposable into components. Thus
+*Customer\_Address* would need to contain attributes such as
+*Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*, *Zip*, and
+*State.*
 
-  The practical rules for ensuring 1NF are:
+Similarly, multiple line items per shopping cart could not be stored
+in the *Shopping\_Cart* table. Instead, we would create a separate
+*Shopping\_Cart\_Line\_Item* table, with attributes including
+*Line\_Item\_Id, Shopping\_Cart\_Id, Product\_Id,* and *Quantity.*
 
-    * Store multi-valued data in multiple rows, creating a separate
-      table if necessary; do not use multiple columns to store
-      multi-valued data
-    * Identify each row with a unique primary key
+The practical rules for ensuring 1NF are:
+
+* Store multi-valued data in multiple rows, creating a separate table
+  if necessary; do not use multiple columns to store multi-valued data
+* Identify each row with a unique primary key
+
+#### Second normal form
 
 Second and third normal form aim to prevent any piece of information
 from being represented in more than one row in the database. If the
@@ -120,66 +127,69 @@ Second and third normal form are defined as restrictions on non-prime
 attributes, which are those attributes that are not part of any
 candidate key.
 
-* **Second normal form (2NF)** requires that a table be in 1NF and not
-  contain any non-prime attribute that is dependent on a proper subset
-  of any candidate key.
+**Second normal form (2NF)** requires that a table be in 1NF and not
+contain any non-prime attribute that is dependent on a proper subset
+of any candidate key.
 
-  Suppose that a customer can create only one shopping cart per
-  instant in time, so that *(Customer\_Id, Creation\_Time)* is a
-  candidate key for the *Shopping\_Cart* table. Now suppose that we
-  stored *Customer\_Birthdate* in the *Shopping\_Cart* table, in order
-  to track purchases by age group. Then *Shopping_Cart* would **not**
-  be in 2NF, because:
+Suppose that a customer can create only one shopping cart per instant
+in time, so that *(Customer\_Id, Creation\_Time)* is a candidate key
+for the *Shopping\_Cart* table. Now suppose that we stored
+*Customer\_Birthdate* in the *Shopping\_Cart* table, in order to track
+purchases by age group. Then *Shopping_Cart* would **not** be in 2NF,
+because:
 
-      * *Customer\_Birthdate* is a non-prime attribute
-      * *Customer\_Birthdate* is dependent on *Customer\_Id*
-      * *Customer\_Id* is a proper subset of the candidate key
-        *(Customer\_Id, Creation\_Time)*
+* *Customer\_Birthdate* is a non-prime attribute
+* *Customer\_Birthdate* is dependent on *Customer\_Id*
+* *Customer\_Id* is a proper subset of the candidate key
+  *(Customer\_Id, Creation\_Time)*
 
-  If a customer has multiple shopping carts over time, and thus
-  multiple rows in *Shopping\_Cart*, it would be possible to modify
-  *Customer\_Birthdate* in one of those rows to be inconsistent with
-  the others. To satisfy 2NF, we would move *Customer\_Birthdate* from
-  *Shopping\_Cart* to the *Customer* table, where each customer would
-  have exactly one row.
+If a customer has multiple shopping carts over time, and thus multiple
+rows in *Shopping\_Cart*, it would be possible to modify
+*Customer\_Birthdate* in one of those rows to be inconsistent with the
+others. To satisfy 2NF, we would move *Customer\_Birthdate* from
+*Shopping\_Cart* to the *Customer* table, where each customer would
+have exactly one row.
 
-  Note that a 1NF table with no composite candidate keys is
-  automatically in 2NF; only composite candidate keys can have proper
-  subsets.
+Note that a 1NF table with no composite candidate keys is
+automatically in 2NF; only composite candidate keys can have proper
+subsets.
 
-  The practical rules for ensuring 2NF are:
-    * Ensure 1NF
-    * Remove subsets of attributes that repeat in multiple rows, and
-      move them to a separate table
-    * Use foreign keys to connect related tables
+The practical rules for ensuring 2NF are:
+
+* Ensure 1NF
+* Remove subsets of attributes that repeat in multiple rows, and move
+  them to a separate table
+* Use foreign keys to connect related tables
+
+#### Third normal form
 
 **Superkeys** are used in defining third normal form. A superkey is
 any set of attributes that forms a unique identifier for rows in a
 table. Unlike a candidate key, a superkey does not need to be a
 *minimal* set of attributes. Every candidate key is also a superkey.
 
-* **Third normal form (3NF)** requires that a table be in 2NF and that
-  every non-prime attribute be directly dependent on every superkey
-  and completely independent of every other non-key attribute. As
-  Wikipedia quotes Bill Kent: "Every non-key attribute must provide a
-  fact about the key, the whole key, and nothing but the key (so help
-  me Codd)."
+**Third normal form (3NF)** requires that a table be in 2NF and that
+every non-prime attribute be directly dependent on every superkey and
+completely independent of every other non-key attribute. As Wikipedia
+quotes Bill Kent: "Every non-key attribute must provide a fact about
+the key, the whole key, and nothing but the key (so help me Codd)."
 
-  To obey 1NF, we created a *Customer\_Address* table and included the
-  attributes *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*,
-  *Zip*, and *State.* But this table contains a violation of
-  3NF. *Zip* always determines *State*, and *Zip* and *State* are both
-  non-primary attributes. Therefore, the non-primary attribute *State*
-  is dependent on the non-key attribute *Zip*, which is a violation of
-  3NF. We would need to create a separate *Zip* table with mappings
-  from zip codes to states.
+To obey 1NF, we created a *Customer\_Address* table and included the
+attributes *Address\_Id*, *Customer\_Id*, *Street\_Address*, *City*,
+*Zip*, and *State.* But this table contains a violation of 3NF. *Zip*
+always determines *State*, and *Zip* and *State* are both non-primary
+attributes. Therefore, the non-primary attribute *State* is dependent
+on the non-key attribute *Zip*, which is a violation of 3NF. We would
+need to create a separate *Zip* table with mappings from zip codes to
+states.
 
-  The practical rules for ensuring 3NF are:
-    * Ensure 1NF and 2NF
-    * Remove attributes that are not directly and exclusively
-      dependent on the primary key
+The practical rules for ensuring 3NF are:
 
-#### Benefits
+* Ensure 1NF and 2NF
+* Remove attributes that are not directly and exclusively dependent on
+  the primary key
+
+#### Benefits of the relational model
 
 The relational model and its normalization principles achieved several
 benefits. Data duplication was minimized, which enhanced data
@@ -189,7 +199,7 @@ ensured by the model: because data was normalized into discrete and
 directly accessible tables, no single traversal path or object
 composition was favored to the exclusion of others.
 
-#### Costs
+#### Costs of the relational model
 
 The costs of the relational model in performance and complexity arose
 primarily from one cause: **The relational model did not model the
@@ -220,11 +230,19 @@ defined with cascading delete on a single parent table under
 referential integrity. Such decomposition of constituent parts does
 not model the intrinsic structure of data.
 
+Another cost of decomposition is the maintenance of referential
+integrity. When a parent object is deleted, its child objects must be
+deleted as well, so that no children are left orphaned. Referential
+integrity is maintained using either foreign keys in the database or
+logic in the application. Either way, it adds cost and complexity to
+data modifications.
+
 The relational model did not recognize composite objects, which are
-ubiquitous in real-world data. The expense and complexity of joins was
-the same for both independent and dependent relationships. And the
-cost of object traversal and assembly was the same for both the
-default traversal path and rarely used traversal paths.
+ubiquitous in real-world data. The expense and complexity of joins and
+referential integrity was the same for both independent and dependent
+relationships. And the cost of object traversal and assembly was the
+same for both the default traversal path and rarely used traversal
+paths.
 
 Many relational systems eventually recognized these costs in the
 relational model, and attempted to mitigate these costs by adding some
@@ -232,15 +250,15 @@ support for nested objects, multi-valued attributes, and other
 features sometimes called "object-relational." But these additions
 were outside the relational model, and the resulting combination
 lacked the coherence and completeness of a data model designed from
-inception to avoid these limitations. The next section presents that
+inception to avoid these limitations. The next section presents such a
 data model.
 
-### Couchbase data model and non-first normal form
+### N1QL data model and non-first normal form
 
-The Couchbase data model is non-first normal form (N1NF) with
-first-class nesting and domain-oriented normalization. As N1NF, the
-Couchbase data model is also a proper superset and generalization of
-the relational model. Let us examine each of its qualities.
+The N!QL data model is non-first normal form (N1NF) with first-class
+nesting and domain-oriented normalization. As N1NF, the N1QL data
+model is also a proper superset and generalization of the relational
+model. Let us examine each of its qualities.
 
 #### Non-first normal form (N1NF)
 
@@ -280,35 +298,36 @@ joins. The choice in retrieval is simply whether or not to include the
 
 #### First-class nesting
 
-In the Couchbase data model, nested tuples can be referenced and
-queried in the same manner as top-level objects. We call this
-first-class nesting. With first-class nesting, the Couchbase data
-model combines the benefits of N1NF and 1NF.
+In the N1QL data model, nested tuples can be referenced and queried in
+the same manner as top-level objects. We call this first-class
+nesting. With first-class nesting, the N1QL data model combines the
+benefits of N1NF and 1NF.
 
 As discussed, N1NF provides natural modeling of object structure and
-avoids artificial decompositions and joins. In our shopping cart
-example, this means embedding address and line items in the *Customer*
-and *Shopping\_Cart* tables, respectively.
+avoids artificial decompositions, joins, and referential integrity. In
+our shopping cart example, this means embedding address and line items
+in the *Customer* and *Shopping\_Cart* tables, respectively.
 
-1NF does incur the costs of artificial decomposition and joins, but it
-offers at least one benefit. It allows us to access dependent objects
-directly, without reference to the corresponding parent objects. This
-is a form of physical data independence. For example, if we needed to
-analyze the geographical distribution of customer addresses, without
-referencing customers, we could do so using only the
-*Customer\_Address* table. Likewise, if we needed to analyze the
-distribution of products in line items, we could do so using only the
-*Shopping\_Cart\_Line\_Item* and *Product* tables.
+1NF does incur the costs of artificial decomposition, joins, and
+referential integrity, but it offers at least one benefit. It allows
+us to access dependent objects directly, without reference to the
+corresponding parent objects. This is a form of physical data
+independence. For example, if we needed to analyze the geographical
+distribution of customer addresses, without referencing customers, we
+could do so using only the *Customer\_Address* table. Likewise, if we
+needed to analyze the distribution of products in line items, we could
+do so using only the *Shopping\_Cart\_Line\_Item* and *Product*
+tables.
 
-With first-class nesting, the Couchbase data model allows us to
-reference nested objects. We can reference and query the
-*Customer.Addresses* and *Shopping\_Cart.Line\_Items* attributes in
-the same manner as top-level objects. As such, we can directly perform
-both computations enabled by 1NF above: analyzing the geographical
-distribution of customer addresses, and analyzing the distribution of
-products in line items.
+With first-class nesting, the N1QL data model allows us to reference
+nested objects. We can reference and query the *Customer.Addresses*
+and *Shopping\_Cart.Line\_Items* attributes in the same manner as
+top-level objects. As such, we can directly perform both computations
+enabled by 1NF above: analyzing the geographical distribution of
+customer addresses, and analyzing the distribution of products in line
+items.
 
-At the same time, the benefits of N1NF are retainedY&mdash;we can
+At the same time, the benefits of N1NF are retained&mdash;we can
 retrieve customers with their addresses and shopping carts with their
 line items, all without any joins.
 
@@ -323,7 +342,7 @@ Domain-oriented normalization can be used to achieve the same data
 consistency, data de-duplication, and anomaly avoidance as the
 relational normal forms.
 
-In our shopping cart example, we have described how the Couchbase data
+In our shopping cart example, we have described how the N1QL data
 model allows customer addresses and shopping cart line items to be
 embedded in their respective parent objects. This does not introduce
 denormalization or data duplication, because parent information is not
@@ -335,41 +354,42 @@ semantics of the domain. A *Customer* exists independently of the
 shopping carts he or she maintains, and a *Product* exists
 independently of the shopping carts that reference it.
 
-A Couchbase application data model with domain-oriented normalization
-is said to be in Domain Normal Form (or Business Normal Form).
+A N1QL application data model with domain-oriented normalization is
+said to be in Domain Normal Form, or equivalently, in Business Normal
+Form.
+
+#### Structural flexibility
+
+In addition to the benefits above, the N1QL data model supports
+flexibility in document structure.
+
+The underlying N1QL database may provide schema-less, open-schema, or
+closed-schema document sets. As attributes are added or removed to a
+schema or to specific documents, pre-existing data and queries remain
+valid. This is a powerful benefit as applications and business
+requirements evolve.
+
+In our shopping cart example, we could support international customers
+by simply including additional attributes in their addresses:
+*Country*, *Postal\_Code.* Domestic customers and queries would be
+unaffected.
 
 ### Logical artifacts
 
-The Couchbase data model provides logical artifacts for constructing
+The N1QL data model provides logical artifacts for constructing
 specific data models and databases. These artifacts include documents,
-buckets, and fragments.
+fragments, buckets, and pools.
 
 #### Documents
 
 Documents are top-level objects. Each row in an independent relational
-table would map to a document in the Couchbase data model. In our
-shopping cart example, every *Customer, Product, and Shopping\_Cart*
-object would be a document.
+table would map to a document in the N1QL data model. In our shopping
+cart example, every *Customer, Product, and Shopping\_Cart* object
+would be a document.
 
-Because Couchbase is also a key-value database, every document has a
-unique primary key, which can be used to lookup and retrieve the
-document.
-
-#### Buckets
-
-Buckets are sets of documents. Buckets are analogous to relational
-tables, except that the documents in a given bucket are not required
-to have the same attributes or structure.
-
-Like tables, buckets are the basic unit of collection and
-querying. Every document is contained in a single bucket, and every
-data-accessing query references one or more buckets.
-
-Buckets should be used to organize data into logical collections. In
-our shopping cart example, we created three separate buckets, for
-customers, products, and shopping carts, respectively. These three
-types of objects are logically distinct, and there are no scenarios or
-queries that would treat them as one.
+Because Couchbase, and any N1QL database, is also a key-value
+database, every document has a unique primary key, which can be used
+to lookup and retrieve the document.
 
 #### Fragments
 
@@ -390,59 +410,74 @@ Customer.Addresses, Customer.Addresses.Zip, Product,
 Product.UnitPrice, Shopping\_Cart, Shopping\_Cart.Customer\_Id,
 Shopping\_Cart.Line\_Items, Shopping\_Cart.Line\_Items.Quantity,* etc.
 
-### JSON
+#### Buckets
 
-JSON, or JavaScript Object Notation, is the physical text-based
-encoding used by Couchbase. Although it originated in a non-database
-context, JSON turns out to be a notation for encoding N1NF data. It
-provides objects, attributes, atomic values, NULL, nested objects
-(tuples), and array-valued (multi-valued) attributes.
+Buckets are sets of documents. Buckets are analogous to relational
+tables, except that N1QL does not require the documents in a given
+bucket to have the same attributes or structure.
+
+Like relational tables, buckets are the basic unit of collection and
+querying. Every document is contained in a single bucket, and every
+data-accessing query references one or more buckets.
+
+Buckets should be used to organize data into logical collections. In
+our shopping cart example, we created three separate buckets, for
+customers, products, and shopping carts, respectively. These three
+types of objects are logically distinct, and there are no use cases
+that would treat them as one.
+
+#### Pools
+
+Pools are sets of buckets. Pools are analagous to a database or schema
+in a relational database. Pools serve as namespaces, and can also
+serve as units of data organization, access control, multi-tenancy,
+and resource allocation.
 
 ## Query model
 
-Just as the Couchbase data model is a superset and generalization of
-the relational data model, so too is the Couchbase query model a
-superset and generalization of the relational query model embodied in
-the SQL query language.
+Just as the N1QL data model is a superset and generalization of the
+relational data model, so too is the N1QL query model a superset and
+generalization of the relational query model embodied in the SQL query
+language.
 
 The relational query model works with tables, which are 2-dimensional
-and can be visualized as rectangles. The Couchbase query model works
-with both 2-dimensional data and nested objects of arbitrary depth,
-which can be visualized as triangles. Thus the Couchbase query model
-is said to work with both rectangles and triangles.
+and can be visualized as rectangles. The N1QL query model works with
+both 2-dimensional data and nested objects of arbitrary depth, which
+can be visualized as triangles. Thus the N1QL query model is said to
+work with both rectangles and triangles.
 
 In relational systems, rows are units of direct access&mdash;once a
 row is obtained, its individual attributes are directly accessible for
-use in expressions, joins, projections, and more. In Couchbase,
-documents are the analogous units of direct access&mdash;once a
-document is obtained, its attributes, fragments, and metadata are
-accessible for use in all aspects of query processing.
+use in expressions, joins, projections, and more. In N1QL, documents
+are the analogous units of direct access&mdash;once a document is
+obtained, its attributes, fragments, and metadata are accessible for
+use in all aspects of query processing.
 
-If relational queries express row-oriented processing, then Couchbase
+If relational queries express row-oriented processing, then N1QL
 queries express fragment-oriented processing. Documents can be
 considered a special case of top-level fragments that provide direct
-and optimized access to all their contained fragments. To highlight
-this optimized in-document access, the Couchbase query model makes a
+and optimized access to all their contained fragments. To leverage
+this optimized in-document access, the N1QL query model makes a
 distinction between in-document joins (among fragments in the same
 document) and cross-document joins (across documents).
 
 The output of a relational query is a set of rows, just like a stored
 relational table. This makes relational queries composable. The output
-of a Couchbase query is a set of documents, just like a stored
-Couchbase bucket. This makes Couchbase queries composable as well.
+of a N1QL query is a set of documents, just like a stored N1QL
+bucket. This makes N1QL queries composable as well.
 
-We now present the Couchbase query model by enumerating the stages of
-the query processing pipeline. Not surprisingly, the stages are the
-same as in relational queries; but within each stage, the capabilities
-are expanded to mirror the generalization of the Couchbase data model.
+We now present the N1QL query model by enumerating the stages of the
+query processing pipeline. Not surprisingly, the stages are the same
+as in relational queries; but within each stage, the capabilities are
+expanded to mirror the generalization of the N1QL data model.
 
 ### Pipeline
 
 A query is a declarative specification of a selection, transformation,
-and retrieval of data. The Couchbase query model provides the
-following pipeline stages for expressing queries. Most of these stages
-are optional; the projecting stage is always required, and the
-sourcing stage is required for accessing stored data.
+and retrieval of data. The N1QL query model provides the following
+pipeline stages for expressing queries. Most of these stages are
+optional; the projecting stage is always required, and the sourcing
+stage is required for accessing stored data.
 
 #### Sourcing
 
@@ -462,7 +497,7 @@ term or the result of one or more joins.
 In the filtering stage, objects from the data source are filtered
 using a filter expression.
 
-Couchbase queries provide additional expressions beyond the relational
+N1QL queries provide additional expressions beyond the relational
 ones&mdash;testing for missing attributes (in addition to NULL
 testing); expressions involving arrays (multi-valued attributes);
 object constructors; and more.
@@ -479,9 +514,8 @@ over the input objects in the group. These aggregate expressions can
 include counts, sums, statistical measures, and arbitrary combinations
 of these.
 
-Couchbase queries provide additional aggregate expressions for
-constructing arrays from expressions on the input objects in each
-group.
+N1QL queries provide additional aggregate expressions for constructing
+arrays from expressions on the input objects in each group.
 
 #### Group filtering
 
@@ -497,11 +531,16 @@ In the projecting stage, result objects are defined. These result
 objects can contain arbitrary expressions on the objects from the
 preceding stage.
 
-In addition to the attribute and expression projections of relational
-queries, Couchbase queries provide projection of arbitrary nested
-objects; construction of new nested objects of arbitrary shape; array
-construction; metadata and raw-value expressions; and all the
-additional expressions in Couchbase queries.
+In addition to the projections of relational queries, N1QL queries
+provide projection of arbitrary nested objects; construction of new
+nested objects of arbitrary shape; array construction; metadata and
+raw-value expressions; and all the additional expressions in N1QL
+queries.
+
+#### De-duplicating
+
+In the de-duplicating stage, duplicate result objects are removed, so
+that each remaining result is unique.
 
 #### Ordering
 
@@ -510,12 +549,12 @@ and predefined collations. A list of ordering expressions can be
 specified, with each expression specified to sort in ascending or
 descending order.
 
-Without an ordering stage, Couchbase queries are not guaranteed to
-return results in any particular order.
+Without an ordering stage, N1QL queries are not guaranteed to return
+results in any particular order.
 
 The ordering stage is essentially equivalent to the corresponding
 relational stage, except for the availability of additional
-expressions in Couchbase.
+expressions in N1QL.
 
 #### Paginating
 
@@ -533,17 +572,17 @@ relational stages.
 
 ## Query language
 
-We now introduce the query language N1QL (pronounced "nickel") as the
-first flavor and incarnation of the Couchbase query model. To state
-the obvious, the name N1QL is an homage to N1NF. Given this paper's
-focus on queries, only the query features of N1QL are highlighted
-here, while data modification features are not included.
+We now introduce the N1QL query language as a flavor and incarnation
+of the N1QL query model. Given this paper's preview focus, only the
+preview features of N1QL are highlighted here. In particular,
+cross-document joins, subqueries, data modification, and compound
+statements are omitted.
 
 The salient features of N1QL queries include a SQL-like flavor; the
 option to begin query statements with either SELECT or FROM; JSON
-syntax for object constructors and expressions; attribute paths for
+syntax for object and array expressions; attribute paths for
 referencing fragments; a special syntax for in-document joins; and
-additional expressions and functions from the Couchbase query model.
+additional expressions and functions from the N1QL query model.
 
 This section is not a complete or authoritative reference. The syntax
 presented here is meant to illustrate the style and highlight some
@@ -555,7 +594,7 @@ The format of a N1QL query statement is:
 
     select-query-statement:
 
-    SELECT select-list
+    SELECT [ DISTINCT ] select-list
 
     [ FROM from-term ]
 
@@ -563,11 +602,11 @@ The format of a N1QL query statement is:
 
     [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
 
-    [ ORDER BY expression [ ASC | DESC ], ... ]
+    [ ORDER BY ( expression [ ASC | DESC ] ), ... ]
 
-    [ LIMIT integer-constant ]
+    [ LIMIT integer-literal ]
 
-    [ OFFSET integer-constant ]
+    [ OFFSET integer-literal ]
   
 or, beginning with the FROM clause:
 
@@ -579,13 +618,13 @@ or, beginning with the FROM clause:
 
     [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
 
-    SELECT select-list
+    SELECT [ DISTINCT ] select-list
 
-    [ ORDER BY expression [ ASC | DESC ], ... ]
+    [ ORDER BY ( expression [ ASC | DESC ] ), ... ]
 
-    [ LIMIT integer-constant ]
+    [ LIMIT integer-literal ]
 
-    [ OFFSET integer-constant ]
+    [ OFFSET integer-literal ]
 
 The *select-list* constructs result objects from specific expressions
 and wildcards.
@@ -594,10 +633,10 @@ and wildcards.
 
     ( '*' | path '.' '*' | expression [ [ AS ] alias ] ), ...
 
-In the next syntax box, we show the in-document version of
-*from-term,* which is limited to a single bucket reference, and leave
-the cross-document version to a future paper. The recursive use of
-*from-term* means that OVER...IN clauses can be chained.
+In the next syntax box, we only show the in-document version of
+*from-term,* which is limited to a single bucket reference. The
+recursive use of *from-term* means that OVER...IN clauses can be
+chained.
 
     from-term:
 
@@ -629,9 +668,9 @@ We now highlight some non-relational expressions in N1QL.
 
 #### IS [ NOT ] MISSING
 
-In the Couchbase data model, documents in a bucket are not required to
-have the same set of attributes. The IS [ NOT ] MISSING operator is
-provided to test whether an expressing (typically attribute or
+In the N1QL data model, documents in a bucket are not required to have
+the same set of attributes. The IS [ NOT ] MISSING operator is
+provided to test whether an expression (typically attribute or
 attribute path) is present in the processing context.
 
 Examples.
@@ -646,9 +685,9 @@ Examples.
 
 #### Arrays
 
-Array concatenation (same syntax as strings).
+Array subscripting.
 
-    expression || expression
+    expression[expression]
 
 Examples.
 
@@ -658,17 +697,11 @@ Array length (same syntax as strings).
 
 Examples.
 
-Array subscripting.
-
-    expression[expression]
-
-Examples.
-
 #### Collection expressions
 
-To leverage the multi-valued attributes of the Couchbase N1NF data
-model, a special set of collection expressions are provided. In the
-boxes below, collection is an array-valued subpath or expression.
+To leverage the multi-valued attributes of the N1QL data model, a
+special set of collection expressions are provided. In the boxes
+below, *collection* is an array-valued subpath or expression.
 
 The existential quantifier over arrays tests whether any array element
 matches a predicate.
@@ -720,37 +753,38 @@ Examples.
 
 #### Functions
 
-* META(): Returns metadata of the current document, including primary key
+* META(): Returns metadata of the current document, including its
+  primary key
 
 * VALUE(): Returns raw value of the current context
 
-* BASE64_VALUE(): Returns nase64 enconding of raw value; this is
+* BASE64_VALUE(): Returns base64 encoding of a raw value; this is
   useful for non-JSON values
 
-* ARRAY_AGG(): An aggreagate function that constructs an array from an
+* ARRAY_AGG(): Aggreagate function that constructs an array from an
   expression over the input objects to each group
 
 ## Conclusion
 
-This paper has previewed the Couchbase query model.
+This paper has previewed the query model of N1QL, a new query language
+from Couchbase.
 
 Beginning with the data model, we reviewed the relational model and
 its normalization principles. We reviewed non-first normal form (N1NF)
 as a superset and generalization of the relational model. We presented
-the Couchbase data model as N1NF with first-class nesting and
+the N1QL data model as N1NF with first-class nesting and
 domain-oriented normalization. We discussed domain-oriented
 normalization as preserving beneficial, intrinsic normalization while
-discarding detractive, artificial normalization. We noted the logical
-artifacts and the JSON encoding of the Couchbase data model.
+discarding detractive, artificial normalization. We described the
+logical artifacts of the N1QL data model.
 
-We presented the Couchbase query model by analogy to the relational
+We presented the N1QL query model by analogy to the relational
 query model, and by enumerating and describing the stages of the
-Couchbase query processing pipeline.
+N1QL query processing pipeline.
 
-Finally, we introduced the query language N1QL as the first flavor and
-incarnation of the Couchbase query model. We diagrammed the query
-statement format, and highlighted some non-relational features of the
-language.
+Finally, we introduced the N1QL query language as a flavor and
+incarnation of the query model. We diagrammed the query statement
+format, and highlighted some non-relational features of the language.
 
 ## About this document
 
@@ -758,6 +792,8 @@ language.
 
 * 2013-08-19 - Initial version
 * 2013-08-20 - Removed array slicing
+* 2013-08-26 - Added END to collection expressions
+* 2013-08-30 - Incorporated feedback, sans examples
 
 ### Open issues
 
