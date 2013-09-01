@@ -1,6 +1,6 @@
 # N1QL from Couchbase&mdash;A Preview of the Query Model
 
-by Gerald Sangudi
+by Gerald Sangudi, Marty Schoch, Steve Yen, and Sriram Melkote
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
