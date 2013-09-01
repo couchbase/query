@@ -1,10 +1,10 @@
-# N1QL from Couchbase&mdash;A Preview of the Query Model
+# N1QL from Couchbase&mdash;A Query Model Preview
 
 by Gerald Sangudi, Marty Schoch, Steve Yen, and Sriram Melkote
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-31
+* Modified: 2013-09-01
 
 ## Introduction
 
@@ -978,3 +978,4 @@ highlighting non-relational features and capabilities.
 * 2013-08-26 - Added END to collection expressions
 * 2013-08-30 - Incorporated feedback, sans examples
 * 2013-08-31 - Added remaining examples
+* 2013-09-01 - Tweaked title
