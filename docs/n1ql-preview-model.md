@@ -4,7 +4,7 @@ by Gerald Sangudi
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-08-30
+* Modified: 2013-08-31
 
 ## Introduction
 
@@ -34,13 +34,14 @@ immutable primary key. For data values that have structure and are not
 opaque, those values are encoded as documents (JSON or equivalent),
 with each document mapped to a primary key.
 
-We start with the conceptual basis of the N1QL data model. In database
-formalism, the data model is based on Non-First Normal Form, or N1NF
-(hence the name N1QL). This model is a superset and generalization of
-the relational model. The relational model requires data normalization
-to First Normal Form (1NF) and advocates further normalization to
-Third Normal Form (3NF). We examine the relational model and its
-normalization principles, and then proceeed to the N1QL data model.
+We start with the conceptual basis of the data model. In database
+formalism, the N1QL data model is based on Non-First Normal Form, or
+N1NF (hence the name N1QL). This model is a superset and
+generalization of the relational model. The relational model requires
+data normalization to First Normal Form (1NF) and advocates further
+normalization to Third Normal Form (3NF). We examine the relational
+model and its normalization principles, and then proceeed to the N1QL
+data model.
 
 ### Relational model and normalization
 
@@ -600,7 +601,7 @@ The format of a N1QL query statement is:
 
     [ WHERE predicate ]
 
-    [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
+    [ GROUP BY expression, ... [ HAVING predicate ] ]
 
     [ ORDER BY ( expression [ ASC | DESC ] ), ... ]
 
@@ -616,7 +617,7 @@ or, beginning with the FROM clause:
 
     [ WHERE predicate ]
 
-    [ GROUP BY expression, ... [ HAVING predicate, ... ] ]
+    [ GROUP BY expression, ... [ HAVING predicate ] ]
 
     SELECT [ DISTINCT ] select-list
 
@@ -660,7 +661,55 @@ When the left-hand-side fragment is a parent or ancestor of the
 right-hand-side fragment, the in-document join amounts to an unnesting
 of the right-hand-side fragment.
 
-Examples.
+As an example, suppose our *Customer* object has a *Rewards\_Number*
+Attribute for handling various loyalty programs, including shipping
+discounts. Our *Customer* bucket includes the following document:
+
+    {
+        name            : "William E. Coyote",
+        rewards_number  : "ABC123XYZ",
+        addresses       : [
+                              {
+                                  ship_to  : "Will Coyote",
+                                  street   : "1 Universal Way",
+                                  city     : "Wonderland",
+                                  state    : "CA",
+                                  zip      : 90210
+                              },
+                              {
+                                  ship_to  : "Rod Runner",
+                                  street   : "2 Water Ride",
+                                  city     : "Magic",
+                                  state    : "CA",
+                                  zip      : 90211
+                              }
+                          ]
+    }
+
+We want to generate shipping labels for the customer. Each shipping
+label contains a rewards number with the shipping address, so that the
+correct shipping discount is applied. The query and results are:
+
+    SELECT c.rewards_number, a.*
+    FROM customer c OVER a IN c.addresses
+    WHERE ...
+
+    {
+        rewards_number  : "ABC123XYZ",
+        ship_to         : "Will Coyote",
+        street          : "1 Universal Way",
+        city            : "Wonderland",
+        state           : "CA",
+        zip             : 90210
+    },
+    {
+        rewards_number  : "ABC123XYZ",
+        ship_to         : "Rod Runner",
+        street          : "2 Water Ride",
+        city            : "Magic",
+        state           : "CA",
+        zip             : 90211
+    }
 
 ### Non-relational expressions
 
@@ -669,67 +718,167 @@ We now highlight some non-relational expressions in N1QL.
 #### IS [ NOT ] MISSING
 
 In the N1QL data model, documents in a bucket are not required to have
-the same set of attributes. The IS [ NOT ] MISSING operator is
-provided to test whether an expression (typically attribute or
-attribute path) is present in the processing context.
+the same set of attributes. The IS MISSING and IS NOT MISSING
+operators are provided to test whether an expression (typically
+attribute or attribute path) is present in the processing context.
 
-Examples.
+In N1QL, MISSING is not the same as NULL. A value that is explicitly
+set to NULL is not MISSING.
+
+Given the following data in the *Product* bucket:
+
+    {
+        sku             : "RURYRYR3T5",
+        title           : "Comfy Recliner",
+        fabric          : "Leather"
+    },
+    {
+        sku             : "O76OIU6IYO",
+        title           : "Coffee Table",
+        length_inches   : 48
+    }
+
+The following queries would produce the corresponding results.
+
+    SELECT *
+    FROM product
+    WHERE fabric IS NOT MISSING
+
+    {
+        sku             : "RURYRYR3T5",
+        title           : "Comfy Recliner",
+        fabric          : "Leather"
+    }
+
+And:
+
+    SELECT *
+    FROM product
+    WHERE fabric IS MISSING
+
+    {
+        sku             : "O76OIU6IYO",
+        title           : "Coffee Table",
+        length_inches   : 48
+    }
+
+#### Arrays
+
+Arrays can be subscripted to extract individual elements.
+
+    expression[expression]
+
+To extract customer name and last-positioned address:
+
+    SELECT c.name, c.addresses[LENGTH(c.addresses) - 1] AS tail_address
+    FROM customer c
+    WHERE LENGTH(c.addresses) > 0
+
+    {
+        name          : "William E. Coyote"
+        tail_address  : {
+                            ship_to  : "Rod Runner",
+                            street   : "2 Water Ride",
+                            city     : "Magic",
+                            state    : "CA",
+                            zip      : 90211
+                        }
+    }
+
+In the FROM clause, any array subscripts must be constants. To extract
+the first zip of every customer:
+
+    SELECT zip
+    FROM customer.addresses[0]
+
+    {
+        zip      : 90210
+    }
 
 #### Path expressions
 
 Nested values of arbitrary depth can be referenced directly as
 expressions, separately from the use of attribute paths in the FROM
-clause.
+clause. To extract customer name and first-positioned zip code:
 
-Examples.
+    SELECT c.name, c.addresses[0].zip
+    FROM customer c
+    WHERE LENGTH(c.addresses) > 0
 
-#### Arrays
-
-Array subscripting.
-
-    expression[expression]
-
-Examples.
-
-Array length (same syntax as strings).
-
-    LENGTH(expression)
-
-Examples.
+    {
+        name  : "William E. Coyote",
+        zip   : 90210
+    }
 
 #### Collection expressions
 
 To leverage the multi-valued attributes of the N1QL data model, a
 special set of collection expressions are provided. In the boxes
-below, *collection* is an array-valued subpath or expression.
+below, *collection* is a collection-valued subpath or expression.
 
-The existential quantifier over arrays tests whether any array element
+The existential quantifier over collections tests whether any element
 matches a predicate.
 
     ANY predicate OVER name IN collection END
 
-Examples.
+Get customers who have any address in zip code 90210:
 
-The universal quantifier over arrays tests whether all array elements
+    SELECT name, rewards_number
+    FROM customer c
+    WHERE ANY a.zip = 90210 OVER a IN c.addresses END
+
+    {
+        name            : "William E. Coyote",
+        rewards_number  : "ABC123XYZ"
+    }
+
+The universal quantifier over collections tests whether all elements
 match a predicate.
 
     ALL predicate OVER name IN collection END
 
-Examples.
+Get the names and address counts of customers who have no addresses
+outside California:
 
-The selector over arrays returns a single expression using an array
-and optional predicate.
+    SELECT c.name, LENGTH(addresses) AS address_count
+    FROM customer c
+    WHERE ALL UPPER(a.state) = "CA" OVER a IN c.addresses END
+
+    {
+        name            : "William E. Coyote",
+        address_count   : 2
+    }
+
+The selector over collections returns a single expression using a
+collection and optional predicate.
 
     FIRST expression OVER name IN collection [ WHEN predicate ] END
 
-Examples.
+Get customer name and any shipping address street in zip code 90211:
 
-The mapper over arrays constructs a new expression array using an
-array and optional predicate.
+    SELECT name, FIRST a.street OVER a IN c.addresses WHEN a.zip = 90211 END AS street
+    FROM customer c
+    WHERE ANY a.zip = 90211 OVER a IN c.addresses END
+
+    {
+        name     : "William E. Coyote",
+        street   : "2 Water Ride"
+    }
+
+The mapper over collections constructs a new expression array using a
+collection and optional predicate. It is also called a comprehension.
 
     ARRAY expression OVER name IN collection [ WHEN predicate ] END
 
-Examples.
+Get customer name and an array of all shipping address zip codes:
+
+    SELECT name, ARRAY a.zip OVER a IN c.addresses END AS zips
+    FROM customer c
+
+    {
+        name     : "William E. Coyote",
+        zips     : [ 90210, 90211 ]
+    }
 
 #### Object expressions
 
@@ -739,17 +888,51 @@ object expressions can be used in any expression context in N1QL, but
 their biggest impact is when projected in the SELECT clause to
 transform result objects into arbitrary shapes as needed.
 
-Array constructors.
+Arrays can be constructed over arbitrary expressions, including nested
+arrays and objects.
 
     [ expression, ... ]
 
-Examples.
+The following query extracts the rewards number as an array, along
+with the customer name. This could be useful if the client application
+or other consumer expects an array of rewards numbers per customer.
 
-Object constructors.
+    SELECT name, [ rewards_number ] AS rewards_numbers
+    FROM customer
 
-    { name : expression, ... }
+    {
+        name             : "William E. Coyote",
+        rewards_numbers  : [ "ABC123XYZ" ]
+    }
 
-Examples.
+Objects can be constructed over arbitrary expressions, including
+nested arrays and objects.
+
+    { attribute : expression, ... }
+
+To extract the customer name along with the first shipping label (this
+time with the address further nested):
+
+    SELECT name,
+           {
+               rewards_number : rewards_number,
+               address        : addresses[0]
+           } AS label
+    FROM customer
+
+    {
+        name  : "William E. Coyote"
+        label : {
+                    rewards_number : "ABC123XYZ",
+                    address        : {
+                                         ship_to : "Will Coyote",
+                                         street  : "1 Universal Way",
+                                         city    : "Wonderland",
+                                         state   : "CA",
+                                         zip     : 90210
+                                     }
+                }
+    }
 
 #### Functions
 
@@ -766,36 +949,32 @@ Examples.
 
 ## Conclusion
 
-This paper has previewed the query model of N1QL, a new query language
-from Couchbase.
+N1QL is a new query language from Couchbase. It aims to meet the query
+needs of Couchbase users and applications at scale, and to offer a
+sound abstraction for next-generation databases and their users. In
+this paper, we have offered a preview of the N1QL query model.
 
-Beginning with the data model, we reviewed the relational model and
-its normalization principles. We reviewed non-first normal form (N1NF)
-as a superset and generalization of the relational model. We presented
-the N1QL data model as N1NF with first-class nesting and
-domain-oriented normalization. We discussed domain-oriented
-normalization as preserving beneficial, intrinsic normalization while
-discarding detractive, artificial normalization. We described the
-logical artifacts of the N1QL data model.
+We first discussed the N1QL data model. As background, we explored the
+principles, benefits and costs of the relational model. We presented
+the N1QL data model and identified its comparative benefits&mdash;
+document-based access, intrinsic data modeling, domain-oriented
+normalization, structural flexibility; in short, preserving the
+benefits of the relational model while shedding its model-induced
+costs.
 
-We presented the N1QL query model by analogy to the relational
-query model, and by enumerating and describing the stages of the
-N1QL query processing pipeline.
+We then described the N1QL query model by analogy to the relational,
+showing a similar processing pipeline with additional capabilities in
+various pipeline stages.
 
-Finally, we introduced the N1QL query language as a flavor and
-incarnation of the query model. We diagrammed the query statement
-format, and highlighted some non-relational features of the language.
+Finally, we previewed the N1QL query language and its syntax,
+highlighting non-relational features and capabilities.
 
 ## About this document
 
 ### Document history
 
 * 2013-08-19 - Initial version
-* 2013-08-20 - Removed array slicing
+* 2013-08-20 - Removed array slicing for now
 * 2013-08-26 - Added END to collection expressions
 * 2013-08-30 - Incorporated feedback, sans examples
-
-### Open issues
-
-This meta-section records open issues in this document, and will
-eventually disappear.
+* 2013-08-31 - Added remaining examples
