@@ -59,11 +59,11 @@ application. The data set contains the following objects:
 * *Product* (title, code, description, unit price)
 * *Shopping Cart* (customer, shipping address, payment method, line items)
 
-We now discuss the principal relational normal forms. This discussion
-serves as background for understanding the differences between N1QL
-and the relational model. You may skim this discussion and continue to
-the benefits and costs of the relational model, or you may read it
-closely as an explanation or refresher.
+Next, we discuss the principal relational normal forms. This
+discussion serves as background for understanding the differences
+between N1QL and the relational model. You may skim this discussion
+and continue to the benefits and costs of the relational model, or you
+may read it as an explanation or refresher.
 
 #### First normal form
 
@@ -216,7 +216,7 @@ force us to introduce at least two additional tables:
 
 * *Customer\_Address* and *Shopping\_Cart\_Line\_Item* belong to
   *Customer* and *Shopping\_Cart*, respectively, and have no
-  independent existence of their own.
+  *independent existence of their own.
 * In applications, *Customer* is almost always retrieved along with
   its addresses, and *Shopping\_Cart* is almost always retrieved along
   with its line items. The expense and complexity of these joins is
@@ -238,12 +238,12 @@ integrity is maintained using either foreign keys in the database or
 logic in the application. Either way, it adds cost and complexity to
 data modifications.
 
-The relational model did not recognize composite objects, which are
-ubiquitous in real-world data. The expense and complexity of joins and
-referential integrity was the same for both independent and dependent
-relationships. And the cost of object traversal and assembly was the
-same for both the default traversal path and rarely used traversal
-paths.
+Fundamentally, the relational model did not distinguish composite
+objects, which are ubiquitous in real-world data. The expense and
+complexity of joins and referential integrity were the same for both
+independent and dependent relationships. And the cost of object
+traversal and assembly was the same for both the preponderant
+traversal path and rarely used traversal paths.
 
 Many relational systems eventually recognized these costs in the
 relational model, and attempted to mitigate these costs by adding some
@@ -251,8 +251,8 @@ support for nested objects, multi-valued attributes, and other
 features sometimes called "object-relational." But these additions
 were outside the relational model, and the resulting combination
 lacked the coherence and completeness of a data model designed from
-inception to avoid these limitations. The next section presents such a
-data model.
+inception to avoid these limitations. We now present such a data
+model.
 
 ### N1QL data model and non-first normal form
 
@@ -282,12 +282,12 @@ model. We can embed the *Customer\_Address* and
 *Shopping\_Cart\_Line\_Item* data directly in the *Customer* and
 *Shopping\_Cart* tables, respectively.
 
-In the *Customer* table, we add an attribute *Addresses*. This is a
+In the *Customer* table, we add an attribute *Address*. This is a
 multi-valued attribute, and each of its values is a tuple with the
 attributes from the *Customer\_Address* table: *Address\_Id,
 Street\_Address, City, Zip,* and *State.*
 
-In the *Shopping\_Cart* table, we add an attribute *Line\_Items*. This
+In the *Shopping\_Cart* table, we add an attribute *Line\_Item*. This
 is a multi-valued attribute, and each of its values is a tuple with
 attributes from the *Shopping\_Cart\_Line\_Item* table, including
 *Line\_Item\_Id, Product\_Id,* and *Quantity.*
@@ -295,7 +295,7 @@ attributes from the *Shopping\_Cart\_Line\_Item* table, including
 Now, *Customer* and *Shopping\_Cart* objects can be retrieved with or
 without addresses and line items, respectively, and never requiring
 joins. The choice in retrieval is simply whether or not to include the
-*Addresses* and *Line\_Items* attributes.
+*Address* and *Line\_Item* attributes.
 
 #### First-class nesting
 
@@ -321,12 +321,11 @@ do so using only the *Shopping\_Cart\_Line\_Item* and *Product*
 tables.
 
 With first-class nesting, the N1QL data model allows us to reference
-nested objects. We can reference and query the *Customer.Addresses*
-and *Shopping\_Cart.Line\_Items* attributes in the same manner as
-top-level objects. As such, we can directly perform both computations
-enabled by 1NF above: analyzing the geographical distribution of
-customer addresses, and analyzing the distribution of products in line
-items.
+nested objects. We can reference and query the *Customer.Address* and
+*Shopping\_Cart.Line\_Item* attributes in the same manner as top-level
+objects. As such, we can directly perform both computations enabled by
+1NF above: analyzing the geographical distribution of customer
+addresses, and analyzing the distribution of products in line items.
 
 At the same time, the benefits of N1NF are retained&mdash;we can
 retrieve customers with their addresses and shopping carts with their
@@ -365,15 +364,15 @@ In addition to the benefits above, the N1QL data model supports
 flexibility in document structure.
 
 The underlying N1QL database may provide schema-less, open-schema, or
-closed-schema document sets. As attributes are added or removed to a
-schema or to specific documents, pre-existing data and queries remain
-valid. This is a powerful benefit as applications and business
+closed-schema document sets. As attributes are added to or removed
+from a schema or specific documents, pre-existing data and queries
+remain valid. This is a powerful benefit as applications and business
 requirements evolve.
 
-In our shopping cart example, we could support international customers
-by simply including additional attributes in their addresses:
-*Country*, *Postal\_Code.* Domestic customers and queries would be
-unaffected.
+In our shopping cart example, we could add support for international
+shipping by simply including additional attributes in those shipping
+addresses&mdash;*Country*, *Postal\_Code.* Domestic addresses and
+queries would be unaffected.
 
 ### Logical artifacts
 
@@ -407,9 +406,9 @@ retrievable by query.
 
 In our shopping cart example, every bucket or attribute path would
 reference a set of fragments: *Customer, Customer.Name,
-Customer.Addresses, Customer.Addresses.Zip, Product,
-Product.UnitPrice, Shopping\_Cart, Shopping\_Cart.Customer\_Id,
-Shopping\_Cart.Line\_Items, Shopping\_Cart.Line\_Items.Quantity,* etc.
+Customer.Address, Customer.Address.Zip, Product, Product.UnitPrice,
+Shopping\_Cart, Shopping\_Cart.Customer\_Id,
+Shopping\_Cart.Line\_Item, Shopping\_Cart.Line\_Item.Quantity,* etc.
 
 #### Buckets
 
@@ -467,7 +466,7 @@ relational table. This makes relational queries composable. The output
 of a N1QL query is a set of documents, just like a stored N1QL
 bucket. This makes N1QL queries composable as well.
 
-We now present the N1QL query model by enumerating the stages of the
+We continue with the N1QL query model by enumerating the stages of the
 query processing pipeline. Not surprisingly, the stages are the same
 as in relational queries; but within each stage, the capabilities are
 expanded to mirror the generalization of the N1QL data model.
@@ -484,8 +483,8 @@ stage is required for accessing stored data.
 
 In the sourcing stage, a data source is constructed from one or more
 terms, which are logical artifacts in the database. If a term is a
-bucket, it refers to all the documents in that bucket. If the term is
-an attribute path within a bucket, it refers to all the fragments
+bucket, it refers to all the documents in that bucket. If a term is an
+attribute path within a bucket, it refers to all the fragments
 reachable by traversing that attribute path within each document in
 that bucket.
 
@@ -535,8 +534,7 @@ preceding stage.
 In addition to the projections of relational queries, N1QL queries
 provide projection of arbitrary nested objects; construction of new
 nested objects of arbitrary shape; array construction; metadata and
-raw-value expressions; and all the additional expressions in N1QL
-queries.
+raw-value expressions; and all the additional expressions in N1QL.
 
 #### De-duplicating
 
@@ -573,10 +571,10 @@ relational stages.
 
 ## Query language
 
-We now introduce the N1QL query language as a flavor and incarnation
-of the N1QL query model. Given this paper's preview focus, only the
-preview features of N1QL are highlighted here. In particular,
-cross-document joins, subqueries, data modification, and compound
+The N1QL query language is a flavor and incarnation of the N1QL query
+model. Given this paper's preview focus, only the preview features of
+N1QL are highlighted here. In particular, cross-document joins,
+subqueries, data modification, data definition, and compound
 statements are omitted.
 
 The salient features of N1QL queries include a SQL-like flavor; the
@@ -585,9 +583,9 @@ syntax for object and array expressions; attribute paths for
 referencing fragments; a special syntax for in-document joins; and
 additional expressions and functions from the N1QL query model.
 
-This section is not a complete or authoritative reference. The syntax
-presented here is meant to illustrate the style and highlight some
-non-relational features of the language.
+This section is not a reference guide. The syntax presented here is
+meant to illustrate the style and highlight some non-relational
+features of the language.
 
 ### Statement format
 
@@ -609,7 +607,7 @@ The format of a N1QL query statement is:
 
     [ OFFSET integer-literal ]
   
-or, beginning with the FROM clause:
+Or, beginning with the FROM clause:
 
     from-query-statement:
 
@@ -668,7 +666,7 @@ discounts. Our *Customer* bucket includes the following document:
     {
         name            : "William E. Coyote",
         rewards_number  : "ABC123XYZ",
-        addresses       : [
+        address         : [
                               {
                                   ship_to  : "Will Coyote",
                                   street   : "1 Universal Way",
@@ -691,7 +689,7 @@ label contains a rewards number with the shipping address, so that the
 correct shipping discount is applied. The query and results are:
 
     SELECT c.rewards_number, a.*
-    FROM customer c OVER a IN c.addresses
+    FROM customer c OVER a IN c.address
     WHERE ...
 
     {
@@ -713,7 +711,7 @@ correct shipping discount is applied. The query and results are:
 
 ### Non-relational expressions
 
-We now highlight some non-relational expressions in N1QL.
+Let us highlight some non-relational expressions in N1QL.
 
 #### IS [ NOT ] MISSING
 
@@ -733,6 +731,11 @@ Given the following data in the *Product* bucket:
         fabric          : "Leather"
     },
     {
+        sku             : "FHGHI5IG45",
+        title           : "Wood Armchair",
+        fabric          : null
+    },
+    {
         sku             : "O76OIU6IYO",
         title           : "Coffee Table",
         length_inches   : 48
@@ -748,6 +751,11 @@ The following queries would produce the corresponding results.
         sku             : "RURYRYR3T5",
         title           : "Comfy Recliner",
         fabric          : "Leather"
+    },
+    {
+        sku             : "FHGHI5IG45",
+        title           : "Wood Armchair",
+        fabric          : null
     }
 
 And:
@@ -770,9 +778,8 @@ Arrays can be subscripted to extract individual elements.
 
 To extract customer name and last-positioned address:
 
-    SELECT c.name, c.addresses[LENGTH(c.addresses) - 1] AS tail_address
+    SELECT c.name, c.address[LENGTH(c.address) - 1] AS tail_address
     FROM customer c
-    WHERE LENGTH(c.addresses) > 0
 
     {
         name          : "William E. Coyote"
@@ -789,21 +796,20 @@ In the FROM clause, any array subscripts must be constants. To extract
 the first zip of every customer:
 
     SELECT zip
-    FROM customer.addresses[0]
+    FROM customer.address[0]
 
     {
-        zip      : 90210
+        zip  : 90210
     }
 
 #### Path expressions
 
 Nested values of arbitrary depth can be referenced directly as
-expressions, separately from the use of attribute paths in the FROM
+expressions. This is separate from the use of paths in the FROM
 clause. To extract customer name and first-positioned zip code:
 
-    SELECT c.name, c.addresses[0].zip
+    SELECT c.name, c.address[0].zip
     FROM customer c
-    WHERE LENGTH(c.addresses) > 0
 
     {
         name  : "William E. Coyote",
@@ -812,9 +818,9 @@ clause. To extract customer name and first-positioned zip code:
 
 #### Collection expressions
 
-To leverage the multi-valued attributes of the N1QL data model, a
-special set of collection expressions are provided. In the boxes
-below, *collection* is a collection-valued subpath or expression.
+To leverage the multi-valued attributes of N1QL, a special set of
+collection expressions is provided. In the syntax boxes below,
+*collection* is a collection-valued subpath or expression.
 
 The existential quantifier over collections tests whether any element
 matches a predicate.
@@ -825,7 +831,7 @@ Get customers who have any address in zip code 90210:
 
     SELECT name, rewards_number
     FROM customer c
-    WHERE ANY a.zip = 90210 OVER a IN c.addresses END
+    WHERE ANY a.zip = 90210 OVER a IN c.address END
 
     {
         name            : "William E. Coyote",
@@ -837,12 +843,12 @@ match a predicate.
 
     ALL predicate OVER name IN collection END
 
-Get the names and address counts of customers who have no addresses
+Get the names and address counts of customers who have no address
 outside California:
 
-    SELECT c.name, LENGTH(addresses) AS address_count
+    SELECT c.name, LENGTH(address) AS address_count
     FROM customer c
-    WHERE ALL UPPER(a.state) = "CA" OVER a IN c.addresses END
+    WHERE ALL UPPER(a.state) = "CA" OVER a IN c.address END
 
     {
         name            : "William E. Coyote",
@@ -856,13 +862,13 @@ collection and optional predicate.
 
 Get customer name and any shipping address street in zip code 90211:
 
-    SELECT name, FIRST a.street OVER a IN c.addresses WHEN a.zip = 90211 END AS street
+    SELECT name, FIRST UPPER(a.street) OVER a IN c.address WHEN a.zip = 90211 END AS street
     FROM customer c
-    WHERE ANY a.zip = 90211 OVER a IN c.addresses END
+    WHERE ANY a.zip = 90211 OVER a IN c.address END
 
     {
         name     : "William E. Coyote",
-        street   : "2 Water Ride"
+        street   : "2 WATER RIDE"
     }
 
 The mapper over collections constructs a new expression array using a
@@ -872,7 +878,7 @@ collection and optional predicate. It is also called a comprehension.
 
 Get customer name and an array of all shipping address zip codes:
 
-    SELECT name, ARRAY a.zip OVER a IN c.addresses END AS zips
+    SELECT name, ARRAY a.zip OVER a IN c.address END AS zips
     FROM customer c
 
     {
@@ -884,18 +890,18 @@ Get customer name and an array of all shipping address zip codes:
 
 A powerful feature of N1QL is the ability to construct arbitrary
 object expressions. N1QL uses JSON syntax for this purpose. These
-object expressions can be used in any expression context in N1QL, but
-their biggest impact is when projected in the SELECT clause to
-transform result objects into arbitrary shapes as needed.
+object expressions can be used in any expression context, but their
+biggest impact is when projected in the SELECT clause to transform
+result objects into arbitrary shapes as needed.
 
 Arrays can be constructed over arbitrary expressions, including nested
 arrays and objects.
 
     [ expression, ... ]
 
-The following query extracts the rewards number as an array, along
-with the customer name. This could be useful if the client application
-or other consumer expects an array of rewards numbers per customer.
+The following query extracts the rewards number as an array. This
+could be useful if the client application or other data consumer
+expects an array of rewards numbers per customer.
 
     SELECT name, [ rewards_number ] AS rewards_numbers
     FROM customer
@@ -916,7 +922,7 @@ time with the address further nested):
     SELECT name,
            {
                rewards_number : rewards_number,
-               address        : addresses[0]
+               address        : address[0]
            } AS label
     FROM customer
 
@@ -934,7 +940,7 @@ time with the address further nested):
                 }
     }
 
-#### Functions
+#### Selected functions
 
 * META(): Returns metadata of the current document, including its
   primary key
@@ -955,19 +961,23 @@ sound abstraction for next-generation databases and their users. In
 this paper, we have offered a preview of the N1QL query model.
 
 We first discussed the N1QL data model. As background, we explored the
-principles, benefits and costs of the relational model. We presented
+relational model and its principles, benefits and costs. We presented
 the N1QL data model and identified its comparative benefits&mdash;
-document-based access, intrinsic data modeling, domain-oriented
-normalization, structural flexibility; in short, preserving the
-benefits of the relational model while shedding its model-induced
-costs.
+document-based access, intrinsic data modeling, first-class nesting,
+domain-oriented normalization, and structural flexibility; in short,
+preserving the benefits of the relational model while shedding its
+model-induced costs.
 
-We then described the N1QL query model by analogy to the relational,
-showing a similar processing pipeline with additional capabilities in
-various pipeline stages.
+We then described the N1QL query model by analogy to the
+relational. The N1QL query model works with both rectangles and
+triangles; is fragment-oriented; and is composable.  N1QL presents a
+similar processing pipeline as relational, with additional
+capabilities in various pipeline stages.
 
-Finally, we previewed the N1QL query language and its syntax,
-highlighting non-relational features and capabilities.
+Finally, we previewed the N1QL query language and its syntax.  We
+highlighted non-relational features and capabilities, including
+in-document joins; array, path, collection, and object expressions;
+and selected functions.
 
 ## About this document
 
@@ -978,4 +988,6 @@ highlighting non-relational features and capabilities.
 * 2013-08-26 - Added END to collection expressions
 * 2013-08-30 - Incorporated feedback, sans examples
 * 2013-08-31 - Added remaining examples
-* 2013-09-01 - Tweaked title
+* 2013-09-01 - Tweaks
+    * Tweaked title and prose
+    * Used singular names for nested attributes
