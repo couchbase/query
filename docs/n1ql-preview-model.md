@@ -216,7 +216,7 @@ force us to introduce at least two additional tables:
 
 * *Customer\_Address* and *Shopping\_Cart\_Line\_Item* belong to
   *Customer* and *Shopping\_Cart*, respectively, and have no
-  *independent existence of their own.
+  independent existence of their own.
 * In applications, *Customer* is almost always retrieved along with
   its addresses, and *Shopping\_Cart* is almost always retrieved along
   with its line items. The expense and complexity of these joins is
@@ -306,8 +306,8 @@ benefits of N1NF and 1NF.
 
 As discussed, N1NF provides natural modeling of object structure and
 avoids artificial decompositions, joins, and referential integrity. In
-our shopping cart example, this means embedding address and line items
-in the *Customer* and *Shopping\_Cart* tables, respectively.
+our shopping cart example, this means embedding addresses and line
+items in the *Customer* and *Shopping\_Cart* tables, respectively.
 
 1NF does incur the costs of artificial decomposition, joins, and
 referential integrity, but it offers at least one benefit. It allows
@@ -371,8 +371,8 @@ requirements evolve.
 
 In our shopping cart example, we could add support for international
 shipping by simply including additional attributes in those shipping
-addresses&mdash;*Country*, *Postal\_Code.* Domestic addresses and
-queries would be unaffected.
+addresses: *Country*, *Postal\_Code.* Domestic addresses and queries
+would be unaffected.
 
 ### Logical artifacts
 
@@ -406,7 +406,7 @@ retrievable by query.
 
 In our shopping cart example, every bucket or attribute path would
 reference a set of fragments: *Customer, Customer.Name,
-Customer.Address, Customer.Address.Zip, Product, Product.UnitPrice,
+Customer.Address, Customer.Address.Zip, Product, Product.Unit\_Price,
 Shopping\_Cart, Shopping\_Cart.Customer\_Id,
 Shopping\_Cart.Line\_Item, Shopping\_Cart.Line\_Item.Quantity,* etc.
 
@@ -690,7 +690,6 @@ correct shipping discount is applied. The query and results are:
 
     SELECT c.rewards_number, a.*
     FROM customer c OVER a IN c.address
-    WHERE ...
 
     {
         rewards_number  : "ABC123XYZ",
