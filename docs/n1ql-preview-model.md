@@ -4,7 +4,7 @@ by Gerald Sangudi, Marty Schoch, Steve Yen, and Sriram Melkote
 
 * Status: DRAFT
 * Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
-* Modified: 2013-09-01
+* Modified: 2013-09-04
 
 ## Introduction
 
@@ -990,3 +990,4 @@ and selected functions.
 * 2013-09-01 - Tweaks
     * Tweaked title and prose
     * Used singular names for nested attributes
+* 2013-09-04 - Small edits
