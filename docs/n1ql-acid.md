@@ -90,6 +90,11 @@ held (SELECT FOR UPDATE) by the current transaction.
 All writes by the query engine (DML statements) require strong ACID
 semantics.
 
+1. For a given statement, all reads must (appear to) happen before all
+   writes. That is, all the inputs to a statement must be read without
+   being modified by the statement. This can be satisfied using stable
+   scans.
+
 1. All DML statements are transactional.
    * If a DML statement is not within an explicit transaction, it will
      behave like a single-statement transaction.
