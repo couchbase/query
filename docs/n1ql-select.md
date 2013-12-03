@@ -1,89 +1,193 @@
-# N1QL&mdash;Query Language for N1NF (Non-1st Normal Form): SELECT
+# N1QL Query Language&mdash;SELECT
 
-* Status: DRAFT/PROPOSAL
+* Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-07-23
+* Modified: 2013-12-03
 
-## Summary
+## Introduction
 
-N1QL is a query language for Couchbase, and is a continuation of
-[UNQL](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/unql-2013.md).
-This document was branched from the UNQL spec, and retains much of
-that content verbatim.
+N1QL ("nickel") is the query language from Couchbase. N1QL aims to
+meet the query needs of distributed document-oriented databases. This
+document specifies the syntax and semantics of the SELECT statement in
+N1QL.
 
-The language attempts to satisfy these
-[requirements](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/requirements.md).
+"N1QL" stands for Non-1st Query Language. The name reflects the fact
+that the Couchbase document-oriented data model is based on [Non-1st
+Normal Form
+(N1NF)](http://en.wikipedia.org/wiki/Database_normalization#Non-first_normal_form_.28NF.C2.B2_or_N1NF.29).
 
-This document describes the syntax and semantics of the SELECT
-statement in the language.
+## SELECT syntax
 
-## SELECT Core
+The syntax of the SELECT statement is as follows.
 
-Before looking at the full SELECT statement, let us start with a
-simpler subset.
+#### SELECT statement
 
-select-core:
+*select:*
+
+![](diagram/select.png)
+
+In N1QL, SELECT statements can begin with either SELECT or FROM. The
+behavior is the same in either case.
+
+*select-core:*
 
 ![](diagram/select-core.png)
 
-result-expr:
+*select-from-core:*
+
+![](diagram/select-from-core.png)
+
+*from-select-core:*
+
+![](diagram/from-select-core.png)
+
+#### SELECT statement
+
+*select-clause:*
+
+![](diagram/select-clause.png)
+
+*result-expr:*
 
 ![](diagram/result-expr.png)
 
-from-term:
-
-![](diagram/from-term.png)
-
-join-type:
-
-![](diagram/join-type.png)
-
-path:
+*path:*
 
 ![](diagram/path.png)
 
-subpath:
+*alias:*
 
-![](diagram/subpath.png)
+![](diagram/alias.png)
 
-The SELECT statement is used to query a data source.  The result of a
-SELECT is an array containing zero or more result objects.
+#### FROM clause
 
-### Select Procesing
+*from-clause:*
+
+![](diagram/from-clause.png)
+
+*from-term:*
+
+![](diagram/from-term.png)
+
+*from-path:*
+
+![](diagram/from-path.png)
+
+*pool-name:*
+
+![](diagram/pool-name.png)
+
+*key-clause:*
+
+![](diagram/key-clause.png)
+
+*unnest-clause:*
+
+![](diagram/unnest-clause.png)
+
+*join-clause:*
+
+![](diagram/join-clause.png)
+
+*join-type:*
+
+![](diagram/join-type.png)
+
+#### WHERE clause
+
+*where-clause:*
+
+![](diagram/where-clause.png)
+
+*cond:*
+
+![](diagram/cond.png)
+
+#### GROUP BY clause
+
+*group-by-clause:*
+
+![](diagram/group-by-clause.png)
+
+*having-clause:*
+
+![](diagram/having-clause.png)
+
+#### ORDER BY clause
+
+*order-by-clause:*
+
+![](diagram/order-by-clause.png)
+
+*ordering-term:*
+
+![](diagram/ordering-term.png)
+
+#### LIMIT clause
+
+*limit-clause:*
+
+![](diagram/limit-clause.png)
+
+#### OFFSET clause
+
+*offset-clause:*
+
+![](diagram/offset-clause.png)
+
+## SELECT processing
 
 The behavior of a SELECT query is best understood as a sequence of
-steps.  Output objects from a step become input objects to the next
-step.
+steps. Output objects from each step become input objects to the next
+step. The result of a SELECT is an array containing zero or more
+result objects.
 
-1.  Data Source - the data source in the FROM clause describes which objects become the input source for the query
-1.  Filtering - result objects are filtered by the WHERE clause 
-1.  Result Object Generation - result objects are generated from GROUP BY, and HAVING clauses and the result expression list
-1.  Duplicate removal - if this is a DISTINCT query, duplicate result objects are removed
+1.  Data sourcing - the data source in the FROM clause describes which
+    objects become the input source for the query
 
-#### Data Source
+1.  Filtering - result objects are filtered by the WHERE clause, if
+    present
 
-The FROM clause is optional.  When it is omitted, the input for the
-execution of the query is a single empty object.  This allows for the
-evaluation of N1QL expressions that do not depend on any data.
+1.  Result object generation - result objects are generated from GROUP
+    BY and HAVING clauses and the result expression list
+
+1.  Duplicate removal - if DISTINCT is specified, duplicate result
+    objects are removed
+
+1.  Ordering - if ORDER BY is specified, the results are sorted
+    according to the ordering terms
+
+1.  Offsetting - if OFFSET is specified, the specified number of
+    results are skipped
+
+1.  Limiting - if LIMIT is specified, the results are limited to the
+    given number
+
+### Data sourcing
+
+If a statement begins with SELECT, The FROM clause is optional.  When
+it is omitted, the input for the execution of the query is a single
+empty object.  This allows for the evaluation of N1QL expressions that
+do not depend on any data.
 
 The most common form of the FROM clause is specifying a single
 identifier which identifies a bucket name.  In this form, an alias can
-optionally be specified with the AS clause.  When spcified this alias
-is the identifier used to explicitly refer to this data source in the
-query.  If omitted, the data source is referred to using the bucket
-name itself.
+optionally be specified with the AS clause.  When specified, this
+alias is the identifier used to explicitly refer to this data source
+in the query.  If omitted, the data source is referred to using the
+bucket name itself.
 
 Another usage of the FROM clause specifies a path within a bucket.  In
-this form, for each document in the specified bucket, the sub-path is
+this form, for each document in the specified bucket, the path is
 evaluated and that value becomes the input to the query.  If a literal
 integer array index is used it must be non-negative.  If any of the
 elements of the path are NULL or MISSING for a document in the bucket,
 that document will not contribute any canidate objects to the rest of
 the query.  For example:
 
-    FROM organizations.address
+    FROM organization.address
 
-In this example, a bucket named `organizations` contains documents
+In this example, a bucket named `organization` contains documents
 describing each organization.  Each organization document has a field
 namd `address` which is an object.  Using this syntax each address
 object becomes the input to the query.
@@ -92,7 +196,7 @@ Finally, the most complex usage of the FROM clause allows for path
 joins within a document.  This feature is sometimes referred to as
 `OVER`, `FLATTEN` or `UNNEST`.  Conceptually, a document containing a
 nested array can have each of the members of this array joined with
-the document.  Each of these joined objectes become the input to the
+the document.  Each of these joined objects become the input to the
 query.  If an element referenced along the OVER path is a scalar value
 instead of an array, it will be treated like a single-element array.
 If it is NULL or MISSING, then this document will not contribute any
@@ -148,17 +252,17 @@ NOTE: Path joining and expansion over array-valued members is only
 done in the FROM clause.  It is not done for nested expressions in the
 SELECT list, WHERE clause, etc.
 
-##### Joins
+#### Joins
 
 Joins have their normal meaning from SQL.
 
-#### Filtering
+### Filtering
 
 If a WHERE clause is specified, the expression is evaluated for each
 object.  All objects evluating to TRUE are included in the result
 array.
 
-#### Result Object Generation
+### Result object generation
 
 Result object generation depends on whether or not this is an
 aggregate query.  An aggregate query is any query which either
@@ -187,7 +291,7 @@ JSON constructors in the projection expression.
 
 See Appendix 6 for some example projections.
 
-#### Duplicate Removal
+### Duplicate removal
 
 If the DISTINCT keyword was specified, duplicate result objects are
 removed from the result array.  If DISTINCT was not specified, the
@@ -197,19 +301,7 @@ Two results are considered duplicate if the projected objects are the
 same (using the normal procedure for comparing objects).  See the
 ORDER BY section for more details about this process.
 
-## SELECT Statement
-
-Now, we can expand to consider the full SELECT statement:
-
-select:
-
-![](diagram/select.png)
-
-ordering-term:
-
-![](diagram/ordering-term.png)
-
-### ORDER BY, LIMIT, and OFFSET
+### Ordering
 
 If no ORDER BY clause is specified, the order in which the result
 objects are returned is undefined.
@@ -235,12 +327,281 @@ list describes the order by type (from lowest to highest):
 * array (element by element comparison, longer arrays sort after)
 * object (key/value by key/value comparison, keys are examined in sorted order using the normal ordering for strings, larger objects sort after)
 
-A LIMIT clause imposes an upper bound on the number of objects
-returned by the SELECT statement.  The LIMIT value must be an integer.
+### Offsetting
 
 An OFFSET clause specifies a number of objects to be skipped. If a
 LIMIT clause is also present, the OFFSET is applied prior to the
 LIMIT.  The OFFSET value must be an integer.
+
+### Limiting
+
+A LIMIT clause imposes an upper bound on the number of objects
+returned by the SELECT statement.  The LIMIT value must be an integer.
+
+## FROM clause
+
+*from-clause:*
+
+![](diagram/from-clause.png)
+
+*from-term:*
+
+![](diagram/from-term.png)
+
+*from-path:*
+
+![](diagram/from-path.png)
+
+*pool-name:*
+
+![](diagram/pool-name.png)
+
+*key-clause:*
+
+![](diagram/key-clause.png)
+
+*unnest-clause:*
+
+![](diagram/unnest-clause.png)
+
+*join-clause:*
+
+![](diagram/join-clause.png)
+
+*join-type:*
+
+![](diagram/join-type.png)
+
+The FROM clause defines the data source and input objects for the
+query.
+
+Every FROM clause specifies one or more buckets. The first bucket is
+called the primary bucket.
+
+The following sections discuss various elements of FROM clauses. These
+can be combined.
+
+### FROM clause omitted
+
+If the FROM clause is omitted, the data source is equivalent to an
+array containing a single empty object. This allows N1QL to be used to
+evaluate expressions that do not depend on stored data.
+
+Evaluating an expression:
+
+        SELECT 10 + 20
+
+=>
+
+        [ { "$1" : 30 } ]
+
+Counting the number of inputs:
+
+        SELECT COUNT(*) AS input_count
+
+=>
+
+        [ { "input_count" : 1 } ]
+
+Getting the input contents:
+
+        SELECT *
+
+=>
+
+        [ { } ]
+
+### Buckets
+
+The simplest type of FROM clause specifies a bucket:
+
+        SELECT * FROM customer
+
+This produces every value in the *customer* bucket.
+
+The bucket name can be prefixed with an optional pool name:
+
+        SELECT * FROM :main.customer
+
+This queries the *customer* bucket in the *main* pool.
+
+If the pool name is omitted, the default pool in the current session
+is used.
+
+### Keys
+
+Specific keys within a bucket can be specified. Only values having
+those keys will be included as inputs to the query.
+
+To specify a single key:
+
+        SELECT * FROM customer KEY "acme-uuid-1234-5678"
+
+To specify multiple keys:
+
+        SELECT * FROM customer KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
+
+### Nested paths
+
+Nested paths within buckets can be specified. For each document in the
+bucket, the path is evaluated and its value becomes an input the
+query. For a given document, if any element of the path is NULL or
+MISSING, that document is skipped and does not contribute any inputs
+to the query.
+
+If some customer documents contain a *primary\_contact* object, the
+following query can retrieve them:
+
+        SELECT * FROM customer.primary_contact
+
+=>
+
+        [
+            { "name" : "John Smith", "phone" : "+1-650-555-1234", "address" : { ... } },
+            { "name" : "Jane Brown", "phone" : "+1-650-555-5678", "address" : { ... } }
+        ]
+
+Nested paths can have arbitrary depth and include array subscripts.
+
+        SELECT * FROM customer.primary_contact.address
+
+=>
+
+        [
+            { "street" : "101 Main St.", "zip" : "94040" },
+            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
+        ]
+
+### Joins
+
+Joins allow you to create new input objects by combining two or more
+source objects. For example, if our *customer* objects were:
+
+        {
+            "name": ...,
+            "primary_contact": ...,
+            "address": [ ... ]
+        }
+
+And our *invoice* objects were:
+
+        {
+            "customer_key": ...,
+            "invoice_date": ...,
+            "total": ...
+        }
+
+And the FROM clause was:
+
+        FROM invoice inv JOIN customer cust KEY inv.customer_key
+
+Then each joined object would be:
+
+        {
+            "inv" : {
+                "customer_key": ...,
+                "invoice_date": ...,
+                "total": ...
+            },
+            "cust" : {
+                "name": ...,
+                "primary_contact": ...,
+                "address": [ ... ]
+            }
+        }
+
+KEY or KEYS is required after each JOIN. It specifies the primary keys
+for the second bucket in the join.
+
+Joins can be chained.
+
+### Unnests
+
+If a document or object contains a nested array, unnesting
+conceptually joins each element of the nested array with its parent
+object. Each resulting joined object becomes an input to the query.
+
+If some customer documents contain an array of addresses under the
+*address* field, the following query retrieves each nested address
+along with the parent customer's name.
+
+        SELECT c.name, a.* FROM customer c UNNEST c.address a
+
+=>
+
+        [
+            { "name" : "Acme Inc.", "street" : "101 Main St.", "zip" : "94040" },
+            { "name" : "Acme Inc.", "street" : "300 Broadway", "zip" : "10011" },
+            { "name" : "Roadster Corp.", "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
+            { "name" : "Roadster Corp.", "street" : "3500 Alamo Dr.", "zip" : "75019" }
+        ]
+
+The first path element after each UNNEST must reference some preceding
+path.
+
+Unnests can be chained.
+
+## WHERE clause
+
+*where-clause:*
+
+![](diagram/where-clause.png)
+
+*cond:*
+
+![](diagram/cond.png)
+
+## GROUP BY clause
+
+*group-by-clause:*
+
+![](diagram/group-by-clause.png)
+
+*having-clause:*
+
+![](diagram/having-clause.png)
+
+### HAVING
+
+## SELECT clause
+
+*select-clause:*
+
+![](diagram/select-clause.png)
+
+*result-expr:*
+
+![](diagram/result-expr.png)
+
+*path:*
+
+![](diagram/path.png)
+
+*alias:*
+
+![](diagram/alias.png)
+
+## ORDER BY clause
+
+*order-by-clause:*
+
+![](diagram/order-by-clause.png)
+
+*ordering-term:*
+
+![](diagram/ordering-term.png)
+
+## LIMIT clause
+
+*limit-clause:*
+
+![](diagram/limit-clause.png)
+
+## OFFSET clause
+
+*offset-clause:*
+
+![](diagram/offset-clause.png)
 
 ## Expressions
 
@@ -287,7 +648,7 @@ current context.
 If the current context is the document:
 
     {
-    	"name": "n1ql"
+        "name": "n1ql"
     }
 
 Then the identifier *name* would evaluate to the value n1ql.
@@ -324,7 +685,7 @@ Consider the following object:
 
     {
       "address": {
-      	"city": "Mountain View"
+        "city": "Mountain View"
       },
       "revisions": [2013]
     }
@@ -363,133 +724,133 @@ operators:
 
 <table>
   <tr>
-  	<th>A</th>
-  	<th>B</th>
-  	<th>A and B</th>
-  	<th>A or B</th>
+        <th>A</th>
+        <th>B</th>
+        <th>A and B</th>
+        <th>A or B</th>
   </tr>
   <tr>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
   </tr>
   <tr>
-  	<td>FALSE</td>
-  	<td>NULL</td>
-  	<td>FALSE</td>
-  	<td>NULL</td>
+        <td>FALSE</td>
+        <td>NULL</td>
+        <td>FALSE</td>
+        <td>NULL</td>
   </tr>
   <tr>
-  	<td>FALSE</td>
-  	<td>MISSING</td>
-  	<td>FALSE</td>
-  	<td>MISSING</td>
+        <td>FALSE</td>
+        <td>MISSING</td>
+        <td>FALSE</td>
+        <td>MISSING</td>
   </tr>
    <tr>
-  	<td>FALSE</td>
-  	<td>TRUE</td>
-  	<td>FALSE</td>
-  	<td>TRUE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
   </tr>
 
   <tr>
-  	<td>NULL</td>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
-  	<td>NULL</td>
+        <td>NULL</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>NULL</td>
   </tr>
   <tr>
-  	<td>NULL</td>
-  	<td>NULL</td>
-  	<td>NULL</td>
-  	<td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
   </tr>
   <tr>
-  	<td>NULL</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
+        <td>NULL</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
   </tr>
    <tr>
-  	<td>NULL</td>
-  	<td>TRUE</td>
-  	<td>NULL</td>
-  	<td>TRUE</td>
+        <td>NULL</td>
+        <td>TRUE</td>
+        <td>NULL</td>
+        <td>TRUE</td>
   </tr>
 
   <tr>
-  	<td>MISSING</td>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
-  	<td>MISSING</td>
+        <td>MISSING</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>MISSING</td>
   </tr>
   <tr>
-  	<td>MISSING</td>
-  	<td>NULL</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
+        <td>MISSING</td>
+        <td>NULL</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
   </tr>
   <tr>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
   </tr>
    <tr>
-  	<td>MISSING</td>
-  	<td>TRUE</td>
-  	<td>MISSING</td>
-  	<td>TRUE</td>
+        <td>MISSING</td>
+        <td>TRUE</td>
+        <td>MISSING</td>
+        <td>TRUE</td>
   </tr>
 
   <tr>
-  	<td>TRUE</td>
-  	<td>FALSE</td>
-  	<td>FALSE</td>
-  	<td>TRUE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
   </tr>
   <tr>
-  	<td>TRUE</td>
-  	<td>NULL</td>
-  	<td>NULL</td>
-  	<td>TRUE</td>
+        <td>TRUE</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>TRUE</td>
   </tr>
   <tr>
-  	<td>TRUE</td>
-  	<td>MISSING</td>
-  	<td>MISSING</td>
-  	<td>TRUE</td>
+        <td>TRUE</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>TRUE</td>
   </tr>
    <tr>
-  	<td>TRUE</td>
-  	<td>TRUE</td>
-  	<td>TRUE</td>
-  	<td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
   </tr>
 </table>
 
 <table>
-	<tr>
-		<th>A</th>
-		<th>not A</th>
-	</tr>
-	<tr>
-		<td>FALSE</td>
-		<td>TRUE</td>
-	</tr>
-	<tr>
-		<td>NULL</td>
-		<td>NULL</td>
-	</tr>
-	<tr>
-		<td>MISSING</td>
-		<td>MISSING</td>
-	</tr>
-	<tr>
-		<td>TRUE</td>
-		<td>FALSE</td>
-	</tr>
+        <tr>
+                <th>A</th>
+                <th>not A</th>
+        </tr>
+        <tr>
+                <td>FALSE</td>
+                <td>TRUE</td>
+        </tr>
+        <tr>
+                <td>NULL</td>
+                <td>NULL</td>
+        </tr>
+        <tr>
+                <td>MISSING</td>
+                <td>MISSING</td>
+        </tr>
+        <tr>
+                <td>TRUE</td>
+                <td>FALSE</td>
+        </tr>
 </table>
 
 comparison-term:
@@ -539,39 +900,39 @@ values.
   inverse operators.  See table below:
 
 <table>
-	<tr>
-		<th></th>
-		<th colspan="3">Value</th>
-	</tr>
-	<tr>
-		<th>Operator</th>
+        <tr>
+                <th></th>
+                <th colspan="3">Value</th>
+        </tr>
+        <tr>
+                <th>Operator</th>
     <th>JSON value</th>
-		<th>NULL</th>
-		<th>MISSING</th>
-	</tr>
+                <th>NULL</th>
+                <th>MISSING</th>
+        </tr>
     <tr>
-    	<td>IS NULL</td>
+        <td>IS NULL</td>
       <td>FALSE</td>
-    	<td>TRUE</td>
-    	<td>FALSE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
     </tr>
     <tr>
-    	<td>IS NOT NULL</td>
+        <td>IS NOT NULL</td>
       <td>TRUE</td>
-    	<td>FALSE</td>
-    	<td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
     </tr>
      <tr>
-    	<td>IS MISSING</td>
+        <td>IS MISSING</td>
       <td>FALSE</td>
-    	<td>FALSE</td>
-    	<td>TRUE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
     </tr>
     <tr>
-    	<td>IS NOT MISSING</td>
+        <td>IS NOT MISSING</td>
       <td>TRUE</td>
-    	<td>TRUE</td>
-    	<td>FALSE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
     </tr>
      <tr>
       <td>IS VALUED</td>
@@ -1044,7 +1405,7 @@ document with ID "n1ql-2013"
     {
       "name": "N1QL",
       "address": {
-      	"city": "Mountain View"
+        "city": "Mountain View"
       },
       "revisions": [2013]
     }
@@ -1056,7 +1417,7 @@ document with ID "n1ql-2013"
     {
       "name": "N1QL",
       "address": {
-      	"city": "Mountain View"
+        "city": "Mountain View"
       },
       "revisions": [2013]
     }
@@ -1066,7 +1427,7 @@ document with ID "n1ql-2013"
 `SELECT name`
 
     {
-    	"name": "N1QL"
+        "name": "N1QL"
     }
 
 ### Selecting a more complex expression
@@ -1074,7 +1435,7 @@ document with ID "n1ql-2013"
 `SELECT revsions[0] - 13`
 
     {
-    	"revisions[0]-13": 2000
+        "revisions[0]-13": 2000
     }
 
 ### Selecting a more complex expression with custom identifier
@@ -1082,7 +1443,7 @@ document with ID "n1ql-2013"
 `SELECT revsions[0] - 13 AS modified_revision`
 
     {
-    	"modified_revision": 2000
+        "modified_revision": 2000
     }
 
 ### Selecting the whole document and adding meta-data
@@ -1092,14 +1453,14 @@ document with ID "n1ql-2013"
     {
       "name": "N1QL",
       "address": {
-      	"city": "Mountain View"
+        "city": "Mountain View"
       },
       "revisions": [2013],
       "meta": {
-      	"id": "n1ql-2013",
-      	"cas": "8BADF00DDEADBEEF",
-      	"flags": 0,
-      	"expiration": 0
+        "id": "n1ql-2013",
+        "cas": "8BADF00DDEADBEEF",
+        "flags": 0,
+        "expiration": 0
       }
     }
 
@@ -1110,14 +1471,14 @@ document with ID "n1ql-2013"
     {
       "name": "N1QL",
       "address": {
-      	"city": "Mountain View"
+        "city": "Mountain View"
       },
       "revisions": [2013],
       "custom_meta_field": {
-      	"id": "n1ql-2013",
-      	"cas": "8BADF00DDEADBEEF",
-      	"flags": 0,
-      	"expiration": 0
+        "id": "n1ql-2013",
+        "cas": "8BADF00DDEADBEEF",
+        "flags": 0,
+        "expiration": 0
       }
     }
 
@@ -1292,25 +1653,22 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added cond to EBNF diagrams
 * 2013-07-23 - JOIN result objects
     * Added Appendix on JOIN result objects
+* 2013-12-03 - Target syntax
+    * Updated syntax targeting beta / production release
+    * KEY joins and subqueries
+    * Updated syntax for FROM UNNEST
+    * Updated syntax for collection expressions
+    * BETWEEN operator
+    * [*] operator for array traversal
+    * Handle NaN and +/- infinity
+    * Date/Time features
 
 ### Open Issues
 
 This meta-section records open issues in this document, and will
 eventually disappear.
 
-1. NULL / MISSING. Merge NULL and MISSING as follows: retain IS [ NOT
-   ] MISSING, but treat NULL and MISSING as identical in all other
-   respects (except sorting?). Remove some other references to
-   MISSING. Remove IS [ NOT ] VALUED.
-
-1. Document handling of NaN and +/- infinity as these may arise during
-   expression evaluation and cannot be represented in standard JSON.
-
-1. Add [*] operator for array traversal.
-
-1. Collection expressions: Add IN; support non-path exprs
-   * ANY / ALL expr OVER ident IN expr
-   * FIRST / ARRAY expr OVER ident IN expr [ WHEN expr ]
-
-1. FROM OVER:
-   * FROM path [ [ AS ] alias ] (OVER ident IN subpath)*
+1. Proposal for NULL / MISSING. Merge NULL and MISSING as follows:
+   retain IS [ NOT ] MISSING, but treat NULL and MISSING as identical
+   in all other respects (except sorting?). Remove some other
+   references to MISSING. Remove IS [ NOT ] VALUED.
