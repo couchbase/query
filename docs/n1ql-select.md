@@ -1654,8 +1654,3 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 
 This meta-section records open issues in this document, and will
 eventually disappear.
-
-1. Proposal for NULL / MISSING. Merge NULL and MISSING as follows:
-   retain IS [ NOT ] MISSING, but treat NULL and MISSING as identical
-   in all other respects (except sorting?). Remove some other
-   references to MISSING. Remove IS [ NOT ] VALUED.
