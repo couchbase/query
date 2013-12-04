@@ -22,13 +22,13 @@ alias ::= identifier
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-path ('AS'? alias)? key-clause? | from-term unnest-clause | from-term join-clause
+from-term ::= from-path ('AS'? alias)? key-clause? | from-term join-clause | from-term unnest-clause
 from-path ::= (pool-name ':')? path
 pool-name ::= identifier
 key-clause ::= ('KEY' | 'KEYS') expr
-unnest-clause ::= 'UNNEST' path ('AS'? alias)?
 join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? key-clause
 join-type ::= 'INNER' | 'LEFT' 'OUTER'?
+unnest-clause ::= 'UNNEST' path ('AS'? alias)?
 
 /*
  *  where clause
@@ -83,7 +83,7 @@ function-name ::= identifier
  */
 collection-expr ::= exists-expr | collection-cond | collection-xform
 exists-expr ::= 'EXISTS' subquery-expr
-collection-cond ::= ('ANY' | 'SOME' | 'ALL' | 'EVERY') (variable 'IN')? expr 'SATISFIES' cond 'END'
+collection-cond ::= ('ANY' | 'SOME' | 'EVERY') (variable 'IN')? expr 'SATISFIES' cond 'END'
 collection-xform ::= map-expr | reduce-expr | array-expr | first-expr
 map-expr ::= 'MAP' (variable 'IN')? expr ('TO' expr)? ('WHEN' cond)? 'END'
 reduce-expr ::= 'REDUCE' (variable 'IN')? expr 'TO' expr ('WHEN' cond)? 'END'

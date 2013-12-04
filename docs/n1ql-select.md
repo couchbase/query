@@ -20,7 +20,7 @@ Normal Form
 
 The syntax of the SELECT statement is as follows.
 
-#### SELECT statement
+### SELECT statement
 
 *select:*
 
@@ -41,7 +41,7 @@ behavior is the same in either case.
 
 ![](diagram/from-select-core.png)
 
-#### SELECT statement
+### SELECT clause
 
 *select-clause:*
 
@@ -59,7 +59,7 @@ behavior is the same in either case.
 
 ![](diagram/alias.png)
 
-#### FROM clause
+### FROM clause
 
 *from-clause:*
 
@@ -81,10 +81,6 @@ behavior is the same in either case.
 
 ![](diagram/key-clause.png)
 
-*unnest-clause:*
-
-![](diagram/unnest-clause.png)
-
 *join-clause:*
 
 ![](diagram/join-clause.png)
@@ -93,7 +89,11 @@ behavior is the same in either case.
 
 ![](diagram/join-type.png)
 
-#### WHERE clause
+*unnest-clause:*
+
+![](diagram/unnest-clause.png)
+
+### WHERE clause
 
 *where-clause:*
 
@@ -103,7 +103,7 @@ behavior is the same in either case.
 
 ![](diagram/cond.png)
 
-#### GROUP BY clause
+### GROUP BY clause
 
 *group-by-clause:*
 
@@ -113,7 +113,7 @@ behavior is the same in either case.
 
 ![](diagram/having-clause.png)
 
-#### ORDER BY clause
+### ORDER BY clause
 
 *order-by-clause:*
 
@@ -123,13 +123,13 @@ behavior is the same in either case.
 
 ![](diagram/ordering-term.png)
 
-#### LIMIT clause
+### LIMIT clause
 
 *limit-clause:*
 
 ![](diagram/limit-clause.png)
 
-#### OFFSET clause
+### OFFSET clause
 
 *offset-clause:*
 
@@ -162,6 +162,8 @@ result objects.
 
 1.  Limiting - if LIMIT is specified, the results are limited to the
     given number
+
+<!--
 
 ### Data sourcing
 
@@ -259,7 +261,7 @@ Joins have their normal meaning from SQL.
 ### Filtering
 
 If a WHERE clause is specified, the expression is evaluated for each
-object.  All objects evluating to TRUE are included in the result
+object.  All objects evaluating to TRUE are included in the result
 array.
 
 ### Result object generation
@@ -289,7 +291,7 @@ results.
 Returning complex object and arrays is possible by specifying literal
 JSON constructors in the projection expression.
 
-See Appendix 6 for some example projections.
+See Appendix for some example projections.
 
 ### Duplicate removal
 
@@ -327,18 +329,15 @@ list describes the order by type (from lowest to highest):
 * array (element by element comparison, longer arrays sort after)
 * object (key/value by key/value comparison, keys are examined in sorted order using the normal ordering for strings, larger objects sort after)
 
-### Offsetting
-
-An OFFSET clause specifies a number of objects to be skipped. If a
-LIMIT clause is also present, the OFFSET is applied prior to the
-LIMIT.  The OFFSET value must be an integer.
-
-### Limiting
-
-A LIMIT clause imposes an upper bound on the number of objects
-returned by the SELECT statement.  The LIMIT value must be an integer.
+-->
 
 ## FROM clause
+
+The FROM clause defines the data source and input objects for the
+query.
+
+Every FROM clause specifies one or more buckets. The first bucket is
+called the primary bucket.
 
 *from-clause:*
 
@@ -360,10 +359,6 @@ returned by the SELECT statement.  The LIMIT value must be an integer.
 
 ![](diagram/key-clause.png)
 
-*unnest-clause:*
-
-![](diagram/unnest-clause.png)
-
 *join-clause:*
 
 ![](diagram/join-clause.png)
@@ -372,20 +367,18 @@ returned by the SELECT statement.  The LIMIT value must be an integer.
 
 ![](diagram/join-type.png)
 
-The FROM clause defines the data source and input objects for the
-query.
+*unnest-clause:*
 
-Every FROM clause specifies one or more buckets. The first bucket is
-called the primary bucket.
+![](diagram/unnest-clause.png)
 
 The following sections discuss various elements of FROM clauses. These
-can be combined.
+elements can be combined.
 
-### FROM clause omitted
+### Omitted
 
 If the FROM clause is omitted, the data source is equivalent to an
-array containing a single empty object. This allows N1QL to be used to
-evaluate expressions that do not depend on stored data.
+array containing a single empty object. This allows you to evaluate
+expressions that do not depend on stored data.
 
 Evaluating an expression:
 
@@ -417,7 +410,7 @@ The simplest type of FROM clause specifies a bucket:
 
         SELECT * FROM customer
 
-This produces every value in the *customer* bucket.
+This returns every value in the *customer* bucket.
 
 The bucket name can be prefixed with an optional pool name:
 
@@ -430,8 +423,8 @@ is used.
 
 ### Keys
 
-Specific keys within a bucket can be specified. Only values having
-those keys will be included as inputs to the query.
+Specific primary keys within a bucket can be specified. Only values
+having those primary keys will be included as inputs to the query.
 
 To specify a single key:
 
@@ -461,7 +454,8 @@ following query can retrieve them:
             { "name" : "Jane Brown", "phone" : "+1-650-555-5678", "address" : { ... } }
         ]
 
-Nested paths can have arbitrary depth and include array subscripts.
+Nested paths can have arbitrary depth and can include array
+subscripts.
 
         SELECT * FROM customer.primary_contact.address
 
@@ -515,10 +509,19 @@ for the second bucket in the join.
 
 Joins can be chained.
 
+By default, an INNER join is performed. This means that for each
+joined object produced, both the left and right hand source objects
+must be non-null.
+
+If LEFT or LEFT OUTER is specified, then a left outer join is
+performed. At least one joined object is produced for each left hand
+source object. If the right hand source object is null or missing, the
+joined object contains a value of NULL for the right hand side.
+
 ### Unnests
 
-If a document or object contains a nested array, unnesting
-conceptually joins each element of the nested array with its parent
+If a document or object contains a nested array, UNNEST conceptually
+performs an inner join of the nested array with its parent
 object. Each resulting joined object becomes an input to the query.
 
 If some customer documents contain an array of addresses under the
@@ -550,6 +553,10 @@ Unnests can be chained.
 *cond:*
 
 ![](diagram/cond.png)
+
+If a WHERE clause is specified, the input objects are filtered
+accordingly. The WHERE condition is evaluated for each input object,
+and only objects evaluating to TRUE are retained.
 
 ## GROUP BY clause
 
@@ -591,11 +598,31 @@ Unnests can be chained.
 
 ![](diagram/ordering-term.png)
 
-## LIMIT clause
+If no ORDER BY clause is specified, the order in which the result
+objects are returned is undefined.
 
-*limit-clause:*
+If an ORDER BY clause is specified, the order of items in the result
+array is determined by the ordering expressions.  Objects are first
+sorted by the left-most expression in the list.  Any items with the
+same sort value are then sorted by the next expression in the list.
+This is repeated to break tie sort values until the end of the
+expression list is reached.  The order of objects with the same sort
+value for each sort expression is undefined.
 
-![](diagram/limit-clause.png)
+As ORDER BY expressions can evaluate to any JSON value, we define an
+ordering when comparing values of different types.  The following list
+describes the order by type (from lowest to highest):
+
+* missing value
+* null
+* false
+* true
+* number
+* string
+* array (element by element comparison, longer arrays sort after)
+* object (key/value by key/value comparison, keys are examined in
+  sorted order using the normal ordering for strings, larger objects
+  sort after)
 
 ## OFFSET clause
 
@@ -603,23 +630,33 @@ Unnests can be chained.
 
 ![](diagram/offset-clause.png)
 
+An OFFSET clause specifies a number of objects to be skipped. If a
+LIMIT clause is also present, the OFFSET is applied prior to the
+LIMIT.  The OFFSET value must be a non-negative integer.
+
+## LIMIT clause
+
+*limit-clause:*
+
+![](diagram/limit-clause.png)
+
+A LIMIT clause imposes an upper bound on the number of objects
+returned by the SELECT statement.  The LIMIT value must be a
+non-negative integer.
+
 ## Expressions
 
-expr:
+*expr:*
 
 ![](diagram/expr.png)
 
-cond:
+### Literal value
 
-![](diagram/cond.png)
-
-literal-value:
-
-The full specification for literal values can be found in Appendix 5.
+The specification for literal values can be found in Appendix.
 
 ### Identifier
 
-identifier:
+*identifier:*
 
 ![](diagram/identifier.png)
 
@@ -634,11 +671,11 @@ backtick characters.
 Keywords cannot be escaped; therefore, escaped identifiers can overlap
 with keywords.
 
-unescaped-identifier:
+*unescaped-identifier:*
 
 ![](diagram/unescaped-identifier.png)
 
-escaped-identifier:
+*escaped-identifier:*
 
 ![](diagram/escaped-identifier.png)
 
@@ -659,11 +696,12 @@ Aliases are always case-insensitive.
 
 Field names within documents use the following case-sensitivity rules.
 
-* *fieldname* and *\`fieldname\`* use nearest-case matching (see below)
+* *fieldname* and *\`fieldname\`* and *\`fieldname\`n* use
+   nearest-case matching (see below)
 * *\`fieldname\`i* uses case-insensitive matching only
 * *\`fieldname\`s* uses case-sensitive matching only
 
-##### Nearest-case matching
+#### Nearest-case matching
 
 1. do a case-sensitive match; if found, the matching is completed
 2. if no case-sensitive match is found, do a case-insensitive match
@@ -696,164 +734,46 @@ Consider the following object:
 
 ### Case
 
-case-expr:
+*case-expr:*
 
 ![](diagram/case-expr.png)
 
-CASE statements allow for conditional logic within an expression.  The
-first WHEN expression is evaluated.  If TRUE, the result of this
-expression is the THEN expression.  If not, subsequent WHEN clauses
-are evaluated in the same manner.  If none of the WHEN clauses
-evaluate to TRUE, then the result of the expression is the ELSE
+*simple-case-expr:*
+
+![](diagram/simple-case-expr.png)
+
+Simple case expressions allow for conditional matching within an
+expression.  The first WHEN expression is evaluated.  If it is equal
+to the search expression, the result of this expression is the THEN
+expression.  If not, subsequent WHEN clauses are evaluated in the same
+manner.  If none of the WHEN expressions is equal to the search
+expression, then the result of the CASE expression is the ELSE
 expression.  If no ELSE expression was provided, the result is NULL.
+
+*searched-case-expr:*
+
+![](diagram/searched-case-expr.png)
+
+Searched case expressions allow for conditional logic within an
+expression.  The first WHEN expression is evaluated.  If TRUE, the
+result of this expression is the THEN expression.  If not, subsequent
+WHEN clauses are evaluated in the same manner.  If none of the WHEN
+clauses evaluate to TRUE, then the result of the expression is the
+ELSE expression.  If no ELSE expression was provided, the result is
+NULL.
 
 ### Logical
 
-logical-term:
+*logical-term:*
 
 ![](diagram/logical-term.png)
 
 Logical terms allow for combining other expressions using boolean
 logic.  Standard AND, OR and NOT operators are supported.
 
-## Four-valued logic
+### Comparison
 
-In N1QL boolean propositions could evaluate to NULL or MISSING.  The
-following table describes how these values relate to the logical
-operators:
-
-<table>
-  <tr>
-        <th>A</th>
-        <th>B</th>
-        <th>A and B</th>
-        <th>A or B</th>
-  </tr>
-  <tr>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-  </tr>
-  <tr>
-        <td>FALSE</td>
-        <td>NULL</td>
-        <td>FALSE</td>
-        <td>NULL</td>
-  </tr>
-  <tr>
-        <td>FALSE</td>
-        <td>MISSING</td>
-        <td>FALSE</td>
-        <td>MISSING</td>
-  </tr>
-   <tr>
-        <td>FALSE</td>
-        <td>TRUE</td>
-        <td>FALSE</td>
-        <td>TRUE</td>
-  </tr>
-
-  <tr>
-        <td>NULL</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>NULL</td>
-  </tr>
-  <tr>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>NULL</td>
-  </tr>
-  <tr>
-        <td>NULL</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-  </tr>
-   <tr>
-        <td>NULL</td>
-        <td>TRUE</td>
-        <td>NULL</td>
-        <td>TRUE</td>
-  </tr>
-
-  <tr>
-        <td>MISSING</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>MISSING</td>
-  </tr>
-  <tr>
-        <td>MISSING</td>
-        <td>NULL</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-  </tr>
-  <tr>
-        <td>MISSING</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-  </tr>
-   <tr>
-        <td>MISSING</td>
-        <td>TRUE</td>
-        <td>MISSING</td>
-        <td>TRUE</td>
-  </tr>
-
-  <tr>
-        <td>TRUE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>TRUE</td>
-  </tr>
-  <tr>
-        <td>TRUE</td>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>TRUE</td>
-  </tr>
-  <tr>
-        <td>TRUE</td>
-        <td>MISSING</td>
-        <td>MISSING</td>
-        <td>TRUE</td>
-  </tr>
-   <tr>
-        <td>TRUE</td>
-        <td>TRUE</td>
-        <td>TRUE</td>
-        <td>TRUE</td>
-  </tr>
-</table>
-
-<table>
-        <tr>
-                <th>A</th>
-                <th>not A</th>
-        </tr>
-        <tr>
-                <td>FALSE</td>
-                <td>TRUE</td>
-        </tr>
-        <tr>
-                <td>NULL</td>
-                <td>NULL</td>
-        </tr>
-        <tr>
-                <td>MISSING</td>
-                <td>MISSING</td>
-        </tr>
-        <tr>
-                <td>TRUE</td>
-                <td>FALSE</td>
-        </tr>
-</table>
-
-comparison-term:
+*comparison-term:*
 
 ![](diagram/comparison-term.png)
 
@@ -882,73 +802,9 @@ right-hand side of the operator is a pattern, optionally containg '%'
 and '_' wildcard characters.  Percent (%) matches any string of zero
 or more characters, underscore (\_) matches any single character.
 
-### Comparing NULL and MISSING values
+### Arithmetic
 
-The normal comparison operators cannot be used to check for NULL or
-MISSING values because they do not contain type information.  Instead
-the following operators are designed specifically to work for these
-values.
-
-* IS NULL - returns rows where the value of a property is explicitly set to NULL (not missing).
-* IS NOT NULL - returns rows which contain a value (not NULL or missing).
-* IS MISSING - returns rows where the value of a property is missing (not explicitly set to null).
-* IS NOT MISSING - returns rows which contain a value or null.
-* IS VALUED - synonym for IS NOT NULL
-* IS NOT VALUED - synonym for IS NULL
-
-**NOTE**: IS NULL/IS NOT NULL and IS MISSING/IS NOT MISSING are NOT
-  inverse operators.  See table below:
-
-<table>
-        <tr>
-                <th></th>
-                <th colspan="3">Value</th>
-        </tr>
-        <tr>
-                <th>Operator</th>
-    <th>JSON value</th>
-                <th>NULL</th>
-                <th>MISSING</th>
-        </tr>
-    <tr>
-        <td>IS NULL</td>
-      <td>FALSE</td>
-        <td>TRUE</td>
-        <td>FALSE</td>
-    </tr>
-    <tr>
-        <td>IS NOT NULL</td>
-      <td>TRUE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-    </tr>
-     <tr>
-        <td>IS MISSING</td>
-      <td>FALSE</td>
-        <td>FALSE</td>
-        <td>TRUE</td>
-    </tr>
-    <tr>
-        <td>IS NOT MISSING</td>
-      <td>TRUE</td>
-        <td>TRUE</td>
-        <td>FALSE</td>
-    </tr>
-     <tr>
-      <td>IS VALUED</td>
-      <td>TRUE</td>
-      <td>FALSE</td>
-      <td>FALSE</td>
-    </tr>
-    <tr>
-      <td>IS NOT VALUED</td>
-      <td>FALSE</td>
-      <td>TRUE</td>
-      <td>FALSE</td>
-    </tr>
-</table>
-
-arithmetic-term:
+*arithmetic-term:*
 
 ![](diagram/arithmetic-term.png)
 
@@ -961,103 +817,87 @@ operator will change the sign of the expression.
 These arithmetic operators only operate on numeric values.  If either
 operand is not numeric it will evaluate to NULL.
 
-concatenation-term:
+### Concatenation
+
+*concatenation-term:*
 
 ![](diagram/concatenation-term.png)
 
 If both operands are strings, the `||` operator concatenates these
-strings.  If either operand is an array, the result is an array
-containing the elements of both operands.  Otherwise the expression
-evaluates to NULL.
+strings.  Otherwise the expression evaluates to NULL.
 
-function:
+### Function
 
-![](diagram/function.png)
+*function-call:*
 
-function-name:
+![](diagram/function-call.png)
+
+*function-name:*
 
 ![](diagram/function-name.png)
 
-Function names are case in-sensitive.  See Appendix 2 for the list and
+Function names are case-insensitive.  See Appendix for the list and
 definition of the supported functions.
 
-subquery-expr:
+### Subquery
+
+*subquery-expr:*
 
 ![](diagram/subquery-expr.png)
 
-Subquery expressions return the result of evaluating a subquery.  When
-a subquery returning a single field is compared against a non-object
-value, the value of the subquery field, instead of the subquery's
-result object, is used in the comparison.
+Subquery expressions return an array that is the result of evaluating
+the subquery.
 
-collection-expr:
+### Collection
+
+*collection-expr:*
 
 ![](diagram/collection-expr.png)
 
-existential-expr:
+*exists-expr:*
 
-![](diagram/existential-expr.png)
+![](diagram/exists-expr.png)
 
 The existential expression, also known as the existential quantifier
 or predicate, evaluates to TRUE if and only if the subquery returns at
 least one row.  Otherwise the existential expression evaluates to
 FALSE.
 
-in-expr:
+*collection-cond:*
 
-![](diagram/in-expr.png)
+Collection predicates allow you to test a boolean condition over the
+elements of a collection.
 
-IN expressions allow you test whether or not the left-hand side
-operand is equal to one of the values returned by the right-hand size
-collection.  The right-hand side must evaluate to an array or
-subquery.  Otherwise, the IN expression evaluates to NULL.
+![](diagram/collection-cond.png)
 
-collection-predicate:
+*variable:*
 
-![](diagram/collection-predicate.png)
+![](diagram/variable.png)
 
-Collection predicates allow you to test boolean expressions against
-collections.  Two variants are supported: ANY and ALL.
+*collection-xform:*
 
-First, the input collections is deteremined by the right-hand side
-expression in the **OVER** clause.  Elements of the collection are
-iterated through, and assigned the `identifier` in the optional **AS**
-clause.  This identifier is only valid while evalutating the
-expression in the **ANY** or **ALL** clause.
+Collection transforms allow you to map and filter the elements of a
+collection.
 
-* ANY - if expression evaluates to a collection and at least one element satisifies the expression then return TRUE, otherwise FALSE
-* ALL - if the expression evaluates to a collection and all the elements satisfy the expression, then return TRUE, otherwise FALSE.  if the collection is empty, the result is TRUE.
+![](diagram/collection-xform.png)
 
-For example, consider a document containing a nested array of
-addresses objects:
+*map-expr:*
 
-    ... WHERE ANY a.city = "Mountain View" OVER addresses a
+![](diagram/map-expr.png)
 
-This would evaluate to TRUE if any of the addresses have the field
-`city` = `Mountain View`
+*reduce-expr:*
 
-first-expr:
+![](diagram/reduce-expr.png)
+
+*array-expr:*
+
+![](diagram/array-expr.png)
+
+*first-expr:*
 
 ![](diagram/first-expr.png)
 
-FIRST expressions are similar to collection predicates, but instead of
-returning a boolean truth value, they return the first actual value of
-evaluating the left-hand side expression OVER the elements of the
-right-hand side.  An optional IF clause filters the elements of the
-right-hand side before evaluating the left-hand expression.
-
-comprehension:
-
-![](diagram/comprehension.png)
-
-Comprehensions are similar to FIRST expressions.  Instead of returning
-the first actual value from the left-hand side expression,
-comprehensions return an array containing the results of evaluating
-the left-hand side expression OVER the elements of the right-hand
-side.  An optional IF clause filters the elements of the right-hand
-side before evaluating the left-hand expression.
-
-## Expression Evaluation
+## Boolean interpretation
 
 As expressions are evaluated they could become any valid JSON value (or MISSING).
 
@@ -1074,15 +914,19 @@ rules used by JavaScript are followed.
 See [ECMAScript Language Specification Chapter 11 Section
 9](http://ecma-international.org/ecma-262/5.1/#sec-11.9)
 
-## Appendix 1 - Identifier Scoping/Ambiguity
+## Appendix - Identifier Scoping/Ambiguity
 
 Identifiers appear in many places in an N1QL query.  Frequently
 identifiers are used to described paths within a document, but they
 are also used in `AS` clauses to introduce new identifiers.
 
-* SELECT - `AS` identifiers in the projection create new names that may be referred to in the SELECT and ORDER BY clauses
-* FROM - `AS` identifiers in the FROM clause create new names that may be referred to anywhere in the query
-* ANY/ALL collection expressions - `AS` identifiers in collection expressions create names that can **ONLY** be used within this collection expression
+* SELECT - `AS` identifiers in the projection create new names that
+  may be referred to in the SELECT and ORDER BY clauses
+* FROM - `AS` identifiers in the FROM clause create new names that may
+  be referred to anywhere in the query
+* Collection expressions - `AS` identifiers in collection expressions
+  create names that can **ONLY** be used within this collection
+  expression
 
 Introducing the same identifier using `AS` multiple times in a query
 results in an error.
@@ -1108,7 +952,7 @@ object in the current context.  For example
 This query would perform an exact match of candidate documents from
 the beer datasource against the specified object literal.
 
-## Appendix 2 - Functions
+## Appendix - Functions
 
 Function names are case in-sensitive.  The following functions are
 defined:
@@ -1225,7 +1069,7 @@ non-NULL, non-MISSING values
 For AVG, and SUM, any row where the result of the expression is
 non-numeric is also eliminated.
 
-## Appendix 3 - Operator Precedence
+## Appendix - Operator Precedence
 
 The following operators are supported by N1QL.  The list is ordered
 from highest to lowest precedence.
@@ -1236,8 +1080,8 @@ from highest to lowest precedence.
 * \-
 * \* / %
 * \+ \-
-* IS NULL, IS MISSING, IS VALUED
-* IS NOT NULL, IS NOT MISSING, IS NOT VALUED
+* IS NULL, IS MISSING
+* IS NOT NULL, IS NOT MISSING
 * LIKE
 * < <= > >=
 * =
@@ -1249,7 +1093,250 @@ Parentheses, while not strictly speaking an operator, allow for
 grouping expressions to override the order of operations.  (they have
 the highest precedence)
 
-## Appendix 4 - Literal JSON Values
+## Appendix - Four-valued logic
+
+In N1QL boolean propositions could evaluate to NULL or MISSING.  The
+following table describes how these values relate to the logical
+operators:
+
+<table>
+  <tr>
+        <th>A</th>
+        <th>B</th>
+        <th>A and B</th>
+        <th>A or B</th>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+  </tr>
+   <tr>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+  </tr>
+   <tr>
+        <td>FALSE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>NULL</td>
+        <td>FALSE</td>
+        <td>NULL</td>
+  </tr>
+  <tr>
+        <td>TRUE</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>MISSING</td>
+        <td>FALSE</td>
+        <td>MISSING</td>
+  </tr>
+  <tr>
+        <td>TRUE</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>NULL</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+  </tr>
+  <tr>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+        <td>MISSING</td>
+  </tr>
+</table>
+
+<table>
+        <tr>
+                <th>A</th>
+                <th>not A</th>
+        </tr>
+        <tr>
+                <td>FALSE</td>
+                <td>TRUE</td>
+        </tr>
+        <tr>
+                <td>TRUE</td>
+                <td>FALSE</td>
+        </tr>
+        <tr>
+                <td>NULL</td>
+                <td>NULL</td>
+        </tr>
+        <tr>
+                <td>MISSING</td>
+                <td>MISSING</td>
+        </tr>
+</table>
+
+#### Comparing NULL and MISSING values
+
+* IS NULL - returns rows where the value of a property is explicitly set to NULL (not missing).
+* IS NOT NULL - returns rows which contain a value (not NULL or missing).
+* IS MISSING - returns rows where the value of a property is missing (not explicitly set to NULL).
+* IS NOT MISSING - returns rows which contain a value or explicit NULL.
+
+**NOTE**: IS NULL/IS NOT NULL and IS MISSING/IS NOT MISSING are **not**
+  inverse operators:
+
+<table>
+        <tr>
+                <th>Operator</th>
+                <th>NULL</th>
+                <th>MISSING</th>
+        </tr>
+    <tr>
+        <td>IS NULL</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+    </tr>
+    <tr>
+        <td>IS NOT NULL</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+    </tr>
+     <tr>
+        <td>IS MISSING</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
+    </tr>
+    <tr>
+        <td>IS NOT MISSING</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+    </tr>
+</table>
+
+## Appendix - Three-valued logic
+
+We are considering unifying NULL and MISSING. In that case, the only
+way to distinguish NULL and MISSING would be via the IS [ NOT ]
+MISSING operators.
+
+Here would be the logic tables in that case:
+
+<table>
+  <tr>
+        <th>A</th>
+        <th>B</th>
+        <th>A and B</th>
+        <th>A or B</th>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+  </tr>
+   <tr>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+  </tr>
+   <tr>
+        <td>FALSE</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>FALSE</td>
+        <td>NULL</td>
+        <td>FALSE</td>
+        <td>NULL</td>
+  </tr>
+   <tr>
+        <td>TRUE</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>TRUE</td>
+  </tr>
+  <tr>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+        <td>NULL</td>
+  </tr>
+</table>
+
+<table>
+        <tr>
+                <th>A</th>
+                <th>not A</th>
+        </tr>
+        <tr>
+                <td>FALSE</td>
+                <td>TRUE</td>
+        </tr>
+        <tr>
+                <td>TRUE</td>
+                <td>FALSE</td>
+        </tr>
+        <tr>
+                <td>NULL</td>
+                <td>NULL</td>
+        </tr>
+</table>
+
+#### Comparing NULL and MISSING values
+
+* IS NULL - returns rows where the value of a property is NULL or missing.
+* IS NOT NULL - returns rows which contain a value (not NULL or missing).
+* IS MISSING - returns rows where the value of a property is missing (not explicitly set to NULL).
+* IS NOT MISSING - returns rows which contain a value or explicit NULL.
+
+<table>
+        <tr>
+                <th>Operator</th>
+                <th>NULL</th>
+                <th>MISSING</th>
+        </tr>
+    <tr>
+        <td>IS NULL</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
+    </tr>
+    <tr>
+        <td>IS NOT NULL</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
+    </tr>
+     <tr>
+        <td>IS MISSING</td>
+        <td>FALSE</td>
+        <td>TRUE</td>
+    </tr>
+    <tr>
+        <td>IS NOT MISSING</td>
+        <td>TRUE</td>
+        <td>FALSE</td>
+    </tr>
+</table>
+
+## Appendix - Literal JSON Values
 
 The following rules are the same as defined by
 [json.org](http://json.org/) with two changes:
@@ -1332,7 +1419,19 @@ hex-digit:
 
 ![](diagram/hex-digit.png)
 
-## Appendix 5 - Key/Reserved Words
+## Appendix - Comments
+
+N1QL supports both block comments and line comments.
+
+block-comment:
+
+![](diagram/block-comment.png)
+
+line-comment:
+
+![](diagram/line-comment.png)
+
+## Appendix - Key/Reserved Words
 
 The following keywords are reserved and cannot be used in document
 property paths without escaping.  All keywords are case-insensitive.
@@ -1397,7 +1496,7 @@ with keywords.
 * WHEN
 * WHERE
 
-## Appendix 6 - Sample Projections
+## Appendix - Sample Projections
 
 For the following examples consider a bucket containing the following
 document with ID "n1ql-2013"
@@ -1492,118 +1591,6 @@ SELECT {"thename": name} AS custom_obj
       }
     }
 
-## Appendix 7 - Comments
-
-N1QL supports both block comments and line comments.
-
-block-comment:
-
-![](diagram/block-comment.png)
-
-line-comment:
-
-![](diagram/line-comment.png)
-
-## Appendix 8 - JOIN result objects
-
-### Internal FROM structure
-
-SELECT ... FROM contacts AS contact OVER children AS child
-
-We agree that there is an internal structure like:
-
-{
-"contact": {
-  "name": "marty",
-  "children": [
-    {
-    
-...
-    }
-  ]
-},
-"child": {
-  "name": "gerald"
-  "age": 17
-}
-}
-
-### SELECT *
-
-We agree that it should NOT flatten the top-level fields, instead it
-should return that internal representation shown above.
-
-### SELECT child.*
-
-There was no debate, this should return:
-
-{
-   "name": "gerald",
-    "age": 17
-}
-
-### SELECT name
-
-There was agreement that this should produce a semantic error.
-
-At this point we can summarize that queries involving a JOIN must
-prefix all property access with bucket/alias names.  Omitting the
-prefix in those queries is a semantic error.  Further, for non-JOIN
-queries, the implementation can convert informal names (omitting
-bucket/alias) into formal names (containing the bucket/alias).  This
-will mean no conversions or special rules at data lookup time.
-
-### SELECT VALUE() FROM contacts AS contact OVER children AS child
-
-Agreement that it should produce:
-
-{
-"$1": <output from star>
-}
-
-### SELECT VALUE(contact) FROM contacts AS contact OVER children AS child
-
-Agreement that it should produce:
-
-{
-"$1": {
-  contents of contact
-}
-}
-
-### SELECT VALUE(contact.name) ...
-
-Agreement that it should produce: (this is because VALUE() is defined
-to work on all different data types already)
-
-{
-"$1": "marty"
-}
-
-### SELECT META() FROM contacts AS contact OVER children AS child
-
-Agreement that it should produce semantic error.  Part of the
-reasoning, is that if we look ahead to future joins of the form:
-
-SELECT ... FROM AS A ... AS B
-
-META(A) - a's meta
-META(B) - b's meta
-META() - semantic error?
-
-Here it seems clear that META() should just be an error.
-
-In summary, the 0 argument version of META() is only valid for
-non-join queries.  JOIN queries must provide 1 argument, where that
-argument is the bucket/alias name.  Otherwise semantic error is
-returned.
-
-### SELECT * FROM contacts.children[0] OVER friends
-
-Agreement that it should be semantic error.  For now it is safest to
-simply inform the user they must provide an explicit alias.  We can
-always improve this later.
-
 ## About this Document
 
 The
@@ -1615,7 +1602,7 @@ This grammar has not yet been converted to an actual implementation,
 ambiguities and conflicts may still be present.
 
 Diagrams were generated by [Railroad Diagram
-Generator](http://railroad.my28msec.com/) ![](diagram/.png)
+Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 
 ### Document History
 
@@ -1640,7 +1627,7 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Streamlined grammar for functions and result-exprs
     * Added to open issues
 * 2013-07-13 - Comments
-    * Added Appendix 7 on comments
+    * Added Appendix on comments
 * 2013-07-15 - Added Open Issue
     * Added open issue on default aliases in results / projections
 * 2013-07-16 - Case-sensitivity and rounding
