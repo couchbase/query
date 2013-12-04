@@ -434,6 +434,9 @@ To specify multiple keys:
 
         SELECT * FROM customer KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
 
+In the FROM clause of a subquery, KEY or KEYS is mandatory for the
+primary bucket.
+
 ### Nested paths
 
 Nested paths within buckets can be specified. For each document in the
@@ -847,6 +850,9 @@ definition of the supported functions.
 
 Subquery expressions return an array that is the result of evaluating
 the subquery.
+
+In the FROM clause of a subquery, KEY or KEYS is mandatory for the
+primary bucket.
 
 ### Collection
 
