@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-12-03
+* Modified: 2013-12-10
 
 ## Introduction
 
@@ -11,7 +11,7 @@ meet the query needs of distributed document-oriented databases. This
 document specifies the syntax and semantics of the SELECT statement in
 N1QL.
 
-"N1QL" stands for Non-1st Query Language. The name reflects the fact
+*N1QL* stands for Non-1st Query Language. The name reflects the fact
 that the Couchbase document-oriented data model is based on [Non-1st
 Normal Form
 (N1NF)](http://en.wikipedia.org/wiki/Database_normalization#Non-first_normal_form_.28NF.C2.B2_or_N1NF.29).
@@ -333,7 +333,7 @@ list describes the order by type (from lowest to highest):
 
 ## FROM clause
 
-The FROM clause defines the data source and input objects for the
+The FROM clause defines the data sources and input objects for the
 query.
 
 Every FROM clause specifies one or more buckets. The first bucket is
@@ -371,8 +371,8 @@ called the primary bucket.
 
 ![](diagram/unnest-clause.png)
 
-The following sections discuss various elements of FROM clauses. These
-elements can be combined.
+The following sections discuss various elements of the FROM
+clause. These elements can be combined.
 
 ### Omitted
 
@@ -519,7 +519,7 @@ must be non-null.
 If LEFT or LEFT OUTER is specified, then a left outer join is
 performed. At least one joined object is produced for each left hand
 source object. If the right hand source object is null or missing, the
-joined object contains a value of NULL for the right hand side.
+joined object is MISSING a value for the right hand side.
 
 ### Unnests
 
@@ -546,6 +546,60 @@ The first path element after each UNNEST must reference some preceding
 path.
 
 Unnests can be chained.
+
+### Expansions
+
+If an array occurs along a path, the array may be subscripted to
+select one element, or it may be expanded to select all its elements.
+
+Array values - for each customer, the entire *address* array is
+selected:
+
+        SELECT VALUE() FROM customer.address
+
+=>
+
+        [
+            {
+                "$1": [
+                          { "street" : "101 Main St.", "zip" : "94040" },
+                          { "street" : "300 Broadway", "zip" : "10011" }
+                      ]
+            },
+                "$1": [
+                          { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
+                          { "street" : "3500 Alamo Dr.", "zip" : "75019" }
+                      ]
+            }
+        ]
+
+Subscripting - for each customer, the first element of the *address*
+array is selected:
+
+        SELECT * FROM customer.address[0]
+
+=>
+
+        [
+            { "street" : "101 Main St.", "zip" : "94040" },
+            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
+        ]
+
+Expansion - for each customer, every element of the *address* array is
+selected:
+
+        SELECT * FROM customer.address[*]
+
+=>
+
+        [
+            { "street" : "101 Main St.", "zip" : "94040" },
+            { "street" : "300 Broadway", "zip" : "10011" },
+            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
+            { "street" : "3500 Alamo Dr.", "zip" : "75019" }
+        ]
+
+Expansions can be chained.
 
 ## WHERE clause
 
@@ -590,6 +644,8 @@ and only objects evaluating to TRUE are retained.
 *alias:*
 
 ![](diagram/alias.png)
+
+### DISTINCT
 
 ## ORDER BY clause
 
@@ -1655,6 +1711,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * [*] operator for array traversal
     * Handle NaN and +/- infinity
     * Date/Time features
+* 2013-12-10 - Syntax
+    * Array expansion
 
 ### Open Issues
 
