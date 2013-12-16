@@ -3,34 +3,69 @@
  ****************/
 
 /*
- *  dataset
- */
-
-dataset ::= path (('AS')? alias1)? ('OVER' subpath (('AS')? aliasN)?)*
-
-/*
  *  dml
  */
-dml-stmt ::= update | delete | insert-values | insert-select | merge | truncate
+dml-stmt ::= insert | delete | update | merge | truncate | select-for | transaction-stmt
 
-update ::= 'UPDATE' dataset (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)) (',' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)))* ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
+/*
+ *  insert
+ */
+insert ::= 'INSERT' 'INTO' bucket-ref key-clause? (value-clause | select) returning-clause?
 
-delete ::= 'DELETE' 'FROM' dataset ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
-
-insert-values ::= 'INSERT' 'INTO' dataset 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)? ('RETURNING' expr (',' expr)*)?
-
-insert-select ::= 'INSERT' 'INTO' (pool-name ':')? bucket-name select ('RETURNING' expr (',' expr)*)?
-
-merge ::= 'MERGE' 'INTO' dataset 'USING' merge-source 'ON' '(' cond ')' (merge-update)? (merge-delete)? (merge-insert)? ('RETURNING' expr (',' expr)*)?
-
-merge-source ::= path (('AS')? alias)? | '(' select ')' ('AS')? alias | merge-source ('OVER' subpath (('AS')? alias)?)+
-
-merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)) (',' (('SET' subpath '=' expr (',' subpath '=' expr)*) | ('UNSET' subpath (',' subpath)*) | ('RENAME' subpath 'TO' identifier (',' subpath 'TO' identifier)*)))* ('WHERE' cond)?
-
-merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' ('WHERE' cond)?
-
-merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' 'VALUES' '(' expr (',' expr)* ')' ('WHERE' cond)?
-
-truncate ::= 'TRUNCATE' 'BUCKET' (pool-name ':')? bucket-name
+bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
 bucket-name ::= identifier
+
+value-clause ::= ('VALUE' | 'VALUES') expr
+
+returning-clause ::= 'RETURNING' expr (',' expr)*
+
+/*
+ *  delete
+ */
+delete ::= 'DELETE' 'FROM' bucket-ref key-clause? where-clause? limit-clause? returning-clause?
+
+/*
+ *  update
+ */
+update ::= 'UPDATE' bucket-ref key-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
+
+set-clause ::= 'SET' path '=' expr path-for? (',' path '=' expr path-for?)*
+
+path-for ::= 'FOR' variable 'IN' path ('WHEN' cond)?
+
+unset-clause ::= 'UNSET' path path-for? (',' path path-for?)*
+
+/*
+ *  merge
+ */
+merge ::= 'MERGE' 'INTO' bucket-ref key-clause? 'USING' merge-source 'ON' '(' cond ')' merge-update? merge-delete? merge-insert? limit-clause? returning-clause?
+
+merge-source ::= from-term | '(' select ')' 'AS'? alias
+
+merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' set-clause? unset-clause? where-clause?
+
+merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' where-clause?
+
+merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' key-clause? value-clause where-clause?
+
+/*
+ *  truncate
+ */
+truncate ::= 'TRUNCATE' 'BUCKET'? bucket-ref
+
+/*
+ *  select-for
+ */
+select-for ::= select 'FOR' ('UPDATE' | 'SHARE') ('OF' bucket-ref (',' bucket-ref)*)?
+
+/*
+ *  transaction-stmt
+ */
+transaction-stmt ::= start | commit | rollback
+
+start ::= 'START' 'TRANSACTION'
+
+commit ::= 'COMMIT' 'WORK'?
+
+rollback ::= 'ROLLBACK' 'WORK'?

@@ -1,145 +1,106 @@
-# N1QL&mdash;Query Language for N1NF (Non-1st Normal Form): DML
+# N1QL Query Language&mdash;DML
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-07-30
+* Modified: 2013-12-15
 
-## Summary
+## Introduction
 
-N1QL is a query language for Couchbase, and is a continuation of
-[UNQL](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/unql-2013.md).
-This document builds on the [N1QL Select
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md).
+N1QL ("nickel") is the query language from Couchbase. N1QL aims to
+meet the query needs of distributed document-oriented databases. This
+document specifies the syntax and semantics of the data modification
+statements in N1QL.
 
-This document describes the syntax and semantics of the DML statements
-in the language.
+*N1QL* stands for Non-1st Query Language. The name reflects the fact
+that the Couchbase document-oriented data model is based on [Non-1st
+Normal Form
+(N1NF)](http://en.wikipedia.org/wiki/Database_normalization#Non-first_normal_form_.28NF.C2.B2_or_N1NF.29).
 
-dml-stmt:
+## DML statements
+
+N1QL provides several data modification and transaction statements.
+
+*dml-stmt:*
 
 ![](diagram/dml-stmt.png)
 
-## Datasets
+## INSERT
 
-N1QL DML statements allow for mutations of entire documents, and of
-fragments within documents.  As such, N1QL DML statements use
-path-based datasets to identify the data to be mutated.  The dataset
-can be as simple as a bucket name, in which case entire documents will
-be mutated; or as complex as a nested path within each document, in
-which case the actual document fragments identified by the nested path
-will be mutated within each document.
+*insert:*
 
-dataset:
+![](diagram/insert.png)
 
-![](diagram/dataset.png)
+*bucket-ref:*
 
-## Result sets
+![](diagram/bucket-ref.png)
 
-N1QL DML statements are defined to return result sets in the same
-format as the SELECT statement.  If no RETURNING clause is specified,
-the result set is the empty array.  If a RETURNING clause is
-specified, it defines the fields of the JSON objects in the result
-set.
+*bucket-name:*
 
-## UPDATE
+![](diagram/bucket-name.png)
 
-The UPDATE statement has two additional clauses: UNSET and RENAME.
+*key-clause:*
 
-UNSET removes the entire field, including its name, from the
-containing object.
+![](diagram/key-clause.png)
 
-RENAME renames the field in the containing object.
+*value-clause:*
 
-update:
+![](diagram/value-clause.png)
 
-![](diagram/update.png)
+*returning-clause:*
+
+![](diagram/returning-clause.png)
 
 ## DELETE
 
-The DELETE statement can delete entire documents or fragments within
-documents.  When deleting fragments, the DELETE statement does not
-UNSET fields in the containing object.  Array-valued fields are left
-as empty arrays, and scalar-valued fields are set to NULL.  In other
-words, DELETE is always schema-safe for containing objects (unless
-NULL is a schema violation).
-
-delete:
+*delete:*
 
 ![](diagram/delete.png)
 
-## INSERT-VALUES
+*where-clause:*
 
-INSERT-VALUES inserts documents or fragments specified in its VALUES
-clause.
+![](diagram/where-clause.png)
 
-If the dataset identifies a bucket, each expr in VALUES is inserted as
-a new document in that bucket.
+*limit-clause:*
 
-If the dataset identifies a path within documents, the expr VALUES are
-evaluated in the context of each document and inserted as fragments at
-that location within each matching document.
+![](diagram/limit-clause.png)
 
-insert-values:
+## UPDATE
 
-![](diagram/insert-values.png)
+*update:*
 
-## INSERT-SELECT
+![](diagram/update.png)
 
-INSERT-SELECT is currently limited to bucket-scope inserts of full
-documents.  This is to prevent users from inadvertently running
-correlated subqueries.
+*set-clause:*
 
-insert-select:
+![](diagram/set-clause.png)
 
-![](diagram/insert-select.png)
+*path-for:*
+
+![](diagram/path-for.png)
+
+*unset-clause:*
+
+![](diagram/unset-clause.png)
 
 ## MERGE
 
-MERGE performs upserts, including deletes, on documents and fragments.
-
-merge:
+*merge:*
 
 ![](diagram/merge.png)
 
-merge-source:
+*merge-source:*
 
 ![](diagram/merge-source.png)
 
-### MERGE-UPDATE
-
-The MERGE-UPDATE clause has the additional ability to UNSET fields,
-which removes the entire field, including its name, from the
-containing object.
-
-merge-update:
+*merge-update:*
 
 ![](diagram/merge-update.png)
 
-### MERGE-DELETE
-
-The MERGE-DELETE clause can delete entire documents or fragments
-within documents.  When deleting fragments, the DELETE statement does
-not UNSET fields in the containing object.  Array-valued fields are
-left as empty arrays, and scalar-valued fields are set to NULL.  In
-other words, MERGE-DELETE is always schema-safe for containing objects
-(unless NULL is a schema violation).
-
-merge-delete:
+*merge-delete:*
 
 ![](diagram/merge-delete.png)
 
-### MERGE-INSERT
-
-MERGE-INSERT inserts documents or fragments specified in its VALUES
-clause.
-
-If the dataset identifies a bucket, each expr in VALUES is inserted as
-a new document in that bucket.
-
-If the dataset identifies a path within documents, the expr VALUES are
-evaluated in the context of each document and inserted as fragments at
-that location within each matching document.
-
-merge-insert:
+*merge-insert:*
 
 ![](diagram/merge-insert.png)
 
@@ -148,13 +109,35 @@ merge-insert:
 TRUNCATE deletes all the documents in a bucket. It cannot be rolled
 back, and it cannot be called within or participate in transactions.
 
-truncate:
+*truncate:*
 
 ![](diagram/truncate.png)
 
-bucket-name:
+## SELECT-FOR
 
-![](diagram/bucket-name.png)
+*select-for:*
+
+![](diagram/select-for.png)
+
+## Transactions
+
+### Start transaction
+
+*start:*
+
+![](diagram/start.png)
+
+### Commit
+
+*commit:*
+
+![](diagram/commit.png)
+
+### Rollback
+
+*rollback:*
+
+![](diagram/rollback.png)
 
 ## About this Document
 
@@ -191,30 +174,12 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-30 - Truncate
     * Required BUCKET after TRUNCATE, to make it more self-documenting
     * Clarified that TRUNCATE does not participate in transactions
+* 2013-12-15 - Target syntax
+    * Updated syntax targeting beta / production release
+    * DML statements apply to documents, not fragments
+    * Transaction START / COMMIT / ROLLBACK statements
 
 ### Open Issues
 
 This meta-section records open issues in this document, and will
 eventually disappear.
-
-1.  DELETE of array-terminated paths deletes elements inside the
-array, potentially leaving an empty containing array.  DELETE of
-scalar-terminated paths sets the field to NULL.  Is this consistent?
-
-1.  INSERT into array-terminated paths inserts into the array; INSERT
-into scalar-terminated paths converts the field to an array.  Should
-it be disallowed instead?  DELETE and INSERT should behave somewhat
-inversely, and certainly predictably and intuitively.
-
-1.  Should we provide UPDATE-APPEND?  This would be similar to
-INSERT-VALUES over array-valued datasets.  INSERT seems to be closer
-to the spirit of N1NF, i.e. embedded datasets are first-class
-entities.
-
-1.  Should we provide UPDATE SET VALUE() = expr for mutating entire
-documents?  It would violate the nice property that function calls are
-always read-only.
-
-1.  Should we require that datasets terminate in an array-valued
-field?  This would clarify / simplify most of the issues above.  Ditto
-for SELECT.
