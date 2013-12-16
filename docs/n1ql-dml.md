@@ -38,13 +38,13 @@ N1QL provides several data modification and transaction statements.
 
 ![](diagram/bucket-name.png)
 
-*key-clause:*
+*keys-clause:*
 
-![](diagram/key-clause.png)
+![](diagram/keys-clause.png)
 
-*value-clause:*
+*values-clause:*
 
-![](diagram/value-clause.png)
+![](diagram/values-clause.png)
 
 *returning-clause:*
 

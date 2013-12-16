@@ -10,13 +10,15 @@ dml-stmt ::= insert | delete | update | merge | truncate | select-for | transact
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' bucket-ref key-clause? (value-clause | select) returning-clause?
+insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (values-clause | select) returning-clause?
 
 bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
 bucket-name ::= identifier
 
-value-clause ::= ('VALUE' | 'VALUES') expr
+keys-clause ::= 'KEYS' expr
+
+values-clause ::= 'VALUES' expr
 
 returning-clause ::= 'RETURNING' expr (',' expr)*
 
