@@ -539,7 +539,7 @@ along with the parent customer's name.
             { "name" : "Acme Inc.", "street" : "101 Main St.", "zip" : "94040" },
             { "name" : "Acme Inc.", "street" : "300 Broadway", "zip" : "10011" },
             { "name" : "Roadster Corp.", "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
-            { "name" : "Roadster Corp.", "street" : "3500 Alamo Dr.", "zip" : "75019" }
+            { "name" : "Roadster Corp.", "street" : "4120 Alamo Dr.", "zip" : "75019" }
         ]
 
 The first path element after each UNNEST must reference some preceding
@@ -568,7 +568,7 @@ selected:
             },
                 "$1": [
                           { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
-                          { "street" : "3500 Alamo Dr.", "zip" : "75019" }
+                          { "street" : "4120 Alamo Dr.", "zip" : "75019" }
                       ]
             }
         ]
@@ -596,7 +596,7 @@ selected:
             { "street" : "101 Main St.", "zip" : "94040" },
             { "street" : "300 Broadway", "zip" : "10011" },
             { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
-            { "street" : "3500 Alamo Dr.", "zip" : "75019" }
+            { "street" : "4120 Alamo Dr.", "zip" : "75019" }
         ]
 
 Expansions can be chained.
@@ -1019,6 +1019,17 @@ the beer datasource against the specified object literal.
 Function names are case in-sensitive.  The following functions are
 defined:
 
+ARRAY_APPEND(array, value) - returns a new array with the value
+appended.
+
+ARRAY_CONCAT(array, array) - returns a new array with the
+concatenation of the input arrays.
+
+ARRAY_LENGTH(array) - returns the number of elements in the array.
+
+ARRAY_PREPEND(value, array) - returns a new array with the value
+prepended.
+
 CEIL(value) - if value is numeric, returns the smallest integer not
 less than the value.  otherwise, NULL.
 
@@ -1043,14 +1054,8 @@ otherwise value1
 LEAST(expr, expr, ...) - returns the smallest non-NULL, non-MISSING of
 all the expressions.  if all valus are NULL or MISSING returns NULL.
 
-LENGTH(expr) - Returns the length of the value after evaluting the
-expression.  The exact meaning of length depends on the type of the
-value:
-
-* string - the length of the string
-* array - the number of items in the array
-* object - the number of key/value pairs in the object
-* anything else - null
+LENGTH(expr) - Returns the length of the string value after evaluting
+the expression, or NULL if the value is not a string.
 
 LOWER(expr) - if expr is a string, the string is returned in all lower
 case.  otherwise NULL.
@@ -1061,6 +1066,15 @@ beginning
 
 NULLIF(value1, value2) - if value1 = value 2, return NULL, otherwise
 value1
+
+POLY_LENGTH(expr) - Returns the length of the value after evaluting
+the expression.  The exact meaning of length depends on the type of
+the value:
+
+* string - the length of the string
+* array - the number of items in the array
+* object - the number of key/value pairs in the object
+* anything else - null
 
 ROUND(value) - if value is numeric, rounds to the nearest integer.
 otherwise NULL.  same as ROUND(value, 0)
@@ -1115,6 +1129,8 @@ If the argument the aggregate function is '*' all rows are considered.
 If the argument to the aggregate function is anything else, then if
 the result of evaluating the expression is Null or Missing, that row
 is eliminated.
+
+ARRAY_AGG(expr) - returns an array of the values in the group.
 
 COUNT(expr) - always returns 0 or a positive integer
 
@@ -1652,6 +1668,44 @@ SELECT {"thename": name} AS custom_obj
         "thename": "N1QL"
       }
     }
+
+## Appendix - Syntax Changes for Beta / GA
+
+#### FROM ... OVER => FROM ... UNNEST
+
+* Replaced FROM ... OVER with FROM ... UNNEST
+
+#### ANY / ALL ... OVER => ANY / EVERY ... SATISFIES
+
+* Replaced ANY / ALL ... OVER with ANY / EVERY ... SATISFIES
+
+#### KEY / KEYS Clause
+
+* Added KEY / KEYS clause to FROM clause
+
+#### JOINs
+
+* Added JOINs based on primary keys
+
+#### Subqueries
+
+* Added subqueries based on primary keys
+
+#### CASE expressions
+
+* Added a second form of CASE expression
+
+#### Array Functions and Slicing
+
+* Added array slicing
+
+* Added ARRAY_CONCAT(), ARRAY_LENGTH(), ARRAY_APPEND(),
+  ARRAY_PREPEND(), and other array functions
+
+#### Array Expansions
+
+* Added array expansions
+
 
 ## About this Document
 
