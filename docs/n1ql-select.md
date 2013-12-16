@@ -414,7 +414,7 @@ This returns every value in the *customer* bucket.
 
 The bucket name can be prefixed with an optional pool name:
 
-        SELECT * FROM :main.customer
+        SELECT * FROM main:customer
 
 This queries the *customer* bucket in the *main* pool.
 
@@ -485,6 +485,7 @@ And our *invoice* objects were:
         {
             "customer_key": ...,
             "invoice_date": ...,
+            "invoice_item_keys": [ ... ],
             "total": ...
         }
 
@@ -498,6 +499,7 @@ Then each joined object would be:
             "inv" : {
                 "customer_key": ...,
                 "invoice_date": ...,
+                "invoice_item_keys": [ ... ],
                 "total": ...
             },
             "cust" : {
@@ -507,6 +509,54 @@ Then each joined object would be:
             }
         }
 
+If our *invoice_item* objects were:
+
+        {
+            "invoice_key": ...,
+            "product_key": ...,
+            "unit_price": ...,
+            "quantity": ...,
+            "item_subtotal": ...
+        }
+
+And the FROM clause was:
+
+        FROM invoice JOIN invoice_item item KEYS invoice.invoice_item_keys
+
+Then our joined objects would be:
+
+        {
+            "invoice" : {
+                "customer_key": ...,
+                "invoice_date": ...,
+                "invoice_item_keys": [ ... ],
+                "total": ...
+            },
+            "item" : {
+                "invoice_key": ...,
+                "product_key": ...,
+                "unit_price": ...,
+                "quantity": ...,
+                "item_subtotal": ...
+            }
+        },
+        {
+            "invoice" : {
+                "customer_key": ...,
+                "invoice_date": ...,
+                "invoice_item_keys": [ ... ],
+                "total": ...
+            },
+            "item" : {
+                "invoice_key": ...,
+                "product_key": ...,
+                "unit_price": ...,
+                "quantity": ...,
+                "item_subtotal": ...
+            }
+        },
+        ...
+
 KEY or KEYS is required after each JOIN. It specifies the primary keys
 for the second bucket in the join.
 
@@ -514,12 +564,13 @@ Joins can be chained.
 
 By default, an INNER join is performed. This means that for each
 joined object produced, both the left and right hand source objects
-must be non-null.
+must be non-missing and non-null.
 
 If LEFT or LEFT OUTER is specified, then a left outer join is
 performed. At least one joined object is produced for each left hand
-source object. If the right hand source object is null or missing, the
-joined object is MISSING a value for the right hand side.
+source object. If the right hand source object is NULL or MISSING,
+then the joined object's right-hand side value is also NULL or MISSING
+(omitted), respectively.
 
 ### Unnests
 
@@ -566,6 +617,7 @@ selected:
                           { "street" : "300 Broadway", "zip" : "10011" }
                       ]
             },
+            {
                 "$1": [
                           { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
                           { "street" : "4120 Alamo Dr.", "zip" : "75019" }
