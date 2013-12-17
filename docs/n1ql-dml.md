@@ -123,7 +123,10 @@ new queries. Once the BUCKET CLEAR is coordinated, the final TRUNCATE
 can be completed (while completing already-started queries).
 
 We may postpone TRUNCATE if the implementation makes it expedient to
-do so.
+do so. Also, we will only expose TRUNCATE via N1QL after the backend
+support for it is in place, and perhaps in conjunction with an
+administrative API that abstracts / hides all the management and
+book-keeping for distributed correctness.
 
 ## SELECT-FOR
 
