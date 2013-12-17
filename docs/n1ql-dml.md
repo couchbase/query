@@ -113,6 +113,18 @@ back, and it cannot be called within or participate in transactions.
 
 ![](diagram/truncate.png)
 
+**NOTE:** Because we are distributed and support XDCR, TRUNCATE would
+need to work correctly and efficiently across partitions and across
+data centers, even as data flows into the bucket.
+
+One possibility is to first broadcast a BUCKET CLEAR message that
+causes the bucket to stop accepting new mutations and to be empty for
+new queries. Once the BUCKET CLEAR is coordinated, the final TRUNCATE
+can be completed (while completing already-started queries).
+
+We may postpone TRUNCATE if the implementation makes it expedient to
+do so.
+
 ## SELECT-FOR
 
 *select-for:*
