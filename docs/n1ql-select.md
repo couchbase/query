@@ -93,6 +93,10 @@ behavior is the same in either case.
 
 ![](diagram/unnest-clause.png)
 
+*nest-clause:*
+
+![](diagram/nest-clause.png)
+
 ### WHERE clause
 
 *where-clause:*
@@ -371,6 +375,10 @@ called the primary bucket.
 
 ![](diagram/unnest-clause.png)
 
+*nest-clause:*
+
+![](diagram/nest-clause.png)
+
 The following sections discuss various elements of the FROM
 clause. These elements can be combined.
 
@@ -575,8 +583,8 @@ then the joined object's right-hand side value is also NULL or MISSING
 ### Unnests
 
 If a document or object contains a nested array, UNNEST conceptually
-performs an inner join of the nested array with its parent
-object. Each resulting joined object becomes an input to the query.
+performs a join of the nested array with its parent object. Each
+resulting joined object becomes an input to the query.
 
 If some customer documents contain an array of addresses under the
 *address* field, the following query retrieves each nested address
@@ -597,6 +605,123 @@ The first path element after each UNNEST must reference some preceding
 path.
 
 Unnests can be chained.
+
+By default, an INNER unnest is performed. This means that for each
+result object produced, both the left and right hand source objects
+must be non-missing and non-null.
+
+If LEFT or LEFT OUTER is specified, then a left outer unnest is
+performed. At least one result object is produced for each left hand
+source object. If the right hand source object is NULL, MISSING,
+empty, or a non-array value, then the result object's right-hand side
+value is MISSING (omitted).
+
+### Nests
+
+Nesting is conceptually the inverse of unnesting. Nesting performs a
+join across two buckets. But instead of producing a cross-product of
+the left and right hand inputs, a single result is produced for each
+left hand input, while the corresponding right hand inputs are
+collected into an array and nested as a single array-valued field in
+the result object.
+
+Recall our *invoice* objects:
+
+        {
+            "customer_key": ...,
+            "invoice_date": ...,
+            "invoice_item_keys": [ ... ],
+            "total": ...
+        }
+
+And our *invoice_item* objects:
+
+        {
+            "invoice_key": ...,
+            "product_key": ...,
+            "unit_price": ...,
+            "quantity": ...,
+            "item_subtotal": ...
+        }
+
+If the FROM clause was:
+
+        FROM invoice inv NEST invoice_item items KEYS inv.invoice_item_keys
+
+The results would be:
+
+        {
+            "customer_key": ...,
+            "invoice_date": ...,
+            "invoice_item_keys": [ ... ],
+            "total": ...,
+            "items" : [
+                {
+                    "invoice_key": ...,
+                    "product_key": ...,
+                    "unit_price": ...,
+                    "quantity": ...,
+                    "item_subtotal": ...
+                },
+                {
+                    "invoice_key": ...,
+                    "product_key": ...,
+                    "unit_price": ...,
+                    "quantity": ...,
+                    "item_subtotal": ...
+                }
+            ]
+        },
+        {
+            "customer_key": ...,
+            "invoice_date": ...,
+            "invoice_item_keys": [ ... ],
+            "total": ...,
+            "items" : [
+                {
+                    "invoice_key": ...,
+                    "product_key": ...,
+                    "unit_price": ...,
+                    "quantity": ...,
+                    "item_subtotal": ...
+                },
+                {
+                    "invoice_key": ...,
+                    "product_key": ...,
+                    "unit_price": ...,
+                    "quantity": ...,
+                    "item_subtotal": ...
+                }
+            ]
+        },
+        ...
+
+Nests can be chained with other nests, joins, and unnests. Note that
+NEST does not introduce new aliases or new composite objects. Instead,
+NEST only modifies its left hand input by adding an array-valued field
+containing its right hand inputs.
+
+The right hand object of NEST is not at the top-level and cannot be
+used as the first path element for paths in JOIN, UNNEST, NEST, or
+KEY/S clauses.
+
+By default, an INNER nest is performed. This means that for each
+result object produced, both the left and right hand source objects
+must be non-missing and non-null.
+
+If LEFT or LEFT OUTER is specified, then a left outer nest is
+performed. One result object is produced for each left hand source
+object. If there is no corresponding right hand source object, then
+the result object's right-hand side value is as follows:
+
+* If the KEY/S expression evaluates to MISSING, the right hand value
+  is also MISSING
+* If the KEY/S expression evaluates to NULL, the right hand value is
+  also NULL
+* If the KEY/S expression evaluates to an array, the right hand value
+  is an empty array
+* If the KEY/S expression evaluates to a non-array value, the right
+  hand value is an empty array
 
 ### Expansions
 

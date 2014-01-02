@@ -2,62 +2,116 @@
 
 * Status: DRAFT
 * Latest: [n1ql-acid](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-acid.md)
-* Modified: 2013-11-21
+* Modified: 2014-01-01
 
-## Summary
+## Introduction
 
 This document specifies the ACID requirements for N1QL. ACID refers to
-Atomicity, Consistency, Isolation, and Durability. Where necessary,
-this document also indicates ACID properties that are **not** required
-by N1QL.
+Atomicity, Consistency, Isolation, and Durability. The purpose of
+these requirements is to provide N1QL users and applications with a
+well-defined programming model that balances robustness and usability
+on the one hand, and performance and scale on the other.
 
-These ACID requirements are intended to inform the design of the
-Indexing and Storage subsytems.
+Consistency in this context refers to database consistency, and not to
+consistency among replicas (as in CAP theorem). Database consistency
+refers to the correctness of data, i.e. that mutations will not
+corrupt data or violate any rules defined in the database.
+
+These ACID requirements are intended to inform the design of indexing
+and transactions.
 
 ## N1QL background
 
-[N1QL](https://github.com/couchbaselabs/query/blob/master/docs/) will
-include the following features:
+N1QL will include the following features. Please see the [N1QL
+specs](https://github.com/couchbaselabs/query/blob/master/docs)
+for more details.
 
 1. Predicate queries (SELECT ... FROM ... WHERE) and aggregates (GROUP
    BY)
 
-1. Joins and subqueries using primary keys
+1. Joins and subqueries using KEYS
 
-1. DML statements with bounded cardinality (UPDATE / DELETE / MERGE
-   ... WHERE with LIMIT or primary keys specified)
+1. DML statements with bounded cardinality (INSERT / UPDATE / DELETE /
+   MERGE ... WHERE with LIMIT or KEYS specified)
 
-1. Transactions with bounded cardinality (BEGIN ... COMMIT / ROLLBACK)
+1. Transactions (BEGIN ... COMMIT / ROLLBACK)
 
-1. Versioned reads within transactions (SELECT ... LIMIT ... FOR UPDATE)
-   * These will behave excatly like UPDATEs with no modifications and
-     no new sequence numbers
+1. Versioned reads within transactions (SELECT ... LIMIT ... FOR
+   UPDATE / FOR SHARE)
+
+## Requirements summary
+
+As stated above, the purpose of these requirements is to provide a
+well-defined and balanced programming model.
+
+### Eventual atomicity
+
+* **Atomic transactions** - Transactions must be atomic in order to
+  spare users the pain of implementing rollback logic.
+
+* **Atomic statements** - DML statements must be atomic for the same
+  reason as transactions. Furthermore, some mutations are not
+  idempotent, e.g. *UPDATE b SET x = x + 1.* Completing or rolling
+  back such a mutation would be difficult without atomic statements.
+
+Atomicity is defined to be eventual, because the effects of a
+statement or transaction may be visible at one node but not yet
+visible at another.
+
+### Database (not CAP) consistency
+
+N1QL does not provide constraints for enforcing data correctness;
+instead, N1QL provides an isolation model that allows users to
+maintain data correctness.
+
+### Stable isolation
+
+* **Transaction overlay**
+
+* **Stable scans**
+
+* **Unique fetches**
+
+### Eventual durability
+
+Completed statements and transactions must be eventually durable. That
+is, their effects are not required to be immediately visible to every
+new query; however, they must eventually be visible to every new
+query.
+
+Furthermore, the effects of completed statements and transactions may
+be visible at one node but not yet at another; however, they must
+eventually be visible at every affected node.
+
+If a query needs all the effects of a previous statement or
+transaction to be completed, the query can provide a minimum stability
+vector.
 
 ## ACID requirements
 
+### Scans and fetches
+
+Queries are executed by performing index scans and key-value fetches.
+
 ### Reads
 
-The query engine performs 2 kinds of reads: index scans and key-value
-fetches. Every scan or fetch should abort or fail rather than produce
-results that don't satisfy the semantics below.
+The query engine performs two kinds of reads: index scans and
+key-value fetches. Every scan or fetch should abort or fail rather
+than produce results that do not satisfy the requirements below.
 
 #### Index scans
 
-1. Stateless scan. Scan committed entries, with no additional
-   requirements. This should be the fastest scan possible. It may or
-   may not be used, but it should be provided, if only for baseline
-   performance comparison.
+Index scans include range scans and full scans for a given index. The
+query engine may request a scan that covers several index
+partitions. In that case, the indexer will combine the results from
+the index partitions and provide the query engine with a unified
+stream of results.
 
-1. Rolling scan. Scan committed entries based on a start vector. The
-   start vector is acquired by asking each index node for a start
-   value. Each index node then performs its scan to reflect that start
-   value or later.
-   * A rolling scan is required to prevent reading a new value
-     followed by an older value for the same entry. This can happen,
-     for example, if two separate index replicas are scanned by
-     subqueries within a query.
-   * Rolling scans (and fetches) can also be used to implement
-     read-your-own-writes.
+N1QL requires stable scans.
+
+A stable scan is defined in terms of a version vector containing a
+version (e.g. SeqNo) for each key-value data partition (not index
+partition).
 
 1. Stable scan. Scan committed entries based on a stability
    vector. The stability vector is acquired by asking each index node
@@ -90,10 +144,10 @@ held (SELECT FOR UPDATE) by the current transaction.
 All writes by the query engine (DML statements) require strong ACID
 semantics.
 
-1. For a given statement, all reads must (appear to) happen before all
-   writes. That is, all the inputs to a statement must be read without
-   being modified by the statement. This can be satisfied using stable
-   scans.
+1. For every DML statement, all reads must (appear to) happen before
+   all writes. That is, all the inputs to a statement must be read
+   without being modified by the statement. This can be satisfied
+   using stable scans.
 
 1. All DML statements are transactional.
    * If a DML statement is not within an explicit transaction, it will
@@ -131,6 +185,7 @@ semantics.
 
 * 2013-10-29 - Initial version
 * 2013-11-21 - Updates
+* 2014-01-01 - Updated requirements based on discussions
 
 ### Open Issues
 
