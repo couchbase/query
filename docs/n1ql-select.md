@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2013-12-15
+* Modified: 2014-01-01
 
 ## Introduction
 
@@ -1946,6 +1946,9 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Array expansion
 * 2013-12-15 - Beta / GA deltas
     * Added appendix on syntax changes for Beta / GA
+* 2014-01-01 - NEST
+    * Added NEST
+    * Added join-type to UNNEST
 
 ### Open Issues
 
