@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2013-12-15
+* Modified: 2014-01-03
 
 ## Introduction
 
@@ -193,6 +193,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Updated syntax targeting beta / production release
     * DML statements apply to documents, not fragments
     * Transaction START / COMMIT / ROLLBACK statements
+* 2014-01-03 - MERGE
+    * Restricted MERGE to key-based matching
+    * Made LIMIT mandatory in MERGE
 
 ### Open Issues
 

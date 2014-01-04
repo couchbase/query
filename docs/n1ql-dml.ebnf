@@ -41,7 +41,7 @@ unset-clause ::= 'UNSET' path path-for? (',' path path-for?)*
 /*
  *  merge
  */
-merge ::= 'MERGE' 'INTO' bucket-ref key-clause? 'USING' merge-source 'ON' '(' cond ')' merge-update? merge-delete? merge-insert? limit-clause? returning-clause?
+merge ::= 'MERGE' 'INTO' bucket-ref 'USING' merge-source 'ON' key-clause merge-update? merge-delete? merge-insert? limit-clause returning-clause?
 
 merge-source ::= from-term | '(' select ')' 'AS'? alias
 
@@ -49,7 +49,7 @@ merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' set-clause? unset-clause? wher
 
 merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' where-clause?
 
-merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' key-clause? value-clause where-clause?
+merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' value-clause where-clause?
 
 /*
  *  truncate
