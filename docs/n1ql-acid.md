@@ -2,13 +2,13 @@
 
 * Status: DRAFT
 * Latest: [n1ql-acid](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-acid.md)
-* Modified: 2014-01-01
+* Modified: 2014-01-05
 
 ## Introduction
 
 This document specifies the ACID requirements for N1QL. ACID refers to
 Atomicity, Consistency, Isolation, and Durability. The purpose of
-these requirements is to provide N1QL users and applications with a
+these requirements is to provide N1QL users and clients with a
 well-defined programming model that balances robustness and usability
 on the one hand, and performance and scale on the other.
 
@@ -31,28 +31,27 @@ for more details.
 
 1. Joins and subqueries using KEYS
 
-1. DML statements with bounded cardinality (INSERT / UPDATE / DELETE /
-   MERGE ... WHERE with LIMIT or KEYS specified)
+1. Write statements with bounded cardinality (INSERT / UPDATE / DELETE
+   / MERGE with LIMIT or KEYS specified)
 
-1. Transactions (BEGIN ... COMMIT / ROLLBACK)
+1. Transactions (START TRANSACTION ... COMMIT / ROLLBACK)
 
 1. Versioned reads within transactions (SELECT ... LIMIT ... FOR
    UPDATE / FOR SHARE)
 
-## Requirements summary
+## Requirements
 
-As stated above, the purpose of these requirements is to provide a
-well-defined and balanced programming model.
+Again, the purpose of these requirements is to provide a well-defined
+and balanced programming model.
 
 ### Eventual atomicity
 
-* **Atomic transactions** - Transactions must be atomic in order to
-  spare users the pain of implementing rollback logic.
+* **Atomic transactions** - By definition, transactions must be atomic.
 
-* **Atomic statements** - DML statements must be atomic for the same
-  reason as transactions. Furthermore, some mutations are not
+* **Atomic statements** - Write statements must be atomic in order to
+  avoid manual rollback. Furthermore, some write statements are not
   idempotent, e.g. *UPDATE b SET x = x + 1.* Completing or rolling
-  back such a mutation would be difficult without atomic statements.
+  back such a statement would be difficult without atomicity.
 
 Atomicity is defined to be eventual, because the effects of a
 statement or transaction may be visible at one node but not yet
@@ -62,122 +61,108 @@ visible at another.
 
 N1QL does not provide constraints for enforcing data correctness;
 instead, N1QL provides an isolation model that allows users to
-maintain data correctness.
+implement data correctness.
 
 ### Stable isolation
 
-* **Transaction overlay**
+Isolation defines which data, versions, and mutations are visible to a
+statement or transaction.
 
-* **Stable scans**
+The N1QL isolation model (called *stable isolation*) is at the core of
+these requirements. It has the following properties:
 
-* **Unique fetches**
+* **Statement-level** - It is statement-level, and not
+  transaction-level.
+
+* **Similar to snapshot isolation** - It is similar to, but not
+  identical to, statement-level [snapshot
+  isolation](http://en.wikipedia.org/wiki/Snapshot_isolation) (but it
+  is not based on timestamps).
+
+* **Stability vectors** - The statement-level "snapshot" is defined by
+  obtaining a *stability vector*. The stability vector is a version
+  vector containing a sequence number for every data (key-value)
+  partition in the bucket.
+
+* **Not point-in-time** - The stability vector does not imply any
+  point-in-time correlation among the sequence numbers in the
+  vector. It only defines a stable state against which queries can be
+  executed.
+
+* **At stable committed** - Like snapshot isolation, *stable
+  isolation* only reads committed data. However, it reads the version
+  of committed data specified exactly by the stability vector. If a
+  new version of the data is committed after the stability vector is
+  obtained but before the statement is executed, that new version is
+  not read.
+
+* **Stable scans** - Index scans are required to use stability
+  vectors. A range scan or full scan may span several index
+  partitions. In that case, all the index partitions must use the same
+  stability vector, and the indexer must combine the results into a
+  unified scan.  Stable scans ensure that an index scan reflects only
+  one version of each document.
+
+* **Unique fetches** - A statement fetches documents that are
+  enumerated by index scans. The document versions read must be either
+  committed or written by the current transaction.
+
+    * A statement must fetch each document at most once, to avoid
+      reading more than one version.
+
+    * A statement must evaluate any WHERE clause predicates against
+      each document, to account for any data-index inconsistency or
+      lag.
+
+    * A statement may also need to ensure that the fetched document
+      satisfies a mimimum vector.
+
+* **Transaction overlay** - Both scans and fetches are overlaid with
+  writes by the current transaction.
+
+    * Index scans will reflect both the stability vector and the
+      current transaction's writes.
+
+    * Document fetches will reflect both committed reads and the
+      current transaction's writes.
+
+* **Result vectors** - Transactions are able to produce *result
+  vectors*, which are version vectors that would reflect all the
+  (eventual) effects of the transaction.
+
+  Read-your-own-writes can be implemented by using the result vector
+  from one statement as the minimum vector for the next statement.
 
 ### Eventual durability
 
-Completed statements and transactions must be eventually durable. That
-is, their effects are not required to be immediately visible to every
-new query; however, they must eventually be visible to every new
-query.
+Completed statements and transactions must be eventually durable.
+Their effects are not required to be immediately visible to every new
+query; however, they must eventually be visible to every new query.
 
 Furthermore, the effects of completed statements and transactions may
 be visible at one node but not yet at another; however, they must
 eventually be visible at every affected node.
 
-If a query needs all the effects of a previous statement or
-transaction to be completed, the query can provide a minimum stability
-vector.
+If a query or client needs all the effects of a previous statement or
+transaction to be visible, the query or client can provide a minimum
+stability vector.
 
-## ACID requirements
+### Additional requirements for writes
 
-### Scans and fetches
+N1QL write statements have additional requirements.
 
-Queries are executed by performing index scans and key-value fetches.
+* For every write statement, all reads must (appear to) happen before
+  all writes. That is, all the inputs to a statement must be read
+  before being modified by the statement. This is satisfied by stable
+  scans.
 
-### Reads
+* All write statements are transactional.
 
-The query engine performs two kinds of reads: index scans and
-key-value fetches. Every scan or fetch should abort or fail rather
-than produce results that do not satisfy the requirements below.
+    * If a write statement is not within an explicit transaction, it
+      will behave like a single-statement transaction.
 
-#### Index scans
-
-Index scans include range scans and full scans for a given index. The
-query engine may request a scan that covers several index
-partitions. In that case, the indexer will combine the results from
-the index partitions and provide the query engine with a unified
-stream of results.
-
-N1QL requires stable scans.
-
-A stable scan is defined in terms of a version vector containing a
-version (e.g. SeqNo) for each key-value data partition (not index
-partition).
-
-1. Stable scan. Scan committed entries based on a stability
-   vector. The stability vector is acquired by asking each index node
-   for a stability value. Each index node then performs its scan to
-   reflect that stability value exactly. This may require MVCC and
-   some history.
-   * A stable scan is required for the following query: find all
-     duplicates. Every value returned must have been a duplicate at
-     some point. So if a value is not a duplicate, but is scanned,
-     deleted, reinserted, and scanned again, it should **not** be
-     returned.
-   * If stable scans are performant, every non-transactional query
-     might use them. This would produce more meaningful results.
-
-1. Transactional scan. Stable scan overlaid with entries modified or
-held (SELECT FOR UPDATE) by the current transaction.
-
-#### Key-value fetches
-
-1. Stateless fetch.
-
-1. Transactional fetch. Stateless fetch overlaid with entries modified
-   or held (SELECT FOR UPDATE) by the current transaction.
-
-1. Question: Is stable fetch required in order to make stable scan
-   useful?
-
-### Writes
-
-All writes by the query engine (DML statements) require strong ACID
-semantics.
-
-1. For every DML statement, all reads must (appear to) happen before
-   all writes. That is, all the inputs to a statement must be read
-   without being modified by the statement. This can be satisfied
-   using stable scans.
-
-1. All DML statements are transactional.
-   * If a DML statement is not within an explicit transaction, it will
-     behave like a single-statement transaction.
-   * If a DML statement is within an explicit transaction, it will
-     behave atomically with respect to the rest of the
-     transaction. This might require two-level transaction support by
-     the transaction manager.
-
-1. Transactional scans (see above).
-
-1. Distributed atomicity
-   * Immediate atomicity within each index node (and data node?)
-   * Eventual atomicity across nodes
-
-1. Index-data consistency for data modified by the current statement
-   (or held by the current transaction)
-
-1. Distributed isolation, commit, and rollback
-   * Immediate commit and rollback with each index node (and data node?)
-   * Eventual commit and rollback across nodes (partial isolation)
-
-1. Distributed durability
-   * N1QL does not define durability, but leaves it to the underlying
-     database (e.g. persistence, replica count, etc.)
-   * Eventual durability: each node can achieve durability at a
-     different point in time, but the transaction state (committed or
-     rolled back) must eventually be reflected in "durable" form
-   * May require post-processing by garbage collectors and transaction
-     background post-processors
+    * If a write statement is within an explicit transaction, it will
+      behave atomically with respect to the rest of the transaction.
 
 ## About this Document
 
@@ -185,7 +170,7 @@ semantics.
 
 * 2013-10-29 - Initial version
 * 2013-11-21 - Updates
-* 2014-01-01 - Updated requirements based on discussions
+* 2014-01-05 - Updated requirements based on discussions
 
 ### Open Issues
 
