@@ -714,14 +714,14 @@ the result object's right-hand side value is as follows:
 * If the KEY/S expression evaluates to MISSING, the right hand value
   is also MISSING
 * If the KEY/S expression evaluates to NULL, the right hand value is
-  also NULL
+  MISSING
 * If the KEY/S expression evaluates to an array, the right hand value
   is an empty array
 * If the KEY/S expression evaluates to a non-array value, the right
   hand value is an empty array
 
 Whether KEY or KEYS is used, the right hand result of NEST is always
-an array, NULL, or MISSING.
+an array or MISSING.
 
 ### Expansions
 
