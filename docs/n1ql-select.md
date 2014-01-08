@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-01-02
+* Modified: 2014-01-07
 
 ## Introduction
 
@@ -706,10 +706,8 @@ By default, an INNER nest is performed. This means that for each
 result object produced, both the left and right hand source objects
 must be non-missing and non-null.
 
-If LEFT or LEFT OUTER is specified, then a left outer nest is
-performed. One result object is produced for each left hand source
-object. If there is no corresponding right hand source object, then
-the result object's right-hand side value is as follows:
+If there is no matching right hand source object, then the right hand
+source object is as follows:
 
 * If the KEY/S expression evaluates to MISSING, the right hand value
   is also MISSING
@@ -719,6 +717,10 @@ the result object's right-hand side value is as follows:
   is an empty array
 * If the KEY/S expression evaluates to a non-array value, the right
   hand value is an empty array
+
+If LEFT or LEFT OUTER is specified, then a left outer nest is
+performed. One result object is produced for each left hand source
+object.
 
 Whether KEY or KEYS is used, the right hand result of NEST is always
 an array or MISSING.
@@ -1951,6 +1953,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added join-type to UNNEST
 * 2014-01-02 - NEST result format
     * Changed NEST result format to be consistent with UNNEST and JOIN
+* 2014-01-07 - NEST result format
+    * Changed result format for inner nests
 
 ### Open Issues
 
