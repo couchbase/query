@@ -1099,9 +1099,17 @@ primary bucket.
 
 ![](diagram/exists-expr.png)
 
-The existential expression, also known as the existential quantifier
-or predicate, evaluates to TRUE if and only if the subquery returns at
-least one row.  Otherwise the existential expression evaluates to
+The existential quantifier evaluates to TRUE if and only if the
+subquery returns at least one row.  Otherwise the existential
+expression evaluates to FALSE.
+
+*in-expr:*
+
+![](diagram/in-expr.png)
+
+IN evaluates to TRUE if and only if the right-hand-side expression
+evaluates to an array and contains the left-hand-side expression.
+
 FALSE.
 
 *collection-cond:*

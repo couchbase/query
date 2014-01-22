@@ -20,7 +20,7 @@ keys-clause ::= 'KEYS' expr
 
 values-clause ::= 'VALUES' expr
 
-returning-clause ::= 'RETURNING' expr (',' expr)*
+returning-clause ::= 'RETURNING' expr ('AS'? alias)? (',' expr ('AS'? alias)?)*
 
 /*
  *  delete
