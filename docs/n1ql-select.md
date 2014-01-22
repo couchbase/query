@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-01-07
+* Modified: 2014-01-21
 
 ## Introduction
 
@@ -1963,6 +1963,26 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Changed NEST result format to be consistent with UNNEST and JOIN
 * 2014-01-07 - NEST result format
     * Changed result format for inner nests
+* 2014-01-21 - Collection expressions
+    * Per customer requirement, extend collection expressions to
+      multiple collections
+    * Customer requirement: If you have a property that is an array of
+      subdocuments like the children property in your examples, it
+      looks easy to find the documents where there is a child with the
+      gender equal to female and the age greater than 12 say for
+      example.  Now suppose the data is stored differently.  There are
+      now two properties in the document, each being an array, one for
+      the list of children genders and one for the list of children
+      ages.  In this case the gender on line one corresponds to the
+      age on line one.  How would you search the document such that
+      the lines matched up?  How do you make sure the line that is
+      female is also the line where the age is greater than 12?  Now
+      take that one step further and put the two properties into two
+      separate documents.  You still want to find the documents where
+      the search criteria are true on the same line in each document.
+      How do you do that?  We need to be able to relate multiple
+      properties together on a line by line basis and they may be
+      stored separately.
 
 ### Open Issues
 

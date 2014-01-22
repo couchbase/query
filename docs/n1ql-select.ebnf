@@ -85,12 +85,12 @@ function-name ::= identifier
 collection-expr ::= exists-expr | in-expr | collection-cond | collection-xform
 exists-expr ::= 'EXISTS' subquery-expr
 in-expr ::= expr 'IN' expr
-collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable 'IN' expr ('SATISFIES' cond)? 'END'
+collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable (',' variable)* 'IN' expr (',' expr)* ('SATISFIES' cond)? 'END'
 collection-xform ::= map-expr | reduce-expr | array-expr | first-expr
-map-expr ::= 'MAP' variable 'IN' expr ('TO' expr)? ('WHEN' cond)? 'END'
-reduce-expr ::= 'REDUCE' variable 'IN' expr 'TO' expr ('WHEN' cond)? 'END'
-array-expr ::= 'ARRAY' expr 'FOR' variable 'IN' expr ('WHEN' cond)? 'END'
-first-expr ::= 'FIRST' expr 'FOR' variable 'IN' expr ('WHEN' cond)? 'END'
+map-expr ::= 'MAP' variable (',' variable)* 'IN' expr (',' expr)* ('TO' expr)? ('WHEN' cond)? 'END'
+reduce-expr ::= 'REDUCE' variable (',' variable)* 'IN' expr (',' expr)* 'TO' expr ('WHEN' cond)? 'END'
+array-expr ::= 'ARRAY' expr 'FOR' variable (',' variable)* 'IN' expr (',' expr)* ('WHEN' cond)? 'END'
+first-expr ::= 'FIRST' expr 'FOR' variable (',' variable)* 'IN' expr (',' expr)* ('WHEN' cond)? 'END'
 variable ::= identifier
 
 /*
