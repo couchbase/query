@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-01-03
+* Modified: 2014-01-21
 
 ## Introduction
 
@@ -196,6 +196,26 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2014-01-03 - MERGE
     * Restricted MERGE to key-based matching
     * Made LIMIT mandatory in MERGE
+* 2014-01-21 - Collection expressions
+    * Per customer requirement, extend collection expressions to
+      multiple collections
+    * Customer requirement: If you have a property that is an array of
+      subdocuments like the children property in your examples, it
+      looks easy to find the documents where there is a child with the
+      gender equal to female and the age greater than 12 say for
+      example.  Now suppose the data is stored differently.  There are
+      now two properties in the document, each being an array, one for
+      the list of children genders and one for the list of children
+      ages.  In this case the gender on line one corresponds to the
+      age on line one.  How would you search the document such that
+      the lines matched up?  How do you make sure the line that is
+      female is also the line where the age is greater than 12?  Now
+      take that one step further and put the two properties into two
+      separate documents.  You still want to find the documents where
+      the search criteria are true on the same line in each document.
+      How do you do that?  We need to be able to relate multiple
+      properties together on a line by line basis and they may be
+      stored separately.
 
 ### Open Issues
 
