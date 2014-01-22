@@ -1110,8 +1110,6 @@ expression evaluates to FALSE.
 IN evaluates to TRUE if and only if the right-hand-side expression
 evaluates to an array and contains the left-hand-side expression.
 
-FALSE.
-
 *collection-cond:*
 
 Collection predicates allow you to test a boolean condition over the
