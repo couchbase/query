@@ -25,7 +25,7 @@ func main() {
 	// attempt to access a nested Value
 	docType, err := doc.Field("type")
 	if err != nil {
-		panic("no property type exists")
+		panic("No property type exists.")
 	}
 
 	// convert docType to a native go value

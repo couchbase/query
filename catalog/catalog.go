@@ -69,12 +69,19 @@ type Bucket interface {
 	FetchOne(key string) (value.Value, err.Error)
 
 	// Used by DML statements
-	Insert(keys []string, values []value.Value) ([]string, err.Error) // nil input keys are replaced with auto-generated keys
-	Update(keys []string, values []value.Value) err.Error
-	Upsert(keys []string, values []value.Value) ([]string, err.Error) // nil input keys are replaced with auto-generated keys
-	Delete(keys []string) err.Error
+	// For all these methods, nil input keys are replaced with auto-generated keys
+	Insert(inserts *Pairs) ([]string, err.Error)
+	Update(updates *Pairs) err.Error
+	Upsert(upserts *Pairs) ([]string, err.Error)
+	Delete(deletes []string) err.Error
+	Merge(upserts *Pairs, deletes []string) (upsertKeys []string, _ err.Error)
 
 	Release()
+}
+
+type Pairs struct {
+	Keys   []string
+	Values []value.Value
 }
 
 type IndexType string
@@ -161,6 +168,7 @@ type RangeIndex interface {
 	RangeCount(range_ *Range, response *IndexResponse)
 	RangeCandidateMins(range_ *Range, response *IndexResponse)  // Anywhere from single Min value to RangeScan()
 	RangeCandidateMaxes(range_ *Range, response *IndexResponse) // Anywhere from single Max value to RangeScan()
+	Ordered() bool
 }
 
 // DualIndexes support restricted range queries.
@@ -171,6 +179,7 @@ type DualIndex interface {
 	DualCount(match value.CompositeValue, range_ *Range, response *IndexResponse)
 	DualCandidateMins(match value.CompositeValue, range_ *Range, response *IndexResponse)  // Anywhere from single Min value to DualScan()
 	DualCandidateMaxes(match value.CompositeValue, range_ *Range, response *IndexResponse) // Anywhere from single Max value to DualScan()
+	Ordered() bool
 }
 
 // RangeStatistics captures statistics for an index range.
