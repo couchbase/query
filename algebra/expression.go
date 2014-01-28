@@ -7,15 +7,19 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package ast
+package algebra
 
 import (
 	"fmt"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
+type Node interface {
 	fmt.Stringer
+}
+
+type Expression interface {
+	Node
 
 	Evaluate(item value.Value) (value.Value, error)
 
@@ -30,3 +34,5 @@ type Expression interface {
 }
 
 type ExpressionList []Expression
+
+type Path Expression
