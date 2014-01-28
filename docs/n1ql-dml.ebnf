@@ -10,7 +10,7 @@ dml-stmt ::= insert | delete | update | merge | truncate | select-for | transact
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (values-clause | select) returning-clause?
+insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (((values-clause | '(' select ')') ('AS'? alias)) | select) returning-clause?
 
 bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
@@ -49,7 +49,7 @@ merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' set-clause? unset-clause? wher
 
 merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' where-clause?
 
-merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' value-clause where-clause?
+merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' key-clause? value-clause where-clause?
 
 /*
  *  truncate
