@@ -10,37 +10,14 @@
 package algebra
 
 import (
-	"fmt"
-	"time"
-
+	_ "fmt"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Node interface {
-	fmt.Stringer
+type SubqueryExpression struct {
+	query *SelectNode
 }
 
-type Expression interface {
-	Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
-
-	// Copy
-	Copy() Expression
-}
-
-type ExpressionList []Expression
-
-type Path Expression
-
-type Context interface {
-	Now() time.Time
-	Argument(parameter string) value.Value
-	EvaluateSubquery(query *SelectNode, item value.Value) (value.Value, error)
+func (this *SubqueryExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return context.EvaluateSubquery(this.query, item)
 }

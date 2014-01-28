@@ -30,7 +30,7 @@ type FromNode interface {
 	GetAs() string
 	GetProjection() Path
 	GetKeys() Expression
-	PrimaryBucket() *FromBucketNode
+	PrimaryBucketNode() *FromBucketNode
 }
 
 type FromBucketNode struct {
