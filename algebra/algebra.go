@@ -25,7 +25,7 @@ import (
 
 type Node interface {
 	//fmt.Stringer
-	HandleNode(handler Handler) (interface{}, error)
+	VisitNode(visitor Visitor) (interface{}, error)
 }
 
 type Context interface {

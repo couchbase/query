@@ -106,6 +106,6 @@ func NewSelect(from FromTerm, where Expression, groupBy ExpressionList,
 		projection, distinct, orderBy, limit, offset}
 }
 
-func (this *Select) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleSelect(this)
+func (this *Select) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSelect(this)
 }

@@ -28,6 +28,6 @@ func NewInsert(bucket *BucketRef, keys, values Expression, query *Select,
 	return &Insert{bucket, keys, values, query, as, returning}
 }
 
-func (this *Insert) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleInsert(this)
+func (this *Insert) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitInsert(this)
 }

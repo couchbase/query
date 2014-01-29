@@ -47,30 +47,30 @@ func NewMerge(bucket *BucketRef, from FromTerm, query *Select, as string,
 	return &Merge{bucket, from, query, as, update, delete, insert, limit, returning}
 }
 
-func (this *Merge) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleMerge(this)
+func (this *Merge) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMerge(this)
 }
 
 func NewMergeUpdate(set *Set, unset *Unset, where Expression) *MergeUpdate {
 	return &MergeUpdate{set, unset, where}
 }
 
-func (this *MergeUpdate) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleMergeUpdate(this)
+func (this *MergeUpdate) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeUpdate(this)
 }
 
 func NewMergeDelete(where Expression) *MergeDelete {
 	return &MergeDelete{where}
 }
 
-func (this *MergeDelete) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleMergeDelete(this)
+func (this *MergeDelete) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeDelete(this)
 }
 
 func NewMergeInsert(value, where Expression) *MergeInsert {
 	return &MergeInsert{value, where}
 }
 
-func (this *MergeInsert) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleMergeInsert(this)
+func (this *MergeInsert) VisitNode(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeInsert(this)
 }

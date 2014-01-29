@@ -14,21 +14,21 @@ import (
 	_ "github.com/couchbaselabs/query/value"
 )
 
-type Handler interface {
+type Visitor interface {
 	// Select
-	HandleSelect(node *Select) (interface{}, error)
+	VisitSelect(node *Select) (interface{}, error)
 
-	HandleInsert(node *Insert) (interface{}, error)
-	HandleDelete(node *Delete) (interface{}, error)
+	VisitInsert(node *Insert) (interface{}, error)
+	VisitDelete(node *Delete) (interface{}, error)
 
 	// Update
-	HandleUpdate(node *Update) (interface{}, error)
-	HandleSet(node *Set) (interface{}, error)
-	HandleUnset(node *Unset) (interface{}, error)
+	VisitUpdate(node *Update) (interface{}, error)
+	VisitSet(node *Set) (interface{}, error)
+	VisitUnset(node *Unset) (interface{}, error)
 
 	// Merge
-	HandleMerge(node *Merge) (interface{}, error)
-	HandleMergeUpdate(node *MergeUpdate) (interface{}, error)
-	HandleMergeDelete(node *MergeDelete) (interface{}, error)
-	HandleMergeInsert(node *MergeInsert) (interface{}, error)
+	VisitMerge(node *Merge) (interface{}, error)
+	VisitMergeUpdate(node *MergeUpdate) (interface{}, error)
+	VisitMergeDelete(node *MergeDelete) (interface{}, error)
+	VisitMergeInsert(node *MergeInsert) (interface{}, error)
 }
