@@ -15,7 +15,7 @@ import (
 )
 
 type SubqueryExpression struct {
-	query *SelectNode
+	query *Select
 }
 
 func (this *SubqueryExpression) Evaluate(item value.Value, context Context) (value.Value, error) {

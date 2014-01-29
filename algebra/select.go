@@ -14,8 +14,8 @@ import (
 	_ "github.com/couchbaselabs/query/value"
 )
 
-type SelectNode struct {
-	from       FromNode             `json:"from"`
+type Select struct {
+	from       FromTerm             `json:"from"`
 	where      Expression           `json:"where"`
 	groupBy    ExpressionList       `json:"group_by"`
 	having     Expression           `json:"having"`
@@ -26,14 +26,11 @@ type SelectNode struct {
 	offset     Expression           `json:"offset"`
 }
 
-type FromNode interface {
-	GetAs() string
-	GetProjection() Path
-	GetKeys() Expression
-	PrimaryBucketNode() *FromBucketNode
+type FromTerm interface {
+	PrimaryTerm() *BucketTerm
 }
 
-type FromBucketNode struct {
+type BucketTerm struct {
 	pool       string
 	bucket     string
 	projection Path
@@ -41,19 +38,50 @@ type FromBucketNode struct {
 	keys       Expression
 }
 
+func NewBucketTerm(pool, bucket string, projection Path, as string, keys Expression) *BucketTerm {
+	return &BucketTerm{pool, bucket, projection, as, keys}
+}
+
+func (this *BucketTerm) PrimaryTerm() *BucketTerm {
+	return this
+}
+
 type Joiner int
 
 const (
-	JOIN   Joiner = 1
-	NEST          = 2
-	UNNEST        = 3
+	JOIN Joiner = 1
+	NEST        = 2
 )
 
-type JoinNode struct {
-	left   FromNode
+// For JOINs and NESTs
+type Join struct {
+	left   FromTerm
 	outer  bool
 	joiner Joiner
-	right  *FromBucketNode
+	right  *BucketTerm
+}
+
+func NewJoin(left FromTerm, outer bool, joiner Joiner, right *BucketTerm) *Join {
+	return &Join{left, outer, joiner, right}
+}
+
+func (this *Join) PrimaryTerm() *BucketTerm {
+	return this.left.PrimaryTerm()
+}
+
+type Unnest struct {
+	left       FromTerm
+	outer      bool
+	projection Path
+	as         string
+}
+
+func NewUnnest(left FromTerm, outer bool, projection Path, as string) *Unnest {
+	return &Unnest{left, outer, projection, as}
+}
+
+func (this *Unnest) PrimaryTerm() *BucketTerm {
+	return this.left.PrimaryTerm()
 }
 
 type ResultExpression struct {
@@ -70,3 +98,14 @@ type SortExpression struct {
 }
 
 type SortExpressionList []*SortExpression
+
+func NewSelect(from FromTerm, where Expression, groupBy ExpressionList,
+	having Expression, projection ResultExpressionList, distinct bool,
+	orderBy SortExpressionList, limit, offset Expression) *Select {
+	return &Select{from, where, groupBy, having,
+		projection, distinct, orderBy, limit, offset}
+}
+
+func (this *Select) HandleNode(handler Handler) (interface{}, error) {
+	return handler.HandleSelect(this)
+}

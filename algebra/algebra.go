@@ -7,26 +7,29 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
+/*
+
+Package algebra provides a language-independent algebra. Any language
+flavor or syntax that can be converted to this algebra can then be
+processed by the query engine.
+
+*/
 package algebra
 
 import (
 	_ "fmt"
+	"time"
 
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+type Node interface {
+	//fmt.Stringer
+	HandleNode(handler Handler) (interface{}, error)
 }
 
-type ExpressionList []Expression
-
-type Path Expression
+type Context interface {
+	Now() time.Time
+	Argument(parameter string) value.Value
+	EvaluateSubquery(query *Select, item value.Value) (value.Value, error)
+}

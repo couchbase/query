@@ -14,20 +14,21 @@ import (
 	_ "github.com/couchbaselabs/query/value"
 )
 
-type Insert struct {
-	bucket    *BucketRef           `json:"bucket"`
-	keys      Expression           `json:"keys"`
-	values    Expression           `json:"values"`
-	query     *Select              `json:"query"`
-	as        string               `json:"as"`
-	returning ResultExpressionList `json:"returning"`
-}
+type Handler interface {
+	// Select
+	HandleSelect(node *Select) (interface{}, error)
 
-func NewInsert(bucket *BucketRef, keys, values Expression, query *Select,
-	as string, returning ResultExpressionList) *Insert {
-	return &Insert{bucket, keys, values, query, as, returning}
-}
+	HandleInsert(node *Insert) (interface{}, error)
+	HandleDelete(node *Delete) (interface{}, error)
 
-func (this *Insert) HandleNode(handler Handler) (interface{}, error) {
-	return handler.HandleInsert(this)
+	// Update
+	HandleUpdate(node *Update) (interface{}, error)
+	HandleSet(node *Set) (interface{}, error)
+	HandleUnset(node *Unset) (interface{}, error)
+
+	// Merge
+	HandleMerge(node *Merge) (interface{}, error)
+	HandleMergeUpdate(node *MergeUpdate) (interface{}, error)
+	HandleMergeDelete(node *MergeDelete) (interface{}, error)
+	HandleMergeInsert(node *MergeInsert) (interface{}, error)
 }

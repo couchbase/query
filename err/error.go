@@ -9,10 +9,11 @@
 
 /*
 
-User-visible errors and warnings.
+Package err provides user-visible errors and warnings. These errors
+include error codes and will eventually provide multi-language
+messages.
 
 */
-
 package err
 
 import (

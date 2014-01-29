@@ -15,18 +15,27 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+type ConstantExpression struct {
+	val value.Value
 }
 
-type ExpressionList []Expression
+func NewConstantExpression(v value.Value) Expression {
+	return &ConstantExpression{v}
+}
 
-type Path Expression
+func (this *ConstantExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.val, nil
+}
+
+func (this *ConstantExpression) EquivalentTo(other Expression) bool {
+	switch other := other.(type) {
+	case *ConstantExpression:
+		return this.val.Equals(other.val)
+	default:
+		return false
+	}
+}
+
+func (this *ConstantExpression) Dependencies() ExpressionList {
+	return nil
+}

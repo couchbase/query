@@ -7,10 +7,17 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
+/*
+
+Package value provides a native abstraction for JSON data values, with
+delayed parsing.
+
+*/
 package value
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
@@ -56,8 +63,9 @@ type ValueCollection []Value
 type Value interface {
 	Type() int                                    // Data type constant
 	Actual() interface{}                          // Native Go representation
-	Duplicate() Value                             // Shallow copy
-	DuplicateForUpdate() Value                    // Deep copy for UPDATE statements; returns Values whose SetIndex() will extend arrays as needed
+	Equals(other Value) bool                      // False negatives allowed
+	Copy() Value                                  // Shallow copy
+	CopyForUpdate() Value                         // Deep copy for UPDATE statements; returns Values whose SetIndex() will extend arrays as needed
 	Bytes() []byte                                // JSON byte encoding
 	Field(field string) (Value, error)            // Object field dereference
 	SetField(field string, val interface{}) error // Object field setting
@@ -147,9 +155,15 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	}
 }
 
+// Missing value
+func NewMissingValue() Value {
+	return &_MISSING_VALUE
+}
+
 // The data types supported by Value
 const (
 	NOT_JSON = iota
+	MISSING
 	NULL
 	BOOLEAN
 	NUMBER
@@ -168,11 +182,20 @@ func (this floatValue) Actual() interface{} {
 	return float64(this)
 }
 
-func (this floatValue) Duplicate() Value {
+func (this floatValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case floatValue:
+		return this == other
+	default:
+		return false
+	}
+}
+
+func (this floatValue) Copy() Value {
 	return this
 }
 
-func (this floatValue) DuplicateForUpdate() Value {
+func (this floatValue) CopyForUpdate() Value {
 	return this
 }
 
@@ -210,11 +233,20 @@ func (this stringValue) Actual() interface{} {
 	return string(this)
 }
 
-func (this stringValue) Duplicate() Value {
+func (this stringValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case stringValue:
+		return this == other
+	default:
+		return false
+	}
+}
+
+func (this stringValue) Copy() Value {
 	return this
 }
 
-func (this stringValue) DuplicateForUpdate() Value {
+func (this stringValue) CopyForUpdate() Value {
 	return this
 }
 
@@ -252,11 +284,20 @@ func (this boolValue) Actual() interface{} {
 	return bool(this)
 }
 
-func (this boolValue) Duplicate() Value {
+func (this boolValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case boolValue:
+		return this == other
+	default:
+		return false
+	}
+}
+
+func (this boolValue) Copy() Value {
 	return this
 }
 
-func (this boolValue) DuplicateForUpdate() Value {
+func (this boolValue) CopyForUpdate() Value {
 	return this
 }
 
@@ -300,11 +341,20 @@ func (this *nullValue) Actual() interface{} {
 	return nil
 }
 
-func (this *nullValue) Duplicate() Value {
+func (this *nullValue) Equals(other Value) bool {
+	switch other.(type) {
+	case *nullValue:
+		return true
+	default:
+		return false
+	}
+}
+
+func (this *nullValue) Copy() Value {
 	return this
 }
 
-func (this *nullValue) DuplicateForUpdate() Value {
+func (this *nullValue) CopyForUpdate() Value {
 	return this
 }
 
@@ -330,6 +380,58 @@ func (this *nullValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
+type missingValue struct {
+}
+
+var _MISSING_VALUE = missingValue{}
+
+func (this *missingValue) Type() int {
+	return MISSING
+}
+
+func (this *missingValue) Actual() interface{} {
+	return nil
+}
+
+func (this *missingValue) Equals(other Value) bool {
+	switch other.(type) {
+	case *missingValue:
+		return true
+	default:
+		return false
+	}
+}
+
+func (this *missingValue) Copy() Value {
+	return this
+}
+
+func (this *missingValue) CopyForUpdate() Value {
+	return this
+}
+
+var _MISSING_BYTES = []byte("missing")
+
+func (this *missingValue) Bytes() []byte {
+	return _MISSING_BYTES
+}
+
+func (this *missingValue) Field(field string) (Value, error) {
+	return nil, Undefined(field)
+}
+
+func (this *missingValue) SetField(field string, val interface{}) error {
+	return Unsettable(field)
+}
+
+func (this *missingValue) Index(index int) (Value, error) {
+	return nil, Undefined(index)
+}
+
+func (this *missingValue) SetIndex(index int, val interface{}) error {
+	return Unsettable(index)
+}
+
 type sliceValue []interface{}
 
 func (this sliceValue) Type() int {
@@ -340,11 +442,20 @@ func (this sliceValue) Actual() interface{} {
 	return ([]interface{})(this)
 }
 
-func (this sliceValue) Duplicate() Value {
+func (this sliceValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case sliceValue:
+		return reflect.DeepEqual(this, other)
+	default:
+		return false
+	}
+}
+
+func (this sliceValue) Copy() Value {
 	return sliceValue(duplicateSlice(this, duplicate))
 }
 
-func (this sliceValue) DuplicateForUpdate() Value {
+func (this sliceValue) CopyForUpdate() Value {
 	return &listValue{duplicateSlice(this, duplicateForUpdate)}
 }
 
@@ -395,11 +506,20 @@ func (this *listValue) Actual() interface{} {
 	return this.actual
 }
 
-func (this *listValue) Duplicate() Value {
+func (this *listValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case *listValue:
+		return reflect.DeepEqual(this.actual, other.actual)
+	default:
+		return false
+	}
+}
+
+func (this *listValue) Copy() Value {
 	return &listValue{duplicateSlice(this.actual, duplicate)}
 }
 
-func (this *listValue) DuplicateForUpdate() Value {
+func (this *listValue) CopyForUpdate() Value {
 	return &listValue{duplicateSlice(this.actual, duplicateForUpdate)}
 }
 
@@ -457,11 +577,20 @@ func (this objectValue) Actual() interface{} {
 	return (map[string]interface{})(this)
 }
 
-func (this objectValue) Duplicate() Value {
+func (this objectValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case objectValue:
+		return reflect.DeepEqual(this, other)
+	default:
+		return false
+	}
+}
+
+func (this objectValue) Copy() Value {
 	return objectValue(duplicateMap(this, duplicate))
 }
 
-func (this objectValue) DuplicateForUpdate() Value {
+func (this objectValue) CopyForUpdate() Value {
 	return objectValue(duplicateMap(this, duplicateForUpdate))
 }
 
@@ -515,9 +644,22 @@ func (this *parsedValue) Actual() interface{} {
 	return this.parse().Actual()
 }
 
-func (this *parsedValue) Duplicate() Value {
+func (this *parsedValue) Equals(other Value) bool {
+	if this.parsed == nil {
+		return false
+	}
+
+	switch other := other.(type) {
+	case *parsedValue:
+		return other.parsed != nil && this.parsed.Equals(other.parsed)
+	default:
+		return this.parsed.Equals(other)
+	}
+}
+
+func (this *parsedValue) Copy() Value {
 	if this.parsed != nil {
-		return this.parsed.Duplicate()
+		return this.parsed.Copy()
 	}
 
 	rv := parsedValue{
@@ -528,12 +670,12 @@ func (this *parsedValue) Duplicate() Value {
 	return &rv
 }
 
-func (this *parsedValue) DuplicateForUpdate() Value {
+func (this *parsedValue) CopyForUpdate() Value {
 	if this.parsedType == NOT_JSON {
-		return this.Duplicate()
+		return this.Copy()
 	}
 
-	return this.parse().DuplicateForUpdate()
+	return this.parse().CopyForUpdate()
 }
 
 func (this *parsedValue) Bytes() []byte {
@@ -629,7 +771,7 @@ func duplicate(val interface{}) interface{} {
 }
 
 func duplicateForUpdate(val interface{}) interface{} {
-	return NewValue(val).DuplicateForUpdate()
+	return NewValue(val).CopyForUpdate()
 }
 
 func duplicateSlice(source []interface{}, dup dupFunc) []interface{} {
@@ -684,9 +826,9 @@ type annotatedValue struct {
 	attacher
 }
 
-func (this *annotatedValue) DuplicateForUpdate() Value {
+func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
-		Value:    this.Value.DuplicateForUpdate(),
+		Value:    this.Value.CopyForUpdate(),
 		attacher: attacher{this.attacher.attachments},
 	}
 }

@@ -9,16 +9,15 @@
 
 /*
 
-Package catalog provides a common catalog abstraction over all storage
+Package catalog provides a common catalog abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
 
 */
-
 package catalog
 
 import (
-	"github.com/couchbaselabs/query/ast"
+	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
@@ -62,7 +61,7 @@ type Bucket interface {
 	IndexByPrimary() (PrimaryIndex, err.Error) // Returns the server-recommended primary index
 	Indexes() ([]Index, err.Error)
 	CreatePrimaryIndex() (PrimaryIndex, err.Error)
-	CreateIndex(name string, match MatchKey, range_ RangeKey, using IndexType) (Index, err.Error)
+	CreateIndex(name string, match EqualKey, range_ RangeKey, using IndexType) (Index, err.Error)
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string) (map[string]value.Value, err.Error)
@@ -91,11 +90,11 @@ const (
 	VIEW        IndexType = "view"
 )
 
-type MatchKey []ast.Expression
+type EqualKey []algebra.Expression
 type RangeKey []*RangePart
 
 type RangePart struct {
-	Expr ast.Expression
+	Expr algebra.Expression
 	Dir  Direction
 }
 
@@ -105,7 +104,7 @@ type Index interface {
 	Id() string
 	Name() string
 	Type() IndexType
-	Match() MatchKey
+	Equal() EqualKey
 	Range() RangeKey
 	Drop() err.Error // PrimaryIndexes cannot be dropped
 }
@@ -125,15 +124,15 @@ type IndexResponse struct {
 
 // PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
-	MatchIndex
+	EqualIndex
 	BucketScan(limit int64, response *IndexResponse)
 }
 
-// MatchIndexes support equality matching.
-type MatchIndex interface {
+// EqualIndexes support equality matching.
+type EqualIndex interface {
 	Index
-	MatchScan(match value.CompositeValue, limit int64, response *IndexResponse)
-	MatchCount(match value.CompositeValue, response *IndexResponse)
+	EqualScan(match value.CompositeValue, limit int64, response *IndexResponse)
+	EqualCount(match value.CompositeValue, response *IndexResponse)
 }
 
 // Direction represents ASC and DESC

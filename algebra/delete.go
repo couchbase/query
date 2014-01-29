@@ -14,10 +14,18 @@ import (
 	_ "github.com/couchbaselabs/query/value"
 )
 
-type DeleteNode struct {
-	bucket    *BucketNode          `json:"bucket"`
+type Delete struct {
+	bucket    *BucketRef           `json:"bucket"`
 	keys      Expression           `json:"keys"`
 	where     Expression           `json:"where"`
 	limit     Expression           `json:"limit"`
 	returning ResultExpressionList `json:"returning"`
+}
+
+func NewDelete(bucket *BucketRef, keys, where, limit Expression, returning ResultExpressionList) *Delete {
+	return &Delete{bucket, keys, where, limit, returning}
+}
+
+func (this *Delete) HandleNode(handler Handler) (interface{}, error) {
+	return handler.HandleDelete(this)
 }

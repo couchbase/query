@@ -14,37 +14,66 @@ import (
 	_ "github.com/couchbaselabs/query/value"
 )
 
-type UpdateNode struct {
-	bucket    *BucketNode          `json:"bucket"`
+type Update struct {
+	bucket    *BucketRef           `json:"bucket"`
 	keys      Expression           `json:"keys"`
-	set       SetNodeList          `json:"set"`
-	unset     UnsetNodeList        `json:"unset"`
+	set       *Set                 `json:"set"`
+	unset     *Unset               `json:"unset"`
 	where     Expression           `json:"where"`
 	limit     Expression           `json:"limit"`
 	returning ResultExpressionList `json:"returning"`
 }
 
-type SetNode struct {
-	path    Path         `json:"path"`
-	value   Expression   `json:"value"`
-	pathFor *PathForNode `json:"path-for"`
+type Set struct {
+	paths []SetPath
 }
 
-type SetNodeList []SetNode
-
-type UnsetNode struct {
-	path    Path         `json:"path"`
-	pathFor *PathForNode `json:"path-for"`
+type Unset struct {
+	paths []UnsetPath
 }
 
-type UnsetNodeList []UnsetNode
+type SetPath struct {
+	path    Path       `json:"path"`
+	value   Expression `json:"value"`
+	pathFor *PathFor   `json:"path-for"`
+}
+
+type UnsetPath struct {
+	path    Path     `json:"path"`
+	pathFor *PathFor `json:"path-for"`
+}
 
 type PathForBinding struct {
 	variable string
-	path     Path
+	expr     Expression
 }
 
-type PathForNode struct {
+type PathFor struct {
 	bindings []*PathForBinding
 	when     Expression
+}
+
+func NewUpdate(bucket *BucketRef, keys Expression, set *Set, unset *Unset,
+	where, limit Expression, returning ResultExpressionList) *Update {
+	return &Update{bucket, keys, set, unset, where, limit, returning}
+}
+
+func (this *Update) HandleNode(handler Handler) (interface{}, error) {
+	return handler.HandleUpdate(this)
+}
+
+func NewSet(paths []SetPath) *Set {
+	return &Set{paths}
+}
+
+func (this *Set) HandleNode(handler Handler) (interface{}, error) {
+	return handler.HandleSet(this)
+}
+
+func NewUnset(paths []UnsetPath) *Unset {
+	return &Unset{paths}
+}
+
+func (this *Unset) HandleNode(handler Handler) (interface{}, error) {
+	return handler.HandleUnset(this)
 }

@@ -11,22 +11,13 @@ package algebra
 
 import (
 	_ "fmt"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+type ParameterExpression struct {
+	parameter string
 }
 
-type ExpressionList []Expression
-
-type Path Expression
+func (this *ParameterExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return context.Argument(this.parameter), nil
+}
