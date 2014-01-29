@@ -27,6 +27,8 @@ type Select struct {
 }
 
 type FromTerm interface {
+	Node
+
 	PrimaryTerm() *BucketTerm
 }
 
@@ -40,6 +42,10 @@ type BucketTerm struct {
 
 func NewBucketTerm(pool, bucket string, projection Path, as string, keys Expression) *BucketTerm {
 	return &BucketTerm{pool, bucket, projection, as, keys}
+}
+
+func (this *BucketTerm) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitBucketTerm(this)
 }
 
 func (this *BucketTerm) PrimaryTerm() *BucketTerm {
@@ -65,6 +71,10 @@ func NewJoin(left FromTerm, outer bool, joiner Joiner, right *BucketTerm) *Join 
 	return &Join{left, outer, joiner, right}
 }
 
+func (this *Join) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitJoin(this)
+}
+
 func (this *Join) PrimaryTerm() *BucketTerm {
 	return this.left.PrimaryTerm()
 }
@@ -78,6 +88,10 @@ type Unnest struct {
 
 func NewUnnest(left FromTerm, outer bool, projection Path, as string) *Unnest {
 	return &Unnest{left, outer, projection, as}
+}
+
+func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnnest(this)
 }
 
 func (this *Unnest) PrimaryTerm() *BucketTerm {
@@ -106,6 +120,6 @@ func NewSelect(from FromTerm, where Expression, groupBy ExpressionList,
 		projection, distinct, orderBy, limit, offset}
 }
 
-func (this *Select) VisitNode(visitor Visitor) (interface{}, error) {
+func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }

@@ -25,7 +25,7 @@ import (
 
 type Node interface {
 	//fmt.Stringer
-	VisitNode(visitor Visitor) (interface{}, error)
+	Accept(visitor Visitor) (interface{}, error)
 }
 
 type Context interface {

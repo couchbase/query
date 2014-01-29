@@ -26,6 +26,6 @@ func NewDelete(bucket *BucketRef, keys, where, limit Expression, returning Resul
 	return &Delete{bucket, keys, where, limit, returning}
 }
 
-func (this *Delete) VisitNode(visitor Visitor) (interface{}, error) {
+func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDelete(this)
 }

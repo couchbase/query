@@ -58,7 +58,7 @@ func NewUpdate(bucket *BucketRef, keys Expression, set *Set, unset *Unset,
 	return &Update{bucket, keys, set, unset, where, limit, returning}
 }
 
-func (this *Update) VisitNode(visitor Visitor) (interface{}, error) {
+func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
@@ -66,7 +66,7 @@ func NewSet(paths []SetPath) *Set {
 	return &Set{paths}
 }
 
-func (this *Set) VisitNode(visitor Visitor) (interface{}, error) {
+func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSet(this)
 }
 
@@ -74,6 +74,6 @@ func NewUnset(paths []UnsetPath) *Unset {
 	return &Unset{paths}
 }
 
-func (this *Unset) VisitNode(visitor Visitor) (interface{}, error) {
+func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnset(this)
 }

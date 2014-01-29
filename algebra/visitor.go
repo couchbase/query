@@ -17,8 +17,14 @@ import (
 type Visitor interface {
 	// Select
 	VisitSelect(node *Select) (interface{}, error)
+	VisitBucketTerm(node *BucketTerm) (interface{}, error)
+	VisitJoin(node *Join) (interface{}, error)
+	VisitUnnest(node *Unnest) (interface{}, error)
 
+	// Insert
 	VisitInsert(node *Insert) (interface{}, error)
+
+	// Delete
 	VisitDelete(node *Delete) (interface{}, error)
 
 	// Update
