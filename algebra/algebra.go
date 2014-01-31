@@ -22,6 +22,7 @@ import (
 
 type Node interface {
 	//fmt.Stringer
+
 	Accept(visitor Visitor) (interface{}, error)
 }
 

@@ -22,7 +22,7 @@ type Visitor interface {
 	VisitValueScan(op *ValueScan) (interface{}, error)
 
 	// Parallel
-	VisitParallelize(op *Parallelize) (interface{}, error)
+	VisitParallel(op *Parallel) (interface{}, error)
 
 	// Sequence
 	VisitSequence(op *Sequence) (interface{}, error)

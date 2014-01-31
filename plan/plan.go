@@ -22,6 +22,7 @@ import (
 )
 
 type Operator interface {
+	Accept(visitor Visitor) (interface{}, error)
 }
 
 func Plan(node algebra.Node) (Operator, error) {

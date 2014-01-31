@@ -16,22 +16,22 @@ import (
 	"github.com/couchbaselabs/query/plan"
 )
 
-type Parallelize struct {
+type Parallel struct {
 	operatorBase
-	plan *plan.Parallelize
+	plan *plan.Parallel
 }
 
-func NewParallelize(plan *plan.Parallelize) *Parallelize {
-	return &Parallelize{plan: plan}
+func NewParallel(plan *plan.Parallel) *Parallel {
+	return &Parallel{plan: plan}
 }
 
-func (this *Parallelize) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitParallelize(this)
+func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParallel(this)
 }
 
-func (this *Parallelize) Copy() Operator {
-	return &Parallelize{this.operatorBase.copy(), this.plan}
+func (this *Parallel) Copy() Operator {
+	return &Parallel{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Parallelize) Run(context algebra.Context) {
+func (this *Parallel) Run(context algebra.Context) {
 }
