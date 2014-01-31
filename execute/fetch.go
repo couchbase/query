@@ -7,28 +7,31 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-/*
-
-Package algebra provides a language-independent algebra. Any language
-flavor or syntax that can be converted to this algebra can then be
-processed by the query engine.
-
-*/
-package algebra
+package execute
 
 import (
 	_ "fmt"
+
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/plan"
 )
 
-type Node interface {
-	//fmt.Stringer
-	Accept(visitor Visitor) (interface{}, error)
+type Fetch struct {
+	operatorBase
+	plan *plan.Fetch
 }
 
-type ResultTerm struct {
-	star bool       `json:"star"`
-	expr Expression `json:"expr"`
-	as   string     `json:"as"`
+func NewFetch(plan *plan.Fetch) *Fetch {
+	return &Fetch{plan: plan}
 }
 
-type ResultTermList []*ResultTerm
+func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFetch(this)
+}
+
+func (this *Fetch) Copy() Operator {
+	return &Fetch{this.operatorBase.copy(), this.plan}
+}
+
+func (this *Fetch) Run(context algebra.Context) {
+}

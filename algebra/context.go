@@ -7,28 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-/*
-
-Package algebra provides a language-independent algebra. Any language
-flavor or syntax that can be converted to this algebra can then be
-processed by the query engine.
-
-*/
 package algebra
 
 import (
 	_ "fmt"
+	"time"
+
+	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/value"
 )
 
-type Node interface {
-	//fmt.Stringer
-	Accept(visitor Visitor) (interface{}, error)
-}
+type Context interface {
+	Now() time.Time
+	Argument(parameter string) value.Value
 
-type ResultTerm struct {
-	star bool       `json:"star"`
-	expr Expression `json:"expr"`
-	as   string     `json:"as"`
-}
+	Warnchan() err.ErrorChannel
+	Errchan() err.ErrorChannel
 
-type ResultTermList []*ResultTerm
+	EvaluateSubquery(query *Select, item value.Value) (value.Value, error)
+}

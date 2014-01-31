@@ -7,32 +7,36 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package execute
 
 import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/plan"
 )
 
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
+	operatorBase
 }
 
 // Write to copy
 type Set struct {
-	node *algebra.Set
+	operatorBase
+	plan *plan.Set
 }
 
 // Write to copy
 type Unset struct {
-	node *algebra.Unset
+	operatorBase
+	plan *plan.Unset
 }
 
 // Send to bucket
 type SendUpdate struct {
-	bucket catalog.Bucket
+	operatorBase
+	plan *plan.SendUpdate
 }
 
 func NewClone() *Clone {
@@ -43,26 +47,54 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitClone(this)
 }
 
-func NewSet(node *algebra.Set) *Set {
-	return &Set{node}
+func (this *Clone) Copy() Operator {
+	return &Clone{this.operatorBase.copy()}
+}
+
+func (this *Clone) Run(context algebra.Context) {
+}
+
+func NewSet(plan *plan.Set) *Set {
+	return &Set{plan: plan}
 }
 
 func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSet(this)
 }
 
-func NewUnset(node *algebra.Unset) *Unset {
-	return &Unset{node}
+func (this *Set) Copy() Operator {
+	return &Set{this.operatorBase.copy(), this.plan}
+}
+
+func (this *Set) Run(context algebra.Context) {
+}
+
+func NewUnset(plan *plan.Unset) *Unset {
+	return &Unset{plan: plan}
 }
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnset(this)
 }
 
-func NewSendUpdate(bucket catalog.Bucket) *SendUpdate {
-	return &SendUpdate{bucket}
+func (this *Unset) Copy() Operator {
+	return &Unset{this.operatorBase.copy(), this.plan}
+}
+
+func (this *Unset) Run(context algebra.Context) {
+}
+
+func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
+	return &SendUpdate{plan: plan}
 }
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpdate(this)
+}
+
+func (this *SendUpdate) Copy() Operator {
+	return &SendUpdate{this.operatorBase.copy(), this.plan}
+}
+
+func (this *SendUpdate) Run(context algebra.Context) {
 }
