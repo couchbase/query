@@ -15,14 +15,14 @@ import (
 	"github.com/couchbaselabs/query/catalog"
 )
 
-type Delete struct {
+type SendDelete struct {
 	bucket catalog.Bucket
 }
 
-func NewDelete(bucket catalog.Bucket) *Delete {
-	return &Delete{bucket}
+func NewSendDelete(bucket catalog.Bucket) *SendDelete {
+	return &SendDelete{bucket}
 }
 
-func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitDelete(this)
+func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendDelete(this)
 }

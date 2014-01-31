@@ -16,15 +16,15 @@ import (
 	"github.com/couchbaselabs/query/catalog"
 )
 
-type Insert struct {
+type SendInsert struct {
 	bucket catalog.Bucket
 	key    algebra.Expression
 }
 
-func NewInsert(bucket catalog.Bucket, key algebra.Expression) *Insert {
-	return &Insert{bucket, key}
+func NewSendInsert(bucket catalog.Bucket, key algebra.Expression) *SendInsert {
+	return &SendInsert{bucket, key}
 }
 
-func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitInsert(this)
+func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendInsert(this)
 }

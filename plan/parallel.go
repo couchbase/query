@@ -13,14 +13,14 @@ import (
 	_ "fmt"
 )
 
-type Scatter struct {
+type Parallelize struct {
 	op Operator
 }
 
-func NewScatter(op Operator) *Scatter {
-	return &Scatter{op}
+func NewParallelize(op Operator) *Parallelize {
+	return &Parallelize{op}
 }
 
-func (this *Scatter) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitScatter(this)
+func (this *Parallelize) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParallelize(this)
 }

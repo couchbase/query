@@ -17,7 +17,7 @@ import (
 )
 
 // Copy-before-write, so that all reads use old values
-type Copy struct {
+type Clone struct {
 }
 
 // Write to copy
@@ -31,16 +31,16 @@ type Unset struct {
 }
 
 // Send to bucket
-type Update struct {
+type SendUpdate struct {
 	bucket catalog.Bucket
 }
 
-func NewCopy() *Copy {
-	return &Copy{}
+func NewClone() *Clone {
+	return &Clone{}
 }
 
-func (this *Copy) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitCopy(this)
+func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitClone(this)
 }
 
 func NewSet(node *algebra.Set) *Set {
@@ -59,10 +59,10 @@ func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnset(this)
 }
 
-func NewUpdate(bucket catalog.Bucket) *Update {
-	return &Update{bucket}
+func NewSendUpdate(bucket catalog.Bucket) *SendUpdate {
+	return &SendUpdate{bucket}
 }
 
-func (this *Update) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitUpdate(this)
+func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendUpdate(this)
 }

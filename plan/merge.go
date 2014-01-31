@@ -12,17 +12,69 @@ package plan
 import (
 	_ "fmt"
 
+	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 )
 
-type Merge struct {
+type ComputeMerge struct {
+	update *MergeUpdate
+	delete *MergeDelete
+	insert *MergeInsert
+}
+
+type MergeUpdate struct {
+	node *algebra.MergeUpdate
+}
+
+type MergeDelete struct {
+	node *algebra.MergeDelete
+}
+
+type MergeInsert struct {
+	node *algebra.MergeInsert
+}
+
+type SendMerge struct {
 	bucket catalog.Bucket
 }
 
-func NewMerge(bucket catalog.Bucket) *Merge {
-	return &Merge{bucket}
+func NewComputeMerge(update *MergeUpdate, delete *MergeDelete,
+	insert *MergeInsert) *ComputeMerge {
+	return &ComputeMerge{update, delete, insert}
 }
 
-func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMerge(this)
+func (this *ComputeMerge) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitComputeMerge(this)
+}
+
+func NewMergeUpdate(node *algebra.MergeUpdate) *MergeUpdate {
+	return &MergeUpdate{node}
+}
+
+func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeUpdate(this)
+}
+
+func NewMergeDelete(node *algebra.MergeDelete) *MergeDelete {
+	return &MergeDelete{node}
+}
+
+func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeDelete(this)
+}
+
+func NewMergeInsert(node *algebra.MergeInsert) *MergeInsert {
+	return &MergeInsert{node}
+}
+
+func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeInsert(this)
+}
+
+func NewSendMerge(bucket catalog.Bucket) *SendMerge {
+	return &SendMerge{bucket}
+}
+
+func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendMerge(this)
 }

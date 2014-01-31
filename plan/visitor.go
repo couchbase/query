@@ -21,8 +21,8 @@ type Visitor interface {
 	VisitKeyScan(op *KeyScan) (interface{}, error)
 	VisitValueScan(op *ValueScan) (interface{}, error)
 
-	// Scatter
-	VisitScatter(op *Scatter) (interface{}, error)
+	// Parallel
+	VisitParallelize(op *Parallelize) (interface{}, error)
 
 	// Sequence
 	VisitSequence(op *Sequence) (interface{}, error)
@@ -61,23 +61,21 @@ type Visitor interface {
 	VisitLimit(op *Limit) (interface{}, error)
 
 	// Insert
-	VisitInsert(op *Insert) (interface{}, error)
+	VisitSendInsert(op *SendInsert) (interface{}, error)
 
 	// Delete
-	VisitDelete(op *Delete) (interface{}, error)
+	VisitSendDelete(op *SendDelete) (interface{}, error)
 
 	// Update
-	VisitCopy(op *Copy) (interface{}, error)
+	VisitClone(op *Clone) (interface{}, error)
 	VisitSet(op *Set) (interface{}, error)
 	VisitUnset(op *Unset) (interface{}, error)
-	VisitUpdate(op *Update) (interface{}, error)
+	VisitSendUpdate(op *SendUpdate) (interface{}, error)
 
 	// Merge
-	/*
-		VisitJoin(op *Join) (interface{}, error)
-		VisitJoin(op *Join) (interface{}, error)
-		VisitJoin(op *Join) (interface{}, error)
-		VisitJoin(op *Join) (interface{}, error)
-	*/
-	VisitMerge(op *Merge) (interface{}, error)
+	VisitComputeMerge(op *ComputeMerge) (interface{}, error)
+	VisitMergeUpdate(op *MergeUpdate) (interface{}, error)
+	VisitMergeDelete(op *MergeDelete) (interface{}, error)
+	VisitMergeInsert(op *MergeInsert) (interface{}, error)
+	VisitSendMerge(op *SendMerge) (interface{}, error)
 }
