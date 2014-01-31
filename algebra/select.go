@@ -15,15 +15,15 @@ import (
 )
 
 type Select struct {
-	from       FromTerm             `json:"from"`
-	where      Expression           `json:"where"`
-	groupBy    ExpressionList       `json:"group_by"`
-	having     Expression           `json:"having"`
-	projection ResultExpressionList `json:"select"`
-	distinct   bool                 `json:"distinct"`
-	orderBy    SortExpressionList   `json:"orderby"`
-	limit      Expression           `json:"limit"`
-	offset     Expression           `json:"offset"`
+	from     FromTerm       `json:"from"`
+	where    Expression     `json:"where"`
+	group    ExpressionList `json:"group"`
+	having   Expression     `json:"having"`
+	project  ResultTermList `json:"project"`
+	distinct bool           `json:"distinct"`
+	order    SortTermList   `json:"order"`
+	offset   Expression     `json:"offset"`
+	limit    Expression     `json:"limit"`
 }
 
 type FromTerm interface {
@@ -33,15 +33,15 @@ type FromTerm interface {
 }
 
 type BucketTerm struct {
-	pool       string
-	bucket     string
-	projection Path
-	as         string
-	keys       Expression
+	pool    string
+	bucket  string
+	project Path
+	as      string
+	keys    Expression
 }
 
-func NewBucketTerm(pool, bucket string, projection Path, as string, keys Expression) *BucketTerm {
-	return &BucketTerm{pool, bucket, projection, as, keys}
+func NewBucketTerm(pool, bucket string, project Path, as string, keys Expression) *BucketTerm {
+	return &BucketTerm{pool, bucket, project, as, keys}
 }
 
 func (this *BucketTerm) Accept(visitor Visitor) (interface{}, error) {
@@ -52,23 +52,14 @@ func (this *BucketTerm) PrimaryTerm() *BucketTerm {
 	return this
 }
 
-type Joiner int
-
-const (
-	JOIN Joiner = 1
-	NEST        = 2
-)
-
-// For JOINs and NESTs
 type Join struct {
-	left   FromTerm
-	outer  bool
-	joiner Joiner
-	right  *BucketTerm
+	left  FromTerm
+	outer bool
+	right *BucketTerm
 }
 
-func NewJoin(left FromTerm, outer bool, joiner Joiner, right *BucketTerm) *Join {
-	return &Join{left, outer, joiner, right}
+func NewJoin(left FromTerm, outer bool, right *BucketTerm) *Join {
+	return &Join{left, outer, right}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -76,6 +67,24 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Join) PrimaryTerm() *BucketTerm {
+	return this.left.PrimaryTerm()
+}
+
+type Nest struct {
+	left  FromTerm
+	outer bool
+	right *BucketTerm
+}
+
+func NewNest(left FromTerm, outer bool, right *BucketTerm) *Nest {
+	return &Nest{left, outer, right}
+}
+
+func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNest(this)
+}
+
+func (this *Nest) PrimaryTerm() *BucketTerm {
 	return this.left.PrimaryTerm()
 }
 
@@ -98,26 +107,19 @@ func (this *Unnest) PrimaryTerm() *BucketTerm {
 	return this.left.PrimaryTerm()
 }
 
-type ResultExpression struct {
-	star bool       `json:"star"`
-	expr Expression `json:"expr"`
-	as   string     `json:"as"`
-}
-
-type ResultExpressionList []*ResultExpression
-
-type SortExpression struct {
+type SortTerm struct {
 	expr      Expression `json:"expr"`
 	ascending bool       `json:"asc"`
 }
 
-type SortExpressionList []*SortExpression
+type SortTermList []*SortTerm
 
-func NewSelect(from FromTerm, where Expression, groupBy ExpressionList,
-	having Expression, projection ResultExpressionList, distinct bool,
-	orderBy SortExpressionList, limit, offset Expression) *Select {
-	return &Select{from, where, groupBy, having,
-		projection, distinct, orderBy, limit, offset}
+func NewSelect(from FromTerm, where Expression, group ExpressionList,
+	having Expression, project ResultTermList, distinct bool,
+	order SortTermList, offset Expression, limit Expression,
+) *Select {
+	return &Select{from, where, group, having,
+		project, distinct, order, offset, limit}
 }
 
 func (this *Select) Accept(visitor Visitor) (interface{}, error) {

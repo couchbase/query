@@ -33,3 +33,11 @@ type Context interface {
 	Argument(parameter string) value.Value
 	EvaluateSubquery(query *Select, item value.Value) (value.Value, error)
 }
+
+type ResultTerm struct {
+	star bool       `json:"star"`
+	expr Expression `json:"expr"`
+	as   string     `json:"as"`
+}
+
+type ResultTermList []*ResultTerm

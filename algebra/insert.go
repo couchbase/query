@@ -15,17 +15,17 @@ import (
 )
 
 type Insert struct {
-	bucket    *BucketRef           `json:"bucket"`
-	keys      Expression           `json:"keys"`
-	values    Expression           `json:"values"`
-	query     *Select              `json:"query"`
-	as        string               `json:"as"`
-	returning ResultExpressionList `json:"returning"`
+	bucket    *BucketRef     `json:"bucket"`
+	key       Expression     `json:"key"`
+	values    Expression     `json:"values"`
+	query     *Select        `json:"query"`
+	as        string         `json:"as"`
+	returning ResultTermList `json:"returning"`
 }
 
-func NewInsert(bucket *BucketRef, keys, values Expression, query *Select,
-	as string, returning ResultExpressionList) *Insert {
-	return &Insert{bucket, keys, values, query, as, returning}
+func NewInsert(bucket *BucketRef, key, values Expression, query *Select,
+	as string, returning ResultTermList) *Insert {
+	return &Insert{bucket, key, values, query, as, returning}
 }
 
 func (this *Insert) Accept(visitor Visitor) (interface{}, error) {

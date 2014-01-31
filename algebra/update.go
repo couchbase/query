@@ -15,13 +15,13 @@ import (
 )
 
 type Update struct {
-	bucket    *BucketRef           `json:"bucket"`
-	keys      Expression           `json:"keys"`
-	set       *Set                 `json:"set"`
-	unset     *Unset               `json:"unset"`
-	where     Expression           `json:"where"`
-	limit     Expression           `json:"limit"`
-	returning ResultExpressionList `json:"returning"`
+	bucket    *BucketRef     `json:"bucket"`
+	keys      Expression     `json:"keys"`
+	set       *Set           `json:"set"`
+	unset     *Unset         `json:"unset"`
+	where     Expression     `json:"where"`
+	limit     Expression     `json:"limit"`
+	returning ResultTermList `json:"returning"`
 }
 
 type Set struct {
@@ -54,7 +54,7 @@ type PathFor struct {
 }
 
 func NewUpdate(bucket *BucketRef, keys Expression, set *Set, unset *Unset,
-	where, limit Expression, returning ResultExpressionList) *Update {
+	where, limit Expression, returning ResultTermList) *Update {
 	return &Update{bucket, keys, set, unset, where, limit, returning}
 }
 
@@ -66,14 +66,6 @@ func NewSet(paths []SetPath) *Set {
 	return &Set{paths}
 }
 
-func (this *Set) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSet(this)
-}
-
 func NewUnset(paths []UnsetPath) *Unset {
 	return &Unset{paths}
-}
-
-func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitUnset(this)
 }

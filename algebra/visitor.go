@@ -10,15 +10,17 @@
 package algebra
 
 import (
-	_ "fmt"
-	_ "github.com/couchbaselabs/query/value"
+	_ "github.com/couchbaselabs/query/err"
 )
 
 type Visitor interface {
 	// Select
 	VisitSelect(node *Select) (interface{}, error)
+
+	// FromTerm
 	VisitBucketTerm(node *BucketTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
+	VisitNest(node *Nest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)
 
 	// Insert
@@ -29,12 +31,7 @@ type Visitor interface {
 
 	// Update
 	VisitUpdate(node *Update) (interface{}, error)
-	VisitSet(node *Set) (interface{}, error)
-	VisitUnset(node *Unset) (interface{}, error)
 
 	// Merge
 	VisitMerge(node *Merge) (interface{}, error)
-	VisitMergeUpdate(node *MergeUpdate) (interface{}, error)
-	VisitMergeDelete(node *MergeDelete) (interface{}, error)
-	VisitMergeInsert(node *MergeInsert) (interface{}, error)
 }
