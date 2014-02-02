@@ -24,5 +24,5 @@ type Context interface {
 	Warnchan() err.ErrorChannel
 	Errchan() err.ErrorChannel
 
-	EvaluateSubquery(query *Select, item value.Value) (value.Value, error)
+	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

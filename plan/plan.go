@@ -17,14 +17,9 @@ package plan
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	_ "github.com/couchbaselabs/query/err"
 )
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
-}
-
-func Plan(node algebra.Node) (Operator, error) {
-	return nil, nil
 }

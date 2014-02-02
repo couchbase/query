@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -43,7 +42,7 @@ func (this *Join) Copy() Operator {
 	return &Join{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Join) Run(context algebra.Context) {
+func (this *Join) Run(context *Context) {
 }
 
 func NewNest(plan *plan.Nest) *Nest {
@@ -58,7 +57,7 @@ func (this *Nest) Copy() Operator {
 	return &Nest{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Nest) Run(context algebra.Context) {
+func (this *Nest) Run(context *Context) {
 }
 
 func NewUnnest(plan *plan.Unnest) *Unnest {
@@ -73,5 +72,5 @@ func (this *Unnest) Copy() Operator {
 	return &Unnest{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Unnest) Run(context algebra.Context) {
+func (this *Unnest) Run(context *Context) {
 }

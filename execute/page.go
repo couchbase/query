@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -38,7 +37,7 @@ func (this *Offset) Copy() Operator {
 	return &Offset{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Offset) Run(context algebra.Context) {
+func (this *Offset) Run(context *Context) {
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
@@ -53,5 +52,5 @@ func (this *Limit) Copy() Operator {
 	return &Limit{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Limit) Run(context algebra.Context) {
+func (this *Limit) Run(context *Context) {
 }

@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -53,7 +52,7 @@ func (this *EqualScan) Copy() Operator {
 	return &EqualScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *EqualScan) Run(context algebra.Context) {
+func (this *EqualScan) Run(context *Context) {
 }
 
 func NewRangeScan(plan *plan.RangeScan) *RangeScan {
@@ -68,7 +67,7 @@ func (this *RangeScan) Copy() Operator {
 	return &RangeScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *RangeScan) Run(context algebra.Context) {
+func (this *RangeScan) Run(context *Context) {
 }
 
 func NewDualScan(plan *plan.DualScan) *DualScan {
@@ -83,7 +82,7 @@ func (this *DualScan) Copy() Operator {
 	return &DualScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *DualScan) Run(context algebra.Context) {
+func (this *DualScan) Run(context *Context) {
 }
 
 func NewKeyScan(plan *plan.KeyScan) *KeyScan {
@@ -98,7 +97,7 @@ func (this *KeyScan) Copy() Operator {
 	return &KeyScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *KeyScan) Run(context algebra.Context) {
+func (this *KeyScan) Run(context *Context) {
 }
 
 func NewValueScan(plan *plan.ValueScan) *ValueScan {
@@ -113,5 +112,5 @@ func (this *ValueScan) Copy() Operator {
 	return &ValueScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *ValueScan) Run(context algebra.Context) {
+func (this *ValueScan) Run(context *Context) {
 }

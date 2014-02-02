@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -46,7 +45,7 @@ func (this *InitialGroup) Copy() Operator {
 	return &InitialGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *InitialGroup) Run(context algebra.Context) {
+func (this *InitialGroup) Run(context *Context) {
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
@@ -61,7 +60,7 @@ func (this *IntermediateGroup) Copy() Operator {
 	return &IntermediateGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *IntermediateGroup) Run(context algebra.Context) {
+func (this *IntermediateGroup) Run(context *Context) {
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
@@ -76,5 +75,5 @@ func (this *FinalGroup) Copy() Operator {
 	return &FinalGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *FinalGroup) Run(context algebra.Context) {
+func (this *FinalGroup) Run(context *Context) {
 }

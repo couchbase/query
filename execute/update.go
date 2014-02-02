@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -51,7 +50,7 @@ func (this *Clone) Copy() Operator {
 	return &Clone{this.operatorBase.copy()}
 }
 
-func (this *Clone) Run(context algebra.Context) {
+func (this *Clone) Run(context *Context) {
 }
 
 func NewSet(plan *plan.Set) *Set {
@@ -66,7 +65,7 @@ func (this *Set) Copy() Operator {
 	return &Set{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Set) Run(context algebra.Context) {
+func (this *Set) Run(context *Context) {
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
@@ -81,7 +80,7 @@ func (this *Unset) Copy() Operator {
 	return &Unset{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Unset) Run(context algebra.Context) {
+func (this *Unset) Run(context *Context) {
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
@@ -96,5 +95,5 @@ func (this *SendUpdate) Copy() Operator {
 	return &SendUpdate{this.operatorBase.copy(), this.plan}
 }
 
-func (this *SendUpdate) Run(context algebra.Context) {
+func (this *SendUpdate) Run(context *Context) {
 }

@@ -12,7 +12,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/plan"
 )
 
@@ -33,5 +32,5 @@ func (this *Project) Copy() Operator {
 	return &Project{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Project) Run(context algebra.Context) {
+func (this *Project) Run(context *Context) {
 }

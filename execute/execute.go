@@ -17,7 +17,6 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	_ "github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,19 +25,19 @@ type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
 	Source() Operator
 	SetSource(source Operator)
-	Port() *Port
-	SetPort(port *Port)
+	Handle() *Handle
+	SetHandle(handle *Handle)
 	Copy() Operator
-	Run(context algebra.Context)
+	Run(context *Context)
 }
 
-type Port struct {
+type Handle struct {
 	Chan value.ValueChannel
 }
 
 type operatorBase struct {
 	source Operator
-	port   *Port
+	handle *Handle
 }
 
 func (this *operatorBase) Source() Operator {
@@ -49,14 +48,14 @@ func (this *operatorBase) SetSource(source Operator) {
 	this.source = source
 }
 
-func (this *operatorBase) Port() *Port {
-	return this.port
+func (this *operatorBase) Handle() *Handle {
+	return this.handle
 }
 
-func (this *operatorBase) SetPort(port *Port) {
-	this.port = port
+func (this *operatorBase) SetHandle(handle *Handle) {
+	this.handle = handle
 }
 
 func (this *operatorBase) copy() operatorBase {
-	return operatorBase{this.source, this.port}
+	return operatorBase{this.source, this.handle}
 }

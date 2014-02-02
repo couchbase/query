@@ -11,8 +11,6 @@ package execute
 
 import (
 	_ "fmt"
-
-	"github.com/couchbaselabs/query/algebra"
 )
 
 // Distincting of input data.
@@ -37,7 +35,7 @@ func (this *InitialDistinct) Copy() Operator {
 	return &InitialDistinct{this.operatorBase.copy()}
 }
 
-func (this *InitialDistinct) Run(context algebra.Context) {
+func (this *InitialDistinct) Run(context *Context) {
 }
 
 func NewSubsequentDistinct() *SubsequentDistinct {
@@ -52,5 +50,5 @@ func (this *SubsequentDistinct) Copy() Operator {
 	return &SubsequentDistinct{this.operatorBase.copy()}
 }
 
-func (this *SubsequentDistinct) Run(context algebra.Context) {
+func (this *SubsequentDistinct) Run(context *Context) {
 }
