@@ -1,0 +1,69 @@
+//  Copieright (c) 2014 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package value
+
+import (
+	json "github.com/dustin/gojson"
+)
+
+type floatValue float64
+
+func (this floatValue) Type() int {
+	return NUMBER
+}
+
+func (this floatValue) Actual() interface{} {
+	return float64(this)
+}
+
+func (this floatValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case floatValue:
+		return this == other
+	case *parsedValue:
+		return this.Equals(other.parse())
+	case *annotatedValue:
+		return this.Equals(other.Value)
+	default:
+		return false
+	}
+}
+
+func (this floatValue) Copy() Value {
+	return this
+}
+
+func (this floatValue) CopyForUpdate() Value {
+	return this
+}
+
+func (this floatValue) Bytes() []byte {
+	bytes, err := json.Marshal(this.Actual())
+	if err != nil {
+		panic(_MARSHAL_ERROR)
+	}
+	return bytes
+}
+
+func (this floatValue) Field(field string) (Value, error) {
+	return nil, Undefined(field)
+}
+
+func (this floatValue) SetField(field string, val interface{}) error {
+	return Unsettable(field)
+}
+
+func (this floatValue) Index(index int) (Value, error) {
+	return nil, Undefined(index)
+}
+
+func (this floatValue) SetIndex(index int, val interface{}) error {
+	return Unsettable(index)
+}

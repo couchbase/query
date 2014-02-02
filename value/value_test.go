@@ -470,11 +470,11 @@ func TestJsonPointerInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestDuplicateValueFromBytes(t *testing.T) {
+func TestCopyValueFromBytes(t *testing.T) {
 
 	val := NewValueFromBytes([]byte(`{"name":"marty","type":"contact","address":{"street":"sutton oaks"}}`))
 
-	val2 := val.Duplicate()
+	val2 := val.Copy()
 	val2.SetField("name", "bob")
 
 	name, err := val.Field("name")
@@ -503,7 +503,7 @@ func TestDuplicateValueFromBytes(t *testing.T) {
 
 }
 
-func TestDuplicateValueFromValue(t *testing.T) {
+func TestCopyValueFromValue(t *testing.T) {
 
 	val := NewValue(map[string]interface{}{
 		"name": "marty",
@@ -513,7 +513,7 @@ func TestDuplicateValueFromValue(t *testing.T) {
 		},
 	})
 
-	val2 := val.Duplicate()
+	val2 := val.Copy()
 	val2.SetField("name", "bob")
 
 	name, err := val.Field("name")
@@ -544,7 +544,7 @@ func TestDuplicateValueFromValue(t *testing.T) {
 
 func TestArraySetIndexLongerThanExistingArray(t *testing.T) {
 	val := NewValueFromBytes([]byte(`[]`))
-	val = val.DuplicateForUpdate()
+	val = val.CopyForUpdate()
 	val.SetIndex(0, "gerald")
 
 	valval := val.Actual()
