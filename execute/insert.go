@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type SendInsert struct {
@@ -32,5 +33,5 @@ func (this *SendInsert) Copy() Operator {
 	return &SendInsert{this.operatorBase.copy(), this.plan}
 }
 
-func (this *SendInsert) Run(context *Context) {
+func (this *SendInsert) Run(context *Context, parent value.Value) {
 }

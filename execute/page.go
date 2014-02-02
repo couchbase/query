@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Offset struct {
@@ -37,7 +38,7 @@ func (this *Offset) Copy() Operator {
 	return &Offset{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Offset) Run(context *Context) {
+func (this *Offset) Run(context *Context, parent value.Value) {
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
@@ -52,5 +53,5 @@ func (this *Limit) Copy() Operator {
 	return &Limit{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Limit) Run(context *Context) {
+func (this *Limit) Run(context *Context, parent value.Value) {
 }

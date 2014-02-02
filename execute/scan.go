@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type EqualScan struct {
@@ -40,6 +41,10 @@ type ValueScan struct {
 	plan *plan.ValueScan
 }
 
+type DummyScan struct {
+	operatorBase
+}
+
 func NewEqualScan(plan *plan.EqualScan) *EqualScan {
 	return &EqualScan{plan: plan}
 }
@@ -52,7 +57,7 @@ func (this *EqualScan) Copy() Operator {
 	return &EqualScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *EqualScan) Run(context *Context) {
+func (this *EqualScan) Run(context *Context, parent value.Value) {
 }
 
 func NewRangeScan(plan *plan.RangeScan) *RangeScan {
@@ -67,7 +72,7 @@ func (this *RangeScan) Copy() Operator {
 	return &RangeScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *RangeScan) Run(context *Context) {
+func (this *RangeScan) Run(context *Context, parent value.Value) {
 }
 
 func NewDualScan(plan *plan.DualScan) *DualScan {
@@ -82,7 +87,7 @@ func (this *DualScan) Copy() Operator {
 	return &DualScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *DualScan) Run(context *Context) {
+func (this *DualScan) Run(context *Context, parent value.Value) {
 }
 
 func NewKeyScan(plan *plan.KeyScan) *KeyScan {
@@ -97,7 +102,7 @@ func (this *KeyScan) Copy() Operator {
 	return &KeyScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *KeyScan) Run(context *Context) {
+func (this *KeyScan) Run(context *Context, parent value.Value) {
 }
 
 func NewValueScan(plan *plan.ValueScan) *ValueScan {
@@ -112,5 +117,20 @@ func (this *ValueScan) Copy() Operator {
 	return &ValueScan{this.operatorBase.copy(), this.plan}
 }
 
-func (this *ValueScan) Run(context *Context) {
+func (this *ValueScan) Run(context *Context, parent value.Value) {
+}
+
+func NewDummyScan() *DummyScan {
+	return &DummyScan{}
+}
+
+func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDummyScan(this)
+}
+
+func (this *DummyScan) Copy() Operator {
+	return &DummyScan{this.operatorBase.copy()}
+}
+
+func (this *DummyScan) Run(context *Context, parent value.Value) {
 }

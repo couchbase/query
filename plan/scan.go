@@ -55,6 +55,10 @@ type ValueScan struct {
 	values algebra.Expression
 }
 
+// Generates a single empty object. Used if there is no FROM clause.
+type DummyScan struct {
+}
+
 func NewEqualScan(index catalog.EqualIndex, equals algebra.ExpressionList) *EqualScan {
 	return &EqualScan{index, equals}
 }
@@ -93,4 +97,12 @@ func NewValueScan(values algebra.Expression) *ValueScan {
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitValueScan(this)
+}
+
+func NewDummyScan() *DummyScan {
+	return &DummyScan{}
+}
+
+func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDummyScan(this)
 }

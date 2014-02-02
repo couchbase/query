@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Precompute struct {
@@ -32,5 +33,5 @@ func (this *Precompute) Copy() Operator {
 	return &Precompute{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Precompute) Run(context *Context) {
+func (this *Precompute) Run(context *Context, parent value.Value) {
 }

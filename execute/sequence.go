@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Sequence struct {
@@ -32,5 +33,5 @@ func (this *Sequence) Copy() Operator {
 	return &Sequence{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Sequence) Run(context *Context) {
+func (this *Sequence) Run(context *Context, parent value.Value) {
 }

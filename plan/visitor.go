@@ -20,6 +20,7 @@ type Visitor interface {
 	VisitDualScan(op *DualScan) (interface{}, error)
 	VisitKeyScan(op *KeyScan) (interface{}, error)
 	VisitValueScan(op *ValueScan) (interface{}, error)
+	VisitDummyScan(op *DummyScan) (interface{}, error)
 
 	// Parallel
 	VisitParallel(op *Parallel) (interface{}, error)

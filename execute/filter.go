@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Filter struct {
@@ -32,5 +33,5 @@ func (this *Filter) Copy() Operator {
 	return &Filter{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Filter) Run(context *Context) {
+func (this *Filter) Run(context *Context, parent value.Value) {
 }

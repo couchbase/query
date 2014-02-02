@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type ComputeMerge struct {
@@ -52,7 +53,7 @@ func (this *ComputeMerge) Copy() Operator {
 	return &ComputeMerge{this.operatorBase.copy(), this.plan}
 }
 
-func (this *ComputeMerge) Run(context *Context) {
+func (this *ComputeMerge) Run(context *Context, parent value.Value) {
 }
 
 func NewMergeUpdate(plan *plan.MergeUpdate) *MergeUpdate {
@@ -67,7 +68,7 @@ func (this *MergeUpdate) Copy() Operator {
 	return &MergeUpdate{this.operatorBase.copy(), this.plan}
 }
 
-func (this *MergeUpdate) Run(context *Context) {
+func (this *MergeUpdate) Run(context *Context, parent value.Value) {
 }
 
 func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
@@ -82,7 +83,7 @@ func (this *MergeDelete) Copy() Operator {
 	return &MergeDelete{this.operatorBase.copy(), this.plan}
 }
 
-func (this *MergeDelete) Run(context *Context) {
+func (this *MergeDelete) Run(context *Context, parent value.Value) {
 }
 
 func NewMergeInsert(plan *plan.MergeInsert) *MergeInsert {
@@ -97,7 +98,7 @@ func (this *MergeInsert) Copy() Operator {
 	return &MergeInsert{this.operatorBase.copy(), this.plan}
 }
 
-func (this *MergeInsert) Run(context *Context) {
+func (this *MergeInsert) Run(context *Context, parent value.Value) {
 }
 
 func NewSendMerge(plan *plan.SendMerge) *SendMerge {
@@ -112,5 +113,5 @@ func (this *SendMerge) Copy() Operator {
 	return &SendMerge{this.operatorBase.copy(), this.plan}
 }
 
-func (this *SendMerge) Run(context *Context) {
+func (this *SendMerge) Run(context *Context, parent value.Value) {
 }

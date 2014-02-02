@@ -28,7 +28,7 @@ type Operator interface {
 	Handle() *Handle
 	SetHandle(handle *Handle)
 	Copy() Operator
-	Run(context *Context)
+	Run(context *Context, parent value.Value)
 }
 
 type Handle struct {

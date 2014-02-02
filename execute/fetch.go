@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Fetch struct {
@@ -32,5 +33,5 @@ func (this *Fetch) Copy() Operator {
 	return &Fetch{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Fetch) Run(context *Context) {
+func (this *Fetch) Run(context *Context, parent value.Value) {
 }

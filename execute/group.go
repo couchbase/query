@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 // Grouping of input data.
@@ -45,7 +46,7 @@ func (this *InitialGroup) Copy() Operator {
 	return &InitialGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *InitialGroup) Run(context *Context) {
+func (this *InitialGroup) Run(context *Context, parent value.Value) {
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
@@ -60,7 +61,7 @@ func (this *IntermediateGroup) Copy() Operator {
 	return &IntermediateGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *IntermediateGroup) Run(context *Context) {
+func (this *IntermediateGroup) Run(context *Context, parent value.Value) {
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
@@ -75,5 +76,5 @@ func (this *FinalGroup) Copy() Operator {
 	return &FinalGroup{this.operatorBase.copy(), this.plan}
 }
 
-func (this *FinalGroup) Run(context *Context) {
+func (this *FinalGroup) Run(context *Context, parent value.Value) {
 }

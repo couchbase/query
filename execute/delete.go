@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type SendDelete struct {
@@ -32,5 +33,5 @@ func (this *SendDelete) Copy() Operator {
 	return &SendDelete{this.operatorBase.copy(), this.plan}
 }
 
-func (this *SendDelete) Run(context *Context) {
+func (this *SendDelete) Run(context *Context, parent value.Value) {
 }

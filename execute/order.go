@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Order struct {
@@ -32,5 +33,5 @@ func (this *Order) Copy() Operator {
 	return &Order{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Order) Run(context *Context) {
+func (this *Order) Run(context *Context, parent value.Value) {
 }

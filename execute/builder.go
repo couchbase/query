@@ -56,6 +56,10 @@ func (this *Builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
 	return NewValueScan(plan), nil
 }
 
+func (this *Builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
+	return NewDummyScan(), nil
+}
+
 // Parallel
 func (this *Builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 	return NewParallel(plan), nil

@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 // Enable copy-before-write, so that all reads use old values
@@ -50,7 +51,7 @@ func (this *Clone) Copy() Operator {
 	return &Clone{this.operatorBase.copy()}
 }
 
-func (this *Clone) Run(context *Context) {
+func (this *Clone) Run(context *Context, parent value.Value) {
 }
 
 func NewSet(plan *plan.Set) *Set {
@@ -65,7 +66,7 @@ func (this *Set) Copy() Operator {
 	return &Set{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Set) Run(context *Context) {
+func (this *Set) Run(context *Context, parent value.Value) {
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
@@ -80,7 +81,7 @@ func (this *Unset) Copy() Operator {
 	return &Unset{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Unset) Run(context *Context) {
+func (this *Unset) Run(context *Context, parent value.Value) {
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
@@ -95,5 +96,5 @@ func (this *SendUpdate) Copy() Operator {
 	return &SendUpdate{this.operatorBase.copy(), this.plan}
 }
 
-func (this *SendUpdate) Run(context *Context) {
+func (this *SendUpdate) Run(context *Context, parent value.Value) {
 }

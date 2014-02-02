@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copieright (c) 2014 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -158,6 +158,14 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 // Missing value
 func NewMissingValue() Value {
 	return &_MISSING_VALUE
+}
+
+// CorrelatedValue enables subqueries.
+func NewCorrelatedValue(parent Value) Value {
+	return &correlatedValue{
+		entries: make(map[string]interface{}),
+		parent:  parent,
+	}
 }
 
 // The data types supported by Value
@@ -452,11 +460,11 @@ func (this sliceValue) Equals(other Value) bool {
 }
 
 func (this sliceValue) Copy() Value {
-	return sliceValue(duplicateSlice(this, duplicate))
+	return sliceValue(copySlice(this, self))
 }
 
 func (this sliceValue) CopyForUpdate() Value {
-	return &listValue{duplicateSlice(this, duplicateForUpdate)}
+	return &listValue{copySlice(this, copyForUpdate)}
 }
 
 func (this sliceValue) Bytes() []byte {
@@ -516,11 +524,11 @@ func (this *listValue) Equals(other Value) bool {
 }
 
 func (this *listValue) Copy() Value {
-	return &listValue{duplicateSlice(this.actual, duplicate)}
+	return &listValue{copySlice(this.actual, self)}
 }
 
 func (this *listValue) CopyForUpdate() Value {
-	return &listValue{duplicateSlice(this.actual, duplicateForUpdate)}
+	return &listValue{copySlice(this.actual, copyForUpdate)}
 }
 
 func (this *listValue) Bytes() []byte {
@@ -587,11 +595,11 @@ func (this objectValue) Equals(other Value) bool {
 }
 
 func (this objectValue) Copy() Value {
-	return objectValue(duplicateMap(this, duplicate))
+	return objectValue(copyMap(this, self))
 }
 
 func (this objectValue) CopyForUpdate() Value {
-	return objectValue(duplicateMap(this, duplicateForUpdate))
+	return objectValue(copyMap(this, copyForUpdate))
 }
 
 func (this objectValue) Bytes() []byte {
@@ -622,6 +630,79 @@ func (this objectValue) Index(index int) (Value, error) {
 }
 
 func (this objectValue) SetIndex(index int, val interface{}) error {
+	return Unsettable(index)
+}
+
+// CorrelatedValue enables subqueries.
+type correlatedValue struct {
+	entries map[string]interface{}
+	parent  Value
+}
+
+func (this *correlatedValue) Type() int {
+	return OBJECT
+}
+
+func (this *correlatedValue) Actual() interface{} {
+	return this.entries
+}
+
+func (this *correlatedValue) Equals(other Value) bool {
+	switch other := other.(type) {
+	case *correlatedValue:
+		return reflect.DeepEqual(this.entries, other.entries)
+	default:
+		return false
+	}
+}
+
+func (this *correlatedValue) Copy() Value {
+	return &correlatedValue{
+		entries: copyMap(this.entries, self),
+		parent:  this.parent,
+	}
+}
+
+func (this *correlatedValue) CopyForUpdate() Value {
+	return &correlatedValue{
+		entries: copyMap(this.entries, copyForUpdate),
+		parent:  this.parent,
+	}
+}
+
+func (this *correlatedValue) Bytes() []byte {
+	bytes, err := json.Marshal(this.Actual())
+	if err != nil {
+		panic(_MARSHAL_ERROR)
+	}
+	return bytes
+}
+
+// Search self and ancestors. Enables subqueries.
+func (this *correlatedValue) Field(field string) (Value, error) {
+	result, ok := this.entries[field]
+	if ok {
+		return NewValue(result), nil
+	}
+
+	if this.parent != nil {
+		return this.parent.Field(field)
+	}
+
+	// consistent with parsedValue
+	return nil, Undefined(field)
+}
+
+func (this *correlatedValue) SetField(field string, val interface{}) error {
+	this.entries[field] = val
+	return nil
+}
+
+func (this *correlatedValue) Index(index int) (Value, error) {
+	return nil, Undefined(index)
+}
+
+func (this *correlatedValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
@@ -764,37 +845,37 @@ func (this *parsedValue) parse() Value {
 	return this.parsed
 }
 
-type dupFunc func(interface{}) interface{}
+type copyFunc func(interface{}) interface{}
 
-func duplicate(val interface{}) interface{} {
+func self(val interface{}) interface{} {
 	return val
 }
 
-func duplicateForUpdate(val interface{}) interface{} {
+func copyForUpdate(val interface{}) interface{} {
 	return NewValue(val).CopyForUpdate()
 }
 
-func duplicateSlice(source []interface{}, dup dupFunc) []interface{} {
+func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	if source == nil {
 		return nil
 	}
 
 	result := make([]interface{}, len(source))
 	for i, v := range source {
-		result[i] = dup(v)
+		result[i] = copier(v)
 	}
 
 	return result
 }
 
-func duplicateMap(source map[string]interface{}, dup dupFunc) map[string]interface{} {
+func copyMap(source map[string]interface{}, copier copyFunc) map[string]interface{} {
 	if source == nil {
 		return nil
 	}
 
 	result := make(map[string]interface{}, len(source))
 	for k, v := range source {
-		result[k] = dup(v)
+		result[k] = copier(v)
 	}
 
 	return result
@@ -824,6 +905,13 @@ func identifyType(bytes []byte) int {
 type annotatedValue struct {
 	Value
 	attacher
+}
+
+func (this *annotatedValue) Copy() Value {
+	return &annotatedValue{
+		Value:    this.Value.Copy(),
+		attacher: attacher{this.attacher.attachments},
+	}
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {

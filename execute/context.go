@@ -79,7 +79,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		return nil, err
 	}
 
-	pipeline.Run(this)
+	pipeline.Run(this, parent)
 
 	return nil, nil
 }

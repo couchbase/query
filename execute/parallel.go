@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Parallel struct {
@@ -32,5 +33,5 @@ func (this *Parallel) Copy() Operator {
 	return &Parallel{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Parallel) Run(context *Context) {
+func (this *Parallel) Run(context *Context, parent value.Value) {
 }

@@ -13,6 +13,7 @@ import (
 	_ "fmt"
 
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Project struct {
@@ -32,5 +33,5 @@ func (this *Project) Copy() Operator {
 	return &Project{this.operatorBase.copy(), this.plan}
 }
 
-func (this *Project) Run(context *Context) {
+func (this *Project) Run(context *Context, parent value.Value) {
 }
