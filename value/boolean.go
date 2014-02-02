@@ -34,6 +34,26 @@ func (this boolValue) Equals(other Value) bool {
 	}
 }
 
+func (this boolValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case boolValue:
+		if this == other {
+			return 0
+		} else if !this {
+			return -1
+		} else {
+			return 1
+		}
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return BOOLEAN - other.Type()
+	}
+
+}
+
 func (this boolValue) Copy() Value {
 	return this
 }

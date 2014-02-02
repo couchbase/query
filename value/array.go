@@ -38,6 +38,21 @@ func (this sliceValue) Equals(other Value) bool {
 	}
 }
 
+func (this sliceValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case sliceValue:
+		return arrayCollate(this, other)
+	case *listValue:
+		return arrayCollate(this, other.actual)
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return ARRAY - other.Type()
+	}
+}
+
 func (this sliceValue) Copy() Value {
 	return sliceValue(copySlice(this, self))
 }
@@ -108,6 +123,21 @@ func (this *listValue) Equals(other Value) bool {
 	}
 }
 
+func (this *listValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case *listValue:
+		return arrayCollate(this.actual, other.actual)
+	case sliceValue:
+		return arrayCollate(this.actual, other)
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return ARRAY - other.Type()
+	}
+}
+
 func (this *listValue) Copy() Value {
 	return &listValue{copySlice(this.actual, self)}
 }
@@ -160,16 +190,32 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 	return nil
 }
 
-func arrayEquals(first, second []interface{}) bool {
-	if len(first) != len(second) {
+func arrayEquals(array1, array2 []interface{}) bool {
+	if len(array1) != len(array2) {
 		return false
 	}
 
-	for i, f := range first {
-		if !NewValue(f).Equals(NewValue(second[i])) {
+	for i, item1 := range array1 {
+		if !NewValue(item1).Equals(NewValue(array2[i])) {
 			return false
 		}
 	}
 
 	return true
+}
+
+// this code originally taken from walrus
+// https://github.com/couchbaselabs/walrus
+func arrayCollate(array1, array2 []interface{}) int {
+	for i, item1 := range array1 {
+		if i >= len(array2) {
+			return 1
+		}
+
+		if cmp := NewValue(item1).Collate(NewValue(array2[i])); cmp != 0 {
+			return cmp
+		}
+	}
+
+	return len(array1) - len(array2)
 }

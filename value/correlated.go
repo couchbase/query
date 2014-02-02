@@ -50,6 +50,21 @@ func (this *correlatedValue) Equals(other Value) bool {
 	}
 }
 
+func (this *correlatedValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case *correlatedValue:
+		return objectCollate(this.entries, other.entries)
+	case objectValue:
+		return objectCollate(this.entries, other)
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return 1
+	}
+}
+
 func (this *correlatedValue) Copy() Value {
 	return &correlatedValue{
 		entries: copyMap(this.entries, self),

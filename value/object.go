@@ -10,6 +10,8 @@
 package value
 
 import (
+	"sort"
+
 	json "github.com/dustin/gojson"
 )
 
@@ -35,6 +37,21 @@ func (this objectValue) Equals(other Value) bool {
 		return this.Equals(other.Value)
 	default:
 		return false
+	}
+}
+
+func (this objectValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case objectValue:
+		return objectCollate(this, other)
+	case *correlatedValue:
+		return objectCollate(this, other.entries)
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return 1
 	}
 }
 
@@ -77,17 +94,69 @@ func (this objectValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
-func objectEquals(first, second map[string]interface{}) bool {
-	if len(first) != len(second) {
+func objectEquals(obj1, obj2 map[string]interface{}) bool {
+	if len(obj1) != len(obj2) {
 		return false
 	}
 
-	for fk, fv := range first {
-		sv, ok := second[fk]
-		if !ok || !NewValue(fv).Equals(NewValue(sv)) {
+	for key1, val1 := range obj1 {
+		val2, ok := obj2[key1]
+		if !ok || !NewValue(val1).Equals(NewValue(val2)) {
 			return false
 		}
 	}
 
 	return true
+}
+
+// this code originally taken from walrus
+// https://github.com/couchbaselabs/walrus
+func objectCollate(obj1, obj2 map[string]interface{}) int {
+	// first see if one object is larger than the other
+	if len(obj1) < len(obj2) {
+		return -1
+	} else if len(obj1) > len(obj2) {
+		return 1
+	}
+
+	// if not, proceed to do key by key comparision
+
+	// collect all the keys
+	allmap := make(map[string]bool, len(obj1)+len(obj2))
+	for k, _ := range obj1 {
+		allmap[k] = false
+	}
+	for k, _ := range obj2 {
+		allmap[k] = false
+	}
+
+	allkeys := make(sort.StringSlice, len(allmap))
+	i := 0
+	for k, _ := range allmap {
+		allkeys[i] = k
+		i++
+	}
+
+	// sort the keys
+	allkeys.Sort()
+
+	// now compare the values associated with each key
+	for _, key := range allkeys {
+		val1, ok := obj1[key]
+		if !ok {
+			// obj1 didn't have this key, so it is smaller
+			return -1
+		}
+		val2, ok := obj2[key]
+		if !ok {
+			// ojb2 didnt have this key, so its smaller
+			return 1
+		}
+		// key was in both objects, need to compare them
+		if cmp := NewValue(val1).Collate(NewValue(val2)); cmp != 0 {
+			return cmp
+		}
+	}
+
+	return 0
 }

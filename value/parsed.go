@@ -39,6 +39,10 @@ func (this *parsedValue) Equals(other Value) bool {
 	return this.parse().Equals(other)
 }
 
+func (this *parsedValue) Collate(other Value) int {
+	return this.parse().Collate(other)
+}
+
 func (this *parsedValue) Copy() Value {
 	if this.parsed != nil {
 		return this.parsed.Copy()

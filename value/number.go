@@ -36,6 +36,20 @@ func (this floatValue) Equals(other Value) bool {
 	}
 }
 
+func (this floatValue) Collate(other Value) int {
+	switch other := other.(type) {
+	case floatValue:
+		return int(this - other)
+	case *parsedValue:
+		return this.Collate(other.parse())
+	case *annotatedValue:
+		return this.Collate(other.Value)
+	default:
+		return NUMBER - other.Type()
+	}
+
+}
+
 func (this floatValue) Copy() Value {
 	return this
 }

@@ -30,16 +30,11 @@ func (this *missingValue) Actual() interface{} {
 }
 
 func (this *missingValue) Equals(other Value) bool {
-	switch other := other.(type) {
-	case *missingValue:
-		return true
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	default:
-		return false
-	}
+	return other.Type() == MISSING
+}
+
+func (this *missingValue) Collate(other Value) int {
+	return MISSING - other.Type()
 }
 
 func (this *missingValue) Copy() Value {

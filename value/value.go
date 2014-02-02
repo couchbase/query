@@ -60,9 +60,10 @@ type ValueCollection []Value
 type Value interface {
 	Type() int                                    // Data type constant
 	Actual() interface{}                          // Native Go representation
-	Equals(other Value) bool                      // Faster than Compare
+	Equals(other Value) bool                      // Faster than Collate()
+	Collate(other Value) int                      // -int if this precedes other
 	Copy() Value                                  // Shallow copy
-	CopyForUpdate() Value                         // Deep copy for UPDATE statements; returns Values whose SetIndex() will extend arrays as needed
+	CopyForUpdate() Value                         // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
 	Bytes() []byte                                // JSON byte encoding
 	Field(field string) (Value, error)            // Object field dereference
 	SetField(field string, val interface{}) error // Object field setting

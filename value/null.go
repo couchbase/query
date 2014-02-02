@@ -23,16 +23,11 @@ func (this *nullValue) Actual() interface{} {
 }
 
 func (this *nullValue) Equals(other Value) bool {
-	switch other := other.(type) {
-	case *nullValue:
-		return true
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	default:
-		return false
-	}
+	return other.Type() == NULL
+}
+
+func (this *nullValue) Collate(other Value) int {
+	return NULL - other.Type()
 }
 
 func (this *nullValue) Copy() Value {
