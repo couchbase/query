@@ -36,16 +36,7 @@ func (this *parsedValue) Actual() interface{} {
 }
 
 func (this *parsedValue) Equals(other Value) bool {
-	if this.parsed == nil {
-		return false
-	}
-
-	switch other := other.(type) {
-	case *parsedValue:
-		return other.parsed != nil && this.parsed.Equals(other.parsed)
-	default:
-		return this.parsed.Equals(other)
-	}
+	return this.parse().Equals(other)
 }
 
 func (this *parsedValue) Copy() Value {
