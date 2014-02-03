@@ -18,6 +18,6 @@ type SubqueryExpression struct {
 	query *Select
 }
 
-func (this *SubqueryExpression) Evaluate(parent value.Value, context Context) (value.Value, error) {
-	return context.EvaluateSubquery(this.query, parent)
+func (this *SubqueryExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return context.EvaluateSubquery(this.query, item)
 }

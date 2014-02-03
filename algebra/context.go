@@ -21,8 +21,8 @@ type Context interface {
 	Now() time.Time
 	Argument(parameter string) value.Value
 
-	Warnchan() err.ErrorChannel
-	Errchan() err.ErrorChannel
+	WarningChannel() err.ErrorChannel
+	Errorchannel() err.ErrorChannel
 
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

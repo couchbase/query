@@ -40,6 +40,22 @@ type BucketTerm struct {
 	keys    Expression
 }
 
+func NewSelect(from FromTerm, where Expression, group ExpressionList,
+	having Expression, project ResultTermList, distinct bool,
+	order SortTermList, offset Expression, limit Expression,
+) *Select {
+	return &Select{from, where, group, having,
+		project, distinct, order, offset, limit}
+}
+
+func (this *Select) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSelect(this)
+}
+
+func (this *Select) IsCorrelated() bool {
+	return true // FIXME
+}
+
 func NewBucketTerm(pool, bucket string, project Path, as string, keys Expression) *BucketTerm {
 	return &BucketTerm{pool, bucket, project, as, keys}
 }
@@ -113,15 +129,3 @@ type SortTerm struct {
 }
 
 type SortTermList []*SortTerm
-
-func NewSelect(from FromTerm, where Expression, group ExpressionList,
-	having Expression, project ResultTermList, distinct bool,
-	order SortTermList, offset Expression, limit Expression,
-) *Select {
-	return &Select{from, where, group, having,
-		project, distinct, order, offset, limit}
-}
-
-func (this *Select) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSelect(this)
-}
