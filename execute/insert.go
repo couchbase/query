@@ -22,10 +22,13 @@ type SendInsert struct {
 }
 
 func NewSendInsert(plan *plan.SendInsert) *SendInsert {
-	return &SendInsert{
+	rv := &SendInsert{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {

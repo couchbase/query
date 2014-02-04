@@ -27,10 +27,13 @@ type Limit struct {
 }
 
 func NewOffset(plan *plan.Offset) *Offset {
-	return &Offset{
+	rv := &Offset{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
@@ -53,10 +56,13 @@ func (this *Offset) afterItems(context *Context, parent value.Value) {
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
-	return &Limit{
+	rv := &Limit{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Limit) Accept(visitor Visitor) (interface{}, error) {

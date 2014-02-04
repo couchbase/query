@@ -35,10 +35,13 @@ type FinalGroup struct {
 }
 
 func NewInitialGroup(plan *plan.InitialGroup) *InitialGroup {
-	return &InitialGroup{
+	rv := &InitialGroup{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -61,10 +64,13 @@ func (this *InitialGroup) afterItems(context *Context, parent value.Value) {
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
-	return &IntermediateGroup{
+	rv := &IntermediateGroup{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -87,10 +93,13 @@ func (this *IntermediateGroup) afterItems(context *Context, parent value.Value) 
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
-	return &FinalGroup{
+	rv := &FinalGroup{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {

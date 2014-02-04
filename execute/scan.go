@@ -56,10 +56,13 @@ type DummyScan struct {
 }
 
 func NewFullScan(plan *plan.FullScan) *FullScan {
-	return &FullScan{
+	rv := &FullScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
@@ -74,10 +77,13 @@ func (this *FullScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewParentScan(plan *plan.ParentScan) *ParentScan {
-	return &ParentScan{
+	rv := &ParentScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
@@ -92,10 +98,13 @@ func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewEqualScan(plan *plan.EqualScan) *EqualScan {
-	return &EqualScan{
+	rv := &EqualScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
@@ -110,10 +119,13 @@ func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewRangeScan(plan *plan.RangeScan) *RangeScan {
-	return &RangeScan{
+	rv := &RangeScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
@@ -128,10 +140,13 @@ func (this *RangeScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewDualScan(plan *plan.DualScan) *DualScan {
-	return &DualScan{
+	rv := &DualScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
@@ -146,10 +161,13 @@ func (this *DualScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewKeyScan(plan *plan.KeyScan) *KeyScan {
-	return &KeyScan{
+	rv := &KeyScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -164,10 +182,13 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewValueScan(plan *plan.ValueScan) *ValueScan {
-	return &ValueScan{
+	rv := &ValueScan{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
@@ -182,9 +203,12 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewDummyScan() *DummyScan {
-	return &DummyScan{
+	rv := &DummyScan{
 		base: newBase(),
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {

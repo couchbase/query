@@ -40,9 +40,12 @@ type SendUpdate struct {
 }
 
 func NewClone() *Clone {
-	return &Clone{
+	rv := &Clone{
 		base: newBase(),
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
@@ -65,10 +68,13 @@ func (this *Clone) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSet(plan *plan.Set) *Set {
-	return &Set{
+	rv := &Set{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Set) Accept(visitor Visitor) (interface{}, error) {
@@ -91,10 +97,13 @@ func (this *Set) afterItems(context *Context, parent value.Value) {
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
-	return &Unset{
+	rv := &Unset{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
@@ -117,10 +126,13 @@ func (this *Unset) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
-	return &SendUpdate{
+	rv := &SendUpdate{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {

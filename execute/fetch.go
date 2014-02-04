@@ -22,10 +22,13 @@ type Fetch struct {
 }
 
 func NewFetch(plan *plan.Fetch) *Fetch {
-	return &Fetch{
+	rv := &Fetch{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {

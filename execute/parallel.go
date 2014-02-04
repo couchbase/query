@@ -11,21 +11,24 @@ package execute
 
 import (
 	_ "fmt"
+	"runtime"
 
-	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Parallel struct {
 	base
-	plan *plan.Parallel
+	child Operator
 }
 
-func NewParallel(plan *plan.Parallel) *Parallel {
-	return &Parallel{
-		base: newBase(),
-		plan: plan,
+func NewParallel(child Operator) *Parallel {
+	rv := &Parallel{
+		base:  newBase(),
+		child: child,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
@@ -33,8 +36,34 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Parallel) Copy() Operator {
-	return &Parallel{this.base.copy(), this.plan}
+	return &Parallel{this.base.copy(), this.child.Copy()}
 }
 
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel)                   // Broadcast that I have stopped
+		defer func() { this.stop.StopChannel() <- 1 }() // Notify that I have stopped
+
+		this.child.SetInput(this.input)
+		this.child.SetOutput(this.output)
+		this.child.SetStop(this)
+
+		n := runtime.NumCPU()
+
+		children := make([]Operator, n)
+		children[0] = this.child
+		for i := 1; i < n; i++ {
+			children[i] = this.child.Copy()
+		}
+
+		// Run children in parallel
+		for i := 0; i < n; i++ {
+			go children[i].RunOnce(context, parent)
+		}
+
+		// Wait for all children to notify me
+		for i := 0; i < n; i++ {
+			<-this.stopChannel // Never closed
+		}
+	})
 }

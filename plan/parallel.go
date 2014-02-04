@@ -14,13 +14,17 @@ import (
 )
 
 type Parallel struct {
-	op Operator
+	child Operator
 }
 
-func NewParallel(op Operator) *Parallel {
-	return &Parallel{op}
+func NewParallel(child Operator) *Parallel {
+	return &Parallel{child}
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitParallel(this)
+}
+
+func (this *Parallel) Child() Operator {
+	return this.child
 }

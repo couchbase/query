@@ -42,10 +42,13 @@ type SendMerge struct {
 }
 
 func NewComputeMerge(plan *plan.ComputeMerge) *ComputeMerge {
-	return &ComputeMerge{
+	rv := &ComputeMerge{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *ComputeMerge) Accept(visitor Visitor) (interface{}, error) {
@@ -68,10 +71,13 @@ func (this *ComputeMerge) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeUpdate(plan *plan.MergeUpdate) *MergeUpdate {
-	return &MergeUpdate{
+	rv := &MergeUpdate{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
@@ -94,10 +100,13 @@ func (this *MergeUpdate) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
-	return &MergeDelete{
+	rv := &MergeDelete{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
@@ -120,10 +129,13 @@ func (this *MergeDelete) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeInsert(plan *plan.MergeInsert) *MergeInsert {
-	return &MergeInsert{
+	rv := &MergeInsert{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
@@ -146,10 +158,13 @@ func (this *MergeInsert) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSendMerge(plan *plan.SendMerge) *SendMerge {
-	return &SendMerge{
+	rv := &SendMerge{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {

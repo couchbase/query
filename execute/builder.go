@@ -70,12 +70,28 @@ func (this *Builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
 
 // Parallel
 func (this *Builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
-	return NewParallel(plan), nil
+	child, err := plan.Child().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewParallel(child.(Operator)), nil
 }
 
 // Sequence
 func (this *Builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	return NewSequence(plan), nil
+	children := make([]Operator, len(plan.Children()))
+
+	for i, pchild := range plan.Children() {
+		child, err := pchild.Accept(this)
+		if err != nil {
+			return nil, err
+		}
+
+		children[i] = child.(Operator)
+	}
+
+	return NewSequence(children), nil
 }
 
 // Fetch

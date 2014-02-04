@@ -26,9 +26,12 @@ type SubsequentDistinct struct {
 }
 
 func NewInitialDistinct() *InitialDistinct {
-	return &InitialDistinct{
+	rv := &InitialDistinct{
 		base: newBase(),
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *InitialDistinct) Accept(visitor Visitor) (interface{}, error) {
@@ -51,9 +54,12 @@ func (this *InitialDistinct) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSubsequentDistinct() *SubsequentDistinct {
-	return &SubsequentDistinct{
+	rv := &SubsequentDistinct{
 		base: newBase(),
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {

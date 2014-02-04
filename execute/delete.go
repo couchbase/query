@@ -22,10 +22,13 @@ type SendDelete struct {
 }
 
 func NewSendDelete(plan *plan.SendDelete) *SendDelete {
-	return &SendDelete{
+	rv := &SendDelete{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {

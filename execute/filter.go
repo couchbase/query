@@ -22,10 +22,13 @@ type Filter struct {
 }
 
 func NewFilter(plan *plan.Filter) *Filter {
-	return &Filter{
+	rv := &Filter{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Filter) Accept(visitor Visitor) (interface{}, error) {

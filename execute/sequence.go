@@ -12,20 +12,22 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Sequence struct {
 	base
-	plan *plan.Sequence
+	children []Operator
 }
 
-func NewSequence(plan *plan.Sequence) *Sequence {
-	return &Sequence{
-		base: newBase(),
-		plan: plan,
+func NewSequence(children []Operator) *Sequence {
+	rv := &Sequence{
+		base:     newBase(),
+		children: children,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
@@ -33,8 +35,38 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
-	return &Sequence{this.base.copy(), this.plan}
+	children := make([]Operator, len(this.children))
+
+	for i, child := range this.children {
+		children[i] = child.Copy()
+	}
+
+	return &Sequence{this.base.copy(), children}
 }
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel)                   // Broadcast that I have stopped
+		defer func() { this.stop.StopChannel() <- 1 }() // Notify that I have stopped
+
+		first_child := this.children[0]
+		first_child.SetInput(this.input)
+		first_child.SetStop(this)
+
+		n := len(this.children)
+
+		for i := 1; i < n; i++ {
+			this.children[i].SetInput(this.children[i-1].Output())
+			this.children[i].SetStop(this.children[i-1])
+		}
+
+		last_child := this.children[n-1]
+		last_child.SetOutput(this.output)
+
+		// Run last child
+		go last_child.RunOnce(context, parent)
+
+		// Wait for first child to notify me
+		<-this.stopChannel // Never closed
+	})
 }

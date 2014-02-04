@@ -22,10 +22,13 @@ type Precompute struct {
 }
 
 func NewPrecompute(plan *plan.Precompute) *Precompute {
-	return &Precompute{
+	rv := &Precompute{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Precompute) Accept(visitor Visitor) (interface{}, error) {

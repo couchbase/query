@@ -22,10 +22,13 @@ type Order struct {
 }
 
 func NewOrder(plan *plan.Order) *Order {
-	return &Order{
+	rv := &Order{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {

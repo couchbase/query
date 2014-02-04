@@ -32,10 +32,13 @@ type Unnest struct {
 }
 
 func NewJoin(plan *plan.Join) *Join {
-	return &Join{
+	rv := &Join{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -58,10 +61,13 @@ func (this *Join) afterItems(context *Context, parent value.Value) {
 }
 
 func NewNest(plan *plan.Nest) *Nest {
-	return &Nest{
+	rv := &Nest{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
@@ -84,10 +90,13 @@ func (this *Nest) afterItems(context *Context, parent value.Value) {
 }
 
 func NewUnnest(plan *plan.Unnest) *Unnest {
-	return &Unnest{
+	rv := &Unnest{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {

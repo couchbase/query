@@ -22,10 +22,13 @@ type Project struct {
 }
 
 func NewProject(plan *plan.Project) *Project {
-	return &Project{
+	rv := &Project{
 		base: newBase(),
 		plan: plan,
 	}
+
+	rv.output = rv
+	return rv
 }
 
 func (this *Project) Accept(visitor Visitor) (interface{}, error) {

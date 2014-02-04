@@ -14,13 +14,17 @@ import (
 )
 
 type Sequence struct {
-	ops []Operator
+	children []Operator
 }
 
-func NewSequence(ops []Operator) *Sequence {
-	return &Sequence{ops}
+func NewSequence(children []Operator) *Sequence {
+	return &Sequence{children}
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSequence(this)
+}
+
+func (this *Sequence) Children() []Operator {
+	return this.children
 }
