@@ -87,8 +87,8 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		go this.input.RunOnce(context, parent)
 
 		var item value.Value
+		ok := cons.beforeItems(context, parent)
 
-		ok := true
 		for ok {
 			select {
 			case item, ok = <-this.input.ItemChannel():
@@ -141,6 +141,14 @@ func (this *base) sendState(err err.Error, channel err.ErrorChannel) bool {
 }
 
 type consumer interface {
+	beforeItems(context *Context, parent value.Value) bool
 	processItem(item value.Value, context *Context, parent value.Value) bool
 	afterItems(context *Context, parent value.Value)
+}
+
+func (this *base) beforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *base) afterItems(context *Context, parent value.Value) {
 }

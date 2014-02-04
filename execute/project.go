@@ -46,6 +46,3 @@ func (this *Project) RunOnce(context *Context, parent value.Value) {
 func (this *Project) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
-
-func (this *Project) afterItems(context *Context, parent value.Value) {
-}

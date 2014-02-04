@@ -10,49 +10,18 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
+	"math"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Offset struct {
-	base
-	plan *plan.Offset
-}
-
 type Limit struct {
 	base
-	plan *plan.Limit
-}
-
-func NewOffset(plan *plan.Offset) *Offset {
-	rv := &Offset{
-		base: newBase(),
-		plan: plan,
-	}
-
-	rv.output = rv
-	return rv
-}
-
-func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitOffset(this)
-}
-
-func (this *Offset) Copy() Operator {
-	return &Offset{this.base.copy(), this.plan}
-}
-
-func (this *Offset) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
-}
-
-func (this *Offset) processItem(item value.Value, context *Context, parent value.Value) bool {
-	return true
-}
-
-func (this *Offset) afterItems(context *Context, parent value.Value) {
+	plan  *plan.Limit
+	limit uint64
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
@@ -70,16 +39,38 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Limit) Copy() Operator {
-	return &Limit{this.base.copy(), this.plan}
+	return &Limit{this.base.copy(), this.plan, 0}
 }
 
 func (this *Limit) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Limit) processItem(item value.Value, context *Context, parent value.Value) bool {
-	return true
+func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
+	val, e := this.plan.Expression().Evaluate(parent, context)
+	if e != nil {
+		context.ErrorChannel() <- err.NewError(e, "Error evaluating LIMIT.")
+		return false
+	}
+
+	actual := val.Actual()
+	switch actual := actual.(type) {
+	case float64:
+		if math.Trunc(actual) == actual {
+			this.limit = uint64(actual)
+			return true
+		}
+	}
+
+	context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf("Invalid LIMIT value %v.", actual))
+	return false
 }
 
-func (this *Limit) afterItems(context *Context, parent value.Value) {
+func (this *Limit) processItem(item value.Value, context *Context, parent value.Value) bool {
+	if this.limit > 0 {
+		this.limit--
+		return this.sendItem(item)
+	} else {
+		return false
+	}
 }

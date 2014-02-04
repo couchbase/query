@@ -67,9 +67,6 @@ func (this *ComputeMerge) processItem(item value.Value, context *Context, parent
 	return true
 }
 
-func (this *ComputeMerge) afterItems(context *Context, parent value.Value) {
-}
-
 func NewMergeUpdate(plan *plan.MergeUpdate) *MergeUpdate {
 	rv := &MergeUpdate{
 		base: newBase(),
@@ -94,9 +91,6 @@ func (this *MergeUpdate) RunOnce(context *Context, parent value.Value) {
 
 func (this *MergeUpdate) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
-}
-
-func (this *MergeUpdate) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
@@ -125,9 +119,6 @@ func (this *MergeDelete) processItem(item value.Value, context *Context, parent 
 	return true
 }
 
-func (this *MergeDelete) afterItems(context *Context, parent value.Value) {
-}
-
 func NewMergeInsert(plan *plan.MergeInsert) *MergeInsert {
 	rv := &MergeInsert{
 		base: newBase(),
@@ -152,9 +143,6 @@ func (this *MergeInsert) RunOnce(context *Context, parent value.Value) {
 
 func (this *MergeInsert) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
-}
-
-func (this *MergeInsert) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSendMerge(plan *plan.SendMerge) *SendMerge {

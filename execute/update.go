@@ -64,9 +64,6 @@ func (this *Clone) processItem(item value.Value, context *Context, parent value.
 	return true
 }
 
-func (this *Clone) afterItems(context *Context, parent value.Value) {
-}
-
 func NewSet(plan *plan.Set) *Set {
 	rv := &Set{
 		base: newBase(),
@@ -91,9 +88,6 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 
 func (this *Set) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
-}
-
-func (this *Set) afterItems(context *Context, parent value.Value) {
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
@@ -122,9 +116,6 @@ func (this *Unset) processItem(item value.Value, context *Context, parent value.
 	return true
 }
 
-func (this *Unset) afterItems(context *Context, parent value.Value) {
-}
-
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
 	rv := &SendUpdate{
 		base: newBase(),
@@ -144,7 +135,6 @@ func (this *SendUpdate) Copy() Operator {
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
 }
 
 func (this *SendUpdate) processItem(item value.Value, context *Context, parent value.Value) bool {

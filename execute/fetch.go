@@ -46,6 +46,3 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 func (this *Fetch) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
-
-func (this *Fetch) afterItems(context *Context, parent value.Value) {
-}

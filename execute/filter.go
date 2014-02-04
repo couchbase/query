@@ -46,6 +46,3 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 func (this *Filter) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
-
-func (this *Filter) afterItems(context *Context, parent value.Value) {
-}

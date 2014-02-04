@@ -45,6 +45,3 @@ func (this *Precompute) RunOnce(context *Context, parent value.Value) {
 func (this *Precompute) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
-
-func (this *Precompute) afterItems(context *Context, parent value.Value) {
-}

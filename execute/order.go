@@ -43,6 +43,10 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *Order) beforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
 func (this *Order) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }

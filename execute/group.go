@@ -56,6 +56,10 @@ func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *InitialGroup) beforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
 func (this *InitialGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
@@ -85,6 +89,10 @@ func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *IntermediateGroup) beforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
 func (this *IntermediateGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
@@ -112,6 +120,10 @@ func (this *FinalGroup) Copy() Operator {
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+}
+
+func (this *FinalGroup) beforeItems(context *Context, parent value.Value) bool {
+	return true
 }
 
 func (this *FinalGroup) processItem(item value.Value, context *Context, parent value.Value) bool {

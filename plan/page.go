@@ -31,10 +31,18 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOffset(this)
 }
 
+func (this *Offset) Expression() algebra.Expression {
+	return this.expr
+}
+
 func NewLimit(expr algebra.Expression) *Limit {
 	return &Limit{expr}
 }
 
 func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLimit(this)
+}
+
+func (this *Limit) Expression() algebra.Expression {
+	return this.expr
 }

@@ -46,6 +46,10 @@ func (this *InitialDistinct) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *InitialDistinct) beforeItems(context *Context, parent value.Value) bool {
+	return true
+}
+
 func (this *InitialDistinct) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
 }
@@ -72,6 +76,10 @@ func (this *SubsequentDistinct) Copy() Operator {
 
 func (this *SubsequentDistinct) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+}
+
+func (this *SubsequentDistinct) beforeItems(context *Context, parent value.Value) bool {
+	return true
 }
 
 func (this *SubsequentDistinct) processItem(item value.Value, context *Context, parent value.Value) bool {

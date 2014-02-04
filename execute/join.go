@@ -57,9 +57,6 @@ func (this *Join) processItem(item value.Value, context *Context, parent value.V
 	return true
 }
 
-func (this *Join) afterItems(context *Context, parent value.Value) {
-}
-
 func NewNest(plan *plan.Nest) *Nest {
 	rv := &Nest{
 		base: newBase(),
@@ -86,9 +83,6 @@ func (this *Nest) processItem(item value.Value, context *Context, parent value.V
 	return true
 }
 
-func (this *Nest) afterItems(context *Context, parent value.Value) {
-}
-
 func NewUnnest(plan *plan.Unnest) *Unnest {
 	rv := &Unnest{
 		base: newBase(),
@@ -113,7 +107,4 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 
 func (this *Unnest) processItem(item value.Value, context *Context, parent value.Value) bool {
 	return true
-}
-
-func (this *Unnest) afterItems(context *Context, parent value.Value) {
 }
