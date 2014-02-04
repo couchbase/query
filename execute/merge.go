@@ -17,32 +17,35 @@ import (
 )
 
 type ComputeMerge struct {
-	operatorBase
+	base
 	plan *plan.ComputeMerge
 }
 
 type MergeUpdate struct {
-	operatorBase
+	base
 	plan *plan.MergeUpdate
 }
 
 type MergeDelete struct {
-	operatorBase
+	base
 	plan *plan.MergeDelete
 }
 
 type MergeInsert struct {
-	operatorBase
+	base
 	plan *plan.MergeInsert
 }
 
 type SendMerge struct {
-	operatorBase
+	base
 	plan *plan.SendMerge
 }
 
 func NewComputeMerge(plan *plan.ComputeMerge) *ComputeMerge {
-	return &ComputeMerge{plan: plan}
+	return &ComputeMerge{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *ComputeMerge) Accept(visitor Visitor) (interface{}, error) {
@@ -50,14 +53,25 @@ func (this *ComputeMerge) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ComputeMerge) Copy() Operator {
-	return &ComputeMerge{this.operatorBase.copy(), this.plan}
+	return &ComputeMerge{this.base.copy(), this.plan}
 }
 
-func (this *ComputeMerge) Run(context *Context, parent value.Value) {
+func (this *ComputeMerge) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *ComputeMerge) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *ComputeMerge) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeUpdate(plan *plan.MergeUpdate) *MergeUpdate {
-	return &MergeUpdate{plan: plan}
+	return &MergeUpdate{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
@@ -65,14 +79,25 @@ func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *MergeUpdate) Copy() Operator {
-	return &MergeUpdate{this.operatorBase.copy(), this.plan}
+	return &MergeUpdate{this.base.copy(), this.plan}
 }
 
-func (this *MergeUpdate) Run(context *Context, parent value.Value) {
+func (this *MergeUpdate) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *MergeUpdate) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *MergeUpdate) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
-	return &MergeDelete{plan: plan}
+	return &MergeDelete{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
@@ -80,14 +105,25 @@ func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *MergeDelete) Copy() Operator {
-	return &MergeDelete{this.operatorBase.copy(), this.plan}
+	return &MergeDelete{this.base.copy(), this.plan}
 }
 
-func (this *MergeDelete) Run(context *Context, parent value.Value) {
+func (this *MergeDelete) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *MergeDelete) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *MergeDelete) afterItems(context *Context, parent value.Value) {
 }
 
 func NewMergeInsert(plan *plan.MergeInsert) *MergeInsert {
-	return &MergeInsert{plan: plan}
+	return &MergeInsert{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
@@ -95,14 +131,25 @@ func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *MergeInsert) Copy() Operator {
-	return &MergeInsert{this.operatorBase.copy(), this.plan}
+	return &MergeInsert{this.base.copy(), this.plan}
 }
 
-func (this *MergeInsert) Run(context *Context, parent value.Value) {
+func (this *MergeInsert) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *MergeInsert) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *MergeInsert) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSendMerge(plan *plan.SendMerge) *SendMerge {
-	return &SendMerge{plan: plan}
+	return &SendMerge{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
@@ -110,8 +157,16 @@ func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendMerge) Copy() Operator {
-	return &SendMerge{this.operatorBase.copy(), this.plan}
+	return &SendMerge{this.base.copy(), this.plan}
 }
 
-func (this *SendMerge) Run(context *Context, parent value.Value) {
+func (this *SendMerge) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *SendMerge) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *SendMerge) afterItems(context *Context, parent value.Value) {
 }

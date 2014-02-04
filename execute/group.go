@@ -18,24 +18,27 @@ import (
 
 // Grouping of input data.
 type InitialGroup struct {
-	operatorBase
+	base
 	plan *plan.InitialGroup
 }
 
 // Grouping of groups. Recursable.
 type IntermediateGroup struct {
-	operatorBase
+	base
 	plan *plan.IntermediateGroup
 }
 
 // Compute DistinctCount() and Avg().
 type FinalGroup struct {
-	operatorBase
+	base
 	plan *plan.FinalGroup
 }
 
 func NewInitialGroup(plan *plan.InitialGroup) *InitialGroup {
-	return &InitialGroup{plan: plan}
+	return &InitialGroup{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -43,14 +46,25 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialGroup) Copy() Operator {
-	return &InitialGroup{this.operatorBase.copy(), this.plan}
+	return &InitialGroup{this.base.copy(), this.plan}
 }
 
-func (this *InitialGroup) Run(context *Context, parent value.Value) {
+func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *InitialGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *InitialGroup) afterItems(context *Context, parent value.Value) {
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
-	return &IntermediateGroup{plan: plan}
+	return &IntermediateGroup{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -58,14 +72,25 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntermediateGroup) Copy() Operator {
-	return &IntermediateGroup{this.operatorBase.copy(), this.plan}
+	return &IntermediateGroup{this.base.copy(), this.plan}
 }
 
-func (this *IntermediateGroup) Run(context *Context, parent value.Value) {
+func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *IntermediateGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *IntermediateGroup) afterItems(context *Context, parent value.Value) {
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
-	return &FinalGroup{plan: plan}
+	return &FinalGroup{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -73,8 +98,16 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalGroup) Copy() Operator {
-	return &FinalGroup{this.operatorBase.copy(), this.plan}
+	return &FinalGroup{this.base.copy(), this.plan}
 }
 
-func (this *FinalGroup) Run(context *Context, parent value.Value) {
+func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *FinalGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *FinalGroup) afterItems(context *Context, parent value.Value) {
 }

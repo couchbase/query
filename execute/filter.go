@@ -17,12 +17,15 @@ import (
 )
 
 type Filter struct {
-	operatorBase
+	base
 	plan *plan.Filter
 }
 
 func NewFilter(plan *plan.Filter) *Filter {
-	return &Filter{plan: plan}
+	return &Filter{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Filter) Copy() Operator {
-	return &Filter{this.operatorBase.copy(), this.plan}
+	return &Filter{this.base.copy(), this.plan}
 }
 
-func (this *Filter) Run(context *Context, parent value.Value) {
+func (this *Filter) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Filter) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Filter) afterItems(context *Context, parent value.Value) {
 }

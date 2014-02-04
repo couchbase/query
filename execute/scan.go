@@ -16,37 +16,86 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+type FullScan struct {
+	base
+	plan *plan.FullScan
+}
+
+type ParentScan struct {
+	base
+	plan *plan.ParentScan
+}
+
 type EqualScan struct {
-	operatorBase
+	base
 	plan *plan.EqualScan
 }
 
 type RangeScan struct {
-	operatorBase
+	base
 	plan *plan.RangeScan
 }
 
 type DualScan struct {
-	operatorBase
+	base
 	plan *plan.DualScan
 }
 
 type KeyScan struct {
-	operatorBase
+	base
 	plan *plan.KeyScan
 }
 
 type ValueScan struct {
-	operatorBase
+	base
 	plan *plan.ValueScan
 }
 
 type DummyScan struct {
-	operatorBase
+	base
+}
+
+func NewFullScan(plan *plan.FullScan) *FullScan {
+	return &FullScan{
+		base: newBase(),
+		plan: plan,
+	}
+}
+
+func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFullScan(this)
+}
+
+func (this *FullScan) Copy() Operator {
+	return &FullScan{this.base.copy(), this.plan}
+}
+
+func (this *FullScan) RunOnce(context *Context, parent value.Value) {
+}
+
+func NewParentScan(plan *plan.ParentScan) *ParentScan {
+	return &ParentScan{
+		base: newBase(),
+		plan: plan,
+	}
+}
+
+func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParentScan(this)
+}
+
+func (this *ParentScan) Copy() Operator {
+	return &ParentScan{this.base.copy(), this.plan}
+}
+
+func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewEqualScan(plan *plan.EqualScan) *EqualScan {
-	return &EqualScan{plan: plan}
+	return &EqualScan{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
@@ -54,14 +103,17 @@ func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *EqualScan) Copy() Operator {
-	return &EqualScan{this.operatorBase.copy(), this.plan}
+	return &EqualScan{this.base.copy(), this.plan}
 }
 
-func (this *EqualScan) Run(context *Context, parent value.Value) {
+func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewRangeScan(plan *plan.RangeScan) *RangeScan {
-	return &RangeScan{plan: plan}
+	return &RangeScan{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
@@ -69,14 +121,17 @@ func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *RangeScan) Copy() Operator {
-	return &RangeScan{this.operatorBase.copy(), this.plan}
+	return &RangeScan{this.base.copy(), this.plan}
 }
 
-func (this *RangeScan) Run(context *Context, parent value.Value) {
+func (this *RangeScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewDualScan(plan *plan.DualScan) *DualScan {
-	return &DualScan{plan: plan}
+	return &DualScan{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
@@ -84,14 +139,17 @@ func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DualScan) Copy() Operator {
-	return &DualScan{this.operatorBase.copy(), this.plan}
+	return &DualScan{this.base.copy(), this.plan}
 }
 
-func (this *DualScan) Run(context *Context, parent value.Value) {
+func (this *DualScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewKeyScan(plan *plan.KeyScan) *KeyScan {
-	return &KeyScan{plan: plan}
+	return &KeyScan{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -99,14 +157,17 @@ func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *KeyScan) Copy() Operator {
-	return &KeyScan{this.operatorBase.copy(), this.plan}
+	return &KeyScan{this.base.copy(), this.plan}
 }
 
-func (this *KeyScan) Run(context *Context, parent value.Value) {
+func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewValueScan(plan *plan.ValueScan) *ValueScan {
-	return &ValueScan{plan: plan}
+	return &ValueScan{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
@@ -114,14 +175,16 @@ func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ValueScan) Copy() Operator {
-	return &ValueScan{this.operatorBase.copy(), this.plan}
+	return &ValueScan{this.base.copy(), this.plan}
 }
 
-func (this *ValueScan) Run(context *Context, parent value.Value) {
+func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func NewDummyScan() *DummyScan {
-	return &DummyScan{}
+	return &DummyScan{
+		base: newBase(),
+	}
 }
 
 func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -129,8 +192,8 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyScan) Copy() Operator {
-	return &DummyScan{this.operatorBase.copy()}
+	return &DummyScan{this.base.copy()}
 }
 
-func (this *DummyScan) Run(context *Context, parent value.Value) {
+func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 }

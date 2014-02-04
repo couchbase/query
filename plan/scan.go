@@ -31,6 +31,16 @@ type Dual struct {
 
 type DualList []*Dual
 
+type FullScan struct {
+	bucket catalog.Bucket
+}
+
+// For subqueries.
+type ParentScan struct {
+	project algebra.Path
+	as      string
+}
+
 type EqualScan struct {
 	index  catalog.EqualIndex
 	equals algebra.ExpressionList
@@ -57,6 +67,22 @@ type ValueScan struct {
 
 // Generates a single empty object. Used if there is no FROM clause.
 type DummyScan struct {
+}
+
+func NewFullScan(bucket catalog.Bucket) *FullScan {
+	return &FullScan{bucket}
+}
+
+func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFullScan(this)
+}
+
+func NewParentScan(project algebra.Path, as string) *ParentScan {
+	return &ParentScan{project, as}
+}
+
+func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParentScan(this)
 }
 
 func NewEqualScan(index catalog.EqualIndex, equals algebra.ExpressionList) *EqualScan {

@@ -17,12 +17,15 @@ import (
 )
 
 type Parallel struct {
-	operatorBase
+	base
 	plan *plan.Parallel
 }
 
 func NewParallel(plan *plan.Parallel) *Parallel {
-	return &Parallel{plan: plan}
+	return &Parallel{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,8 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Parallel) Copy() Operator {
-	return &Parallel{this.operatorBase.copy(), this.plan}
+	return &Parallel{this.base.copy(), this.plan}
 }
 
-func (this *Parallel) Run(context *Context, parent value.Value) {
+func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 }

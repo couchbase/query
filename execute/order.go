@@ -17,12 +17,15 @@ import (
 )
 
 type Order struct {
-	operatorBase
+	base
 	plan *plan.Order
 }
 
 func NewOrder(plan *plan.Order) *Order {
-	return &Order{plan: plan}
+	return &Order{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Order) Copy() Operator {
-	return &Order{this.operatorBase.copy(), this.plan}
+	return &Order{this.base.copy(), this.plan}
 }
 
-func (this *Order) Run(context *Context, parent value.Value) {
+func (this *Order) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Order) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Order) afterItems(context *Context, parent value.Value) {
 }

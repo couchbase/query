@@ -18,29 +18,31 @@ import (
 
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
-	operatorBase
+	base
 }
 
 // Write to copy
 type Set struct {
-	operatorBase
+	base
 	plan *plan.Set
 }
 
 // Write to copy
 type Unset struct {
-	operatorBase
+	base
 	plan *plan.Unset
 }
 
 // Send to bucket
 type SendUpdate struct {
-	operatorBase
+	base
 	plan *plan.SendUpdate
 }
 
 func NewClone() *Clone {
-	return &Clone{}
+	return &Clone{
+		base: newBase(),
+	}
 }
 
 func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
@@ -48,14 +50,25 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Clone) Copy() Operator {
-	return &Clone{this.operatorBase.copy()}
+	return &Clone{this.base.copy()}
 }
 
-func (this *Clone) Run(context *Context, parent value.Value) {
+func (this *Clone) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Clone) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Clone) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSet(plan *plan.Set) *Set {
-	return &Set{plan: plan}
+	return &Set{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Set) Accept(visitor Visitor) (interface{}, error) {
@@ -63,14 +76,25 @@ func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Set) Copy() Operator {
-	return &Set{this.operatorBase.copy(), this.plan}
+	return &Set{this.base.copy(), this.plan}
 }
 
-func (this *Set) Run(context *Context, parent value.Value) {
+func (this *Set) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Set) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Set) afterItems(context *Context, parent value.Value) {
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
-	return &Unset{plan: plan}
+	return &Unset{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
@@ -78,14 +102,25 @@ func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Unset) Copy() Operator {
-	return &Unset{this.operatorBase.copy(), this.plan}
+	return &Unset{this.base.copy(), this.plan}
 }
 
-func (this *Unset) Run(context *Context, parent value.Value) {
+func (this *Unset) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Unset) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Unset) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
-	return &SendUpdate{plan: plan}
+	return &SendUpdate{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
@@ -93,8 +128,16 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendUpdate) Copy() Operator {
-	return &SendUpdate{this.operatorBase.copy(), this.plan}
+	return &SendUpdate{this.base.copy(), this.plan}
 }
 
-func (this *SendUpdate) Run(context *Context, parent value.Value) {
+func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *SendUpdate) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *SendUpdate) afterItems(context *Context, parent value.Value) {
 }

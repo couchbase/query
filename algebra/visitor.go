@@ -19,6 +19,7 @@ type Visitor interface {
 
 	// FromTerm
 	VisitBucketTerm(node *BucketTerm) (interface{}, error)
+	VisitParentTerm(node *ParentTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)

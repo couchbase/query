@@ -36,6 +36,14 @@ type Builder struct {
 }
 
 // Scan
+func (this *Builder) VisitFullScan(plan *plan.FullScan) (interface{}, error) {
+	return NewFullScan(plan), nil
+}
+
+func (this *Builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
+	return NewParentScan(plan), nil
+}
+
 func (this *Builder) VisitEqualScan(plan *plan.EqualScan) (interface{}, error) {
 	return NewEqualScan(plan), nil
 }

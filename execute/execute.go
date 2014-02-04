@@ -9,53 +9,28 @@
 
 /*
 
-Package execute provides query execution.
+Package execute provides query execution. The execution is
+data-parallel to the extent possible.
 
 */
 package execute
 
 import (
-	_ "fmt"
-
-	_ "github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
 
+type StopChannel chan int
+
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
-	Source() Operator
-	SetSource(source Operator)
-	Handle() *Handle
-	SetHandle(handle *Handle)
-	Copy() Operator
-	Run(context *Context, parent value.Value)
-}
-
-type Handle struct {
-	Chan value.ValueChannel
-}
-
-type operatorBase struct {
-	source Operator
-	handle *Handle
-}
-
-func (this *operatorBase) Source() Operator {
-	return this.source
-}
-
-func (this *operatorBase) SetSource(source Operator) {
-	this.source = source
-}
-
-func (this *operatorBase) Handle() *Handle {
-	return this.handle
-}
-
-func (this *operatorBase) SetHandle(handle *Handle) {
-	this.handle = handle
-}
-
-func (this *operatorBase) copy() operatorBase {
-	return operatorBase{this.source, this.handle}
+	ItemChannel() value.ValueChannel              // Closed by this operator
+	StopChannel() StopChannel                     // Never closed, just garbage-collected
+	Input() Operator                              // Read by this operator
+	SetInput(op Operator)                         // Can be set
+	Output() Operator                             // Written by this operator
+	SetOutput(op Operator)                        // Can be set
+	Stop() Operator                               // Notified when this operator stops
+	SetStop(op Operator)                          // Can be set
+	Copy() Operator                               // Keep input/output/stop, but make new item and stop channels
+	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once
 }

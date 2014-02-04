@@ -17,16 +17,18 @@ import (
 
 // Distincting of input data.
 type InitialDistinct struct {
-	operatorBase
+	base
 }
 
 // Distincting of distincts. Recursable.
 type SubsequentDistinct struct {
-	operatorBase
+	base
 }
 
 func NewInitialDistinct() *InitialDistinct {
-	return &InitialDistinct{}
+	return &InitialDistinct{
+		base: newBase(),
+	}
 }
 
 func (this *InitialDistinct) Accept(visitor Visitor) (interface{}, error) {
@@ -34,14 +36,24 @@ func (this *InitialDistinct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialDistinct) Copy() Operator {
-	return &InitialDistinct{this.operatorBase.copy()}
+	return &InitialDistinct{this.base.copy()}
 }
 
-func (this *InitialDistinct) Run(context *Context, parent value.Value) {
+func (this *InitialDistinct) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *InitialDistinct) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *InitialDistinct) afterItems(context *Context, parent value.Value) {
 }
 
 func NewSubsequentDistinct() *SubsequentDistinct {
-	return &SubsequentDistinct{}
+	return &SubsequentDistinct{
+		base: newBase(),
+	}
 }
 
 func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {
@@ -49,8 +61,16 @@ func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SubsequentDistinct) Copy() Operator {
-	return &SubsequentDistinct{this.operatorBase.copy()}
+	return &SubsequentDistinct{this.base.copy()}
 }
 
-func (this *SubsequentDistinct) Run(context *Context, parent value.Value) {
+func (this *SubsequentDistinct) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *SubsequentDistinct) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *SubsequentDistinct) afterItems(context *Context, parent value.Value) {
 }

@@ -17,12 +17,15 @@ import (
 )
 
 type Project struct {
-	operatorBase
+	base
 	plan *plan.Project
 }
 
 func NewProject(plan *plan.Project) *Project {
-	return &Project{plan: plan}
+	return &Project{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Project) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *Project) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Project) Copy() Operator {
-	return &Project{this.operatorBase.copy(), this.plan}
+	return &Project{this.base.copy(), this.plan}
 }
 
-func (this *Project) Run(context *Context, parent value.Value) {
+func (this *Project) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Project) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Project) afterItems(context *Context, parent value.Value) {
 }

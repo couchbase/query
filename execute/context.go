@@ -24,19 +24,21 @@ type Context struct {
 	now       time.Time
 	arguments map[string]value.Value
 
-	warnchan err.ErrorChannel
-	errchan  err.ErrorChannel
+	warningChannel err.ErrorChannel
+	errorChannel   err.ErrorChannel
 
-	subplans *subplanMap
+	subplans   *subqueryMap
+	subresults *subqueryMap
 }
 
 func NewContext() *Context {
 	rv := &Context{}
 	rv.now = time.Now()
 	rv.arguments = make(map[string]value.Value)
-	rv.warnchan = make(err.ErrorChannel)
-	rv.errchan = make(err.ErrorChannel)
-	rv.subplans = newSubplanMap()
+	rv.warningChannel = make(err.ErrorChannel)
+	rv.errorChannel = make(err.ErrorChannel)
+	rv.subplans = newSubqueryMap()
+	rv.subresults = newSubqueryMap()
 	return rv
 }
 
@@ -53,18 +55,23 @@ func (this *Context) Argument(parameter string) value.Value {
 	return val
 }
 
-func (this *Context) Warnchan() err.ErrorChannel {
-	return this.warnchan
+func (this *Context) WarningChannel() err.ErrorChannel {
+	return this.warningChannel
 }
 
-func (this *Context) Errchan() err.ErrorChannel {
-	return this.errchan
+func (this *Context) ErrorChannel() err.ErrorChannel {
+	return this.errorChannel
 }
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
-	subplan, ok := this.subplans.get(query)
+	subresult, ok := this.subresults.get(query)
+	if ok {
+		return subresult.(value.Value), nil
+	}
 
-	if !ok {
+	subplan, planFound := this.subplans.get(query)
+
+	if !planFound {
 		var err error
 		subplan, err = plan.Plan(query)
 		if err != nil {
@@ -74,37 +81,42 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		this.subplans.set(query, subplan)
 	}
 
-	pipeline, err := Build(subplan)
+	pipeline, err := Build(subplan.(plan.Operator))
 	if err != nil {
 		return nil, err
 	}
 
-	pipeline.Run(this, parent)
+	pipeline.RunOnce(this, parent)
+	var results value.Value = nil // FIXME
 
-	return nil, nil
+	if !planFound && !query.IsCorrelated() {
+		this.subresults.set(query, results)
+	}
+
+	return results, nil
 }
 
-// Synchronized access to subplans
-type subplanMap struct {
-	mutex    sync.RWMutex
-	subplans map[*algebra.Select]plan.Operator
+// Mutex-synchronized map
+type subqueryMap struct {
+	mutex   sync.RWMutex
+	entries map[*algebra.Select]interface{}
 }
 
-func newSubplanMap() *subplanMap {
-	rv := &subplanMap{}
-	rv.subplans = make(map[*algebra.Select]plan.Operator)
+func newSubqueryMap() *subqueryMap {
+	rv := &subqueryMap{}
+	rv.entries = make(map[*algebra.Select]interface{})
 	return rv
 }
 
-func (this *subplanMap) get(key *algebra.Select) (plan.Operator, bool) {
+func (this *subqueryMap) get(key *algebra.Select) (interface{}, bool) {
 	this.mutex.RLock()
-	rv, ok := this.subplans[key]
+	rv, ok := this.entries[key]
 	this.mutex.RUnlock()
 	return rv, ok
 }
 
-func (this *subplanMap) set(key *algebra.Select, value plan.Operator) {
+func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
 	this.mutex.Lock()
-	this.subplans[key] = value
+	this.entries[key] = value
 	this.mutex.Unlock()
 }

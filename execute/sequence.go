@@ -17,12 +17,15 @@ import (
 )
 
 type Sequence struct {
-	operatorBase
+	base
 	plan *plan.Sequence
 }
 
 func NewSequence(plan *plan.Sequence) *Sequence {
-	return &Sequence{plan: plan}
+	return &Sequence{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,8 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
-	return &Sequence{this.operatorBase.copy(), this.plan}
+	return &Sequence{this.base.copy(), this.plan}
 }
 
-func (this *Sequence) Run(context *Context, parent value.Value) {
+func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 }

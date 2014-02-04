@@ -17,12 +17,15 @@ import (
 )
 
 type SendDelete struct {
-	operatorBase
+	base
 	plan *plan.SendDelete
 }
 
 func NewSendDelete(plan *plan.SendDelete) *SendDelete {
-	return &SendDelete{plan: plan}
+	return &SendDelete{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendDelete) Copy() Operator {
-	return &SendDelete{this.operatorBase.copy(), this.plan}
+	return &SendDelete{this.base.copy(), this.plan}
 }
 
-func (this *SendDelete) Run(context *Context, parent value.Value) {
+func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *SendDelete) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *SendDelete) afterItems(context *Context, parent value.Value) {
 }

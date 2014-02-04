@@ -17,12 +17,15 @@ import (
 )
 
 type SendInsert struct {
-	operatorBase
+	base
 	plan *plan.SendInsert
 }
 
 func NewSendInsert(plan *plan.SendInsert) *SendInsert {
-	return &SendInsert{plan: plan}
+	return &SendInsert{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendInsert) Copy() Operator {
-	return &SendInsert{this.operatorBase.copy(), this.plan}
+	return &SendInsert{this.base.copy(), this.plan}
 }
 
-func (this *SendInsert) Run(context *Context, parent value.Value) {
+func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *SendInsert) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *SendInsert) afterItems(context *Context, parent value.Value) {
 }

@@ -15,6 +15,8 @@ import (
 
 type Visitor interface {
 	// Scan
+	VisitFullScan(op *FullScan) (interface{}, error)
+	VisitParentScan(op *ParentScan) (interface{}, error)
 	VisitEqualScan(op *EqualScan) (interface{}, error)
 	VisitRangeScan(op *RangeScan) (interface{}, error)
 	VisitDualScan(op *DualScan) (interface{}, error)

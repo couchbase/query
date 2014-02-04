@@ -42,6 +42,10 @@ func (this *Planner) VisitBucketTerm(node *algebra.BucketTerm) (interface{}, err
 	return nil, nil
 }
 
+func (this *Planner) VisitParentTerm(node *algebra.ParentTerm) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *Planner) VisitJoin(node *algebra.Join) (interface{}, error) {
 	return nil, nil
 }

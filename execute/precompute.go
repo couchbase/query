@@ -17,12 +17,15 @@ import (
 )
 
 type Precompute struct {
-	operatorBase
+	base
 	plan *plan.Precompute
 }
 
 func NewPrecompute(plan *plan.Precompute) *Precompute {
-	return &Precompute{plan: plan}
+	return &Precompute{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Precompute) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,15 @@ func (this *Precompute) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Precompute) Copy() Operator {
-	return &Precompute{this.operatorBase.copy(), this.plan}
+	return &Precompute{this.base.copy(), this.plan}
 }
 
-func (this *Precompute) Run(context *Context, parent value.Value) {
+func (this *Precompute) RunOnce(context *Context, parent value.Value) {
+}
+
+func (this *Precompute) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Precompute) afterItems(context *Context, parent value.Value) {
 }

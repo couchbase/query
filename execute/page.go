@@ -17,17 +17,20 @@ import (
 )
 
 type Offset struct {
-	operatorBase
+	base
 	plan *plan.Offset
 }
 
 type Limit struct {
-	operatorBase
+	base
 	plan *plan.Limit
 }
 
 func NewOffset(plan *plan.Offset) *Offset {
-	return &Offset{plan: plan}
+	return &Offset{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
@@ -35,14 +38,25 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Offset) Copy() Operator {
-	return &Offset{this.operatorBase.copy(), this.plan}
+	return &Offset{this.base.copy(), this.plan}
 }
 
-func (this *Offset) Run(context *Context, parent value.Value) {
+func (this *Offset) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Offset) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Offset) afterItems(context *Context, parent value.Value) {
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
-	return &Limit{plan: plan}
+	return &Limit{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
@@ -50,8 +64,16 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Limit) Copy() Operator {
-	return &Limit{this.operatorBase.copy(), this.plan}
+	return &Limit{this.base.copy(), this.plan}
 }
 
-func (this *Limit) Run(context *Context, parent value.Value) {
+func (this *Limit) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Limit) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Limit) afterItems(context *Context, parent value.Value) {
 }

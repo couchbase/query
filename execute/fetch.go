@@ -17,12 +17,15 @@ import (
 )
 
 type Fetch struct {
-	operatorBase
+	base
 	plan *plan.Fetch
 }
 
 func NewFetch(plan *plan.Fetch) *Fetch {
-	return &Fetch{plan: plan}
+	return &Fetch{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
@@ -30,8 +33,16 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	return &Fetch{this.operatorBase.copy(), this.plan}
+	return &Fetch{this.base.copy(), this.plan}
 }
 
-func (this *Fetch) Run(context *Context, parent value.Value) {
+func (this *Fetch) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Fetch) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Fetch) afterItems(context *Context, parent value.Value) {
 }

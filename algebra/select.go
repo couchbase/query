@@ -28,8 +28,7 @@ type Select struct {
 
 type FromTerm interface {
 	Node
-
-	PrimaryTerm() *BucketTerm
+	PrimaryTerm() FromTerm
 }
 
 type BucketTerm struct {
@@ -38,6 +37,31 @@ type BucketTerm struct {
 	project Path
 	as      string
 	keys    Expression
+}
+
+// For subqueries.
+type ParentTerm struct {
+	project Path
+	as      string
+}
+
+type Join struct {
+	left  FromTerm
+	outer bool
+	right *BucketTerm
+}
+
+type Nest struct {
+	left  FromTerm
+	outer bool
+	right *BucketTerm
+}
+
+type Unnest struct {
+	left       FromTerm
+	outer      bool
+	projection Path
+	as         string
 }
 
 func NewSelect(from FromTerm, where Expression, group ExpressionList,
@@ -64,14 +88,20 @@ func (this *BucketTerm) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitBucketTerm(this)
 }
 
-func (this *BucketTerm) PrimaryTerm() *BucketTerm {
+func (this *BucketTerm) PrimaryTerm() FromTerm {
 	return this
 }
 
-type Join struct {
-	left  FromTerm
-	outer bool
-	right *BucketTerm
+func NewParentTerm(project Path, as string) *ParentTerm {
+	return &ParentTerm{project, as}
+}
+
+func (this *ParentTerm) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParentTerm(this)
+}
+
+func (this *ParentTerm) PrimaryTerm() FromTerm {
+	return this
 }
 
 func NewJoin(left FromTerm, outer bool, right *BucketTerm) *Join {
@@ -82,14 +112,8 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
-func (this *Join) PrimaryTerm() *BucketTerm {
+func (this *Join) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
-}
-
-type Nest struct {
-	left  FromTerm
-	outer bool
-	right *BucketTerm
 }
 
 func NewNest(left FromTerm, outer bool, right *BucketTerm) *Nest {
@@ -100,15 +124,8 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
-func (this *Nest) PrimaryTerm() *BucketTerm {
+func (this *Nest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
-}
-
-type Unnest struct {
-	left       FromTerm
-	outer      bool
-	projection Path
-	as         string
 }
 
 func NewUnnest(left FromTerm, outer bool, projection Path, as string) *Unnest {
@@ -119,7 +136,7 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
 }
 
-func (this *Unnest) PrimaryTerm() *BucketTerm {
+func (this *Unnest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
 

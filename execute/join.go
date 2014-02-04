@@ -17,22 +17,25 @@ import (
 )
 
 type Join struct {
-	operatorBase
+	base
 	plan *plan.Join
 }
 
 type Nest struct {
-	operatorBase
+	base
 	plan *plan.Nest
 }
 
 type Unnest struct {
-	operatorBase
+	base
 	plan *plan.Unnest
 }
 
 func NewJoin(plan *plan.Join) *Join {
-	return &Join{plan: plan}
+	return &Join{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -40,14 +43,25 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Join) Copy() Operator {
-	return &Join{this.operatorBase.copy(), this.plan}
+	return &Join{this.base.copy(), this.plan}
 }
 
-func (this *Join) Run(context *Context, parent value.Value) {
+func (this *Join) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Join) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Join) afterItems(context *Context, parent value.Value) {
 }
 
 func NewNest(plan *plan.Nest) *Nest {
-	return &Nest{plan: plan}
+	return &Nest{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
@@ -55,14 +69,25 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Nest) Copy() Operator {
-	return &Nest{this.operatorBase.copy(), this.plan}
+	return &Nest{this.base.copy(), this.plan}
 }
 
-func (this *Nest) Run(context *Context, parent value.Value) {
+func (this *Nest) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Nest) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Nest) afterItems(context *Context, parent value.Value) {
 }
 
 func NewUnnest(plan *plan.Unnest) *Unnest {
-	return &Unnest{plan: plan}
+	return &Unnest{
+		base: newBase(),
+		plan: plan,
+	}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
@@ -70,8 +95,16 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Unnest) Copy() Operator {
-	return &Unnest{this.operatorBase.copy(), this.plan}
+	return &Unnest{this.base.copy(), this.plan}
 }
 
-func (this *Unnest) Run(context *Context, parent value.Value) {
+func (this *Unnest) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *Unnest) processItem(item value.Value, context *Context, parent value.Value) bool {
+	return true
+}
+
+func (this *Unnest) afterItems(context *Context, parent value.Value) {
 }
