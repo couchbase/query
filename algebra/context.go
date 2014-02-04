@@ -22,7 +22,7 @@ type Context interface {
 	Argument(parameter string) value.Value
 
 	WarningChannel() err.ErrorChannel
-	Errorchannel() err.ErrorChannel
+	ErrorChannel() err.ErrorChannel
 
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

@@ -41,7 +41,7 @@ func (this *Builder) VisitFullScan(plan *plan.FullScan) (interface{}, error) {
 }
 
 func (this *Builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
-	return NewParentScan(plan), nil
+	return NewParentScan(), nil
 }
 
 func (this *Builder) VisitEqualScan(plan *plan.EqualScan) (interface{}, error) {
@@ -91,7 +91,7 @@ func (this *Builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		children[i] = child.(Operator)
 	}
 
-	return NewSequence(children), nil
+	return NewSequence(children...), nil
 }
 
 // Fetch

@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package execute
 
 import (
 	_ "fmt"
@@ -15,21 +15,33 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+type DummyScan struct {
+	base
 }
 
-type ExpressionList []Expression
+func NewDummyScan() *DummyScan {
+	rv := &DummyScan{
+		base: newBase(),
+	}
 
-type Path interface {
-	Expression
-	Alias() string
+	rv.output = rv
+	return rv
+}
+
+func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDummyScan(this)
+}
+
+func (this *DummyScan) Copy() Operator {
+	return &DummyScan{this.base.copy()}
+}
+
+func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+
+		cv := value.NewCorrelatedValue(parent)
+		av := value.NewAnnotatedValue(cv)
+		this.output.ItemChannel() <- av
+	})
 }

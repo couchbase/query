@@ -16,6 +16,52 @@ import (
 	"github.com/couchbaselabs/query/catalog"
 )
 
+// bucketScan is common to scans that read a bucket.
+type bucketScan struct {
+	term *algebra.BucketTerm
+}
+
+func (this *bucketScan) Term() *algebra.BucketTerm {
+	return this.term
+}
+
+func (this *bucketScan) Alias() string {
+	return this.term.Alias()
+}
+
+type FullScan struct {
+	bucketScan
+	bucket catalog.Bucket
+}
+
+func NewFullScan(term *algebra.BucketTerm, bucket catalog.Bucket) *FullScan {
+	return &FullScan{bucketScan{term}, bucket}
+}
+
+func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFullScan(this)
+}
+
+type EqualScan struct {
+	bucketScan
+	index  catalog.EqualIndex
+	equals algebra.ExpressionList
+}
+
+func NewEqualScan(term *algebra.BucketTerm, index catalog.EqualIndex, equals algebra.ExpressionList) *EqualScan {
+	return &EqualScan{bucketScan{term}, index, equals}
+}
+
+func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitEqualScan(this)
+}
+
+type RangeScan struct {
+	bucketScan
+	index  catalog.RangeIndex
+	ranges RangeList
+}
+
 type Range struct {
 	Low       algebra.ExpressionList
 	High      algebra.ExpressionList
@@ -24,6 +70,20 @@ type Range struct {
 
 type RangeList []*Range
 
+func NewRangeScan(term *algebra.BucketTerm, index catalog.RangeIndex, ranges RangeList) *RangeScan {
+	return &RangeScan{bucketScan{term}, index, ranges}
+}
+
+func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitRangeScan(this)
+}
+
+type DualScan struct {
+	bucketScan
+	index catalog.DualIndex
+	duals DualList
+}
+
 type Dual struct {
 	equal  algebra.Expression
 	ranges RangeList
@@ -31,90 +91,47 @@ type Dual struct {
 
 type DualList []*Dual
 
-type FullScan struct {
-	bucket catalog.Bucket
-}
-
-// For subqueries.
-type ParentScan struct {
-	project algebra.Path
-	as      string
-}
-
-type EqualScan struct {
-	index  catalog.EqualIndex
-	equals algebra.ExpressionList
-}
-
-type RangeScan struct {
-	index  catalog.RangeIndex
-	ranges RangeList
-}
-
-type DualScan struct {
-	index catalog.DualIndex
-	duals DualList
-}
-
-type KeyScan struct {
-	bucket catalog.Bucket
-	keys   algebra.Expression
-}
-
-type ValueScan struct {
-	values algebra.Expression
-}
-
-// Generates a single empty object. Used if there is no FROM clause.
-type DummyScan struct {
-}
-
-func NewFullScan(bucket catalog.Bucket) *FullScan {
-	return &FullScan{bucket}
-}
-
-func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFullScan(this)
-}
-
-func NewParentScan(project algebra.Path, as string) *ParentScan {
-	return &ParentScan{project, as}
-}
-
-func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitParentScan(this)
-}
-
-func NewEqualScan(index catalog.EqualIndex, equals algebra.ExpressionList) *EqualScan {
-	return &EqualScan{index, equals}
-}
-
-func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitEqualScan(this)
-}
-
-func NewRangeScan(index catalog.RangeIndex, ranges RangeList) *RangeScan {
-	return &RangeScan{index, ranges}
-}
-
-func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitRangeScan(this)
-}
-
-func NewDualScan(index catalog.DualIndex, duals DualList) *DualScan {
-	return &DualScan{index, duals}
+func NewDualScan(term *algebra.BucketTerm, index catalog.DualIndex, duals DualList) *DualScan {
+	return &DualScan{bucketScan{term}, index, duals}
 }
 
 func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDualScan(this)
 }
 
-func NewKeyScan(bucket catalog.Bucket, keys algebra.Expression) *KeyScan {
-	return &KeyScan{bucket, keys}
+// KeyScan is used for KEYS clauses (except after JOIN / NEST).
+type KeyScan struct {
+	bucketScan
+	bucket catalog.Bucket
+}
+
+func NewKeyScan(term *algebra.BucketTerm, bucket catalog.Bucket) *KeyScan {
+	return &KeyScan{bucketScan{term}, bucket}
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyScan(this)
+}
+
+// ParentScan is used for UNNEST subqueries.
+type ParentScan struct {
+}
+
+func NewParentScan() *ParentScan {
+	return &ParentScan{}
+}
+
+func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitParentScan(this)
+}
+
+// ValueScan is used for VALUES clauses, e.g. in INSERTs.
+type ValueScan struct {
+	values algebra.Expression
+}
+
+// DummyScan is used for SELECTs with no FROM clause.
+type DummyScan struct {
 }
 
 func NewValueScan(values algebra.Expression) *ValueScan {
@@ -123,6 +140,10 @@ func NewValueScan(values algebra.Expression) *ValueScan {
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitValueScan(this)
+}
+
+func (this *ValueScan) Values() algebra.Expression {
+	return this.values
 }
 
 func NewDummyScan() *DummyScan {

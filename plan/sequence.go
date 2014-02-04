@@ -17,7 +17,7 @@ type Sequence struct {
 	children []Operator
 }
 
-func NewSequence(children []Operator) *Sequence {
+func NewSequence(children ...Operator) *Sequence {
 	return &Sequence{children}
 }
 

@@ -7,29 +7,37 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package execute
 
 import (
 	_ "fmt"
 
+	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+type DualScan struct {
+	base
+	plan *plan.DualScan
 }
 
-type ExpressionList []Expression
+func NewDualScan(plan *plan.DualScan) *DualScan {
+	rv := &DualScan{
+		base: newBase(),
+		plan: plan,
+	}
 
-type Path interface {
-	Expression
-	Alias() string
+	rv.output = rv
+	return rv
+}
+
+func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDualScan(this)
+}
+
+func (this *DualScan) Copy() Operator {
+	return &DualScan{this.base.copy(), this.plan}
+}
+
+func (this *DualScan) RunOnce(context *Context, parent value.Value) {
 }

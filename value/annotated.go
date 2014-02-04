@@ -42,14 +42,14 @@ type annotatedValue struct {
 func (this *annotatedValue) Copy() Value {
 	return &annotatedValue{
 		Value:    this.Value.Copy(),
-		attacher: attacher{this.attacher.attachments},
+		attacher: attacher{copyMap(this.attacher.attachments, self)},
 	}
 }
 
 func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
 		Value:    this.Value.CopyForUpdate(),
-		attacher: attacher{this.attacher.attachments},
+		attacher: attacher{copyMap(this.attacher.attachments, self)},
 	}
 }
 
@@ -75,8 +75,9 @@ func (this *attacher) SetAttachment(key string, val interface{}) {
 	this.attachments[key] = val
 }
 
-// Remove an object attached to this Value with this key.
-// If there had been an object attached to this Value with this key it is returned, otherwise nil.
+// Remove an object attached to this Value with this key.  If there
+// had been an object attached to this Value with this key it is
+// returned, otherwise nil.
 func (this *attacher) RemoveAttachment(key string) interface{} {
 	var rv interface{}
 	if this.attachments != nil {

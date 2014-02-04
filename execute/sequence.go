@@ -20,7 +20,7 @@ type Sequence struct {
 	children []Operator
 }
 
-func NewSequence(children []Operator) *Sequence {
+func NewSequence(children ...Operator) *Sequence {
 	rv := &Sequence{
 		base:     newBase(),
 		children: children,

@@ -29,6 +29,7 @@ type Select struct {
 type FromTerm interface {
 	Node
 	PrimaryTerm() FromTerm
+	Alias() string
 }
 
 type BucketTerm struct {
@@ -58,10 +59,10 @@ type Nest struct {
 }
 
 type Unnest struct {
-	left       FromTerm
-	outer      bool
-	projection Path
-	as         string
+	left    FromTerm
+	outer   bool
+	project Path
+	as      string
 }
 
 func NewSelect(from FromTerm, where Expression, group ExpressionList,
@@ -92,6 +93,20 @@ func (this *BucketTerm) PrimaryTerm() FromTerm {
 	return this
 }
 
+func (this *BucketTerm) Alias() string {
+	if len(this.as) > 0 {
+		return this.as
+	} else if this.project != nil {
+		return this.project.Alias()
+	} else {
+		return this.bucket
+	}
+}
+
+func (this *BucketTerm) Keys() Expression {
+	return this.keys
+}
+
 func NewParentTerm(project Path, as string) *ParentTerm {
 	return &ParentTerm{project, as}
 }
@@ -102,6 +117,10 @@ func (this *ParentTerm) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *ParentTerm) PrimaryTerm() FromTerm {
 	return this
+}
+
+func (this *ParentTerm) Alias() string {
+	return this.as
 }
 
 func NewJoin(left FromTerm, outer bool, right *BucketTerm) *Join {
@@ -116,6 +135,10 @@ func (this *Join) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
 
+func (this *Join) Alias() string {
+	return this.right.Alias()
+}
+
 func NewNest(left FromTerm, outer bool, right *BucketTerm) *Nest {
 	return &Nest{left, outer, right}
 }
@@ -128,8 +151,12 @@ func (this *Nest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
 
-func NewUnnest(left FromTerm, outer bool, projection Path, as string) *Unnest {
-	return &Unnest{left, outer, projection, as}
+func (this *Nest) Alias() string {
+	return this.right.Alias()
+}
+
+func NewUnnest(left FromTerm, outer bool, project Path, as string) *Unnest {
+	return &Unnest{left, outer, project, as}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
@@ -138,6 +165,14 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Unnest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
+}
+
+func (this *Unnest) Alias() string {
+	if len(this.as) > 0 {
+		return this.as
+	} else {
+		return this.project.Alias()
+	}
 }
 
 type SortTerm struct {
