@@ -28,3 +28,7 @@ func NewSendInsert(bucket catalog.Bucket, key algebra.Expression) *SendInsert {
 func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendInsert(this)
 }
+
+func (this *SendInsert) Bucket() catalog.Bucket {
+	return this.bucket
+}

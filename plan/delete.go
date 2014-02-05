@@ -26,3 +26,7 @@ func NewSendDelete(bucket catalog.Bucket) *SendDelete {
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendDelete(this)
 }
+
+func (this *SendDelete) Bucket() catalog.Bucket {
+	return this.bucket
+}

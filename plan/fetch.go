@@ -29,3 +29,7 @@ func NewFetch(bucket catalog.Bucket, project algebra.Path, as string) *Fetch {
 func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFetch(this)
 }
+
+func (this *Fetch) Bucket() catalog.Bucket {
+	return this.bucket
+}

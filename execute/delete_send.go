@@ -10,8 +10,6 @@
 package execute
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -54,6 +52,25 @@ func (this *SendDelete) afterItems(context *Context) {
 func (this *SendDelete) flushBatch(context *Context) bool {
 	if len(this.batch) == 0 {
 		return true
+	}
+
+	keys := make([]string, 0, len(this.batch))
+
+	for _, av := range this.batch {
+		key, ok := this.requireKey(av, context)
+		if ok {
+			keys = append(keys, key)
+		} else {
+			return false
+		}
+	}
+
+	this.batch = nil
+
+	e := this.plan.Bucket().Delete(keys)
+	if e != nil {
+		context.ErrorChannel() <- e
+		return false
 	}
 
 	return true

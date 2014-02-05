@@ -78,3 +78,7 @@ func NewSendMerge(bucket catalog.Bucket) *SendMerge {
 func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendMerge(this)
 }
+
+func (this *SendMerge) Bucket() catalog.Bucket {
+	return this.bucket
+}

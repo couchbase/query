@@ -10,7 +10,7 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 	"sync"
 
 	"github.com/couchbaselabs/query/err"
@@ -176,4 +176,28 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 
 	this.batch = append(this.batch, item)
 	return true
+}
+
+func (this *base) requireKey(item value.AnnotatedValue, context *Context) (string, bool) {
+	mv := item.GetAttachment("meta")
+	if mv == nil {
+		context.ErrorChannel() <- err.NewError(nil, "Unable to process value with no key.")
+		return "", false
+	}
+
+	meta := mv.(map[string]interface{})
+	key, ok := meta["id"]
+	if !ok {
+		context.ErrorChannel() <- err.NewError(nil, "Unable to process value with no key.")
+		return "", false
+	}
+
+	switch key := key.(type) {
+	case string:
+		return key, true
+	default:
+		e := err.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
+		context.ErrorChannel() <- e
+		return "", false
+	}
 }

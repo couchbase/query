@@ -66,3 +66,7 @@ func NewSendUpdate(bucket catalog.Bucket) *SendUpdate {
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpdate(this)
 }
+
+func (this *SendUpdate) Bucket() catalog.Bucket {
+	return this.bucket
+}
