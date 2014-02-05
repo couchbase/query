@@ -42,6 +42,6 @@ func (this *Precompute) Copy() Operator {
 func (this *Precompute) RunOnce(context *Context, parent value.Value) {
 }
 
-func (this *Precompute) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Precompute) processItem(item value.Value, context *Context) bool {
 	return true
 }

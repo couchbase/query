@@ -60,11 +60,11 @@ func (this *InitialGroup) beforeItems(context *Context, parent value.Value) bool
 	return true
 }
 
-func (this *InitialGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *InitialGroup) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *InitialGroup) afterItems(context *Context, parent value.Value) {
+func (this *InitialGroup) afterItems(context *Context) {
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
@@ -93,11 +93,11 @@ func (this *IntermediateGroup) beforeItems(context *Context, parent value.Value)
 	return true
 }
 
-func (this *IntermediateGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *IntermediateGroup) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *IntermediateGroup) afterItems(context *Context, parent value.Value) {
+func (this *IntermediateGroup) afterItems(context *Context) {
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
@@ -126,9 +126,9 @@ func (this *FinalGroup) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *FinalGroup) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *FinalGroup) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *FinalGroup) afterItems(context *Context, parent value.Value) {
+func (this *FinalGroup) afterItems(context *Context) {
 }

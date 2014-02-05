@@ -43,6 +43,6 @@ func (this *Project) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Project) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Project) processItem(item value.Value, context *Context) bool {
 	return true
 }

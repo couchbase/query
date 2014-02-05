@@ -47,9 +47,9 @@ func (this *Order) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *Order) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Order) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *Order) afterItems(context *Context, parent value.Value) {
+func (this *Order) afterItems(context *Context) {
 }

@@ -65,6 +65,10 @@ func (this *correlatedValue) Collate(other Value) int {
 	}
 }
 
+func (this *correlatedValue) Truth() bool {
+	return len(this.entries) > 0
+}
+
 func (this *correlatedValue) Copy() Value {
 	return &correlatedValue{
 		entries: copyMap(this.entries, self),

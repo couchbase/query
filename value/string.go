@@ -56,6 +56,10 @@ func (this stringValue) Collate(other Value) int {
 
 }
 
+func (this stringValue) Truth() bool {
+	return len(this) > 0
+}
+
 func (this stringValue) Copy() Value {
 	return this
 }

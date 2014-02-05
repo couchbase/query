@@ -55,6 +55,10 @@ func (this objectValue) Collate(other Value) int {
 	}
 }
 
+func (this objectValue) Truth() bool {
+	return len(this) > 0
+}
+
 func (this objectValue) Copy() Value {
 	return objectValue(copyMap(this, self))
 }

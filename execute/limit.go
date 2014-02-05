@@ -66,7 +66,7 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 	return false
 }
 
-func (this *Limit) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Limit) processItem(item value.Value, context *Context) bool {
 	if this.limit > 0 {
 		this.limit--
 		return this.sendItem(item)

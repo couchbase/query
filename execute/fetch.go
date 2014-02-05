@@ -43,6 +43,6 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Fetch) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Fetch) processItem(item value.Value, context *Context) bool {
 	return true
 }

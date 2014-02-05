@@ -66,7 +66,7 @@ func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
 	return false
 }
 
-func (this *Offset) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Offset) processItem(item value.Value, context *Context) bool {
 	if this.offset > 0 {
 		this.offset--
 		return true

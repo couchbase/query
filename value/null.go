@@ -30,6 +30,10 @@ func (this *nullValue) Collate(other Value) int {
 	return NULL - other.Type()
 }
 
+func (this *nullValue) Truth() bool {
+	return false
+}
+
 func (this *nullValue) Copy() Value {
 	return this
 }

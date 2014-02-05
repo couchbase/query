@@ -37,6 +37,10 @@ func (this *missingValue) Collate(other Value) int {
 	return MISSING - other.Type()
 }
 
+func (this *missingValue) Truth() bool {
+	return false
+}
+
 func (this *missingValue) Copy() Value {
 	return this
 }

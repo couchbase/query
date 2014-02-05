@@ -26,3 +26,7 @@ func NewFilter(cond algebra.Expression) *Filter {
 func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFilter(this)
 }
+
+func (this *Filter) Condition() algebra.Expression {
+	return this.cond
+}

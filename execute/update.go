@@ -60,7 +60,7 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Clone) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Clone) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
@@ -86,7 +86,7 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Set) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Set) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
@@ -112,7 +112,7 @@ func (this *Unset) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Unset) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *Unset) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
@@ -137,9 +137,9 @@ func (this *SendUpdate) Copy() Operator {
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
 }
 
-func (this *SendUpdate) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *SendUpdate) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *SendUpdate) afterItems(context *Context, parent value.Value) {
+func (this *SendUpdate) afterItems(context *Context) {
 }

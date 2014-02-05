@@ -10,6 +10,8 @@
 package value
 
 import (
+	"math"
+
 	json "github.com/dustin/gojson"
 )
 
@@ -48,6 +50,10 @@ func (this floatValue) Collate(other Value) int {
 		return NUMBER - other.Type()
 	}
 
+}
+
+func (this floatValue) Truth() bool {
+	return !math.IsNaN(float64(this)) && this != 0
 }
 
 func (this floatValue) Copy() Value {

@@ -43,9 +43,9 @@ func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendInsert) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *SendInsert) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *SendInsert) afterItems(context *Context, parent value.Value) {
+func (this *SendInsert) afterItems(context *Context) {
 }

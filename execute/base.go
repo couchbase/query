@@ -20,7 +20,6 @@ import (
 type base struct {
 	itemChannel value.ValueChannel
 	stopChannel StopChannel // Never closed
-	stopCount   int
 	input       Operator
 	output      Operator
 	stop        Operator
@@ -93,14 +92,14 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			select {
 			case item, ok = <-this.input.ItemChannel():
 				if ok {
-					ok = cons.processItem(item, context, parent)
+					ok = cons.processItem(item, context)
 				}
 			case _, _ = <-this.stopChannel: // Never closed
 				break
 			}
 		}
 
-		cons.afterItems(context, parent)
+		cons.afterItems(context)
 	})
 }
 
@@ -142,13 +141,13 @@ func (this *base) sendState(err err.Error, channel err.ErrorChannel) bool {
 
 type consumer interface {
 	beforeItems(context *Context, parent value.Value) bool
-	processItem(item value.Value, context *Context, parent value.Value) bool
-	afterItems(context *Context, parent value.Value)
+	processItem(item value.Value, context *Context) bool
+	afterItems(context *Context)
 }
 
 func (this *base) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *base) afterItems(context *Context, parent value.Value) {
+func (this *base) afterItems(context *Context) {
 }

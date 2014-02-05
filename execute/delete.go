@@ -43,9 +43,9 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendDelete) processItem(item value.Value, context *Context, parent value.Value) bool {
+func (this *SendDelete) processItem(item value.Value, context *Context) bool {
 	return true
 }
 
-func (this *SendDelete) afterItems(context *Context, parent value.Value) {
+func (this *SendDelete) afterItems(context *Context) {
 }

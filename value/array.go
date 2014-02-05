@@ -53,6 +53,10 @@ func (this sliceValue) Collate(other Value) int {
 	}
 }
 
+func (this sliceValue) Truth() bool {
+	return len(this) > 0
+}
+
 func (this sliceValue) Copy() Value {
 	return sliceValue(copySlice(this, self))
 }
@@ -136,6 +140,10 @@ func (this *listValue) Collate(other Value) int {
 	default:
 		return ARRAY - other.Type()
 	}
+}
+
+func (this *listValue) Truth() bool {
+	return len(this.actual) > 0
 }
 
 func (this *listValue) Copy() Value {

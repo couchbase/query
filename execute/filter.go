@@ -12,6 +12,7 @@ package execute
 import (
 	_ "fmt"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -43,6 +44,16 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Filter) processItem(item value.Value, context *Context, parent value.Value) bool {
-	return true
+func (this *Filter) processItem(item value.Value, context *Context) bool {
+	val, e := this.plan.Condition().Evaluate(item, context)
+	if e != nil {
+		context.ErrorChannel() <- err.NewError(e, "Error evaluating WHERE.")
+		return false
+	}
+
+	if val.Truth() {
+		return this.sendItem(item)
+	} else {
+		return true
+	}
 }

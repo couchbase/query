@@ -54,6 +54,10 @@ func (this boolValue) Collate(other Value) int {
 
 }
 
+func (this boolValue) Truth() bool {
+	return bool(this)
+}
+
 func (this boolValue) Copy() Value {
 	return this
 }

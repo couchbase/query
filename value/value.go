@@ -62,6 +62,7 @@ type Value interface {
 	Actual() interface{}                          // Native Go representation
 	Equals(other Value) bool                      // Faster than Collate()
 	Collate(other Value) int                      // -int if this precedes other
+	Truth() bool                                  // Truth value
 	Copy() Value                                  // Shallow copy
 	CopyForUpdate() Value                         // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
 	Bytes() []byte                                // JSON byte encoding
