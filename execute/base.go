@@ -18,7 +18,7 @@ import (
 )
 
 type base struct {
-	itemChannel value.ValueChannel
+	itemChannel value.AnnotatedChannel
 	stopChannel StopChannel // Never closed
 	input       Operator
 	output      Operator
@@ -31,12 +31,12 @@ const _STOP_CHAN_SIZE = 64
 
 func newBase() base {
 	return base{
-		itemChannel: make(value.ValueChannel, _ITEM_CHAN_SIZE),
+		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_SIZE),
 		stopChannel: make(StopChannel, _STOP_CHAN_SIZE),
 	}
 }
 
-func (this *base) ItemChannel() value.ValueChannel {
+func (this *base) ItemChannel() value.AnnotatedChannel {
 	return this.itemChannel
 }
 
@@ -70,7 +70,7 @@ func (this *base) SetStop(op Operator) {
 
 func (this *base) copy() base {
 	return base{
-		itemChannel: make(value.ValueChannel, _ITEM_CHAN_SIZE),
+		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_SIZE),
 		stopChannel: make(StopChannel, _STOP_CHAN_SIZE),
 		input:       this.input,
 		output:      this.output,
@@ -85,7 +85,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 
 		go this.input.RunOnce(context, parent)
 
-		var item value.Value
+		var item value.AnnotatedValue
 		ok := cons.beforeItems(context, parent)
 
 		for ok {
@@ -103,7 +103,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	})
 }
 
-func (this *base) sendItem(item value.Value) bool {
+func (this *base) sendItem(item value.AnnotatedValue) bool {
 	ok := true
 	for ok {
 		select {
@@ -141,7 +141,7 @@ func (this *base) sendState(err err.Error, channel err.ErrorChannel) bool {
 
 type consumer interface {
 	beforeItems(context *Context, parent value.Value) bool
-	processItem(item value.Value, context *Context) bool
+	processItem(item value.AnnotatedValue, context *Context) bool
 	afterItems(context *Context)
 }
 

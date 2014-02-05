@@ -43,7 +43,7 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendDelete) processItem(item value.Value, context *Context) bool {
+func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 

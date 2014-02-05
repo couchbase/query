@@ -53,7 +53,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.Value, context *Context) bool {
+func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -79,7 +79,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Nest) processItem(item value.Value, context *Context) bool {
+func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -105,6 +105,6 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Unnest) processItem(item value.Value, context *Context) bool {
+func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }

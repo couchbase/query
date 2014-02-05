@@ -63,7 +63,7 @@ func (this *ComputeMerge) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *ComputeMerge) processItem(item value.Value, context *Context) bool {
+func (this *ComputeMerge) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -89,7 +89,7 @@ func (this *MergeUpdate) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *MergeUpdate) processItem(item value.Value, context *Context) bool {
+func (this *MergeUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -115,7 +115,7 @@ func (this *MergeDelete) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *MergeDelete) processItem(item value.Value, context *Context) bool {
+func (this *MergeDelete) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -141,7 +141,7 @@ func (this *MergeInsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *MergeInsert) processItem(item value.Value, context *Context) bool {
+func (this *MergeInsert) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -167,7 +167,7 @@ func (this *SendMerge) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendMerge) processItem(item value.Value, context *Context) bool {
+func (this *SendMerge) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 

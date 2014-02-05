@@ -50,7 +50,7 @@ func (this *InitialDistinct) beforeItems(context *Context, parent value.Value) b
 	return true
 }
 
-func (this *InitialDistinct) processItem(item value.Value, context *Context) bool {
+func (this *InitialDistinct) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
@@ -82,7 +82,7 @@ func (this *SubsequentDistinct) beforeItems(context *Context, parent value.Value
 	return true
 }
 
-func (this *SubsequentDistinct) processItem(item value.Value, context *Context) bool {
+func (this *SubsequentDistinct) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 

@@ -11,6 +11,8 @@ package value
 
 import ()
 
+type AnnotatedChannel chan AnnotatedValue
+
 type AnnotatedValue interface {
 	Value
 	GetAttachment(key string) interface{}
@@ -48,8 +50,7 @@ func (this *annotatedValue) Copy() Value {
 
 func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
-		Value:    this.Value.CopyForUpdate(),
-		attacher: attacher{copyMap(this.attacher.attachments, self)},
+		Value: this.Value.CopyForUpdate(),
 	}
 }
 

@@ -23,7 +23,7 @@ type StopChannel chan int
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
-	ItemChannel() value.ValueChannel              // Closed by this operator
+	ItemChannel() value.AnnotatedChannel          // Closed by this operator
 	StopChannel() StopChannel                     // Never closed, just garbage-collected
 	Input() Operator                              // Read by this operator
 	SetInput(op Operator)                         // Can be set

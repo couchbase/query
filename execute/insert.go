@@ -43,7 +43,7 @@ func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendInsert) processItem(item value.Value, context *Context) bool {
+func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 

@@ -44,7 +44,7 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Filter) processItem(item value.Value, context *Context) bool {
+func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
 	val, e := this.plan.Condition().Evaluate(item, context)
 	if e != nil {
 		context.ErrorChannel() <- err.NewError(e, "Error evaluating WHERE.")

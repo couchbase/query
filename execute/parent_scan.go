@@ -42,6 +42,6 @@ func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
 
 		// Shallow copy of the parent includes
 		// correlated and annotated aspects
-		this.output.ItemChannel() <- parent.Copy()
+		this.output.ItemChannel() <- parent.Copy().(value.AnnotatedValue)
 	})
 }

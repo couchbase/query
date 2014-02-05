@@ -21,24 +21,6 @@ type Clone struct {
 	base
 }
 
-// Write to copy
-type Set struct {
-	base
-	plan *plan.Set
-}
-
-// Write to copy
-type Unset struct {
-	base
-	plan *plan.Unset
-}
-
-// Send to bucket
-type SendUpdate struct {
-	base
-	plan *plan.SendUpdate
-}
-
 func NewClone() *Clone {
 	rv := &Clone{
 		base: newBase(),
@@ -60,8 +42,16 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Clone) processItem(item value.Value, context *Context) bool {
-	return true
+func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
+	av := item.(value.AnnotatedValue)
+	av.SetAttachment("clone", av.CopyForUpdate())
+	return this.sendItem(av)
+}
+
+// Write to copy
+type Set struct {
+	base
+	plan *plan.Set
 }
 
 func NewSet(plan *plan.Set) *Set {
@@ -86,8 +76,14 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Set) processItem(item value.Value, context *Context) bool {
+func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
+}
+
+// Write to copy
+type Unset struct {
+	base
+	plan *plan.Unset
 }
 
 func NewUnset(plan *plan.Unset) *Unset {
@@ -112,8 +108,14 @@ func (this *Unset) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Unset) processItem(item value.Value, context *Context) bool {
+func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
+}
+
+// Send to bucket
+type SendUpdate struct {
+	base
+	plan *plan.SendUpdate
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
@@ -137,7 +139,7 @@ func (this *SendUpdate) Copy() Operator {
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
 }
 
-func (this *SendUpdate) processItem(item value.Value, context *Context) bool {
+func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }
 
