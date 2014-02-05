@@ -16,13 +16,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+// Write to copy
+type Unset struct {
 	base
-	plan *plan.Join
+	plan *plan.Unset
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewUnset(plan *plan.Unset) *Unset {
+	rv := &Unset{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +32,18 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnset(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *Unset) Copy() Operator {
+	return &Unset{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *Unset) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }

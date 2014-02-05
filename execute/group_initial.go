@@ -16,13 +16,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+// Grouping of input data.
+type InitialGroup struct {
 	base
-	plan *plan.Join
+	plan *plan.InitialGroup
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewInitialGroup(plan *plan.InitialGroup) *InitialGroup {
+	rv := &InitialGroup{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +32,25 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitInitialGroup(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *InitialGroup) Copy() Operator {
+	return &InitialGroup{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *InitialGroup) beforeItems(context *Context, parent value.Value) bool {
 	return true
+}
+
+func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Context) bool {
+	return true
+}
+
+func (this *InitialGroup) afterItems(context *Context) {
 }

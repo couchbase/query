@@ -12,37 +12,42 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+// Distincting of distincts. Recursable.
+type SubsequentDistinct struct {
 	base
-	plan *plan.Join
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewSubsequentDistinct() *SubsequentDistinct {
+	rv := &SubsequentDistinct{
 		base: newBase(),
-		plan: plan,
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSubsequentDistinct(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *SubsequentDistinct) Copy() Operator {
+	return &SubsequentDistinct{this.base.copy()}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *SubsequentDistinct) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *SubsequentDistinct) beforeItems(context *Context, parent value.Value) bool {
 	return true
+}
+
+func (this *SubsequentDistinct) processItem(item value.AnnotatedValue, context *Context) bool {
+	return true
+}
+
+func (this *SubsequentDistinct) afterItems(context *Context) {
 }

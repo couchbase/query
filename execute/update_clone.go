@@ -12,37 +12,36 @@ package execute
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+// Enable copy-before-write, so that all reads use old values
+type Clone struct {
 	base
-	plan *plan.Join
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewClone() *Clone {
+	rv := &Clone{
 		base: newBase(),
-		plan: plan,
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitClone(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *Clone) Copy() Operator {
+	return &Clone{this.base.copy()}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *Clone) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
+	item.SetAttachment("clone", item.CopyForUpdate())
+	return this.sendItem(item)
 }

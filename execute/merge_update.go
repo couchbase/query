@@ -16,13 +16,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+type MergeUpdate struct {
 	base
-	plan *plan.Join
+	plan *plan.MergeUpdate
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewMergeUpdate(plan *plan.MergeUpdate) *MergeUpdate {
+	rv := &MergeUpdate{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +31,18 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMergeUpdate(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *MergeUpdate) Copy() Operator {
+	return &MergeUpdate{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *MergeUpdate) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *MergeUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
 }

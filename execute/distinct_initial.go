@@ -20,11 +20,6 @@ type InitialDistinct struct {
 	base
 }
 
-// Distincting of distincts. Recursable.
-type SubsequentDistinct struct {
-	base
-}
-
 func NewInitialDistinct() *InitialDistinct {
 	rv := &InitialDistinct{
 		base: newBase(),
@@ -55,36 +50,4 @@ func (this *InitialDistinct) processItem(item value.AnnotatedValue, context *Con
 }
 
 func (this *InitialDistinct) afterItems(context *Context) {
-}
-
-func NewSubsequentDistinct() *SubsequentDistinct {
-	rv := &SubsequentDistinct{
-		base: newBase(),
-	}
-
-	rv.output = rv
-	return rv
-}
-
-func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSubsequentDistinct(this)
-}
-
-func (this *SubsequentDistinct) Copy() Operator {
-	return &SubsequentDistinct{this.base.copy()}
-}
-
-func (this *SubsequentDistinct) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
-}
-
-func (this *SubsequentDistinct) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
-func (this *SubsequentDistinct) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
-}
-
-func (this *SubsequentDistinct) afterItems(context *Context) {
 }

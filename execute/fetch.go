@@ -44,5 +44,17 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
+	return this.enbatch(item, this, context)
+}
+
+func (this *Fetch) afterItems(context *Context) {
+	this.flushBatch(context)
+}
+
+func (this *Fetch) flushBatch(context *Context) bool {
+	if len(this.batch) == 0 {
+		return true
+	}
+
 	return true
 }

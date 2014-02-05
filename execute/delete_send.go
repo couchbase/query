@@ -16,13 +16,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+type SendDelete struct {
 	base
-	plan *plan.Join
+	plan *plan.SendDelete
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewSendDelete(plan *plan.SendDelete) *SendDelete {
+	rv := &SendDelete{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +31,30 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendDelete(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *SendDelete) Copy() Operator {
+	return &SendDelete{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
+	return this.enbatch(item, this, context)
+}
+
+func (this *SendDelete) afterItems(context *Context) {
+	this.flushBatch(context)
+}
+
+func (this *SendDelete) flushBatch(context *Context) bool {
+	if len(this.batch) == 0 {
+		return true
+	}
+
 	return true
 }

@@ -16,13 +16,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+type SendMerge struct {
 	base
-	plan *plan.Join
+	plan *plan.SendMerge
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewSendMerge(plan *plan.SendMerge) *SendMerge {
+	rv := &SendMerge{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +31,30 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendMerge(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *SendMerge) Copy() Operator {
+	return &SendMerge{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *SendMerge) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *SendMerge) processItem(item value.AnnotatedValue, context *Context) bool {
+	return this.enbatch(item, this, context)
+}
+
+func (this *SendMerge) afterItems(context *Context) {
+	this.flushBatch(context)
+}
+
+func (this *SendMerge) flushBatch(context *Context) bool {
+	if len(this.batch) == 0 {
+		return true
+	}
+
 	return true
 }

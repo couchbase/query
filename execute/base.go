@@ -24,6 +24,7 @@ type base struct {
 	output      Operator
 	stop        Operator
 	once        sync.Once
+	batch       []value.AnnotatedValue
 }
 
 const _ITEM_CHAN_SIZE = 1024
@@ -150,4 +151,29 @@ func (this *base) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *base) afterItems(context *Context) {
+}
+
+type batcher interface {
+	allocateBatch(n int)
+	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
+	flushBatch(context *Context) bool
+}
+
+func (this *base) allocateBatch(n int) {
+	this.batch = make([]value.AnnotatedValue, 0, n)
+}
+
+func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
+	if this.batch == nil {
+		this.allocateBatch(1024)
+	}
+
+	if len(this.batch) == cap(this.batch) {
+		if !b.flushBatch(context) {
+			return false
+		}
+	}
+
+	this.batch = append(this.batch, item)
+	return true
 }

@@ -16,13 +16,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type SendInsert struct {
+// Grouping of groups. Recursable.
+type IntermediateGroup struct {
 	base
-	plan *plan.SendInsert
+	plan *plan.IntermediateGroup
 }
 
-func NewSendInsert(plan *plan.SendInsert) *SendInsert {
-	rv := &SendInsert{
+func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
+	rv := &IntermediateGroup{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,21 +32,25 @@ func NewSendInsert(plan *plan.SendInsert) *SendInsert {
 	return rv
 }
 
-func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSendInsert(this)
+func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIntermediateGroup(this)
 }
 
-func (this *SendInsert) Copy() Operator {
-	return &SendInsert{this.base.copy(), this.plan}
+func (this *IntermediateGroup) Copy() Operator {
+	return &IntermediateGroup{this.base.copy(), this.plan}
 }
 
-func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
+func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *IntermediateGroup) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
-func (this *SendInsert) afterItems(context *Context) {
+func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *Context) bool {
+	return true
+}
+
+func (this *IntermediateGroup) afterItems(context *Context) {
 }

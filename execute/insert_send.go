@@ -16,13 +16,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type SendDelete struct {
+type SendInsert struct {
 	base
-	plan *plan.SendDelete
+	plan *plan.SendInsert
 }
 
-func NewSendDelete(plan *plan.SendDelete) *SendDelete {
-	rv := &SendDelete{
+func NewSendInsert(plan *plan.SendInsert) *SendInsert {
+	rv := &SendInsert{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,21 +31,30 @@ func NewSendDelete(plan *plan.SendDelete) *SendDelete {
 	return rv
 }
 
-func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSendDelete(this)
+func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSendInsert(this)
 }
 
-func (this *SendDelete) Copy() Operator {
-	return &SendDelete{this.base.copy(), this.plan}
+func (this *SendInsert) Copy() Operator {
+	return &SendInsert{this.base.copy(), this.plan}
 }
 
-func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
+func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context) bool {
+	return this.enbatch(item, this, context)
 }
 
-func (this *SendDelete) afterItems(context *Context) {
+func (this *SendInsert) afterItems(context *Context) {
+	this.flushBatch(context)
+}
+
+func (this *SendInsert) flushBatch(context *Context) bool {
+	if len(this.batch) == 0 {
+		return true
+	}
+
+	return true
 }

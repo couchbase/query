@@ -16,13 +16,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Join struct {
+// Compute DistinctCount() and Avg().
+type FinalGroup struct {
 	base
-	plan *plan.Join
+	plan *plan.FinalGroup
 }
 
-func NewJoin(plan *plan.Join) *Join {
-	rv := &Join{
+func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
+	rv := &FinalGroup{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +32,25 @@ func NewJoin(plan *plan.Join) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFinalGroup(this)
 }
 
-func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+func (this *FinalGroup) Copy() Operator {
+	return &FinalGroup{this.base.copy(), this.plan}
 }
 
-func (this *Join) RunOnce(context *Context, parent value.Value) {
+func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *FinalGroup) beforeItems(context *Context, parent value.Value) bool {
 	return true
+}
+
+func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context) bool {
+	return true
+}
+
+func (this *FinalGroup) afterItems(context *Context) {
 }
