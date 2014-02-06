@@ -1977,7 +1977,7 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2014-01-21 - Misc
     * Restored IS [ NOT ] VALUED
     * Removed MAP() and REDUCE() for now
-    * Syntax tweaks for traversing multiple collections
+    * Syntax fixes for traversing multiple collections
 
 ### Open Issues
 

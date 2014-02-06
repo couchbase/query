@@ -5,7 +5,7 @@
 /*
  *  dml
  */
-dml-stmt ::= insert | delete | update | merge | truncate | select-for | transaction-stmt
+dml-stmt ::= insert | delete | update | merge
 
 /*
  *  insert
