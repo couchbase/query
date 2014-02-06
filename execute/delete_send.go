@@ -54,17 +54,20 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		return true
 	}
 
-	keys := make([]string, 0, len(this.batch))
+	keys := make([]string, len(this.batch))
+	i := 0
 
 	for _, av := range this.batch {
 		key, ok := this.requireKey(av, context)
 		if ok {
-			keys = append(keys, key)
+			keys[i] = key
+			i++
 		} else {
 			return false
 		}
 	}
 
+	keys = keys[0:i]
 	this.batch = nil
 
 	e := this.plan.Bucket().Delete(keys)

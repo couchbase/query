@@ -138,10 +138,12 @@ type consumer interface {
 	afterItems(context *Context)
 }
 
+// Override if needed
 func (this *base) beforeItems(context *Context, parent value.Value) bool {
 	return true
 }
 
+// Override if needed
 func (this *base) afterItems(context *Context) {
 }
 
@@ -158,11 +160,13 @@ func (this *base) allocateBatch(n int) {
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
 	if this.batch == nil {
 		this.allocateBatch(1024)
-	}
-
-	if len(this.batch) == cap(this.batch) {
+	} else if len(this.batch) == cap(this.batch) {
 		if !b.flushBatch(context) {
 			return false
+		}
+
+		if len(this.batch) == cap(this.batch) {
+			this.allocateBatch(1024)
 		}
 	}
 

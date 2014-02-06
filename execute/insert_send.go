@@ -58,12 +58,12 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return true
 	}
 
-	pairs := make([]catalog.Pair, 0, len(this.batch))
 	key := this.plan.Key()
+	pairs := make([]catalog.Pair, len(this.batch))
+	i := 0
 
 	for _, av := range this.batch {
-		var pair catalog.Pair
-		pair.Value = av
+		pair := &pairs[i]
 
 		// Evaluate and set the key, if any
 		if key != nil {
@@ -84,9 +84,11 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			}
 		}
 
-		pairs = append(pairs, pair)
+		pair.Value = av
+		i++
 	}
 
+	pairs = pairs[0:i]
 	this.batch = nil
 
 	// Perform the actual INSERT
