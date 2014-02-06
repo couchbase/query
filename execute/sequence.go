@@ -17,13 +17,15 @@ import (
 
 type Sequence struct {
 	base
-	children []Operator
+	children     []Operator
+	childChannel ChildChannel
 }
 
 func NewSequence(children ...Operator) *Sequence {
 	rv := &Sequence{
-		base:     newBase(),
-		children: children,
+		base:         newBase(),
+		children:     children,
+		childChannel: make(ChildChannel),
 	}
 
 	rv.output = rv
@@ -41,17 +43,21 @@ func (this *Sequence) Copy() Operator {
 		children[i] = child.Copy()
 	}
 
-	return &Sequence{this.base.copy(), children}
+	return &Sequence{
+		base:         this.base.copy(),
+		children:     children,
+		childChannel: make(ChildChannel),
+	}
 }
 
 func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer close(this.itemChannel)                   // Broadcast that I have stopped
-		defer func() { this.stop.StopChannel() <- 1 }() // Notify that I have stopped
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		first_child := this.children[0]
 		first_child.SetInput(this.input)
-		first_child.SetStop(this)
+		first_child.SetStop(this.stop)
 
 		n := len(this.children)
 
@@ -62,11 +68,20 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 		last_child := this.children[n-1]
 		last_child.SetOutput(this.output)
+		last_child.SetParent(this)
 
 		// Run last child
 		go last_child.RunOnce(context, parent)
 
-		// Wait for first child to notify me
-		<-this.stopChannel // Never closed
+		select {
+		// Wait for last child or stop
+		case <-this.childChannel: // Never closed
+		case <-this.stopChannel: // Never closed
+			last_child.StopChannel() <- false
+		}
 	})
+}
+
+func (this *Sequence) ChildChannel() ChildChannel {
+	return this.childChannel
 }

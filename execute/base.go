@@ -23,6 +23,7 @@ type base struct {
 	input       Operator
 	output      Operator
 	stop        Operator
+	parent      Parent
 	once        sync.Once
 	batch       []value.AnnotatedValue
 }
@@ -69,6 +70,14 @@ func (this *base) SetStop(op Operator) {
 	this.stop = op
 }
 
+func (this *base) Parent() Parent {
+	return this.parent
+}
+
+func (this *base) SetParent(parent Parent) {
+	this.parent = parent
+}
+
 func (this *base) copy() base {
 	return base{
 		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_SIZE),
@@ -81,8 +90,8 @@ func (this *base) copy() base {
 
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer close(this.itemChannel)                   // Broadcast that I have stopped
-		defer func() { this.stop.StopChannel() <- 1 }() // Notify that I have stopped
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		go this.input.RunOnce(context, parent)
 
@@ -95,7 +104,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 				if ok {
 					ok = cons.processItem(item, context)
 				}
-			case _, _ = <-this.stopChannel: // Never closed
+			case <-this.stopChannel: // Never closed
 				break
 			}
 		}
@@ -104,40 +113,23 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	})
 }
 
+func (this *base) notify() {
+	if this.stop != nil {
+		this.stop.StopChannel() <- false
+	}
+
+	if this.parent != nil {
+		this.parent.ChildChannel() <- 1
+	}
+}
+
 func (this *base) sendItem(item value.AnnotatedValue) bool {
-	ok := true
-	for ok {
-		select {
-		case this.output.ItemChannel() <- item:
-			return true
-		case _, _ = <-this.stopChannel: // Never closed
-			return false
-		}
+	select {
+	case this.output.ItemChannel() <- item:
+		return true
+	case <-this.stopChannel: // Never closed
+		return false
 	}
-
-	return ok
-}
-
-func (this *base) sendWarning(warning err.Error, context Context) bool {
-	return this.sendState(warning, context.WarningChannel())
-}
-
-func (this *base) sendError(err err.Error, context Context) bool {
-	return this.sendState(err, context.ErrorChannel())
-}
-
-func (this *base) sendState(err err.Error, channel err.ErrorChannel) bool {
-	ok := true
-	for ok {
-		select {
-		case channel <- err:
-			return true
-		case _, _ = <-this.stopChannel: // Never closed
-			return false
-		}
-	}
-
-	return ok
 }
 
 type consumer interface {

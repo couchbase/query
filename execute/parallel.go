@@ -18,13 +18,15 @@ import (
 
 type Parallel struct {
 	base
-	child Operator
+	child        Operator
+	childChannel ChildChannel
 }
 
 func NewParallel(child Operator) *Parallel {
 	rv := &Parallel{
-		base:  newBase(),
-		child: child,
+		base:         newBase(),
+		child:        child,
+		childChannel: make(ChildChannel, runtime.NumCPU()),
 	}
 
 	rv.output = rv
@@ -36,17 +38,22 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Parallel) Copy() Operator {
-	return &Parallel{this.base.copy(), this.child.Copy()}
+	return &Parallel{
+		base:         this.base.copy(),
+		child:        this.child.Copy(),
+		childChannel: make(ChildChannel, runtime.NumCPU()),
+	}
 }
 
 func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		defer close(this.itemChannel)                   // Broadcast that I have stopped
-		defer func() { this.stop.StopChannel() <- 1 }() // Notify that I have stopped
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)
-		this.child.SetStop(this)
+		this.child.SetStop(nil)
+		this.child.SetParent(this)
 
 		n := runtime.NumCPU()
 
@@ -61,9 +68,24 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 			go children[i].RunOnce(context, parent)
 		}
 
-		// Wait for all children to notify me
-		for i := 0; i < n; i++ {
-			<-this.stopChannel // Never closed
+		for {
+			select {
+			// Wait for children or stop
+			case <-this.childChannel: // Never closed
+				n -= 1
+				if n <= 0 {
+					break
+				}
+			case <-this.stopChannel: // Never closed
+				for _, child := range children {
+					child.StopChannel() <- false
+				}
+				break
+			}
 		}
 	})
+}
+
+func (this *Parallel) ChildChannel() ChildChannel {
+	return this.childChannel
 }

@@ -19,7 +19,8 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type StopChannel chan int
+type StopChannel chan bool
+type ChildChannel chan int
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
@@ -31,6 +32,12 @@ type Operator interface {
 	SetOutput(op Operator)                        // Can be set
 	Stop() Operator                               // Notified when this operator stops
 	SetStop(op Operator)                          // Can be set
+	Parent() Parent                               // Notified when this operator stops
+	SetParent(parent Parent)                      // Can be set
 	Copy() Operator                               // Keep input/output/stop, but make new item and stop channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once
+}
+
+type Parent interface {
+	ChildChannel() ChildChannel // Never closed, just garbage-collected
 }
