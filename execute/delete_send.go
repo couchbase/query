@@ -42,7 +42,7 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	return this.enbatch(item, this, context) && this.sendItem(item)
 }
 
 func (this *SendDelete) afterItems(context *Context) {

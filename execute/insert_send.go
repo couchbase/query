@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -56,5 +58,51 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return true
 	}
 
-	return true
+	pairs := make([]catalog.Pair, 0, len(this.batch))
+	key := this.plan.Key()
+
+	for _, av := range this.batch {
+		var pair catalog.Pair
+		pair.Value = av
+
+		// Evaluate and set the key, if any
+		if key != nil {
+			k, e := key.Evaluate(av, context)
+			if e != nil {
+				context.WarningChannel() <- err.NewError(e,
+					fmt.Sprintf("Error evaluating INSERT key for value %v.", av.GetValue()))
+				continue
+			}
+
+			switch k := k.Actual().(type) {
+			case string:
+				pair.Key = k
+			default:
+				context.WarningChannel() <- err.NewError(nil,
+					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k))
+				continue
+			}
+		}
+
+		pairs = append(pairs, pair)
+	}
+
+	this.batch = nil
+
+	// Perform the actual INSERT
+	keys, e := this.plan.Bucket().Insert(pairs)
+	if e != nil {
+		context.ErrorChannel() <- e
+		return false
+	}
+
+	// Capture the inserted key in case there's a RETURNING clause
+	ok := true
+	for i, k := range keys {
+		av := pairs[i].Value.(value.AnnotatedValue)
+		av.SetAttachment("meta", map[string]interface{}{"id": k})
+		ok = ok && this.sendItem(av)
+	}
+
+	return ok
 }

@@ -18,6 +18,7 @@ type AnnotatedValue interface {
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
 	RemoveAttachment(key string) interface{}
+	GetValue() Value
 }
 
 // Create an AnnotatedValue to hold attachments
@@ -52,6 +53,10 @@ func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
 		Value: this.Value.CopyForUpdate(),
 	}
+}
+
+func (this *annotatedValue) GetValue() Value {
+	return this.Value
 }
 
 type attacher struct {

@@ -32,3 +32,7 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 func (this *SendInsert) Bucket() catalog.Bucket {
 	return this.bucket
 }
+
+func (this *SendInsert) Key() algebra.Expression {
+	return this.key
+}

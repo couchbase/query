@@ -69,18 +69,17 @@ type Bucket interface {
 
 	// Used by DML statements
 	// For all these methods, nil input keys are replaced with auto-generated keys
-	Insert(inserts *Pairs) ([]string, err.Error)
-	Update(updates *Pairs) err.Error
-	Upsert(upserts *Pairs) ([]string, err.Error)
+	Insert(inserts []Pair) ([]string, err.Error)
+	Update(updates []Pair) err.Error
+	Upsert(upserts []Pair) ([]string, err.Error)
 	Delete(deletes []string) err.Error
-	Merge(upserts *Pairs, deletes []string) (upsertKeys []string, _ err.Error)
 
 	Release()
 }
 
-type Pairs struct {
-	Keys   []string
-	Values []value.Value
+type Pair struct {
+	Key   string
+	Value value.Value
 }
 
 type IndexType string
