@@ -34,7 +34,7 @@ update ::= 'UPDATE' bucket-ref key-clause? set-clause? unset-clause? where-claus
 
 set-clause ::= 'SET' path '=' expr path-for? (',' path '=' expr path-for?)*
 
-path-for ::= 'FOR' variable (',' variable)* 'IN' path (',' path)* ('WHEN' cond)?
+path-for ::= 'FOR' variable 'IN' path (',' variable 'IN' path)* ('WHEN' cond)? 'END'
 
 unset-clause ::= 'UNSET' path path-for? (',' path path-for?)*
 

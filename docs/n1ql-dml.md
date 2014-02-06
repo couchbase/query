@@ -3,6 +3,7 @@
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
 * Modified: 2014-01-21
+* Modified: 2014-02-06
 
 ## Introduction
 
@@ -18,7 +19,7 @@ Normal Form
 
 ## DML statements
 
-N1QL provides several data modification and transaction statements.
+N1QL provides several data modification statements.
 
 *dml-stmt:*
 
@@ -104,6 +105,8 @@ N1QL provides several data modification and transaction statements.
 
 ![](diagram/merge-insert.png)
 
+<!--
+
 ## TRUNCATE
 
 TRUNCATE deletes all the documents in a bucket. It cannot be rolled
@@ -153,6 +156,8 @@ book-keeping for distributed correctness.
 *rollback:*
 
 ![](diagram/rollback.png)
+
+-->
 
 ## About this Document
 
@@ -216,6 +221,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
       How do you do that?  We need to be able to relate multiple
       properties together on a line by line basis and they may be
       stored separately.
+* 2014-02-06 - Transactions
+    * Removed transaction statements for now.
 
 ### Open Issues
 

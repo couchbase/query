@@ -67,7 +67,7 @@ logical-term ::= cond 'AND' cond | cond 'OR' cond | 'NOT' cond
 case-expr ::= simple-case-expr | searched-case-expr
 simple-case-expr ::= 'CASE' expr ('WHEN' expr 'THEN' expr)+ ('ELSE' expr)? 'END'
 searched-case-expr ::= 'CASE' ('WHEN' cond 'THEN' expr)+ ('ELSE' expr)? 'END'
-comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'NOT'? 'BETWEEN' expr 'AND' expr | expr 'NOT'? 'LIKE' expr | expr 'IS' 'NOT'? 'NULL' | expr 'IS' 'NOT'? 'MISSING'
+comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'NOT'? 'BETWEEN' expr 'AND' expr | expr 'NOT'? 'LIKE' expr | expr 'IS' 'NOT'? 'NULL' | expr 'IS' 'NOT'? 'MISSING' | expr 'IS' 'NOT'? 'VALUED'
 arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | '-' expr
 concatenation-term ::= expr '||' expr
 nested-expr ::= expr '.' expr | expr '[' expr (':' expr?)? ']'
@@ -85,12 +85,10 @@ function-name ::= identifier
 collection-expr ::= exists-expr | in-expr | collection-cond | collection-xform
 exists-expr ::= 'EXISTS' subquery-expr
 in-expr ::= expr 'IN' expr
-collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable (',' variable)* 'IN' expr (',' expr)* ('SATISFIES' cond)? 'END'
-collection-xform ::= map-expr | reduce-expr | array-expr | first-expr
-map-expr ::= 'MAP' variable (',' variable)* 'IN' expr (',' expr)* ('TO' expr)? ('WHEN' cond)? 'END'
-reduce-expr ::= 'REDUCE' variable (',' variable)* 'IN' expr (',' expr)* 'TO' expr ('WHEN' cond)? 'END'
-array-expr ::= 'ARRAY' expr 'FOR' variable (',' variable)* 'IN' expr (',' expr)* ('WHEN' cond)? 'END'
-first-expr ::= 'FIRST' expr 'FOR' variable (',' variable)* 'IN' expr (',' expr)* ('WHEN' cond)? 'END'
+collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable 'IN' expr (',' variable 'IN' expr)* ('SATISFIES' cond)? 'END'
+collection-xform ::= array-expr | first-expr
+array-expr ::= 'ARRAY' expr 'FOR' variable 'IN' expr (',' variable 'IN' expr)* ('WHEN' cond)? 'END'
+first-expr ::= 'FIRST' expr 'FOR' variable 'IN' expr (',' variable 'IN' expr)* ('WHEN' cond)? 'END'
 variable ::= identifier
 
 /*

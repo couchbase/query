@@ -3,6 +3,7 @@
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
 * Modified: 2014-01-21
+* Modified: 2014-02-06
 
 ## Introduction
 
@@ -1128,14 +1129,6 @@ collection.
 
 ![](diagram/collection-xform.png)
 
-*map-expr:*
-
-![](diagram/map-expr.png)
-
-*reduce-expr:*
-
-![](diagram/reduce-expr.png)
-
 *array-expr:*
 
 ![](diagram/array-expr.png)
@@ -1981,6 +1974,10 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
       How do you do that?  We need to be able to relate multiple
       properties together on a line by line basis and they may be
       stored separately.
+* 2014-01-21 - Misc
+    * Restored IS [ NOT ] VALUED
+    * Removed MAP() and REDUCE() for now
+    * Syntax tweaks for traversing multiple collections
 
 ### Open Issues
 
