@@ -68,32 +68,6 @@ func (this *Builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
 	return NewDummyScan(), nil
 }
 
-// Parallel
-func (this *Builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
-	child, err := plan.Child().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewParallel(child.(Operator)), nil
-}
-
-// Sequence
-func (this *Builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	children := make([]Operator, len(plan.Children()))
-
-	for i, pchild := range plan.Children() {
-		child, err := pchild.Accept(this)
-		if err != nil {
-			return nil, err
-		}
-
-		children[i] = child.(Operator)
-	}
-
-	return NewSequence(children...), nil
-}
-
 // Fetch
 func (this *Builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil
@@ -209,4 +183,40 @@ func (this *Builder) VisitMergeInsert(plan *plan.MergeInsert) (interface{}, erro
 
 func (this *Builder) VisitSendMerge(plan *plan.SendMerge) (interface{}, error) {
 	return NewSendMerge(plan), nil
+}
+
+// Parallel
+func (this *Builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
+	child, err := plan.Child().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewParallel(child.(Operator)), nil
+}
+
+// Sequence
+func (this *Builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
+	children := make([]Operator, len(plan.Children()))
+
+	for i, pchild := range plan.Children() {
+		child, err := pchild.Accept(this)
+		if err != nil {
+			return nil, err
+		}
+
+		children[i] = child.(Operator)
+	}
+
+	return NewSequence(children...), nil
+}
+
+// Discard
+func (this *Builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
+	return NewDiscard(), nil
+}
+
+// Stream
+func (this *Builder) VisitStream(plan *plan.Stream) (interface{}, error) {
+	return NewStream(), nil
 }

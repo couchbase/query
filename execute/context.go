@@ -96,6 +96,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	return results, nil
 }
 
+func (this *Context) Stream(item value.Value) bool {
+	return true
+}
+
 // Mutex-synchronized map
 type subqueryMap struct {
 	mutex   sync.RWMutex

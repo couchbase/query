@@ -24,12 +24,6 @@ type Visitor interface {
 	VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)
 
-	// Parallel
-	VisitParallel(op *Parallel) (interface{}, error)
-
-	// Sequence
-	VisitSequence(op *Sequence) (interface{}, error)
-
 	// Fetch
 	VisitFetch(op *Fetch) (interface{}, error)
 
@@ -81,4 +75,10 @@ type Visitor interface {
 	VisitMergeDelete(op *MergeDelete) (interface{}, error)
 	VisitMergeInsert(op *MergeInsert) (interface{}, error)
 	VisitSendMerge(op *SendMerge) (interface{}, error)
+
+	// Framework
+	VisitParallel(op *Parallel) (interface{}, error)
+	VisitSequence(op *Sequence) (interface{}, error)
+	VisitDiscard(op *Discard) (interface{}, error)
+	VisitStream(op *Stream) (interface{}, error)
 }
