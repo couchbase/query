@@ -220,3 +220,8 @@ func (this *Builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
 func (this *Builder) VisitStream(plan *plan.Stream) (interface{}, error) {
 	return NewStream(), nil
 }
+
+// Collect
+func (this *Builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
+	return NewCollect(), nil
+}

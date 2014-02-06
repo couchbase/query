@@ -72,7 +72,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 			select {
 			// Wait for all children
 			case <-this.childChannel: // Never closed
-				if n -= 1; n <= 0 {
+				if n--; n <= 0 {
 					return
 				}
 			case <-this.stopChannel: // Never closed

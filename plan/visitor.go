@@ -81,4 +81,5 @@ type Visitor interface {
 	VisitSequence(op *Sequence) (interface{}, error)
 	VisitDiscard(op *Discard) (interface{}, error)
 	VisitStream(op *Stream) (interface{}, error)
+	VisitCollect(op *Collect) (interface{}, error)
 }
