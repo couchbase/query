@@ -84,7 +84,7 @@ func (this *base) copy() base {
 		stopChannel: make(StopChannel, _STOP_CHAN_SIZE),
 		input:       this.input,
 		output:      this.output,
-		stop:        this.stop,
+		parent:      this.parent,
 	}
 }
 

@@ -34,7 +34,7 @@ type Operator interface {
 	SetStop(op Operator)                          // Can be set
 	Parent() Parent                               // Notified when this operator stops
 	SetParent(parent Parent)                      // Can be set
-	Copy() Operator                               // Keep input/output/stop, but make new item and stop channels
+	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once
 }
 

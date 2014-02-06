@@ -25,7 +25,7 @@ func NewSequence(children ...Operator) *Sequence {
 	rv := &Sequence{
 		base:         newBase(),
 		children:     children,
-		childChannel: make(ChildChannel),
+		childChannel: make(ChildChannel, 1),
 	}
 
 	rv.output = rv
@@ -46,7 +46,7 @@ func (this *Sequence) Copy() Operator {
 	return &Sequence{
 		base:         this.base.copy(),
 		children:     children,
-		childChannel: make(ChildChannel),
+		childChannel: make(ChildChannel, 1),
 	}
 }
 

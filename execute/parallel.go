@@ -70,17 +70,15 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		for {
 			select {
-			// Wait for children or stop
+			// Wait for all children
 			case <-this.childChannel: // Never closed
-				n -= 1
-				if n <= 0 {
-					break
+				if n -= 1; n <= 0 {
+					return
 				}
 			case <-this.stopChannel: // Never closed
 				for _, child := range children {
 					child.StopChannel() <- false
 				}
-				break
 			}
 		}
 	})
