@@ -10,6 +10,8 @@
 package execute
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
@@ -62,15 +64,26 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 		return false
 	}
 
-	if len(this.values) == this.length {
-		values := make([]value.Value, this.length<<1)
-		copy(values, this.values)
-		this.values = values
-	}
+	switch project := project.(type) {
+	case value.Value:
+		if project.Type() != value.MISSING {
+			// Ensure room
+			if len(this.values) == this.length {
+				values := make([]value.Value, this.length<<1)
+				copy(values, this.values)
+				this.values = values
+			}
 
-	this.values[this.length] = value.NewValue(project)
-	this.length++
-	return true
+			this.values[this.length] = project
+			this.length++
+		}
+
+		return true
+	default:
+		context.ErrorChannel() <- err.NewError(nil,
+			fmt.Sprintf("Unable to project value %v of type %T.", project, project))
+		return false
+	}
 }
 
 func (this *Collect) afterItems(context *Context) {
