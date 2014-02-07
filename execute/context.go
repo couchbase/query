@@ -20,26 +20,44 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+const _BUFFER_CAP = 1024
+
+// Context.Close() must be invoked to release resources.
 type Context struct {
 	now       time.Time
 	arguments map[string]value.Value
 
-	warningChannel err.ErrorChannel
-	errorChannel   err.ErrorChannel
+	warningChannel err.ErrorChannel // Never closed, just garbage-collected
+	errorChannel   err.ErrorChannel // Never closed, just garbage-collected
+	warnings       []err.Error
+	errors         []err.Error
 
 	subplans   *subqueryMap
 	subresults *subqueryMap
 }
 
+// Context.Close() must be invoked to release resources.
 func NewContext() *Context {
 	rv := &Context{}
 	rv.now = time.Now()
 	rv.arguments = make(map[string]value.Value)
-	rv.warningChannel = make(err.ErrorChannel)
-	rv.errorChannel = make(err.ErrorChannel)
+	rv.warningChannel = make(err.ErrorChannel, _BUFFER_CAP)
+	rv.errorChannel = make(err.ErrorChannel, _BUFFER_CAP)
+	rv.warnings = make([]err.Error, 0, _BUFFER_CAP)
+	rv.errors = make([]err.Error, 0, _BUFFER_CAP)
 	rv.subplans = newSubqueryMap()
 	rv.subresults = newSubqueryMap()
+
+	go rv.drain(rv.warningChannel, &rv.warnings)
+	go rv.drain(rv.errorChannel, &rv.errors)
+
 	return rv
+}
+
+// Context.Close() must be invoked to release resources.
+func (this *Context) Close() {
+	this.warningChannel <- nil
+	this.errorChannel <- nil
 }
 
 func (this *Context) Now() time.Time {
@@ -98,6 +116,37 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 func (this *Context) Stream(item value.Value) bool {
 	return true
+}
+
+func (this *Context) Warnings() []err.Error {
+	return this.warnings
+}
+
+func (this *Context) Errors() []err.Error {
+	return this.errors
+}
+
+func (this *Context) drain(channel err.ErrorChannel, buf *[]err.Error) {
+	var e err.Error
+	for {
+		e = <-channel
+
+		if e == nil {
+			return
+		} else {
+			collect(e, buf)
+		}
+	}
+}
+
+func collect(e err.Error, buf *[]err.Error) {
+	if len(*buf) == cap(*buf) {
+		b := make([]err.Error, len(*buf), len(*buf)<<1)
+		copy(b, *buf)
+		*buf = b
+	}
+
+	*buf = append(*buf, e)
 }
 
 // Mutex-synchronized map
