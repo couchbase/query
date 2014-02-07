@@ -21,11 +21,3 @@ type Node interface {
 
 	Accept(visitor Visitor) (interface{}, error)
 }
-
-type ResultTerm struct {
-	star bool       `json:"star"`
-	expr Expression `json:"expr"`
-	as   string     `json:"as"`
-}
-
-type ResultTerms []*ResultTerm

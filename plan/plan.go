@@ -14,12 +14,6 @@ Package plan provides query plans.
 */
 package plan
 
-import (
-	_ "fmt"
-
-	_ "github.com/couchbaselabs/query/err"
-)
-
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
 }

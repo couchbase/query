@@ -15,14 +15,61 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
+type ProjectTerms []*ProjectTerm
+
+type ProjectTerm struct {
+	result *algebra.ResultTerm
+	alias  string
+}
+
 type Project struct {
-	results algebra.ResultTerms
+	terms ProjectTerms
 }
 
 func NewProject(results algebra.ResultTerms) *Project {
-	return &Project{results}
+	terms := make(ProjectTerms, len(results))
+	a := 1
+
+	for i, res := range results {
+		pt := &ProjectTerm{
+			result: res,
+		}
+
+		pt.setAlias(&a)
+		terms[i] = pt
+	}
+
+	return &Project{
+		terms: terms,
+	}
 }
 
 func (this *Project) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitProject(this)
+}
+
+func (this *Project) Terms() ProjectTerms {
+	return this.terms
+}
+
+func (this *ProjectTerm) Result() *algebra.ResultTerm {
+	return this.result
+}
+
+func (this *ProjectTerm) Alias() string {
+	return this.alias
+}
+
+func (this *ProjectTerm) setAlias(a *int) {
+	if this.result.Star() {
+		return
+	}
+
+	res := this.result.Alias()
+	if res != "" {
+		this.alias = res
+	} else {
+		this.alias = "$" + string(*a)
+		*a++
+	}
 }

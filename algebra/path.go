@@ -13,19 +13,9 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expressions []Expression
+type Paths []Path
 
-type Expression interface {
-	//Node
-
-	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() Expressions
-
-	// Terminal identifier, or nil
-	Alias() string
+type Path interface {
+	Expression
+	Set(item, val value.Value) error
 }

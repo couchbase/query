@@ -115,9 +115,7 @@ func (this *Order) Less(i, j int) bool {
 
 		if c == 0 {
 			continue
-		}
-
-		if term.Descending() {
+		} else if term.Descending() {
 			return c > 0
 		} else {
 			return c < 0

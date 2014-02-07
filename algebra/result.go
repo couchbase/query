@@ -9,23 +9,32 @@
 
 package algebra
 
-import (
-	"github.com/couchbaselabs/query/value"
-)
+type ResultTerms []*ResultTerm
 
-type Expressions []Expression
+type ResultTerm struct {
+	star bool       `json:"star"`
+	expr Expression `json:"expr"`
+	as   string     `json:"as"`
+}
 
-type Expression interface {
-	//Node
+func (this *ResultTerm) Star() bool {
+	return this.star
+}
 
-	Evaluate(item value.Value, context Context) (value.Value, error)
+func (this *ResultTerm) Expression() Expression {
+	return this.expr
+}
 
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
+func (this *ResultTerm) As() string {
+	return this.as
+}
 
-	// A list of other Expressions on which this depends
-	Dependencies() Expressions
-
-	// Terminal identifier, or nil
-	Alias() string
+func (this *ResultTerm) Alias() string {
+	if this.star {
+		return ""
+	} else if this.as != "" {
+		return this.as
+	} else {
+		return this.expr.Alias()
+	}
 }

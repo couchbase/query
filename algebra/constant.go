@@ -39,3 +39,7 @@ func (this *ConstantExpression) EquivalentTo(other Expression) bool {
 func (this *ConstantExpression) Dependencies() Expressions {
 	return nil
 }
+
+func (this *ConstantExpression) Alias() string {
+	return ""
+}

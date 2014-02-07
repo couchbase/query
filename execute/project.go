@@ -12,6 +12,7 @@ package execute
 import (
 	_ "fmt"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -44,5 +45,63 @@ func (this *Project) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Project) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	// Single unprefixed star
+	if len(this.plan.Terms()) == 1 && this.plan.Terms()[0].Result().Expression() == nil {
+		if item.Type() == value.OBJECT {
+			item.SetAttachment("project", item)
+		} else {
+			item.SetAttachment("project", value.NewValue(map[string]interface{}{}))
+		}
+
+		return this.sendItem(item)
+	}
+
+	project := value.NewValue(make(map[string]interface{}))
+	as := make(map[string]value.Value)
+
+	for _, term := range this.plan.Terms() {
+		if term.Alias() != "" {
+			val, e := term.Result().Expression().Evaluate(item, context)
+			if e != nil {
+				context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+				return false
+			}
+
+			if term.Result().As() != "" {
+				as[term.Alias()] = val
+			} else {
+				project.SetField(term.Alias(), val)
+			}
+		} else {
+			// Star
+			var starActual interface{}
+			if term.Result().Expression() == nil {
+				starActual = item.Actual()
+			} else {
+				val, e := term.Result().Expression().Evaluate(item, context)
+				if e != nil {
+					context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+					return false
+				}
+				starActual = val.Actual()
+			}
+
+			// Latest star overwrites previous star
+			switch starActual := starActual.(type) {
+			case map[string]interface{}:
+				for k, v := range starActual {
+					project.SetField(k, value.NewValue(v))
+				}
+			}
+		}
+	}
+
+	// Explicit aliases overwrite everything, including data
+	for a, v := range as {
+		project.SetField(a, v)
+		item.SetField(a, v)
+	}
+
+	item.SetAttachment("project", project)
+	return this.sendItem(item)
 }
