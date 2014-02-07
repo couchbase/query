@@ -10,57 +10,49 @@
 package plan
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 )
 
-// bucketScan is common to scans that read a bucket.
-type bucketScan struct {
-	term *algebra.BucketTerm
+type PrimaryScan struct {
+	index catalog.PrimaryIndex
 }
 
-func (this *bucketScan) Term() *algebra.BucketTerm {
-	return this.term
+func NewPrimaryScan(index catalog.PrimaryIndex) *PrimaryScan {
+	return &PrimaryScan{index}
 }
 
-func (this *bucketScan) Alias() string {
-	return this.term.Alias()
+func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitPrimaryScan(this)
 }
 
-type FullScan struct {
-	bucketScan
-	bucket catalog.Bucket
-}
-
-func NewFullScan(term *algebra.BucketTerm, bucket catalog.Bucket) *FullScan {
-	return &FullScan{bucketScan{term}, bucket}
-}
-
-func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFullScan(this)
+func (this *PrimaryScan) Index() catalog.PrimaryIndex {
+	return this.index
 }
 
 type EqualScan struct {
-	bucketScan
 	index  catalog.EqualIndex
 	equals algebra.Expressions
 }
 
-func NewEqualScan(term *algebra.BucketTerm, index catalog.EqualIndex, equals algebra.Expressions) *EqualScan {
-	return &EqualScan{bucketScan{term}, index, equals}
+func NewEqualScan(index catalog.EqualIndex, equals algebra.Expressions) *EqualScan {
+	return &EqualScan{index, equals}
 }
 
 func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitEqualScan(this)
 }
 
+func (this *EqualScan) Index() catalog.EqualIndex {
+	return this.index
+}
+
 type RangeScan struct {
-	bucketScan
 	index  catalog.RangeIndex
 	ranges Ranges
 }
+
+type Ranges []*Range
 
 type Range struct {
 	Low       algebra.Expressions
@@ -68,49 +60,57 @@ type Range struct {
 	Inclusion catalog.RangeInclusion
 }
 
-type Ranges []*Range
-
-func NewRangeScan(term *algebra.BucketTerm, index catalog.RangeIndex, ranges Ranges) *RangeScan {
-	return &RangeScan{bucketScan{term}, index, ranges}
+func NewRangeScan(index catalog.RangeIndex, ranges Ranges) *RangeScan {
+	return &RangeScan{index, ranges}
 }
 
 func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitRangeScan(this)
 }
 
+func (this *RangeScan) Index() catalog.RangeIndex {
+	return this.index
+}
+
 type DualScan struct {
-	bucketScan
 	index catalog.DualIndex
 	duals Duals
 }
+
+type Duals []*Dual
 
 type Dual struct {
 	equal  algebra.Expression
 	ranges Ranges
 }
 
-type Duals []*Dual
-
-func NewDualScan(term *algebra.BucketTerm, index catalog.DualIndex, duals Duals) *DualScan {
-	return &DualScan{bucketScan{term}, index, duals}
+func NewDualScan(index catalog.DualIndex, duals Duals) *DualScan {
+	return &DualScan{index, duals}
 }
 
 func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDualScan(this)
 }
 
-// KeyScan is used for KEYS clauses (except after JOIN / NEST).
-type KeyScan struct {
-	bucketScan
-	bucket catalog.Bucket
+func (this *DualScan) Index() catalog.DualIndex {
+	return this.index
 }
 
-func NewKeyScan(term *algebra.BucketTerm, bucket catalog.Bucket) *KeyScan {
-	return &KeyScan{bucketScan{term}, bucket}
+// KeyScan is used for KEYS clauses (except after JOIN / NEST).
+type KeyScan struct {
+	term *algebra.BucketTerm
+}
+
+func NewKeyScan(term *algebra.BucketTerm) *KeyScan {
+	return &KeyScan{term}
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyScan(this)
+}
+
+func (this *KeyScan) Term() *algebra.BucketTerm {
+	return this.term
 }
 
 // ParentScan is used for UNNEST subqueries.

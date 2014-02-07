@@ -94,7 +94,7 @@ func (this *BucketTerm) PrimaryTerm() FromTerm {
 }
 
 func (this *BucketTerm) Alias() string {
-	if len(this.as) > 0 {
+	if this.as != "" {
 		return this.as
 	} else if this.project != nil {
 		return this.project.Alias()

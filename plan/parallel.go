@@ -9,10 +9,6 @@
 
 package plan
 
-import (
-	_ "fmt"
-)
-
 type Parallel struct {
 	child Operator
 }

@@ -9,10 +9,6 @@
 
 package plan
 
-import (
-	_ "fmt"
-)
-
 type Sequence struct {
 	children []Operator
 }

@@ -9,13 +9,9 @@
 
 package plan
 
-import (
-	_ "fmt"
-)
-
 type Visitor interface {
 	// Scan
-	VisitFullScan(op *FullScan) (interface{}, error)
+	VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
 	VisitParentScan(op *ParentScan) (interface{}, error)
 	VisitEqualScan(op *EqualScan) (interface{}, error)
 	VisitRangeScan(op *RangeScan) (interface{}, error)

@@ -19,14 +19,14 @@ import (
 type Parallel struct {
 	base
 	child        Operator
-	childChannel ChildChannel
+	childChannel StopChannel
 }
 
 func NewParallel(child Operator) *Parallel {
 	rv := &Parallel{
 		base:         newBase(),
 		child:        child,
-		childChannel: make(ChildChannel, runtime.NumCPU()),
+		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
 
 	rv.output = rv
@@ -41,7 +41,7 @@ func (this *Parallel) Copy() Operator {
 	return &Parallel{
 		base:         this.base.copy(),
 		child:        this.child.Copy(),
-		childChannel: make(ChildChannel, runtime.NumCPU()),
+		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
 }
 
@@ -84,6 +84,6 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *Parallel) ChildChannel() ChildChannel {
+func (this *Parallel) ChildChannel() StopChannel {
 	return this.childChannel
 }

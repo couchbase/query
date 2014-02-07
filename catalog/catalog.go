@@ -17,7 +17,6 @@ databases and storage engines, etc.
 package catalog
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
@@ -61,7 +60,7 @@ type Bucket interface {
 	IndexByPrimary() (PrimaryIndex, err.Error) // Returns the server-recommended primary index
 	Indexes() ([]Index, err.Error)
 	CreatePrimaryIndex() (PrimaryIndex, err.Error)
-	CreateIndex(name string, match EqualKey, range_ RangeKey, using IndexType) (Index, err.Error)
+	CreateIndex(name string, match EqualKey, rk RangeKey, using IndexType) (Index, err.Error)
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string) (map[string]value.Value, err.Error)
@@ -80,111 +79,4 @@ type Bucket interface {
 type Pair struct {
 	Key   string
 	Value value.Value
-}
-
-type IndexType string
-
-const (
-	UNSPECIFIED IndexType = "unspecified" // used by non-view primary_indexes
-	VIEW        IndexType = "view"
-)
-
-type EqualKey []algebra.Expression
-type RangeKey []*RangePart
-
-type RangePart struct {
-	Expr algebra.Expression
-	Dir  Direction
-}
-
-// Index is the base type for all indexes.
-type Index interface {
-	BucketId() string
-	Id() string
-	Name() string
-	Type() IndexType
-	Equal() EqualKey
-	Range() RangeKey
-	Drop() err.Error // PrimaryIndexes cannot be dropped
-}
-
-type IndexEntry struct {
-	EntryKey   value.CompositeValue
-	PrimaryKey string
-}
-
-type EntryChannel chan *IndexEntry
-
-type IndexResponse struct {
-	Chan     EntryChannel
-	Warnchan err.ErrorChannel
-	Errchan  err.ErrorChannel
-}
-
-// PrimaryIndex represents primary key indexes.
-type PrimaryIndex interface {
-	EqualIndex
-	BucketScan(limit int64, response *IndexResponse)
-}
-
-// EqualIndexes support equality matching.
-type EqualIndex interface {
-	Index
-	EqualScan(match value.CompositeValue, limit int64, response *IndexResponse)
-	EqualCount(match value.CompositeValue, response *IndexResponse)
-}
-
-// Direction represents ASC and DESC
-type Direction int
-
-const (
-	ASC  Direction = 1
-	DESC           = 2
-)
-
-// Inclusion controls how the boundary values of a range are treated.
-type RangeInclusion int
-
-const (
-	NEITHER RangeInclusion = iota
-	LOW
-	HIGH
-	BOTH
-)
-
-type Range struct {
-	Low       value.CompositeValue
-	High      value.CompositeValue
-	Inclusion RangeInclusion
-}
-
-// RangeIndexes support unrestricted range queries.
-type RangeIndex interface {
-	Index
-	RangeStats(range_ *Range) (RangeStatistics, err.Error)
-	RangeScan(range_ *Range, limit int64, response *IndexResponse)
-	RangeCount(range_ *Range, response *IndexResponse)
-	RangeCandidateMins(range_ *Range, response *IndexResponse)  // Anywhere from single Min value to RangeScan()
-	RangeCandidateMaxes(range_ *Range, response *IndexResponse) // Anywhere from single Max value to RangeScan()
-	Ordered() bool
-}
-
-// DualIndexes support restricted range queries.
-type DualIndex interface {
-	Index
-	DualStats(match value.CompositeValue, range_ *Range) (RangeStatistics, err.Error)
-	DualScan(match value.CompositeValue, range_ *Range, limit int64, response *IndexResponse)
-	DualCount(match value.CompositeValue, range_ *Range, response *IndexResponse)
-	DualCandidateMins(match value.CompositeValue, range_ *Range, response *IndexResponse)  // Anywhere from single Min value to DualScan()
-	DualCandidateMaxes(match value.CompositeValue, range_ *Range, response *IndexResponse) // Anywhere from single Max value to DualScan()
-	Ordered() bool
-}
-
-// RangeStatistics captures statistics for an index range.
-type RangeStatistics interface {
-	Count() (int64, err.Error)
-	Min() (value.Value, err.Error)
-	Max() (value.Value, err.Error)
-	DistinctCount(int64, err.Error)
-	Bins() ([]RangeStatistics, err.Error)
 }

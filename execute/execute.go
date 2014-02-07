@@ -20,7 +20,6 @@ import (
 )
 
 type StopChannel chan bool
-type ChildChannel chan int
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
@@ -39,5 +38,5 @@ type Operator interface {
 }
 
 type Parent interface {
-	ChildChannel() ChildChannel // Never closed, just garbage-collected
+	ChildChannel() StopChannel // Never closed, just garbage-collected
 }

@@ -40,4 +40,7 @@ func (this *EqualScan) Copy() Operator {
 }
 
 func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+	})
 }

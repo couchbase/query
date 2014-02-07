@@ -18,14 +18,14 @@ import (
 type Sequence struct {
 	base
 	children     []Operator
-	childChannel ChildChannel
+	childChannel StopChannel
 }
 
 func NewSequence(children ...Operator) *Sequence {
 	rv := &Sequence{
 		base:         newBase(),
 		children:     children,
-		childChannel: make(ChildChannel, 1),
+		childChannel: make(StopChannel, 1),
 	}
 
 	rv.output = rv
@@ -46,7 +46,7 @@ func (this *Sequence) Copy() Operator {
 	return &Sequence{
 		base:         this.base.copy(),
 		children:     children,
-		childChannel: make(ChildChannel, 1),
+		childChannel: make(StopChannel, 1),
 	}
 }
 
@@ -82,6 +82,6 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *Sequence) ChildChannel() ChildChannel {
+func (this *Sequence) ChildChannel() StopChannel {
 	return this.childChannel
 }

@@ -10,20 +10,21 @@
 package plan
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 )
 
 type Fetch struct {
-	bucket  catalog.Bucket
-	project algebra.Path
-	as      string
+	bucket catalog.Bucket
+	term   *algebra.BucketTerm
+	alias  string
 }
 
-func NewFetch(bucket catalog.Bucket, project algebra.Path, as string) *Fetch {
-	return &Fetch{bucket, project, as}
+func NewFetch(bucket catalog.Bucket, term *algebra.BucketTerm) *Fetch {
+	return &Fetch{
+		bucket: bucket,
+		term:   term,
+	}
 }
 
 func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
@@ -32,4 +33,12 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Fetch) Bucket() catalog.Bucket {
 	return this.bucket
+}
+
+func (this *Fetch) Term() *algebra.BucketTerm {
+	return this.term
+}
+
+func (this *Fetch) Alias() string {
+	return this.alias
 }

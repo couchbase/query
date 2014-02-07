@@ -120,7 +120,7 @@ func (this *base) notify() {
 	}
 
 	if this.parent != nil {
-		this.parent.ChildChannel() <- 1
+		this.parent.ChildChannel() <- false
 	}
 }
 

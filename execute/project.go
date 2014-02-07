@@ -45,10 +45,10 @@ func (this *Project) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Project) processItem(item value.AnnotatedValue, context *Context) bool {
-	// Single unprefixed star
+	// Single unprefixed star, or project raw value
 	if len(this.plan.Terms()) == 1 && this.plan.Terms()[0].Result().Expression() == nil {
-		if item.Type() == value.OBJECT {
-			item.SetAttachment("project", item)
+		if item.Type() == value.OBJECT || !this.plan.Terms()[0].Result().Star() {
+			item.SetAttachment("project", item.GetValue())
 		} else {
 			item.SetAttachment("project", value.NewValue(map[string]interface{}{}))
 		}

@@ -55,13 +55,12 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		switch actuals.(type) {
 		case []interface{}:
 		case nil:
-			actuals = []interface{}(nil)
+			return
 		default:
 			actuals = []interface{}{actuals}
 		}
 
 		acts := actuals.([]interface{})
-
 		for _, act := range acts {
 			av := value.NewAnnotatedValue(value.NewValue(act))
 			this.output.ItemChannel() <- av

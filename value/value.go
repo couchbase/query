@@ -52,6 +52,7 @@ type ValueChannel chan Value
 
 // A composite Value
 type CompositeValue []Value
+type CompositeValues []CompositeValue
 
 // A collection of Value objects
 type Values []Value

@@ -10,8 +10,6 @@
 package plan
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 )

@@ -66,7 +66,6 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 			cv := value.NewCorrelatedValue(parent)
 			av := value.NewAnnotatedValue(cv)
 			av.SetAttachment("meta", map[string]interface{}{"id": key})
-			av.SetAttachment("term", this.plan.Term())
 			this.output.ItemChannel() <- av
 		}
 	})
