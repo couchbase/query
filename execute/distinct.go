@@ -72,6 +72,21 @@ func (this *Distinct) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
+	project := item.GetAttachment("project")
+
+	switch project := project.(type) {
+	case value.AnnotatedValue:
+		item = project
+	case value.Value:
+		item = value.NewAnnotatedValue(project)
+	default:
+		context.ErrorChannel() <- err.NewError(nil,
+			fmt.Sprintf("Invalid or missing projection %v.", project))
+		return false
+	}
+
+	item.SetAttachment("project", item)
+
 	switch item.Type() {
 	case value.OBJECT:
 		bytes, e := json.Marshal(item.Actual())
@@ -97,6 +112,8 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 			return false
 		}
 		this.arrays[string(bytes)] = item
+	case value.NOT_JSON:
+		return this.sendItem(item)
 	default:
 		context.ErrorChannel() <- err.NewError(nil,
 			fmt.Sprintf("Unknown Value.Type() %v.", item.Type()))
