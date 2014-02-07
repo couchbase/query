@@ -115,12 +115,8 @@ func (this *Builder) VisitProject(plan *plan.Project) (interface{}, error) {
 }
 
 // Distinct
-func (this *Builder) VisitInitialDistinct(plan *plan.InitialDistinct) (interface{}, error) {
-	return NewInitialDistinct(), nil
-}
-
-func (this *Builder) VisitSubsequentDistinct(plan *plan.SubsequentDistinct) (interface{}, error) {
-	return NewSubsequentDistinct(), nil
+func (this *Builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
+	return NewDistinct(), nil
 }
 
 // Order

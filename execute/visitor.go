@@ -47,8 +47,7 @@ type Visitor interface {
 	VisitProject(op *Project) (interface{}, error)
 
 	// Distinct
-	VisitInitialDistinct(op *InitialDistinct) (interface{}, error)
-	VisitSubsequentDistinct(op *SubsequentDistinct) (interface{}, error)
+	VisitDistinct(op *Distinct) (interface{}, error)
 
 	// Order
 	VisitOrder(op *Order) (interface{}, error)

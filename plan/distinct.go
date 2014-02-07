@@ -9,28 +9,13 @@
 
 package plan
 
-import (
-	_ "fmt"
-)
-
-type InitialDistinct struct {
+type Distinct struct {
 }
 
-type SubsequentDistinct struct {
+func NewDistinct() *Distinct {
+	return &Distinct{}
 }
 
-func NewInitialDistinct() *InitialDistinct {
-	return &InitialDistinct{}
-}
-
-func (this *InitialDistinct) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitInitialDistinct(this)
-}
-
-func NewSubsequentDistinct() *SubsequentDistinct {
-	return &SubsequentDistinct{}
-}
-
-func (this *SubsequentDistinct) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSubsequentDistinct(this)
+func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDistinct(this)
 }
