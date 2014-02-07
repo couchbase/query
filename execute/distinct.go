@@ -30,7 +30,7 @@ type Distinct struct {
 	objects  map[string]value.AnnotatedValue
 }
 
-const _CAP = 1024
+const _DISTINCT_CAP = 1024
 
 func NewDistinct() *Distinct {
 	rv := &Distinct{
@@ -43,7 +43,7 @@ func NewDistinct() *Distinct {
 	rv.numbers = make(map[float64]value.AnnotatedValue)
 	rv.strings = make(map[string]value.AnnotatedValue)
 	rv.arrays = make(map[string]value.AnnotatedValue)
-	rv.objects = make(map[string]value.AnnotatedValue, _CAP)
+	rv.objects = make(map[string]value.AnnotatedValue, _DISTINCT_CAP)
 
 	return rv
 }
@@ -59,7 +59,7 @@ func (this *Distinct) Copy() Operator {
 		numbers:  make(map[float64]value.AnnotatedValue),
 		strings:  make(map[string]value.AnnotatedValue),
 		arrays:   make(map[string]value.AnnotatedValue),
-		objects:  make(map[string]value.AnnotatedValue, _CAP),
+		objects:  make(map[string]value.AnnotatedValue, _DISTINCT_CAP),
 	}
 }
 
@@ -124,6 +124,16 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 }
 
 func (this *Distinct) afterItems(context *Context) {
+	defer func() {
+		this.missings = nil
+		this.nulls = nil
+		this.booleans = nil
+		this.numbers = nil
+		this.strings = nil
+		this.arrays = nil
+		this.objects = nil
+	}()
+
 	if this.missings != nil {
 		if !this.sendItem(this.missings) {
 			return

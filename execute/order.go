@@ -11,20 +11,28 @@ package execute
 
 import (
 	_ "fmt"
+	"sort"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Order struct {
 	base
-	plan *plan.Order
+	plan    *plan.Order
+	values  []value.AnnotatedValue
+	length  int
+	context *Context
 }
+
+const _ORDER_CAP = 64
 
 func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{
-		base: newBase(),
-		plan: plan,
+		base:   newBase(),
+		plan:   plan,
+		values: make([]value.AnnotatedValue, _ORDER_CAP),
 	}
 
 	rv.output = rv
@@ -36,7 +44,11 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Order) Copy() Operator {
-	return &Order{this.base.copy(), this.plan}
+	return &Order{
+		base:   this.base.copy(),
+		plan:   this.plan,
+		values: make([]value.AnnotatedValue, _ORDER_CAP),
+	}
 }
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
@@ -48,8 +60,73 @@ func (this *Order) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
+	if len(this.values) >= this.length {
+		values := make([]value.AnnotatedValue, this.length<<1)
+		copy(values, this.values)
+		this.values = values
+	}
+
+	this.values[this.length] = item
+	this.length++
 	return true
 }
 
 func (this *Order) afterItems(context *Context) {
+	defer func() { this.values = nil }()
+
+	this.values = this.values[0:this.length]
+	this.context = context
+	sort.Sort(this)
+	this.context = nil
+
+	for _, av := range this.values {
+		if !this.sendItem(av) {
+			return
+		}
+	}
+}
+
+func (this *Order) Len() int {
+	return len(this.values)
+}
+
+func (this *Order) Less(i, j int) bool {
+	v1 := this.values[i]
+	v2 := this.values[j]
+
+	var e1, e2 value.Value
+	var c int
+	var e error
+
+	for _, term := range this.plan.Terms() {
+		e1, e = term.Expression().Evaluate(v1, this.context)
+		if e != nil {
+			this.context.ErrorChannel() <- err.NewError(e, "Error evaluating ORDER BY.")
+			return false
+		}
+
+		e2, e = term.Expression().Evaluate(v2, this.context)
+		if e != nil {
+			this.context.ErrorChannel() <- err.NewError(e, "Error evaluating ORDER BY.")
+			return false
+		}
+
+		c = e1.Collate(e2)
+
+		if c == 0 {
+			continue
+		}
+
+		if term.Descending() {
+			return c > 0
+		} else {
+			return c < 0
+		}
+	}
+
+	return false
+}
+
+func (this *Order) Swap(i, j int) {
+	this.values[i], this.values[j] = this.values[j], this.values[i]
 }

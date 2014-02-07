@@ -16,10 +16,10 @@ import (
 )
 
 type Precompute struct {
-	exprs algebra.ExpressionList
+	exprs algebra.Expressions
 }
 
-func NewPrecompute(exprs algebra.ExpressionList) *Precompute {
+func NewPrecompute(exprs algebra.Expressions) *Precompute {
 	return &Precompute{exprs}
 }
 

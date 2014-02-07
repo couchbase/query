@@ -15,16 +15,16 @@ import (
 )
 
 type Insert struct {
-	bucket    *BucketRef     `json:"bucket"`
-	key       Expression     `json:"key"`
-	values    Expression     `json:"values"`
-	query     *Select        `json:"query"`
-	as        string         `json:"as"`
-	returning ResultTermList `json:"returning"`
+	bucket    *BucketRef  `json:"bucket"`
+	key       Expression  `json:"key"`
+	values    Expression  `json:"values"`
+	query     *Select     `json:"query"`
+	as        string      `json:"as"`
+	returning ResultTerms `json:"returning"`
 }
 
 func NewInsert(bucket *BucketRef, key, values Expression, query *Select,
-	as string, returning ResultTermList) *Insert {
+	as string, returning ResultTerms) *Insert {
 	return &Insert{bucket, key, values, query, as, returning}
 }
 

@@ -92,6 +92,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+		defer func() { this.batch = nil }()
 
 		go this.input.RunOnce(context, parent)
 

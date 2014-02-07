@@ -16,10 +16,6 @@ processed by the query engine.
 */
 package algebra
 
-import (
-	_ "fmt"
-)
-
 type Node interface {
 	//fmt.Stringer
 
@@ -32,4 +28,4 @@ type ResultTerm struct {
 	as   string     `json:"as"`
 }
 
-type ResultTermList []*ResultTerm
+type ResultTerms []*ResultTerm

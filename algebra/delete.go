@@ -15,15 +15,15 @@ import (
 )
 
 type Delete struct {
-	bucket    *BucketRef     `json:"bucket"`
-	keys      Expression     `json:"keys"`
-	where     Expression     `json:"where"`
-	limit     Expression     `json:"limit"`
-	returning ResultTermList `json:"returning"`
+	bucket    *BucketRef  `json:"bucket"`
+	keys      Expression  `json:"keys"`
+	where     Expression  `json:"where"`
+	limit     Expression  `json:"limit"`
+	returning ResultTerms `json:"returning"`
 }
 
 func NewDelete(bucket *BucketRef, keys, where, limit Expression,
-	returning ResultTermList) *Delete {
+	returning ResultTerms) *Delete {
 	return &Delete{bucket, keys, where, limit, returning}
 }
 

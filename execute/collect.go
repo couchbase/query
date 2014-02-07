@@ -51,25 +51,13 @@ func (this *Collect) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bool {
-	mv := item.GetAttachment("meta")
-	if mv == nil {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find meta.")
-		return false
-	}
-
-	meta := mv.(map[string]interface{})
-	project, ok := meta["project"]
-	if !ok {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find projection.")
-		return false
-	}
-
-	// Ensure room
-	if len(this.values) == this.length {
+	if len(this.values) >= this.length {
 		values := make([]value.Value, this.length<<1)
 		copy(values, this.values)
 		this.values = values
 	}
+
+	project := item.GetAttachment("project")
 
 	switch project := project.(type) {
 	case value.Value:
@@ -80,7 +68,7 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 		return true
 	default:
 		context.ErrorChannel() <- err.NewError(nil,
-			fmt.Sprintf("Unable to project value %v of type %T.", project, project))
+			fmt.Sprintf("Invalid or missing projection %v.", project))
 		return false
 	}
 }

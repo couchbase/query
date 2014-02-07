@@ -24,12 +24,13 @@ type Expression interface {
 	EquivalentTo(other Expression) bool
 
 	// A list of other Expressions on which this depends
-	Dependencies() ExpressionList
+	Dependencies() Expressions
 }
 
-type ExpressionList []Expression
+type Expressions []Expression
 
 type Path interface {
 	Expression
 	Alias() string
+	Set(value.Value) error
 }

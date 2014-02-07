@@ -10,19 +10,21 @@
 package plan
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/algebra"
 )
 
 type Order struct {
-	terms algebra.SortTermList
+	terms algebra.SortTerms
 }
 
-func NewOrder(terms algebra.SortTermList) *Order {
+func NewOrder(terms algebra.SortTerms) *Order {
 	return &Order{terms}
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOrder(this)
+}
+
+func (this *Order) Terms() algebra.SortTerms {
+	return this.terms
 }

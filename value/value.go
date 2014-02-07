@@ -54,7 +54,7 @@ type ValueChannel chan Value
 type CompositeValue []Value
 
 // A collection of Value objects
-type ValueCollection []Value
+type Values []Value
 
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {

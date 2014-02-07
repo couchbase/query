@@ -45,10 +45,10 @@ func (this *FullScan) Accept(visitor Visitor) (interface{}, error) {
 type EqualScan struct {
 	bucketScan
 	index  catalog.EqualIndex
-	equals algebra.ExpressionList
+	equals algebra.Expressions
 }
 
-func NewEqualScan(term *algebra.BucketTerm, index catalog.EqualIndex, equals algebra.ExpressionList) *EqualScan {
+func NewEqualScan(term *algebra.BucketTerm, index catalog.EqualIndex, equals algebra.Expressions) *EqualScan {
 	return &EqualScan{bucketScan{term}, index, equals}
 }
 
@@ -59,18 +59,18 @@ func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
 type RangeScan struct {
 	bucketScan
 	index  catalog.RangeIndex
-	ranges RangeList
+	ranges Ranges
 }
 
 type Range struct {
-	Low       algebra.ExpressionList
-	High      algebra.ExpressionList
+	Low       algebra.Expressions
+	High      algebra.Expressions
 	Inclusion catalog.RangeInclusion
 }
 
-type RangeList []*Range
+type Ranges []*Range
 
-func NewRangeScan(term *algebra.BucketTerm, index catalog.RangeIndex, ranges RangeList) *RangeScan {
+func NewRangeScan(term *algebra.BucketTerm, index catalog.RangeIndex, ranges Ranges) *RangeScan {
 	return &RangeScan{bucketScan{term}, index, ranges}
 }
 
@@ -81,17 +81,17 @@ func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
 type DualScan struct {
 	bucketScan
 	index catalog.DualIndex
-	duals DualList
+	duals Duals
 }
 
 type Dual struct {
 	equal  algebra.Expression
-	ranges RangeList
+	ranges Ranges
 }
 
-type DualList []*Dual
+type Duals []*Dual
 
-func NewDualScan(term *algebra.BucketTerm, index catalog.DualIndex, duals DualList) *DualScan {
+func NewDualScan(term *algebra.BucketTerm, index catalog.DualIndex, duals Duals) *DualScan {
 	return &DualScan{bucketScan{term}, index, duals}
 }
 

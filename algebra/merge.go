@@ -16,15 +16,15 @@ import (
 )
 
 type Merge struct {
-	bucket    *BucketRef     `json:"bucket"`
-	from      FromTerm       `json:"from"`
-	query     *Select        `json:"query"`
-	as        string         `json:"as"`
-	update    *MergeUpdate   `json:"update"`
-	delete    *MergeDelete   `json:"delete"`
-	insert    *MergeInsert   `json:"insert"`
-	limit     Expression     `json:"limit"`
-	returning ResultTermList `json:"returning"`
+	bucket    *BucketRef   `json:"bucket"`
+	from      FromTerm     `json:"from"`
+	query     *Select      `json:"query"`
+	as        string       `json:"as"`
+	update    *MergeUpdate `json:"update"`
+	delete    *MergeDelete `json:"delete"`
+	insert    *MergeInsert `json:"insert"`
+	limit     Expression   `json:"limit"`
+	returning ResultTerms  `json:"returning"`
 }
 
 type MergeUpdate struct {
@@ -44,7 +44,7 @@ type MergeInsert struct {
 
 func NewMerge(bucket *BucketRef, from FromTerm, query *Select, as string,
 	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
-	limit Expression, returning ResultTermList) *Merge {
+	limit Expression, returning ResultTerms) *Merge {
 	return &Merge{bucket, from, query, as, update,
 		delete, insert, limit, returning}
 }

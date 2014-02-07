@@ -17,23 +17,23 @@ import (
 
 // Grouping of input data.
 type InitialGroup struct {
-	keys algebra.ExpressionList
-	aggs algebra.ExpressionList
+	keys algebra.Expressions
+	aggs algebra.Expressions
 }
 
 // Grouping of groups. Recursable.
 type IntermediateGroup struct {
-	keys algebra.ExpressionList
-	aggs algebra.ExpressionList
+	keys algebra.Expressions
+	aggs algebra.Expressions
 }
 
 // Compute DistinctCount() and Avg().
 type FinalGroup struct {
-	keys algebra.ExpressionList
-	aggs algebra.ExpressionList
+	keys algebra.Expressions
+	aggs algebra.Expressions
 }
 
-func NewInitialGroup(keys, aggs algebra.ExpressionList) *InitialGroup {
+func NewInitialGroup(keys, aggs algebra.Expressions) *InitialGroup {
 	return &InitialGroup{keys, aggs}
 }
 
@@ -41,7 +41,7 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
-func NewIntermediateGroup(keys, aggs algebra.ExpressionList) *IntermediateGroup {
+func NewIntermediateGroup(keys, aggs algebra.Expressions) *IntermediateGroup {
 	return &IntermediateGroup{keys, aggs}
 }
 
@@ -49,7 +49,7 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
-func NewFinalGroup(keys, aggs algebra.ExpressionList) *FinalGroup {
+func NewFinalGroup(keys, aggs algebra.Expressions) *FinalGroup {
 	return &FinalGroup{keys, aggs}
 }
 

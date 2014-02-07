@@ -16,10 +16,10 @@ import (
 )
 
 type Project struct {
-	results algebra.ResultTermList
+	results algebra.ResultTerms
 }
 
-func NewProject(results algebra.ResultTermList) *Project {
+func NewProject(results algebra.ResultTerms) *Project {
 	return &Project{results}
 }
 

@@ -42,18 +42,7 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
-	mv := item.GetAttachment("meta")
-	if mv == nil {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find meta.")
-		return false
-	}
-
-	meta := mv.(map[string]interface{})
-	project, ok := meta["project"]
-	if !ok {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find projection.")
-		return false
-	}
+	project := item.GetAttachment("project")
 
 	switch project := project.(type) {
 	case value.Value:
@@ -64,7 +53,7 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 		}
 	default:
 		context.ErrorChannel() <- err.NewError(nil,
-			fmt.Sprintf("Unable to project value %v of type %T.", project, project))
+			fmt.Sprintf("Invalid or missing projection %v.", project))
 		return false
 	}
 }

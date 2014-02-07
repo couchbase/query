@@ -15,15 +15,15 @@ import (
 )
 
 type Select struct {
-	from     FromTerm       `json:"from"`
-	where    Expression     `json:"where"`
-	group    ExpressionList `json:"group"`
-	having   Expression     `json:"having"`
-	project  ResultTermList `json:"project"`
-	distinct bool           `json:"distinct"`
-	order    SortTermList   `json:"order"`
-	offset   Expression     `json:"offset"`
-	limit    Expression     `json:"limit"`
+	from     FromTerm    `json:"from"`
+	where    Expression  `json:"where"`
+	group    Expressions `json:"group"`
+	having   Expression  `json:"having"`
+	project  ResultTerms `json:"project"`
+	distinct bool        `json:"distinct"`
+	order    SortTerms   `json:"order"`
+	offset   Expression  `json:"offset"`
+	limit    Expression  `json:"limit"`
 }
 
 type FromTerm interface {
@@ -65,9 +65,9 @@ type Unnest struct {
 	as      string
 }
 
-func NewSelect(from FromTerm, where Expression, group ExpressionList,
-	having Expression, project ResultTermList, distinct bool,
-	order SortTermList, offset Expression, limit Expression,
+func NewSelect(from FromTerm, where Expression, group Expressions,
+	having Expression, project ResultTerms, distinct bool,
+	order SortTerms, offset Expression, limit Expression,
 ) *Select {
 	return &Select{from, where, group, having,
 		project, distinct, order, offset, limit}
@@ -175,9 +175,17 @@ func (this *Unnest) Alias() string {
 	}
 }
 
+type SortTerms []*SortTerm
+
 type SortTerm struct {
-	expr      Expression `json:"expr"`
-	ascending bool       `json:"asc"`
+	expr       Expression `json:"expr"`
+	descending bool       `json:"asc"`
 }
 
-type SortTermList []*SortTerm
+func (this *SortTerm) Expression() Expression {
+	return this.expr
+}
+
+func (this *SortTerm) Descending() bool {
+	return this.descending
+}

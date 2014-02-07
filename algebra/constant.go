@@ -36,6 +36,6 @@ func (this *ConstantExpression) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *ConstantExpression) Dependencies() ExpressionList {
+func (this *ConstantExpression) Dependencies() Expressions {
 	return nil
 }
