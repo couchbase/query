@@ -10,8 +10,9 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -44,5 +45,69 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
+	if e != nil {
+		context.ErrorChannel() <- err.NewError(e, "Error evaluating NEST keys.")
+		return false
+	}
+
+	actuals := kv.Actual()
+	switch actuals.(type) {
+	case []interface{}:
+	case nil:
+		actuals = []interface{}(nil)
+	default:
+		actuals = []interface{}{actuals}
+	}
+
+	acts := actuals.([]interface{})
+	if len(acts) == 0 {
+		// Outer nest
+		return !this.plan.Term().Outer() || this.sendItem(item)
+	}
+
+	// Build list of keys
+	keys := make([]string, len(acts))
+	for i, key := range acts {
+		switch key := key.(type) {
+		case string:
+			keys[i] = key
+		default:
+			context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+				"Missing or invalid nest key %v of type %T.",
+				key, key))
+			return false
+		}
+	}
+
+	// Fetch
+	nestItems, er := this.plan.Bucket().Fetch(keys)
+	if er != nil {
+		context.ErrorChannel() <- er
+		return false
+	}
+
+	// Attach meta
+	nvs := make([]value.AnnotatedValue, len(nestItems))
+	for i, nestItem := range nestItems {
+		// Apply projection, if any
+		project := this.plan.Term().Right().Project()
+		if project != nil {
+			var e error
+			nestItem, e = project.Evaluate(nestItem, context)
+			if e != nil {
+				context.ErrorChannel() <- err.NewError(e,
+					"Error evaluating nest path.")
+				return false
+			}
+		}
+
+		nv := value.NewAnnotatedValue(nestItem)
+		nv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
+		nvs[i] = nv
+	}
+
+	// Attach and send
+	item.SetField(this.plan.Alias(), nvs)
+	return this.sendItem(item)
 }

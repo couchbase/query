@@ -15,49 +15,74 @@ import (
 )
 
 type Join struct {
-	outer      bool
-	bucket     catalog.Bucket
-	projection algebra.Path
-	as         string
-	keys       algebra.Expression
+	bucket catalog.Bucket
+	term   *algebra.Join
+	alias  string
 }
 
-type Nest struct {
-	outer   bool
-	bucket  catalog.Bucket
-	project algebra.Path
-	as      string
-	keys    algebra.Expression
-}
-
-type Unnest struct {
-	outer   bool
-	project algebra.Path
-	as      string
-}
-
-func NewJoin(outer bool, bucket catalog.Bucket, project algebra.Path,
-	as string, keys algebra.Expression) *Join {
-	return &Join{outer, bucket, project, as, keys}
+func NewJoin(bucket catalog.Bucket, term *algebra.Join, alias string) *Join {
+	return &Join{bucket, term, alias}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
-func NewNest(outer bool, bucket catalog.Bucket, project algebra.Path,
-	as string, keys algebra.Expression) *Nest {
-	return &Nest{outer, bucket, project, as, keys}
+func (this *Join) Bucket() catalog.Bucket {
+	return this.bucket
+}
+
+func (this *Join) Term() *algebra.Join {
+	return this.term
+}
+
+func (this *Join) Alias() string {
+	return this.alias
+}
+
+type Nest struct {
+	bucket catalog.Bucket
+	term   *algebra.Nest
+	alias  string
+}
+
+func NewNest(bucket catalog.Bucket, term *algebra.Nest, alias string) *Nest {
+	return &Nest{bucket, term, alias}
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
-func NewUnnest(outer bool, project algebra.Path, as string) *Unnest {
-	return &Unnest{outer, project, as}
+func (this *Nest) Bucket() catalog.Bucket {
+	return this.bucket
+}
+
+func (this *Nest) Term() *algebra.Nest {
+	return this.term
+}
+
+func (this *Nest) Alias() string {
+	return this.alias
+}
+
+type Unnest struct {
+	term  *algebra.Unnest
+	alias string
+}
+
+func NewUnnest(term *algebra.Unnest, alias string) *Unnest {
+	return &Unnest{term, alias}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
+}
+
+func (this *Unnest) Term() *algebra.Unnest {
+	return this.term
+}
+
+func (this *Unnest) Alias() string {
+	return this.alias
 }

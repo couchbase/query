@@ -65,7 +65,6 @@ type Bucket interface {
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string) ([]value.Value, err.Error)
-	FetchOne(key string) (value.Value, err.Error)
 
 	// Used by DML statements
 	// For all these methods, nil input keys are replaced with auto-generated keys

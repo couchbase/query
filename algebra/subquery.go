@@ -10,7 +10,6 @@
 package algebra
 
 import (
-	_ "fmt"
 	"github.com/couchbaselabs/query/value"
 )
 

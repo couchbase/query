@@ -11,7 +11,6 @@ package algebra
 
 import (
 	_ "fmt"
-	_ "github.com/couchbaselabs/query/value"
 )
 
 type Select struct {
@@ -26,45 +25,6 @@ type Select struct {
 	limit    Expression  `json:"limit"`
 }
 
-type FromTerm interface {
-	Node
-	PrimaryTerm() FromTerm
-	Alias() string
-}
-
-type BucketTerm struct {
-	pool    string
-	bucket  string
-	project Path
-	as      string
-	keys    Expression
-}
-
-// For subqueries.
-type ParentTerm struct {
-	project Path
-	as      string
-}
-
-type Join struct {
-	left  FromTerm
-	outer bool
-	right *BucketTerm
-}
-
-type Nest struct {
-	left  FromTerm
-	outer bool
-	right *BucketTerm
-}
-
-type Unnest struct {
-	left    FromTerm
-	outer   bool
-	project Path
-	as      string
-}
-
 func NewSelect(from FromTerm, where Expression, group Expressions,
 	having Expression, project ResultTerms, distinct bool,
 	order SortTerms, offset Expression, limit Expression,
@@ -77,106 +37,44 @@ func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
-func (this *Select) IsCorrelated() bool {
-	return true // FIXME
+func (this *Select) From() FromTerm {
+	return this.from
 }
 
-func NewBucketTerm(pool, bucket string, project Path, as string, keys Expression) *BucketTerm {
-	return &BucketTerm{pool, bucket, project, as, keys}
+func (this *Select) Where() Expression {
+	return this.where
 }
 
-func (this *BucketTerm) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitBucketTerm(this)
+func (this *Select) Group() Expressions {
+	return this.group
 }
 
-func (this *BucketTerm) PrimaryTerm() FromTerm {
-	return this
+func (this *Select) Having() Expression {
+	return this.having
 }
 
-func (this *BucketTerm) Project() Path {
+func (this *Select) Project() ResultTerms {
 	return this.project
 }
 
-func (this *BucketTerm) Alias() string {
-	if this.as != "" {
-		return this.as
-	} else if this.project != nil {
-		return this.project.Alias()
-	} else {
-		return this.bucket
-	}
+func (this *Select) Distinct() bool {
+	return this.distinct
 }
 
-func (this *BucketTerm) Keys() Expression {
-	return this.keys
+func (this *Select) Order() SortTerms {
+	return this.order
 }
 
-func NewParentTerm(project Path, as string) *ParentTerm {
-	return &ParentTerm{project, as}
+func (this *Select) Offset() Expression {
+	return this.offset
 }
 
-func (this *ParentTerm) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitParentTerm(this)
+func (this *Select) Limit() Expression {
+	return this.limit
 }
 
-func (this *ParentTerm) PrimaryTerm() FromTerm {
-	return this
-}
-
-func (this *ParentTerm) Alias() string {
-	return this.as
-}
-
-func NewJoin(left FromTerm, outer bool, right *BucketTerm) *Join {
-	return &Join{left, outer, right}
-}
-
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
-}
-
-func (this *Join) PrimaryTerm() FromTerm {
-	return this.left.PrimaryTerm()
-}
-
-func (this *Join) Alias() string {
-	return this.right.Alias()
-}
-
-func NewNest(left FromTerm, outer bool, right *BucketTerm) *Nest {
-	return &Nest{left, outer, right}
-}
-
-func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitNest(this)
-}
-
-func (this *Nest) PrimaryTerm() FromTerm {
-	return this.left.PrimaryTerm()
-}
-
-func (this *Nest) Alias() string {
-	return this.right.Alias()
-}
-
-func NewUnnest(left FromTerm, outer bool, project Path, as string) *Unnest {
-	return &Unnest{left, outer, project, as}
-}
-
-func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitUnnest(this)
-}
-
-func (this *Unnest) PrimaryTerm() FromTerm {
-	return this.left.PrimaryTerm()
-}
-
-func (this *Unnest) Alias() string {
-	if len(this.as) > 0 {
-		return this.as
-	} else {
-		return this.project.Alias()
-	}
+func (this *Select) IsCorrelated() bool {
+	return true // FIXME
 }
 
 type SortTerms []*SortTerm
