@@ -64,7 +64,7 @@ type Bucket interface {
 	CreateIndex(name string, equal, ranje algebra.CompositeExpression, using IndexType) (Index, err.Error)
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) (map[string]value.Value, err.Error)
+	Fetch(keys []string) ([]value.Value, err.Error)
 	FetchOne(key string) (value.Value, err.Error)
 
 	// Used by DML statements

@@ -10,8 +10,9 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -54,6 +55,49 @@ func (this *Fetch) afterItems(context *Context) {
 func (this *Fetch) flushBatch(context *Context) bool {
 	if len(this.batch) == 0 {
 		return true
+	}
+
+	// Build list of keys
+	keys := make([]string, len(this.batch))
+	for i, av := range this.batch {
+		meta := av.GetAttachment("meta")
+
+		switch meta := meta.(type) {
+		case map[string]interface{}:
+			key := meta["id"]
+
+			switch key := key.(type) {
+			case string:
+				keys[i] = key
+			default:
+				context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+					"Missing or invalid primary key %v of type %T.", key, key))
+				return false
+			}
+		default:
+			context.ErrorChannel() <- err.NewError(nil,
+				"Missing or invalid meta for primary key.")
+			return false
+		}
+	}
+
+	// Fetch
+	items, e := this.plan.Bucket().Fetch(keys)
+	if e != nil {
+		context.ErrorChannel() <- e
+		return false
+	}
+
+	// Attach meta and send
+	for i, item := range items {
+		av := this.batch[i]
+		fv := value.NewAnnotatedValue(item)
+		fv.SetAttachment("meta", av.GetAttachment("meta"))
+		av.SetField(this.plan.Alias(), fv)
+
+		if !this.sendItem(av) {
+			return false
+		}
 	}
 
 	return true
