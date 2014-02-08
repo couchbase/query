@@ -45,7 +45,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 
-		keys, e := this.plan.Term().Keys().Evaluate(parent, context)
+		keys, e := this.plan.Keys().Evaluate(parent, context)
 		if e != nil {
 			context.ErrorChannel() <- err.NewError(e, "Error evaluating KEYS.")
 			return

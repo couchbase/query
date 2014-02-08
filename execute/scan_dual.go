@@ -10,8 +10,8 @@
 package execute
 
 import (
-	_ "fmt"
-
+	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -40,4 +40,66 @@ func (this *DualScan) Copy() Operator {
 }
 
 func (this *DualScan) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+
+		for _, dual := range this.plan.Duals() {
+			if !this.scanDual(context, parent, dual) {
+				return
+			}
+		}
+	})
+}
+
+func (this *DualScan) scanDual(context *Context, parent value.Value, dual *plan.Dual) bool {
+	conn := catalog.NewIndexConnection(
+		context.WarningChannel(),
+		context.ErrorChannel(),
+	)
+
+	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+
+	dv := &catalog.Dual{}
+	var ok bool
+
+	if dual.Equal == nil {
+		context.ErrorChannel() <- err.NewError(nil, "No equality term for dual filter.")
+		return false
+	}
+
+	dv.Equal, ok = eval(dual.Equal, context, parent)
+	if !ok {
+		return false
+	}
+
+	dv.Low, ok = eval(dual.Low, context, parent)
+	if !ok {
+		return false
+	}
+
+	dv.High, ok = eval(dual.High, context, parent)
+	if !ok {
+		return false
+	}
+
+	dv.Inclusion = dual.Inclusion
+	go this.plan.Index().DualScan(dv, conn)
+
+	var entry *catalog.IndexEntry
+
+	for ok {
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			if ok {
+				cv := value.NewCorrelatedValue(parent)
+				av := value.NewAnnotatedValue(cv)
+				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				ok = this.sendItem(av)
+			}
+		case <-this.stopChannel:
+			return false
+		}
+	}
+
+	return true
 }

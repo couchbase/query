@@ -10,8 +10,9 @@
 package execute
 
 import (
-	_ "fmt"
-
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -42,5 +43,50 @@ func (this *EqualScan) Copy() Operator {
 func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+
+		for _, equal := range this.plan.Equals() {
+			if !this.scanEqual(context, parent, equal) {
+				return
+			}
+		}
 	})
+}
+
+func (this *EqualScan) scanEqual(context *Context, parent value.Value, equal algebra.CompositeExpression) bool {
+	conn := catalog.NewIndexConnection(
+		context.WarningChannel(),
+		context.ErrorChannel(),
+	)
+
+	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+
+	if equal == nil {
+		context.ErrorChannel() <- err.NewError(nil, "No equality term for filter.")
+		return false
+	}
+
+	cv, ok := eval(equal, context, parent)
+	if !ok {
+		return false
+	}
+
+	go this.plan.Index().EqualScan(cv, conn)
+
+	var entry *catalog.IndexEntry
+
+	for ok {
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			if ok {
+				cv := value.NewCorrelatedValue(parent)
+				av := value.NewAnnotatedValue(cv)
+				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				ok = this.sendItem(av)
+			}
+		case <-this.stopChannel:
+			return false
+		}
+	}
+
+	return true
 }

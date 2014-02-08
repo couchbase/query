@@ -10,10 +10,7 @@
 package execute
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -43,7 +40,10 @@ func (this *PrimaryScan) Copy() Operator {
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		conn := catalog.NewIndexConnection()
+		conn := catalog.NewIndexConnection(
+			context.WarningChannel(),
+			context.ErrorChannel(),
+		)
 
 		defer close(this.itemChannel)                  // Broadcast that I have stopped
 		defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
@@ -51,7 +51,6 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 		go this.plan.Index().PrimaryScan(conn)
 
 		var entry *catalog.IndexEntry
-		var e err.Error
 
 		ok := true
 		for ok {
@@ -61,13 +60,8 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 					cv := value.NewCorrelatedValue(parent)
 					av := value.NewAnnotatedValue(cv)
 					av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
-					this.output.ItemChannel() <- av
+					ok = this.sendItem(av)
 				}
-			case e, ok = <-conn.WarningChannel():
-				context.WarningChannel() <- e
-			case e, ok = <-conn.ErrorChannel():
-				context.ErrorChannel() <- e
-				return
 			case <-this.stopChannel:
 				return
 			}

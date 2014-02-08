@@ -17,6 +17,7 @@ databases and storage engines, etc.
 package catalog
 
 import (
+	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
@@ -60,7 +61,7 @@ type Bucket interface {
 	IndexByPrimary() (PrimaryIndex, err.Error) // Returns the server-recommended primary index
 	Indexes() ([]Index, err.Error)
 	CreatePrimaryIndex() (PrimaryIndex, err.Error)
-	CreateIndex(name string, match EqualKey, rk RangeKey, using IndexType) (Index, err.Error)
+	CreateIndex(name string, equal, ranje algebra.CompositeExpression, using IndexType) (Index, err.Error)
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string) (map[string]value.Value, err.Error)

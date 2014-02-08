@@ -7,28 +7,28 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package execute
 
 import (
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
+func eval(cx algebra.CompositeExpression, context *Context, parent value.Value) (value.CompositeValue, bool) {
+	if cx == nil {
+		return nil, true
+	}
 
-	Evaluate(item value.Value, context Context) (value.Value, error)
+	cv := make(value.CompositeValue, len(cx))
+	var e error
+	for i, expr := range cx {
+		cv[i], e = expr.Evaluate(parent, context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating filter term.")
+			return nil, false
+		}
+	}
 
-	// Is this Expression equivalent to another
-	EquivalentTo(other Expression) bool
-
-	// A list of other Expressions on which this depends
-	Dependencies() Expressions
-
-	// Terminal identifier, or nil
-	Alias() string
+	return cv, true
 }
-
-type Expressions []Expression
-
-type CompositeExpression []Expression
-type CompositeExpressions []CompositeExpression

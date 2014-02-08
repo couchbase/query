@@ -32,10 +32,10 @@ func (this *PrimaryScan) Index() catalog.PrimaryIndex {
 
 type EqualScan struct {
 	index  catalog.EqualIndex
-	equals algebra.Expressions
+	equals algebra.CompositeExpressions
 }
 
-func NewEqualScan(index catalog.EqualIndex, equals algebra.Expressions) *EqualScan {
+func NewEqualScan(index catalog.EqualIndex, equals algebra.CompositeExpressions) *EqualScan {
 	return &EqualScan{index, equals}
 }
 
@@ -47,6 +47,10 @@ func (this *EqualScan) Index() catalog.EqualIndex {
 	return this.index
 }
 
+func (this *EqualScan) Equals() algebra.CompositeExpressions {
+	return this.equals
+}
+
 type RangeScan struct {
 	index  catalog.RangeIndex
 	ranges Ranges
@@ -55,8 +59,8 @@ type RangeScan struct {
 type Ranges []*Range
 
 type Range struct {
-	Low       algebra.Expressions
-	High      algebra.Expressions
+	Low       algebra.CompositeExpression
+	High      algebra.CompositeExpression
 	Inclusion catalog.RangeInclusion
 }
 
@@ -72,6 +76,10 @@ func (this *RangeScan) Index() catalog.RangeIndex {
 	return this.index
 }
 
+func (this *RangeScan) Ranges() Ranges {
+	return this.ranges
+}
+
 type DualScan struct {
 	index catalog.DualIndex
 	duals Duals
@@ -80,8 +88,8 @@ type DualScan struct {
 type Duals []*Dual
 
 type Dual struct {
-	equal  algebra.Expression
-	ranges Ranges
+	Equal algebra.CompositeExpression
+	Range
 }
 
 func NewDualScan(index catalog.DualIndex, duals Duals) *DualScan {
@@ -96,21 +104,25 @@ func (this *DualScan) Index() catalog.DualIndex {
 	return this.index
 }
 
-// KeyScan is used for KEYS clauses (except after JOIN / NEST).
-type KeyScan struct {
-	term *algebra.BucketTerm
+func (this *DualScan) Duals() Duals {
+	return this.duals
 }
 
-func NewKeyScan(term *algebra.BucketTerm) *KeyScan {
-	return &KeyScan{term}
+// KeyScan is used for KEYS clauses (except after JOIN / NEST).
+type KeyScan struct {
+	keys algebra.Expression
+}
+
+func NewKeyScan(keys algebra.Expression) *KeyScan {
+	return &KeyScan{keys}
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyScan(this)
 }
 
-func (this *KeyScan) Term() *algebra.BucketTerm {
-	return this.term
+func (this *KeyScan) Keys() algebra.Expression {
+	return this.keys
 }
 
 // ParentScan is used for UNNEST subqueries.

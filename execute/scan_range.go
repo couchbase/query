@@ -10,8 +10,7 @@
 package execute
 
 import (
-	_ "fmt"
-
+	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -40,4 +39,56 @@ func (this *RangeScan) Copy() Operator {
 }
 
 func (this *RangeScan) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+
+		for _, ranje := range this.plan.Ranges() {
+			if !this.scanRange(context, parent, ranje) {
+				return
+			}
+		}
+	})
+}
+
+func (this *RangeScan) scanRange(context *Context, parent value.Value, ranje *plan.Range) bool {
+	conn := catalog.NewIndexConnection(
+		context.WarningChannel(),
+		context.ErrorChannel(),
+	)
+
+	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+
+	rv := &catalog.Range{}
+	var ok bool
+
+	rv.Low, ok = eval(ranje.Low, context, parent)
+	if !ok {
+		return false
+	}
+
+	rv.High, ok = eval(ranje.High, context, parent)
+	if !ok {
+		return false
+	}
+
+	rv.Inclusion = ranje.Inclusion
+	go this.plan.Index().RangeScan(rv, conn)
+
+	var entry *catalog.IndexEntry
+
+	for ok {
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			if ok {
+				cv := value.NewCorrelatedValue(parent)
+				av := value.NewAnnotatedValue(cv)
+				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				ok = this.sendItem(av)
+			}
+		case <-this.stopChannel:
+			return false
+		}
+	}
+
+	return true
 }

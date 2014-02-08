@@ -23,22 +23,14 @@ const (
 	LSM         IndexType = "lsm"
 )
 
-type EqualKey []algebra.Expression
-type RangeKey []*RangePart
-
-type RangePart struct {
-	Expr algebra.Expression
-	Dir  Direction
-}
-
 // Index is the base type for all indexes.
 type Index interface {
 	BucketId() string
 	Id() string
 	Name() string
 	Type() IndexType
-	Equal() EqualKey
-	Range() RangeKey
+	Equal() algebra.CompositeExpression
+	Range() algebra.CompositeExpression
 	Drop() err.Error // PrimaryIndexes cannot be dropped
 }
 
@@ -59,17 +51,9 @@ type PrimaryIndex interface {
 // EqualIndexes support equality matching.
 type EqualIndex interface {
 	Index
-	EqualScan(match value.CompositeValue, conn *IndexConnection)
-	EqualCount(match value.CompositeValue, conn *IndexConnection)
+	EqualScan(equal value.CompositeValue, conn *IndexConnection)
+	EqualCount(equal value.CompositeValue, conn *IndexConnection)
 }
-
-// Direction represents ASC and DESC
-type Direction int
-
-const (
-	ASC  Direction = 1
-	DESC           = 2
-)
 
 // Inclusion controls how the boundary values of a range are treated.
 type RangeInclusion int
@@ -92,21 +76,26 @@ type Range struct {
 // RangeIndexes support unrestricted range queries.
 type RangeIndex interface {
 	Index
-	RangeStats(r *Range) (RangeStatistics, err.Error)
-	RangeScan(r *Range, conn *IndexConnection)
-	RangeCount(r *Range, conn *IndexConnection)
-	RangeCandidateMins(r *Range, conn *IndexConnection)  // Anywhere from single Min value to RangeScan()
-	RangeCandidateMaxes(r *Range, conn *IndexConnection) // Anywhere from single Max value to RangeScan()
+	RangeStats(ranje *Range) (RangeStatistics, err.Error)
+	RangeScan(ranje *Range, conn *IndexConnection)
+	RangeCount(ranje *Range, conn *IndexConnection)
+	RangeCandidateMins(ranje *Range, conn *IndexConnection)  // Anywhere from single Min value to RangeScan()
+	RangeCandidateMaxes(ranje *Range, conn *IndexConnection) // Anywhere from single Max value to RangeScan()
+}
+
+type Dual struct {
+	Equal value.CompositeValue
+	Range
 }
 
 // DualIndexes support restricted range queries.
 type DualIndex interface {
 	Index
-	DualStats(match value.CompositeValue, r *Range) (RangeStatistics, err.Error)
-	DualScan(match value.CompositeValue, r *Range, conn *IndexConnection)
-	DualCount(match value.CompositeValue, r *Range, conn *IndexConnection)
-	DualCandidateMins(match value.CompositeValue, r *Range, conn *IndexConnection)  // Anywhere from single Min value to DualScan()
-	DualCandidateMaxes(match value.CompositeValue, r *Range, conn *IndexConnection) // Anywhere from single Max value to DualScan()
+	DualStats(dual *Dual) (RangeStatistics, err.Error)
+	DualScan(dual *Dual, conn *IndexConnection)
+	DualCount(dual *Dual, conn *IndexConnection)
+	DualCandidateMins(dual *Dual, conn *IndexConnection)  // Anywhere from single Min value to DualScan()
+	DualCandidateMaxes(dual *Dual, conn *IndexConnection) // Anywhere from single Max value to DualScan()
 }
 
 // RangeStatistics captures statistics for an index range.
@@ -119,21 +108,20 @@ type RangeStatistics interface {
 }
 
 type IndexConnection struct {
-	entryChannel   EntryChannel     // Entries
-	warningChannel err.ErrorChannel // Warnings
-	errorChannel   err.ErrorChannel // Errors
-	stopChannel    StopChannel      // Stop notification; replaces limit
+	entryChannel   EntryChannel     // Closed by index.
+	stopChannel    StopChannel      // Stop notification to index. Never closed, just garbage-collected.
+	warningChannel err.ErrorChannel // Written by index. Never closed, just garbage-collected.
+	errorChannel   err.ErrorChannel // Written by index. Never closed, just garbage-collected.
 }
 
 const _ENTRY_CAP = 1024
-const _ERROR_CAP = 64
 
-func NewIndexConnection() *IndexConnection {
+func NewIndexConnection(warningChannel, errorChannel err.ErrorChannel) *IndexConnection {
 	return &IndexConnection{
 		entryChannel:   make(EntryChannel, _ENTRY_CAP),
-		warningChannel: make(err.ErrorChannel, _ERROR_CAP),
-		errorChannel:   make(err.ErrorChannel, _ERROR_CAP),
 		stopChannel:    make(StopChannel, 1),
+		warningChannel: warningChannel,
+		errorChannel:   errorChannel,
 	}
 }
 
@@ -141,14 +129,14 @@ func (this *IndexConnection) EntryChannel() EntryChannel {
 	return this.entryChannel
 }
 
-func (this *IndexConnection) WarningChannel() err.ErrorChannel {
-	return this.warningChannel
-}
-
-func (this *IndexConnection) ErrorChannel() err.ErrorChannel {
-	return this.errorChannel
-}
-
 func (this *IndexConnection) StopChannel() StopChannel {
 	return this.stopChannel
+}
+
+func (this *IndexConnection) SendWarning(e err.Error) {
+	this.warningChannel <- e
+}
+
+func (this *IndexConnection) SendError(e err.Error) {
+	this.errorChannel <- e
 }
