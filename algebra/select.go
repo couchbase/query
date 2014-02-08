@@ -93,6 +93,10 @@ func (this *BucketTerm) PrimaryTerm() FromTerm {
 	return this
 }
 
+func (this *BucketTerm) Project() Path {
+	return this.project
+}
+
 func (this *BucketTerm) Alias() string {
 	if this.as != "" {
 		return this.as

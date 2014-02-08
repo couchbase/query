@@ -71,7 +71,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 				keys[i] = key
 			default:
 				context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
-					"Missing or invalid primary key %v of type %T.", key, key))
+					"Missing or invalid primary key %v of type %T.",
+					key, key))
 				return false
 			}
 		default:
@@ -82,14 +83,26 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	// Fetch
-	items, e := this.plan.Bucket().Fetch(keys)
-	if e != nil {
-		context.ErrorChannel() <- e
+	items, er := this.plan.Bucket().Fetch(keys)
+	if er != nil {
+		context.ErrorChannel() <- er
 		return false
 	}
 
 	// Attach meta and send
 	for i, item := range items {
+		// Apply projection, if any
+		project := this.plan.Term().Project()
+		if project != nil {
+			var e error
+			item, e = project.Evaluate(item, context)
+			if e != nil {
+				context.ErrorChannel() <- err.NewError(e,
+					"Error evaluating fetch path.")
+				return false
+			}
+		}
+
 		av := this.batch[i]
 		fv := value.NewAnnotatedValue(item)
 		fv.SetAttachment("meta", av.GetAttachment("meta"))
