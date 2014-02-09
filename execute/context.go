@@ -96,6 +96,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			return nil, err
 		}
 
+		// Cache plan
 		this.subplans.set(query, subplan)
 	}
 
@@ -104,9 +105,20 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		return nil, err
 	}
 
-	pipeline.RunOnce(this, parent)
-	var results value.Value = nil // FIXME
+	// Collect subquery results
+	collect := NewCollect()
+	sequence := NewSequence(pipeline, collect)
+	sequence.RunOnce(this, parent)
 
+	// Await completion
+	ok = true
+	for ok {
+		_, ok = <-collect.Output().ItemChannel()
+	}
+
+	results := value.NewValue(collect.Values())
+
+	// Cache results
 	if !planFound && !query.IsCorrelated() {
 		this.subresults.set(query, results)
 	}

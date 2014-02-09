@@ -73,11 +73,14 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		// Run last child
 		go last_child.RunOnce(context, parent)
 
-		select {
-		// Wait for last child or stop
-		case <-this.childChannel: // Never closed
-		case <-this.stopChannel: // Never closed
-			last_child.StopChannel() <- false
+		for {
+			select {
+			// Wait for last child
+			case <-this.childChannel: // Never closed
+				return
+			case <-this.stopChannel: // Never closed
+				last_child.StopChannel() <- false
+			}
 		}
 	})
 }
