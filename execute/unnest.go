@@ -10,8 +10,7 @@
 package execute
 
 import (
-	_ "fmt"
-
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -44,5 +43,42 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
+	pv, e := this.plan.Term().Project().Evaluate(item, context)
+	if e != nil {
+		context.ErrorChannel() <- err.NewError(e, "Error evaluating UNNEST path.")
+		return false
+	}
+
+	actuals := pv.Actual()
+	switch actuals.(type) {
+	case []interface{}:
+	case nil:
+		actuals = []interface{}(nil)
+	default:
+		actuals = []interface{}{actuals}
+	}
+
+	acts := actuals.([]interface{})
+	if len(acts) == 0 {
+		// Outer unnest
+		return !this.plan.Term().Outer() || this.sendItem(item)
+	}
+
+	// Attach and send
+	for i, act := range acts {
+		var av value.AnnotatedValue
+		if i < len(acts)-1 {
+			av = item.Copy().(value.AnnotatedValue)
+		} else {
+			av = item
+		}
+
+		av.SetField(this.plan.Alias(), value.NewValue(act))
+
+		if !this.sendItem(av) {
+			return false
+		}
+	}
+
 	return true
 }
