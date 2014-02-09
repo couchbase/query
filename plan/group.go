@@ -13,42 +13,75 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
-// Grouping of input data.
+// Grouping of input data. Parallelizable.
 type InitialGroup struct {
-	keys algebra.Expressions
-	aggs algebra.Expressions
+	keys       algebra.Expressions
+	aggregates algebra.Aggregates
+	initials   algebra.InitialAggregates
 }
 
-// Grouping of groups. Recursable.
-type IntermediateGroup struct {
-	keys algebra.Expressions
-	aggs algebra.Expressions
-}
+func NewInitialGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *InitialGroup {
+	rv := &InitialGroup{
+		keys:       keys,
+		aggregates: aggregates,
+	}
 
-// Compute DistinctCount() and Avg().
-type FinalGroup struct {
-	keys algebra.Expressions
-	aggs algebra.Expressions
-}
+	rv.initials = make(algebra.InitialAggregates, len(aggregates))
+	for i, agg := range aggregates {
+		rv.initials[i] = agg.Initial()
+	}
 
-func NewInitialGroup(keys, aggs algebra.Expressions) *InitialGroup {
-	return &InitialGroup{keys, aggs}
+	return rv
 }
 
 func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
-func NewIntermediateGroup(keys, aggs algebra.Expressions) *IntermediateGroup {
-	return &IntermediateGroup{keys, aggs}
+// Grouping of groups. Recursable and parallelizable.
+type IntermediateGroup struct {
+	keys          algebra.Expressions
+	aggregates    algebra.Aggregates
+	intermediates algebra.IntermediateAggregates
+}
+
+func NewIntermediateGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {
+	rv := &IntermediateGroup{
+		keys:       keys,
+		aggregates: aggregates,
+	}
+
+	rv.intermediates = make(algebra.IntermediateAggregates, len(aggregates))
+	for i, agg := range aggregates {
+		rv.intermediates[i] = agg.Intermediate()
+	}
+
+	return rv
 }
 
 func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
-func NewFinalGroup(keys, aggs algebra.Expressions) *FinalGroup {
-	return &FinalGroup{keys, aggs}
+// Final grouping and aggregation.
+type FinalGroup struct {
+	keys       algebra.Expressions
+	aggregates algebra.Aggregates
+	finals     algebra.FinalAggregates
+}
+
+func NewFinalGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *FinalGroup {
+	rv := &FinalGroup{
+		keys:       keys,
+		aggregates: aggregates,
+	}
+
+	rv.finals = make(algebra.FinalAggregates, len(aggregates))
+	for i, agg := range aggregates {
+		rv.finals[i] = agg.Final()
+	}
+
+	return rv
 }
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {

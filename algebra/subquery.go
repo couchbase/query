@@ -13,10 +13,10 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type SubqueryExpression struct {
+type Subquery struct {
 	query *Select
 }
 
-func (this *SubqueryExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Subquery) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return context.EvaluateSubquery(this.query, item)
 }

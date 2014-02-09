@@ -18,7 +18,7 @@ type Expression interface {
 
 	Evaluate(item value.Value, context Context) (value.Value, error)
 
-	// Is this Expression equivalent to another
+	// Is this expression equivalent to another
 	EquivalentTo(other Expression) bool
 
 	// A list of other Expressions on which this depends

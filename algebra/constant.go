@@ -10,36 +10,34 @@
 package algebra
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-type ConstantExpression struct {
+type Constant struct {
 	val value.Value
 }
 
-func NewConstantExpression(v value.Value) Expression {
-	return &ConstantExpression{v}
+func NewConstant(v value.Value) Expression {
+	return &Constant{v}
 }
 
-func (this *ConstantExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.val, nil
 }
 
-func (this *ConstantExpression) EquivalentTo(other Expression) bool {
+func (this *Constant) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
-	case *ConstantExpression:
+	case *Constant:
 		return this.val.Equals(other.val)
 	default:
 		return false
 	}
 }
 
-func (this *ConstantExpression) Dependencies() Expressions {
+func (this *Constant) Dependencies() Expressions {
 	return nil
 }
 
-func (this *ConstantExpression) Alias() string {
+func (this *Constant) Alias() string {
 	return ""
 }
