@@ -3,7 +3,7 @@
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
 * Modified: 2014-01-21
-* Modified: 2014-02-06
+* Modified: 2014-02-10
 
 ## Introduction
 
@@ -1974,10 +1974,13 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
       How do you do that?  We need to be able to relate multiple
       properties together on a line by line basis and they may be
       stored separately.
-* 2014-01-21 - Misc
+* 2014-02-06 - Misc
     * Restored IS [ NOT ] VALUED
     * Removed MAP() and REDUCE() for now
     * Syntax fixes for traversing multiple collections
+* 2014-02-10 - Function call syntax
+    * Removed COUNT(path.*), kept COUNT(*)
+    * Removed COUNT(DISTINCT *), kept COUNT(DISTINCT expr, ...)
 
 ### Open Issues
 
