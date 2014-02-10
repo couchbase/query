@@ -15,27 +15,27 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type CountDistinct struct {
+type SumDistinct struct {
 	aggregateBase
 }
 
-func NewCountDistinct(parameter Expression) Aggregate {
-	return &CountDistinct{aggregateBase{parameter}}
+func NewSumDistinct(parameter Expression) Aggregate {
+	return &SumDistinct{aggregateBase{parameter}}
 }
 
-func (this *CountDistinct) Default() value.Value {
+func (this *SumDistinct) Default() value.Value {
 	av := value.NewAnnotatedValue(nil)
 	av.SetAttachment("set", value.NewSet(64))
 	return av
 }
 
-func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+func (this *SumDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.parameter.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	if item.Type() <= value.NULL {
+	if item.Type() != value.NUMBER {
 		return cumulative, nil
 	}
 
@@ -47,18 +47,18 @@ func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context
 			set.Add(item)
 			return cumulative, nil
 		default:
-			return nil, fmt.Errorf("Invalid COUNT DISTINCT set %v of type %T.", set, set)
+			return nil, fmt.Errorf("Invalid SUM DISTINCT set %v of type %T.", set, set)
 		}
 	default:
-		return nil, fmt.Errorf("Invalid COUNT DISTINCT %v of type %T.", cumulative, cumulative)
+		return nil, fmt.Errorf("Invalid SUM DISTINCT %v of type %T.", cumulative, cumulative)
 	}
 }
 
-func (this *CountDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+func (this *SumDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateSets(part, cumulative, context)
 }
 
-func (this *CountDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
+func (this *SumDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
 	c, e = cumulateSets(part, cumulative, context)
 	if e != nil {
 		return c, e
@@ -66,5 +66,20 @@ func (this *CountDistinct) CumulateFinal(part, cumulative value.Value, context C
 
 	av := c.(value.AnnotatedValue)
 	set := av.GetAttachment("set").(*value.Set)
-	return value.NewValue(set.Len()), nil
+	if set.Len() == 0 {
+		return value.NewValue(nil), nil
+	}
+
+	sum := 0.0
+	for _, v := range set.Values() {
+		a := v.Actual()
+		switch a := a.(type) {
+		case float64:
+			sum += a
+		default:
+			return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", a, a)
+		}
+	}
+
+	return value.NewValue(sum), nil
 }

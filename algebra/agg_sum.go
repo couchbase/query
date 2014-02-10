@@ -23,10 +23,8 @@ func NewSum(parameter Expression) Aggregate {
 	return &Sum{aggregateBase{parameter}}
 }
 
-var _DEFAULT_SUM = value.NewValue(0.0)
-
 func (this *Sum) Default() value.Value {
-	return _DEFAULT_SUM
+	return nil
 }
 
 func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -52,7 +50,9 @@ func (this *Sum) CumulateFinal(part, cumulative value.Value, context Context) (v
 
 func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
 	if part == nil {
-		return nil, fmt.Errorf("Nil partial result in SUM.")
+		return cumulative, nil
+	} else if cumulative == nil {
+		return part, nil
 	}
 
 	actual := part.Actual()

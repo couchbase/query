@@ -24,10 +24,8 @@ func NewArrayAgg(parameter Expression) Aggregate {
 	return &ArrayAgg{aggregateBase{parameter}}
 }
 
-var _DEFAULT_ARRAY = value.NewValue([]interface{}{})
-
 func (this *ArrayAgg) Default() value.Value {
-	return _DEFAULT_ARRAY
+	return nil
 }
 
 func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -53,11 +51,20 @@ func (this *ArrayAgg) CumulateFinal(part, cumulative value.Value, context Contex
 		return rv, e
 	}
 
-	sort.Sort(value.NewSorter(rv))
+	if rv != nil {
+		sort.Sort(value.NewSorter(rv))
+	}
+
 	return rv, nil
 }
 
 func (this *ArrayAgg) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
+	if part == nil {
+		return cumulative, nil
+	} else if cumulative == nil {
+		return part, nil
+	}
+
 	actual := part.Actual()
 	switch actual := actual.(type) {
 	case []interface{}:

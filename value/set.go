@@ -125,3 +125,37 @@ func (this *Set) Values() []Value {
 
 	return rv
 }
+
+func (this *Set) Actuals() []interface{} {
+	rv := make([]interface{}, 0, this.Len())
+
+	if this.nills || this.missings != nil || this.nulls != nil {
+		rv = append(rv, nil)
+	}
+
+	for _, av := range this.booleans {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.numbers {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.strings {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.arrays {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.objects {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.blobs {
+		rv = append(rv, av.Actual())
+	}
+
+	return rv
+}

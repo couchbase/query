@@ -11,31 +11,32 @@ package algebra
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/couchbaselabs/query/value"
 )
 
-type CountDistinct struct {
+type ArrayDistinct struct {
 	aggregateBase
 }
 
-func NewCountDistinct(parameter Expression) Aggregate {
-	return &CountDistinct{aggregateBase{parameter}}
+func NewArrayDistinct(parameter Expression) Aggregate {
+	return &ArrayDistinct{aggregateBase{parameter}}
 }
 
-func (this *CountDistinct) Default() value.Value {
+func (this *ArrayDistinct) Default() value.Value {
 	av := value.NewAnnotatedValue(nil)
 	av.SetAttachment("set", value.NewSet(64))
 	return av
 }
 
-func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+func (this *ArrayDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.parameter.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	if item.Type() <= value.NULL {
+	if item.Type() <= value.MISSING {
 		return cumulative, nil
 	}
 
@@ -47,18 +48,18 @@ func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context
 			set.Add(item)
 			return cumulative, nil
 		default:
-			return nil, fmt.Errorf("Invalid COUNT DISTINCT set %v of type %T.", set, set)
+			return nil, fmt.Errorf("Invalid ARRAY DISTINCT set %v of type %T.", set, set)
 		}
 	default:
-		return nil, fmt.Errorf("Invalid COUNT DISTINCT %v of type %T.", cumulative, cumulative)
+		return nil, fmt.Errorf("Invalid ARRAY DISTINCT %v of type %T.", cumulative, cumulative)
 	}
 }
 
-func (this *CountDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+func (this *ArrayDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateSets(part, cumulative, context)
 }
 
-func (this *CountDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
+func (this *ArrayDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
 	c, e = cumulateSets(part, cumulative, context)
 	if e != nil {
 		return c, e
@@ -66,5 +67,13 @@ func (this *CountDistinct) CumulateFinal(part, cumulative value.Value, context C
 
 	av := c.(value.AnnotatedValue)
 	set := av.GetAttachment("set").(*value.Set)
-	return value.NewValue(set.Len()), nil
+	if set.Len() == 0 {
+		return value.NewValue(nil), nil
+	}
+
+	actuals := set.Actuals()
+	c = value.NewValue(actuals)
+	sorter := value.NewSorter(c)
+	sort.Sort(sorter)
+	return c, nil
 }

@@ -23,16 +23,16 @@ func NewCount(parameter Expression) Aggregate {
 	return &Count{aggregateBase{parameter}}
 }
 
-var _DEFAULT_COUNT = value.NewValue(0)
+var _ZERO = value.NewValue(0)
 var _ONE = value.NewValue(1)
 
 func (this *Count) Default() value.Value {
-	return _DEFAULT_COUNT
+	return _ZERO
 }
 
 func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	if this.parameter == nil {
-		item = _ONE // Any non-null value would do
+		item = _ONE
 	} else {
 		item, e := this.parameter.Evaluate(item, context)
 		if e != nil {
@@ -58,7 +58,9 @@ func (this *Count) CumulateFinal(part, cumulative value.Value, context Context) 
 
 func (this *Count) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
 	if part == nil {
-		return nil, fmt.Errorf("Nil partial result in SUM.")
+		return cumulative, nil
+	} else if cumulative == nil {
+		return part, nil
 	}
 
 	actual := part.Actual()
