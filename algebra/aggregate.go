@@ -17,33 +17,16 @@ import (
 )
 
 type Aggregates []Aggregate
-type InitialAggregates []InitialAggregate
-type IntermediateAggregates []IntermediateAggregate
-type FinalAggregates []FinalAggregate
 
 type Aggregate interface {
 	Expression
 
 	Default() value.Value
-	Initial() InitialAggregate
-	Intermediate() IntermediateAggregate
-	Final() FinalAggregate
 	Parameter() Expression
-}
 
-type InitialAggregate interface {
-	// Returns the new cumulative value
 	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
-}
-
-type IntermediateAggregate interface {
-	// Returns the new cumulative value
-	CumulateIntermediate(item, cumulative value.Value, context Context) (value.Value, error)
-}
-
-type FinalAggregate interface {
-	// Returns the new cumulative value
-	CumulateFinal(item, cumulative value.Value, context Context) (value.Value, error)
+	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
+	CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error)
 }
 
 type aggregateBase struct {

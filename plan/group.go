@@ -17,21 +17,13 @@ import (
 type InitialGroup struct {
 	keys       algebra.Expressions
 	aggregates algebra.Aggregates
-	initials   algebra.InitialAggregates
 }
 
 func NewInitialGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *InitialGroup {
-	rv := &InitialGroup{
+	return &InitialGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-
-	rv.initials = make(algebra.InitialAggregates, len(aggregates))
-	for i, agg := range aggregates {
-		rv.initials[i] = agg.Initial()
-	}
-
-	return rv
 }
 
 func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -42,21 +34,13 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 type IntermediateGroup struct {
 	keys          algebra.Expressions
 	aggregates    algebra.Aggregates
-	intermediates algebra.IntermediateAggregates
 }
 
 func NewIntermediateGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {
-	rv := &IntermediateGroup{
+	return &IntermediateGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-
-	rv.intermediates = make(algebra.IntermediateAggregates, len(aggregates))
-	for i, agg := range aggregates {
-		rv.intermediates[i] = agg.Intermediate()
-	}
-
-	return rv
 }
 
 func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
@@ -67,21 +51,13 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 type FinalGroup struct {
 	keys       algebra.Expressions
 	aggregates algebra.Aggregates
-	finals     algebra.FinalAggregates
 }
 
 func NewFinalGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *FinalGroup {
-	rv := &FinalGroup{
+	return &FinalGroup{
 		keys:       keys,
 		aggregates: aggregates,
 	}
-
-	rv.finals = make(algebra.FinalAggregates, len(aggregates))
-	for i, agg := range aggregates {
-		rv.finals[i] = agg.Final()
-	}
-
-	return rv
 }
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {

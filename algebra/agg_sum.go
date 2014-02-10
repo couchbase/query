@@ -29,37 +29,33 @@ func (this *Sum) Default() value.Value {
 	return _DEFAULT_SUM
 }
 
-func (this *Sum) Initial() InitialAggregate {
-	return this
-}
-
-func (this *Sum) Intermediate() IntermediateAggregate {
-	return this
-}
-
-func (this *Sum) Final() FinalAggregate {
-	return this
-}
-
 func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Sum) CumulateIntermediate(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Sum) CumulateFinal(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Sum) cumulate(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.parameter.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	actual := item.Actual()
+	if item.Type() != value.NUMBER {
+		return cumulative, nil
+	}
+
+	return this.cumulatePart(item, cumulative, context)
+}
+
+func (this *Sum) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Sum) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
+	if part == nil {
+		return nil, fmt.Errorf("Nil partial result in SUM.")
+	}
+
+	actual := part.Actual()
 	switch actual := actual.(type) {
 	case float64:
 		sum := cumulative.Actual()
@@ -70,6 +66,6 @@ func (this *Sum) cumulate(item, cumulative value.Value, context Context) (value.
 			return nil, fmt.Errorf("Invalid SUM %v of type %T.", sum, sum)
 		}
 	default:
-		return cumulative, nil
+		return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", actual, actual)
 	}
 }

@@ -21,48 +21,34 @@ func NewMin(parameter Expression) Aggregate {
 	return &Min{aggregateBase{parameter}}
 }
 
-var _DEFAULT_MIN = value.NewValue(0.0)
-
 func (this *Min) Default() value.Value {
-	return _DEFAULT_MIN
-}
-
-func (this *Min) Initial() InitialAggregate {
-	return this
-}
-
-func (this *Min) Intermediate() IntermediateAggregate {
-	return this
-}
-
-func (this *Min) Final() FinalAggregate {
-	return this
+	return nil
 }
 
 func (this *Min) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Min) CumulateIntermediate(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Min) CumulateFinal(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Min) cumulate(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.parameter.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	if item.Type() <= value.NULL {
+	return this.cumulatePart(item, cumulative, context)
+}
+
+func (this *Min) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Min) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Min) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
+	if part == nil || part.Type() <= value.NULL {
 		return cumulative, nil
 	} else if cumulative == nil {
-		return item, nil
-	} else if item.Collate(cumulative) > 0 {
-		return item, nil
+		return part, nil
+	} else if part.Collate(cumulative) < 0 {
+		return part, nil
 	} else {
 		return cumulative, nil
 	}

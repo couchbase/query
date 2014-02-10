@@ -25,42 +25,30 @@ func (this *Max) Default() value.Value {
 	return nil
 }
 
-func (this *Max) Initial() InitialAggregate {
-	return this
-}
-
-func (this *Max) Intermediate() IntermediateAggregate {
-	return this
-}
-
-func (this *Max) Final() FinalAggregate {
-	return this
-}
-
 func (this *Max) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Max) CumulateIntermediate(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Max) CumulateFinal(item, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulate(item, cumulative, context)
-}
-
-func (this *Max) cumulate(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.parameter.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	if item.Type() <= value.NULL {
+	return this.cumulatePart(item, cumulative, context)
+}
+
+func (this *Max) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Max) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
+	return this.cumulatePart(part, cumulative, context)
+}
+
+func (this *Max) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
+	if part == nil || part.Type() <= value.NULL {
 		return cumulative, nil
 	} else if cumulative == nil {
-		return item, nil
-	} else if item.Collate(cumulative) > 0 {
-		return item, nil
+		return part, nil
+	} else if part.Collate(cumulative) > 0 {
+		return part, nil
 	} else {
 		return cumulative, nil
 	}
