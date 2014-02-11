@@ -14,8 +14,6 @@ import (
 
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
-
-	json "github.com/dustin/gojson"
 )
 
 // Distincting of input data.

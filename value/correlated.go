@@ -92,18 +92,17 @@ func (this *correlatedValue) Bytes() []byte {
 }
 
 // Search self and ancestors. Enables subqueries.
-func (this *correlatedValue) Field(field string) (Value, error) {
+func (this *correlatedValue) Field(field string) Value {
 	result, ok := this.entries[field]
 	if ok {
-		return NewValue(result), nil
+		return NewValue(result)
 	}
 
 	if this.parent != nil {
 		return this.parent.Field(field)
 	}
 
-	// consistent with parsedValue
-	return nil, Undefined(field)
+	return missingField(field)
 }
 
 func (this *correlatedValue) SetField(field string, val interface{}) error {
@@ -111,8 +110,8 @@ func (this *correlatedValue) SetField(field string, val interface{}) error {
 	return nil
 }
 
-func (this *correlatedValue) Index(index int) (Value, error) {
-	return nil, Undefined(index)
+func (this *correlatedValue) Index(index int) Value {
+	return missingIndex(index)
 }
 
 func (this *correlatedValue) SetIndex(index int, val interface{}) error {

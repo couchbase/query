@@ -73,21 +73,20 @@ func (this sliceValue) Bytes() []byte {
 	return bytes
 }
 
-func (this sliceValue) Field(field string) (Value, error) {
-	return nil, Undefined(field)
+func (this sliceValue) Field(field string) Value {
+	return missingField(field)
 }
 
 func (this sliceValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this sliceValue) Index(index int) (Value, error) {
+func (this sliceValue) Index(index int) Value {
 	if index >= 0 && index < len(this) {
-		return NewValue(this[index]), nil
+		return NewValue(this[index])
 	}
 
-	// consistent with parsedValue
-	return nil, Undefined(index)
+	return missingIndex(index)
 }
 
 // NOTE: Slices do NOT extend beyond length.
@@ -162,21 +161,20 @@ func (this *listValue) Bytes() []byte {
 	return bytes
 }
 
-func (this *listValue) Field(field string) (Value, error) {
-	return nil, Undefined(field)
+func (this *listValue) Field(field string) Value {
+	return missingField(field)
 }
 
 func (this *listValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this *listValue) Index(index int) (Value, error) {
+func (this *listValue) Index(index int) Value {
 	if index >= 0 && index < len(this.actual) {
-		return NewValue(this.actual[index]), nil
+		return NewValue(this.actual[index])
 	}
 
-	// consistent with parsedValue
-	return nil, Undefined(index)
+	return missingIndex(index)
 }
 
 func (this *listValue) SetIndex(index int, val interface{}) error {
@@ -226,4 +224,17 @@ func arrayCollate(array1, array2 []interface{}) int {
 	}
 
 	return len(array1) - len(array2)
+}
+
+func copySlice(source []interface{}, copier copyFunc) []interface{} {
+	if source == nil {
+		return nil
+	}
+
+	result := make([]interface{}, len(source))
+	for i, v := range source {
+		result[i] = copier(v)
+	}
+
+	return result
 }

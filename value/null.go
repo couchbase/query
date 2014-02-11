@@ -48,16 +48,16 @@ func (this *nullValue) Bytes() []byte {
 	return _NULL_BYTES
 }
 
-func (this *nullValue) Field(field string) (Value, error) {
-	return nil, Undefined(field)
+func (this *nullValue) Field(field string) Value {
+	return missingField(field)
 }
 
 func (this *nullValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this *nullValue) Index(index int) (Value, error) {
-	return nil, Undefined(index)
+func (this *nullValue) Index(index int) Value {
+	return missingIndex(index)
 }
 
 func (this *nullValue) SetIndex(index int, val interface{}) error {

@@ -77,16 +77,16 @@ func (this boolValue) Bytes() []byte {
 	}
 }
 
-func (this boolValue) Field(field string) (Value, error) {
-	return nil, Undefined(field)
+func (this boolValue) Field(field string) Value {
+	return missingField(field)
 }
 
 func (this boolValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this boolValue) Index(index int) (Value, error) {
-	return nil, Undefined(index)
+func (this boolValue) Index(index int) Value {
+	return missingIndex(index)
 }
 
 func (this boolValue) SetIndex(index int, val interface{}) error {

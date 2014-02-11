@@ -9,64 +9,81 @@
 
 package value
 
-import ()
+import (
+	"fmt"
+)
 
 // Missing value
+type missingValue string
+
 func NewMissingValue() Value {
-	return &_MISSING_VALUE
+	return _MISSING_VALUE
 }
 
-type missingValue struct {
+// Description of which property or index was undefined (if known).
+func (this missingValue) Error() string {
+	if string(this) != "" {
+		return fmt.Sprintf("Field or index %s is not defined.", string(this))
+	}
+	return "Not defined."
 }
 
-var _MISSING_VALUE = missingValue{}
+var _MISSING_VALUE = missingValue("")
 
-func (this *missingValue) Type() int {
+func (this missingValue) Type() int {
 	return MISSING
 }
 
-func (this *missingValue) Actual() interface{} {
+func (this missingValue) Actual() interface{} {
 	return nil
 }
 
-func (this *missingValue) Equals(other Value) bool {
+func (this missingValue) Equals(other Value) bool {
 	return other.Type() == MISSING
 }
 
-func (this *missingValue) Collate(other Value) int {
+func (this missingValue) Collate(other Value) int {
 	return MISSING - other.Type()
 }
 
-func (this *missingValue) Truth() bool {
+func (this missingValue) Truth() bool {
 	return false
 }
 
-func (this *missingValue) Copy() Value {
+func (this missingValue) Copy() Value {
 	return this
 }
 
-func (this *missingValue) CopyForUpdate() Value {
+func (this missingValue) CopyForUpdate() Value {
 	return this
 }
 
 var _MISSING_BYTES = []byte("missing")
 
-func (this *missingValue) Bytes() []byte {
+func (this missingValue) Bytes() []byte {
 	return _MISSING_BYTES
 }
 
-func (this *missingValue) Field(field string) (Value, error) {
-	return nil, Undefined(field)
+func (this missingValue) Field(field string) Value {
+	return missingField(field)
 }
 
-func (this *missingValue) SetField(field string, val interface{}) error {
+func (this missingValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this *missingValue) Index(index int) (Value, error) {
-	return nil, Undefined(index)
+func (this missingValue) Index(index int) Value {
+	return missingIndex(index)
 }
 
-func (this *missingValue) SetIndex(index int, val interface{}) error {
+func (this missingValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
+}
+
+func missingField(field string) Value {
+	return missingValue(field)
+}
+
+func missingIndex(index int) Value {
+	return missingValue(string(index))
 }

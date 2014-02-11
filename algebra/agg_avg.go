@@ -55,8 +55,7 @@ func (this *Avg) CumulateFinal(part, cumulative value.Value, context Context) (v
 		return nil, nil
 	}
 
-	sum, _ := cumulative.Field("sum")
-	count, _ := cumulative.Field("count")
+	sum, count := cumulative.Field("sum"), cumulative.Field("count")
 
 	if sum == nil || count == nil {
 		return nil, fmt.Errorf("Missing sum or count in AVG.")
@@ -81,10 +80,8 @@ func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (va
 		return part, nil
 	}
 
-	psum, _ := part.Field("sum")
-	pcount, _ := part.Field("sum")
-	csum, _ := cumulative.Field("sum")
-	ccount, _ := cumulative.Field("sum")
+	psum, pcount := part.Field("sum"), part.Field("count")
+	csum, ccount := cumulative.Field("sum"), cumulative.Field("count")
 
 	if psum == nil || pcount == nil || csum == nil || ccount == nil {
 		return nil, fmt.Errorf("Missing partial sum or count in AVG.")

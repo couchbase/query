@@ -32,8 +32,8 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
-	keys          algebra.Expressions
-	aggregates    algebra.Aggregates
+	keys       algebra.Expressions
+	aggregates algebra.Aggregates
 }
 
 func NewIntermediateGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {

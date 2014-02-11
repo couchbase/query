@@ -75,14 +75,13 @@ func (this objectValue) Bytes() []byte {
 	return bytes
 }
 
-func (this objectValue) Field(field string) (Value, error) {
+func (this objectValue) Field(field string) Value {
 	result, ok := this[field]
 	if ok {
-		return NewValue(result), nil
+		return NewValue(result)
 	}
 
-	// consistent with parsedValue
-	return nil, Undefined(field)
+	return missingField(field)
 }
 
 func (this objectValue) SetField(field string, val interface{}) error {
@@ -90,8 +89,8 @@ func (this objectValue) SetField(field string, val interface{}) error {
 	return nil
 }
 
-func (this objectValue) Index(index int) (Value, error) {
-	return nil, Undefined(index)
+func (this objectValue) Index(index int) Value {
+	return missingIndex(index)
 }
 
 func (this objectValue) SetIndex(index int, val interface{}) error {
@@ -163,4 +162,17 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 	}
 
 	return 0
+}
+
+func copyMap(source map[string]interface{}, copier copyFunc) map[string]interface{} {
+	if source == nil {
+		return nil
+	}
+
+	result := make(map[string]interface{}, len(source))
+	for k, v := range source {
+		result[k] = copier(v)
+	}
+
+	return result
 }

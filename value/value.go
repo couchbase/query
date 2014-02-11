@@ -21,18 +21,6 @@ import (
 	json "github.com/dustin/gojson"
 )
 
-// When you try to access a nested property or index that does not exist,
-// the return value will be nil, and the return error will be Undefined.
-type Undefined string
-
-// Description of which property or index was undefined (if known).
-func (this Undefined) Error() string {
-	if string(this) != "" {
-		return fmt.Sprintf("Field or index %s is not defined.", string(this))
-	}
-	return "Not defined."
-}
-
 // When you try to set a nested property or index that does not exist,
 // the return error will be Unsettable.
 type Unsettable string
@@ -67,9 +55,9 @@ type Value interface {
 	Copy() Value                                  // Shallow copy
 	CopyForUpdate() Value                         // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
 	Bytes() []byte                                // JSON byte encoding
-	Field(field string) (Value, error)            // Object field dereference
+	Field(field string) Value                     // Object field dereference, or MISSING
 	SetField(field string, val interface{}) error // Object field setting
-	Index(index int) (Value, error)               // Array index dereference
+	Index(index int) Value                        // Array index dereference, or MISSING
 	SetIndex(index int, val interface{}) error    // Array index setting
 }
 
@@ -152,32 +140,6 @@ func self(val interface{}) interface{} {
 
 func copyForUpdate(val interface{}) interface{} {
 	return NewValue(val).CopyForUpdate()
-}
-
-func copySlice(source []interface{}, copier copyFunc) []interface{} {
-	if source == nil {
-		return nil
-	}
-
-	result := make([]interface{}, len(source))
-	for i, v := range source {
-		result[i] = copier(v)
-	}
-
-	return result
-}
-
-func copyMap(source map[string]interface{}, copier copyFunc) map[string]interface{} {
-	if source == nil {
-		return nil
-	}
-
-	result := make(map[string]interface{}, len(source))
-	for k, v := range source {
-		result[k] = copier(v)
-	}
-
-	return result
 }
 
 func identifyType(bytes []byte) int {

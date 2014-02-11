@@ -77,26 +77,26 @@ func (this *parsedValue) Bytes() []byte {
 	}
 }
 
-func (this *parsedValue) Field(field string) (Value, error) {
+func (this *parsedValue) Field(field string) Value {
 	if this.parsed != nil {
 		return this.parsed.Field(field)
 	}
 
 	if this.parsedType != OBJECT {
-		return nil, Undefined(field)
+		return missingField(field)
 	}
 
 	if this.raw != nil {
 		res, err := jsonpointer.Find(this.raw, "/"+field)
 		if err != nil {
-			return nil, err
+			return missingField(field)
 		}
 		if res != nil {
-			return NewValueFromBytes(res), nil
+			return NewValueFromBytes(res)
 		}
 	}
 
-	return nil, Undefined(field)
+	return missingField(field)
 }
 
 func (this *parsedValue) SetField(field string, val interface{}) error {
@@ -107,26 +107,26 @@ func (this *parsedValue) SetField(field string, val interface{}) error {
 	return this.parse().SetField(field, val)
 }
 
-func (this *parsedValue) Index(index int) (Value, error) {
+func (this *parsedValue) Index(index int) Value {
 	if this.parsed != nil {
 		return this.parsed.Index(index)
 	}
 
 	if this.parsedType != ARRAY {
-		return nil, Undefined(index)
+		return missingIndex(index)
 	}
 
 	if this.raw != nil {
 		res, err := jsonpointer.Find(this.raw, "/"+strconv.Itoa(index))
 		if err != nil {
-			return nil, err
+			return missingIndex(index)
 		}
 		if res != nil {
-			return NewValueFromBytes(res), nil
+			return NewValueFromBytes(res)
 		}
 	}
 
-	return nil, Undefined(index)
+	return missingIndex(index)
 }
 
 func (this *parsedValue) SetIndex(index int, val interface{}) error {
