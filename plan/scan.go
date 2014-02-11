@@ -142,10 +142,6 @@ type ValueScan struct {
 	values algebra.Expression
 }
 
-// DummyScan is used for SELECTs with no FROM clause.
-type DummyScan struct {
-}
-
 func NewValueScan(values algebra.Expression) *ValueScan {
 	return &ValueScan{values}
 }
@@ -158,10 +154,31 @@ func (this *ValueScan) Values() algebra.Expression {
 	return this.values
 }
 
+// DummyScan is used for SELECTs with no FROM clause.
+type DummyScan struct {
+}
+
 func NewDummyScan() *DummyScan {
 	return &DummyScan{}
 }
 
 func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDummyScan(this)
+}
+
+// CountScan is used for SELECT COUNT(*) with no WHERE clause.
+type CountScan struct {
+	bucket catalog.Bucket
+}
+
+func NewCountScan(bucket catalog.Bucket) *CountScan {
+	return &CountScan{bucket}
+}
+
+func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitCountScan(this)
+}
+
+func (this *CountScan) Bucket() catalog.Bucket {
+	return this.bucket
 }

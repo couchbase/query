@@ -39,9 +39,8 @@ func (this *aggregateBase) Evaluate(item value.Value, context Context) (result v
 	}()
 
 	av := item.(value.AnnotatedValue)
-	meta := av.GetAttachment("meta").(map[string]interface{})
-	aggregate := meta["aggregates"].(map[Aggregate]value.Value)
-	result = aggregate[interface{}(this).(Aggregate)]
+	aggregates := av.GetAttachment("aggregates").(map[Aggregate]value.Value)
+	result = aggregates[interface{}(this).(Aggregate)]
 	return result, e
 }
 

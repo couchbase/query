@@ -68,6 +68,10 @@ func (this *Builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
 	return NewDummyScan(), nil
 }
 
+func (this *Builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
+	return NewCountScan(plan), nil
+}
+
 // Fetch
 func (this *Builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil

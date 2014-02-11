@@ -30,10 +30,31 @@ func (this *Count) Default() value.Value {
 	return _ZERO
 }
 
+func (this *Count) Evaluate(item value.Value, context Context) (result value.Value, e error) {
+	if this.parameter != nil {
+		return this.aggregateBase.Evaluate(item, context)
+	}
+
+	switch item := item.(type) {
+	case value.AnnotatedValue:
+	default:
+		return this.aggregateBase.Evaluate(item, context)
+	}
+
+	count := item.(value.AnnotatedValue).GetAttachment("count")
+
+	switch count := count.(type) {
+	case value.Value:
+		return count, nil
+	case nil:
+		return this.aggregateBase.Evaluate(item, context)
+	default:
+		return nil, fmt.Errorf("Invalid count %v of type %T.", count, count)
+	}
+}
+
 func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	if this.parameter == nil {
-		item = _ONE
-	} else {
+	if this.parameter != nil {
 		item, e := this.parameter.Evaluate(item, context)
 		if e != nil {
 			return nil, e
