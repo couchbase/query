@@ -41,7 +41,7 @@ cond ::= expr
  *  group-by clause
  */
 group-by-clause ::= 'GROUP' 'BY' expr (',' expr)* having-clause?
-having-clause ::= 'HAVING' cond?
+having-clause ::= 'HAVING' cond
 
 /*
  *  order-by clause
