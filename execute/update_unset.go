@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -45,5 +47,38 @@ func (this *Unset) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
+	if !ok {
+		context.ErrorChannel() <- err.NewError(nil,
+			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone))
+		return false
+	}
+
+	for _, up := range this.plan.Node().Paths() {
+		unsetPath(up, clone, context)
+	}
+
+	return this.sendItem(item)
+}
+
+func unsetPath(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Context) error {
+	if up.PathFor() != nil {
+		return unsetPathFor(up, clone, context)
+	}
+
+	up.Path().Unset(clone)
+	return nil
+}
+
+func unsetPathFor(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Context) error {
+	cvals, e := buildFor(up.PathFor(), clone, context)
+	if e != nil {
+		return e
+	}
+
+	for i := 0; i < len(cvals); i++ {
+		up.Path().Unset(cvals[i])
+	}
+
+	return nil
 }

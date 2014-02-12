@@ -101,38 +101,3 @@ func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *
 
 	return nil
 }
-
-func buildFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.Value, error) {
-	var e error
-	arrays := make([]value.Value, len(pf.Bindings()))
-	for i, b := range pf.Bindings() {
-		arrays[i], e = b.Expression().Evaluate(val, context)
-		if e != nil {
-			return nil, e
-		}
-	}
-
-	n := 0
-	for _, a := range arrays {
-		act := a.Actual()
-		switch act := act.(type) {
-		case []interface{}:
-			if len(act) > n {
-				n = len(act)
-			}
-		}
-	}
-
-	rv := make([]value.Value, n)
-	for i, _ := range rv {
-		rv[i] = value.NewCorrelatedValue(val)
-		for j, b := range pf.Bindings() {
-			v := arrays[j].Index(i)
-			if v.Type() != value.MISSING {
-				rv[i].SetField(b.Variable(), v)
-			}
-		}
-	}
-
-	return rv, nil
-}
