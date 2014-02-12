@@ -41,9 +41,6 @@ type Visitor interface {
 	VisitIntermediateGroup(op *IntermediateGroup) (interface{}, error)
 	VisitFinalGroup(op *FinalGroup) (interface{}, error)
 
-	// Precompute
-	VisitPrecompute(op *Precompute) (interface{}, error)
-
 	// Project
 	VisitProject(op *Project) (interface{}, error)
 

@@ -108,11 +108,6 @@ func (this *Builder) VisitFinalGroup(plan *plan.FinalGroup) (interface{}, error)
 	return NewFinalGroup(plan), nil
 }
 
-// Precompute
-func (this *Builder) VisitPrecompute(plan *plan.Precompute) (interface{}, error) {
-	return NewPrecompute(plan), nil
-}
-
 // Project
 func (this *Builder) VisitProject(plan *plan.Project) (interface{}, error) {
 	return NewProject(plan), nil
