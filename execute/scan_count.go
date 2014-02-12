@@ -49,7 +49,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		cv := value.NewCorrelatedValue(parent)
 		av := value.NewAnnotatedValue(cv)
-		av.SetAttachment("count", value.NewValue(float64(count)))
+		av.SetAttachment("count", value.NewValue(count))
 		this.output.ItemChannel() <- av
 	})
 }

@@ -100,6 +100,10 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 					"Error evaluating nest path.")
 				return false
 			}
+
+			if nestItem.Type() == value.MISSING {
+				continue
+			}
 		}
 
 		nv := value.NewAnnotatedValue(nestItem)

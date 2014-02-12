@@ -55,10 +55,6 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Order) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
 	if len(this.values) >= this.length {
 		values := make([]value.AnnotatedValue, this.length<<1)

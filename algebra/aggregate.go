@@ -26,7 +26,7 @@ type Aggregate interface {
 
 	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
 	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
-	CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error)
+	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)
 }
 
 type aggregateBase struct {

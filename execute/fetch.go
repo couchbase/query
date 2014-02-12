@@ -101,6 +101,10 @@ func (this *Fetch) flushBatch(context *Context) bool {
 					"Error evaluating fetch path.")
 				return false
 			}
+
+			if item.Type() == value.MISSING {
+				continue
+			}
 		}
 
 		av := this.batch[i]

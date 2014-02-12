@@ -17,6 +17,7 @@ package value
 
 import (
 	"fmt"
+	"reflect"
 
 	json "github.com/dustin/gojson"
 )
@@ -61,6 +62,12 @@ type Value interface {
 	SetIndex(index int, val interface{}) error    // Array index setting
 }
 
+var _CONVERSIONS = []reflect.Type{
+	reflect.TypeOf(0.0),
+	reflect.TypeOf(false),
+	reflect.TypeOf(""),
+}
+
 // Bring a data object into the Value type system
 func NewValue(val interface{}) Value {
 	switch val := val.(type) {
@@ -81,6 +88,12 @@ func NewValue(val interface{}) Value {
 	case map[string]interface{}:
 		return objectValue(val)
 	default:
+		for _, c := range _CONVERSIONS {
+			if reflect.TypeOf(val).ConvertibleTo(c) {
+				return NewValue(reflect.ValueOf(val).Convert(c).Interface())
+			}
+		}
+
 		panic(fmt.Sprintf("Cannot create value for type %T.", val))
 	}
 }

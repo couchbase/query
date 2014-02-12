@@ -24,7 +24,7 @@ func NewAvg(parameter Expression) Aggregate {
 }
 
 func (this *Avg) Default() value.Value {
-	return nil
+	return _NULL
 }
 
 func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -45,14 +45,9 @@ func (this *Avg) CumulateIntermediate(part, cumulative value.Value, context Cont
 	return this.cumulatePart(part, cumulative, context)
 }
 
-func (this *Avg) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
-	cumulative, e := this.cumulatePart(part, cumulative, context)
-	if e != nil {
-		return nil, e
-	}
-
-	if cumulative == nil {
-		return nil, nil
+func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+	if cumulative == _NULL {
+		return cumulative, nil
 	}
 
 	sum, count := cumulative.Field("sum"), cumulative.Field("count")
@@ -66,17 +61,17 @@ func (this *Avg) CumulateFinal(part, cumulative value.Value, context Context) (v
 			sum.Actual(), count.Actual())
 	}
 
-	if count.Actual().(float64) <= 0.0 {
-		return nil, nil
-	} else {
+	if count.Actual().(float64) > 0.0 {
 		return value.NewValue(sum.Actual().(float64) / count.Actual().(float64)), nil
+	} else {
+		return _NULL, nil
 	}
 }
 
 func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == nil {
+	if part == _NULL {
 		return cumulative, nil
-	} else if cumulative == nil {
+	} else if cumulative == _NULL {
 		return part, nil
 	}
 

@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -19,13 +21,15 @@ import (
 // Compute DistinctCount() and Avg().
 type FinalGroup struct {
 	base
-	plan *plan.FinalGroup
+	plan   *plan.FinalGroup
+	groups map[string]value.AnnotatedValue
 }
 
 func NewFinalGroup(plan *plan.FinalGroup) *FinalGroup {
 	rv := &FinalGroup{
-		base: newBase(),
-		plan: plan,
+		base:   newBase(),
+		plan:   plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
 
 	rv.output = rv
@@ -37,20 +41,76 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalGroup) Copy() Operator {
-	return &FinalGroup{this.base.copy(), this.plan}
+	return &FinalGroup{
+		base:   this.base.copy(),
+		plan:   this.plan,
+		groups: make(map[string]value.AnnotatedValue),
+	}
 }
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *FinalGroup) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
 func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	// Generate the group key
+	var gk string
+	if len(this.plan.Keys()) > 0 {
+		var e error
+		gk, e = groupKey(item, this.plan.Keys(), context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating GROUP key.")
+			return false
+		}
+	}
+
+	// Get or seed the group value
+	gv := this.groups[gk]
+	if gv != nil {
+		context.ErrorChannel() <- err.NewError(nil, "Duplicate final GROUP.")
+		return false
+	}
+
+	gv = item
+	this.groups[gk] = gv
+
+	// Compute final aggregates
+	aggregates := gv.GetAttachment("aggregates")
+	switch aggregates := aggregates.(type) {
+	case map[algebra.Aggregate]value.Value:
+		for agg, val := range aggregates {
+			v, e := agg.ComputeFinal(val, context)
+			if e != nil {
+				context.ErrorChannel() <- err.NewError(
+					e, "Error updating GROUP value.")
+				return false
+			}
+			aggregates[agg] = v
+		}
+		return true
+	default:
+		context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+			"Invalid or missing aggregates of type %T.", aggregates))
+		return false
+	}
 }
 
 func (this *FinalGroup) afterItems(context *Context) {
+	if len(this.groups) > 0 {
+		for _, av := range this.groups {
+			if !this.sendItem(av) {
+				return
+			}
+		}
+	} else {
+		av := value.NewAnnotatedValue(nil)
+		aggregates := make(map[algebra.Aggregate]value.Value, len(this.plan.Aggregates()))
+		av.SetAttachment("aggregates", aggregates)
+
+		for _, agg := range this.plan.Aggregates() {
+			aggregates[agg] = agg.Default()
+		}
+
+		this.sendItem(av)
+	}
 }

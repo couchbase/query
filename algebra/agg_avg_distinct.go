@@ -24,9 +24,7 @@ func NewAvgDistinct(parameter Expression) Aggregate {
 }
 
 func (this *AvgDistinct) Default() value.Value {
-	av := value.NewAnnotatedValue(nil)
-	av.SetAttachment("set", value.NewSet(64))
-	return av
+	return _NULL
 }
 
 func (this *AvgDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -39,35 +37,22 @@ func (this *AvgDistinct) CumulateInitial(item, cumulative value.Value, context C
 		return cumulative, nil
 	}
 
-	switch cumulative := cumulative.(type) {
-	case value.AnnotatedValue:
-		set := cumulative.GetAttachment("set")
-		switch set := set.(type) {
-		case *value.Set:
-			set.Add(item)
-			return cumulative, nil
-		default:
-			return nil, fmt.Errorf("Invalid AVG DISTINCT set %v of type %T.", set, set)
-		}
-	default:
-		return nil, fmt.Errorf("Invalid AVG DISTINCT %v of type %T.", cumulative, cumulative)
-	}
+	return setAdd(item, cumulative)
 }
 
 func (this *AvgDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateSets(part, cumulative, context)
+	return cumulateSets(part, cumulative)
 }
 
-func (this *AvgDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
-	c, e = cumulateSets(part, cumulative, context)
-	if e != nil {
-		return c, e
+func (this *AvgDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
+	if cumulative == _NULL {
+		return cumulative, nil
 	}
 
-	av := c.(value.AnnotatedValue)
+	av := cumulative.(value.AnnotatedValue)
 	set := av.GetAttachment("set").(*value.Set)
 	if set.Len() == 0 {
-		return value.NewValue(nil), nil
+		return _NULL, nil
 	}
 
 	sum := 0.0

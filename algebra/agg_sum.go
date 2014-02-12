@@ -24,7 +24,7 @@ func NewSum(parameter Expression) Aggregate {
 }
 
 func (this *Sum) Default() value.Value {
-	return nil
+	return _NULL
 }
 
 func (this *Sum) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -44,14 +44,14 @@ func (this *Sum) CumulateIntermediate(part, cumulative value.Value, context Cont
 	return this.cumulatePart(part, cumulative, context)
 }
 
-func (this *Sum) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+func (this *Sum) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+	return cumulative, nil
 }
 
 func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == nil {
+	if part == _NULL {
 		return cumulative, nil
-	} else if cumulative == nil {
+	} else if cumulative == _NULL {
 		return part, nil
 	}
 

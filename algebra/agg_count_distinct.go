@@ -10,8 +10,6 @@
 package algebra
 
 import (
-	"fmt"
-
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -24,9 +22,7 @@ func NewCountDistinct(parameter Expression) Aggregate {
 }
 
 func (this *CountDistinct) Default() value.Value {
-	av := value.NewAnnotatedValue(nil)
-	av.SetAttachment("set", value.NewSet(64))
-	return av
+	return _ZERO
 }
 
 func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -39,32 +35,25 @@ func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context
 		return cumulative, nil
 	}
 
-	switch cumulative := cumulative.(type) {
-	case value.AnnotatedValue:
-		set := cumulative.GetAttachment("set")
-		switch set := set.(type) {
-		case *value.Set:
-			set.Add(item)
-			return cumulative, nil
-		default:
-			return nil, fmt.Errorf("Invalid COUNT DISTINCT set %v of type %T.", set, set)
-		}
-	default:
-		return nil, fmt.Errorf("Invalid COUNT DISTINCT %v of type %T.", cumulative, cumulative)
-	}
+	return setAdd(cumulative, item)
 }
 
 func (this *CountDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	return cumulateSets(part, cumulative, context)
-}
-
-func (this *CountDistinct) CumulateFinal(part, cumulative value.Value, context Context) (c value.Value, e error) {
-	c, e = cumulateSets(part, cumulative, context)
-	if e != nil {
-		return c, e
+	if part == _ZERO {
+		return cumulative, nil
+	} else if cumulative == _ZERO {
+		return part, nil
 	}
 
-	av := c.(value.AnnotatedValue)
+	return cumulateSets(part, cumulative)
+}
+
+func (this *CountDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
+	if cumulative == _ZERO {
+		return cumulative, nil
+	}
+
+	av := cumulative.(value.AnnotatedValue)
 	set := av.GetAttachment("set").(*value.Set)
 	return value.NewValue(set.Len()), nil
 }

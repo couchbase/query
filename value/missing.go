@@ -58,7 +58,7 @@ func (this missingValue) CopyForUpdate() Value {
 	return this
 }
 
-var _MISSING_BYTES = []byte("missing")
+var _MISSING_BYTES = []byte{}
 
 func (this missingValue) Bytes() []byte {
 	return _MISSING_BYTES

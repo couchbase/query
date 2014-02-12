@@ -73,17 +73,11 @@ func (this *Count) CumulateIntermediate(part, cumulative value.Value, context Co
 	return this.cumulatePart(part, cumulative, context)
 }
 
-func (this *Count) CumulateFinal(part, cumulative value.Value, context Context) (value.Value, error) {
-	return this.cumulatePart(part, cumulative, context)
+func (this *Count) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
+	return cumulative, nil
 }
 
 func (this *Count) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == nil {
-		return cumulative, nil
-	} else if cumulative == nil {
-		return part, nil
-	}
-
 	actual := part.Actual()
 	switch actual := actual.(type) {
 	case float64:

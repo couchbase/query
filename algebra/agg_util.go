@@ -15,10 +15,28 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func cumulateSets(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == nil {
+var _NULL = value.NewValue(nil)
+
+var _OBJECT_CAP = 64
+
+func setAdd(item, cumulative value.Value) (value.Value, error) {
+	set, e := getSet(cumulative)
+	if e == nil {
+		set.Add(item)
 		return cumulative, nil
-	} else if cumulative == nil {
+	}
+
+	set = value.NewSet(_OBJECT_CAP)
+	set.Add(item)
+	av := value.NewAnnotatedValue(nil)
+	av.SetAttachment("set", set)
+	return av, nil
+}
+
+func cumulateSets(part, cumulative value.Value) (value.Value, error) {
+	if part.Type() == value.NULL {
+		return cumulative, nil
+	} else if cumulative.Type() == value.NULL {
 		return part, nil
 	}
 

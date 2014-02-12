@@ -30,6 +30,14 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
+func (this *InitialGroup) Keys() algebra.Expressions {
+	return this.keys
+}
+
+func (this *InitialGroup) Aggregates() algebra.Aggregates {
+	return this.aggregates
+}
+
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
 	keys       algebra.Expressions
@@ -47,6 +55,14 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
+func (this *IntermediateGroup) Keys() algebra.Expressions {
+	return this.keys
+}
+
+func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
+	return this.aggregates
+}
+
 // Final grouping and aggregation.
 type FinalGroup struct {
 	keys       algebra.Expressions
@@ -62,4 +78,12 @@ func NewFinalGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *Fin
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalGroup(this)
+}
+
+func (this *FinalGroup) Keys() algebra.Expressions {
+	return this.keys
+}
+
+func (this *FinalGroup) Aggregates() algebra.Aggregates {
+	return this.aggregates
 }

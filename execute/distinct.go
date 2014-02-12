@@ -49,10 +49,6 @@ func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Distinct) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
 	project := item.GetAttachment("project")
 

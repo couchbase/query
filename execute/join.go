@@ -87,6 +87,8 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		return false
 	}
 
+	found := false
+
 	// Attach and send
 	for i, joinItem := range joinItems {
 		// Apply projection, if any
@@ -98,6 +100,12 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 				context.ErrorChannel() <- err.NewError(e,
 					"Error evaluating join path.")
 				return false
+			}
+
+			if joinItem.Type() == value.MISSING {
+				continue
+			} else {
+				found = true
 			}
 		}
 
@@ -118,5 +126,5 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		}
 	}
 
-	return true
+	return found || !this.plan.Term().Outer() || this.sendItem(item)
 }

@@ -10,8 +10,8 @@
 package execute
 
 import (
-	_ "fmt"
-
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -19,13 +19,15 @@ import (
 // Grouping of input data.
 type InitialGroup struct {
 	base
-	plan *plan.InitialGroup
+	plan   *plan.InitialGroup
+	groups map[string]value.AnnotatedValue
 }
 
 func NewInitialGroup(plan *plan.InitialGroup) *InitialGroup {
 	rv := &InitialGroup{
-		base: newBase(),
-		plan: plan,
+		base:   newBase(),
+		plan:   plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
 
 	rv.output = rv
@@ -37,20 +39,60 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *InitialGroup) Copy() Operator {
-	return &InitialGroup{this.base.copy(), this.plan}
+	return &InitialGroup{
+		base:   this.base.copy(),
+		plan:   this.plan,
+		groups: make(map[string]value.AnnotatedValue),
+	}
 }
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *InitialGroup) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
 func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Context) bool {
+	// Generate the group key
+	var gk string
+	if len(this.plan.Keys()) > 0 {
+		var e error
+		gk, e = groupKey(item, this.plan.Keys(), context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating GROUP key.")
+			return false
+		}
+	}
+
+	// Get or seed the group value
+	gv := this.groups[gk]
+	if gv == nil {
+		gv = item
+		this.groups[gk] = gv
+
+		aggregates := make(map[algebra.Aggregate]value.Value)
+		gv.SetAttachment("aggregates", aggregates)
+		for _, agg := range this.plan.Aggregates() {
+			aggregates[agg] = agg.Default()
+		}
+	}
+
+	// Cumulate aggregates
+	aggregates := gv.GetAttachment("aggregates").(map[algebra.Aggregate]value.Value)
+	for agg, val := range aggregates {
+		v, e := agg.CumulateInitial(item, val, context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error updating GROUP value.")
+			return false
+		}
+		aggregates[agg] = v
+	}
+
 	return true
 }
 
 func (this *InitialGroup) afterItems(context *Context) {
+	for _, av := range this.groups {
+		if !this.sendItem(av) {
+			return
+		}
+	}
 }

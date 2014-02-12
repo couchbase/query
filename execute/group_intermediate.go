@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -19,13 +21,15 @@ import (
 // Grouping of groups. Recursable.
 type IntermediateGroup struct {
 	base
-	plan *plan.IntermediateGroup
+	plan   *plan.IntermediateGroup
+	groups map[string]value.AnnotatedValue
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup) *IntermediateGroup {
 	rv := &IntermediateGroup{
-		base: newBase(),
-		plan: plan,
+		base:   newBase(),
+		plan:   plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
 
 	rv.output = rv
@@ -37,20 +41,62 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntermediateGroup) Copy() Operator {
-	return &IntermediateGroup{this.base.copy(), this.plan}
+	return &IntermediateGroup{
+		base:   this.base.copy(),
+		plan:   this.plan,
+		groups: make(map[string]value.AnnotatedValue),
+	}
 }
 
 func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *IntermediateGroup) beforeItems(context *Context, parent value.Value) bool {
-	return true
-}
-
 func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	// Generate the group key
+	var gk string
+	if len(this.plan.Keys()) > 0 {
+		var e error
+		gk, e = groupKey(item, this.plan.Keys(), context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating GROUP key.")
+			return false
+		}
+	}
+
+	// Get or seed the group value
+	gv := this.groups[gk]
+	if gv == nil {
+		gv = item
+		this.groups[gk] = gv
+		return true
+	}
+
+	// Cumulate aggregates
+	aggregates := gv.GetAttachment("aggregates")
+	switch aggregates := aggregates.(type) {
+	case map[algebra.Aggregate]value.Value:
+		for agg, val := range aggregates {
+			v, e := agg.CumulateIntermediate(item, val, context)
+			if e != nil {
+				context.ErrorChannel() <- err.NewError(
+					e, "Error updating GROUP value.")
+				return false
+			}
+			aggregates[agg] = v
+		}
+		return true
+	default:
+		context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+			"Invalid or missing aggregates of type %T.", aggregates))
+		return false
+	}
 }
 
 func (this *IntermediateGroup) afterItems(context *Context) {
+	for _, av := range this.groups {
+		if !this.sendItem(av) {
+			return
+		}
+	}
 }
