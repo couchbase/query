@@ -9,11 +9,6 @@
 
 package algebra
 
-import (
-	_ "fmt"
-	_ "github.com/couchbaselabs/query/value"
-)
-
 type Update struct {
 	bucket    *BucketRef  `json:"bucket"`
 	keys      Expression  `json:"keys"`
@@ -125,35 +120,18 @@ func (this *UnsetPath) PathFor() *PathFor {
 }
 
 type PathFor struct {
-	bindings []*PathForBinding
+	bindings []*Binding
 	when     Expression
 }
 
-func NewPathFor(bindings []*PathForBinding, when Expression) *PathFor {
+func NewPathFor(bindings []*Binding, when Expression) *PathFor {
 	return &PathFor{bindings, when}
 }
 
-func (this *PathFor) Bindings() []*PathForBinding {
+func (this *PathFor) Bindings() []*Binding {
 	return this.bindings
 }
 
 func (this *PathFor) When() Expression {
 	return this.when
-}
-
-type PathForBinding struct {
-	variable string
-	expr     Expression
-}
-
-func NewPathForBinding(variable string, expr Expression) *PathForBinding {
-	return &PathForBinding{variable, expr}
-}
-
-func (this *PathForBinding) Variable() string {
-	return this.variable
-}
-
-func (this *PathForBinding) Expression() Expression {
-	return this.expr
 }

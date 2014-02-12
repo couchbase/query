@@ -15,10 +15,12 @@ type AnnotatedChannel chan AnnotatedValue
 
 type AnnotatedValue interface {
 	Value
+	GetValue() Value
+	Attachments() map[string]interface{}
+	SetAttachments(atmts map[string]interface{})
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
 	RemoveAttachment(key string) interface{}
-	GetValue() Value
 }
 
 // Create an AnnotatedValue to hold attachments
@@ -51,7 +53,7 @@ func (this *annotatedValue) Copy() Value {
 
 func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
-		Value: this.Value.CopyForUpdate(),
+		Value:    this.Value.CopyForUpdate(),
 		attacher: attacher{this.attacher.attachments},
 	}
 }
@@ -62,6 +64,14 @@ func (this *annotatedValue) GetValue() Value {
 
 type attacher struct {
 	attachments map[string]interface{}
+}
+
+func (this *attacher) SetAttachments(atmts map[string]interface{}) {
+	this.attachments = atmts
+}
+
+func (this *attacher) Attachments() map[string]interface{} {
+	return this.attachments
 }
 
 // Return the object attached to this Value with this key.

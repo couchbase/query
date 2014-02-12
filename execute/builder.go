@@ -90,6 +90,11 @@ func (this *Builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {
 	return NewUnnest(plan), nil
 }
 
+// Let + Letting
+func (this *Builder) VisitLet(plan *plan.Let) (interface{}, error) {
+	return NewLet(plan), nil
+}
+
 // Filter
 func (this *Builder) VisitFilter(plan *plan.Filter) (interface{}, error) {
 	return NewFilter(plan), nil

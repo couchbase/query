@@ -33,6 +33,9 @@ type Visitor interface {
 	VisitNest(op *Nest) (interface{}, error)
 	VisitUnnest(op *Unnest) (interface{}, error)
 
+	// Let + Letting
+	VisitLet(op *Let) (interface{}, error)
+
 	// Filter
 	VisitFilter(op *Filter) (interface{}, error)
 
