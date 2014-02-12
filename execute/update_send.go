@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -56,5 +58,39 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		return true
 	}
 
+	pairs := make([]catalog.Pair, len(this.batch))
+
+	for i, av := range this.batch {
+		key, ok := this.requireKey(av, context)
+		if !ok {
+			return false
+		}
+
+		pairs[i].Key = key
+		clone := av.GetAttachment("clone")
+		switch clone := clone.(type) {
+		case value.AnnotatedValue:
+			pairs[i].Value = clone
+		default:
+			context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+				"Invalid UPDATE value of type %T.", clone))
+			return false
+		}
+	}
+
+	e := this.plan.Bucket().Update(pairs)
+	if e != nil {
+		context.ErrorChannel() <- e
+		this.batch = nil
+		return false
+	}
+
+	for _, p := range pairs {
+		if !this.sendItem(p.Value.(value.AnnotatedValue)) {
+			break
+		}
+	}
+
+	this.batch = nil
 	return true
 }

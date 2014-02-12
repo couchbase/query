@@ -52,6 +52,7 @@ func (this *annotatedValue) Copy() Value {
 func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
 		Value: this.Value.CopyForUpdate(),
+		attacher: attacher{this.attacher.attachments},
 	}
 }
 

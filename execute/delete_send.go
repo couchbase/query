@@ -42,7 +42,7 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context) && this.sendItem(item)
+	return this.enbatch(item, this, context)
 }
 
 func (this *SendDelete) afterItems(context *Context) {
@@ -55,26 +55,28 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	}
 
 	keys := make([]string, len(this.batch))
-	i := 0
 
-	for _, av := range this.batch {
+	for i, av := range this.batch {
 		key, ok := this.requireKey(av, context)
-		if ok {
-			keys[i] = key
-			i++
-		} else {
+		if !ok {
 			return false
 		}
+		keys[i] = key
 	}
-
-	keys = keys[0:i]
-	this.batch = nil
 
 	e := this.plan.Bucket().Delete(keys)
 	if e != nil {
 		context.ErrorChannel() <- e
+		this.batch = nil
 		return false
 	}
 
+	for _, av := range this.batch {
+		if !this.sendItem(av) {
+			break
+		}
+	}
+
+	this.batch = nil
 	return true
 }

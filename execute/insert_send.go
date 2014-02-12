@@ -98,13 +98,14 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return false
 	}
 
-	// Capture the inserted key in case there's a RETURNING clause
-	ok := true
+	// Capture the inserted keys in case there's a RETURNING clause
 	for i, k := range keys {
 		av := pairs[i].Value.(value.AnnotatedValue)
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
-		ok = ok && this.sendItem(av)
+		if !this.sendItem(av) {
+			return false
+		}
 	}
 
-	return ok
+	return true
 }

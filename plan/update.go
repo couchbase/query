@@ -49,12 +49,20 @@ func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSet(this)
 }
 
+func (this *Set) Node() *algebra.Set {
+	return this.node
+}
+
 func NewUnset(node *algebra.Unset) *Unset {
 	return &Unset{node}
 }
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnset(this)
+}
+
+func (this *Unset) Node() *algebra.Unset {
+	return this.node
 }
 
 func NewSendUpdate(bucket catalog.Bucket) *SendUpdate {

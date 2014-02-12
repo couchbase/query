@@ -10,8 +10,10 @@
 package execute
 
 import (
-	_ "fmt"
+	"fmt"
 
+	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -45,5 +47,92 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
+	if !ok {
+		context.ErrorChannel() <- err.NewError(nil,
+			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone))
+		return false
+	}
+
+	for _, sp := range this.plan.Node().Paths() {
+		setPath(sp, clone, item, context)
+	}
+
+	return this.sendItem(item)
+}
+
+func setPath(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) error {
+	if sp.PathFor() != nil {
+		return setPathFor(sp, clone, item, context)
+	}
+
+	v, e := sp.Value().Evaluate(item, context)
+	if e != nil {
+		return e
+	}
+
+	sp.Path().Set(clone, v)
+	return nil
+}
+
+func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) error {
+	cvals, e := buildFor(sp.PathFor(), clone, context)
+	if e != nil {
+		return e
+	}
+
+	ivals, e := buildFor(sp.PathFor(), item, context)
+	if e != nil {
+		return e
+	}
+
+	n := len(cvals)
+	if len(ivals) < n {
+		n = len(ivals)
+	}
+
+	for i := 0; i < n; i++ {
+		v, e := sp.Value().Evaluate(ivals[i], context)
+		if e != nil {
+			return e
+		}
+		sp.Path().Set(cvals[i], v)
+	}
+
+	return nil
+}
+
+func buildFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.Value, error) {
+	var e error
+	arrays := make([]value.Value, len(pf.Bindings()))
+	for i, b := range pf.Bindings() {
+		arrays[i], e = b.Expression().Evaluate(val, context)
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	n := 0
+	for _, a := range arrays {
+		act := a.Actual()
+		switch act := act.(type) {
+		case []interface{}:
+			if len(act) > n {
+				n = len(act)
+			}
+		}
+	}
+
+	rv := make([]value.Value, n)
+	for i, _ := range rv {
+		rv[i] = value.NewCorrelatedValue(val)
+		for j, b := range pf.Bindings() {
+			v := arrays[j].Index(i)
+			if v.Type() != value.MISSING {
+				rv[i].SetField(b.Variable(), v)
+			}
+		}
+	}
+
+	return rv, nil
 }

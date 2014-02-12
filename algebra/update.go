@@ -24,35 +24,6 @@ type Update struct {
 	returning ResultTerms `json:"returning"`
 }
 
-type Set struct {
-	paths []SetPath
-}
-
-type Unset struct {
-	paths []UnsetPath
-}
-
-type SetPath struct {
-	path    Path       `json:"path"`
-	value   Expression `json:"value"`
-	pathFor *PathFor   `json:"path-for"`
-}
-
-type UnsetPath struct {
-	path    Path     `json:"path"`
-	pathFor *PathFor `json:"path-for"`
-}
-
-type PathForBinding struct {
-	variable string
-	expr     Expression
-}
-
-type PathFor struct {
-	bindings []*PathForBinding
-	when     Expression
-}
-
 func NewUpdate(bucket *BucketRef, keys Expression, set *Set, unset *Unset,
 	where, limit Expression, returning ResultTerms) *Update {
 	return &Update{bucket, keys, set, unset, where, limit, returning}
@@ -62,10 +33,127 @@ func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
-func NewSet(paths []SetPath) *Set {
+func (this *Update) BucketRef() *BucketRef {
+	return this.bucket
+}
+
+func (this *Update) Keys() Expression {
+	return this.keys
+}
+
+func (this *Update) Set() *Set {
+	return this.set
+}
+
+func (this *Update) Unset() *Unset {
+	return this.unset
+}
+
+func (this *Update) Where() Expression {
+	return this.where
+}
+
+func (this *Update) Limit() Expression {
+	return this.limit
+}
+
+func (this *Update) Returning() ResultTerms {
+	return this.returning
+}
+
+type Set struct {
+	paths []*SetPath
+}
+
+func NewSet(paths []*SetPath) *Set {
 	return &Set{paths}
 }
 
-func NewUnset(paths []UnsetPath) *Unset {
+func (this *Set) Paths() []*SetPath {
+	return this.paths
+}
+
+type Unset struct {
+	paths []*UnsetPath
+}
+
+func NewUnset(paths []*UnsetPath) *Unset {
 	return &Unset{paths}
+}
+
+func (this *Unset) Paths() []*UnsetPath {
+	return this.paths
+}
+
+type SetPath struct {
+	path    Path       `json:"path"`
+	value   Expression `json:"value"`
+	pathFor *PathFor   `json:"path-for"`
+}
+
+func (this *SetPath) Path() Path {
+	return this.path
+}
+
+func (this *SetPath) Value() Expression {
+	return this.value
+}
+
+func (this *SetPath) PathFor() *PathFor {
+	return this.pathFor
+}
+
+func NewSetPath(path Path, value Expression, pathFor *PathFor) *SetPath {
+	return &SetPath{path, value, pathFor}
+}
+
+type UnsetPath struct {
+	path    Path     `json:"path"`
+	pathFor *PathFor `json:"path-for"`
+}
+
+func NewUnsetPath(path Path, pathFor *PathFor) *UnsetPath {
+	return &UnsetPath{path, pathFor}
+}
+
+func (this *UnsetPath) Path() Path {
+	return this.path
+}
+
+func (this *UnsetPath) PathFor() *PathFor {
+	return this.pathFor
+}
+
+type PathFor struct {
+	bindings []*PathForBinding
+	when     Expression
+}
+
+func NewPathFor(bindings []*PathForBinding, when Expression) *PathFor {
+	return &PathFor{bindings, when}
+}
+
+func (this *PathFor) Bindings() []*PathForBinding {
+	return this.bindings
+}
+
+func (this *PathFor) When() Expression {
+	return this.when
+}
+
+type PathForBinding struct {
+	variable string
+	expr     Expression
+}
+
+func NewPathForBinding(variable string, expr Expression) *PathForBinding {
+	return &PathForBinding{variable, expr}
+}
+
+func (this *PathForBinding) Variable() string {
+	return this.variable
+}
+
+func (this *PathForBinding) Expression() Expression {
+	return this.expr
 }

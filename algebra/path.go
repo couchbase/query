@@ -17,6 +17,6 @@ type Paths []Path
 
 type Path interface {
 	Expression
-	Set(item, val value.Value) error
-	Unset(item value.Value) error
+	Set(item, val value.Value) bool
+	Unset(item value.Value) bool
 }
