@@ -55,8 +55,8 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	}
 
 	var e error
-	for _, sp := range this.plan.Node().Paths() {
-		clone, e = setPath(sp, clone, item, context)
+	for _, t := range this.plan.Node().Terms() {
+		clone, e = setPath(t, clone, item, context)
 		if e != nil {
 			context.ErrorChannel() <- err.NewError(e, "Error evaluating SET clause.")
 			return false
@@ -67,18 +67,18 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	return this.sendItem(item)
 }
 
-func setPath(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
-	if sp.PathFor() != nil {
-		return setPathFor(sp, clone, item, context)
+func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+	if t.UpdateFor() != nil {
+		return setFor(t, clone, item, context)
 	}
 
-	v, e := sp.Value().Evaluate(item, context)
+	v, e := t.Value().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	if sp.Path() != nil {
-		sp.Path().Set(clone, v)
+	if t.Path() != nil {
+		t.Path().Set(clone, v)
 		return clone, nil
 	} else {
 		av := value.NewAnnotatedValue(v)
@@ -87,42 +87,50 @@ func setPath(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Con
 	}
 }
 
-func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
-	carrays, e := arraysFor(sp.PathFor(), clone, context)
+func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+	carrays, e := arraysFor(t.UpdateFor(), clone, context)
 	if e != nil {
 		return nil, e
 	}
 
-	cvals, e := buildFor(sp.PathFor(), clone, carrays, context)
+	cvals, e := buildFor(t.UpdateFor(), clone, carrays, context)
 	if e != nil {
 		return nil, e
 	}
 
-	iarrays, e := arraysFor(sp.PathFor(), item, context)
+	iarrays, e := arraysFor(t.UpdateFor(), item, context)
 	if e != nil {
 		return nil, e
 	}
 
-	ivals, e := buildFor(sp.PathFor(), item, iarrays, context)
+	ivals, e := buildFor(t.UpdateFor(), item, iarrays, context)
 	if e != nil {
 		return nil, e
 	}
 
-	n := len(cvals)
-	if len(ivals) < n {
-		n = len(ivals)
+	// Clone may have been shortened by previous SET term
+	n := len(ivals)
+	if len(cvals) < n {
+		n = len(cvals)
 	}
 
 	for i := 0; i < n; i++ {
-		v, e := sp.Value().Evaluate(ivals[i], context)
+		v, e := t.Value().Evaluate(ivals[i], context)
 		if e != nil {
 			return nil, e
 		}
 
-		if sp.Path() != nil {
-			sp.Path().Set(cvals[i], v)
-		} else {
-			cvals[i] = v
+		t.Path().Set(cvals[i], v)
+	}
+
+	// Set array elements
+	f := t.UpdateFor()
+	for a, b := range f.Bindings() {
+		switch ca := carrays[a].Actual().(type) {
+		case []interface{}:
+			for i := 0; i < n; i++ {
+				ca[i], _ = cvals[i].Field(b.Variable())
+			}
 		}
 	}
 

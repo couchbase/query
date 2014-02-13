@@ -54,35 +54,35 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 		return false
 	}
 
-	for _, up := range this.plan.Node().Paths() {
-		unsetPath(up, clone, context)
+	for _, t := range this.plan.Node().Terms() {
+		unsetPath(t, clone, context)
 	}
 
 	return this.sendItem(item)
 }
 
-func unsetPath(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Context) error {
-	if up.PathFor() != nil {
-		return unsetPathFor(up, clone, context)
+func unsetPath(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context) error {
+	if t.UpdateFor() != nil {
+		return unsetFor(t, clone, context)
 	}
 
-	up.Path().Unset(clone)
+	t.Path().Unset(clone)
 	return nil
 }
 
-func unsetPathFor(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Context) error {
-	arrays, e := arraysFor(up.PathFor(), clone, context)
+func unsetFor(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context) error {
+	arrays, e := arraysFor(t.UpdateFor(), clone, context)
 	if e != nil {
 		return e
 	}
 
-	cvals, e := buildFor(up.PathFor(), clone, arrays, context)
+	cvals, e := buildFor(t.UpdateFor(), clone, arrays, context)
 	if e != nil {
 		return e
 	}
 
 	for i := 0; i < len(cvals); i++ {
-		up.Path().Unset(cvals[i])
+		t.Path().Unset(cvals[i])
 	}
 
 	return nil

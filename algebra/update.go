@@ -57,81 +57,81 @@ func (this *Update) Returning() ResultTerms {
 }
 
 type Set struct {
-	paths []*SetPath
+	terms []*SetTerm
 }
 
-func NewSet(paths []*SetPath) *Set {
-	return &Set{paths}
+func NewSet(terms []*SetTerm) *Set {
+	return &Set{terms}
 }
 
-func (this *Set) Paths() []*SetPath {
-	return this.paths
+func (this *Set) Terms() []*SetTerm {
+	return this.terms
 }
 
 type Unset struct {
-	paths []*UnsetPath
+	terms []*UnsetTerm
 }
 
-func NewUnset(paths []*UnsetPath) *Unset {
-	return &Unset{paths}
+func NewUnset(terms []*UnsetTerm) *Unset {
+	return &Unset{terms}
 }
 
-func (this *Unset) Paths() []*UnsetPath {
-	return this.paths
+func (this *Unset) Terms() []*UnsetTerm {
+	return this.terms
 }
 
-type SetPath struct {
-	path    Path       `json:"path"`
-	value   Expression `json:"value"`
-	pathFor *PathFor   `json:"path-for"`
+type SetTerm struct {
+	path      Path       `json:"path"`
+	value     Expression `json:"value"`
+	updateFor *UpdateFor `json:"path-for"`
 }
 
-func (this *SetPath) Path() Path {
+func NewSetTerm(path Path, value Expression, updateFor *UpdateFor) *SetTerm {
+	return &SetTerm{path, value, updateFor}
+}
+
+func (this *SetTerm) Path() Path {
 	return this.path
 }
 
-func (this *SetPath) Value() Expression {
+func (this *SetTerm) Value() Expression {
 	return this.value
 }
 
-func (this *SetPath) PathFor() *PathFor {
-	return this.pathFor
+func (this *SetTerm) UpdateFor() *UpdateFor {
+	return this.updateFor
 }
 
-func NewSetPath(path Path, value Expression, pathFor *PathFor) *SetPath {
-	return &SetPath{path, value, pathFor}
+type UnsetTerm struct {
+	path      Path       `json:"path"`
+	updateFor *UpdateFor `json:"path-for"`
 }
 
-type UnsetPath struct {
-	path    Path     `json:"path"`
-	pathFor *PathFor `json:"path-for"`
+func NewUnsetTerm(path Path, updateFor *UpdateFor) *UnsetTerm {
+	return &UnsetTerm{path, updateFor}
 }
 
-func NewUnsetPath(path Path, pathFor *PathFor) *UnsetPath {
-	return &UnsetPath{path, pathFor}
-}
-
-func (this *UnsetPath) Path() Path {
+func (this *UnsetTerm) Path() Path {
 	return this.path
 }
 
-func (this *UnsetPath) PathFor() *PathFor {
-	return this.pathFor
+func (this *UnsetTerm) UpdateFor() *UpdateFor {
+	return this.updateFor
 }
 
-type PathFor struct {
+type UpdateFor struct {
 	bindings []*Binding
 	when     Expression
 }
 
-func NewPathFor(bindings []*Binding, when Expression) *PathFor {
-	return &PathFor{bindings, when}
+func NewUpdateFor(bindings []*Binding, when Expression) *UpdateFor {
+	return &UpdateFor{bindings, when}
 }
 
-func (this *PathFor) Bindings() []*Binding {
+func (this *UpdateFor) Bindings() []*Binding {
 	return this.bindings
 }
 
-func (this *PathFor) When() Expression {
+func (this *UpdateFor) When() Expression {
 	return this.when
 }

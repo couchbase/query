@@ -14,10 +14,10 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func arraysFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.Value, error) {
+func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) ([]value.Value, error) {
 	var e error
-	arrays := make([]value.Value, len(pf.Bindings()))
-	for i, b := range pf.Bindings() {
+	arrays := make([]value.Value, len(f.Bindings()))
+	for i, b := range f.Bindings() {
 		arrays[i], e = b.Expression().Evaluate(val, context)
 		if e != nil {
 			return nil, e
@@ -27,13 +27,13 @@ func arraysFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.
 	return arrays, nil
 }
 
-func buildFor(pf *algebra.PathFor, val value.Value, arrays []value.Value, context *Context) ([]value.Value, error) {
+func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, context *Context) ([]value.Value, error) {
 	n := 0
 	for _, a := range arrays {
 		act := a.Actual()
 		switch act := act.(type) {
 		case []interface{}:
-			if len(act) > n {
+			if n == 0 || len(act) < n {
 				n = len(act)
 			}
 		}
@@ -41,8 +41,8 @@ func buildFor(pf *algebra.PathFor, val value.Value, arrays []value.Value, contex
 
 	rv := make([]value.Value, n)
 	for i, _ := range rv {
-		rv[i] = value.NewCorrelatedValue(make(map[string]interface{}, len(pf.Bindings())), val)
-		for j, b := range pf.Bindings() {
+		rv[i] = value.NewCorrelatedValue(make(map[string]interface{}, len(f.Bindings())), val)
+		for j, b := range f.Bindings() {
 			v, _ := arrays[j].Index(i)
 			rv[i].SetField(b.Variable(), v)
 		}
