@@ -50,14 +50,11 @@ func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Va
 		return cumulative, nil
 	}
 
-	sum, count := cumulative.Field("sum"), cumulative.Field("count")
-
-	if sum == nil || count == nil {
-		return nil, fmt.Errorf("Missing sum or count in AVG.")
-	}
+	sum, _ := cumulative.Field("sum")
+	count, _ := cumulative.Field("count")
 
 	if sum.Type() != value.NUMBER || count.Type() != value.NUMBER {
-		return nil, fmt.Errorf("Invalid sum or count in AVG: %v, %v.",
+		return nil, fmt.Errorf("Missing or invalid sum or count in AVG: %v, %v.",
 			sum.Actual(), count.Actual())
 	}
 
@@ -75,16 +72,14 @@ func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (va
 		return part, nil
 	}
 
-	psum, pcount := part.Field("sum"), part.Field("count")
-	csum, ccount := cumulative.Field("sum"), cumulative.Field("count")
-
-	if psum == nil || pcount == nil || csum == nil || ccount == nil {
-		return nil, fmt.Errorf("Missing partial sum or count in AVG.")
-	}
+	psum, _ := part.Field("sum")
+	pcount, _ := part.Field("count")
+	csum, _ := cumulative.Field("sum")
+	ccount, _ := cumulative.Field("count")
 
 	if psum.Type() != value.NUMBER || pcount.Type() != value.NUMBER ||
 		csum.Type() != value.NUMBER || ccount.Type() != value.NUMBER {
-		return nil, fmt.Errorf("Non-numeric partial sum or count in AVG: %v, %v, %v, v.",
+		return nil, fmt.Errorf("Missing or invalid partial sum or count in AVG: %v, %v, %v, v.",
 			psum.Actual(), pcount.Actual(), csum.Actual(), ccount.Actual())
 	}
 

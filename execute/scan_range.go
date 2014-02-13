@@ -80,7 +80,7 @@ func (this *RangeScan) scanRange(context *Context, parent value.Value, ranje *pl
 		select {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
-				cv := value.NewCorrelatedValue(parent)
+				cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 				ok = this.sendItem(av)

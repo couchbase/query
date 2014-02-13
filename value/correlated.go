@@ -9,111 +9,45 @@
 
 package value
 
-import (
-	json "github.com/dustin/gojson"
-)
-
-// CorrelatedValue enables subqueries.
-func NewCorrelatedValue(parent Value) Value {
-	return &correlatedValue{
-		entries: make(map[string]interface{}),
-		parent:  parent,
-	}
-}
-
 // CorrelatedValue enables subqueries.
 type correlatedValue struct {
-	entries map[string]interface{}
-	parent  Value
+	Value
+	parent Value
 }
 
-func (this *correlatedValue) Type() int {
-	return OBJECT
-}
-
-func (this *correlatedValue) Actual() interface{} {
-	return this.entries
-}
-
-func (this *correlatedValue) Equals(other Value) bool {
-	switch other := other.(type) {
-	case *correlatedValue:
-		return objectEquals(this.entries, other.entries)
-	case objectValue:
-		return objectEquals(this.entries, other)
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	default:
-		return false
+// CorrelatedValue provides alias scoping for subqueries, FORs, LETs,
+// projections, etc.
+func NewCorrelatedValue(value interface{}, parent Value) Value {
+	return &correlatedValue{
+		Value:  NewValue(value),
+		parent: parent,
 	}
-}
-
-func (this *correlatedValue) Collate(other Value) int {
-	switch other := other.(type) {
-	case *correlatedValue:
-		return objectCollate(this.entries, other.entries)
-	case objectValue:
-		return objectCollate(this.entries, other)
-	case *parsedValue:
-		return this.Collate(other.parse())
-	case *annotatedValue:
-		return this.Collate(other.Value)
-	default:
-		return 1
-	}
-}
-
-func (this *correlatedValue) Truth() bool {
-	return len(this.entries) > 0
 }
 
 func (this *correlatedValue) Copy() Value {
 	return &correlatedValue{
-		entries: copyMap(this.entries, self),
-		parent:  this.parent,
+		Value:  this.Value.Copy(),
+		parent: this.parent,
 	}
 }
 
 func (this *correlatedValue) CopyForUpdate() Value {
 	return &correlatedValue{
-		entries: copyMap(this.entries, copyForUpdate),
-		parent:  this.parent,
+		Value:  this.Value.CopyForUpdate(),
+		parent: this.parent,
 	}
 }
 
-func (this *correlatedValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
-}
-
-// Search self and ancestors. Enables subqueries.
-func (this *correlatedValue) Field(field string) Value {
-	result, ok := this.entries[field]
+// Search self, the parent. Implements scoping.
+func (this *correlatedValue) Field(field string) (Value, bool) {
+	result, ok := this.Value.Field(field)
 	if ok {
-		return NewValue(result)
+		return result, true
 	}
 
 	if this.parent != nil {
 		return this.parent.Field(field)
 	}
 
-	return missingField(field)
-}
-
-func (this *correlatedValue) SetField(field string, val interface{}) error {
-	this.entries[field] = val
-	return nil
-}
-
-func (this *correlatedValue) Index(index int) Value {
-	return missingIndex(index)
-}
-
-func (this *correlatedValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return missingField(field), false
 }

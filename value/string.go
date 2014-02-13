@@ -76,16 +76,16 @@ func (this stringValue) Bytes() []byte {
 	return bytes
 }
 
-func (this stringValue) Field(field string) Value {
-	return missingField(field)
+func (this stringValue) Field(field string) (Value, bool) {
+	return missingField(field), false
 }
 
 func (this stringValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this stringValue) Index(index int) Value {
-	return missingIndex(index)
+func (this stringValue) Index(index int) (Value, bool) {
+	return missingIndex(index), false
 }
 
 func (this stringValue) SetIndex(index int, val interface{}) error {

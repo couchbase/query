@@ -71,7 +71,12 @@ func unsetPath(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Conte
 }
 
 func unsetPathFor(up *algebra.UnsetPath, clone value.AnnotatedValue, context *Context) error {
-	cvals, e := buildFor(up.PathFor(), clone, context)
+	arrays, e := arraysFor(up.PathFor(), clone, context)
+	if e != nil {
+		return e
+	}
+
+	cvals, e := buildFor(up.PathFor(), clone, arrays, context)
 	if e != nil {
 		return e
 	}

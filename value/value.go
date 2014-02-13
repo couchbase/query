@@ -56,9 +56,9 @@ type Value interface {
 	Copy() Value                                  // Shallow copy
 	CopyForUpdate() Value                         // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
 	Bytes() []byte                                // JSON byte encoding
-	Field(field string) Value                     // Object field dereference, or MISSING
+	Field(field string) (Value, bool)             // Object field dereference, or MISSING; true if found
 	SetField(field string, val interface{}) error // Object field setting
-	Index(index int) Value                        // Array index dereference, or MISSING
+	Index(index int) (Value, bool)                // Array index dereference, or MISSING; true if found
 	SetIndex(index int, val interface{}) error    // Array index setting
 }
 

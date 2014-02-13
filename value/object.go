@@ -30,11 +30,11 @@ func (this objectValue) Equals(other Value) bool {
 	case objectValue:
 		return objectEquals(this, other)
 	case *correlatedValue:
-		return objectEquals(this, other.entries)
-	case *parsedValue:
-		return this.Equals(other.parse())
+		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
+	case *parsedValue:
+		return this.Equals(other.parse())
 	default:
 		return false
 	}
@@ -45,11 +45,11 @@ func (this objectValue) Collate(other Value) int {
 	case objectValue:
 		return objectCollate(this, other)
 	case *correlatedValue:
-		return objectCollate(this, other.entries)
-	case *parsedValue:
-		return this.Collate(other.parse())
+		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)
+	case *parsedValue:
+		return this.Collate(other.parse())
 	default:
 		return 1
 	}
@@ -75,13 +75,13 @@ func (this objectValue) Bytes() []byte {
 	return bytes
 }
 
-func (this objectValue) Field(field string) Value {
+func (this objectValue) Field(field string) (Value, bool) {
 	result, ok := this[field]
 	if ok {
-		return NewValue(result)
+		return NewValue(result), true
 	}
 
-	return missingField(field)
+	return missingField(field), false
 }
 
 func (this objectValue) SetField(field string, val interface{}) error {
@@ -89,8 +89,8 @@ func (this objectValue) SetField(field string, val interface{}) error {
 	return nil
 }
 
-func (this objectValue) Index(index int) Value {
-	return missingIndex(index)
+func (this objectValue) Index(index int) (Value, bool) {
+	return missingIndex(index), false
 }
 
 func (this objectValue) SetIndex(index int, val interface{}) error {

@@ -29,10 +29,12 @@ func (this sliceValue) Equals(other Value) bool {
 		return arrayEquals(this, other)
 	case *listValue:
 		return arrayEquals(this, other.actual)
-	case *parsedValue:
-		return this.Equals(other.parse())
+	case *correlatedValue:
+		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
+	case *parsedValue:
+		return this.Equals(other.parse())
 	default:
 		return false
 	}
@@ -44,10 +46,12 @@ func (this sliceValue) Collate(other Value) int {
 		return arrayCollate(this, other)
 	case *listValue:
 		return arrayCollate(this, other.actual)
-	case *parsedValue:
-		return this.Collate(other.parse())
+	case *correlatedValue:
+		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)
+	case *parsedValue:
+		return this.Collate(other.parse())
 	default:
 		return ARRAY - other.Type()
 	}
@@ -73,20 +77,20 @@ func (this sliceValue) Bytes() []byte {
 	return bytes
 }
 
-func (this sliceValue) Field(field string) Value {
-	return missingField(field)
+func (this sliceValue) Field(field string) (Value, bool) {
+	return missingField(field), false
 }
 
 func (this sliceValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this sliceValue) Index(index int) Value {
+func (this sliceValue) Index(index int) (Value, bool) {
 	if index >= 0 && index < len(this) {
-		return NewValue(this[index])
+		return NewValue(this[index]), true
 	}
 
-	return missingIndex(index)
+	return missingIndex(index), false
 }
 
 // NOTE: Slices do NOT extend beyond length.
@@ -117,10 +121,12 @@ func (this *listValue) Equals(other Value) bool {
 		return arrayEquals(this.actual, other.actual)
 	case sliceValue:
 		return arrayEquals(this.actual, other)
-	case *parsedValue:
-		return this.Equals(other.parse())
+	case *correlatedValue:
+		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
+	case *parsedValue:
+		return this.Equals(other.parse())
 	default:
 		return false
 	}
@@ -132,10 +138,12 @@ func (this *listValue) Collate(other Value) int {
 		return arrayCollate(this.actual, other.actual)
 	case sliceValue:
 		return arrayCollate(this.actual, other)
-	case *parsedValue:
-		return this.Collate(other.parse())
+	case *correlatedValue:
+		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)
+	case *parsedValue:
+		return this.Collate(other.parse())
 	default:
 		return ARRAY - other.Type()
 	}
@@ -161,20 +169,20 @@ func (this *listValue) Bytes() []byte {
 	return bytes
 }
 
-func (this *listValue) Field(field string) Value {
-	return missingField(field)
+func (this *listValue) Field(field string) (Value, bool) {
+	return missingField(field), false
 }
 
 func (this *listValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this *listValue) Index(index int) Value {
+func (this *listValue) Index(index int) (Value, bool) {
 	if index >= 0 && index < len(this.actual) {
-		return NewValue(this.actual[index])
+		return NewValue(this.actual[index]), true
 	}
 
-	return missingIndex(index)
+	return missingIndex(index), false
 }
 
 func (this *listValue) SetIndex(index int, val interface{}) error {

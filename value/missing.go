@@ -64,16 +64,16 @@ func (this missingValue) Bytes() []byte {
 	return _MISSING_BYTES
 }
 
-func (this missingValue) Field(field string) Value {
-	return missingField(field)
+func (this missingValue) Field(field string) (Value, bool) {
+	return missingField(field), false
 }
 
 func (this missingValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
-func (this missingValue) Index(index int) Value {
-	return missingIndex(index)
+func (this missingValue) Index(index int) (Value, bool) {
+	return missingIndex(index), false
 }
 
 func (this missingValue) SetIndex(index int, val interface{}) error {

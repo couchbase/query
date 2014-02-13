@@ -91,7 +91,7 @@ func (this *DualScan) scanDual(context *Context, parent value.Value, dual *plan.
 		select {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
-				cv := value.NewCorrelatedValue(parent)
+				cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 				ok = this.sendItem(av)

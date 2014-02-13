@@ -14,7 +14,7 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func buildFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.Value, error) {
+func arraysFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.Value, error) {
 	var e error
 	arrays := make([]value.Value, len(pf.Bindings()))
 	for i, b := range pf.Bindings() {
@@ -24,6 +24,10 @@ func buildFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.V
 		}
 	}
 
+	return arrays, nil
+}
+
+func buildFor(pf *algebra.PathFor, val value.Value, arrays []value.Value, context *Context) ([]value.Value, error) {
 	n := 0
 	for _, a := range arrays {
 		act := a.Actual()
@@ -37,9 +41,9 @@ func buildFor(pf *algebra.PathFor, val value.Value, context *Context) ([]value.V
 
 	rv := make([]value.Value, n)
 	for i, _ := range rv {
-		rv[i] = value.NewCorrelatedValue(val)
+		rv[i] = value.NewCorrelatedValue(make(map[string]interface{}, len(pf.Bindings())), val)
 		for j, b := range pf.Bindings() {
-			v := arrays[j].Index(i)
+			v, _ := arrays[j].Index(i)
 			rv[i].SetField(b.Variable(), v)
 		}
 	}

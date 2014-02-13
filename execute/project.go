@@ -10,8 +10,6 @@
 package execute
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -45,19 +43,58 @@ func (this *Project) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Project) processItem(item value.AnnotatedValue, context *Context) bool {
-	// Single unprefixed star, or project raw value
-	if len(this.plan.Terms()) == 1 && this.plan.Terms()[0].Result().Expression() == nil {
-		if item.Type() == value.OBJECT || !this.plan.Terms()[0].Result().Star() {
-			item.SetAttachment("project", item.GetValue())
-		} else {
-			item.SetAttachment("project", value.NewValue(map[string]interface{}{}))
-		}
+	terms := this.plan.Terms()
+	n := len(terms)
 
+	if n > 1 {
+		return this.processTerms(item, context)
+	}
+
+	// Raw value
+	if n == 0 {
+		item.SetAttachment("project", item.GetValue())
 		return this.sendItem(item)
 	}
 
+	// n == 1
+	result := terms[0].Result()
+	expr := result.Expression()
+	alias := terms[0].Alias()
+
+	// Special cases
+	if expr == nil {
+		// Unprefixed star or raw value
+		if item.Type() == value.OBJECT || !result.Star() {
+			item.SetAttachment("project", item.GetValue())
+		} else {
+			item.SetAttachment("project",
+				value.NewValue(map[string]interface{}{}))
+		}
+		return this.sendItem(item)
+	} else if alias == "" && !result.Star() {
+		// Raw projection of single expression
+		val, e := expr.Evaluate(item, context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+			return false
+		}
+		item.SetAttachment("project", val)
+		return this.sendItem(item)
+	}
+
+	// Default
+	return this.processTerms(item, context)
+}
+
+func (this *Project) processTerms(item value.AnnotatedValue, context *Context) bool {
+	n := len(this.plan.Terms())
+	cv := value.NewCorrelatedValue(make(map[string]interface{}, n), item)
+
+	pv := value.NewAnnotatedValue(cv)
+	pv.SetAttachments(item.Attachments())
+
 	project := value.NewValue(make(map[string]interface{}))
-	as := make(map[string]value.Value)
+	pv.SetAttachment("project", project)
 
 	for _, term := range this.plan.Terms() {
 		if term.Alias() != "" {
@@ -67,27 +104,26 @@ func (this *Project) processItem(item value.AnnotatedValue, context *Context) bo
 				return false
 			}
 
+			project.SetField(term.Alias(), val)
+
+			// Explicit aliases overshadow data
 			if term.Result().As() != "" {
-				as[term.Alias()] = val
-			} else {
-				project.SetField(term.Alias(), val)
+				pv.SetField(term.Alias(), val)
 			}
 		} else {
 			// Star
-			var starActual interface{}
-			if term.Result().Expression() == nil {
-				starActual = item.Actual()
-			} else {
-				val, e := term.Result().Expression().Evaluate(item, context)
+			starValue := item.(value.Value)
+			if term.Result().Expression() != nil {
+				var e error
+				starValue, e = term.Result().Expression().Evaluate(item, context)
 				if e != nil {
 					context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
 					return false
 				}
-				starActual = val.Actual()
 			}
 
 			// Latest star overwrites previous star
-			switch starActual := starActual.(type) {
+			switch starActual := starValue.Actual().(type) {
 			case map[string]interface{}:
 				for k, v := range starActual {
 					project.SetField(k, value.NewValue(v))
@@ -96,12 +132,5 @@ func (this *Project) processItem(item value.AnnotatedValue, context *Context) bo
 		}
 	}
 
-	// Explicit aliases overwrite everything, including data
-	for a, v := range as {
-		project.SetField(a, v)
-		item.SetField(a, v)
-	}
-
-	item.SetAttachment("project", project)
-	return this.sendItem(item)
+	return this.sendItem(pv)
 }

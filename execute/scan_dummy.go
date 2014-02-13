@@ -40,7 +40,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 
-		cv := value.NewCorrelatedValue(parent)
+		cv := value.NewCorrelatedValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
 		this.output.ItemChannel() <- av
 	})

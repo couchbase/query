@@ -54,36 +54,58 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 		return false
 	}
 
+	var e error
 	for _, sp := range this.plan.Node().Paths() {
-		setPath(sp, clone, item, context)
+		clone, e = setPath(sp, clone, item, context)
+		if e != nil {
+			context.ErrorChannel() <- err.NewError(e, "Error evaluating SET clause.")
+			return false
+		}
 	}
 
+	item.SetAttachment("clone", clone)
 	return this.sendItem(item)
 }
 
-func setPath(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) error {
+func setPath(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
 	if sp.PathFor() != nil {
 		return setPathFor(sp, clone, item, context)
 	}
 
 	v, e := sp.Value().Evaluate(item, context)
 	if e != nil {
-		return e
+		return nil, e
 	}
 
-	sp.Path().Set(clone, v)
-	return nil
+	if sp.Path() != nil {
+		sp.Path().Set(clone, v)
+		return clone, nil
+	} else {
+		av := value.NewAnnotatedValue(v)
+		av.SetAttachments(clone.Attachments())
+		return av, nil
+	}
 }
 
-func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) error {
-	cvals, e := buildFor(sp.PathFor(), clone, context)
+func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+	carrays, e := arraysFor(sp.PathFor(), clone, context)
 	if e != nil {
-		return e
+		return nil, e
 	}
 
-	ivals, e := buildFor(sp.PathFor(), item, context)
+	cvals, e := buildFor(sp.PathFor(), clone, carrays, context)
 	if e != nil {
-		return e
+		return nil, e
+	}
+
+	iarrays, e := arraysFor(sp.PathFor(), item, context)
+	if e != nil {
+		return nil, e
+	}
+
+	ivals, e := buildFor(sp.PathFor(), item, iarrays, context)
+	if e != nil {
+		return nil, e
 	}
 
 	n := len(cvals)
@@ -94,10 +116,15 @@ func setPathFor(sp *algebra.SetPath, clone, item value.AnnotatedValue, context *
 	for i := 0; i < n; i++ {
 		v, e := sp.Value().Evaluate(ivals[i], context)
 		if e != nil {
-			return e
+			return nil, e
 		}
-		sp.Path().Set(cvals[i], v)
+
+		if sp.Path() != nil {
+			sp.Path().Set(cvals[i], v)
+		} else {
+			cvals[i] = v
+		}
 	}
 
-	return nil
+	return clone, nil
 }
