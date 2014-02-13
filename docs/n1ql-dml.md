@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-02-12
+* Modified: 2014-02-13
 
 ## Introduction
 
@@ -228,8 +228,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
       stored separately.
 * 2014-02-06 - Transactions
     * Removed transaction statements for now.
-* 2014-02-12 - Upsert
+* 2014-02-12 - UPSERT
     * Added UPSERT option to INSERT
+* 2014-02-13 - RETURNING
+    * Omit result expressions to return raw value
 
 ### Open Issues
 

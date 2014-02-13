@@ -2,8 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-01-21
-* Modified: 2014-02-10
+* Modified: 2014-02-13
 
 ## Introduction
 
@@ -1981,6 +1980,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2014-02-10 - Function call syntax
     * Removed COUNT(path.*), kept COUNT(*)
     * Removed COUNT(DISTINCT *), kept COUNT(DISTINCT expr, ...)
+* 2014-02-13 - SELECT clause
+    * Omit result expressions to return raw value
 
 ### Open Issues
 

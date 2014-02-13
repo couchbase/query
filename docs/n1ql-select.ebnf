@@ -13,7 +13,7 @@ from-select-core ::= from-clause where-clause? group-by-clause? select-clause
 /*
  *  select clause
  */
-select-clause ::= 'SELECT' ('ALL' | 'DISTINCT')? result-expr (',' result-expr)*
+select-clause ::= 'SELECT' (('ALL' | 'DISTINCT')? result-expr (',' result-expr)*)?
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
 path ::= identifier ('[' (uint | '*') ']')? ('.' path)?
 alias ::= identifier
