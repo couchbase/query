@@ -2,8 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-01-21
-* Modified: 2014-02-06
+* Modified: 2014-02-12
 
 ## Introduction
 
@@ -27,7 +26,7 @@ N1QL provides several data modification statements.
 
 ## INSERT
 
-*insert:*
+*insert and upsert:*
 
 ![](diagram/insert.png)
 
@@ -223,6 +222,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
       stored separately.
 * 2014-02-06 - Transactions
     * Removed transaction statements for now.
+* 2014-02-12 - Upsert
+    * Added UPSERT option to INSERT
 
 ### Open Issues
 
