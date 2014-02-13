@@ -26,7 +26,7 @@ N1QL provides several data modification statements.
 
 ## INSERT
 
-*insert and upsert:*
+*insert:*
 
 ![](diagram/insert.png)
 
@@ -49,6 +49,12 @@ N1QL provides several data modification statements.
 *returning-clause:*
 
 ![](diagram/returning-clause.png)
+
+## UPSERT
+
+*upsert:*
+
+![](diagram/upsert.png)
 
 ## DELETE
 
