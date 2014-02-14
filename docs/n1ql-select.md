@@ -121,7 +121,7 @@ behavior is the same in either case.
 
 *letting-clause:*
 
-![](diagram/let-clause.png)
+![](diagram/letting-clause.png)
 
 *having-clause:*
 
