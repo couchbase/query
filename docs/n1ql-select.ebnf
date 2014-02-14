@@ -7,8 +7,8 @@
  */
 select ::= select-core order-by-clause? limit-clause? offset-clause?
 select-core ::= select-from-core | from-select-core
-select-from-core ::= select-clause from-clause? where-clause? group-by-clause?
-from-select-core ::= from-clause where-clause? group-by-clause? select-clause
+select-from-core ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
+from-select-core ::= from-clause let-clause? where-clause? group-by-clause? select-clause
 
 /*
  *  select clause
@@ -32,6 +32,12 @@ unnest-clause ::= join-type? 'UNNEST' path ('AS'? alias)?
 nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? key-clause
 
 /*
+ *  let clause
+ */
+let-clause ::= 'LET' alias '=' expr (',' alias '=' expr)*
+cond ::= expr
+
+/*
  *  where clause
  */
 where-clause ::= 'WHERE' cond
@@ -40,7 +46,8 @@ cond ::= expr
 /*
  *  group-by clause
  */
-group-by-clause ::= 'GROUP' 'BY' expr (',' expr)* having-clause?
+group-by-clause ::= 'GROUP' 'BY' expr (',' expr)* letting-clause? having-clause?
+letting-clause ::= 'LETTING' alias '=' expr (',' alias '=' expr)*
 having-clause ::= 'HAVING' cond
 
 /*

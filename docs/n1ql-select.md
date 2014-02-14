@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-13
+* Modified: 2014-02-14
 
 ## Introduction
 
@@ -97,6 +97,12 @@ behavior is the same in either case.
 
 ![](diagram/nest-clause.png)
 
+### LET clause
+
+*let-clause:*
+
+![](diagram/let-clause.png)
+
 ### WHERE clause
 
 *where-clause:*
@@ -112,6 +118,10 @@ behavior is the same in either case.
 *group-by-clause:*
 
 ![](diagram/group-by-clause.png)
+
+*letting-clause:*
+
+![](diagram/let-clause.png)
 
 *having-clause:*
 
@@ -320,7 +330,7 @@ repeated to break tie sort values until the end of the expression list
 is reached.  The order of objects with the same sort value for each
 sort expression is undefined.
 
-As ORDER BY expressions can evaluate to any JSON value, it must define
+As ORDER BY expressions can evaluate to any JSON value. It must define
 an ordering when comparing values of different types.  The following
 list describes the order by type (from lowest to highest):
 
@@ -330,8 +340,8 @@ list describes the order by type (from lowest to highest):
 * true
 * number
 * string
-* array (element by element comparison, longer arrays sort after)
-* object (key/value by key/value comparison, keys are examined in sorted order using the normal ordering for strings, larger objects sort after)
+* array (element by element comparison is performed until the end of the shorter array; if all the elements so far are equal, then the longer array sorts after)
+* object (larger objects sort after; for objects of equal length, key/value by key/value comparison is performed; keys are examined in sorted order using the normal ordering for strings)
 
 -->
 
@@ -1030,10 +1040,10 @@ In N1QL a comparison operator implicitly requires that both operands
 be of the same type.  If the operands are of different types it always
 evaluates to FALSE.
 
-By default, string comparison is done using a raw collation (sometimes
-referred to as binary, C, or memcmp).  This collation is **case
-sensitive**.  Case insensitive comparisons can be performed using
-UPPER() or LOWER() functions.
+By default, string comparison is done using a raw collation of UTF8
+encoded strings (sometimes referred to as binary, C, or memcmp).  This
+collation is **case sensitive**.  Case insensitive comparisons can be
+performed using UPPER() or LOWER() functions.
 
 The LIKE operator allows for wildcard matching of string values.  The
 right-hand side of the operator is a pattern, optionally containg '%'
@@ -1982,6 +1992,9 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Removed COUNT(DISTINCT *), kept COUNT(DISTINCT expr, ...)
 * 2014-02-13 - SELECT clause
     * Omit result expressions to return raw value
+* 2014-02-14 - Collation, LET, LETTING
+    * Clarified collation spec strings, arrays, and objects
+    * Added LET and LETTING clauses
 
 ### Open Issues
 

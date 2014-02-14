@@ -116,10 +116,9 @@ func objectEquals(obj1, obj2 map[string]interface{}) bool {
 // https://github.com/couchbaselabs/walrus
 func objectCollate(obj1, obj2 map[string]interface{}) int {
 	// first see if one object is larger than the other
-	if len(obj1) < len(obj2) {
-		return -1
-	} else if len(obj1) > len(obj2) {
-		return 1
+	delta := len(obj1) - len(obj2)
+	if delta != 0 {
+		return delta
 	}
 
 	// if not, proceed to do key by key comparision
