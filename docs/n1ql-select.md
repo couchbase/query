@@ -866,11 +866,14 @@ describes the order by type (from lowest to highest):
 * false
 * true
 * number
-* string
-* array (element by element comparison, longer arrays sort after)
-* object (key/value by key/value comparison, keys are examined in
-  sorted order using the normal ordering for strings, larger objects
-  sort after)
+* string (string comparison is done using a raw byte collation of UTF8
+  encoded strings)
+* array (element by element comparison is performed until the end of
+  the shorter array; if all the elements so far are equal, then the
+  longer array sorts after)
+* object (larger objects sort after; for objects of equal length,
+  key/value by key/value comparison is performed; keys are examined in
+  sorted order using the normal ordering for strings)
 
 ## OFFSET clause
 
@@ -1040,8 +1043,8 @@ In N1QL a comparison operator implicitly requires that both operands
 be of the same type.  If the operands are of different types it always
 evaluates to FALSE.
 
-By default, string comparison is done using a raw collation of UTF8
-encoded strings (sometimes referred to as binary, C, or memcmp).  This
+String comparison is done using a raw byte collation of UTF8 encoded
+strings (sometimes referred to as binary, C, or memcmp).  This
 collation is **case sensitive**.  Case insensitive comparisons can be
 performed using UPPER() or LOWER() functions.
 
