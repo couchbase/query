@@ -10,7 +10,7 @@ dml-stmt ::= insert | delete | update | merge
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (((values-clause | '(' select ')') ('AS'? alias)) | select) returning-clause?
+insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (values-clause | select) returning-clause?
 
 bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
@@ -25,7 +25,7 @@ returning-clause ::= 'RETURNING' (expr ('AS'? alias)? (',' expr ('AS'? alias)?)*
 /*
  *  upsert
  */
-upsert ::= 'UPSERT' 'INTO' bucket-ref keys-clause (((values-clause | '(' select ')') ('AS'? alias)) | select) returning-clause?
+upsert ::= 'UPSERT' 'INTO' bucket-ref keys-clause (values-clause | select) returning-clause?
 
 /*
  *  delete
