@@ -35,7 +35,6 @@ nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? key-clause
  *  let clause
  */
 let-clause ::= 'LET' alias '=' expr (',' alias '=' expr)*
-cond ::= expr
 
 /*
  *  where clause
