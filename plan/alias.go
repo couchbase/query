@@ -7,22 +7,20 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package plan
 
-type Insert struct {
-	bucket    *BucketRef  `json:"bucket"`
-	key       Expression  `json:"key"`
-	values    Expression  `json:"values"`
-	query     *Select     `json:"query"`
-	as        string      `json:"as"`
-	returning ResultTerms `json:"returning"`
+type Alias struct {
+	alias string
 }
 
-func NewInsert(bucket *BucketRef, key, values Expression, query *Select,
-	as string, returning ResultTerms) *Insert {
-	return &Insert{bucket, key, values, query, as, returning}
+func NewAlias(alias string) *Alias {
+	return &Alias{alias}
 }
 
-func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitInsert(this)
+func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAlias(this)
+}
+
+func (this *Alias) Alias() string {
+	return this.alias
 }

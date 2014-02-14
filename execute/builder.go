@@ -114,8 +114,12 @@ func (this *Builder) VisitFinalGroup(plan *plan.FinalGroup) (interface{}, error)
 }
 
 // Project
-func (this *Builder) VisitProject(plan *plan.Project) (interface{}, error) {
-	return NewProject(plan), nil
+func (this *Builder) VisitInitialProject(plan *plan.InitialProject) (interface{}, error) {
+	return NewInitialProject(plan), nil
+}
+
+func (this *Builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
+	return NewFinalProject(), nil
 }
 
 // Distinct
@@ -165,24 +169,38 @@ func (this *Builder) VisitSendUpdate(plan *plan.SendUpdate) (interface{}, error)
 }
 
 // Merge
-func (this *Builder) VisitComputeMerge(plan *plan.ComputeMerge) (interface{}, error) {
-	return NewComputeMerge(plan), nil
+func (this *Builder) VisitMerge(plan *plan.Merge) (interface{}, error) {
+	var update, delete, insert Operator
+
+	if plan.Update() != nil {
+		op, e := plan.Update().Accept(this)
+		if e != nil {
+			return nil, e
+		}
+		update = op.(Operator)
+	}
+
+	if plan.Delete() != nil {
+		op, e := plan.Delete().Accept(this)
+		if e != nil {
+			return nil, e
+		}
+		delete = op.(Operator)
+	}
+
+	if plan.Insert() != nil {
+		op, e := plan.Insert().Accept(this)
+		if e != nil {
+			return nil, e
+		}
+		insert = op.(Operator)
+	}
+
+	return NewMerge(plan, update, delete, insert), nil
 }
 
-func (this *Builder) VisitMergeUpdate(plan *plan.MergeUpdate) (interface{}, error) {
-	return NewMergeUpdate(plan), nil
-}
-
-func (this *Builder) VisitMergeDelete(plan *plan.MergeDelete) (interface{}, error) {
-	return NewMergeDelete(plan), nil
-}
-
-func (this *Builder) VisitMergeInsert(plan *plan.MergeInsert) (interface{}, error) {
-	return NewMergeInsert(plan), nil
-}
-
-func (this *Builder) VisitSendMerge(plan *plan.SendMerge) (interface{}, error) {
-	return NewSendMerge(plan), nil
+func (this *Builder) VisitAlias(plan *plan.Alias) (interface{}, error) {
+	return NewAlias(plan), nil
 }
 
 // Parallel

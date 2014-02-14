@@ -81,7 +81,19 @@ func unsetFor(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context
 		return e
 	}
 
+	when := t.UpdateFor().When()
 	for i := 0; i < len(cvals); i++ {
+		if when != nil {
+			w, e := when.Evaluate(cvals[i], context)
+			if e != nil {
+				return e
+			}
+
+			if !w.Truth() {
+				continue
+			}
+		}
+
 		t.Path().Unset(cvals[i])
 	}
 

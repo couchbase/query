@@ -10,9 +10,6 @@
 package execute
 
 import (
-	"fmt"
-
-	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -42,18 +39,5 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
-	project := item.GetAttachment("project")
-
-	switch project := project.(type) {
-	case value.Value:
-		if project.Type() != value.MISSING {
-			return context.Stream(project)
-		} else {
-			return true
-		}
-	default:
-		context.ErrorChannel() <- err.NewError(nil,
-			fmt.Sprintf("Invalid or missing projection %v.", project))
-		return false
-	}
+	return context.Stream(item)
 }

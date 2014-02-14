@@ -14,69 +14,45 @@ import (
 	"github.com/couchbaselabs/query/catalog"
 )
 
-type ComputeMerge struct {
-	update *MergeUpdate
-	delete *MergeDelete
-	insert *MergeInsert
-}
-
-type MergeUpdate struct {
-	node *algebra.MergeUpdate
-}
-
-type MergeDelete struct {
-	node *algebra.MergeDelete
-}
-
-type MergeInsert struct {
-	node *algebra.MergeInsert
-}
-
-type SendMerge struct {
+type Merge struct {
 	bucket catalog.Bucket
+	ref    *algebra.BucketRef
+	key    algebra.Expression
+	update Operator
+	delete Operator
+	insert Operator
+	alias  string
 }
 
-func NewComputeMerge(update *MergeUpdate, delete *MergeDelete,
-	insert *MergeInsert) *ComputeMerge {
-	return &ComputeMerge{update, delete, insert}
+func NewMerge(bucket catalog.Bucket, ref *algebra.BucketRef,
+	key algebra.Expression, update, delete, insert Operator) *Merge {
+	return &Merge{bucket, ref, key, update, delete, insert, ""}
 }
 
-func (this *ComputeMerge) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitComputeMerge(this)
+func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMerge(this)
 }
 
-func NewMergeUpdate(node *algebra.MergeUpdate) *MergeUpdate {
-	return &MergeUpdate{node}
-}
-
-func (this *MergeUpdate) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMergeUpdate(this)
-}
-
-func NewMergeDelete(node *algebra.MergeDelete) *MergeDelete {
-	return &MergeDelete{node}
-}
-
-func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMergeDelete(this)
-}
-
-func NewMergeInsert(node *algebra.MergeInsert) *MergeInsert {
-	return &MergeInsert{node}
-}
-
-func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMergeInsert(this)
-}
-
-func NewSendMerge(bucket catalog.Bucket) *SendMerge {
-	return &SendMerge{bucket}
-}
-
-func (this *SendMerge) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSendMerge(this)
-}
-
-func (this *SendMerge) Bucket() catalog.Bucket {
+func (this *Merge) Bucket() catalog.Bucket {
 	return this.bucket
+}
+
+func (this *Merge) Key() algebra.Expression {
+	return this.key
+}
+
+func (this *Merge) Update() Operator {
+	return this.update
+}
+
+func (this *Merge) Delete() Operator {
+	return this.delete
+}
+
+func (this *Merge) Insert() Operator {
+	return this.insert
+}
+
+func (this *Merge) Alias() string {
+	return this.alias
 }

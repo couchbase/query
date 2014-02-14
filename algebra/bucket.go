@@ -9,11 +9,6 @@
 
 package algebra
 
-import (
-	_ "fmt"
-	_ "github.com/couchbaselabs/query/value"
-)
-
 type BucketRef struct {
 	pool   string `json:"pool"`
 	bucket string `json:"bucket"`

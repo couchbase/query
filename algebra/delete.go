@@ -9,11 +9,6 @@
 
 package algebra
 
-import (
-	_ "fmt"
-	_ "github.com/couchbaselabs/query/value"
-)
-
 type Delete struct {
 	bucket    *BucketRef  `json:"bucket"`
 	keys      Expression  `json:"keys"`

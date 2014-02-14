@@ -114,10 +114,22 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 		n = len(cvals)
 	}
 
+	when := t.UpdateFor().When()
 	for i := 0; i < n; i++ {
 		v, e := t.Value().Evaluate(ivals[i], context)
 		if e != nil {
 			return nil, e
+		}
+
+		if when != nil {
+			w, e := when.Evaluate(ivals[i], context)
+			if e != nil {
+				return nil, e
+			}
+
+			if !w.Truth() {
+				continue
+			}
 		}
 
 		t.Path().Set(cvals[i], v)

@@ -15,13 +15,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Project struct {
+type InitialProject struct {
 	base
-	plan *plan.Project
+	plan *plan.InitialProject
 }
 
-func NewProject(plan *plan.Project) *Project {
-	rv := &Project{
+func NewInitialProject(plan *plan.InitialProject) *InitialProject {
+	rv := &InitialProject{
 		base: newBase(),
 		plan: plan,
 	}
@@ -30,19 +30,19 @@ func NewProject(plan *plan.Project) *Project {
 	return rv
 }
 
-func (this *Project) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitProject(this)
+func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitInitialProject(this)
 }
 
-func (this *Project) Copy() Operator {
-	return &Project{this.base.copy(), this.plan}
+func (this *InitialProject) Copy() Operator {
+	return &InitialProject{this.base.copy(), this.plan}
 }
 
-func (this *Project) RunOnce(context *Context, parent value.Value) {
+func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Project) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *InitialProject) processItem(item value.AnnotatedValue, context *Context) bool {
 	terms := this.plan.Terms()
 	n := len(terms)
 
@@ -86,7 +86,7 @@ func (this *Project) processItem(item value.AnnotatedValue, context *Context) bo
 	return this.processTerms(item, context)
 }
 
-func (this *Project) processTerms(item value.AnnotatedValue, context *Context) bool {
+func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
 	cv := value.NewCorrelatedValue(make(map[string]interface{}, n), item)
 

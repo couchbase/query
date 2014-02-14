@@ -10,8 +10,6 @@
 package execute
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -42,6 +40,11 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
-	item.SetAttachment("clone", item.CopyForUpdate())
+	target, ok := item.GetAttachment("target").(value.Value)
+	if !ok {
+		target = item
+	}
+
+	item.SetAttachment("clone", target.CopyForUpdate())
 	return this.sendItem(item)
 }

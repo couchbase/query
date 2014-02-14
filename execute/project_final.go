@@ -10,39 +10,43 @@
 package execute
 
 import (
-	_ "fmt"
-
-	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type MergeInsert struct {
+type FinalProject struct {
 	base
-	plan *plan.MergeInsert
 }
 
-func NewMergeInsert(plan *plan.MergeInsert) *MergeInsert {
-	rv := &MergeInsert{
+func NewFinalProject() *FinalProject {
+	rv := &FinalProject{
 		base: newBase(),
-		plan: plan,
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *MergeInsert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMergeInsert(this)
+func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFinalProject(this)
 }
 
-func (this *MergeInsert) Copy() Operator {
-	return &MergeInsert{this.base.copy(), this.plan}
+func (this *FinalProject) Copy() Operator {
+	return &FinalProject{this.base.copy()}
 }
 
-func (this *MergeInsert) RunOnce(context *Context, parent value.Value) {
+func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *MergeInsert) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+func (this *FinalProject) processItem(item value.AnnotatedValue, context *Context) bool {
+	if item.Type() == value.MISSING {
+		return true
+	}
+
+	project := item.GetAttachment("project")
+	if project == nil {
+		project = item
+	}
+
+	return this.sendItem(value.NewAnnotatedValue(project))
 }

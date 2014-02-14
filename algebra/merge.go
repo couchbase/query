@@ -9,12 +9,6 @@
 
 package algebra
 
-import (
-	_ "fmt"
-
-	_ "github.com/couchbaselabs/query/value"
-)
-
 type Merge struct {
 	bucket    *BucketRef   `json:"bucket"`
 	from      FromTerm     `json:"from"`

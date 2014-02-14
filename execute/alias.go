@@ -10,19 +10,17 @@
 package execute
 
 import (
-	_ "fmt"
-
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type MergeDelete struct {
+type Alias struct {
 	base
-	plan *plan.MergeDelete
+	plan *plan.Alias
 }
 
-func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
-	rv := &MergeDelete{
+func NewAlias(plan *plan.Alias) *Alias {
+	rv := &Alias{
 		base: newBase(),
 		plan: plan,
 	}
@@ -31,18 +29,21 @@ func NewMergeDelete(plan *plan.MergeDelete) *MergeDelete {
 	return rv
 }
 
-func (this *MergeDelete) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMergeDelete(this)
+func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAlias(this)
 }
 
-func (this *MergeDelete) Copy() Operator {
-	return &MergeDelete{this.base.copy(), this.plan}
+func (this *Alias) Copy() Operator {
+	return &Alias{this.base.copy(), this.plan}
 }
 
-func (this *MergeDelete) RunOnce(context *Context, parent value.Value) {
+func (this *Alias) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *MergeDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	return true
+func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool {
+	av := value.NewAnnotatedValue(make(map[string]interface{}))
+	av.SetAttachments(item.Attachments())
+	av.SetField(this.plan.Alias(), item)
+	return this.sendItem(av)
 }

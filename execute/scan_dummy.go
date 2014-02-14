@@ -42,6 +42,6 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 
 		cv := value.NewCorrelatedValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
-		this.output.ItemChannel() <- av
+		this.sendItem(av)
 	})
 }

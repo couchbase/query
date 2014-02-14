@@ -10,9 +10,6 @@
 package execute
 
 import (
-	"fmt"
-
-	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -57,20 +54,9 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 		this.values = values
 	}
 
-	project := item.GetAttachment("project")
-
-	switch project := project.(type) {
-	case value.Value:
-		if project.Type() != value.MISSING {
-			this.values[this.length] = project
-			this.length++
-		}
-		return true
-	default:
-		context.ErrorChannel() <- err.NewError(nil,
-			fmt.Sprintf("Invalid or missing projection %v.", project))
-		return false
-	}
+	this.values[this.length] = item
+	this.length++
+	return true
 }
 
 func (this *Collect) afterItems(context *Context) {

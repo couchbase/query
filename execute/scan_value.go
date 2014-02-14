@@ -62,8 +62,10 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 
 		acts := actuals.([]interface{})
 		for _, act := range acts {
-			av := value.NewAnnotatedValue(value.NewValue(act))
-			this.output.ItemChannel() <- av
+			av := value.NewAnnotatedValue(act)
+			if !this.sendItem(av) {
+				return
+			}
 		}
 	})
 }

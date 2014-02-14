@@ -10,11 +10,9 @@
 package execute
 
 import (
-	_ "fmt"
-	"sort"
-
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/sort"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -26,7 +24,7 @@ type Order struct {
 	context *Context
 }
 
-const _ORDER_CAP = 64
+const _ORDER_CAP = 1024
 
 func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{

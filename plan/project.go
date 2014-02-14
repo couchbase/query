@@ -20,11 +20,11 @@ type ProjectTerm struct {
 	alias  string
 }
 
-type Project struct {
+type InitialProject struct {
 	terms ProjectTerms
 }
 
-func NewProject(results algebra.ResultTerms) *Project {
+func NewInitialProject(results algebra.ResultTerms) *InitialProject {
 	terms := make(ProjectTerms, len(results))
 	a := 1
 
@@ -37,17 +37,28 @@ func NewProject(results algebra.ResultTerms) *Project {
 		terms[i] = pt
 	}
 
-	return &Project{
+	return &InitialProject{
 		terms: terms,
 	}
 }
 
-func (this *Project) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitProject(this)
+func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitInitialProject(this)
 }
 
-func (this *Project) Terms() ProjectTerms {
+func (this *InitialProject) Terms() ProjectTerms {
 	return this.terms
+}
+
+type FinalProject struct {
+}
+
+func NewFinalProject() *FinalProject {
+	return &FinalProject{}
+}
+
+func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFinalProject(this)
 }
 
 func (this *ProjectTerm) Result() *algebra.ResultTerm {

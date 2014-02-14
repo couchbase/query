@@ -66,7 +66,9 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 			cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
 			av := value.NewAnnotatedValue(cv)
 			av.SetAttachment("meta", map[string]interface{}{"id": key})
-			this.output.ItemChannel() <- av
+			if !this.sendItem(av) {
+				return
+			}
 		}
 	})
 }

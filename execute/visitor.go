@@ -45,7 +45,8 @@ type Visitor interface {
 	VisitFinalGroup(op *FinalGroup) (interface{}, error)
 
 	// Project
-	VisitProject(op *Project) (interface{}, error)
+	VisitInitialProject(op *InitialProject) (interface{}, error)
+	VisitFinalProject(op *FinalProject) (interface{}, error)
 
 	// Distinct
 	VisitDistinct(op *Distinct) (interface{}, error)
@@ -70,11 +71,8 @@ type Visitor interface {
 	VisitSendUpdate(op *SendUpdate) (interface{}, error)
 
 	// Merge
-	VisitComputeMerge(op *ComputeMerge) (interface{}, error)
-	VisitMergeUpdate(op *MergeUpdate) (interface{}, error)
-	VisitMergeDelete(op *MergeDelete) (interface{}, error)
-	VisitMergeInsert(op *MergeInsert) (interface{}, error)
-	VisitSendMerge(op *SendMerge) (interface{}, error)
+	VisitMerge(op *Merge) (interface{}, error)
+	VisitAlias(op *Alias) (interface{}, error)
 
 	// Framework
 	VisitParallel(op *Parallel) (interface{}, error)
