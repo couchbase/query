@@ -41,6 +41,7 @@ func (this *RangeScan) Copy() Operator {
 func (this *RangeScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		for _, ranje := range this.plan.Ranges() {
 			if !this.scanRange(context, parent, ranje) {
@@ -56,7 +57,7 @@ func (this *RangeScan) scanRange(context *Context, parent value.Value, ranje *pl
 		context.ErrorChannel(),
 	)
 
-	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+	defer notifyConn(conn) // Notify index that I have stopped
 
 	rv := &catalog.Range{}
 	var ok bool

@@ -10,33 +10,39 @@
 package execute
 
 import (
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/value"
 )
 
-func eval(cx algebra.CompositeExpression, context *Context, parent value.Value) (value.CompositeValue, bool) {
-	if cx == nil {
-		return nil, true
-	}
-
-	cv := make(value.CompositeValue, len(cx))
-	var e error
-	for i, expr := range cx {
-		cv[i], e = expr.Evaluate(parent, context)
-		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating filter term.")
-			return nil, false
-		}
-	}
-
-	return cv, true
+// Dummy operator that simply wraps an item channel.
+type Channel struct {
+	base
 }
 
-func notifyConn(conn *catalog.IndexConnection) {
-	select {
-	case conn.StopChannel() <- false:
-	default:
+func NewChannel() *Channel {
+	rv := &Channel{
+		base: newBase(),
 	}
+
+	rv.output = rv
+	return rv
+}
+
+func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitChannel(this)
+}
+
+func (this *Channel) Copy() Operator {
+	return &Channel{
+		this.base.copy(),
+	}
+}
+
+// This operator must be notified to stop.
+func (this *Channel) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
+
+		<-this.stopChannel // Never closed
+	})
 }

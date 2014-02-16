@@ -243,3 +243,8 @@ func (this *Builder) VisitStream(plan *plan.Stream) (interface{}, error) {
 func (this *Builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
 	return NewCollect(), nil
 }
+
+// Channel
+func (this *Builder) VisitChannel(plan *plan.Channel) (interface{}, error) {
+	return NewChannel(), nil
+}

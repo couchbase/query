@@ -40,31 +40,37 @@ func (this *PrimaryScan) Copy() Operator {
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
-		conn := catalog.NewIndexConnection(
-			context.WarningChannel(),
-			context.ErrorChannel(),
-		)
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
-		defer close(this.itemChannel)                  // Broadcast that I have stopped
-		defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
-
-		go this.plan.Index().PrimaryScan(conn)
-
-		var entry *catalog.IndexEntry
-
-		ok := true
-		for ok {
-			select {
-			case entry, ok = <-conn.EntryChannel():
-				if ok {
-					cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
-					av := value.NewAnnotatedValue(cv)
-					av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
-					ok = this.sendItem(av)
-				}
-			case <-this.stopChannel:
-				return
-			}
-		}
+		this.scanPrimary(context, parent)
 	})
+}
+
+func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
+	conn := catalog.NewIndexConnection(
+		context.WarningChannel(),
+		context.ErrorChannel(),
+	)
+
+	defer notifyConn(conn) // Notify index that I have stopped
+
+	go this.plan.Index().PrimaryScan(conn)
+
+	var entry *catalog.IndexEntry
+
+	ok := true
+	for ok {
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			if ok {
+				cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
+				av := value.NewAnnotatedValue(cv)
+				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				ok = this.sendItem(av)
+			}
+		case <-this.stopChannel:
+			return
+		}
+	}
 }

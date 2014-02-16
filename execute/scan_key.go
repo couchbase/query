@@ -44,6 +44,7 @@ func (this *KeyScan) Copy() Operator {
 func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		keys, e := this.plan.Keys().Evaluate(parent, context)
 		if e != nil {

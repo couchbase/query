@@ -39,6 +39,7 @@ func (this *ParentScan) Copy() Operator {
 func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		// Shallow copy of the parent includes
 		// correlated and annotated aspects

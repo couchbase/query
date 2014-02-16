@@ -29,12 +29,11 @@ type base struct {
 }
 
 const _ITEM_CHAN_CAP = 1024
-const _STOP_CHAN_CAP = 64
 
 func newBase() base {
 	return base{
 		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		stopChannel: make(StopChannel, _STOP_CHAN_CAP),
+		stopChannel: make(StopChannel, 1),
 	}
 }
 
@@ -81,11 +80,26 @@ func (this *base) SetParent(parent Parent) {
 func (this *base) copy() base {
 	return base{
 		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		stopChannel: make(StopChannel, _STOP_CHAN_CAP),
+		stopChannel: make(StopChannel, 1),
 		input:       this.input,
 		output:      this.output,
 		parent:      this.parent,
 	}
+}
+
+func (this *base) sendItem(item value.AnnotatedValue) bool {
+	select {
+	case this.output.ItemChannel() <- item:
+		return true
+	case <-this.stopChannel: // Never closed
+		return false
+	}
+}
+
+type consumer interface {
+	beforeItems(context *Context, parent value.Value) bool
+	processItem(item value.AnnotatedValue, context *Context) bool
+	afterItems(context *Context)
 }
 
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
@@ -114,31 +128,6 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	})
 }
 
-func (this *base) notify() {
-	if this.stop != nil {
-		this.stop.StopChannel() <- false
-	}
-
-	if this.parent != nil {
-		this.parent.ChildChannel() <- false
-	}
-}
-
-func (this *base) sendItem(item value.AnnotatedValue) bool {
-	select {
-	case this.output.ItemChannel() <- item:
-		return true
-	case <-this.stopChannel: // Never closed
-		return false
-	}
-}
-
-type consumer interface {
-	beforeItems(context *Context, parent value.Value) bool
-	processItem(item value.AnnotatedValue, context *Context) bool
-	afterItems(context *Context)
-}
-
 // Override if needed
 func (this *base) beforeItems(context *Context, parent value.Value) bool {
 	return true
@@ -146,6 +135,35 @@ func (this *base) beforeItems(context *Context, parent value.Value) bool {
 
 // Override if needed
 func (this *base) afterItems(context *Context) {
+}
+
+// Unblock all dependencies.
+func (this *base) notify() {
+	this.notifyParent()
+	this.notifyStop()
+}
+
+// Notify parent, if any.
+func (this *base) notifyParent() {
+	parent := this.parent
+	if parent != nil {
+		// Blocks on parent
+		parent.ChildChannel() <- false
+		this.parent = nil
+	}
+}
+
+// Notify upstream to stop.
+func (this *base) notifyStop() {
+	stop := this.stop
+	if stop != nil {
+		select {
+		case stop.StopChannel() <- false:
+			this.stop = nil
+		default:
+			// Already notified.
+		}
+	}
 }
 
 type batcher interface {

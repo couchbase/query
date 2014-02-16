@@ -42,6 +42,7 @@ func (this *DualScan) Copy() Operator {
 func (this *DualScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		for _, dual := range this.plan.Duals() {
 			if !this.scanDual(context, parent, dual) {
@@ -57,7 +58,7 @@ func (this *DualScan) scanDual(context *Context, parent value.Value, dual *plan.
 		context.ErrorChannel(),
 	)
 
-	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+	defer notifyConn(conn) // Notify index that I have stopped
 
 	dv := &catalog.Dual{}
 	var ok bool

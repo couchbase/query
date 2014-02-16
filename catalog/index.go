@@ -52,7 +52,7 @@ type PrimaryIndex interface {
 type EqualIndex interface {
 	Index
 	EqualScan(equal value.CompositeValue, conn *IndexConnection)
-	EqualCount(equal value.CompositeValue, conn *IndexConnection)
+	EqualCount(equal value.CompositeValue) (int64, err.Error)
 }
 
 // Inclusion controls how the boundary values of a range are treated.
@@ -78,7 +78,6 @@ type RangeIndex interface {
 	Index
 	RangeStats(ranje *Range) (RangeStatistics, err.Error)
 	RangeScan(ranje *Range, conn *IndexConnection)
-	RangeCount(ranje *Range, conn *IndexConnection)
 	RangeCandidateMins(ranje *Range, conn *IndexConnection)  // Anywhere from single Min value to RangeScan()
 	RangeCandidateMaxes(ranje *Range, conn *IndexConnection) // Anywhere from single Max value to RangeScan()
 }
@@ -93,7 +92,6 @@ type DualIndex interface {
 	Index
 	DualStats(dual *Dual) (RangeStatistics, err.Error)
 	DualScan(dual *Dual, conn *IndexConnection)
-	DualCount(dual *Dual, conn *IndexConnection)
 	DualCandidateMins(dual *Dual, conn *IndexConnection)  // Anywhere from single Min value to DualScan()
 	DualCandidateMaxes(dual *Dual, conn *IndexConnection) // Anywhere from single Max value to DualScan()
 }

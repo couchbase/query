@@ -43,6 +43,7 @@ func (this *EqualScan) Copy() Operator {
 func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		for _, equal := range this.plan.Equals() {
 			if !this.scanEqual(context, parent, equal) {
@@ -58,7 +59,7 @@ func (this *EqualScan) scanEqual(context *Context, parent value.Value, equal alg
 		context.ErrorChannel(),
 	)
 
-	defer func() { conn.StopChannel() <- false }() // Notify that I have stopped
+	defer notifyConn(conn) // Notify index that I have stopped
 
 	if equal == nil {
 		context.ErrorChannel() <- err.NewError(nil, "No equality term for filter.")

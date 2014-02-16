@@ -44,6 +44,7 @@ func (this *ValueScan) Copy() Operator {
 func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
 
 		vals, e := this.plan.Values().Evaluate(parent, context)
 		if e != nil {

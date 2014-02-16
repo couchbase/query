@@ -19,28 +19,22 @@ import (
 
 type Merge struct {
 	base
-	plan          *plan.Merge
-	update        Operator
-	delete        Operator
-	insert        Operator
-	updateChannel value.AnnotatedChannel
-	deleteChannel value.AnnotatedChannel
-	insertChannel value.AnnotatedChannel
-	childChannel  StopChannel
-	childCount    int
+	plan         *plan.Merge
+	update       Operator
+	delete       Operator
+	insert       Operator
+	childChannel StopChannel
+	childCount   int
 }
 
 func NewMerge(plan *plan.Merge, update, delete, insert Operator) *Merge {
 	rv := &Merge{
-		base:          newBase(),
-		plan:          plan,
-		update:        update,
-		delete:        delete,
-		insert:        insert,
-		updateChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		deleteChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		insertChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		childChannel:  make(StopChannel, 3),
+		base:         newBase(),
+		plan:         plan,
+		update:       update,
+		delete:       delete,
+		insert:       insert,
+		childChannel: make(StopChannel, 3),
 	}
 
 	rv.output = rv
@@ -53,49 +47,58 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Merge) Copy() Operator {
 	return &Merge{
-		base:          this.base.copy(),
-		plan:          this.plan,
-		update:        copyOperator(this.update),
-		delete:        copyOperator(this.delete),
-		insert:        copyOperator(this.insert),
-		updateChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		deleteChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		insertChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
-		childChannel:  make(StopChannel, 3),
+		base:         this.base.copy(),
+		plan:         this.plan,
+		update:       copyOperator(this.update),
+		delete:       copyOperator(this.delete),
+		insert:       copyOperator(this.insert),
+		childChannel: make(StopChannel, 3),
 	}
 }
 
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
+
+		update := this.wrapChild(this.update)
+		delete := this.wrapChild(this.delete)
+		insert := this.wrapChild(this.insert)
+
+		go this.input.RunOnce(context, parent)
+
+		var item value.AnnotatedValue
+		n := this.childCount
+		ok := true
+
+		for {
+			select {
+			case item, ok = <-this.input.ItemChannel():
+				if ok {
+					ok = this.processMatch(item, context, update, delete, insert)
+				}
+
+				if !ok {
+					notifyChildren(update, delete, insert)
+				}
+			case <-this.childChannel: // Never closed
+				// Wait for all children
+				if n--; n <= 0 {
+					return
+				}
+			case <-this.stopChannel: // Never closed
+				notifyChildren(update, delete, insert)
+			}
+		}
+	})
 }
 
 func (this *Merge) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *Merge) beforeItems(context *Context, parent value.Value) bool {
-	if this.update != nil {
-		this.update.SetParent(this)
-		this.update.SetOutput(this.output)
-		this.childCount++
-	}
-
-	if this.delete != nil {
-		this.delete.SetParent(this)
-		this.delete.SetOutput(this.output)
-		this.childCount++
-	}
-
-	if this.insert != nil {
-		this.insert.SetParent(this)
-		this.insert.SetOutput(this.output)
-		this.childCount++
-	}
-
-	return true
-}
-
-func (this *Merge) processItem(item value.AnnotatedValue, context *Context) bool {
+func (this *Merge) processMatch(item value.AnnotatedValue,
+	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
 	if e != nil {
 		context.ErrorChannel() <- err.NewError(e, "Error evaluatating MERGE key.")
@@ -110,33 +113,37 @@ func (this *Merge) processItem(item value.AnnotatedValue, context *Context) bool
 		return false
 	}
 
-	tv, er := this.plan.Bucket().FetchOne(k)
+	bv, er := this.plan.Bucket().FetchOne(k)
 	if er != nil {
 		context.ErrorChannel() <- er
 		return false
 	}
 
-	if tv != nil {
-		av := value.NewAnnotatedValue(tv)
-
-		// Matched; UPDATE and/or DELETE
-		if this.updateChannel != nil {
-			this.updateChannel <- av
+	if bv != nil {
+		// Matched; join source and target
+		if update != nil {
+			item.SetAttachment("target", item.Copy())
 		}
-		if this.deleteChannel != nil {
-			this.deleteChannel <- av
+
+		abv := value.NewAnnotatedValue(bv)
+		item.SetField(this.plan.Alias(), abv)
+
+		// Perform UPDATE and/or DELETE
+		if update != nil {
+			update.Input().ItemChannel() <- item
+		}
+
+		if delete != nil {
+			delete.Input().ItemChannel() <- item
 		}
 	} else {
 		// Not matched; INSERT
-		if this.insertChannel != nil {
-			this.insertChannel <- item
+		if insert != nil {
+			insert.Input().ItemChannel() <- item
 		}
 	}
 
 	return true
-}
-
-func (this *Merge) afterItems(context *Context) {
 }
 
 func copyOperator(op Operator) Operator {
@@ -144,5 +151,37 @@ func copyOperator(op Operator) Operator {
 		return nil
 	} else {
 		return op.Copy()
+	}
+}
+
+func (this *Merge) wrapChild(op Operator) Operator {
+	if op == nil {
+		return nil
+	}
+
+	ch := NewChannel()
+	seq := NewSequence(ch, op)
+	seq.SetInput(ch)
+	seq.SetParent(this)
+	seq.SetOutput(this.output)
+	this.childCount++
+	return seq
+}
+
+func notifyChildren(children ...Operator) {
+	for _, child := range children {
+		if child == nil {
+			continue
+		}
+
+		select {
+		case child.Input().StopChannel() <- false:
+		default:
+		}
+
+		select {
+		case child.StopChannel() <- false:
+		default:
+		}
 	}
 }
