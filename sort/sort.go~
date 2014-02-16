@@ -210,9 +210,9 @@ func quickSort(data sort.Interface, a, b, maxDepth int, parent childChannel) {
 	}
 }
 
-func notify(parent childChannel) {
-	if parent != nil {
-		parent <- false
+func notify(ch childChannel) {
+	if ch != nil {
+		ch <- false
 	}
 }
 
