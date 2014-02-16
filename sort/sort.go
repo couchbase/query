@@ -200,9 +200,8 @@ func quickSort(data sort.Interface, a, b, maxDepth int, parent childChannel) {
 	}
 
 	// Await children
-	for childCount > 0 {
+	for ; childCount > 0; childCount-- {
 		<-children
-		childCount--
 	}
 
 	if b-a > 1 {
