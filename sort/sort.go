@@ -156,13 +156,18 @@ func doPivot(data sort.Interface, lo, hi int) (midlo, midhi int) {
 }
 
 type childChannel chan bool
+const _PTHRESH = 256
 
-func quickSort(data sort.Interface, a, b, maxDepth int, ch childChannel) {
-	defer func() {
-		if ch != nil {
-			close(ch)
-		}
-	}()
+func quickSort(data sort.Interface, a, b, maxDepth int, parent childChannel) {
+	defer notify(parent)
+
+	var children childChannel
+	childCount := 0
+
+	if b-a >= _PTHRESH {
+		children = make(childChannel, 64)
+		defer close(children)
+	}
 
 	for b-a > 7 {
 		if maxDepth == 0 {
@@ -175,15 +180,43 @@ func quickSort(data sort.Interface, a, b, maxDepth int, ch childChannel) {
 		// Avoiding recursion on the larger subproblem guarantees
 		// a stack depth of at most lg(b-a).
 		if mlo-a < b-mhi {
-			quickSort(data, a, mlo, maxDepth, nil)
+			if (mlo < mhi) && (mlo-a >= _PTHRESH) {
+				go quickSort(data, a, mlo, maxDepth, children)
+				childCount++
+			} else {
+				quickSort(data, a, mlo, maxDepth, nil)
+			}
 			a = mhi // i.e., quickSort(data, mhi, b)
 		} else {
-			quickSort(data, mhi, b, maxDepth, nil)
+			if (mlo < mhi) && (b-mhi >= _PTHRESH) {
+				go quickSort(data, mhi, b, maxDepth, children)
+				childCount++
+			} else {
+				quickSort(data, mhi, b, maxDepth, nil)
+			}
 			b = mlo // i.e., quickSort(data, a, mlo)
 		}
 	}
+
+	// Await children
+	for childCount > 0 {
+		<-children
+		childCount--
+	}
+
 	if b-a > 1 {
 		insertionSort(data, a, b)
+	}
+}
+
+func notify(ch childChannel) {
+	if ch == nil {
+		return
+	}
+
+	select {
+	case ch <- false:
+	default:
 	}
 }
 
