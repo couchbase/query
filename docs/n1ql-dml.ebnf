@@ -10,13 +10,13 @@ dml-stmt ::= insert | delete | update | merge
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' bucket-ref keys-clause? (values-clause | select) returning-clause?
+insert ::= 'INSERT' 'INTO' bucket-ref key-clause? (values-clause | select) returning-clause?
 
 bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
 bucket-name ::= identifier
 
-keys-clause ::= 'KEYS' expr
+key-clause ::= 'KEY' expr
 
 values-clause ::= 'VALUES' expr
 
@@ -25,23 +25,23 @@ returning-clause ::= 'RETURNING' ((expr ('AS'? alias)? (',' expr ('AS'? alias)?)
 /*
  *  upsert
  */
-upsert ::= 'UPSERT' 'INTO' bucket-ref keys-clause (values-clause | select) returning-clause?
+upsert ::= 'UPSERT' 'INTO' bucket-ref key-clause (values-clause | select) returning-clause?
 
 /*
  *  delete
  */
-delete ::= 'DELETE' 'FROM' bucket-ref key-clause? where-clause? limit-clause? returning-clause?
+delete ::= 'DELETE' 'FROM' bucket-ref keys-clause? where-clause? limit-clause? returning-clause?
 
 /*
  *  update
  */
-update ::= 'UPDATE' bucket-ref key-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
+update ::= 'UPDATE' bucket-ref keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
 
-set-clause ::= 'SET' path '=' expr path-for? (',' path '=' expr path-for?)*
+set-clause ::= 'SET' path '=' expr update-for? (',' path '=' expr update-for?)*
 
-path-for ::= 'FOR' variable 'IN' path (',' variable 'IN' path)* ('WHEN' cond)? 'END'
+update-for ::= 'FOR' variable 'IN' path (',' variable 'IN' path)* ('WHEN' cond)? 'END'
 
-unset-clause ::= 'UNSET' path path-for? (',' path path-for?)*
+unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
 
 /*
  *  merge
@@ -54,7 +54,7 @@ merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' set-clause? unset-clause? wher
 
 merge-delete ::= 'WHEN' 'MATCHED' 'THEN' 'DELETE' where-clause?
 
-merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' value-clause where-clause?
+merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' expr where-clause?
 
 /*
  *  truncate

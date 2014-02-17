@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-02-16
+* Modified: 2014-02-17
 
 ## Introduction
 
@@ -38,9 +38,9 @@ N1QL provides several data modification statements.
 
 ![](diagram/bucket-name.png)
 
-*keys-clause:*
+*key-clause:*
 
-![](diagram/keys-clause.png)
+![](diagram/key-clause.png)
 
 *values-clause:*
 
@@ -62,6 +62,10 @@ N1QL provides several data modification statements.
 
 ![](diagram/delete.png)
 
+*keys-clause:*
+
+![](diagram/keys-clause.png)
+
 *where-clause:*
 
 ![](diagram/where-clause.png)
@@ -80,9 +84,9 @@ N1QL provides several data modification statements.
 
 ![](diagram/set-clause.png)
 
-*path-for:*
+*update-for:*
 
-![](diagram/path-for.png)
+![](diagram/update-for.png)
 
 *unset-clause:*
 
@@ -234,6 +238,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Omit result expressions to return raw value
 * 2014-02-16 - RETURNING RAW
     * Added RETURNING RAW
+* 2014-02-17 - KEY / KEYS
+    * Cleaned up usage of KEY and kEYS.
 
 ### Open Issues
 

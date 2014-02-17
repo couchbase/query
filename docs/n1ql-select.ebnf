@@ -22,14 +22,14 @@ alias ::= identifier
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-path ('AS'? alias)? key-clause? | from-term join-clause | from-term unnest-clause | from-term nest-clause
+from-term ::= from-path ('AS'? alias)? keys-clause? | from-term join-clause | from-term nest-clause | from-term unnest-clause
 from-path ::= (pool-name ':')? path
 pool-name ::= identifier
-key-clause ::= ('KEY' | 'KEYS') expr
-join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? key-clause
+keys-clause ::= 'KEYS' expr
+join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? keys-clause
 join-type ::= 'INNER' | 'LEFT' 'OUTER'?
+nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? keys-clause
 unnest-clause ::= join-type? 'UNNEST' path ('AS'? alias)?
-nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? key-clause
 
 /*
  *  let clause

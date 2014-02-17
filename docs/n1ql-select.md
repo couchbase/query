@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-16
+* Modified: 2014-02-17
 
 ## Introduction
 
@@ -89,13 +89,13 @@ behavior is the same in either case.
 
 ![](diagram/join-type.png)
 
-*unnest-clause:*
-
-![](diagram/unnest-clause.png)
-
 *nest-clause:*
 
 ![](diagram/nest-clause.png)
+
+*unnest-clause:*
+
+![](diagram/unnest-clause.png)
 
 ### LET clause
 
@@ -381,13 +381,13 @@ called the primary bucket.
 
 ![](diagram/join-type.png)
 
-*unnest-clause:*
-
-![](diagram/unnest-clause.png)
-
 *nest-clause:*
 
 ![](diagram/nest-clause.png)
+
+*unnest-clause:*
+
+![](diagram/unnest-clause.png)
 
 The following sections discuss various elements of the FROM
 clause. These elements can be combined.
@@ -2000,6 +2000,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added LET and LETTING clauses
 * 2014-02-16 - SELECT RAW
     * Added SELECT RAW
+* 2014-02-17 - KEY / KEYS
+    * Cleaned up usage of KEY and kEYS.
 
 ### Open Issues
 
