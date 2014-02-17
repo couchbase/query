@@ -29,8 +29,6 @@ type Expression interface {
 
 	// Constant folding
 	Fold() Expression
-	IsConstant() bool
-	ConstantValue() value.Value
 }
 
 type Expressions []Expression

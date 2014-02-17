@@ -46,10 +46,6 @@ func (this *Constant) Fold() Expression {
 	return this
 }
 
-func (this *Constant) IsConstant() bool {
-	return true
-}
-
-func (this *Constant) ConstantValue() value.Value {
+func (this *Constant) Value() value.Value {
 	return this.value
 }

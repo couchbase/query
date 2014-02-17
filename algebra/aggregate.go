@@ -62,14 +62,6 @@ func (this *aggregateBase) Fold() Expression {
 	return this
 }
 
-func (this *aggregateBase) IsConstant() bool {
-	return false
-}
-
-func (this *aggregateBase) ConstantValue() value.Value {
-	return nil
-}
-
 func (this *aggregateBase) Parameter() Expression {
 	return this.parameter
 }
