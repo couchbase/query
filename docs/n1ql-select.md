@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-14
+* Modified: 2014-02-16
 
 ## Introduction
 
@@ -1998,6 +1998,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2014-02-14 - Collation, LET, LETTING
     * Clarified collation spec strings, arrays, and objects
     * Added LET and LETTING clauses
+* 2014-02-16 - SELECT RAW
+    * Added SELECT RAW
 
 ### Open Issues
 
