@@ -77,9 +77,9 @@ behavior is the same in either case.
 
 ![](diagram/pool-name.png)
 
-*key-clause:*
+*keys-clause:*
 
-![](diagram/key-clause.png)
+![](diagram/keys-clause.png)
 
 *join-clause:*
 
