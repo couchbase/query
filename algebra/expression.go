@@ -29,6 +29,9 @@ type Expression interface {
 
 	// Constant folding
 	Fold() Expression
+
+	// Conjunctive Normal Form
+	CNF() Expression
 }
 
 type Expressions []Expression

@@ -46,6 +46,10 @@ func (this *Constant) Fold() Expression {
 	return this
 }
 
+func (this *Constant) CNF() Expression {
+	return this
+}
+
 func (this *Constant) Value() value.Value {
 	return this.value
 }

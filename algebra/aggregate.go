@@ -62,6 +62,10 @@ func (this *aggregateBase) Fold() Expression {
 	return this
 }
 
+func (this *aggregateBase) CNF() Expression {
+	return this
+}
+
 func (this *aggregateBase) Parameter() Expression {
 	return this.parameter
 }
