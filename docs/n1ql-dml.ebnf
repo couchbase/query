@@ -5,7 +5,7 @@
 /*
  *  dml
  */
-dml-stmt ::= insert | delete | update | merge
+dml-stmt ::= insert | upsert | delete | update | merge
 
 /*
  *  insert
