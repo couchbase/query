@@ -72,6 +72,21 @@ func (this *Builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 	return NewCountScan(plan), nil
 }
 
+func (this *Builder) VisitMultipleScan(plan *plan.MultipleScan) (interface{}, error) {
+	scans := make([]Operator, len(plan.Scans()))
+
+	for i, p := range plan.Scans() {
+		s, e := p.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+
+		scans[i] = s.(Operator)
+	}
+
+	return NewMultipleScan(scans), nil
+}
+
 // Fetch
 func (this *Builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil

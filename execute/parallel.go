@@ -68,13 +68,11 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 			go children[i].RunOnce(context, parent)
 		}
 
-		for {
+		for n > 0 {
 			select {
 			case <-this.childChannel: // Never closed
 				// Wait for all children
-				if n--; n <= 0 {
-					return
-				}
+				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
 				for _, child := range children {

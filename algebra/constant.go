@@ -14,21 +14,21 @@ import (
 )
 
 type Constant struct {
-	val value.Value
+	value value.Value
 }
 
-func NewConstant(v value.Value) Expression {
-	return &Constant{v}
+func NewConstant(value value.Value) Expression {
+	return &Constant{value}
 }
 
 func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.val, nil
+	return this.value, nil
 }
 
 func (this *Constant) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Constant:
-		return this.val.Equals(other.val)
+		return this.value.Equals(other.value)
 	default:
 		return false
 	}
@@ -40,4 +40,16 @@ func (this *Constant) Dependencies() Expressions {
 
 func (this *Constant) Alias() string {
 	return ""
+}
+
+func (this *Constant) Fold() Expression {
+	return this
+}
+
+func (this *Constant) IsConstant() bool {
+	return true
+}
+
+func (this *Constant) ConstantValue() value.Value {
+	return this.value
 }

@@ -182,3 +182,20 @@ func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
 func (this *CountScan) Bucket() catalog.Bucket {
 	return this.bucket
 }
+
+// MultipleScan scans multiple indexes and intersects the results.
+type MultipleScan struct {
+	scans []Operator
+}
+
+func NewMultipleScan(scans ...Operator) *MultipleScan {
+	return &MultipleScan{scans}
+}
+
+func (this *MultipleScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMultipleScan(this)
+}
+
+func (this *MultipleScan) Scans() []Operator {
+	return this.scans
+}

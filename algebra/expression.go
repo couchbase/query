@@ -26,6 +26,11 @@ type Expression interface {
 
 	// Terminal identifier, or nil
 	Alias() string
+
+	// Constant folding
+	Fold() Expression
+	IsConstant() bool
+	ConstantValue() value.Value
 }
 
 type Expressions []Expression
