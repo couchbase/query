@@ -446,14 +446,14 @@ having those primary keys will be included as inputs to the query.
 
 To specify a single key:
 
-        SELECT * FROM customer KEY "acme-uuid-1234-5678"
+        SELECT * FROM customer KEYS "acme-uuid-1234-5678"
 
 To specify multiple keys:
 
         SELECT * FROM customer KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
 
-In the FROM clause of a subquery, KEY or KEYS is mandatory for the
-primary bucket.
+In the FROM clause of a subquery, KEYS is mandatory for the primary
+bucket.
 
 ### Nested paths
 
@@ -509,7 +509,7 @@ And our *invoice* objects were:
 
 And the FROM clause was:
 
-        FROM invoice inv JOIN customer cust KEY inv.customer_key
+        FROM invoice inv JOIN customer cust KEYS inv.customer_key
 
 Then each joined object would be:
 
@@ -575,8 +575,8 @@ Then our joined objects would be:
         },
         ...
 
-KEY or KEYS is required after each JOIN. It specifies the primary keys
-for the second bucket in the join.
+KEYS is required after each JOIN. It specifies the primary keys for
+the second bucket in the join.
 
 Joins can be chained.
 
@@ -719,21 +719,20 @@ must be non-missing and non-null.
 If there is no matching right hand source object, then the right hand
 source object is as follows:
 
-* If the KEY/S expression evaluates to MISSING, the right hand value
+* If the KEYS expression evaluates to MISSING, the right hand value
   is also MISSING
-* If the KEY/S expression evaluates to NULL, the right hand value is
+* If the KEYS expression evaluates to NULL, the right hand value is
   MISSING
-* If the KEY/S expression evaluates to an array, the right hand value
+* If the KEYS expression evaluates to an array, the right hand value
   is an empty array
-* If the KEY/S expression evaluates to a non-array value, the right
+* If the KEYS expression evaluates to a non-array value, the right
   hand value is an empty array
 
 If LEFT or LEFT OUTER is specified, then a left outer nest is
 performed. One result object is produced for each left hand source
 object.
 
-Whether KEY or KEYS is used, the right hand result of NEST is always
-an array or MISSING.
+The right hand result of NEST is always an array or MISSING.
 
 ### Expansions
 
@@ -1099,8 +1098,8 @@ definition of the supported functions.
 Subquery expressions return an array that is the result of evaluating
 the subquery.
 
-In the FROM clause of a subquery, KEY or KEYS is mandatory for the
-primary bucket.
+In the FROM clause of a subquery, KEYS is mandatory for the primary
+bucket.
 
 ### Collection
 
@@ -1869,9 +1868,9 @@ SELECT {"thename": name} AS custom_obj
 
 * Replaced ANY / ALL ... OVER with ANY / EVERY ... SATISFIES
 
-#### KEY / KEYS Clause
+#### KEYS Clause
 
-* Added KEY / KEYS clause to FROM clause
+* Added KEYS clause to FROM clause
 
 #### JOINs
 
