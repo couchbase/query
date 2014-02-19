@@ -13,42 +13,24 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Or struct {
-	nAryBase
+type Negate struct {
+	unaryBase
 }
 
-func NewOr(operands Expressions) Expression {
-	return &Or{nAryBase{operands: operands}}
+func NewNegate(operand Expression) Expression {
+	return &Negate{unaryBase{operand: operand}}
 }
 
-func (this *Or) constructor() nAryConstructor {
-	return NewOr
+func (this *Negate) constructor() unaryConstructor {
+	return NewNegate
 }
 
-func (this *Or) evaluate(operands value.Values) (value.Value, error) {
-	missing := false
-	null := false
-	for _, v := range operands {
-		if v.Type() > value.NULL {
-			if v.Truth() {
-				return value.NewValue(true), nil
-			}
-		} else if v.Type() == value.NULL {
-			null = true
-		} else if v.Type() == value.MISSING {
-			missing = true
-		}
-	}
-
-	if missing {
+func (this *Negate) evaluate(operand value.Value) (value.Value, error) {
+	if operand.Type() == value.NUMBER {
+		return value.NewValue(-operand.Actual().(float64)), nil
+	} else if operand.Type() == value.MISSING {
 		return _MISSING_VALUE, nil
-	} else if null {
-		return _NULL_VALUE, nil
 	} else {
-		return value.NewValue(false), nil
+		return _NULL_VALUE, nil
 	}
-}
-
-func (this *Or) shortCircuit(v value.Value) bool {
-	return v.Truth()
 }

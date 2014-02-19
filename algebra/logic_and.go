@@ -48,3 +48,7 @@ func (this *And) evaluate(operands value.Values) (value.Value, error) {
 		return value.NewValue(true), nil
 	}
 }
+
+func (this *And) shortCircuit(v value.Value) bool {
+	return (v.Type() > value.NULL) && !v.Truth()
+}

@@ -20,7 +20,7 @@ type nAry interface {
 	Expression
 	constructor() nAryConstructor
 	evaluate(operands value.Values) (value.Value, error)
-	shortCircuit() bool
+	shortCircuit(v value.Value) bool
 }
 
 type nAryConstructor func(operands Expressions) Expression
@@ -102,7 +102,7 @@ func (this *nAryBase) Fold() Expression {
 		}
 
 		constant := NewConstant(c)
-		if len(others) == 0 || nary.shortCircuit() {
+		if len(others) == 0 || nary.shortCircuit(c) {
 			return constant
 		}
 
@@ -121,32 +121,9 @@ func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
 	panic("Must override.")
 }
 
-func (this *nAryBase) shortCircuit() bool {
+func (this *nAryBase) shortCircuit(v value.Value) bool {
 	return false
 }
 
 var _MISSING_VALUE = value.NewMissingValue()
 var _NULL_VALUE = value.NewValue(nil)
-
-func unvalued(operands ...value.Value) value.Value {
-	if len(operands) == 0 {
-		return _MISSING_VALUE
-	}
-
-	null := false
-	for _, v := range operands {
-		if v.Type() == value.MISSING {
-			return v
-		}
-
-		if v.Type() == value.NULL {
-			null = true
-		}
-	}
-
-	if null {
-		return _NULL_VALUE
-	}
-
-	return nil
-}
