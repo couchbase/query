@@ -27,14 +27,34 @@ type Expression interface {
 	// Terminal identifier, or nil
 	Alias() string
 
-	// Constant folding
+	// Flattening and constant folding
 	Fold() Expression
-
-	// Conjunctive Normal Form
-	CNF() Expression
 }
 
 type Expressions []Expression
 
 type CompositeExpression []Expression
 type CompositeExpressions []CompositeExpression
+
+type expressionBase struct {
+}
+
+func (this *expressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return nil, nil
+}
+
+func (this *expressionBase) EquivalentTo(other Expression) bool {
+	return false
+}
+
+func (this *expressionBase) Dependencies() Expressions {
+	return nil
+}
+
+func (this *expressionBase) Alias() string {
+	return ""
+}
+
+func (this *expressionBase) Fold() Expression {
+	return nil
+}

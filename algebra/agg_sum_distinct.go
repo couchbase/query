@@ -20,7 +20,7 @@ type SumDistinct struct {
 }
 
 func NewSumDistinct(parameter Expression) Aggregate {
-	return &SumDistinct{aggregateBase{parameter}}
+	return &SumDistinct{aggregateBase{parameter: parameter}}
 }
 
 func (this *SumDistinct) Default() value.Value {

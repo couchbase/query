@@ -20,7 +20,7 @@ type ArrayDistinct struct {
 }
 
 func NewArrayDistinct(parameter Expression) Aggregate {
-	return &ArrayDistinct{aggregateBase{parameter}}
+	return &ArrayDistinct{aggregateBase{parameter: parameter}}
 }
 
 func (this *ArrayDistinct) Default() value.Value {

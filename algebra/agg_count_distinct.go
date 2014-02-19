@@ -18,7 +18,7 @@ type CountDistinct struct {
 }
 
 func NewCountDistinct(parameter Expression) Aggregate {
-	return &CountDistinct{aggregateBase{parameter}}
+	return &CountDistinct{aggregateBase{parameter: parameter}}
 }
 
 func (this *CountDistinct) Default() value.Value {

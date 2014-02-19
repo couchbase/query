@@ -20,7 +20,7 @@ type Avg struct {
 }
 
 func NewAvg(parameter Expression) Aggregate {
-	return &Avg{aggregateBase{parameter}}
+	return &Avg{aggregateBase{parameter: parameter}}
 }
 
 func (this *Avg) Default() value.Value {

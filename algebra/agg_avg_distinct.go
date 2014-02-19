@@ -20,7 +20,7 @@ type AvgDistinct struct {
 }
 
 func NewAvgDistinct(parameter Expression) Aggregate {
-	return &AvgDistinct{aggregateBase{parameter}}
+	return &AvgDistinct{aggregateBase{parameter: parameter}}
 }
 
 func (this *AvgDistinct) Default() value.Value {

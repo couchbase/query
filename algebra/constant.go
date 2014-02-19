@@ -14,11 +14,12 @@ import (
 )
 
 type Constant struct {
+	expressionBase
 	value value.Value
 }
 
 func NewConstant(value value.Value) Expression {
-	return &Constant{value}
+	return &Constant{value: value}
 }
 
 func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {

@@ -20,7 +20,7 @@ type Sum struct {
 }
 
 func NewSum(parameter Expression) Aggregate {
-	return &Sum{aggregateBase{parameter}}
+	return &Sum{aggregateBase{parameter: parameter}}
 }
 
 func (this *Sum) Default() value.Value {

@@ -18,7 +18,7 @@ type Max struct {
 }
 
 func NewMax(parameter Expression) Aggregate {
-	return &Max{aggregateBase{parameter}}
+	return &Max{aggregateBase{parameter: parameter}}
 }
 
 func (this *Max) Default() value.Value {

@@ -18,7 +18,7 @@ type Min struct {
 }
 
 func NewMin(parameter Expression) Aggregate {
-	return &Min{aggregateBase{parameter}}
+	return &Min{aggregateBase{parameter: parameter}}
 }
 
 func (this *Min) Default() value.Value {

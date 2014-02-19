@@ -21,7 +21,7 @@ type ArrayAgg struct {
 }
 
 func NewArrayAgg(parameter Expression) Aggregate {
-	return &ArrayAgg{aggregateBase{parameter}}
+	return &ArrayAgg{aggregateBase{parameter: parameter}}
 }
 
 func (this *ArrayAgg) Default() value.Value {

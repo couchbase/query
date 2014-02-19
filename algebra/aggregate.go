@@ -30,6 +30,7 @@ type Aggregate interface {
 }
 
 type aggregateBase struct {
+	expressionBase
 	parameter Expression
 }
 
@@ -50,19 +51,11 @@ func (this *aggregateBase) EquivalentTo(other Expression) bool {
 		this.parameter.EquivalentTo(other.(Aggregate).Parameter())
 }
 
-func (this *aggregateBase) Dependencies() Expressions {
-	return nil
-}
-
-func (this *aggregateBase) Alias() string {
-	return ""
-}
-
 func (this *aggregateBase) Fold() Expression {
-	return this
-}
+	if this.parameter != nil {
+		this.parameter = this.parameter.Fold()
+	}
 
-func (this *aggregateBase) CNF() Expression {
 	return this
 }
 

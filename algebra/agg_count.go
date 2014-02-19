@@ -20,7 +20,7 @@ type Count struct {
 }
 
 func NewCount(parameter Expression) Aggregate {
-	return &Count{aggregateBase{parameter}}
+	return &Count{aggregateBase{parameter: parameter}}
 }
 
 var _ZERO = value.NewValue(0)

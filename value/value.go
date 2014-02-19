@@ -135,9 +135,9 @@ func NewValueFromBytes(bytes []byte) Value {
 
 // The data types supported by Value
 const (
-	NOT_JSON = iota
-	MISSING
+	MISSING = iota
 	NULL
+	NOT_JSON
 	BOOLEAN
 	NUMBER
 	STRING
