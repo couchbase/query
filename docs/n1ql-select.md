@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-17
+* Modified: 2014-02-18
 
 ## Introduction
 
@@ -2001,6 +2001,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added SELECT RAW
 * 2014-02-17 - KEY / KEYS
     * Cleaned up usage of KEY and kEYS.
+* 2014-02-18 - SELECT list
+    * Require SELECT list
 
 ### Open Issues
 

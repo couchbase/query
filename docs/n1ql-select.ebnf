@@ -13,7 +13,7 @@ from-select-core ::= from-clause let-clause? where-clause? group-by-clause? sele
 /*
  *  select clause
  */
-select-clause ::= 'SELECT' ((('ALL' | 'DISTINCT')? result-expr (',' result-expr)*) | 'RAW' expr)?
+select-clause ::= 'SELECT' ((('ALL' | 'DISTINCT')? result-expr (',' result-expr)*) | 'RAW' expr)
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
 path ::= identifier ('[' (uint | '*') ']')? ('.' path)?
 alias ::= identifier
