@@ -734,10 +734,10 @@ object.
 
 The right hand result of NEST is always an array or MISSING.
 
-### Expansions
+### Arrays
 
 If an array occurs along a path, the array may be subscripted to
-select one element, or it may be expanded to select all its elements.
+select one element.
 
 Array values - for each customer, the entire *address* array is
 selected:
@@ -772,22 +772,6 @@ array is selected:
             { "street" : "101 Main St.", "zip" : "94040" },
             { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
         ]
-
-Expansion - for each customer, every element of the *address* array is
-selected:
-
-        SELECT * FROM customer.address[*]
-
-=>
-
-        [
-            { "street" : "101 Main St.", "zip" : "94040" },
-            { "street" : "300 Broadway", "zip" : "10011" },
-            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
-            { "street" : "4120 Alamo Dr.", "zip" : "75019" }
-        ]
-
-Expansions can be chained.
 
 ## WHERE clause
 
@@ -1891,11 +1875,6 @@ SELECT {"thename": name} AS custom_obj
 * Added ARRAY_CONCAT(), ARRAY_LENGTH(), ARRAY_APPEND(),
   ARRAY_PREPEND(), and other array functions
 
-#### Array Expansions
-
-* Added array expansions
-
-
 ## About this Document
 
 The
@@ -2003,6 +1982,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Cleaned up usage of KEY and kEYS.
 * 2014-02-18 - SELECT list
     * Require SELECT list
+* 2013-12-18 - Array expansion
+    * Removed array expansion for now.
 
 ### Open Issues
 
