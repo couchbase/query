@@ -36,6 +36,13 @@ func (this *Negate) Fold() Expression {
 		return NewConstant(v)
 	case *Negate:
 		return o.operand
+	case *Add:
+		operands := make(Expressions, len(o.operands))
+		for i, oo := range o.operands {
+			operands[i] = NewNegate(oo)
+		}
+		add := NewAdd(operands...)
+		return add.Fold()
 	}
 
 	return this

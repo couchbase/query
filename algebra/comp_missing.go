@@ -13,19 +13,19 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Reciprocate struct {
+type IsMissing struct {
 	unaryBase
 }
 
-func NewReciprocate(operand Expression) Expression {
-	return &Reciprocate{
+func NewIsMissing(operand Expression) Expression {
+	return &IsMissing{
 		unaryBase{
 			operand: operand,
 		},
 	}
 }
 
-func (this *Reciprocate) Fold() Expression {
+func (this *IsMissing) Fold() Expression {
 	this.operand = this.operand.Fold()
 	switch o := this.operand.(type) {
 	case *Constant:
@@ -34,30 +34,20 @@ func (this *Reciprocate) Fold() Expression {
 			return this
 		}
 		return NewConstant(v)
-	case *Reciprocate:
-		return o.operand
-	case *Multiply:
-		operands := make(Expressions, len(o.operands))
-		for i, oo := range o.operands {
-			operands[i] = NewReciprocate(oo)
-		}
-		mult := NewMultiply(operands...)
-		return mult.Fold()
 	}
 
 	return this
 }
 
-func (this *Reciprocate) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.NUMBER {
-		a := operand.Actual().(float64)
-		if a == 0.0 {
-			return _NULL_VALUE, nil
-		}
-		return value.NewValue(1.0 / a), nil
-	} else if operand.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else {
-		return _NULL_VALUE, nil
+func (this *IsMissing) evaluate(operand value.Value) (value.Value, error) {
+	switch operand.Type() {
+	case value.MISSING:
+		return value.NewValue(true), nil
+	default:
+		return value.NewValue(false), nil
 	}
+}
+
+func NewIsNotMissing(operand Expression) Expression {
+	return NewNot(NewIsMissing(operand))
 }

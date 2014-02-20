@@ -19,7 +19,6 @@ import (
 type binary interface {
 	Expression
 	evaluate(first, second value.Value) (value.Value, error)
-	isReverse(other Expression) bool
 }
 
 type binaryBase struct {
@@ -49,12 +48,6 @@ func (this *binaryBase) EquivalentTo(other Expression) bool {
 			this.second.EquivalentTo(o.second)
 	}
 
-	if this.isReverse(other) {
-		o := other.(*binaryBase)
-		return this.first.EquivalentTo(o.second) &&
-			this.second.EquivalentTo(o.first)
-	}
-
 	return false
 }
 
@@ -82,9 +75,5 @@ func (this *binaryBase) Fold() Expression {
 }
 
 func (this *binaryBase) evaluate(first, second value.Value) (value.Value, error) {
-	panic("Must override.")
-}
-
-func (this *binaryBase) isReverse(other Expression) bool {
 	panic("Must override.")
 }
