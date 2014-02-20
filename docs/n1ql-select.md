@@ -1044,9 +1044,8 @@ or more characters, underscore (\_) matches any single character.
 
 Arithemetic terms allow for performing basic arithmetic within an
 expression.  The standard addition, subtraction, multiplication,
-division, and modulo operators are supported.  DIV performs integer
-(instead of floating-point) division.  Additionally, a negation
-operator will change the sign of the expression.
+division, and modulo operators are supported.  Additionally, a
+negation operator will change the sign of the expression.
 
 These arithmetic operators only operate on numeric values.  If either
 operand is not numeric it will evaluate to NULL.
