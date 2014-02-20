@@ -18,11 +18,27 @@ type Negate struct {
 }
 
 func NewNegate(operand Expression) Expression {
-	return &Negate{unaryBase{operand: operand}}
+	return &Negate{
+		unaryBase{
+			operand: operand,
+		},
+	}
 }
 
-func (this *Negate) constructor() unaryConstructor {
-	return NewNegate
+func (this *Negate) Fold() Expression {
+	this.operand = this.operand.Fold()
+	switch o := this.operand.(type) {
+	case *Constant:
+		v, e := this.evaluate(o.Value())
+		if e != nil {
+			return this
+		}
+		return NewConstant(v)
+	case *Negate:
+		return o.operand
+	}
+
+	return this
 }
 
 func (this *Negate) evaluate(operand value.Value) (value.Value, error) {

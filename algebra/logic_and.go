@@ -17,12 +17,12 @@ type And struct {
 	nAryBase
 }
 
-func NewAnd(operands Expressions) Expression {
-	return &And{nAryBase{operands: operands}}
-}
-
-func (this *And) constructor() nAryConstructor {
-	return NewAnd
+func NewAnd(operands ...Expression) Expression {
+	return &And{
+		nAryBase{
+			operands: operands,
+		},
+	}
 }
 
 func (this *And) evaluate(operands value.Values) (value.Value, error) {
@@ -49,6 +49,12 @@ func (this *And) evaluate(operands value.Values) (value.Value, error) {
 	}
 }
 
-func (this *And) shortCircuit(v value.Value) bool {
-	return (v.Type() > value.NULL) && !v.Truth()
+func (this *And) construct(constant value.Value, others Expressions) Expression {
+	if constant.Type() == value.MISSING {
+		return NewConstant(constant)
+	} else if constant.Type() == value.BOOLEAN && !constant.Actual().(bool) {
+		return NewConstant(value.NewValue(false))
+	}
+
+	return NewAnd(append(others, NewConstant(constant))...)
 }

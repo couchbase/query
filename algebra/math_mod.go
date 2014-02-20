@@ -10,31 +10,40 @@
 package algebra
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/value"
 )
 
-type Reciprocate struct {
-	unaryBase
+type Modulo struct {
+	binaryBase
 }
 
-func NewReciprocate(operand Expression) Expression {
-	return &Reciprocate{
-		unaryBase{
-			operand: operand,
+func NewModulo(first, second Expression) Expression {
+	return &Modulo{
+		binaryBase{
+			first:  first,
+			second: second,
 		},
 	}
 }
 
-func (this *Reciprocate) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.NUMBER {
-		a := operand.Actual().(float64)
-		if a == 0.0 {
+func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
+	if second.Type() == value.NUMBER {
+		s := second.Actual().(float64)
+		if s == 0.0 {
 			return _NULL_VALUE, nil
 		}
-		return value.NewValue(1.0 / a), nil
-	} else if operand.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else {
-		return _NULL_VALUE, nil
+
+		if first.Type() == value.NUMBER {
+			m := math.Mod(first.Actual().(float64), s)
+			return value.NewValue(m), nil
+		}
 	}
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return _MISSING_VALUE, nil
+	}
+
+	return _NULL_VALUE, nil
 }

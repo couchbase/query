@@ -18,11 +18,27 @@ type Not struct {
 }
 
 func NewNot(operand Expression) Expression {
-	return &Not{unaryBase{operand: operand}}
+	return &Not{
+		unaryBase{
+			operand: operand,
+		},
+	}
 }
 
-func (this *Not) constructor() unaryConstructor {
-	return NewNot
+func (this *Not) Fold() Expression {
+	this.operand = this.operand.Fold()
+	switch o := this.operand.(type) {
+	case *Constant:
+		v, e := this.evaluate(o.Value())
+		if e != nil {
+			return this
+		}
+		return NewConstant(v)
+	case *Not:
+		return o.operand
+	}
+
+	return this
 }
 
 func (this *Not) evaluate(operand value.Value) (value.Value, error) {

@@ -9,32 +9,6 @@
 
 package algebra
 
-import (
-	"github.com/couchbaselabs/query/value"
-)
-
-type Reciprocate struct {
-	unaryBase
-}
-
-func NewReciprocate(operand Expression) Expression {
-	return &Reciprocate{
-		unaryBase{
-			operand: operand,
-		},
-	}
-}
-
-func (this *Reciprocate) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.NUMBER {
-		a := operand.Actual().(float64)
-		if a == 0.0 {
-			return _NULL_VALUE, nil
-		}
-		return value.NewValue(1.0 / a), nil
-	} else if operand.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else {
-		return _NULL_VALUE, nil
-	}
+func NewDivide(first, second Expression) Expression {
+	return NewMultiply(first, NewReciprocate(second))
 }

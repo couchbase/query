@@ -17,19 +17,19 @@ type Add struct {
 	nAryBase
 }
 
-func NewAdd(operands Expressions) Expression {
-	return &Add{nAryBase{operands: operands}}
-}
-
-func (this *Add) constructor() nAryConstructor {
-	return NewAdd
+func NewAdd(operands ...Expression) Expression {
+	return &Add{
+		nAryBase{
+			operands: operands,
+		},
+	}
 }
 
 func (this *Add) evaluate(operands value.Values) (value.Value, error) {
 	null := false
 	sum := 0.0
 	for _, v := range operands {
-		if v.Type() == value.NUMBER {
+		if !null && v.Type() == value.NUMBER {
 			sum += v.Actual().(float64)
 		} else if v.Type() == value.MISSING {
 			return _MISSING_VALUE, nil
@@ -43,4 +43,14 @@ func (this *Add) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	return value.NewValue(sum), nil
+}
+
+func (this *Add) construct(constant value.Value, others Expressions) Expression {
+	if constant.Type() == value.MISSING {
+		return NewConstant(constant)
+	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 0.0 {
+		return NewAdd(others...)
+	}
+
+	return NewAdd(append(others, NewConstant(constant))...)
 }

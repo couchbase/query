@@ -18,11 +18,8 @@ import (
 // Commutative and associative operators.
 type unary interface {
 	Expression
-	constructor() unaryConstructor
 	evaluate(operand value.Value) (value.Value, error)
 }
-
-type unaryConstructor func(operand Expression) Expression
 
 type unaryBase struct {
 	expressionBase
@@ -39,7 +36,7 @@ func (this *unaryBase) Evaluate(item value.Value, context Context) (value.Value,
 }
 
 func (this *unaryBase) EquivalentTo(other Expression) bool {
-	return (reflect.TypeOf(this) != reflect.TypeOf(other)) &&
+	return (reflect.TypeOf(this) == reflect.TypeOf(other)) &&
 		this.operand.EquivalentTo(other.(*unaryBase).operand)
 }
 
@@ -59,10 +56,6 @@ func (this *unaryBase) Fold() Expression {
 	}
 
 	return this
-}
-
-func (this *unaryBase) constructor() unaryConstructor {
-	panic("Must override.")
 }
 
 func (this *unaryBase) evaluate(operand value.Value) (value.Value, error) {

@@ -17,12 +17,12 @@ type Or struct {
 	nAryBase
 }
 
-func NewOr(operands Expressions) Expression {
-	return &Or{nAryBase{operands: operands}}
-}
-
-func (this *Or) constructor() nAryConstructor {
-	return NewOr
+func NewOr(operands ...Expression) Expression {
+	return &Or{
+		nAryBase{
+			operands: operands,
+		},
+	}
 }
 
 func (this *Or) evaluate(operands value.Values) (value.Value, error) {
@@ -40,15 +40,19 @@ func (this *Or) evaluate(operands value.Values) (value.Value, error) {
 		}
 	}
 
-	if missing {
-		return _MISSING_VALUE, nil
-	} else if null {
+	if null {
 		return _NULL_VALUE, nil
+	} else if missing {
+		return _MISSING_VALUE, nil
 	} else {
 		return value.NewValue(false), nil
 	}
 }
 
-func (this *Or) shortCircuit(v value.Value) bool {
-	return v.Truth()
+func (this *Or) construct(constant value.Value, others Expressions) Expression {
+	if constant.Truth() {
+		return NewConstant(value.NewValue(true))
+	}
+
+	return NewOr(append(others, NewConstant(constant))...)
 }

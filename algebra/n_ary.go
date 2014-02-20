@@ -18,9 +18,8 @@ import (
 // Commutative and associative operators.
 type nAry interface {
 	Expression
-	constructor() nAryConstructor
 	evaluate(operands value.Values) (value.Value, error)
-	shortCircuit(v value.Value) bool
+	construct(constant value.Value, others Expressions) Expression
 }
 
 type nAryConstructor func(operands Expressions) Expression
@@ -78,10 +77,20 @@ func (this *nAryBase) Dependencies() Expressions {
 }
 
 func (this *nAryBase) Fold() Expression {
-	operands := this.operands
-	for i, o := range operands {
-		operands[i] = o.Fold()
+	operands := make(Expressions, 0, len(this.operands))
+	for _, o := range this.operands {
+		o = o.Fold()
+		if reflect.TypeOf(this) == reflect.TypeOf(o) {
+			// Associative, so promote subexpressions.
+			for _, oo := range o.(*nAryBase).operands {
+				operands = append(operands, oo)
+			}
+		} else {
+			operands = append(operands, o)
+		}
 	}
+
+	this.operands = operands
 
 	constants := make(value.Values, 0, len(operands))
 	others := make(Expressions, 0, len(operands))
@@ -101,28 +110,22 @@ func (this *nAryBase) Fold() Expression {
 			return this
 		}
 
-		constant := NewConstant(c)
-		if len(others) == 0 || nary.shortCircuit(c) {
-			return constant
+		if len(others) == 0 {
+			return NewConstant(c)
 		}
 
-		others = append(others, constant)
-		return nary.constructor()(others)
+		return nary.construct(c, others)
 	}
 
 	return this
-}
-
-func (this *nAryBase) constructor() nAryConstructor {
-	panic("Must override.")
 }
 
 func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
 	panic("Must override.")
 }
 
-func (this *nAryBase) shortCircuit(v value.Value) bool {
-	return false
+func (this *nAryBase) construct(constant value.Value, others Expressions) Expression {
+	panic("Must override.")
 }
 
 var _MISSING_VALUE = value.NewMissingValue()

@@ -17,19 +17,19 @@ type Multiply struct {
 	nAryBase
 }
 
-func NewMultiply(operands Expressions) Expression {
-	return &Multiply{nAryBase{operands: operands}}
-}
-
-func (this *Multiply) constructor() nAryConstructor {
-	return NewMultiply
+func NewMultiply(operands ...Expression) Expression {
+	return &Multiply{
+		nAryBase{
+			operands: operands,
+		},
+	}
 }
 
 func (this *Multiply) evaluate(operands value.Values) (value.Value, error) {
 	null := false
 	prod := 1.0
 	for _, v := range operands {
-		if v.Type() == value.NUMBER {
+		if !null && v.Type() == value.NUMBER {
 			prod *= v.Actual().(float64)
 		} else if v.Type() == value.MISSING {
 			return _MISSING_VALUE, nil
@@ -43,4 +43,14 @@ func (this *Multiply) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	return value.NewValue(prod), nil
+}
+
+func (this *Multiply) construct(constant value.Value, others Expressions) Expression {
+	if constant.Type() == value.MISSING {
+		return NewConstant(constant)
+	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 1.0 {
+		return NewMultiply(others...)
+	}
+
+	return NewMultiply(append(others, NewConstant(constant))...)
 }
