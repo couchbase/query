@@ -49,10 +49,9 @@ func (this *unaryBase) Fold() Expression {
 	switch o := this.operand.(type) {
 	case *Constant:
 		v, e := unary(this).evaluate(o.Value())
-		if e != nil {
-			return this
+		if e == nil {
+			return NewConstant(v)
 		}
-		return NewConstant(v)
 	}
 
 	return this

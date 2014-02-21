@@ -30,10 +30,9 @@ func (this *Reciprocate) Fold() Expression {
 	switch o := this.operand.(type) {
 	case *Constant:
 		v, e := this.evaluate(o.Value())
-		if e != nil {
-			return this
+		if e == nil {
+			return NewConstant(v)
 		}
-		return NewConstant(v)
 	case *Reciprocate:
 		return o.operand
 	case *Multiply:

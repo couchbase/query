@@ -64,10 +64,9 @@ func (this *binaryBase) Fold() Expression {
 		switch s := this.second.(type) {
 		case *Constant:
 			v, e := binary(this).evaluate(f.Value(), s.Value())
-			if e != nil {
-				return this
+			if e == nil {
+				return NewConstant(v)
 			}
-			return NewConstant(v)
 		}
 	}
 
