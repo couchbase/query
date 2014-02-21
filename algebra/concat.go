@@ -10,26 +10,23 @@
 package algebra
 
 import (
-	"reflect"
+	"bytes"
 
 	"github.com/couchbaselabs/query/value"
 )
 
-// Commutative and associative operators.
-type nAry interface {
-	Expression
-	evaluate(operands value.Values) (value.Value, error)
-	construct(constant value.Value, others Expressions) Expression
-}
-
-type nAryConstructor func(operands Expressions) Expression
-
-type nAryBase struct {
+type Concat struct {
 	expressionBase
 	operands Expressions
 }
 
-func (this *nAryBase) Evaluate(item value.Value, context Context) (value.Value, error) {
+func NewConcat(operands ...Expression) Expression {
+	return &Concat{
+		operands: operands,
+	}
+}
+
+func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var e error
 	operands := make([]value.Value, len(this.operands))
 	for i, o := range this.operands {
@@ -39,32 +36,21 @@ func (this *nAryBase) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 	}
 
-	return nAry(this).evaluate(operands)
+	return this.evaluate(operands)
 }
 
-func (this *nAryBase) EquivalentTo(other Expression) bool {
-	if reflect.TypeOf(this) != reflect.TypeOf(other) {
+func (this *Concat) EquivalentTo(other Expression) bool {
+	that, ok := other.(*Concat)
+	if !ok {
 		return false
 	}
 
-	that := other.(*nAryBase)
 	if len(this.operands) != len(that.operands) {
 		return false
 	}
 
-	found := make([]bool, len(this.operands))
-
-	for _, first := range this.operands {
-		for j, second := range that.operands {
-			if !found[j] && first.EquivalentTo(second) {
-				found[j] = true
-				break
-			}
-		}
-	}
-
-	for _, f := range found {
-		if !f {
+	for i, o := range this.operands {
+		if !o.EquivalentTo(that.operands[i]) {
 			return false
 		}
 	}
@@ -72,20 +58,21 @@ func (this *nAryBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *nAryBase) Dependencies() Expressions {
+func (this *Concat) Dependencies() Expressions {
 	return this.operands
 }
 
-func (this *nAryBase) Fold() Expression {
+func (this *Concat) Fold() Expression {
 	operands := make(Expressions, 0, len(this.operands))
 	for _, o := range this.operands {
 		o = o.Fold()
-		if reflect.TypeOf(this) == reflect.TypeOf(o) {
+		switch o := o.(type) {
+		case *Concat:
 			// Associative, so promote subexpressions.
-			for _, oo := range o.(*nAryBase).operands {
+			for _, oo := range o.operands {
 				operands = append(operands, oo)
 			}
-		} else {
+		default:
 			operands = append(operands, o)
 		}
 	}
@@ -94,18 +81,26 @@ func (this *nAryBase) Fold() Expression {
 
 	constants := make(value.Values, 0, len(operands))
 	others := make(Expressions, 0, len(operands))
-	for i, o := range operands {
+	for _, o := range operands {
 		switch o := o.(type) {
 		case *Constant:
-			constants[i] = o.Value()
+			constants = append(constants, o.Value())
 		default:
-			others[i] = o
+			if len(constants) > 0 {
+				c, e := this.evaluate(constants)
+				if e != nil {
+					return this
+				}
+				others = append(others, NewConstant(c))
+				constants = make(value.Values, 0, len(operands))
+			}
+
+			others = append(others, o)
 		}
 	}
 
 	if len(constants) > 0 {
-		nary := nAry(this)
-		c, e := nary.evaluate(constants)
+		c, e := this.evaluate(constants)
 		if e != nil {
 			return this
 		}
@@ -114,16 +109,30 @@ func (this *nAryBase) Fold() Expression {
 			return NewConstant(c)
 		}
 
-		return nary.construct(c, others)
+		others = append(others, NewConstant(c))
 	}
 
-	return this
+	return NewConcat(others...)
 }
 
-func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
-	panic("Must override.")
-}
+func (this *Concat) evaluate(operands value.Values) (value.Value, error) {
+	var buf bytes.Buffer
+	null := false
 
-func (this *nAryBase) construct(constant value.Value, others Expressions) Expression {
-	panic("Must override.")
+	for _, o := range operands {
+		switch o.Type() {
+		case value.STRING:
+			buf.WriteString(o.Actual().(string))
+		case value.MISSING:
+			return _MISSING_VALUE, nil
+		default:
+			null = true
+		}
+	}
+
+	if null {
+		return _NULL_VALUE, nil
+	}
+
+	return value.NewValue(buf.String()), nil
 }

@@ -58,3 +58,6 @@ func (this *expressionBase) Alias() string {
 func (this *expressionBase) Fold() Expression {
 	return nil
 }
+
+var _MISSING_VALUE = value.NewMissingValue()
+var _NULL_VALUE = value.NewValue(nil)
