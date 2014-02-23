@@ -1028,7 +1028,7 @@ operations. They have the highest precedence.
 
 ## Appendix - Four-valued logic
 
-In N1QL boolean propositions could evaluate to NULL or MISSING.  The
+In N1QL boolean propositions can evaluate to NULL or MISSING.  The
 following table describes how these values relate to the logical
 operators:
 
@@ -1351,11 +1351,11 @@ within the string, or -1. The position is 0-based.
 **REMOVE(expr, substr)** - string with all occurences of *substr*
 removed.
 
-**REPLACE(expr, substr1, substr2)** - string with all occurences of
-*substr1* replaced with *substr2.*
-
 **REPEAT(expr, count)** - string formed by repeating *expr* *count*
 times.
+
+**REPLACE(expr, substr1, substr2)** - string with all occurences of
+*substr1* replaced with *substr2.*
 
 **REVERSE(expr)** - string with characters in reverse order.
 
