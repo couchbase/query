@@ -22,130 +22,130 @@ The syntax of the SELECT statement is as follows.
 
 ### SELECT statement
 
-*select:*
+_select:_
 
 ![](diagram/select.png)
 
 In N1QL, SELECT statements can begin with either SELECT or FROM. The
 behavior is the same in either case.
 
-*select-core:*
+_select-core:_
 
 ![](diagram/select-core.png)
 
-*select-from-core:*
+_select-from-core:_
 
 ![](diagram/select-from-core.png)
 
-*from-select-core:*
+_from-select-core:_
 
 ![](diagram/from-select-core.png)
 
 ### SELECT clause
 
-*select-clause:*
+_select-clause:_
 
 ![](diagram/select-clause.png)
 
-*result-expr:*
+_result-expr:_
 
 ![](diagram/result-expr.png)
 
-*path:*
+_path:_
 
 ![](diagram/path.png)
 
-*alias:*
+_alias:_
 
 ![](diagram/alias.png)
 
 ### FROM clause
 
-*from-clause:*
+_from-clause:_
 
 ![](diagram/from-clause.png)
 
-*from-term:*
+_from-term:_
 
 ![](diagram/from-term.png)
 
-*from-path:*
+_from-path:_
 
 ![](diagram/from-path.png)
 
-*pool-name:*
+_pool-name:_
 
 ![](diagram/pool-name.png)
 
-*keys-clause:*
+_keys-clause:_
 
 ![](diagram/keys-clause.png)
 
-*join-clause:*
+_join-clause:_
 
 ![](diagram/join-clause.png)
 
-*join-type:*
+_join-type:_
 
 ![](diagram/join-type.png)
 
-*nest-clause:*
+_nest-clause:_
 
 ![](diagram/nest-clause.png)
 
-*unnest-clause:*
+_unnest-clause:_
 
 ![](diagram/unnest-clause.png)
 
 ### LET clause
 
-*let-clause:*
+_let-clause:_
 
 ![](diagram/let-clause.png)
 
 ### WHERE clause
 
-*where-clause:*
+_where-clause:_
 
 ![](diagram/where-clause.png)
 
-*cond:*
+_cond:_
 
 ![](diagram/cond.png)
 
 ### GROUP BY clause
 
-*group-by-clause:*
+_group-by-clause:_
 
 ![](diagram/group-by-clause.png)
 
-*letting-clause:*
+_letting-clause:_
 
 ![](diagram/letting-clause.png)
 
-*having-clause:*
+_having-clause:_
 
 ![](diagram/having-clause.png)
 
 ### ORDER BY clause
 
-*order-by-clause:*
+_order-by-clause:_
 
 ![](diagram/order-by-clause.png)
 
-*ordering-term:*
+_ordering-term:_
 
 ![](diagram/ordering-term.png)
 
 ### LIMIT clause
 
-*limit-clause:*
+_limit-clause:_
 
 ![](diagram/limit-clause.png)
 
 ### OFFSET clause
 
-*offset-clause:*
+_offset-clause:_
 
 ![](diagram/offset-clause.png)
 
@@ -185,39 +185,39 @@ query.
 Every FROM clause specifies one or more buckets. The first bucket is
 called the primary bucket.
 
-*from-clause:*
+_from-clause:_
 
 ![](diagram/from-clause.png)
 
-*from-term:*
+_from-term:_
 
 ![](diagram/from-term.png)
 
-*from-path:*
+_from-path:_
 
 ![](diagram/from-path.png)
 
-*pool-name:*
+_pool-name:_
 
 ![](diagram/pool-name.png)
 
-*keys-clause:*
+_keys-clause:_
 
 ![](diagram/keys-clause.png)
 
-*join-clause:*
+_join-clause:_
 
 ![](diagram/join-clause.png)
 
-*join-type:*
+_join-type:_
 
 ![](diagram/join-type.png)
 
-*nest-clause:*
+_nest-clause:_
 
 ![](diagram/nest-clause.png)
 
-*unnest-clause:*
+_unnest-clause:_
 
 ![](diagram/unnest-clause.png)
 
@@ -260,13 +260,13 @@ The simplest type of FROM clause specifies a bucket:
 
         SELECT * FROM customer
 
-This returns every value in the *customer* bucket.
+This returns every value in the _customer_ bucket.
 
 The bucket name can be prefixed with an optional pool name:
 
         SELECT * FROM main:customer
 
-This queries the *customer* bucket in the *main* pool.
+This queries the _customer_ bucket in the _main_ pool.
 
 If the pool name is omitted, the default pool in the current session
 is used.
@@ -295,7 +295,7 @@ query. For a given document, if any element of the path is NULL or
 MISSING, that document is skipped and does not contribute any inputs
 to the query.
 
-If some customer documents contain a *primary\_contact* object, the
+If some customer documents contain a _primary\_contact_ object, the
 following query can retrieve them:
 
         SELECT * FROM customer.primary_contact
@@ -322,7 +322,7 @@ subscripts.
 ### Joins
 
 Joins allow you to create new input objects by combining two or more
-source objects. For example, if our *customer* objects were:
+source objects. For example, if our _customer_ objects were:
 
         {
             "name": ...,
@@ -330,7 +330,7 @@ source objects. For example, if our *customer* objects were:
             "address": [ ... ]
         }
 
-And our *invoice* objects were:
+And our _invoice_ objects were:
 
         {
             "customer_key": ...,
@@ -359,7 +359,7 @@ Then each joined object would be:
             }
         }
 
-If our *invoice_item* objects were:
+If our _invoice_item_ objects were:
 
         {
             "invoice_key": ...,
@@ -429,7 +429,7 @@ performs a join of the nested array with its parent object. Each
 resulting joined object becomes an input to the query.
 
 If some customer documents contain an array of addresses under the
-*address* field, the following query retrieves each nested address
+_address_ field, the following query retrieves each nested address
 along with the parent customer's name.
 
         SELECT c.name, a.* FROM customer c UNNEST c.address a
@@ -467,7 +467,7 @@ left hand input, while the corresponding right hand inputs are
 collected into an array and nested as a single array-valued field in
 the result object.
 
-Recall our *invoice* objects:
+Recall our _invoice_ objects:
 
         {
             "customer_key": ...,
@@ -476,7 +476,7 @@ Recall our *invoice* objects:
             "total": ...
         }
 
-And our *invoice_item* objects:
+And our _invoice_item_ objects:
 
         {
             "invoice_key": ...,
@@ -571,7 +571,7 @@ The right hand result of NEST is always an array or MISSING.
 If an array occurs along a path, the array may be subscripted to
 select one element.
 
-Array values - for each customer, the entire *address* array is
+Array values - for each customer, the entire _address_ array is
 selected:
 
         SELECT VALUE() FROM customer.address
@@ -593,7 +593,7 @@ selected:
             }
         ]
 
-Subscripting - for each customer, the first element of the *address*
+Subscripting - for each customer, the first element of the _address_
 array is selected:
 
         SELECT * FROM customer.address[0]
@@ -607,11 +607,11 @@ array is selected:
 
 ## WHERE clause
 
-*where-clause:*
+_where-clause:_
 
 ![](diagram/where-clause.png)
 
-*cond:*
+_cond:_
 
 ![](diagram/cond.png)
 
@@ -621,15 +621,15 @@ and only objects evaluating to TRUE are retained.
 
 ## GROUP BY clause
 
-*group-by-clause:*
+_group-by-clause:_
 
 ![](diagram/group-by-clause.png)
 
-*letting-clause:*
+_letting-clause:_
 
 ![](diagram/letting-clause.png)
 
-*having-clause:*
+_having-clause:_
 
 ![](diagram/having-clause.png)
 
@@ -637,19 +637,19 @@ and only objects evaluating to TRUE are retained.
 
 ## SELECT clause
 
-*select-clause:*
+_select-clause:_
 
 ![](diagram/select-clause.png)
 
-*result-expr:*
+_result-expr:_
 
 ![](diagram/result-expr.png)
 
-*path:*
+_path:_
 
 ![](diagram/path.png)
 
-*alias:*
+_alias:_
 
 ![](diagram/alias.png)
 
@@ -657,11 +657,11 @@ and only objects evaluating to TRUE are retained.
 
 ## ORDER BY clause
 
-*order-by-clause:*
+_order-by-clause:_
 
 ![](diagram/order-by-clause.png)
 
-*ordering-term:*
+_ordering-term:_
 
 ![](diagram/ordering-term.png)
 
@@ -696,7 +696,7 @@ describes the order by type (from lowest to highest):
 
 ## OFFSET clause
 
-*offset-clause:*
+_offset-clause:_
 
 ![](diagram/offset-clause.png)
 
@@ -706,7 +706,7 @@ LIMIT.  The OFFSET value must be a non-negative integer.
 
 ## LIMIT clause
 
-*limit-clause:*
+_limit-clause:_
 
 ![](diagram/limit-clause.png)
 
@@ -716,7 +716,7 @@ non-negative integer.
 
 ## Expressions
 
-*expr:*
+_expr:_
 
 ![](diagram/expr.png)
 
@@ -726,7 +726,7 @@ The specification for literal values can be found in Appendix.
 
 ### Identifier
 
-*identifier:*
+_identifier:_
 
 ![](diagram/identifier.png)
 
@@ -741,11 +741,11 @@ backtick characters.
 Keywords cannot be escaped; therefore, escaped identifiers can overlap
 with keywords.
 
-*unescaped-identifier:*
+_unescaped-identifier:_
 
 ![](diagram/unescaped-identifier.png)
 
-*escaped-identifier:*
+_escaped-identifier:_
 
 ![](diagram/escaped-identifier.png)
 
@@ -758,7 +758,7 @@ If the current context is the document:
         "name": "n1ql"
     }
 
-Then the identifier *name* would evaluate to the value n1ql.
+Then the identifier _name_ would evaluate to the value n1ql.
 
 #### Case-sensitivity of identifiers
 
@@ -789,11 +789,11 @@ Consider the following object:
 
 ### Case
 
-*case-expr:*
+_case-expr:_
 
 ![](diagram/case-expr.png)
 
-*simple-case-expr:*
+_simple-case-expr:_
 
 ![](diagram/simple-case-expr.png)
 
@@ -805,7 +805,7 @@ manner.  If none of the WHEN expressions is equal to the search
 expression, then the result of the CASE expression is the ELSE
 expression.  If no ELSE expression was provided, the result is NULL.
 
-*searched-case-expr:*
+_searched-case-expr:_
 
 ![](diagram/searched-case-expr.png)
 
@@ -819,7 +819,7 @@ NULL.
 
 ### Logical
 
-*logical-term:*
+_logical-term:_
 
 ![](diagram/logical-term.png)
 
@@ -828,7 +828,7 @@ logic.  Standard AND, OR and NOT operators are supported.
 
 ### Comparison
 
-*comparison-term:*
+_comparison-term:_
 
 ![](diagram/comparison-term.png)
 
@@ -865,7 +865,7 @@ another backslash.
 
 ### Arithmetic
 
-*arithmetic-term:*
+_arithmetic-term:_
 
 ![](diagram/arithmetic-term.png)
 
@@ -879,7 +879,7 @@ is not a number, it will evaluate to NULL.
 
 ### Concatenation
 
-*concatenation-term:*
+_concatenation-term:_
 
 ![](diagram/concatenation-term.png)
 
@@ -888,11 +888,11 @@ strings.  Otherwise the expression evaluates to NULL.
 
 ### Function
 
-*function-call:*
+_function-call:_
 
 ![](diagram/function-call.png)
 
-*function-name:*
+_function-name:_
 
 ![](diagram/function-name.png)
 
@@ -901,7 +901,7 @@ functions.
 
 ### Subquery
 
-*subquery-expr:*
+_subquery-expr:_
 
 ![](diagram/subquery-expr.png)
 
@@ -913,47 +913,47 @@ bucket.
 
 ### Collection
 
-*collection-expr:*
+_collection-expr:_
 
 ![](diagram/collection-expr.png)
 
-*exists-expr:*
+_exists-expr:_
 
 ![](diagram/exists-expr.png)
 
 EXISTS evaluates to TRUE if the value is an array and contains at
 least one element.
 
-*in-expr:*
+_in-expr:_
 
 ![](diagram/in-expr.png)
 
 IN evaluates to TRUE if the right-hand-side value is an array and
 contains the left-hand-side value.
 
-*collection-cond:*
+_collection-cond:_
 
 Collection predicates allow you to test a boolean condition over the
 elements of a collection.
 
 ![](diagram/collection-cond.png)
 
-*variable:*
+_variable:_
 
 ![](diagram/variable.png)
 
-*collection-xform:*
+_collection-xform:_
 
 Collection transforms allow you to map and filter the elements of a
 collection.
 
 ![](diagram/collection-xform.png)
 
-*array-expr:*
+_array-expr:_
 
 ![](diagram/array-expr.png)
 
-*first-expr:*
+_first-expr:_
 
 ![](diagram/first-expr.png)
 
@@ -1181,79 +1181,79 @@ The following rules are the same as defined by
    N1QL, to be consistent with other keywords, they are defined to be
    case-insensitive.
 
-*literal-value:*
+_literal-value:_
 
 ![](diagram/literal-value.png)
 
-*object:*
+_object:_
 
 ![](diagram/object.png)
 
-*members:*
+_members:_
 
 ![](diagram/members.png)
 
-*pair:*
+_pair:_
 
 ![](diagram/pair.png)
 
-*array:*
+_array:_
 
 ![](diagram/array.png)
 
-*elements:*
+_elements:_
 
 ![](diagram/elements.png)
 
-*string:*
+_string:_
 
 ![](diagram/string.png)
 
-*chars:*
+_chars:_
 
 ![](diagram/chars.png)
 
-*char:*
+_char:_
 
 ![](diagram/char.png)
 
-*number:*
+_number:_
 
 ![](diagram/number.png)
 
-*int:*
+_int:_
 
 ![](diagram/int.png)
 
-*uint:*
+_uint:_
 
 ![](diagram/uint.png)
 
-*frac:*
+_frac:_
 
 ![](diagram/frac.png)
 
-*exp:*
+_exp:_
 
 ![](diagram/exp.png)
 
-*digits:*
+_digits:_
 
 ![](diagram/digits.png)
 
-*non-zero-digit:*
+_non-zero-digit:_
 
 ![](diagram/non-zero-digit.png)
 
-*digit:*
+_digit:_
 
 ![](diagram/digit.png)
 
-*e:*
+_e:_
 
 ![](diagram/e.png)
 
-*hex-digit:*
+_hex-digit:_
 
 ![](diagram/hex-digit.png)
 
@@ -1327,8 +1327,8 @@ vary during a query.
 __NOW\_STR()__ - statement timestamp as a string in ISO 8601 / RFC
 3339 format; does not vary during a query.
 
-__STR\_TO\_MILLIS(expr)__ - converts date in ISO 8601 format to UNIX
-milliseconds.
+__STR\_TO\_MILLIS(expr)__ - converts date in a supported format to
+UNIX milliseconds.
 
 ### String functions
 
@@ -1347,28 +1347,28 @@ __LTRIM(expr)__ - string with all beginning whitespace removed.
 __POSITION(expr, substr)__ - the first position of the substring
 within the string, or -1. The position is 0-based.
 
-__REMOVE(expr, substr)__ - string with all occurences of *substr*
+__REMOVE(expr, substr)__ - string with all occurences of _substr_
 removed.
 
-__REPEAT(expr, count)__ - string formed by repeating *expr* *count*
+__REPEAT(expr, count)__ - string formed by repeating _expr_ _count_
 times.
 
 __REPLACE(expr, substr1, substr2)__ - string with all occurences of
-*substr1* replaced with *substr2.*
+_substr1_ replaced with _substr2._
 
 __REVERSE(expr)__ - string with characters in reverse order.
 
 __RTRIM(expr)__ - string with all ending whitespace removed.
 
 __SUBSTR(expr, position)__ - returns the substring from the integer
-*position* to the end of the string. The position is 0-based, i.e. the
-*first position is 0. If *position* is negative, it is counted from
-*the end of the string; -1 is the last position in the string.
+_position_ to the end of the string. The position is 0-based, i.e. the
+first position is 0. If _position_ is negative, it is counted from the
+end of the string; -1 is the last position in the string.
 
 __SUBSTR(expr, position, length)__ - returns the substring of the
-given *length* from the integer *position* to the end of the
+given _length_ from the integer _position_ to the end of the
 string. The position is 0-based, i.e. the first position is 0. If
-*position* is negative, it is counted from the end of the string; -1
+_position_ is negative, it is counted from the end of the string; -1
 is the last position in the string.
 
 __TRIM(expr)__ - string with all beginning and ending whitespace
@@ -1407,15 +1407,15 @@ negative).
 
 ### Array functions
 
-__ARRAY\_ADD(expr, value)__ - new array with *value* appended, if
-*value* is not already present; else unmodified input array.
+__ARRAY\_ADD(expr, value)__ - new array with _value_ appended, if
+_value_ is not already present; else unmodified input array.
 
-__ARRAY\_APPEND(expr, value)__ - new array with *value* appended.
+__ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
 
 __ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
 the input arrays.
 
-__ARRAY_CONTAINS(expr, value)__ - true if the array contains *value.*
+__ARRAY_CONTAINS(expr, value)__ - true if the array contains _value._
 
 __ARRAY_DISTINCT(expr)__ - new array with distinct elements of input
 array.
@@ -1431,19 +1431,19 @@ N1QL collation order.
 __ARRAY\_MIN(expr)__ - smallest non-NULL, non-MISSING array element,
 in N1QL collation order.
 
-__ARRAY_POSITION(expr, value)__ - the first position of *value* within
+__ARRAY_POSITION(expr, value)__ - the first position of _value_ within
 the array, or -1. The position is 0-based.
 
-__ARRAY\_PREPEND(value, expr)__ - new array with *value* prepended.
+__ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
 
 __ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
-*value* removed.
+_value_ removed.
 
-__ARRAY\_REPEAT(value, count)__ - new array with *value* repeated
-*count* times.
+__ARRAY\_REPEAT(value, count)__ - new array with _value_ repeated
+_count_ times.
 
 __ARRAY\_REPLACE(expr, value1, value2)__ - new array with all
-occurences of *value1* replaced with *value2.*
+occurences of _value1_ replaced with _value2._
 
 __ARRAY\_REVERSE(expr)__ - new array with all elements
 in reverse order.
