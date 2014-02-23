@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-22
+* Modified: 2014-02-23
 
 ## Introduction
 
@@ -762,7 +762,7 @@ Then the identifier *name* would evaluate to the value n1ql.
 
 #### Case-sensitivity of identifiers
 
-Identifiers in N1QL are **case-sensitive.**
+Identifiers in N1QL are __case-sensitive.__
 
 ### Nested
 
@@ -849,7 +849,7 @@ evaluates to FALSE.
 
 String comparison is done using a raw byte collation of UTF8 encoded
 strings (sometimes referred to as binary, C, or memcmp).  This
-collation is **case sensitive**.  Case insensitive comparisons can be
+collation is __case sensitive__.  Case insensitive comparisons can be
 performed using UPPER() or LOWER() functions.
 
 #### LIKE
@@ -1277,194 +1277,194 @@ not of the required type.
 
 ### Date functions
 
-**CLOCK\_NOW\_MILLIS()** - system clock at function evaluation time,
+__CLOCK\_NOW\_MILLIS()__ - system clock at function evaluation time,
 as UNIX milliseconds; varies during a query.
 
-**CLOCK\_NOW\_STR()** - system clock at function evaluation time, as a
+__CLOCK\_NOW\_STR()__ - system clock at function evaluation time, as a
 string in ISO 8601 / RFC 3339 format; varies during a query.
 
-**DATE\_PART\_MILLIS(expr, part)** - date part as an integer. The date
+__DATE\_PART\_MILLIS(expr, part)__ - date part as an integer. The date
 expr is a number representing UNIX milliseconds, and part is one of
 the following date part strings.
 
-* **"millenium"**
-* **"century"**
-* **"decade"** - year / 10
-* **"year"**
-* **"quarter"** - 1 to 4
-* **"month"** - 1 to 12
-* **"day"** - 1 to 31
-* **"hour"** - 0 to 23
-* **"minute"** - 0 to 59
-* **"second"** - 0 to 59
-* **"millisecond"** - 0 to 999
-* **"week"** - 1 to 53; ceil(day\_of\_year / 7.0)
-* **"day\_of\_year", "doy"** - 1 to 366
-* **"day\_of\_week", "dow"** - 0 to 6
-* **"iso\_week"** - 1 to 53; use with "iso_year"
-* **"iso\_year"** - use with "iso_week"
-* **"iso\_dow"** - 1 to 7
-* **"timezone"** - offset from UTC in seconds
-* **"timezone\_hour"** - hour component of timezone offset
-* **"timezone\_minute"** - minute component of timezone offset
+* __"millenium"__
+* __"century"__
+* __"decade"__ - floor(year / 10)
+* __"year"__
+* __"quarter"__ - 1 to 4
+* __"month"__ - 1 to 12
+* __"day"__ - 1 to 31
+* __"hour"__ - 0 to 23
+* __"minute"__ - 0 to 59
+* __"second"__ - 0 to 59
+* __"millisecond"__ - 0 to 999
+* __"week"__ - 1 to 53; ceil(day\_of\_year / 7.0)
+* __"day\_of\_year", "doy"__ - 1 to 366
+* __"day\_of\_week", "dow"__ - 0 to 6
+* __"iso\_week"__ - 1 to 53; use with "iso_year"
+* __"iso\_year"__ - use with "iso_week"
+* __"iso\_dow"__ - 1 to 7
+* __"timezone"__ - offset from UTC in seconds
+* __"timezone\_hour"__ - hour component of timezone offset
+* __"timezone\_minute"__ - minute component of timezone offset
 
-**DATE\_PART\_STR(expr, part)** - date part as an integer. The date
+__DATE\_PART\_STR(expr, part)__ - date part as an integer. The date
 expr is a string in a supported format, and part is one of the
 supported date part strings.
 
-**DATE\_TRUNC\_MILLIS(expr, part)** - truncates UNIX timestamp so that
+__DATE\_TRUNC\_MILLIS(expr, part)__ - truncates UNIX timestamp so that
 the given date part string is the least significant.
 
-**DATE\_TRUNC\_STR(expr, part)** - truncates ISO 8601 timestamp so
+__DATE\_TRUNC\_STR(expr, part)__ - truncates ISO 8601 timestamp so
 that the given date part string is the least significant.
 
-**MILLIS\_TO\_STR(expr)** - converts UNIX milliseconds to string in
+__MILLIS\_TO\_STR(expr)__ - converts UNIX milliseconds to string in
 ISO 8601 format.
 
-**NOW\_MILLIS()** - statement timestamp as UNIX milliseconds; does not
+__NOW\_MILLIS()__ - statement timestamp as UNIX milliseconds; does not
 vary during a query.
 
-**NOW\_STR()** - statement timestamp as a string in ISO 8601 / RFC
+__NOW\_STR()__ - statement timestamp as a string in ISO 8601 / RFC
 3339 format; does not vary during a query.
 
-**STR\_TO\_MILLIS(expr)** - converts date in ISO 8601 format to UNIX
+__STR\_TO\_MILLIS(expr)__ - converts date in ISO 8601 format to UNIX
 milliseconds.
 
 ### String functions
 
-**CONTAINS(expr, substr)** - true if the string contains the
+__CONTAINS(expr, substr)__ - true if the string contains the
 substring.
 
-**INITCAP(expr)** - converts the string so that the first letter of
+__INITCAP(expr)__ - converts the string so that the first letter of
 each word is uppercase and every other letter is lowercase.
 
-**LENGTH(expr)** - length of the string value.
+__LENGTH(expr)__ - length of the string value.
 
-**LOWER(expr)** - lowercase of the string value.
+__LOWER(expr)__ - lowercase of the string value.
 
-**LTRIM(expr)** - string with all beginning whitespace removed.
+__LTRIM(expr)__ - string with all beginning whitespace removed.
 
-**POSITION(expr, substr)** - the first position of the substring
+__POSITION(expr, substr)__ - the first position of the substring
 within the string, or -1. The position is 0-based.
 
-**REMOVE(expr, substr)** - string with all occurences of *substr*
+__REMOVE(expr, substr)__ - string with all occurences of *substr*
 removed.
 
-**REPEAT(expr, count)** - string formed by repeating *expr* *count*
+__REPEAT(expr, count)__ - string formed by repeating *expr* *count*
 times.
 
-**REPLACE(expr, substr1, substr2)** - string with all occurences of
+__REPLACE(expr, substr1, substr2)__ - string with all occurences of
 *substr1* replaced with *substr2.*
 
-**REVERSE(expr)** - string with characters in reverse order.
+__REVERSE(expr)__ - string with characters in reverse order.
 
-**RTRIM(expr)** - string with all ending whitespace removed.
+__RTRIM(expr)__ - string with all ending whitespace removed.
 
-**SUBSTR(expr, position)** - returns the substring from the integer
+__SUBSTR(expr, position)__ - returns the substring from the integer
 *position* to the end of the string. The position is 0-based, i.e. the
 *first position is 0. If *position* is negative, it is counted from
 *the end of the string; -1 is the last position in the string.
 
-**SUBSTR(expr, position, length)** - returns the substring of the
+__SUBSTR(expr, position, length)__ - returns the substring of the
 given *length* from the integer *position* to the end of the
 string. The position is 0-based, i.e. the first position is 0. If
 *position* is negative, it is counted from the end of the string; -1
 is the last position in the string.
 
-**TRIM(expr)** - string with all beginning and ending whitespace
+__TRIM(expr)__ - string with all beginning and ending whitespace
 removed.
 
-**UPPER(expr)** - uppercase of the string value.
+__UPPER(expr)__ - uppercase of the string value.
 
 ### Number functions
 
-**ABS(expr)** - absolute value of the number.
+__ABS(expr)__ - absolute value of the number.
 
-**CEIL(expr)** - smallest integer not less than the number.
+__CEIL(expr)__ - smallest integer not less than the number.
 
-**FLOOR(expr)** - largest integer not greater than the number.
+__FLOOR(expr)__ - largest integer not greater than the number.
 
-**RANDOM()** -
+__RANDOM()__ -
 
-**RANDOM(expr)** -
+__RANDOM(expr)__ -
 
-**ROUND(expr)** - rounds the number to the nearest integer; same as
+__ROUND(expr)__ - rounds the number to the nearest integer; same as
 ROUND(value, 0).
 
-**ROUND(expr, digits)** - rounds the value to the given number of
+__ROUND(expr, digits)__ - rounds the value to the given number of
 integer digits to the right of the decimal point (left if digits is
 negative).
 
-**SIGN(expr)** - -1, 0, or 1 for negative, zero, or positive numbers
+__SIGN(expr)__ - -1, 0, or 1 for negative, zero, or positive numbers
 respectively.
 
-**TRUNC(expr)** - truncates the number towards zero; same as
+__TRUNC(expr)__ - truncates the number towards zero; same as
 TRUNC(value, 0).
 
-**TRUNC(expr, digits)** - truncates the number to the given number of
+__TRUNC(expr, digits)__ - truncates the number to the given number of
 integer digits to the right of the decimal point (left if digits is
 negative).
 
 ### Array functions
 
-**ARRAY\_ADD(expr, value)** - new array with *value* appended, if
+__ARRAY\_ADD(expr, value)__ - new array with *value* appended, if
 *value* is not already present; else unmodified input array.
 
-**ARRAY\_APPEND(expr, value)** - new array with *value* appended.
+__ARRAY\_APPEND(expr, value)__ - new array with *value* appended.
 
-**ARRAY\_CONCAT(expr1, expr2)** - new array with the concatenation of
+__ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
 the input arrays.
 
-**ARRAY_CONTAINS(expr, value)** - true if the array contains *value.*
+__ARRAY_CONTAINS(expr, value)__ - true if the array contains *value.*
 
-**ARRAY_DISTINCT(expr)** - new array with distinct elements of input
+__ARRAY_DISTINCT(expr)__ - new array with distinct elements of input
 array.
 
-**ARRAY\_IFNULL(expr)** - return the first non-NULL value in the
+__ARRAY\_IFNULL(expr)__ - return the first non-NULL value in the
 array, or NULL.
 
-**ARRAY\_LENGTH(expr)** - number of elements in the array.
+__ARRAY\_LENGTH(expr)__ - number of elements in the array.
 
-**ARRAY\_MAX(expr)** - largest non-NULL, non-MISSING array element, in
+__ARRAY\_MAX(expr)__ - largest non-NULL, non-MISSING array element, in
 N1QL collation order.
 
-**ARRAY\_MIN(expr)** - smallest non-NULL, non-MISSING array element,
+__ARRAY\_MIN(expr)__ - smallest non-NULL, non-MISSING array element,
 in N1QL collation order.
 
-**ARRAY_POSITION(expr, value)** - the first position of *value* within
+__ARRAY_POSITION(expr, value)__ - the first position of *value* within
 the array, or -1. The position is 0-based.
 
-**ARRAY\_PREPEND(value, expr)** - new array with *value* prepended.
+__ARRAY\_PREPEND(value, expr)__ - new array with *value* prepended.
 
-**ARRAY\_REMOVE(expr, value)** - new array with all occurences of
+__ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
 *value* removed.
 
-**ARRAY\_REPEAT(value, count)** - new array with *value* repeated
+__ARRAY\_REPEAT(value, count)__ - new array with *value* repeated
 *count* times.
 
-**ARRAY\_REPLACE(expr, value1, value2)** - new array with all
+__ARRAY\_REPLACE(expr, value1, value2)__ - new array with all
 occurences of *value1* replaced with *value2.*
 
-**ARRAY\_REVERSE(expr)** - new array with all elements
+__ARRAY\_REVERSE(expr)__ - new array with all elements
 in reverse order.
 
-**ARRAY\_SORT(expr)** - new array with elements sorted in N1QL
+__ARRAY\_SORT(expr)__ - new array with elements sorted in N1QL
 collation order.
 
 ### Object functions
 
-**OBJECT\_LENGTH(expr)** - returns the number of key-value pairs in
+__OBJECT\_LENGTH(expr)__ - returns the number of key-value pairs in
 the object.
 
-**OBJECT\_KEYS(expr)** - returns an array containing the keys of the
+__OBJECT\_KEYS(expr)__ - returns an array containing the keys of the
 object, in N1QL collation order.
 
-**OBJECT\_VALUES(expr)** - returns an array containing the values of
+__OBJECT\_VALUES(expr)__ - returns an array containing the values of
 the object, in N1QL collation order of the corresponding keys.
 
 ### JSON functions
 
-**POLY\_LENGTH(expr)** - length of the value after evaluating the
+__POLY\_LENGTH(expr)__ - length of the value after evaluating the
 expression.  The exact meaning of length depends on the type of the
 value:
 
@@ -1475,108 +1475,108 @@ value:
 * object - the number of key/value pairs in the object
 * any other value - NULL
 
-**SIZE\_JSON(expr)** - returns the number of bytes in an uncompressed
+__SIZE\_JSON(expr)__ - returns the number of bytes in an uncompressed
 JSON encoding of the value. The exact size is
 implementation-dependent. Always returns an integer, and never MISSING
 or NULL; returns 0 for MISSING.
 
 ### Comparison functions
 
-**GREATEST(expr1, expr2, ...)** - largest non-NULL, non-MISSING value
+__GREATEST(expr1, expr2, ...)__ - largest non-NULL, non-MISSING value
 if the values are of the same type; otherwise NULL.
 
-**LEAST(expr1, expr2, ...)** - smallest non-NULL, non-MISSING value if
+__LEAST(expr1, expr2, ...)__ - smallest non-NULL, non-MISSING value if
 the values are of the same type; otherwise NULL.
 
 ### Conditional functions for unknowns
 
-**IFMISSING(expr1, expr2, ...)** - returns the first non-MISSING
+__IFMISSING(expr1, expr2, ...)__ - returns the first non-MISSING
 value.
 
-**IFMISSINGORNULL(expr1, expr2, ...)** - returns the first non-NULL,
+__IFMISSINGORNULL(expr1, expr2, ...)__ - returns the first non-NULL,
 non-MISSING value.
 
-**IFNULL(expr1, expr2, ...)** - returns the first non-NULL value. Note
+__IFNULL(expr1, expr2, ...)__ - returns the first non-NULL value. Note
 that this function may return MISSING.
 
-**MISSINGIF(value1, value2)** - if value1 = value 2, returns MISSING;
+__MISSINGIF(value1, value2)__ - if value1 = value 2, returns MISSING;
 otherwise, value1.
 
-**NULLIF(value1, value2)** - if value1 = value 2, returns NULL,
+__NULLIF(value1, value2)__ - if value1 = value 2, returns NULL,
 otherwise value1
 
 ### Conditional functions for numbers
 
-**IFINF(expr1, expr2, ...)** -
+__IFINF(expr1, expr2, ...)__ -
 
-**IFNAN(expr1, expr2, ...)** -
+__IFNAN(expr1, expr2, ...)__ -
 
-**IFNANORINF(expr1, expr2, ...)** -
+__IFNANORINF(expr1, expr2, ...)__ -
 
-**IFNEGINF(expr1, expr2, ...)** -
+__IFNEGINF(expr1, expr2, ...)__ -
 
-**IFPOSINF(expr1, expr2, ...)** -
+__IFPOSINF(expr1, expr2, ...)__ -
 
-**FIRSTNUM(expr1, expr2, ...)** -
+__FIRSTNUM(expr1, expr2, ...)__ -
 
-**NANIF(expr1, expr2)** -
+__NANIF(expr1, expr2)__ -
 
-**NEGINFIF(expr1, expr2)** -
+__NEGINFIF(expr1, expr2)__ -
 
-**POSINFIF(expr1, expr2)** -
+__POSINFIF(expr1, expr2)__ -
 
 ### Meta and value functions
 
-**BASE64_VALUE()** -
+__BASE64_VALUE()__ -
 
-**BASE64_VALUE(expr)** -
+__BASE64_VALUE(expr)__ -
 
-**META()** - returns the meta data for the primary document in the
+__META()__ - returns the meta data for the primary document in the
 current context.
 
-**META(expr)** -
+__META(expr)__ -
 
-**VALUE()** -
+__VALUE()__ -
 
-**VALUE(expr)** -
+__VALUE(expr)__ -
 
 ### Type checking functions
 
-**IS_ARRAY(expr)** - true if expr is an array; else false.
+__IS_ARRAY(expr)__ - true if expr is an array; else false.
 
-**IS_ATOM(expr)** - true if expr is a boolean, number, or
+__IS_ATOM(expr)__ - true if expr is a boolean, number, or
 string; else false.
 
-**IS_BOOL(expr)** - true if expr is a boolean; else false.
+__IS_BOOL(expr)__ - true if expr is a boolean; else false.
 
-**IS_NUM(expr)** - true if expr is a number; else false.
+__IS_NUM(expr)__ - true if expr is a number; else false.
 
-**IS_OBJ(expr)** - true if expr is an object; else false.
+__IS_OBJ(expr)__ - true if expr is an object; else false.
 
-**IS_STR(expr)** - true if expr is a string; else false.
+__IS_STR(expr)__ - true if expr is a string; else false.
 
-**TYPE_NAME(expr)** - one of the following strings, based on the value
+__TYPE_NAME(expr)__ - one of the following strings, based on the value
 of expr:
 
-* **"missing"**
-* **"null"**
-* **"not_json"**
-* **"boolean"**
-* **"number"**
-* **"string"**
-* **"array"**
-* **"object"**
+* __"missing"__
+* __"null"__
+* __"not_json"__
+* __"boolean"__
+* __"number"__
+* __"string"__
+* __"array"__
+* __"object"__
 
 ### Type casting functions
 
-**TO_ARRAY(expr)** - array as follows:
+__TO_ARRAY(expr)__ - array as follows:
 
 * MISSING is MISSING
 * NULL is NULL
 * arrays are themselves
 * all other values are wrapped in an array
 
-**TO_ATOM(expr)** - atomic value as follows:
+__TO_ATOM(expr)__ - atomic value as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1585,7 +1585,7 @@ of expr:
 * booleans, numbers, and strings are themselves
 * all other values are NULL
 
-**TO_BOOL(expr)** - boolean as follows:
+__TO_BOOL(expr)__ - boolean as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1594,7 +1594,7 @@ of expr:
 * empty strings, arrays, and objects are false
 * all other values are true
 
-**TO_NUM(expr)** - number as follows:
+__TO_NUM(expr)__ - number as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1604,7 +1604,7 @@ of expr:
 * strings that parse as numbers are those numbers
 * all other values are NULL
 
-**TO_STR(expr)** - string as follows:
+__TO_STR(expr)__ - string as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1623,104 +1623,155 @@ these clauses, the query will operate as an aggregate query.
 If there is no input row for the group, COUNT functions return 0. All
 other aggregate functions return NULL.
 
-**ARRAY_AGG(expr)** - array of the values in the group, including
+__ARRAY_AGG(expr)__ - array of the values in the group, including
 NULLs.
 
-**ARRAY_AGG(DISTINCT expr)** - array of the distinct values in the
+__ARRAY_AGG(DISTINCT expr)__ - array of the distinct values in the
 group, including NULLs.
 
-**AVG(expr)** - arithmetic mean (average) of all the numeric,
+__AVG(expr)__ - arithmetic mean (average) of all the numeric,
 non-NULL, non-MISSING values in the group.
 
-**AVG(DISTINCT expr)** - arithmetic mean (average) of all the
+__AVG(DISTINCT expr)__ - arithmetic mean (average) of all the
 distinct numeric, non-NULL, non-MISSING values in the group.
 
-**COUNT(*)** - count of all the input rows for the group, regardless
+__COUNT(*)__ - count of all the input rows for the group, regardless
 of value.
 
-**COUNT(expr)** - count of all the non-NULL, non-MISSING values in
+__COUNT(expr)__ - count of all the non-NULL, non-MISSING values in
 the group.
 
-**COUNT(DISTINCT expr)** - count of all the distinct non-NULL,
+__COUNT(DISTINCT expr)__ - count of all the distinct non-NULL,
 non-MISSING values in the group.
 
-**MAX(expr)** - maximum non-NULL, non-MISSING value in the group,
+__MAX(expr)__ - maximum non-NULL, non-MISSING value in the group,
 according to N1QL collation.
 
-**MIN(expr)** - minimum non-NULL, non-MISSING value in the group,
+__MIN(expr)__ - minimum non-NULL, non-MISSING value in the group,
 according to N1QL collation.
 
-**SUM(expr)** - arithmetic sum of all the numeric, non-NULL,
+__SUM(expr)__ - arithmetic sum of all the numeric, non-NULL,
 non-MISSING values in the group.
 
-**SUM(DISTINCT expr)** - arithmetic sum of all the distinct numeric,
+__SUM(DISTINCT expr)__ - arithmetic sum of all the distinct numeric,
 non-NULL, non-MISSING values in the group.
 
-## Appendix - Key / reserved words
+## Appendix - Keywords
 
-The following keywords are reserved and cannot be used in document
-property paths without escaping.  All keywords are case-insensitive.
+The following keywords are reserved and cannot be used as identifiers
+without escaping.  All keywords are case-insensitive.
 
 Keywords cannot be escaped; therefore, escaped identifiers can overlap
 with keywords.
 
-* ALL
-* ALTER
-* AND
-* ANY
-* AS
-* ASC
-* BETWEEN
-* BUCKET
-* BY
-* CASE
-* CAST
-* COLLATE
-* CREATE
-* DATABASE
-* DELETE
-* DESC
-* DISTINCT
-* DROP
-* EACH
-* ELSE
-* END
-* EXCEPT
-* EXISTS
-* EXPLAIN
-* FALSE
-* FROM
-* GROUP
-* HAVING
-* IF
-* IN
-* INLINE
-* INSERT
-* INTERSECT
-* INTO
-* IS
-* JOIN
-* LIKE
-* LIMIT
-* MISSING
-* NOT
-* NULL
-* OFFSET
-* ON
-* OR
-* ORDER
-* OVER
-* PATH
-* SELECT
-* THEN
-* TRUE
-* UNION
-* UNIQUE
-* UPDATE
-* VALUED
-* WHEN
-* WHERE
-* XOR
+* __ALL__
+* __AND__
+* __ANY__
+* __ARRAY__
+* __AS__
+* __ASC__
+* __BETWEEN__
+* __BUCKET__
+* __BY__
+* __CASE__
+* __CREATE__
+* __DATABASE__
+* __DELETE__
+* __DESC__
+* __DISTINCT__
+* __DROP__
+* __ELSE__
+* __END__
+* __EXISTS__
+* __EXPLAIN__
+* __EVERY__
+* __FALSE__
+* __FIRST__
+* __FOR__
+* __FROM__
+* __GROUP__
+* __HAVING__
+* __IN__
+* __INDEX__
+* __INNER__
+* __INSERT__
+* __INTO__
+* __IS__
+* __JOIN__
+* __KEY__
+* __KEYS__
+* __LEFT__
+* __LET__
+* __LETTING__
+* __LIKE__
+* __LIMIT__
+* __MATCHED__
+* __MERGE__
+* __MISSING__
+* __NEST__
+* __NOT__
+* __NULL__
+* __OFFSET__
+* __ON__
+* __OR__
+* __ORDER__
+* __OUTER__
+* __RAW__
+* __RETURNING__
+* __SATISFIES__
+* __SELECT__
+* __SET__
+* __SOME__
+* __THEN__
+* __TRUE__
+* __UNIQUE__
+* __UNNEST__
+* __UNSET__
+* __UPDATE__
+* __UPSERT__
+* __USING__
+* __VALUED__
+* __VALUES__
+* __VIEW__
+* __WHEN__
+* __WHERE__
+
+## Appendix - Reserved words
+
+The following keywords are reserved for future use and cannot be used
+as identifiers without escaping.  All keywords are case-insensitive.
+
+Keywords cannot be escaped; therefore, escaped identifiers can overlap
+with keywords.
+
+* __ALTER__
+* __BEGIN__
+* __BREAK__
+* __CALL__
+* __CAST__
+* __CLUSTER__
+* __COMMIT__
+* __CONTINUE__
+* __DATABASE__
+* __DECLARE__
+* __DO__
+* __EXCEPT__
+* __EXECUTE__
+* __IF__
+* __INTERSECT__
+* __OVER__
+* __POOL__
+* __PREPARE__
+* __RENAME__
+* __RETURN__
+* __ROLLBACK__
+* __START__
+* __TRANSACTION__
+* __TYPE__
+* __UNION__
+* __WHILE__
+* __WORK__
+* __XOR__
 
 ## Appendix - Sample projections
 
@@ -1961,6 +2012,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Removed array expansion for now.
 * 2013-12-22 - Functions
     * Expanded set of functions.
+* 2013-12-23 - Keywords
+    * Updated list of keywords and reserved words.
 
 ### Open issues
 
