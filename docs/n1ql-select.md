@@ -772,7 +772,7 @@ nested-expr:
 
 Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
-notation (`[index]`) to access elements inside an array or object.
+notation (`[position]`) to access elements inside an array or object.
 
 Consider the following object:
 
@@ -921,16 +921,15 @@ bucket.
 
 ![](diagram/exists-expr.png)
 
-The existential quantifier evaluates to TRUE if and only if the
-subquery returns at least one row.  Otherwise the existential
-expression evaluates to FALSE.
+EXISTS evaluates to TRUE if the value is an array and contains at
+least one element.
 
 *in-expr:*
 
 ![](diagram/in-expr.png)
 
-IN evaluates to TRUE if and only if the right-hand-side expression
-evaluates to an array and contains the left-hand-side expression.
+IN evaluates to TRUE if the right-hand-side value is an array and
+contains the left-hand-side value.
 
 *collection-cond:*
 
@@ -1363,12 +1362,12 @@ times.
 
 **SUBSTR(expr, position)** - returns the substring from the integer
 *position* to the end of the string. The position is 0-based, i.e. the
-first index is 0. If *position* is negative, it is counted from the
-end of the string; -1 is the last position in the string.
+*first position is 0. If *position* is negative, it is counted from
+*the end of the string; -1 is the last position in the string.
 
 **SUBSTR(expr, position, length)** - returns the substring of the
 given *length* from the integer *position* to the end of the
-string. The position is 0-based, i.e. the first index is 0. If
+string. The position is 0-based, i.e. the first position is 0. If
 *position* is negative, it is counted from the end of the string; -1
 is the last position in the string.
 
@@ -1384,6 +1383,8 @@ removed.
 **CEIL(expr)** - smallest integer not less than the number.
 
 **FLOOR(expr)** - largest integer not greater than the number.
+
+**RANDOM()** -
 
 **RANDOM(expr)** -
 
@@ -1444,7 +1445,7 @@ in reverse order.
 **ARRAY\_SORT(expr)** - new array with elements sorted in N1QL
 collation order.
 
-### JSON functions
+### Object functions
 
 **OBJECT\_LENGTH(expr)** - returns the number of key-value pairs in
 the object.
@@ -1454,6 +1455,8 @@ object, in N1QL collation order.
 
 **OBJECT\_VALUES(expr)** - returns an array containing the values of
 the object, in N1QL collation order of the corresponding keys.
+
+### JSON functions
 
 **POLY\_LENGTH(expr)** - length of the value after evaluating the
 expression.  The exact meaning of length depends on the type of the
