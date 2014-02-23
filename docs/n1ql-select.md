@@ -1285,6 +1285,32 @@ as UNIX milliseconds; varies during a query.
 __CLOCK\_NOW\_STR()__ - system clock at function evaluation time, as a
 string in ISO 8601 / RFC 3339 format; varies during a query.
 
+__DATE\_ADD\_MILLIS(expr, count, part)__ - date arithmetic. _count_
+and _part_ are used to define an interval or duration, which is then
+added (or subtracted) to the UNIX timestamp, returning the
+result. Parts:
+
+* __"year"__
+* __"month"__ - 1 to 12
+* __"day"__ - 1 to 31
+* __"hour"__ - 0 to 23
+* __"minute"__ - 0 to 59
+* __"second"__ - 0 to 59
+* __"millisecond"__ - 0 to 999
+
+__DATE\_ADD\_STR(expr, count, part)__ - date arithmetic. _count_ and
+_part_ are used to define an interval or duration, which is then added
+(or subtracted) to the date string in a supported format, returning
+the result.
+
+__DATE\_DIFF\_MILLIS(expr1, expr2, part)__ - date arithmetic. returns
+the elapsed time between two UNIX timestamps, as an integer whose unit
+is _part_.
+
+__DATE\_DIFF\_STR(expr1, expr2, part)__ - date arithmetic. returns the
+elapsed time between two date strings in a supported format, as an
+integer whose unit is _part_.
+
 __DATE\_PART\_MILLIS(expr, part)__ - date part as an integer. The date
 expr is a number representing UNIX milliseconds, and part is one of
 the following date part strings.
@@ -1349,18 +1375,36 @@ __LTRIM(expr)__ - string with all beginning whitespace removed.
 __POSITION(expr, substr)__ - the first position of the substring
 within the string, or -1. The position is 0-based.
 
+__REGEXP\_CONTAINS(expr, pattern)__ - true if the string value
+contains the regular expression pattern.
+
+__REGEXP\_LIKE(expr, pattern)__ - true if the string value matches the
+regular expression pattern.
+
+__REGEXP\_POSITION(expr, pattern)__ - returns the first position of
+the regular expression pattern within the string, or -1.
+
+__REGEXP\_REPLACE(expr, pattern, repl [, n])__ - returns a new string
+with occurences of _pattern_ replaced with _repl_. If _n_ is given, at
+most _n_ replacements are performed.
+
 __REMOVE(expr, substr)__ - string with all occurences of _substr_
 removed.
 
 __REPEAT(expr, count)__ - string formed by repeating _expr_ _count_
 times.
 
-__REPLACE(expr, substr1, substr2)__ - string with all occurences of
-_substr1_ replaced with _substr2._
+__REPLACE(expr, substr1, substr2 [, n])__ - string with all occurences
+of _substr1_ replaced with _substr2_. If _n_ is given, at most _n_
+replacements are performed.
 
 __REVERSE(expr)__ - string with characters in reverse order.
 
 __RTRIM(expr)__ - string with all ending whitespace removed.
+
+__SPLIT(expr [, sep])__ - splits the string into an array of
+substrings separated by any combination of characters in _sep_. If
+_sep_ is not given, any combination of whitespace characters is used.
 
 __SUBSTR(expr, position)__ - returns the substring from the integer
 _position_ to the end of the string. The position is 0-based, i.e. the
@@ -1417,9 +1461,9 @@ __ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
 __ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
 the input arrays.
 
-__ARRAY_CONTAINS(expr, value)__ - true if the array contains _value._
+__ARRAY\_CONTAINS(expr, value)__ - true if the array contains _value._
 
-__ARRAY_DISTINCT(expr)__ - new array with distinct elements of input
+__ARRAY\_DISTINCT(expr)__ - new array with distinct elements of input
 array.
 
 __ARRAY\_IFNULL(expr)__ - return the first non-NULL value in the
@@ -1433,7 +1477,7 @@ N1QL collation order.
 __ARRAY\_MIN(expr)__ - smallest non-NULL, non-MISSING array element,
 in N1QL collation order.
 
-__ARRAY_POSITION(expr, value)__ - the first position of _value_ within
+__ARRAY\_POSITION(expr, value)__ - the first position of _value_ within
 the array, or -1. The position is 0-based.
 
 __ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
@@ -1444,8 +1488,9 @@ _value_ removed.
 __ARRAY\_REPEAT(value, count)__ - new array with _value_ repeated
 _count_ times.
 
-__ARRAY\_REPLACE(expr, value1, value2)__ - new array with all
-occurences of _value1_ replaced with _value2._
+__ARRAY\_REPLACE(expr, value1, value2 [, n])__ - new array with all
+occurences of _value1_ replaced with _value2_. If _n_ is given, at
+most _n_ replacements are performed.
 
 __ARRAY\_REVERSE(expr)__ - new array with all elements
 in reverse order.
@@ -2015,6 +2060,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Expanded set of functions.
 * 2013-12-23 - Keywords
     * Updated list of keywords and reserved words.
+* 2013-12-23 - Functions
+    * Added regexp and date arithmetic functions.
 
 ### Open issues
 
