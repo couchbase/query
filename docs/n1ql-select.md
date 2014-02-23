@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-18
+* Modified: 2014-02-22
 
 ## Introduction
 
@@ -1950,6 +1950,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Require SELECT list
 * 2013-12-18 - Array expansion
     * Removed array expansion for now.
+* 2013-12-22 - Functions
+    * Expanded set of functions.
 
 ### Open issues
 
