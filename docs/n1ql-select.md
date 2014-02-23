@@ -177,174 +177,6 @@ result objects.
 1.  Limiting - if LIMIT is specified, the results are limited to the
     given number
 
-<!--
-
-### Data sourcing
-
-If a statement begins with SELECT, The FROM clause is optional.  When
-it is omitted, the input for the execution of the query is a single
-empty object.  This allows for the evaluation of N1QL expressions that
-do not depend on any data.
-
-The most common form of the FROM clause is specifying a single
-identifier which identifies a bucket name.  In this form, an alias can
-optionally be specified with the AS clause.  When specified, this
-alias is the identifier used to explicitly refer to this data source
-in the query.  If omitted, the data source is referred to using the
-bucket name itself.
-
-Another usage of the FROM clause specifies a path within a bucket.  In
-this form, for each document in the specified bucket, the path is
-evaluated and that value becomes the input to the query.  If a literal
-integer array index is used it must be non-negative.  If any of the
-elements of the path are NULL or MISSING for a document in the bucket,
-that document will not contribute any canidate objects to the rest of
-the query.  For example:
-
-    FROM organization.address
-
-In this example, a bucket named `organization` contains documents
-describing each organization.  Each organization document has a field
-namd `address` which is an object.  Using this syntax each address
-object becomes the input to the query.
-
-Finally, the most complex usage of the FROM clause allows for path
-joins within a document.  This feature is sometimes referred to as
-`OVER`, `FLATTEN` or `UNNEST`.  Conceptually, a document containing a
-nested array can have each of the members of this array joined with
-the document.  Each of these joined objects become the input to the
-query.  If an element referenced along the OVER path is a scalar value
-instead of an array, it will be treated like a single-element array.
-If it is NULL or MISSING, then this document will not contribute any
-candidate objects to the rest of the query.  For example:
-
-    FROM organizations o OVER o.employees e
-
-Using this sytnax, a single organization with two employees:
-
-    {
-      "name": "o1",
-      "employees": [ e1, e2]
-    }
-
-Would result in two objects forming the input for the execution of the
-query:
-
-    {
-      "organization": {
-        "name": "o1",
-        "employees": [ e1, e2]
-      },
-      "employee": e1
-    }
-    {
-      "organization": {
-        "name": "o1",
-        "employees": [ e1, e2]
-      },
-      "employee": e2
-    }
-
-As the right hand side of OVER is another data source, OVERs may be
-chained together.  However, the OVER right-hand argument must always
-be a subpath relative to the immediate preceding expression.  The
-following is a valid usage of multiple OVERs.
-
-    FROM organization o OVER o.employees e OVER e.addresses a
-
-It is important to understand that the following two FROM clauses have
-different behaviors.
-
-    FROM organization.employees
-
-    FROM organization OVER employees
-
-The first clause would make the input to the query be the array of
-employees.  The second clause would iterate over the employees array
-and join each element to the organization, and then make the resulting
-joined objects the inputs to the query.
-
-NOTE: Path joining and expansion over array-valued members is only
-done in the FROM clause.  It is not done for nested expressions in the
-SELECT list, WHERE clause, etc.
-
-#### Joins
-
-Joins have their normal meaning from SQL.
-
-### Filtering
-
-If a WHERE clause is specified, the expression is evaluated for each
-object.  All objects evaluating to TRUE are included in the result
-array.
-
-### Result object generation
-
-Result object generation depends on whether or not this is an
-aggregate query.  An aggregate query is any query which either
-contains a GROUP BY clause or references one or more aggregate
-functions in the result expression list.
-
-* Non-aggregate query - each result expression in the result expression list is evaluated once for each object.
-* Aggregate query without GROUP BY - each result expression in the result expression list is evaluated once for a single group containing all objects.
-* Aggregate query with GROUP BY - each expression the GROUP BY clause is evaluated once for each row.  Based on this evaluation each row is assigned to a group.  If a HAVING clause was also specified, it is evaluated once for each group.  If the result of evaluation is false this group is discarded.  Finally, each result expression in the result expression list is evaluated once for each group.
-
-Final projection of evaluated result expressions is as follows:
-
-1.  If the result expression list included '*', the result object is the original item returned from the FROM clause.  Otherwise the result object starts empty.
-1.  If the result expression list includes `<path>.*`, the path is evaluated.  If the result of this evaluation is an object, all the key/value pairs within this object are added to the result object.  If the result is not an object, nothing is added to the result object.
-1.  For each remaining expression in the result expression list.  If an alias was specified, that identifier is used as the key in the result object and the value is the evaluated expression.  If no alias was specified, a default name is generated for the key.
-
-Specifying the same identifier more than once in the result expression
-list, or using an identifer that conflicts with a field in the
-document returned by '*' is allowed, but it is only guaranteed that
-one value with that key is returned.  If duplicate key names are
-detected in the projection, a warning is returned along with the query
-results.
-
-Returning complex object and arrays is possible by specifying literal
-JSON constructors in the projection expression.
-
-See Appendix for some example projections.
-
-### Duplicate removal
-
-If the DISTINCT keyword was specified, duplicate result objects are
-removed from the result array.  If DISTINCT was not specified, the
-statement returns all qualifying objects.
-
-Two results are considered duplicate if the projected objects are the
-same (using the normal procedure for comparing objects).  See the
-ORDER BY section for more details about this process.
-
-### Ordering
-
-If no ORDER BY clause is specified, the order in which the result
-objects are returned is undefined.
-
-If an ORDER BY clause is specified, the order of items in the result
-array is determined by these expressions.  Objects are first sorted by
-the left-most expression in the list.  Any items with the same sort
-value are then sorted by the next expresion in the list.  This is
-repeated to break tie sort values until the end of the expression list
-is reached.  The order of objects with the same sort value for each
-sort expression is undefined.
-
-As ORDER BY expressions can evaluate to any JSON value. It must define
-an ordering when comparing values of different types.  The following
-list describes the order by type (from lowest to highest):
-
-* missing value
-* null
-* false
-* true
-* number
-* string
-* array (element by element comparison is performed until the end of the shorter array; if all the elements so far are equal, then the longer array sorts after)
-* object (larger objects sort after; for objects of equal length, key/value by key/value comparison is performed; keys are examined in sorted order using the normal ordering for strings)
-
--->
-
 ## FROM clause
 
 The FROM clause defines the data sources and input objects for the
@@ -793,6 +625,10 @@ and only objects evaluating to TRUE are retained.
 
 ![](diagram/group-by-clause.png)
 
+*letting-clause:*
+
+![](diagram/letting-clause.png)
+
 *having-clause:*
 
 ![](diagram/having-clause.png)
@@ -926,22 +762,7 @@ Then the identifier *name* would evaluate to the value n1ql.
 
 #### Case-sensitivity of identifiers
 
-Aliases are always case-insensitive.
-
-Field names within documents use the following case-sensitivity rules.
-
-* *fieldname* and *\`fieldname\`* and *\`fieldname\`n* use
-   nearest-case matching (see below)
-* *\`fieldname\`i* uses case-insensitive matching only
-* *\`fieldname\`s* uses case-sensitive matching only
-
-#### Nearest-case matching
-
-1. do a case-sensitive match; if found, the matching is completed
-2. if no case-sensitive match is found, do a case-insensitive match
-
-If a case-insensitive or nearest-case match finds more than one
-matching field, a match is not made and warnings are generated.
+Identifiers in N1QL are **case-sensitive.**
 
 ### Nested
 
@@ -1031,10 +852,16 @@ strings (sometimes referred to as binary, C, or memcmp).  This
 collation is **case sensitive**.  Case insensitive comparisons can be
 performed using UPPER() or LOWER() functions.
 
+#### LIKE
+
 The LIKE operator allows for wildcard matching of string values.  The
 right-hand side of the operator is a pattern, optionally containg '%'
-and '_' wildcard characters.  Percent (%) matches any string of zero
-or more characters, underscore (\_) matches any single character.
+and '\_' wildcard characters.  Percent (%) matches any string of zero
+or more characters; underscore (\_) matches any single character.
+
+The wildcards can be escaped by preceding them with a backslash
+(\\). Backslash itself can also be escaped by preceding it with
+another backslash.
 
 ### Arithmetic
 
@@ -1047,8 +874,8 @@ expression.  The standard addition, subtraction, multiplication,
 division, and modulo operators are supported.  Additionally, a
 negation operator will change the sign of the expression.
 
-These arithmetic operators only operate on numeric values.  If either
-operand is not numeric it will evaluate to NULL.
+These arithmetic operators only operate on numbers. If either operand
+is not a number, it will evaluate to NULL.
 
 ### Concatenation
 
@@ -1069,8 +896,8 @@ strings.  Otherwise the expression evaluates to NULL.
 
 ![](diagram/function-name.png)
 
-Function names are case-insensitive.  See Appendix for the list and
-definition of the supported functions.
+Function names are case-insensitive.  See Appendices for the supported
+functions.
 
 ### Subquery
 
@@ -1133,42 +960,40 @@ collection.
 
 ## Boolean interpretation
 
-As expressions are evaluated they could become any valid JSON value (or MISSING).
-
-During some phases of executing a query the evaluated value must be
-considered in a **boolean** context.  These are:
+Some contexts require values to be interpreted as booleans. For
+example:
 
 * WHERE clause
 * HAVING clause
-* any application of BOOLEAN logic (AND, OR, NOT)
+* WHEN clause
 
-When interpreting a non-boolean value in a boolean context, the same
-rules used by JavaScript are followed.
+The following rules apply:
 
-See [ECMAScript Language Specification Chapter 11 Section
-9](http://ecma-international.org/ecma-262/5.1/#sec-11.9)
+* MISSING, NULL, and false are false
+* numbers +0, -0, and NaN are false
+* empty strings, arrays, and objects are false
+* all other values are true
 
-## Appendix - Identifier Scoping/Ambiguity
+## Appendix - Identifier scoping / ambiguity
 
-Identifiers appear in many places in an N1QL query.  Frequently
-identifiers are used to described paths within a document, but they
-are also used in `AS` clauses to introduce new identifiers.
+Identifiers include bucket names, fields within documents, and
+aliases. The following rules apply.
 
-* SELECT - `AS` identifiers in the projection create new names that
-  may be referred to in the SELECT and ORDER BY clauses
-* FROM - `AS` identifiers in the FROM clause create new names that may
+* FROM - Aliases in the FROM clause create new names that may
   be referred to anywhere in the query
-* Collection expressions - `AS` identifiers in collection expressions
-  create names that can **ONLY** be used within this collection
-  expression
+* LET - Aliases in the LET clause create new names that may
+  be referred to anywhere in the query
+* LETTING - Aliases in the LETTING clause create new names that may be
+  referred to in the HAVING, SELECT, and ORDER BY clauses
+* SELECT - Aliases in the projection create new names that
+  may be referred to in the SELECT and ORDER BY clauses
+* FOR - Aliases in a collection expression create names that
+  are local to that collection expression
 
-Introducing the same identifier using `AS` multiple times in a query
-results in an error.
-
-When an `AS` identifier collides with a document property in the same
-scope, the identifier always refers to the `AS` alias and **NOT** the
-document property.  This allows for consistent behavior in scenarios
-where an identifier only collides with some of the documents.
+When an alias collides with a bucket or field name in the same scope,
+the identifier always refers to the alias. This allows for consistent
+behavior in scenarios where an identifier only collides in some
+documents.
 
 The left-most portion of a dotted identifier may refer to the name of
 the datasource.  For example:
@@ -1178,148 +1003,7 @@ the datasource.  For example:
 In this query `beer.name` is simply a more formal way of expressing
 `name`.
 
-If the identifier is the name of a datasource, it refers to the whole
-object in the current context.  For example
-
-    SELECT * FROM beer WHERE beer = {"name": "bud"}
-
-This query would perform an exact match of candidate documents from
-the beer datasource against the specified object literal.
-
-## Appendix - Functions
-
-Function names are case in-sensitive.  The following functions are
-defined:
-
-ARRAY_APPEND(array, value) - returns a new array with the value
-appended.
-
-ARRAY_CONCAT(array, array) - returns a new array with the
-concatenation of the input arrays.
-
-ARRAY_LENGTH(array) - returns the number of elements in the array.
-
-ARRAY_PREPEND(value, array) - returns a new array with the value
-prepended.
-
-CEIL(value) - if value is numeric, returns the smallest integer not
-less than the value.  otherwise, NULL.
-
-FLOOR(value) - if value is numeric, returns the largest integer not
-greater than the value.  otherwise, NULL.
-
-GREATEST(expr, expr, ...) - returns the largest value of all the
-expressions.  if all values are NULL or MISSING returns NULL.
-
-IFMISSING(expr1, expr2, ...) - returns the first non-MISSING value
-
-IFMISSINGORNULL(expr1, expr2, ...) - returns the first non-NULL,
-non-MISSING value
-
-IFNULL(epxr1, expr2, ...) - returns the first non-NULL value
-
-META() - returns the meta data for the document in the current context
-
-MISSINGIF(value1, value2) - if value1 = value 2, return MISSING,
-otherwise value1
-
-LEAST(expr, expr, ...) - returns the smallest non-NULL, non-MISSING of
-all the expressions.  if all valus are NULL or MISSING returns NULL.
-
-LENGTH(expr) - Returns the length of the string value after evaluting
-the expression, or NULL if the value is not a string.
-
-LOWER(expr) - if expr is a string, the string is returned in all lower
-case.  otherwise NULL.
-
-LTRIM(expr, character set) - remove the longest string containing only
-the characters in the specified character set starting at the
-beginning
-
-NULLIF(value1, value2) - if value1 = value 2, return NULL, otherwise
-value1
-
-POLY_LENGTH(expr) - Returns the length of the value after evaluting
-the expression.  The exact meaning of length depends on the type of
-the value:
-
-* string - the length of the string
-* array - the number of items in the array
-* object - the number of key/value pairs in the object
-* anything else - null
-
-ROUND(value) - if value is numeric, rounds to the nearest integer.
-otherwise NULL.  same as ROUND(value, 0)
-
-ROUND(value, digits) - if digits is an integer and value is numeric,
-rounds the value the specified number of digits to the right of the
-decimal point (left if digits is negative). Otherwise, NULL.
-
-RTRIM(expr, character set) - remove the longest string containing only
-the characters in the specified character set starting at the end
-
-SUBSTR(value, position) - if value is a string and position is numeric
-returns a substring from the position to the end of the string.
-string positions always start with 1.  if position is 0, it behaves as
-if you specified 1.  if position is a positive integer, characters are
-counted from the begining of the string.  if position is negative,
-characters are counted from the end of the string.  if value is not a
-string or position is not an integer, returns NULL.
-
-SUBSTR(value, position, length) - if length is a positive integer
-behaves identical to SUBSTR(value, position) but only returns at most
-length characters.  otherwise NULL.
-
-TRIM(expr, character set) - synonym for LTRIM(RTRIM(expr, character
-set), character set)
-
-TRUNC(value) - if the value is numeric, truncates towards zero.
-Otherwise NULL.  same as TRUNC(value, 0)
-
-TRUNC(value, digits) - if digits is an integer and value is numeric,
-truncates to the specific number of digits to the right of the decimal
-point (left if digits is negative).  Otherwise, NULL.
-
-UPPER(expr) - if expr is a string, the string is return in all upper
-case.  Otherwise NULL.
-
-VALUE() - returns the full value for the item in the current context
-
-### Aggregate Functions
-
-There are 5 aggregate functions, SUM, AVG, COUNT, MIN, and MAX.
-Aggregate functions can only be used in SELECT, HAVING, and ORDER BY
-clauses.  When aggregate functions are used in expressions in these
-clauses, the query will operate as an aggregate query.  Aggregate
-functions take one argument, the value over which to compute the
-aggregate function.  The COUNT function can also take '*' as its
-argument.
-
-#### Null/Missing/Non-numeric Elimination
-
-If the argument the aggregate function is '*' all rows are considered.
-If the argument to the aggregate function is anything else, then if
-the result of evaluating the expression is Null or Missing, that row
-is eliminated.
-
-ARRAY_AGG(expr) - returns an array of the values in the group.
-
-COUNT(expr) - always returns 0 or a positive integer
-
-MIN(expr) - min returns the minimum value of all values in the group.
-The minimum value is the first non-NULL, non-MISSING value that would
-result from an ORDER BY on the same expression.  min returns NULL if
-there are no non-NULL, non-MISSING values.
-
-MAX(expr) - max returns the maximum values of all values in the group.
-The maximum value is the last value that would be returned from an
-ORDER BY on the same expression.  max returns NULL if there are no
-non-NULL, non-MISSING values
-
-For AVG, and SUM, any row where the result of the expression is
-non-numeric is also eliminated.
-
-## Appendix - Operator Precedence
+## Appendix - Operator precedence
 
 The following operators are supported by N1QL.  The list is ordered
 from highest to lowest precedence.
@@ -1327,21 +1011,20 @@ from highest to lowest precedence.
 * CASE/WHEN/THEN/ELSE/END
 * . 
 * [] 
-* \-
+* \- (unary)
 * \* / %
-* \+ \-
-* IS NULL, IS MISSING
-* IS NOT NULL, IS NOT MISSING
+* \+ \- (binary)
+* IS VALUED, IS NULL, IS MISSING
+* IS NOT VALUED, IS NOT NULL, IS NOT MISSING
 * LIKE
 * < <= > >=
-* =
+* =, ==, <>, !=
 * NOT
 * AND
 * OR
 
-Parentheses, while not strictly speaking an operator, allow for
-grouping expressions to override the order of operations.  (they have
-the highest precedence)
+Parentheses allow for grouping expressions to override the order of
+operations. They have the highest precedence.
 
 ## Appendix - Four-valued logic
 
@@ -1408,7 +1091,7 @@ operators:
         <td>NULL</td>
         <td>MISSING</td>
         <td>MISSING</td>
-        <td>MISSING</td>
+        <td>NULL</td>
   </tr>
   <tr>
         <td>MISSING</td>
@@ -1443,150 +1126,52 @@ operators:
 
 #### Comparing NULL and MISSING values
 
-* IS NULL - returns rows where the value of a property is explicitly set to NULL (not missing).
-* IS NOT NULL - returns rows which contain a value (not NULL or missing).
-* IS MISSING - returns rows where the value of a property is missing (not explicitly set to NULL).
-* IS NOT MISSING - returns rows which contain a value or explicit NULL.
-
-**NOTE**: IS NULL/IS NOT NULL and IS MISSING/IS NOT MISSING are **not**
-  inverse operators:
-
 <table>
         <tr>
                 <th>Operator</th>
+                <th>Non-NULL Value</th>
                 <th>NULL</th>
                 <th>MISSING</th>
         </tr>
     <tr>
         <td>IS NULL</td>
-        <td>TRUE</td>
         <td>FALSE</td>
+        <td>TRUE</td>
+        <td>MISSING</td>
     </tr>
     <tr>
         <td>IS NOT NULL</td>
+        <td>TRUE</td>
         <td>FALSE</td>
-        <td>FALSE</td>
+        <td>MISSING</td>
     </tr>
-     <tr>
+    <tr>
         <td>IS MISSING</td>
+        <td>FALSE</td>
         <td>FALSE</td>
         <td>TRUE</td>
     </tr>
     <tr>
         <td>IS NOT MISSING</td>
         <td>TRUE</td>
-        <td>FALSE</td>
-    </tr>
-</table>
-
-## Appendix - Three-valued logic
-
-We are considering unifying NULL and MISSING. In that case, the only
-way to distinguish NULL and MISSING would be via the IS [ NOT ]
-MISSING operators.
-
-Here would be the logic tables in that case:
-
-<table>
-  <tr>
-        <th>A</th>
-        <th>B</th>
-        <th>A and B</th>
-        <th>A or B</th>
-  </tr>
-  <tr>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-  </tr>
-   <tr>
-        <td>TRUE</td>
-        <td>TRUE</td>
-        <td>TRUE</td>
-        <td>TRUE</td>
-  </tr>
-   <tr>
-        <td>FALSE</td>
         <td>TRUE</td>
         <td>FALSE</td>
-        <td>TRUE</td>
-  </tr>
-  <tr>
-        <td>FALSE</td>
-        <td>NULL</td>
-        <td>FALSE</td>
-        <td>NULL</td>
-  </tr>
-   <tr>
-        <td>TRUE</td>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>TRUE</td>
-  </tr>
-  <tr>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>NULL</td>
-        <td>NULL</td>
-  </tr>
-</table>
-
-<table>
-        <tr>
-                <th>A</th>
-                <th>not A</th>
-        </tr>
-        <tr>
-                <td>FALSE</td>
-                <td>TRUE</td>
-        </tr>
-        <tr>
-                <td>TRUE</td>
-                <td>FALSE</td>
-        </tr>
-        <tr>
-                <td>NULL</td>
-                <td>NULL</td>
-        </tr>
-</table>
-
-#### Comparing NULL and MISSING values
-
-* IS NULL - returns rows where the value of a property is NULL or missing.
-* IS NOT NULL - returns rows which contain a value (not NULL or missing).
-* IS MISSING - returns rows where the value of a property is missing (not explicitly set to NULL).
-* IS NOT MISSING - returns rows which contain a value or explicit NULL.
-
-<table>
-        <tr>
-                <th>Operator</th>
-                <th>NULL</th>
-                <th>MISSING</th>
-        </tr>
-    <tr>
-        <td>IS NULL</td>
-        <td>TRUE</td>
-        <td>TRUE</td>
     </tr>
     <tr>
-        <td>IS NOT NULL</td>
-        <td>FALSE</td>
-        <td>FALSE</td>
-    </tr>
-     <tr>
-        <td>IS MISSING</td>
-        <td>FALSE</td>
+        <td>IS VALUED</td>
         <td>TRUE</td>
+        <td>FALSE</td>
+        <td>FALSE</td>
     </tr>
     <tr>
-        <td>IS NOT MISSING</td>
-        <td>TRUE</td>
+        <td>IS NOT VALUED</td>
         <td>FALSE</td>
+        <td>TRUE</td>
+        <td>TRUE</td>
     </tr>
 </table>
 
-## Appendix - Literal JSON Values
+## Appendix - Literal JSON values
 
 The following rules are the same as defined by
 [json.org](http://json.org/) with two changes:
@@ -1597,75 +1182,79 @@ The following rules are the same as defined by
    N1QL, to be consistent with other keywords, they are defined to be
    case-insensitive.
 
-literal-value:
+*literal-value:*
 
 ![](diagram/literal-value.png)
 
-object:
+*object:*
 
 ![](diagram/object.png)
 
-members:
+*members:*
 
 ![](diagram/members.png)
 
-pair:
+*pair:*
 
 ![](diagram/pair.png)
 
-array:
+*array:*
 
 ![](diagram/array.png)
 
-elements:
+*elements:*
 
 ![](diagram/elements.png)
 
-string:
+*string:*
 
 ![](diagram/string.png)
 
-chars:
+*chars:*
 
 ![](diagram/chars.png)
 
-char:
+*char:*
 
 ![](diagram/char.png)
 
-number:
+*number:*
 
 ![](diagram/number.png)
 
-int:
+*int:*
 
 ![](diagram/int.png)
 
-frac:
+*uint:*
+
+![](diagram/uint.png)
+
+*frac:*
 
 ![](diagram/frac.png)
 
-exp:
+*exp:*
 
 ![](diagram/exp.png)
 
-digits:
+*digits:*
 
 ![](diagram/digits.png)
 
-non-zero-digit:
+*non-zero-digit:*
 
 ![](diagram/non-zero-digit.png)
 
-digit:
+*digit:*
 
 ![](diagram/digit.png)
 
-e:
+*e:*
 
 ![](diagram/e.png)
 
-hex-digit:
+*hex-digit:*
 
 ![](diagram/hex-digit.png)
 
@@ -1681,7 +1270,384 @@ line-comment:
 
 ![](diagram/line-comment.png)
 
-## Appendix - Key/Reserved Words
+## Appendix - Scalar functions
+
+Function names are case in-sensitive. Scalar functions return MISSING
+if any argument is MISSING, and then NULL if any argument is NULL or
+not of the required type.
+
+### Date functions
+
+**CLOCK\_NOW\_MILLIS()** - system clock at function evaluation time,
+as UNIX milliseconds; varies during a query.
+
+**CLOCK\_NOW\_STR()** - system clock at function evaluation time, as a
+string in ISO 8601 / RFC 3339 format; varies during a query.
+
+**DATE\_PART\_MILLIS(expr, part)** - date part as an integer. The date
+expr is a number representing UNIX milliseconds, and part is one of
+the following date part strings.
+
+* **"millenium"**
+* **"century"**
+* **"decade"** - year / 10
+* **"year"**
+* **"quarter"** - 1 to 4
+* **"month"** - 1 to 12
+* **"day"** - 1 to 31
+* **"hour"** - 0 to 23
+* **"minute"** - 0 to 59
+* **"second"** - 0 to 59
+* **"millisecond"** - 0 to 999
+* **"week"** - 1 to 53; ceil(day\_of\_year / 7.0)
+* **"day\_of\_year", "doy"** - 1 to 366
+* **"day\_of\_week", "dow"** - 0 to 6
+* **"iso\_week"** - 1 to 53; use with "iso_year"
+* **"iso\_year"** - use with "iso_week"
+* **"iso\_dow"** - 1 to 7
+* **"timezone"** - offset from UTC in seconds
+* **"timezone\_hour"** - hour component of timezone offset
+* **"timezone\_minute"** - minute component of timezone offset
+
+**DATE\_PART\_STR(expr, part)** - date part as an integer. The date
+expr is a string in a supported format, and part is one of the
+supported date part strings.
+
+**DATE\_TRUNC\_MILLIS(expr, part)** - truncates UNIX timestamp so that
+the given date part string is the least significant.
+
+**DATE\_TRUNC\_STR(expr, part)** - truncates ISO 8601 timestamp so
+that the given date part string is the least significant.
+
+**MILLIS\_TO\_STR(expr)** - converts UNIX milliseconds to string in
+ISO 8601 format.
+
+**NOW\_MILLIS()** - statement timestamp as UNIX milliseconds; does not
+vary during a query.
+
+**NOW\_STR()** - statement timestamp as a string in ISO 8601 / RFC
+3339 format; does not vary during a query.
+
+**STR\_TO\_MILLIS(expr)** - converts date in ISO 8601 format to UNIX
+milliseconds.
+
+### String functions
+
+**CONTAINS(expr, substr)** - true if the string contains the
+substring.
+
+**INITCAP(expr)** - converts the string so that the first letter of
+each word is uppercase and every other letter is lowercase.
+
+**LENGTH(expr)** - length of the string value.
+
+**LOWER(expr)** - lowercase of the string value.
+
+**LTRIM(expr)** - string with all beginning whitespace removed.
+
+**POSITION(expr, substr)** - the first position of the substring
+within the string, or -1. The position is 0-based.
+
+**REMOVE(expr, substr)** - string with all occurences of *substr*
+removed.
+
+**REPLACE(expr, substr1, substr2)** - string with all occurences of
+*substr1* replaced with *substr2.*
+
+**REPEAT(expr, count)** - string formed by repeating *expr* *count*
+times.
+
+**REVERSE(expr)** - string with characters in reverse order.
+
+**RTRIM(expr)** - string with all ending whitespace removed.
+
+**SUBSTR(expr, position)** - returns the substring from the integer
+*position* to the end of the string. The position is 0-based, i.e. the
+first index is 0. If *position* is negative, it is counted from the
+end of the string; -1 is the last position in the string.
+
+**SUBSTR(expr, position, length)** - returns the substring of the
+given *length* from the integer *position* to the end of the
+string. The position is 0-based, i.e. the first index is 0. If
+*position* is negative, it is counted from the end of the string; -1
+is the last position in the string.
+
+**TRIM(expr)** - string with all beginning and ending whitespace
+removed.
+
+**UPPER(expr)** - uppercase of the string value.
+
+### Number functions
+
+**ABS(expr)** - absolute value of the number.
+
+**CEIL(expr)** - smallest integer not less than the number.
+
+**FLOOR(expr)** - largest integer not greater than the number.
+
+**RANDOM(expr)** -
+
+**ROUND(expr)** - rounds the number to the nearest integer; same as
+ROUND(value, 0).
+
+**ROUND(expr, digits)** - rounds the value to the given number of
+integer digits to the right of the decimal point (left if digits is
+negative).
+
+**SIGN(expr)** - -1, 0, or 1 for negative, zero, or positive numbers
+respectively.
+
+**TRUNC(expr)** - truncates the number towards zero; same as
+TRUNC(value, 0).
+
+**TRUNC(expr, digits)** - truncates the number to the given number of
+integer digits to the right of the decimal point (left if digits is
+negative).
+
+### Array functions
+
+**ARRAY\_APPEND(expr, value)** - new array with *value* appended.
+
+**ARRAY\_CONCAT(expr1, expr2)** - new array with the concatenation of
+the input arrays.
+
+**ARRAY_CONTAINS(expr, value)** - true if the array contains *value.*
+
+**ARRAY\_IFNULL(expr)** - return the first non-NULL value in the
+array, or NULL.
+
+**ARRAY\_LENGTH(expr)** - number of elements in the array.
+
+**ARRAY\_MAX(expr)** - largest non-NULL, non-MISSING array element, in
+N1QL collation order.
+
+**ARRAY\_MIN(expr)** - smallest non-NULL, non-MISSING array element,
+in N1QL collation order.
+
+**ARRAY_POSITION(expr, value)** - the first position of *value* within
+the array, or -1. The position is 0-based.
+
+**ARRAY\_PREPEND(value, expr)** - new array with *value* prepended.
+
+**ARRAY\_REMOVE(expr, value)** - new array with all occurences of
+*value* removed.
+
+**ARRAY\_REPEAT(value, count)** - new array with *value* repeated
+*count* times.
+
+**ARRAY\_REPLACE(expr, value1, value2)** - new array with all
+occurences of *value1* replaced with *value2.*
+
+**ARRAY\_REVERSE(expr)** - new array with all elements
+in reverse order.
+
+**ARRAY\_SORT(expr)** - new array with elements sorted in N1QL
+collation order.
+
+### JSON functions
+
+**OBJECT\_LENGTH(expr)** - returns the number of key-value pairs in
+the object.
+
+**OBJECT\_KEYS(expr)** - returns an array containing the keys of the
+object, in N1QL collation order.
+
+**OBJECT\_VALUES(expr)** - returns an array containing the values of
+the object, in N1QL collation order of the corresponding keys.
+
+**POLY\_LENGTH(expr)** - length of the value after evaluating the
+expression.  The exact meaning of length depends on the type of the
+value:
+
+* MISSING - MISSING
+* NULL - NULL
+* string - the length of the string
+* array - the number of elements in the array
+* object - the number of key/value pairs in the object
+* any other value - NULL
+
+**SIZE\_JSON(expr)** - returns the number of bytes in an uncompressed
+JSON encoding of the value. The exact size is
+implementation-dependent. Always returns an integer, and never MISSING
+or NULL; returns 0 for MISSING.
+
+### Comparison functions
+
+**GREATEST(expr1, expr2, ...)** - largest non-NULL, non-MISSING value
+if the values are of the same type; otherwise NULL.
+
+**LEAST(expr1, expr2, ...)** - smallest non-NULL, non-MISSING value if
+the values are of the same type; otherwise NULL.
+
+### Conditional functions for unknowns
+
+**IFMISSING(expr1, expr2, ...)** - returns the first non-MISSING
+value.
+
+**IFMISSINGORNULL(expr1, expr2, ...)** - returns the first non-NULL,
+non-MISSING value.
+
+**IFNULL(expr1, expr2, ...)** - returns the first non-NULL value. Note
+that this function may return MISSING.
+
+**MISSINGIF(value1, value2)** - if value1 = value 2, returns MISSING;
+otherwise, value1.
+
+**NULLIF(value1, value2)** - if value1 = value 2, returns NULL,
+otherwise value1
+
+### Conditional functions for numbers
+
+**IFINF(expr1, expr2, ...)** -
+
+**IFNAN(expr1, expr2, ...)** -
+
+**IFNANORINF(expr1, expr2, ...)** -
+
+**IFNEGINF(expr1, expr2, ...)** -
+
+**IFPOSINF(expr1, expr2, ...)** -
+
+**FIRSTNUM(expr1, expr2, ...)** -
+
+**NANIF(expr1, expr2)** -
+
+**NEGINFIF(expr1, expr2)** -
+
+**POSINFIF(expr1, expr2)** -
+
+### Meta and value functions
+
+**BASE64_VALUE()** -
+
+**BASE64_VALUE(expr)** -
+
+**META()** - returns the meta data for the primary document in the
+current context.
+
+**META(expr)** -
+
+**VALUE()** -
+
+**VALUE(expr)** -
+
+### Type checking functions
+
+**IS_ARRAY(expr)** - true if expr is an array; else false.
+
+**IS_ATOM(expr)** - true if expr is a boolean, number, or
+string; else false.
+
+**IS_BOOL(expr)** - true if expr is a boolean; else false.
+
+**IS_NUM(expr)** - true if expr is a number; else false.
+
+**IS_OBJ(expr)** - true if expr is an object; else false.
+
+**IS_STR(expr)** - true if expr is a string; else false.
+
+**TYPE_NAME(expr)** - one of the following strings, based on the value
+of expr:
+
+* **"missing"**
+* **"null"**
+* **"not_json"**
+* **"boolean"**
+* **"number"**
+* **"string"**
+* **"array"**
+* **"object"**
+
+### Type casting functions
+
+**TO_ARRAY(expr)** - array as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* arrays are themselves
+* all other values are wrapped in an array
+
+**TO_ATOM(expr)** - atomic value as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* arrays of length 1 are the result of TOATOM() on their single element
+* objects of length 1 are the result of TOATOM() on their single value
+* booleans, numbers, and strings are themselves
+* all other values are NULL
+
+**TO_BOOL(expr)** - boolean as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* false is false
+* numbers +0, -0, and NaN are false
+* empty strings, arrays, and objects are false
+* all other values are true
+
+**TO_NUM(expr)** - number as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* false is 0
+* true is 1
+* numbers are themselves
+* strings that parse as numbers are those numbers
+* all other values are NULL
+
+**TO_STR(expr)** - string as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* false is "false"
+* true is "true"
+* numbers are their string representation
+* strings are themselves
+* all other values are NULL
+
+## Appendix - Aggregate functions
+
+Aggregate functions can only be used in LETTING, HAVING, SELECT, and
+ORDER BY clauses.  When aggregate functions are used in expressions in
+these clauses, the query will operate as an aggregate query.
+
+If there is no input row for the group, COUNT functions return 0. All
+other aggregate functions return NULL.
+
+**ARRAY_AGG(expr)** - array of the values in the group, including
+NULLs.
+
+**ARRAY_AGG(DISTINCT expr)** - array of the distinct values in the
+group, including NULLs.
+
+**AVG(expr)** - arithmetic mean (average) of all the numeric,
+non-NULL, non-MISSING values in the group.
+
+**AVG(DISTINCT expr)** - arithmetic mean (average) of all the
+distinct numeric, non-NULL, non-MISSING values in the group.
+
+**COUNT(*)** - count of all the input rows for the group, regardless
+of value.
+
+**COUNT(expr)** - count of all the non-NULL, non-MISSING values in
+the group.
+
+**COUNT(DISTINCT expr)** - count of all the distinct non-NULL,
+non-MISSING values in the group.
+
+**MAX(expr)** - maximum non-NULL, non-MISSING value in the group,
+according to N1QL collation.
+
+**MIN(expr)** - minimum non-NULL, non-MISSING value in the group,
+according to N1QL collation.
+
+**SUM(expr)** - arithmetic sum of all the numeric, non-NULL,
+non-MISSING values in the group.
+
+**SUM(DISTINCT expr)** - arithmetic sum of all the distinct numeric,
+non-NULL, non-MISSING values in the group.
+
+## Appendix - Key / reserved words
 
 The following keywords are reserved and cannot be used in document
 property paths without escaping.  All keywords are case-insensitive.
@@ -1745,8 +1711,9 @@ with keywords.
 * VALUED
 * WHEN
 * WHERE
+* XOR
 
-## Appendix - Sample Projections
+## Appendix - Sample projections
 
 For the following examples consider a bucket containing the following
 document with ID "n1ql-2013"
@@ -1841,7 +1808,7 @@ SELECT {"thename": name} AS custom_obj
       }
     }
 
-## Appendix - Syntax Changes for Beta / GA
+## Appendix - Syntax changes for Beta / GA
 
 #### FROM ... OVER => FROM ... UNNEST
 
@@ -1867,14 +1834,14 @@ SELECT {"thename": name} AS custom_obj
 
 * Added a second form of CASE expression
 
-#### Array Functions and Slicing
+#### Array functions and slicing
 
 * Added array slicing
 
 * Added ARRAY_CONCAT(), ARRAY_LENGTH(), ARRAY_APPEND(),
   ARRAY_PREPEND(), and other array functions
 
-## About this Document
+## About this document
 
 The
 [grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.ebnf)
@@ -1887,7 +1854,7 @@ ambiguities and conflicts may still be present.
 Diagrams were generated by [Railroad Diagram
 Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 
-### Document History
+### Document history
 
 * 2013-07-06 - Initial branching off from UNQL spec
     * Added joins, subqueries, and pools
@@ -1984,7 +1951,7 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2013-12-18 - Array expansion
     * Removed array expansion for now.
 
-### Open Issues
+### Open issues
 
 This meta-section records open issues in this document, and will
 eventually disappear.
