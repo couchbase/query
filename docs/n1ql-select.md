@@ -1623,17 +1623,17 @@ these clauses, the query will operate as an aggregate query.
 If there is no input row for the group, COUNT functions return 0. All
 other aggregate functions return NULL.
 
-__ARRAY_AGG(expr)__ - array of the values in the group, including
-NULLs.
+__ARRAY_AGG(expr)__ - array of the non-MISSING values in the group,
+including NULLs.
 
-__ARRAY_AGG(DISTINCT expr)__ - array of the distinct values in the
-group, including NULLs.
+__ARRAY_AGG(DISTINCT expr)__ - array of the distinct non-MISSING
+values in the group, including NULLs.
 
-__AVG(expr)__ - arithmetic mean (average) of all the numeric,
-non-NULL, non-MISSING values in the group.
+__AVG(expr)__ - arithmetic mean (average) of all the number values in
+the group.
 
-__AVG(DISTINCT expr)__ - arithmetic mean (average) of all the
-distinct numeric, non-NULL, non-MISSING values in the group.
+__AVG(DISTINCT expr)__ - arithmetic mean (average) of all the distinct
+number values in the group.
 
 __COUNT(*)__ - count of all the input rows for the group, regardless
 of value.
@@ -1645,16 +1645,15 @@ __COUNT(DISTINCT expr)__ - count of all the distinct non-NULL,
 non-MISSING values in the group.
 
 __MAX(expr)__ - maximum non-NULL, non-MISSING value in the group,
-according to N1QL collation.
+in N1QL collation order.
 
 __MIN(expr)__ - minimum non-NULL, non-MISSING value in the group,
-according to N1QL collation.
+in N1QL collation order.
 
-__SUM(expr)__ - arithmetic sum of all the numeric, non-NULL,
-non-MISSING values in the group.
+__SUM(expr)__ - arithmetic sum of all the number values in the group.
 
-__SUM(DISTINCT expr)__ - arithmetic sum of all the distinct numeric,
-non-NULL, non-MISSING values in the group.
+__SUM(DISTINCT expr)__ - arithmetic sum of all the distinct number
+values in the group.
 
 ## Appendix - Keywords
 
