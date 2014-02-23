@@ -1407,12 +1407,18 @@ negative).
 
 ### Array functions
 
+**ARRAY\_ADD(expr, value)** - new array with *value* appended, if
+*value* is not already present; else unmodified input array.
+
 **ARRAY\_APPEND(expr, value)** - new array with *value* appended.
 
 **ARRAY\_CONCAT(expr1, expr2)** - new array with the concatenation of
 the input arrays.
 
 **ARRAY_CONTAINS(expr, value)** - true if the array contains *value.*
+
+**ARRAY_DISTINCT(expr)** - new array with distinct elements of input
+array.
 
 **ARRAY\_IFNULL(expr)** - return the first non-NULL value in the
 array, or NULL.
