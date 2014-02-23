@@ -7,8 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
-func NewSubtract(first, second Expression) Expression {
-	return NewAdd(first, NewNegate(second))
+func NewDivide(first, second Expression) Expression {
+	return NewMultiply(first, NewReciprocate(second))
 }

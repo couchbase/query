@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	_ "fmt"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -18,6 +18,6 @@ type ParameterExpression struct {
 	parameter string
 }
 
-func (this *ParameterExpression) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return context.Argument(this.parameter), nil
+func (this *ParameterExpression) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
+	return context.(Context).Argument(this.parameter), nil
 }

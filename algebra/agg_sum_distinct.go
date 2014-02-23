@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type SumDistinct struct {
 	aggregateBase
 }
 
-func NewSumDistinct(parameter Expression) Aggregate {
+func NewSumDistinct(parameter expression.Expression) Aggregate {
 	return &SumDistinct{aggregateBase{parameter: parameter}}
 }
 

@@ -7,18 +7,20 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/value"
 )
 
-type LT struct {
+type Modulo struct {
 	binaryBase
 }
 
-func NewLT(first, second Expression) Expression {
-	return &LT{
+func NewModulo(first, second Expression) Expression {
+	return &Modulo{
 		binaryBase{
 			first:  first,
 			second: second,
@@ -26,13 +28,22 @@ func NewLT(first, second Expression) Expression {
 	}
 }
 
-func (this *LT) evaluate(first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
-		return _NULL_VALUE, nil
+func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
+	if second.Type() == value.NUMBER {
+		s := second.Actual().(float64)
+		if s == 0.0 {
+			return _NULL_VALUE, nil
+		}
+
+		if first.Type() == value.NUMBER {
+			m := math.Mod(first.Actual().(float64), s)
+			return value.NewValue(m), nil
+		}
 	}
 
-	return value.NewValue(first.Collate(second) < 0), nil
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return _MISSING_VALUE, nil
+	}
+
+	return _NULL_VALUE, nil
 }

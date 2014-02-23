@@ -10,8 +10,8 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type PrimaryScan struct {
@@ -32,10 +32,10 @@ func (this *PrimaryScan) Index() catalog.PrimaryIndex {
 
 type EqualScan struct {
 	index  catalog.EqualIndex
-	equals algebra.CompositeExpressions
+	equals expression.CompositeExpressions
 }
 
-func NewEqualScan(index catalog.EqualIndex, equals algebra.CompositeExpressions) *EqualScan {
+func NewEqualScan(index catalog.EqualIndex, equals expression.CompositeExpressions) *EqualScan {
 	return &EqualScan{index, equals}
 }
 
@@ -47,7 +47,7 @@ func (this *EqualScan) Index() catalog.EqualIndex {
 	return this.index
 }
 
-func (this *EqualScan) Equals() algebra.CompositeExpressions {
+func (this *EqualScan) Equals() expression.CompositeExpressions {
 	return this.equals
 }
 
@@ -59,8 +59,8 @@ type RangeScan struct {
 type Ranges []*Range
 
 type Range struct {
-	Low       algebra.CompositeExpression
-	High      algebra.CompositeExpression
+	Low       expression.CompositeExpression
+	High      expression.CompositeExpression
 	Inclusion catalog.RangeInclusion
 }
 
@@ -88,7 +88,7 @@ type DualScan struct {
 type Duals []*Dual
 
 type Dual struct {
-	Equal algebra.CompositeExpression
+	Equal expression.CompositeExpression
 	Range
 }
 
@@ -110,10 +110,10 @@ func (this *DualScan) Duals() Duals {
 
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).
 type KeyScan struct {
-	keys algebra.Expression
+	keys expression.Expression
 }
 
-func NewKeyScan(keys algebra.Expression) *KeyScan {
+func NewKeyScan(keys expression.Expression) *KeyScan {
 	return &KeyScan{keys}
 }
 
@@ -121,7 +121,7 @@ func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyScan(this)
 }
 
-func (this *KeyScan) Keys() algebra.Expression {
+func (this *KeyScan) Keys() expression.Expression {
 	return this.keys
 }
 
@@ -139,10 +139,10 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
 type ValueScan struct {
-	values algebra.Expression
+	values expression.Expression
 }
 
-func NewValueScan(values algebra.Expression) *ValueScan {
+func NewValueScan(values expression.Expression) *ValueScan {
 	return &ValueScan{values}
 }
 
@@ -150,7 +150,7 @@ func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitValueScan(this)
 }
 
-func (this *ValueScan) Values() algebra.Expression {
+func (this *ValueScan) Values() expression.Expression {
 	return this.values
 }
 

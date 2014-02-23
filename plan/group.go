@@ -11,15 +11,16 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 // Grouping of input data. Parallelizable.
 type InitialGroup struct {
-	keys       algebra.Expressions
+	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }
 
-func NewInitialGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *InitialGroup {
+func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates) *InitialGroup {
 	return &InitialGroup{
 		keys:       keys,
 		aggregates: aggregates,
@@ -30,7 +31,7 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
-func (this *InitialGroup) Keys() algebra.Expressions {
+func (this *InitialGroup) Keys() expression.Expressions {
 	return this.keys
 }
 
@@ -40,11 +41,11 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
-	keys       algebra.Expressions
+	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }
 
-func NewIntermediateGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {
+func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates) *IntermediateGroup {
 	return &IntermediateGroup{
 		keys:       keys,
 		aggregates: aggregates,
@@ -55,7 +56,7 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
-func (this *IntermediateGroup) Keys() algebra.Expressions {
+func (this *IntermediateGroup) Keys() expression.Expressions {
 	return this.keys
 }
 
@@ -65,11 +66,11 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 
 // Final grouping and aggregation.
 type FinalGroup struct {
-	keys       algebra.Expressions
+	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }
 
-func NewFinalGroup(keys algebra.Expressions, aggregates algebra.Aggregates) *FinalGroup {
+func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates) *FinalGroup {
 	return &FinalGroup{
 		keys:       keys,
 		aggregates: aggregates,
@@ -80,7 +81,7 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalGroup(this)
 }
 
-func (this *FinalGroup) Keys() algebra.Expressions {
+func (this *FinalGroup) Keys() expression.Expressions {
 	return this.keys
 }
 

@@ -7,20 +7,18 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
-	"math"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-type Modulo struct {
+type EQ struct {
 	binaryBase
 }
 
-func NewModulo(first, second Expression) Expression {
-	return &Modulo{
+func NewEQ(first, second Expression) Expression {
+	return &EQ{
 		binaryBase{
 			first:  first,
 			second: second,
@@ -28,22 +26,17 @@ func NewModulo(first, second Expression) Expression {
 	}
 }
 
-func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
-	if second.Type() == value.NUMBER {
-		s := second.Actual().(float64)
-		if s == 0.0 {
-			return _NULL_VALUE, nil
-		}
-
-		if first.Type() == value.NUMBER {
-			m := math.Mod(first.Actual().(float64), s)
-			return value.NewValue(m), nil
-		}
-	}
-
+func (this *EQ) evaluate(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return _MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
+		first.Type() != second.Type() {
+		return _NULL_VALUE, nil
 	}
 
-	return _NULL_VALUE, nil
+	return value.NewValue(first.Collate(second) == 0), nil
+}
+
+func NewNEQ(first, second Expression) Expression {
+	return NewNot(NewEQ(first, second))
 }

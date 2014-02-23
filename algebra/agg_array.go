@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -20,7 +21,7 @@ type ArrayAgg struct {
 	aggregateBase
 }
 
-func NewArrayAgg(parameter Expression) Aggregate {
+func NewArrayAgg(parameter expression.Expression) Aggregate {
 	return &ArrayAgg{aggregateBase{parameter: parameter}}
 }
 

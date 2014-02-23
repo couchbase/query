@@ -13,16 +13,17 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Aggregates []Aggregate
 
 type Aggregate interface {
-	Expression
+	expression.Expression
 
 	Default() value.Value
-	Parameter() Expression
+	Parameter() expression.Expression
 
 	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
 	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
@@ -30,11 +31,10 @@ type Aggregate interface {
 }
 
 type aggregateBase struct {
-	expressionBase
-	parameter Expression
+	parameter expression.Expression
 }
 
-func (this *aggregateBase) Evaluate(item value.Value, context Context) (result value.Value, e error) {
+func (this *aggregateBase) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	defer func() {
 		e = fmt.Errorf("Error evaluating aggregate: %v.", recover())
 	}()
@@ -45,13 +45,21 @@ func (this *aggregateBase) Evaluate(item value.Value, context Context) (result v
 	return result, e
 }
 
-func (this *aggregateBase) EquivalentTo(other Expression) bool {
+func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
 	return reflect.TypeOf(this) == reflect.TypeOf(other) &&
 		(this.parameter == nil && other.(Aggregate).Parameter() == nil) ||
 		this.parameter.EquivalentTo(other.(Aggregate).Parameter())
 }
 
-func (this *aggregateBase) Fold() Expression {
+func (this *aggregateBase) Dependencies() expression.Expressions {
+	return nil
+}
+
+func (this *aggregateBase) Alias() string {
+	return ""
+}
+
+func (this *aggregateBase) Fold() expression.Expression {
 	if this.parameter != nil {
 		this.parameter = this.parameter.Fold()
 	}
@@ -59,6 +67,6 @@ func (this *aggregateBase) Fold() Expression {
 	return this
 }
 
-func (this *aggregateBase) Parameter() Expression {
+func (this *aggregateBase) Parameter() expression.Expression {
 	return this.parameter
 }

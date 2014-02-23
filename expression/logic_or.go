@@ -7,31 +7,31 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type And struct {
+type Or struct {
 	nAryBase
 }
 
-func NewAnd(operands ...Expression) Expression {
-	return &And{
+func NewOr(operands ...Expression) Expression {
+	return &Or{
 		nAryBase{
 			operands: operands,
 		},
 	}
 }
 
-func (this *And) evaluate(operands value.Values) (value.Value, error) {
+func (this *Or) evaluate(operands value.Values) (value.Value, error) {
 	missing := false
 	null := false
 	for _, v := range operands {
 		if v.Type() > value.NULL {
-			if !v.Truth() {
-				return value.NewValue(false), nil
+			if v.Truth() {
+				return value.NewValue(true), nil
 			}
 		} else if v.Type() == value.NULL {
 			null = true
@@ -40,21 +40,19 @@ func (this *And) evaluate(operands value.Values) (value.Value, error) {
 		}
 	}
 
-	if missing {
-		return _MISSING_VALUE, nil
-	} else if null {
+	if null {
 		return _NULL_VALUE, nil
+	} else if missing {
+		return _MISSING_VALUE, nil
 	} else {
-		return value.NewValue(true), nil
+		return value.NewValue(false), nil
 	}
 }
 
-func (this *And) construct(constant value.Value, others Expressions) Expression {
-	if constant.Type() == value.MISSING {
-		return NewConstant(constant)
-	} else if constant.Type() == value.BOOLEAN && !constant.Actual().(bool) {
-		return NewConstant(value.NewValue(false))
+func (this *Or) construct(constant value.Value, others Expressions) Expression {
+	if constant.Truth() {
+		return NewConstant(value.NewValue(true))
 	}
 
-	return NewAnd(append(others, NewConstant(constant))...)
+	return NewOr(append(others, NewConstant(constant))...)
 }

@@ -10,26 +10,26 @@
 package algebra
 
 import (
-	_ "fmt"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Select struct {
-	from     FromTerm    `json:"from"`
-	let      Bindings    `json:"let"`
-	where    Expression  `json:"where"`
-	group    Expressions `json:"group"`
-	letting  Bindings    `json:"letting"`
-	having   Expression  `json:"having"`
-	project  ResultTerms `json:"project"`
-	distinct bool        `json:"distinct"`
-	order    SortTerms   `json:"order"`
-	offset   Expression  `json:"offset"`
-	limit    Expression  `json:"limit"`
+	from     FromTerm               `json:"from"`
+	let      Bindings               `json:"let"`
+	where    expression.Expression  `json:"where"`
+	group    expression.Expressions `json:"group"`
+	letting  Bindings               `json:"letting"`
+	having   expression.Expression  `json:"having"`
+	project  ResultTerms            `json:"project"`
+	distinct bool                   `json:"distinct"`
+	order    SortTerms              `json:"order"`
+	offset   expression.Expression  `json:"offset"`
+	limit    expression.Expression  `json:"limit"`
 }
 
-func NewSelect(from FromTerm, let Bindings, where Expression, group Expressions,
-	letting Bindings, having Expression, project ResultTerms, distinct bool,
-	order SortTerms, offset Expression, limit Expression,
+func NewSelect(from FromTerm, let Bindings, where expression.Expression, group expression.Expressions,
+	letting Bindings, having expression.Expression, project ResultTerms, distinct bool,
+	order SortTerms, offset expression.Expression, limit expression.Expression,
 ) *Select {
 	return &Select{from, let, where, group, letting, having,
 		project, distinct, order, offset, limit}
@@ -43,15 +43,15 @@ func (this *Select) From() FromTerm {
 	return this.from
 }
 
-func (this *Select) Where() Expression {
+func (this *Select) Where() expression.Expression {
 	return this.where
 }
 
-func (this *Select) Group() Expressions {
+func (this *Select) Group() expression.Expressions {
 	return this.group
 }
 
-func (this *Select) Having() Expression {
+func (this *Select) Having() expression.Expression {
 	return this.having
 }
 
@@ -67,11 +67,11 @@ func (this *Select) Order() SortTerms {
 	return this.order
 }
 
-func (this *Select) Offset() Expression {
+func (this *Select) Offset() expression.Expression {
 	return this.offset
 }
 
-func (this *Select) Limit() Expression {
+func (this *Select) Limit() expression.Expression {
 	return this.limit
 }
 
@@ -82,11 +82,11 @@ func (this *Select) IsCorrelated() bool {
 type SortTerms []*SortTerm
 
 type SortTerm struct {
-	expr       Expression `json:"expr"`
-	descending bool       `json:"asc"`
+	expr       expression.Expression `json:"expr"`
+	descending bool                  `json:"asc"`
 }
 
-func (this *SortTerm) Expression() Expression {
+func (this *SortTerm) Expression() expression.Expression {
 	return this.expr
 }
 

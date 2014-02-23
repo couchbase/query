@@ -10,13 +10,14 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Paths []Path
 
 type Path interface {
-	Expression
+	expression.Expression
 	Set(item, val value.Value) bool
 	Unset(item value.Value) bool
 }

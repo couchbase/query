@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type Avg struct {
 	aggregateBase
 }
 
-func NewAvg(parameter Expression) Aggregate {
+func NewAvg(parameter expression.Expression) Aggregate {
 	return &Avg{aggregateBase{parameter: parameter}}
 }
 

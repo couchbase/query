@@ -9,10 +9,6 @@
 
 package algebra
 
-import (
-	_ "github.com/couchbaselabs/query/err"
-)
-
 type Visitor interface {
 	// Select
 	VisitSelect(node *Select) (interface{}, error)

@@ -9,19 +9,23 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type ResultTerms []*ResultTerm
 
 type ResultTerm struct {
-	star bool       `json:"star"`
-	expr Expression `json:"expr"`
-	as   string     `json:"as"`
+	star bool                  `json:"star"`
+	expr expression.Expression `json:"expr"`
+	as   string                `json:"as"`
 }
 
 func (this *ResultTerm) Star() bool {
 	return this.star
 }
 
-func (this *ResultTerm) Expression() Expression {
+func (this *ResultTerm) Expression() expression.Expression {
 	return this.expr
 }
 

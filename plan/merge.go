@@ -12,12 +12,13 @@ package plan
 import (
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Merge struct {
 	bucket catalog.Bucket
 	ref    *algebra.BucketRef
-	key    algebra.Expression
+	key    expression.Expression
 	update Operator
 	delete Operator
 	insert Operator
@@ -25,7 +26,7 @@ type Merge struct {
 }
 
 func NewMerge(bucket catalog.Bucket, ref *algebra.BucketRef,
-	key algebra.Expression, update, delete, insert Operator) *Merge {
+	key expression.Expression, update, delete, insert Operator) *Merge {
 	return &Merge{bucket, ref, key, update, delete, insert, ""}
 }
 
@@ -37,7 +38,7 @@ func (this *Merge) Bucket() catalog.Bucket {
 	return this.bucket
 }
 
-func (this *Merge) Key() algebra.Expression {
+func (this *Merge) Key() expression.Expression {
 	return this.key
 }
 

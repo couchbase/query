@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	_ "fmt"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type FromTerm interface {
@@ -24,10 +24,10 @@ type BucketTerm struct {
 	bucket  string
 	project Path
 	as      string
-	keys    Expression
+	keys    expression.Expression
 }
 
-func NewBucketTerm(pool, bucket string, project Path, as string, keys Expression) *BucketTerm {
+func NewBucketTerm(pool, bucket string, project Path, as string, keys expression.Expression) *BucketTerm {
 	return &BucketTerm{pool, bucket, project, as, keys}
 }
 
@@ -65,7 +65,7 @@ func (this *BucketTerm) As() string {
 	return this.as
 }
 
-func (this *BucketTerm) Keys() Expression {
+func (this *BucketTerm) Keys() expression.Expression {
 	return this.keys
 }
 

@@ -10,11 +10,11 @@
 package execute
 
 import (
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
-func groupKey(item value.Value, keys algebra.Expressions, context *Context) (string, error) {
+func groupKey(item value.Value, keys expression.Expressions, context *Context) (string, error) {
 	kvs := make(map[string]interface{}, len(keys))
 	for i, key := range keys {
 		k, e := key.Evaluate(item, context)

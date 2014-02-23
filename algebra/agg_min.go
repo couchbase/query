@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -17,7 +18,7 @@ type Min struct {
 	aggregateBase
 }
 
-func NewMin(parameter Expression) Aggregate {
+func NewMin(parameter expression.Expression) Aggregate {
 	return &Min{aggregateBase{parameter: parameter}}
 }
 

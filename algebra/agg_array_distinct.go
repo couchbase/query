@@ -12,6 +12,7 @@ package algebra
 import (
 	"sort"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type ArrayDistinct struct {
 	aggregateBase
 }
 
-func NewArrayDistinct(parameter Expression) Aggregate {
+func NewArrayDistinct(parameter expression.Expression) Aggregate {
 	return &ArrayDistinct{aggregateBase{parameter: parameter}}
 }
 

@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type AvgDistinct struct {
 	aggregateBase
 }
 
-func NewAvgDistinct(parameter Expression) Aggregate {
+func NewAvgDistinct(parameter expression.Expression) Aggregate {
 	return &AvgDistinct{aggregateBase{parameter: parameter}}
 }
 

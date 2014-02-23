@@ -7,25 +7,25 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Negate struct {
+type IsNull struct {
 	unaryBase
 }
 
-func NewNegate(operand Expression) Expression {
-	return &Negate{
+func NewIsNull(operand Expression) Expression {
+	return &IsNull{
 		unaryBase{
 			operand: operand,
 		},
 	}
 }
 
-func (this *Negate) Fold() Expression {
+func (this *IsNull) Fold() Expression {
 	this.operand = this.operand.Fold()
 	switch o := this.operand.(type) {
 	case *Constant:
@@ -33,26 +33,22 @@ func (this *Negate) Fold() Expression {
 		if e == nil {
 			return NewConstant(v)
 		}
-	case *Negate:
-		return o.operand
-	case *Add:
-		operands := make(Expressions, len(o.operands))
-		for i, oo := range o.operands {
-			operands[i] = NewNegate(oo)
-		}
-		add := NewAdd(operands...)
-		return add.Fold()
 	}
 
 	return this
 }
 
-func (this *Negate) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.NUMBER {
-		return value.NewValue(-operand.Actual().(float64)), nil
-	} else if operand.Type() == value.MISSING {
+func (this *IsNull) evaluate(operand value.Value) (value.Value, error) {
+	switch operand.Type() {
+	case value.NULL:
+		return value.NewValue(true), nil
+	case value.MISSING:
 		return _MISSING_VALUE, nil
-	} else {
-		return _NULL_VALUE, nil
+	default:
+		return value.NewValue(false), nil
 	}
+}
+
+func NewIsNotNull(operand Expression) Expression {
+	return NewNot(NewIsNull(operand))
 }

@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type Sum struct {
 	aggregateBase
 }
 
-func NewSum(parameter Expression) Aggregate {
+func NewSum(parameter expression.Expression) Aggregate {
 	return &Sum{aggregateBase{parameter: parameter}}
 }
 

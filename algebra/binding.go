@@ -9,14 +9,18 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type Bindings []*Binding
 
 type Binding struct {
 	variable string
-	expr     Expression
+	expr     expression.Expression
 }
 
-func NewBinding(variable string, expr Expression) *Binding {
+func NewBinding(variable string, expr expression.Expression) *Binding {
 	return &Binding{variable, expr}
 }
 
@@ -24,6 +28,6 @@ func (this *Binding) Variable() string {
 	return this.variable
 }
 
-func (this *Binding) Expression() Expression {
+func (this *Binding) Expression() expression.Expression {
 	return this.expr
 }

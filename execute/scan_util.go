@@ -10,13 +10,13 @@
 package execute
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
-func eval(cx algebra.CompositeExpression, context *Context, parent value.Value) (value.CompositeValue, bool) {
+func eval(cx expression.CompositeExpression, context *Context, parent value.Value) (value.CompositeValue, bool) {
 	if cx == nil {
 		return nil, true
 	}

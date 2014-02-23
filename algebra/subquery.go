@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -17,6 +18,6 @@ type Subquery struct {
 	query *Select
 }
 
-func (this *Subquery) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return context.EvaluateSubquery(this.query, item)
+func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
+	return context.(Context).EvaluateSubquery(this.query, item)
 }

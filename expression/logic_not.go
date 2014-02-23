@@ -7,36 +7,45 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type EQ struct {
-	binaryBase
+type Not struct {
+	unaryBase
 }
 
-func NewEQ(first, second Expression) Expression {
-	return &EQ{
-		binaryBase{
-			first:  first,
-			second: second,
+func NewNot(operand Expression) Expression {
+	return &Not{
+		unaryBase{
+			operand: operand,
 		},
 	}
 }
 
-func (this *EQ) evaluate(first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
-		return _NULL_VALUE, nil
+func (this *Not) Fold() Expression {
+	this.operand = this.operand.Fold()
+	switch o := this.operand.(type) {
+	case *Constant:
+		v, e := this.evaluate(o.Value())
+		if e == nil {
+			return NewConstant(v)
+		}
+	case *Not:
+		return o.operand
 	}
 
-	return value.NewValue(first.Collate(second) == 0), nil
+	return this
 }
 
-func NewNEQ(first, second Expression) Expression {
-	return NewNot(NewEQ(first, second))
+func (this *Not) evaluate(operand value.Value) (value.Value, error) {
+	if operand.Type() > value.NULL {
+		return value.NewValue(!operand.Truth()), nil
+	} else if operand.Type() == value.MISSING {
+		return _MISSING_VALUE, nil
+	} else {
+		return _NULL_VALUE, nil
+	}
 }

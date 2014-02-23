@@ -9,18 +9,22 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type Update struct {
-	bucket    *BucketRef  `json:"bucket"`
-	keys      Expression  `json:"keys"`
-	set       *Set        `json:"set"`
-	unset     *Unset      `json:"unset"`
-	where     Expression  `json:"where"`
-	limit     Expression  `json:"limit"`
-	returning ResultTerms `json:"returning"`
+	bucket    *BucketRef            `json:"bucket"`
+	keys      expression.Expression `json:"keys"`
+	set       *Set                  `json:"set"`
+	unset     *Unset                `json:"unset"`
+	where     expression.Expression `json:"where"`
+	limit     expression.Expression `json:"limit"`
+	returning ResultTerms           `json:"returning"`
 }
 
-func NewUpdate(bucket *BucketRef, keys Expression, set *Set, unset *Unset,
-	where, limit Expression, returning ResultTerms) *Update {
+func NewUpdate(bucket *BucketRef, keys expression.Expression, set *Set, unset *Unset,
+	where, limit expression.Expression, returning ResultTerms) *Update {
 	return &Update{bucket, keys, set, unset, where, limit, returning}
 }
 
@@ -32,7 +36,7 @@ func (this *Update) BucketRef() *BucketRef {
 	return this.bucket
 }
 
-func (this *Update) Keys() Expression {
+func (this *Update) Keys() expression.Expression {
 	return this.keys
 }
 
@@ -44,11 +48,11 @@ func (this *Update) Unset() *Unset {
 	return this.unset
 }
 
-func (this *Update) Where() Expression {
+func (this *Update) Where() expression.Expression {
 	return this.where
 }
 
-func (this *Update) Limit() Expression {
+func (this *Update) Limit() expression.Expression {
 	return this.limit
 }
 
@@ -81,12 +85,12 @@ func (this *Unset) Terms() []*UnsetTerm {
 }
 
 type SetTerm struct {
-	path      Path       `json:"path"`
-	value     Expression `json:"value"`
-	updateFor *UpdateFor `json:"path-for"`
+	path      Path                  `json:"path"`
+	value     expression.Expression `json:"value"`
+	updateFor *UpdateFor            `json:"path-for"`
 }
 
-func NewSetTerm(path Path, value Expression, updateFor *UpdateFor) *SetTerm {
+func NewSetTerm(path Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
 	return &SetTerm{path, value, updateFor}
 }
 
@@ -94,7 +98,7 @@ func (this *SetTerm) Path() Path {
 	return this.path
 }
 
-func (this *SetTerm) Value() Expression {
+func (this *SetTerm) Value() expression.Expression {
 	return this.value
 }
 
@@ -121,10 +125,10 @@ func (this *UnsetTerm) UpdateFor() *UpdateFor {
 
 type UpdateFor struct {
 	bindings []*Binding
-	when     Expression
+	when     expression.Expression
 }
 
-func NewUpdateFor(bindings []*Binding, when Expression) *UpdateFor {
+func NewUpdateFor(bindings []*Binding, when expression.Expression) *UpdateFor {
 	return &UpdateFor{bindings, when}
 }
 
@@ -132,6 +136,6 @@ func (this *UpdateFor) Bindings() []*Binding {
 	return this.bindings
 }
 
-func (this *UpdateFor) When() Expression {
+func (this *UpdateFor) When() expression.Expression {
 	return this.when
 }

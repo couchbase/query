@@ -7,32 +7,8 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
-import (
-	"github.com/couchbaselabs/query/value"
-)
-
-type LE struct {
-	binaryBase
-}
-
-func NewLE(first, second Expression) Expression {
-	return &LE{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
-	}
-}
-
-func (this *LE) evaluate(first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
-		return _NULL_VALUE, nil
-	}
-
-	return value.NewValue(first.Collate(second) <= 0), nil
+func NewSubtract(first, second Expression) Expression {
+	return NewAdd(first, NewNegate(second))
 }

@@ -9,15 +9,19 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type Delete struct {
-	bucket    *BucketRef  `json:"bucket"`
-	keys      Expression  `json:"keys"`
-	where     Expression  `json:"where"`
-	limit     Expression  `json:"limit"`
-	returning ResultTerms `json:"returning"`
+	bucket    *BucketRef            `json:"bucket"`
+	keys      expression.Expression `json:"keys"`
+	where     expression.Expression `json:"where"`
+	limit     expression.Expression `json:"limit"`
+	returning ResultTerms           `json:"returning"`
 }
 
-func NewDelete(bucket *BucketRef, keys, where, limit Expression,
+func NewDelete(bucket *BucketRef, keys, where, limit expression.Expression,
 	returning ResultTerms) *Delete {
 	return &Delete{bucket, keys, where, limit, returning}
 }

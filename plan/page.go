@@ -10,18 +10,18 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Offset struct {
-	expr algebra.Expression
+	expr expression.Expression
 }
 
 type Limit struct {
-	expr algebra.Expression
+	expr expression.Expression
 }
 
-func NewOffset(expr algebra.Expression) *Offset {
+func NewOffset(expr expression.Expression) *Offset {
 	return &Offset{expr}
 }
 
@@ -29,11 +29,11 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOffset(this)
 }
 
-func (this *Offset) Expression() algebra.Expression {
+func (this *Offset) Expression() expression.Expression {
 	return this.expr
 }
 
-func NewLimit(expr algebra.Expression) *Limit {
+func NewLimit(expr expression.Expression) *Limit {
 	return &Limit{expr}
 }
 
@@ -41,6 +41,6 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLimit(this)
 }
 
-func (this *Limit) Expression() algebra.Expression {
+func (this *Limit) Expression() expression.Expression {
 	return this.expr
 }

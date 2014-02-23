@@ -7,48 +7,32 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type IsNull struct {
-	unaryBase
+type LT struct {
+	binaryBase
 }
 
-func NewIsNull(operand Expression) Expression {
-	return &IsNull{
-		unaryBase{
-			operand: operand,
+func NewLT(first, second Expression) Expression {
+	return &LT{
+		binaryBase{
+			first:  first,
+			second: second,
 		},
 	}
 }
 
-func (this *IsNull) Fold() Expression {
-	this.operand = this.operand.Fold()
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
-		}
-	}
-
-	return this
-}
-
-func (this *IsNull) evaluate(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
-	case value.NULL:
-		return value.NewValue(true), nil
-	case value.MISSING:
+func (this *LT) evaluate(first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return _MISSING_VALUE, nil
-	default:
-		return value.NewValue(false), nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
+		first.Type() != second.Type() {
+		return _NULL_VALUE, nil
 	}
-}
 
-func NewIsNotNull(operand Expression) Expression {
-	return NewNot(NewIsNull(operand))
+	return value.NewValue(first.Collate(second) < 0), nil
 }

@@ -10,9 +10,9 @@
 package execute
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -53,7 +53,7 @@ func (this *EqualScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *EqualScan) scanEqual(context *Context, parent value.Value, equal algebra.CompositeExpression) bool {
+func (this *EqualScan) scanEqual(context *Context, parent value.Value, equal expression.CompositeExpression) bool {
 	conn := catalog.NewIndexConnection(
 		context.WarningChannel(),
 		context.ErrorChannel(),

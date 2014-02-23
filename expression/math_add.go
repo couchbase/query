@@ -7,30 +7,30 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Multiply struct {
+type Add struct {
 	nAryBase
 }
 
-func NewMultiply(operands ...Expression) Expression {
-	return &Multiply{
+func NewAdd(operands ...Expression) Expression {
+	return &Add{
 		nAryBase{
 			operands: operands,
 		},
 	}
 }
 
-func (this *Multiply) evaluate(operands value.Values) (value.Value, error) {
+func (this *Add) evaluate(operands value.Values) (value.Value, error) {
 	null := false
-	prod := 1.0
+	sum := 0.0
 	for _, v := range operands {
 		if !null && v.Type() == value.NUMBER {
-			prod *= v.Actual().(float64)
+			sum += v.Actual().(float64)
 		} else if v.Type() == value.MISSING {
 			return _MISSING_VALUE, nil
 		} else {
@@ -42,15 +42,15 @@ func (this *Multiply) evaluate(operands value.Values) (value.Value, error) {
 		return _NULL_VALUE, nil
 	}
 
-	return value.NewValue(prod), nil
+	return value.NewValue(sum), nil
 }
 
-func (this *Multiply) construct(constant value.Value, others Expressions) Expression {
+func (this *Add) construct(constant value.Value, others Expressions) Expression {
 	if constant.Type() == value.MISSING {
 		return NewConstant(constant)
-	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 1.0 {
-		return NewMultiply(others...)
+	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 0.0 {
+		return NewAdd(others...)
 	}
 
-	return NewMultiply(append(others, NewConstant(constant))...)
+	return NewAdd(append(others, NewConstant(constant))...)
 }

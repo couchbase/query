@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -17,7 +18,7 @@ type Max struct {
 	aggregateBase
 }
 
-func NewMax(parameter Expression) Aggregate {
+func NewMax(parameter expression.Expression) Aggregate {
 	return &Max{aggregateBase{parameter: parameter}}
 }
 

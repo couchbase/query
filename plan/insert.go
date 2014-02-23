@@ -10,16 +10,16 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type SendInsert struct {
 	bucket catalog.Bucket
-	key    algebra.Expression
+	key    expression.Expression
 }
 
-func NewSendInsert(bucket catalog.Bucket, key algebra.Expression) *SendInsert {
+func NewSendInsert(bucket catalog.Bucket, key expression.Expression) *SendInsert {
 	return &SendInsert{bucket, key}
 }
 
@@ -31,6 +31,6 @@ func (this *SendInsert) Bucket() catalog.Bucket {
 	return this.bucket
 }
 
-func (this *SendInsert) Key() algebra.Expression {
+func (this *SendInsert) Key() expression.Expression {
 	return this.key
 }

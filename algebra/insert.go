@@ -9,16 +9,20 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type Insert struct {
-	bucket    *BucketRef  `json:"bucket"`
-	key       Expression  `json:"key"`
-	values    Expression  `json:"values"`
-	query     *Select     `json:"query"`
-	as        string      `json:"as"`
-	returning ResultTerms `json:"returning"`
+	bucket    *BucketRef            `json:"bucket"`
+	key       expression.Expression `json:"key"`
+	values    expression.Expression `json:"values"`
+	query     *Select               `json:"query"`
+	as        string                `json:"as"`
+	returning ResultTerms           `json:"returning"`
 }
 
-func NewInsert(bucket *BucketRef, key, values Expression, query *Select,
+func NewInsert(bucket *BucketRef, key, values expression.Expression, query *Select,
 	as string, returning ResultTerms) *Insert {
 	return &Insert{bucket, key, values, query, as, returning}
 }

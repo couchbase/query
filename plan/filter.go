@@ -10,14 +10,14 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Filter struct {
-	cond algebra.Expression
+	cond expression.Expression
 }
 
-func NewFilter(cond algebra.Expression) *Filter {
+func NewFilter(cond expression.Expression) *Filter {
 	return &Filter{cond}
 }
 
@@ -25,6 +25,6 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFilter(this)
 }
 
-func (this *Filter) Condition() algebra.Expression {
+func (this *Filter) Condition() expression.Expression {
 	return this.cond
 }

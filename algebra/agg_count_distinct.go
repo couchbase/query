@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -17,7 +18,7 @@ type CountDistinct struct {
 	aggregateBase
 }
 
-func NewCountDistinct(parameter Expression) Aggregate {
+func NewCountDistinct(parameter expression.Expression) Aggregate {
 	return &CountDistinct{aggregateBase{parameter: parameter}}
 }
 

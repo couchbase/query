@@ -10,8 +10,8 @@
 package catalog
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -29,8 +29,8 @@ type Index interface {
 	Id() string
 	Name() string
 	Type() IndexType
-	Equal() algebra.CompositeExpression
-	Range() algebra.CompositeExpression
+	Equal() expression.CompositeExpression
+	Range() expression.CompositeExpression
 	Drop() err.Error // PrimaryIndexes cannot be dropped
 }
 

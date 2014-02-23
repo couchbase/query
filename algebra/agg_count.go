@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -19,7 +20,7 @@ type Count struct {
 	aggregateBase
 }
 
-func NewCount(parameter Expression) Aggregate {
+func NewCount(parameter expression.Expression) Aggregate {
 	return &Count{aggregateBase{parameter: parameter}}
 }
 
@@ -30,7 +31,7 @@ func (this *Count) Default() value.Value {
 	return _ZERO
 }
 
-func (this *Count) Evaluate(item value.Value, context Context) (result value.Value, e error) {
+func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	if this.parameter != nil {
 		return this.aggregateBase.Evaluate(item, context)
 	}

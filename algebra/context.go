@@ -10,19 +10,18 @@
 package algebra
 
 import (
-	_ "fmt"
 	"time"
 
 	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Context interface {
+	expression.Context
 	Now() time.Time
 	Argument(parameter string) value.Value
-
 	WarningChannel() err.ErrorChannel
 	ErrorChannel() err.ErrorChannel
-
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }
