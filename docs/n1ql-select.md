@@ -844,13 +844,15 @@ Next, if either operand in a comparison is NULL, the result is NULL.
 Otherwise the remaining rules for comparing values are followed.
 
 In N1QL a comparison operator implicitly requires that both operands
-be of the same type.  If the operands are of different types it always
-evaluates to FALSE.
+are of the same type.  If the operands are of different types, the
+result is always MISSING (if either operand is MISSING) or NULL.
 
 String comparison is done using a raw byte collation of UTF8 encoded
 strings (sometimes referred to as binary, C, or memcmp).  This
 collation is __case sensitive__.  Case insensitive comparisons can be
 performed using UPPER() or LOWER() functions.
+
+Array and object comparisons are done as described under __ORDER BY__.
 
 #### LIKE
 
