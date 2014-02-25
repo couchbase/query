@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-23
+* Modified: 2014-02-24
 
 ## Introduction
 
@@ -2094,6 +2094,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Updated list of keywords and reserved words.
 * 2013-12-23 - Functions
     * Added regexp and date arithmetic functions.
+* 2013-12-23 - Trig functions
+    * Added trig functions.
 
 ### Open issues
 
