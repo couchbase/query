@@ -1285,10 +1285,9 @@ as UNIX milliseconds; varies during a query.
 __CLOCK\_NOW\_STR()__ - system clock at function evaluation time, as a
 string in ISO 8601 / RFC 3339 format; varies during a query.
 
-__DATE\_ADD\_MILLIS(expr, count, part)__ - date arithmetic. _count_
-and _part_ are used to define an interval or duration, which is then
-added (or subtracted) to the UNIX timestamp, returning the
-result. Parts:
+__DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
+are used to define an interval or duration, which is then added (or
+subtracted) to the UNIX timestamp, returning the result. Parts:
 
 * __"year"__
 * __"month"__ - 1 to 12
@@ -1298,10 +1297,10 @@ result. Parts:
 * __"second"__ - 0 to 59
 * __"millisecond"__ - 0 to 999
 
-__DATE\_ADD\_STR(expr, count, part)__ - date arithmetic. _count_ and
-_part_ are used to define an interval or duration, which is then added
-(or subtracted) to the date string in a supported format, returning
-the result.
+__DATE\_ADD\_STR(expr, n, part)__ - date arithmetic. _n_ and _part_
+are used to define an interval or duration, which is then added (or
+subtracted) to the date string in a supported format, returning the
+result.
 
 __DATE\_DIFF\_MILLIS(expr1, expr2, part)__ - date arithmetic. returns
 the elapsed time between two UNIX timestamps, as an integer whose unit
@@ -1398,8 +1397,6 @@ __REPLACE(expr, substr1, substr2 [, n])__ - string with all occurences
 of _substr1_ replaced with _substr2_. If _n_ is given, at most _n_
 replacements are performed.
 
-__REVERSE(expr)__ - string with characters in reverse order.
-
 __RTRIM(expr)__ - string with all ending whitespace removed.
 
 __SPLIT(expr [, sep])__ - splits the string into an array of
@@ -1426,13 +1423,39 @@ __UPPER(expr)__ - uppercase of the string value.
 
 __ABS(expr)__ - absolute value of the number.
 
+__ACOS(expr)__ - arccosine in radians.
+
+__ASIN(expr)__ - arcsine in radians.
+
+__ATAN(expr)__ - arctangent in radians.
+
+__ATAN2(expr1, expr2)__ - arctangent of expr2/expr1.
+
 __CEIL(expr)__ - smallest integer not less than the number.
+
+__COS(expr)__ - cosine.
+
+__COT(expr)__ - cotangent.
+
+__DEGREES(expr)__ - radians to degrees.
+
+__EXP(expr)__ - _e_\*\*expr.
+
+__LN(expr)__ - log base _e_.
+
+__LOG(expr)__ - log base 10.
 
 __FLOOR(expr)__ - largest integer not greater than the number.
 
-__RANDOM()__ -
+__PI()__ - PI.
 
-__RANDOM(expr)__ -
+__POWER(expr1, expr2)__ - expr1\*\*expr2.
+
+__RADIANS(expr)__ - degrees to radians.
+
+__RANDOM()__ - pseudorandom number.
+
+__RANDOM(expr)__ - pseudorandom number with seed.
 
 __ROUND(expr)__ - rounds the number to the nearest integer; same as
 ROUND(value, 0).
@@ -1443,6 +1466,12 @@ negative).
 
 __SIGN(expr)__ - -1, 0, or 1 for negative, zero, or positive numbers
 respectively.
+
+__SIN(expr)__ - sine.
+
+__SQRT(expr)__ - square root.
+
+__TAN(expr)__ - tangent.
 
 __TRUNC(expr)__ - truncates the number towards zero; same as
 TRUNC(value, 0).
@@ -1500,11 +1529,11 @@ collation order.
 
 ### Object functions
 
-__OBJECT\_LENGTH(expr)__ - returns the number of key-value pairs in
-the object.
-
 __OBJECT\_KEYS(expr)__ - returns an array containing the keys of the
 object, in N1QL collation order.
+
+__OBJECT\_LENGTH(expr)__ - returns the number of key-value pairs in
+the object.
 
 __OBJECT\_VALUES(expr)__ - returns an array containing the values of
 the object, in N1QL collation order of the corresponding keys.
@@ -1537,72 +1566,75 @@ the values are of the same type; otherwise NULL.
 
 ### Conditional functions for unknowns
 
-__IFMISSING(expr1, expr2, ...)__ - returns the first non-MISSING
+__IFMISSING(expr1, expr2, ...)__ - first non-MISSING value.
+
+__IFMISSINGORNULL(expr1, expr2, ...)__ - first non-NULL, non-MISSING
 value.
 
-__IFMISSINGORNULL(expr1, expr2, ...)__ - returns the first non-NULL,
-non-MISSING value.
+__IFNULL(expr1, expr2, ...)__ - first non-NULL value. Note that this
+function may return MISSING.
 
-__IFNULL(expr1, expr2, ...)__ - returns the first non-NULL value. Note
-that this function may return MISSING.
+__MISSINGIF(expr1, expr2)__ - MISSING if expr1 = expr2, else expr1.
 
-__MISSINGIF(value1, value2)__ - if value1 = value 2, returns MISSING;
-otherwise, value1.
-
-__NULLIF(value1, value2)__ - if value1 = value 2, returns NULL,
-otherwise value1
+__NULLIF(expr1, expr2)__ - NULL if expr1 = expr2; else expr1.
 
 ### Conditional functions for numbers
 
-__IFINF(expr1, expr2, ...)__ -
+__IFINF(expr1, expr2, ...)__ - first non-MISSING, non-Inf number or
+NULL.
 
-__IFNAN(expr1, expr2, ...)__ -
+__IFNAN(expr1, expr2, ...)__ - first non-MISSING, non-NaN number or
+NULL.
 
-__IFNANORINF(expr1, expr2, ...)__ -
+__IFNANORINF(expr1, expr2, ...)__ - first non-MISSING, non-Inf,
+non-NaN number or NULL.
 
-__IFNEGINF(expr1, expr2, ...)__ -
+__IFNEGINF(expr1, expr2, ...)__ - first non-MISSING, non-NegInf number
+or NULL.
 
-__IFPOSINF(expr1, expr2, ...)__ -
+__IFPOSINF(expr1, expr2, ...)__ - first non-MISSING, non-PosInf number
+or NULL.
 
-__FIRSTNUM(expr1, expr2, ...)__ -
+__FIRSTNUM(expr1, expr2, ...)__ - first finite number.
 
-__NANIF(expr1, expr2)__ -
+__NANIF(expr1, expr2)__ - NaN if expr1 = expr2; else expr1.
 
-__NEGINFIF(expr1, expr2)__ -
+__NEGINFIF(expr1, expr2)__ - NegInf if expr1 = expr2; else expr1.
 
-__POSINFIF(expr1, expr2)__ -
+__POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
 
 ### Meta and value functions
 
-__BASE64_VALUE()__ -
+__BASE64\_VALUE()__ - base64-encoded value of the current primary
+document.
 
-__BASE64_VALUE(expr)__ -
+__BASE64\_VALUE(expr)__ - base64-encoded value of the document
+containing _expr_.
 
-__META()__ - returns the meta data for the primary document in the
-current context.
+__META()__ - meta data for the current primary document.
 
-__META(expr)__ -
+__META(expr)__ - meta data for the document containing _expr_.
 
-__VALUE()__ -
+__VALUE()__ - value of the current primary document.
 
-__VALUE(expr)__ -
+__VALUE(expr)__ - value of the document containing _expr_.
 
 ### Type checking functions
 
-__IS_ARRAY(expr)__ - true if expr is an array; else false.
+__IS\_ARRAY(expr)__ - true if expr is an array; else false.
 
-__IS_ATOM(expr)__ - true if expr is a boolean, number, or
+__IS\_ATOM(expr)__ - true if expr is a boolean, number, or
 string; else false.
 
-__IS_BOOL(expr)__ - true if expr is a boolean; else false.
+__IS\_BOOL(expr)__ - true if expr is a boolean; else false.
 
-__IS_NUM(expr)__ - true if expr is a number; else false.
+__IS\_NUM(expr)__ - true if expr is a number; else false.
 
-__IS_OBJ(expr)__ - true if expr is an object; else false.
+__IS\_OBJ(expr)__ - true if expr is an object; else false.
 
-__IS_STR(expr)__ - true if expr is a string; else false.
+__IS\_STR(expr)__ - true if expr is a string; else false.
 
-__TYPE_NAME(expr)__ - one of the following strings, based on the value
+__TYPE\_NAME(expr)__ - one of the following strings, based on the value
 of expr:
 
 * __"missing"__
@@ -1616,14 +1648,14 @@ of expr:
 
 ### Type casting functions
 
-__TO_ARRAY(expr)__ - array as follows:
+__TO\_ARRAY(expr)__ - array as follows:
 
 * MISSING is MISSING
 * NULL is NULL
 * arrays are themselves
 * all other values are wrapped in an array
 
-__TO_ATOM(expr)__ - atomic value as follows:
+__TO\_ATOM(expr)__ - atomic value as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1632,7 +1664,7 @@ __TO_ATOM(expr)__ - atomic value as follows:
 * booleans, numbers, and strings are themselves
 * all other values are NULL
 
-__TO_BOOL(expr)__ - boolean as follows:
+__TO\_BOOL(expr)__ - boolean as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1641,7 +1673,7 @@ __TO_BOOL(expr)__ - boolean as follows:
 * empty strings, arrays, and objects are false
 * all other values are true
 
-__TO_NUM(expr)__ - number as follows:
+__TO\_NUM(expr)__ - number as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1651,7 +1683,7 @@ __TO_NUM(expr)__ - number as follows:
 * strings that parse as numbers are those numbers
 * all other values are NULL
 
-__TO_STR(expr)__ - string as follows:
+__TO\_STR(expr)__ - string as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1670,10 +1702,10 @@ these clauses, the query will operate as an aggregate query.
 If there is no input row for the group, COUNT functions return 0. All
 other aggregate functions return NULL.
 
-__ARRAY_AGG(expr)__ - array of the non-MISSING values in the group,
+__ARRAY\_AGG(expr)__ - array of the non-MISSING values in the group,
 including NULLs.
 
-__ARRAY_AGG(DISTINCT expr)__ - array of the distinct non-MISSING
+__ARRAY\_AGG(DISTINCT expr)__ - array of the distinct non-MISSING
 values in the group, including NULLs.
 
 __AVG(expr)__ - arithmetic mean (average) of all the number values in
