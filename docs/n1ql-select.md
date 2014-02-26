@@ -1946,7 +1946,7 @@ SELECT {"thename": name} AS custom_obj
       }
     }
 
-## Appendix - Syntax changes for Beta / GA
+## Appendix - Changes from DP2 to DP3
 
 #### FROM ... OVER => FROM ... UNNEST
 
@@ -1954,7 +1954,8 @@ SELECT {"thename": name} AS custom_obj
 
 #### ANY / ALL ... OVER => ANY / EVERY ... SATISFIES
 
-* Replaced ANY / ALL ... OVER with ANY / EVERY ... SATISFIES
+* Replaced ANY ... OVER with ANY ... SATISFIES
+* Replaced ALL ... OVER with EVERY ... SATISFIES
 
 #### KEYS Clause
 
@@ -1964,20 +1965,62 @@ SELECT {"thename": name} AS custom_obj
 
 * Added JOINs based on primary keys
 
-#### Subqueries
+#### NESTs
 
-* Added subqueries based on primary keys
+* Added NESTs based on primary keys
 
-#### CASE expressions
+#### CASE
 
 * Added a second form of CASE expression
+
+#### BETWEEN
+
+* Added [ NOT ] BETWEEN
 
 #### Array functions and slicing
 
 * Added array slicing
 
 * Added ARRAY_CONCAT(), ARRAY_LENGTH(), ARRAY_APPEND(),
-  ARRAY_PREPEND(), and other array functions
+  ARRAY_PREPEND(), and ARRAY_REMOVE()
+
+#### Date functions
+
+* Added functions for UNIX timestamps, with MILLIS in the function
+  name
+
+#### Type functions
+
+* Added IS_<type> type-checking functions
+
+* Added TYPE_NAME() function
+
+* Added TO_<type> type conversion functions
+
+## Appendix - Features not in DP3
+
+The following features are not supported in DP3.
+
+#### RAW
+
+#### LET
+
+#### LETTING
+
+#### FOR
+
+* Only a single variable is supported in the FOR clause
+
+#### Unknowns
+
+* In DP3, IS VALUED is the opposite of IS NOT NULL. The behavior of IS
+  [ NOT ] NULL and IS [ NOT ] VALUED are described in the DP1 / DP2
+  spec.
+
+#### Functions
+
+* In DP3, not all functions are provided. Only the DP2 functions, plus
+  the array, date, and type functions mentioned above, are provided.
 
 ## About this document
 
