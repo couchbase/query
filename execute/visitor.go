@@ -17,9 +17,7 @@ type Visitor interface {
 	// Scan
 	VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
 	VisitParentScan(op *ParentScan) (interface{}, error)
-	VisitEqualScan(op *EqualScan) (interface{}, error)
-	VisitRangeScan(op *RangeScan) (interface{}, error)
-	VisitDualScan(op *DualScan) (interface{}, error)
+	VisitIndexScan(op *IndexScan) (interface{}, error)
 	VisitKeyScan(op *KeyScan) (interface{}, error)
 	VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)
@@ -51,6 +49,9 @@ type Visitor interface {
 
 	// Distinct
 	VisitDistinct(op *Distinct) (interface{}, error)
+
+	// Union [ All ]
+	VisitAll(op *All) (interface{}, error)
 
 	// Order
 	VisitOrder(op *Order) (interface{}, error)

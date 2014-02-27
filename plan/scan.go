@@ -30,82 +30,21 @@ func (this *PrimaryScan) Index() catalog.PrimaryIndex {
 	return this.index
 }
 
-type EqualScan struct {
-	index  catalog.EqualIndex
-	equals expression.CompositeExpressions
+type IndexScan struct {
+	index catalog.Index
+	spans expression.Spans
 }
 
-func NewEqualScan(index catalog.EqualIndex, equals expression.CompositeExpressions) *EqualScan {
-	return &EqualScan{index, equals}
+func NewIndexScan(index catalog.Index, spans expression.Spans) *IndexScan {
+	return &IndexScan{index, spans}
 }
 
-func (this *EqualScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitEqualScan(this)
-}
-
-func (this *EqualScan) Index() catalog.EqualIndex {
+func (this *IndexScan) Index() catalog.Index {
 	return this.index
 }
 
-func (this *EqualScan) Equals() expression.CompositeExpressions {
-	return this.equals
-}
-
-type RangeScan struct {
-	index  catalog.RangeIndex
-	ranges Ranges
-}
-
-type Ranges []*Range
-
-type Range struct {
-	Low       expression.CompositeExpression
-	High      expression.CompositeExpression
-	Inclusion catalog.RangeInclusion
-}
-
-func NewRangeScan(index catalog.RangeIndex, ranges Ranges) *RangeScan {
-	return &RangeScan{index, ranges}
-}
-
-func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitRangeScan(this)
-}
-
-func (this *RangeScan) Index() catalog.RangeIndex {
-	return this.index
-}
-
-func (this *RangeScan) Ranges() Ranges {
-	return this.ranges
-}
-
-type DualScan struct {
-	index catalog.DualIndex
-	duals Duals
-}
-
-type Duals []*Dual
-
-type Dual struct {
-	Equal expression.CompositeExpression
-	Range
-}
-
-func NewDualScan(index catalog.DualIndex, duals Duals) *DualScan {
-	return &DualScan{index, duals}
-}
-
-func (this *DualScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitDualScan(this)
-}
-
-func (this *DualScan) Index() catalog.DualIndex {
-	return this.index
-}
-
-func (this *DualScan) Duals() Duals {
-	return this.duals
+func (this *IndexScan) Spans() expression.Spans {
+	return this.spans
 }
 
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).

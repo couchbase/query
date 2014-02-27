@@ -52,7 +52,11 @@ func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
 }
 
 func (this *aggregateBase) Dependencies() expression.Expressions {
-	return nil
+	if this.parameter != nil {
+		return expression.Expressions{this.parameter}
+	} else {
+		return nil
+	}
 }
 
 func (this *aggregateBase) Alias() string {
@@ -65,6 +69,14 @@ func (this *aggregateBase) Fold() expression.Expression {
 	}
 
 	return this
+}
+
+func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
+	return false
+}
+
+func (this *aggregateBase) Spans(index expression.Index) expression.Spans {
+	return nil
 }
 
 func (this *aggregateBase) Parameter() expression.Expression {

@@ -127,6 +127,14 @@ _having-clause:_
 
 ![](diagram/having-clause.png)
 
+### UNION [ ALL ]
+
+UNION and UNION ALL are used to combine results from multiple SELECTs.
+
+UNION returns distinct results, such that there are no duplicates.
+
+UNION ALL combines all the results, including any duplicates.
+
 ### ORDER BY clause
 
 _order-by-clause:_
@@ -2007,6 +2015,8 @@ The following features are not supported in DP3.
 
 #### LETTING
 
+#### UNION [ ALL ]
+
 #### FOR
 
 * Only a single variable is supported in the FOR clause
@@ -2018,6 +2028,9 @@ The following features are not supported in DP3.
   spec.
 
 #### Functions
+
+* In DP3, not all functions are provided. Only the DP2 functions, plus
+  the array, date, and type functions mentioned above, are provided.
 
 * In DP3, not all functions are provided. Only the DP2 functions, plus
   the array, date, and type functions mentioned above, are provided.

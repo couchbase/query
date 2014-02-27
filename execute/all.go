@@ -13,80 +13,73 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Sequence struct {
+type All struct {
 	base
 	children     []Operator
 	childChannel StopChannel
 }
 
-func NewSequence(children ...Operator) *Sequence {
-	rv := &Sequence{
+func NewAll(children []Operator) *All {
+	rv := &All{
 		base:         newBase(),
 		children:     children,
-		childChannel: make(StopChannel, 1),
+		childChannel: make(StopChannel, len(children)),
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitSequence(this)
+func (this *All) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAll(this)
 }
 
-func (this *Sequence) Copy() Operator {
-	children := make([]Operator, len(this.children))
-
-	for i, child := range this.children {
-		children[i] = child.Copy()
-	}
-
-	return &Sequence{
+func (this *All) Copy() Operator {
+	rv := &All{
 		base:         this.base.copy(),
-		children:     children,
-		childChannel: make(StopChannel, 1),
+		childChannel: make(StopChannel, len(this.children)),
 	}
+
+	children := make([]Operator, len(this.children))
+	for i, c := range this.children {
+		children[i] = c.Copy()
+	}
+
+	rv.children = children
+	return rv
 }
 
-func (this *Sequence) RunOnce(context *Context, parent value.Value) {
+func (this *All) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		first_child := this.children[0]
-		first_child.SetInput(this.input)
-		first_child.SetStop(this.stop)
-
 		n := len(this.children)
 
-		for i := 1; i < n; i++ {
-			this.children[i].SetInput(this.children[i-1].Output())
-			this.children[i].SetStop(this.children[i-1])
+		// Run children in parallel
+		for _, child := range this.children {
+			child.SetOutput(this.output)
+			go child.RunOnce(context, parent)
 		}
 
-		last_child := this.children[n-1]
-		last_child.SetOutput(this.output)
-		last_child.SetParent(this)
-
-		// Run last child
-		go last_child.RunOnce(context, parent)
-
-		for {
+		for n > 0 {
 			select {
 			case <-this.childChannel: // Never closed
-				// Wait for last child
-				return
+				// Wait for all children
+				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				select {
-				case last_child.StopChannel() <- false:
-				default:
+				for _, child := range this.children {
+					select {
+					case child.StopChannel() <- false:
+					default:
+					}
 				}
 			}
 		}
 	})
 }
 
-func (this *Sequence) ChildChannel() StopChannel {
+func (this *All) ChildChannel() StopChannel {
 	return this.childChannel
 }

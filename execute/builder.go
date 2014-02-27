@@ -44,16 +44,8 @@ func (this *Builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error)
 	return NewParentScan(), nil
 }
 
-func (this *Builder) VisitEqualScan(plan *plan.EqualScan) (interface{}, error) {
-	return NewEqualScan(plan), nil
-}
-
-func (this *Builder) VisitRangeScan(plan *plan.RangeScan) (interface{}, error) {
-	return NewRangeScan(plan), nil
-}
-
-func (this *Builder) VisitDualScan(plan *plan.DualScan) (interface{}, error) {
-	return NewDualScan(plan), nil
+func (this *Builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
+	return NewIndexScan(plan), nil
 }
 
 func (this *Builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
@@ -140,6 +132,21 @@ func (this *Builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, er
 // Distinct
 func (this *Builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 	return NewDistinct(), nil
+}
+
+// Union [ All ]
+func (this *Builder) VisitAll(plan *plan.All) (interface{}, error) {
+	children := make([]Operator, len(plan.Children()))
+	for i, child := range plan.Children() {
+		c, e := child.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+
+		children[i] = c.(Operator)
+	}
+
+	return NewAll(children), nil
 }
 
 // Order

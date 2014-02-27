@@ -10,7 +10,6 @@
 package execute
 
 import (
-	_ "fmt"
 	"runtime"
 
 	"github.com/couchbaselabs/query/value"

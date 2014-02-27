@@ -13,51 +13,29 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Expression interface {
-	//Node
+type Expressions []Expression
+type CompositeExpression []Expression
+type CompositeExpressions []CompositeExpression
 
+type Expression interface {
 	Evaluate(item value.Value, context Context) (value.Value, error)
 
-	// Is this expression equivalent to another
+	// Is this expression equivalent to the other
 	EquivalentTo(other Expression) bool
 
 	// A list of other Expressions on which this depends
 	Dependencies() Expressions
 
-	// Terminal identifier, or nil
+	// Terminal identifier if this is a path; else nil
 	Alias() string
 
-	// Flattening and constant folding
+	// Constant and other folding
 	Fold() Expression
+
+	// Is this expression a subset of the other
+	// E.g. A < 5 is a subset of A < 10
+	SubsetOf(other Expression) bool
+
+	// Index spans to satisfy this expression, or nil
+	Spans(index Index) Spans
 }
-
-type Expressions []Expression
-
-type CompositeExpression []Expression
-type CompositeExpressions []CompositeExpression
-
-type expressionBase struct {
-}
-
-func (this *expressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return nil, nil
-}
-
-func (this *expressionBase) EquivalentTo(other Expression) bool {
-	return false
-}
-
-func (this *expressionBase) Dependencies() Expressions {
-	return nil
-}
-
-func (this *expressionBase) Alias() string {
-	return ""
-}
-
-func (this *expressionBase) Fold() Expression {
-	return nil
-}
-
-var _MISSING_VALUE = value.NewMissingValue()
-var _NULL_VALUE = value.NewValue(nil)

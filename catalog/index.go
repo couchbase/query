@@ -25,13 +25,16 @@ const (
 
 // Index is the base type for all indexes.
 type Index interface {
+	expression.Index
 	BucketId() string
 	Id() string
 	Name() string
 	Type() IndexType
-	Equal() expression.CompositeExpression
-	Range() expression.CompositeExpression
 	Drop() err.Error // PrimaryIndexes cannot be dropped
+	Statistics(span *expression.Span) (Statistics, err.Error)
+	Scan(span *expression.Span, conn *IndexConnection)
+	CandidateMins(span *expression.Span, conn *IndexConnection)  // Anywhere from single min value to Scan()
+	CandidateMaxes(span *expression.Span, conn *IndexConnection) // Anywhere from single max value to Scan()
 }
 
 type IndexEntry struct {
@@ -44,65 +47,17 @@ type StopChannel chan bool
 
 // PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
-	EqualIndex
+	Index
 	PrimaryScan(conn *IndexConnection)
 }
 
-// EqualIndexes support equality matching.
-type EqualIndex interface {
-	Index
-	EqualScan(equal value.CompositeValue, conn *IndexConnection)
-	EqualCount(equal value.CompositeValue) (int64, err.Error)
-}
-
-// Inclusion controls how the boundary values of a range are treated.
-type RangeInclusion int
-
-const (
-	NEITHER RangeInclusion = iota
-	LOW
-	HIGH
-	BOTH
-)
-
-type Ranges []*Range
-
-type Range struct {
-	Low       value.CompositeValue
-	High      value.CompositeValue
-	Inclusion RangeInclusion
-}
-
-// RangeIndexes support unrestricted range queries.
-type RangeIndex interface {
-	Index
-	RangeStats(ranje *Range) (RangeStatistics, err.Error)
-	RangeScan(ranje *Range, conn *IndexConnection)
-	RangeCandidateMins(ranje *Range, conn *IndexConnection)  // Anywhere from single Min value to RangeScan()
-	RangeCandidateMaxes(ranje *Range, conn *IndexConnection) // Anywhere from single Max value to RangeScan()
-}
-
-type Dual struct {
-	Equal value.CompositeValue
-	Range
-}
-
-// DualIndexes support restricted range queries.
-type DualIndex interface {
-	Index
-	DualStats(dual *Dual) (RangeStatistics, err.Error)
-	DualScan(dual *Dual, conn *IndexConnection)
-	DualCandidateMins(dual *Dual, conn *IndexConnection)  // Anywhere from single Min value to DualScan()
-	DualCandidateMaxes(dual *Dual, conn *IndexConnection) // Anywhere from single Max value to DualScan()
-}
-
-// RangeStatistics captures statistics for an index range.
-type RangeStatistics interface {
+// Statistics captures statistics for an index span.
+type Statistics interface {
 	Count() (int64, err.Error)
 	Min() (value.Value, err.Error)
 	Max() (value.Value, err.Error)
 	DistinctCount(int64, err.Error)
-	Bins() ([]RangeStatistics, err.Error)
+	Bins() ([]Statistics, err.Error)
 }
 
 type IndexConnection struct {

@@ -11,17 +11,18 @@ package execute
 
 import (
 	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type RangeScan struct {
+type IndexScan struct {
 	base
-	plan *plan.RangeScan
+	plan *plan.IndexScan
 }
 
-func NewRangeScan(plan *plan.RangeScan) *RangeScan {
-	rv := &RangeScan{
+func NewIndexScan(plan *plan.IndexScan) *IndexScan {
+	rv := &IndexScan{
 		base: newBase(),
 		plan: plan,
 	}
@@ -30,28 +31,28 @@ func NewRangeScan(plan *plan.RangeScan) *RangeScan {
 	return rv
 }
 
-func (this *RangeScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitRangeScan(this)
+func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIndexScan(this)
 }
 
-func (this *RangeScan) Copy() Operator {
-	return &RangeScan{this.base.copy(), this.plan}
+func (this *IndexScan) Copy() Operator {
+	return &IndexScan{this.base.copy(), this.plan}
 }
 
-func (this *RangeScan) RunOnce(context *Context, parent value.Value) {
+func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		for _, ranje := range this.plan.Ranges() {
-			if !this.scanRange(context, parent, ranje) {
+		for _, span := range this.plan.Spans() {
+			if !this.scanIndex(context, parent, span) {
 				return
 			}
 		}
 	})
 }
 
-func (this *RangeScan) scanRange(context *Context, parent value.Value, ranje *plan.Range) bool {
+func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *expression.Span) bool {
 	conn := catalog.NewIndexConnection(
 		context.WarningChannel(),
 		context.ErrorChannel(),
@@ -59,24 +60,11 @@ func (this *RangeScan) scanRange(context *Context, parent value.Value, ranje *pl
 
 	defer notifyConn(conn) // Notify index that I have stopped
 
-	rv := &catalog.Range{}
-	var ok bool
-
-	rv.Low, ok = eval(ranje.Low, context, parent)
-	if !ok {
-		return false
-	}
-
-	rv.High, ok = eval(ranje.High, context, parent)
-	if !ok {
-		return false
-	}
-
-	rv.Inclusion = ranje.Inclusion
-	go this.plan.Index().RangeScan(rv, conn)
+	go this.plan.Index().Scan(span, conn)
 
 	var entry *catalog.IndexEntry
 
+	ok := true
 	for ok {
 		select {
 		case entry, ok = <-conn.EntryChannel():
