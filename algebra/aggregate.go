@@ -71,6 +71,12 @@ func (this *aggregateBase) Fold() expression.Expression {
 	return this
 }
 
+func (this *aggregateBase) Formalize() {
+	if this.parameter != nil {
+		this.parameter.Formalize()
+	}
+}
+
 func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
 	return false
 }

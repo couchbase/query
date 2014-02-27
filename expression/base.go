@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"reflect"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -17,11 +19,27 @@ type expressionBase struct {
 }
 
 func (this *expressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return nil, nil
+	panic("Must override.")
 }
 
 func (this *expressionBase) EquivalentTo(other Expression) bool {
-	return false
+	if reflect.TypeOf(this) != reflect.TypeOf(other) {
+		return false
+	}
+
+	ours := this.Dependencies()
+	theirs := other.Dependencies()
+	if len(ours) != len(theirs) {
+		return false
+	}
+
+	for i, o := range ours {
+		if !o.EquivalentTo(theirs[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (this *expressionBase) Dependencies() Expressions {
@@ -33,11 +51,17 @@ func (this *expressionBase) Alias() string {
 }
 
 func (this *expressionBase) Fold() Expression {
-	return nil
+	panic("Must override.")
+}
+
+func (this *expressionBase) Formalize() {
+	for _, d := range this.Dependencies() {
+		d.Formalize()
+	}
 }
 
 func (this *expressionBase) SubsetOf(other Expression) bool {
-	return false
+	return this.EquivalentTo(other)
 }
 
 func (this *expressionBase) Spans(index Index) Spans {

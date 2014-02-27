@@ -32,6 +32,9 @@ type Expression interface {
 	// Constant and other folding
 	Fold() Expression
 
+	// Formal notation
+	Formalize()
+
 	// Is this expression a subset of the other
 	// E.g. A < 5 is a subset of A < 10
 	SubsetOf(other Expression) bool
