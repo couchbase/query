@@ -35,22 +35,6 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 	}
 }
 
-func (this *SimpleCase) Dependencies() Expressions {
-	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
-
-	rv = append(rv, this.searchTerm)
-	for _, w := range this.whenTerms {
-		rv = append(rv, w.When)
-		rv = append(rv, w.Then)
-	}
-
-	if this.elseTerm != nil {
-		rv = append(rv, this.elseTerm)
-	}
-
-	return rv
-}
-
 func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	s, e := this.searchTerm.Evaluate(item, context)
 	if e != nil {
@@ -87,6 +71,22 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	return ev, nil
+}
+
+func (this *SimpleCase) Dependencies() Expressions {
+	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
+
+	rv = append(rv, this.searchTerm)
+	for _, w := range this.whenTerms {
+		rv = append(rv, w.When)
+		rv = append(rv, w.Then)
+	}
+
+	if this.elseTerm != nil {
+		rv = append(rv, this.elseTerm)
+	}
+
+	return rv
 }
 
 func (this *SimpleCase) Fold() Expression {

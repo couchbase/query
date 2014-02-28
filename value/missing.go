@@ -80,6 +80,10 @@ func (this missingValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
+func (this missingValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}
+
 func missingField(field string) Value {
 	return missingValue(field)
 }

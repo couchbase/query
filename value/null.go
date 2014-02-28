@@ -67,3 +67,7 @@ func (this *nullValue) Index(index int) (Value, bool) {
 func (this *nullValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
+
+func (this *nullValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}

@@ -92,3 +92,7 @@ func (this boolValue) Index(index int) (Value, bool) {
 func (this boolValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
+
+func (this boolValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}

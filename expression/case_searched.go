@@ -26,21 +26,6 @@ func NewSearchedCase(whenTerms WhenTerms, elseTerm Expression) Expression {
 	}
 }
 
-func (this *SearchedCase) Dependencies() Expressions {
-	rv := make(Expressions, 0, 1+(len(this.whenTerms)<<1))
-
-	for _, w := range this.whenTerms {
-		rv = append(rv, w.When)
-		rv = append(rv, w.Then)
-	}
-
-	if this.elseTerm != nil {
-		rv = append(rv, this.elseTerm)
-	}
-
-	return rv
-}
-
 func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	for _, w := range this.whenTerms {
 		wv, e := w.When.Evaluate(item, context)
@@ -68,6 +53,21 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	return ev, nil
+}
+
+func (this *SearchedCase) Dependencies() Expressions {
+	rv := make(Expressions, 0, 1+(len(this.whenTerms)<<1))
+
+	for _, w := range this.whenTerms {
+		rv = append(rv, w.When)
+		rv = append(rv, w.Then)
+	}
+
+	if this.elseTerm != nil {
+		rv = append(rv, this.elseTerm)
+	}
+
+	return rv
 }
 
 func (this *SearchedCase) Fold() Expression {

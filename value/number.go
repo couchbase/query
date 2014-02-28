@@ -87,3 +87,7 @@ func (this floatValue) Index(index int) (Value, bool) {
 func (this floatValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
+
+func (this floatValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}

@@ -137,6 +137,10 @@ func (this *parsedValue) SetIndex(index int, val interface{}) error {
 	return this.parse().SetIndex(index, val)
 }
 
+func (this *parsedValue) Slice(start, end int) (Value, bool) {
+	return this.parse().Slice(start, end)
+}
+
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
 		if this.parsedType == NOT_JSON {

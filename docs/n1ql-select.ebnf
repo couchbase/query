@@ -76,7 +76,7 @@ searched-case-expr ::= 'CASE' ('WHEN' cond 'THEN' expr)+ ('ELSE' expr)? 'END'
 comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'NOT'? 'BETWEEN' expr 'AND' expr | expr 'NOT'? 'LIKE' expr | expr 'IS' 'NOT'? 'VALUED' | expr 'IS' 'NOT'? 'NULL' | expr 'IS' 'NOT'? 'MISSING'
 arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | '-' expr
 concatenation-term ::= expr '||' expr
-nested-expr ::= expr '.' path | expr '[' expr (':' expr?)? ']'
+nested-expr ::= expr '.' identifier | expr '[' expr (':' expr?)? ']'
 subquery-expr ::= '(' select ')'
 
 /*

@@ -86,6 +86,10 @@ func (this sliceValue) SetField(field string, val interface{}) error {
 }
 
 func (this sliceValue) Index(index int) (Value, bool) {
+	if index < 0 {
+		index = len(this) - index
+	}
+
 	if index >= 0 && index < len(this) {
 		return NewValue(this[index]), true
 	}
@@ -95,12 +99,32 @@ func (this sliceValue) Index(index int) (Value, bool) {
 
 // NOTE: Slices do NOT extend beyond length.
 func (this sliceValue) SetIndex(index int, val interface{}) error {
+	if index < 0 {
+		index = len(this) - index
+	}
+
 	if index < 0 || index >= len(this) {
 		return Unsettable(index)
 	}
 
 	this[index] = val
 	return nil
+}
+
+func (this sliceValue) Slice(start, end int) (Value, bool) {
+	if start < 0 {
+		start = len(this) - start
+	}
+
+	if end < 0 {
+		end = len(this) - end
+	}
+
+	if start <= end && start >= 0 && end <= len(this) {
+		return NewValue(this[start:end]), true
+	}
+
+	return MISSING_VALUE, false
 }
 
 type listValue struct {
@@ -178,6 +202,10 @@ func (this *listValue) SetField(field string, val interface{}) error {
 }
 
 func (this *listValue) Index(index int) (Value, bool) {
+	if index < 0 {
+		index = len(this.actual) - index
+	}
+
 	if index >= 0 && index < len(this.actual) {
 		return NewValue(this.actual[index]), true
 	}
@@ -186,6 +214,10 @@ func (this *listValue) Index(index int) (Value, bool) {
 }
 
 func (this *listValue) SetIndex(index int, val interface{}) error {
+	if index < 0 {
+		index = len(this.actual) - index
+	}
+
 	if index < 0 {
 		return Unsettable(index)
 	}
@@ -202,6 +234,22 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 
 	this.actual[index] = val
 	return nil
+}
+
+func (this *listValue) Slice(start, end int) (Value, bool) {
+	if start < 0 {
+		start = len(this.actual) - start
+	}
+
+	if end < 0 {
+		end = len(this.actual) - end
+	}
+
+	if start <= end && start >= 0 && end <= len(this.actual) {
+		return NewValue(this.actual[start:end]), true
+	}
+
+	return MISSING_VALUE, false
 }
 
 func arrayEquals(array1, array2 []interface{}) bool {

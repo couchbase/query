@@ -91,3 +91,7 @@ func (this stringValue) Index(index int) (Value, bool) {
 func (this stringValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
+
+func (this stringValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}

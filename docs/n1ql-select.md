@@ -1389,12 +1389,12 @@ contains the regular expression pattern.
 __REGEXP\_LIKE(expr, pattern)__ - true if the string value matches the
 regular expression pattern.
 
-__REGEXP\_POSITION(expr, pattern)__ - returns the first position of
-the regular expression pattern within the string, or -1.
+__REGEXP\_POSITION(expr, pattern)__ - first position of the regular
+expression pattern within the string, or -1.
 
-__REGEXP\_REPLACE(expr, pattern, repl [, n])__ - returns a new string
-with occurences of _pattern_ replaced with _repl_. If _n_ is given, at
-most _n_ replacements are performed.
+__REGEXP\_REPLACE(expr, pattern, repl [, n])__ - new string with
+occurences of _pattern_ replaced with _repl_. If _n_ is given, at most
+_n_ replacements are performed.
 
 __REMOVE(expr, substr)__ - string with all occurences of _substr_
 removed.
@@ -1412,16 +1412,16 @@ __SPLIT(expr [, sep])__ - splits the string into an array of
 substrings separated by any combination of characters in _sep_. If
 _sep_ is not given, any combination of whitespace characters is used.
 
-__SUBSTR(expr, position)__ - returns the substring from the integer
-_position_ to the end of the string. The position is 0-based, i.e. the
-first position is 0. If _position_ is negative, it is counted from the
-end of the string; -1 is the last position in the string.
+__SUBSTR(expr, position)__ - substring from the integer _position_ to
+the end of the string. The position is 0-based, i.e. the first
+position is 0. If _position_ is negative, it is counted from the end
+of the string; -1 is the last position in the string.
 
-__SUBSTR(expr, position, length)__ - returns the substring of the
-given _length_ from the integer _position_ to the end of the
-string. The position is 0-based, i.e. the first position is 0. If
-_position_ is negative, it is counted from the end of the string; -1
-is the last position in the string.
+__SUBSTR(expr, position, length)__ - substring of the given _length_
+from the integer _position_ to the end of the string. The position is
+0-based, i.e. the first position is 0. If _position_ is negative, it
+is counted from the end of the string; -1 is the last position in the
+string.
 
 __TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
 first letter of each word is uppercase and every other letter is
@@ -1542,14 +1542,13 @@ collation order.
 
 ### Object functions
 
-__OBJECT\_KEYS(expr)__ - returns an array containing the keys of the
-object, in N1QL collation order.
+__OBJECT\_KEYS(expr)__ - array containing the keys of the object, in
+N1QL collation order.
 
-__OBJECT\_LENGTH(expr)__ - returns the number of key-value pairs in
-the object.
+__OBJECT\_LENGTH(expr)__ - number of key-value pairs in the object.
 
-__OBJECT\_VALUES(expr)__ - returns an array containing the values of
-the object, in N1QL collation order of the corresponding keys.
+__OBJECT\_VALUES(expr)__ - array containing the values of the object,
+in N1QL collation order of the corresponding keys.
 
 ### JSON functions
 
@@ -1564,8 +1563,8 @@ value:
 * object - the number of key/value pairs in the object
 * any other value - NULL
 
-__SIZE\_JSON(expr)__ - returns the number of bytes in an uncompressed
-JSON encoding of the value. The exact size is
+__SIZE\_JSON(expr)__ - number of bytes in an uncompressed JSON
+encoding of the value. The exact size is
 implementation-dependent. Always returns an integer, and never MISSING
 or NULL; returns 0 for MISSING.
 
@@ -1815,6 +1814,7 @@ with keywords.
 * __SOME__
 * __THEN__
 * __TRUE__
+* __UNION__
 * __UNIQUE__
 * __UNNEST__
 * __UNSET__
@@ -1859,7 +1859,6 @@ with keywords.
 * __START__
 * __TRANSACTION__
 * __TYPE__
-* __UNION__
 * __WHILE__
 * __WORK__
 * __XOR__

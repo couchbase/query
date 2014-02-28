@@ -97,6 +97,10 @@ func (this objectValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
+func (this objectValue) Slice(start, end int) (Value, bool) {
+	return MISSING_VALUE, false
+}
+
 func objectEquals(obj1, obj2 map[string]interface{}) bool {
 	if len(obj1) != len(obj2) {
 		return false
