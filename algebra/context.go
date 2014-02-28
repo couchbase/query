@@ -20,7 +20,7 @@ import (
 type Context interface {
 	expression.Context
 	Now() time.Time
-	Argument(parameter string) value.Value
+	Argument(parameter string) (value.Value, error)
 	WarningChannel() err.ErrorChannel
 	ErrorChannel() err.ErrorChannel
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)

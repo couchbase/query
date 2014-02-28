@@ -19,5 +19,5 @@ type ParameterExpression struct {
 }
 
 func (this *ParameterExpression) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
-	return context.(Context).Argument(this.parameter), nil
+	return context.(Context).Argument(this.parameter)
 }

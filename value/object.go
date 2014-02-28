@@ -90,7 +90,7 @@ func (this objectValue) SetField(field string, val interface{}) error {
 }
 
 func (this objectValue) Index(index int) (Value, bool) {
-	return missingIndex(index), false
+	return NULL_VALUE, false
 }
 
 func (this objectValue) SetIndex(index int, val interface{}) error {
@@ -98,7 +98,7 @@ func (this objectValue) SetIndex(index int, val interface{}) error {
 }
 
 func (this objectValue) Slice(start, end int) (Value, bool) {
-	return MISSING_VALUE, false
+	return NULL_VALUE, false
 }
 
 func objectEquals(obj1, obj2 map[string]interface{}) bool {

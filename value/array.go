@@ -78,7 +78,7 @@ func (this sliceValue) Bytes() []byte {
 }
 
 func (this sliceValue) Field(field string) (Value, bool) {
-	return missingField(field), false
+	return NULL_VALUE, false
 }
 
 func (this sliceValue) SetField(field string, val interface{}) error {
@@ -194,7 +194,7 @@ func (this *listValue) Bytes() []byte {
 }
 
 func (this *listValue) Field(field string) (Value, bool) {
-	return missingField(field), false
+	return NULL_VALUE, false
 }
 
 func (this *listValue) SetField(field string, val interface{}) error {

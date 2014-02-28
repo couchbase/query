@@ -36,7 +36,7 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 		return nil, e
 	}
 
-	if source.Type() != value.ARRAY {
+	if source.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
@@ -45,38 +45,40 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 		return nil, e
 	}
 
-	if start.Type() != value.NUMBER {
+	if start.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
-	sa := start.Actual().(float64)
-	if sa != math.Trunc(sa) {
-		return value.MISSING_VALUE, nil
-	}
-
-	sv := int(sa)
-	sov := source.Actual().([]interface{})
-	ev := len(sov)
+	ev := -1
 	if this.end != nil {
 		end, e := this.end.Evaluate(item, context)
 		if e != nil {
 			return nil, e
 		}
 
-		if end.Type() != value.NUMBER {
+		if end.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		}
 
-		ea := end.Actual().(float64)
-		if ea != math.Trunc(ea) {
-			return value.MISSING_VALUE, nil
+		ea, ok := end.Actual().(float64)
+		if !ok || ea != math.Trunc(ea) {
+			return value.NULL_VALUE, nil
 		}
 
 		ev = int(ea)
 	}
 
-	rv, _ := source.Slice(sv, ev)
-	return rv, nil
+	sa, ok := start.Actual().(float64)
+	if !ok || sa != math.Trunc(sa) {
+		return value.NULL_VALUE, nil
+	}
+
+	if source.Type() == value.ARRAY {
+		rv, _ := source.Slice(int(sa), ev)
+		return rv, nil
+	} else {
+		return value.NULL_VALUE, nil
+	}
 }
 
 func (this *Slice) Dependencies() Expressions {

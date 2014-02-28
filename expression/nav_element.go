@@ -31,12 +31,18 @@ func NewElement(first, second Expression) Expression {
 func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.NUMBER:
-		sf := second.Actual().(float64)
-		if sf == math.Trunc(sf) {
-			v, _ := first.Index(int(sf))
+		s := second.Actual().(float64)
+		if s == math.Trunc(s) {
+			v, _ := first.Index(int(s))
 			return v, nil
 		}
+	case value.STRING:
+		s := second.Actual().(string)
+		v, _ := first.Field(s)
+		return v, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
 	}
 
-	return value.MISSING_VALUE, nil
+	return value.NULL_VALUE, nil
 }

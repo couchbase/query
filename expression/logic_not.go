@@ -43,9 +43,7 @@ func (this *Not) Fold() Expression {
 func (this *Not) evaluate(operand value.Value) (value.Value, error) {
 	if operand.Type() > value.NULL {
 		return value.NewValue(!operand.Truth()), nil
-	} else if operand.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
 	} else {
-		return value.NULL_VALUE, nil
+		return operand, nil
 	}
 }

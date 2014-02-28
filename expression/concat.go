@@ -122,7 +122,9 @@ func (this *Concat) evaluate(operands value.Values) (value.Value, error) {
 	for _, o := range operands {
 		switch o.Type() {
 		case value.STRING:
-			buf.WriteString(o.Actual().(string))
+			if !null {
+				buf.WriteString(o.Actual().(string))
+			}
 		case value.MISSING:
 			return value.MISSING_VALUE, nil
 		default:

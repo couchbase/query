@@ -78,7 +78,7 @@ func (this boolValue) Bytes() []byte {
 }
 
 func (this boolValue) Field(field string) (Value, bool) {
-	return missingField(field), false
+	return NULL_VALUE, false
 }
 
 func (this boolValue) SetField(field string, val interface{}) error {
@@ -86,7 +86,7 @@ func (this boolValue) SetField(field string, val interface{}) error {
 }
 
 func (this boolValue) Index(index int) (Value, bool) {
-	return missingIndex(index), false
+	return NULL_VALUE, false
 }
 
 func (this boolValue) SetIndex(index int, val interface{}) error {
@@ -94,5 +94,5 @@ func (this boolValue) SetIndex(index int, val interface{}) error {
 }
 
 func (this boolValue) Slice(start, end int) (Value, bool) {
-	return MISSING_VALUE, false
+	return NULL_VALUE, false
 }
