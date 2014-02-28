@@ -21,7 +21,7 @@ type WhenTerm struct {
 }
 
 type SimpleCase struct {
-	expressionBase
+	ExpressionBase
 	searchTerm Expression
 	whenTerms  WhenTerms
 	elseTerm   Expression
@@ -78,7 +78,7 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	if this.elseTerm == nil {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 
 	ev, e := this.elseTerm.Evaluate(item, context)

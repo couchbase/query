@@ -1370,8 +1370,9 @@ UNIX milliseconds.
 __CONTAINS(expr, substr)__ - true if the string contains the
 substring.
 
-__INITCAP(expr)__ - converts the string so that the first letter of
-each word is uppercase and every other letter is lowercase.
+__INITCAP(expr)__, __TITLE(expr)__ - converts the string so that the
+first letter of each word is uppercase and every other letter is
+lowercase.
 
 __LENGTH(expr)__ - length of the string value.
 
@@ -1421,6 +1422,10 @@ given _length_ from the integer _position_ to the end of the
 string. The position is 0-based, i.e. the first position is 0. If
 _position_ is negative, it is counted from the end of the string; -1
 is the last position in the string.
+
+__TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
+first letter of each word is uppercase and every other letter is
+lowercase.
 
 __TRIM(expr)__ - string with all beginning and ending whitespace
 removed.

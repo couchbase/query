@@ -25,19 +25,6 @@ func NewIsValued(operand Expression) Expression {
 	}
 }
 
-func (this *IsValued) Fold() Expression {
-	this.operand = this.operand.Fold()
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
-		}
-	}
-
-	return this
-}
-
 func (this *IsValued) evaluate(operand value.Value) (value.Value, error) {
 	if operand.Type() > value.NULL {
 		return value.NewValue(true), nil

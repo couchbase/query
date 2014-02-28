@@ -25,7 +25,7 @@ type nAry interface {
 type nAryConstructor func(operands Expressions) Expression
 
 type nAryBase struct {
-	expressionBase
+	ExpressionBase
 	operands Expressions
 }
 

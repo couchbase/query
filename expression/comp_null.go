@@ -25,25 +25,12 @@ func NewIsNull(operand Expression) Expression {
 	}
 }
 
-func (this *IsNull) Fold() Expression {
-	this.operand = this.operand.Fold()
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
-		}
-	}
-
-	return this
-}
-
 func (this *IsNull) evaluate(operand value.Value) (value.Value, error) {
 	switch operand.Type() {
 	case value.NULL:
 		return value.NewValue(true), nil
 	case value.MISSING:
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	default:
 		return value.NewValue(false), nil
 	}

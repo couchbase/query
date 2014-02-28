@@ -15,9 +15,20 @@ import (
 )
 
 type Subquery struct {
+	expression.ExpressionBase
 	query *Select
+}
+
+func NewSubquery(query *Select) expression.Expression {
+	return &Subquery{
+		query: query,
+	}
 }
 
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return context.(Context).EvaluateSubquery(this.query, item)
+}
+
+func (this *Subquery) Dependencies() expression.Expressions {
+	return nil
 }

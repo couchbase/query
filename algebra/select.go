@@ -75,6 +75,10 @@ func (this *Select) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *Select) SetLimit(limit expression.Expression) {
+	this.limit = limit
+}
+
 func (this *Select) IsCorrelated() bool {
 	return true // FIXME
 }

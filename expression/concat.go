@@ -16,7 +16,7 @@ import (
 )
 
 type Concat struct {
-	expressionBase
+	ExpressionBase
 	operands Expressions
 }
 
@@ -124,14 +124,14 @@ func (this *Concat) evaluate(operands value.Values) (value.Value, error) {
 		case value.STRING:
 			buf.WriteString(o.Actual().(string))
 		case value.MISSING:
-			return _MISSING_VALUE, nil
+			return value.MISSING_VALUE, nil
 		default:
 			null = true
 		}
 	}
 
 	if null {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(buf.String()), nil

@@ -16,8 +16,10 @@ import (
 // Missing value
 type missingValue string
 
+var MISSING_VALUE = missingValue("")
+
 func NewMissingValue() Value {
-	return _MISSING_VALUE
+	return MISSING_VALUE
 }
 
 // Description of which property or index was undefined (if known).
@@ -27,8 +29,6 @@ func (this missingValue) Error() string {
 	}
 	return "Not defined."
 }
-
-var _MISSING_VALUE = missingValue("")
 
 func (this missingValue) Type() int {
 	return MISSING

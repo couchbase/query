@@ -7,20 +7,16 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
-
-import (
-	"github.com/couchbaselabs/query/expression"
-)
+package expression
 
 type Bindings []*Binding
 
 type Binding struct {
 	variable string
-	expr     expression.Expression
+	expr     Expression
 }
 
-func NewBinding(variable string, expr expression.Expression) *Binding {
+func NewBinding(variable string, expr Expression) *Binding {
 	return &Binding{variable, expr}
 }
 
@@ -28,6 +24,10 @@ func (this *Binding) Variable() string {
 	return this.variable
 }
 
-func (this *Binding) Expression() expression.Expression {
+func (this *Binding) Expression() Expression {
 	return this.expr
+}
+
+func (this *Binding) Fold() {
+	this.expr = this.expr.Fold()
 }

@@ -22,7 +22,7 @@ type unary interface {
 }
 
 type unaryBase struct {
-	expressionBase
+	ExpressionBase
 	operand Expression
 }
 

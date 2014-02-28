@@ -80,7 +80,7 @@ func NewValue(val interface{}) Value {
 	case bool:
 		return boolValue(val)
 	case nil:
-		return &_NULL_VALUE
+		return NULL_VALUE
 	case []byte:
 		return NewValueFromBytes(val)
 	case []interface{}:
@@ -116,7 +116,7 @@ func NewValueFromBytes(bytes []byte) Value {
 
 			return NewValue(p)
 		case NULL:
-			return &_NULL_VALUE
+			return NULL_VALUE
 		}
 	}
 

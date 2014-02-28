@@ -41,9 +41,9 @@ func (this *Or) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	if null {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	} else if missing {
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	} else {
 		return value.NewValue(false), nil
 	}

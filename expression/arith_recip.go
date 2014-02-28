@@ -51,12 +51,12 @@ func (this *Reciprocate) evaluate(operand value.Value) (value.Value, error) {
 	if operand.Type() == value.NUMBER {
 		a := operand.Actual().(float64)
 		if a == 0.0 {
-			return _NULL_VALUE, nil
+			return value.NULL_VALUE, nil
 		}
 		return value.NewValue(1.0 / a), nil
 	} else if operand.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	} else {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 }

@@ -26,7 +26,7 @@ func NewArrayAgg(parameter expression.Expression) Aggregate {
 }
 
 func (this *ArrayAgg) Default() value.Value {
-	return _NULL
+	return value.NULL_VALUE
 }
 
 func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -47,7 +47,7 @@ func (this *ArrayAgg) CumulateIntermediate(part, cumulative value.Value, context
 }
 
 func (this *ArrayAgg) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
-	if cumulative == _NULL {
+	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}
 
@@ -56,9 +56,9 @@ func (this *ArrayAgg) ComputeFinal(cumulative value.Value, context Context) (val
 }
 
 func (this *ArrayAgg) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == _NULL {
+	if part == value.NULL_VALUE {
 		return cumulative, nil
-	} else if cumulative == _NULL {
+	} else if cumulative == value.NULL_VALUE {
 		return part, nil
 	}
 

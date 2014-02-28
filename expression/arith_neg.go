@@ -51,8 +51,8 @@ func (this *Negate) evaluate(operand value.Value) (value.Value, error) {
 	if operand.Type() == value.NUMBER {
 		return value.NewValue(-operand.Actual().(float64)), nil
 	} else if operand.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	} else {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type Constant struct {
-	expressionBase
+	ExpressionBase
 	value value.Value
 }
 
@@ -39,15 +39,7 @@ func (this *Constant) Dependencies() Expressions {
 	return nil
 }
 
-func (this *Constant) Alias() string {
-	return ""
-}
-
 func (this *Constant) Fold() Expression {
-	return this
-}
-
-func (this *Constant) CNF() Expression {
 	return this
 }
 

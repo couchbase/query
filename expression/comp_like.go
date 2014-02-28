@@ -38,9 +38,9 @@ func (this *Like) Fold() Expression {
 	case *Constant:
 		sv := s.Value()
 		if sv.Type() == value.MISSING {
-			return NewConstant(_MISSING_VALUE)
+			return NewConstant(value.MISSING_VALUE)
 		} else if sv.Type() != value.STRING {
-			return NewConstant(_NULL_VALUE)
+			return NewConstant(value.NULL_VALUE)
 		}
 
 		re, err := this.compile(sv.Actual().(string))
@@ -64,9 +64,9 @@ func (this *Like) Fold() Expression {
 
 func (this *Like) evaluate(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 
 	f := first.Actual().(string)

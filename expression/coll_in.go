@@ -13,39 +13,36 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Not struct {
-	unaryBase
+type In struct {
+	binaryBase
 }
 
-func NewNot(operand Expression) Expression {
-	return &Not{
-		unaryBase{
-			operand: operand,
+func NewIn(first, second Expression) Expression {
+	return &In{
+		binaryBase{
+			first:  first,
+			second: second,
 		},
 	}
 }
 
-func (this *Not) Fold() Expression {
-	this.operand = this.operand.Fold()
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
-		}
-	case *Not:
-		return o.operand
-	}
-
-	return this
-}
-
-func (this *Not) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() > value.NULL {
-		return value.NewValue(!operand.Truth()), nil
-	} else if operand.Type() == value.MISSING {
+func (this *In) evaluate(first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else {
+	} else if second.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
+
+	sa := second.Actual().([]interface{})
+	for _, s := range sa {
+		if first.Equals(value.NewValue(s)) {
+			return value.NewValue(true), nil
+		}
+	}
+
+	return value.NewValue(false), nil
+}
+
+func NewNotIn(first, second Expression) Expression {
+	return NewNot(NewIn(first, second))
 }

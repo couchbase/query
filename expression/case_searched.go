@@ -14,7 +14,7 @@ import (
 )
 
 type SearchedCase struct {
-	expressionBase
+	ExpressionBase
 	whenTerms WhenTerms
 	elseTerm  Expression
 }
@@ -59,7 +59,7 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	if this.elseTerm == nil {
-		return _NULL_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 
 	ev, e := this.elseTerm.Evaluate(item, context)

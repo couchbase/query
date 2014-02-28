@@ -32,7 +32,7 @@ func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
 	if second.Type() == value.NUMBER {
 		s := second.Actual().(float64)
 		if s == 0.0 {
-			return _NULL_VALUE, nil
+			return value.NULL_VALUE, nil
 		}
 
 		if first.Type() == value.NUMBER {
@@ -42,8 +42,8 @@ func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
 	}
 
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return _MISSING_VALUE, nil
+		return value.MISSING_VALUE, nil
 	}
 
-	return _NULL_VALUE, nil
+	return value.NULL_VALUE, nil
 }

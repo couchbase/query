@@ -15,14 +15,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type expressionBase struct {
+type ExpressionBase struct {
 }
 
-func (this *expressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ExpressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	panic("Must override.")
 }
 
-func (this *expressionBase) EquivalentTo(other Expression) bool {
+func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	if reflect.TypeOf(this) != reflect.TypeOf(other) {
 		return false
 	}
@@ -42,31 +42,28 @@ func (this *expressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *expressionBase) Dependencies() Expressions {
-	return nil
-}
-
-func (this *expressionBase) Alias() string {
-	return ""
-}
-
-func (this *expressionBase) Fold() Expression {
+func (this *ExpressionBase) Dependencies() Expressions {
 	panic("Must override.")
 }
 
-func (this *expressionBase) Formalize() {
+func (this *ExpressionBase) Alias() string {
+	return ""
+}
+
+func (this *ExpressionBase) Fold() Expression {
+	panic("Must override.")
+}
+
+func (this *ExpressionBase) Formalize() {
 	for _, d := range this.Dependencies() {
 		d.Formalize()
 	}
 }
 
-func (this *expressionBase) SubsetOf(other Expression) bool {
+func (this *ExpressionBase) SubsetOf(other Expression) bool {
 	return this.EquivalentTo(other)
 }
 
-func (this *expressionBase) Spans(index Index) Spans {
+func (this *ExpressionBase) Spans(index Index) Spans {
 	return nil
 }
-
-var _MISSING_VALUE = value.NewMissingValue()
-var _NULL_VALUE = value.NewValue(nil)

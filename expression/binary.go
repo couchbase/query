@@ -22,7 +22,7 @@ type binary interface {
 }
 
 type binaryBase struct {
-	expressionBase
+	ExpressionBase
 	first  Expression
 	second Expression
 }

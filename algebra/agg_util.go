@@ -15,8 +15,6 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-var _NULL = value.NewValue(nil)
-
 var _OBJECT_CAP = 64
 
 func setAdd(item, cumulative value.Value) (value.Value, error) {

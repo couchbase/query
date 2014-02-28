@@ -25,7 +25,7 @@ func NewArrayDistinct(parameter expression.Expression) Aggregate {
 }
 
 func (this *ArrayDistinct) Default() value.Value {
-	return _NULL
+	return value.NULL_VALUE
 }
 
 func (this *ArrayDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -46,14 +46,14 @@ func (this *ArrayDistinct) CumulateIntermediate(part, cumulative value.Value, co
 }
 
 func (this *ArrayDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
-	if cumulative == _NULL {
+	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}
 
 	av := cumulative.(value.AnnotatedValue)
 	set := av.GetAttachment("set").(*value.Set)
 	if set.Len() == 0 {
-		return _NULL, nil
+		return value.NULL_VALUE, nil
 	}
 
 	actuals := set.Actuals()

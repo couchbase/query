@@ -23,7 +23,7 @@ func NewMax(parameter expression.Expression) Aggregate {
 }
 
 func (this *Max) Default() value.Value {
-	return _NULL
+	return value.NULL_VALUE
 }
 
 func (this *Max) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
@@ -48,9 +48,9 @@ func (this *Max) ComputeFinal(cumulative value.Value, context Context) (value.Va
 }
 
 func (this *Max) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == _NULL {
+	if part == value.NULL_VALUE {
 		return cumulative, nil
-	} else if cumulative == _NULL {
+	} else if cumulative == value.NULL_VALUE {
 		return part, nil
 	} else if part.Collate(cumulative) > 0 {
 		return part, nil

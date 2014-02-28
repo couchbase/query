@@ -25,19 +25,6 @@ func NewIsMissing(operand Expression) Expression {
 	}
 }
 
-func (this *IsMissing) Fold() Expression {
-	this.operand = this.operand.Fold()
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
-		}
-	}
-
-	return this
-}
-
 func (this *IsMissing) evaluate(operand value.Value) (value.Value, error) {
 	switch operand.Type() {
 	case value.MISSING:
