@@ -1396,9 +1396,6 @@ __REGEXP\_REPLACE(expr, pattern, repl [, n])__ - new string with
 occurences of _pattern_ replaced with _repl_. If _n_ is given, at most
 _n_ replacements are performed.
 
-__REMOVE(expr, substr)__ - string with all occurences of _substr_
-removed.
-
 __REPEAT(expr, count)__ - string formed by repeating _expr_ _count_
 times.
 
@@ -1563,7 +1560,7 @@ value:
 * object - the number of key/value pairs in the object
 * any other value - NULL
 
-__SIZE\_JSON(expr)__ - number of bytes in an uncompressed JSON
+__ENCODED\_SIZE(expr)__ - number of bytes in an uncompressed JSON
 encoding of the value. The exact size is
 implementation-dependent. Always returns an integer, and never MISSING
 or NULL; returns 0 for MISSING.
@@ -1658,7 +1655,7 @@ of expr:
 * __"array"__
 * __"object"__
 
-### Type casting functions
+### Type conversion functions
 
 __TO\_ARRAY(expr)__ - array as follows:
 
