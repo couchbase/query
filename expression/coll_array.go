@@ -28,6 +28,9 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 }
 
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+
 	barr := make([][]interface{}, len(this.bindings))
 	for i, b := range this.bindings {
 		bv, e := b.Expression().Evaluate(item, context)
@@ -35,12 +38,22 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 			return nil, e
 		}
 
-		switch ba := bv.Actual().(type) {
-		case []interface{}:
-			barr[i] = ba
+		switch bv.Type() {
+		case value.ARRAY:
+			barr[i] = bv.Actual().([]interface{})
+		case value.MISSING:
+			missing = true
 		default:
-			return value.NULL_VALUE, nil
+			null = true
 		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
 	}
 
 	n := -1
@@ -73,7 +86,9 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 			return nil, e
 		}
 
-		rv = append(rv, mv)
+		if mv.Type() != value.MISSING {
+			rv = append(rv, mv)
+		}
 	}
 
 	return value.NewValue(rv), nil
