@@ -20,8 +20,14 @@ type Avg struct {
 	aggregateBase
 }
 
-func NewAvg(parameter expression.Expression) Aggregate {
-	return &Avg{aggregateBase{parameter: parameter}}
+func NewAvg(argument expression.Expression) Aggregate {
+	return &Avg{aggregateBase{argument: argument}}
+}
+
+func (this *Avg) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewAvg(arguments[0])
+	}
 }
 
 func (this *Avg) Default() value.Value {
@@ -29,7 +35,7 @@ func (this *Avg) Default() value.Value {
 }
 
 func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

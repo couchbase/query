@@ -20,8 +20,14 @@ type AvgDistinct struct {
 	aggregateBase
 }
 
-func NewAvgDistinct(parameter expression.Expression) Aggregate {
-	return &AvgDistinct{aggregateBase{parameter: parameter}}
+func NewAvgDistinct(argument expression.Expression) Aggregate {
+	return &AvgDistinct{aggregateBase{argument: argument}}
+}
+
+func (this *AvgDistinct) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewAvgDistinct(arguments[0])
+	}
 }
 
 func (this *AvgDistinct) Default() value.Value {
@@ -29,7 +35,7 @@ func (this *AvgDistinct) Default() value.Value {
 }
 
 func (this *AvgDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

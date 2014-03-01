@@ -21,8 +21,14 @@ type ArrayAgg struct {
 	aggregateBase
 }
 
-func NewArrayAgg(parameter expression.Expression) Aggregate {
-	return &ArrayAgg{aggregateBase{parameter: parameter}}
+func NewArrayAgg(argument expression.Expression) Aggregate {
+	return &ArrayAgg{aggregateBase{argument: argument}}
+}
+
+func (this *ArrayAgg) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewArrayAgg(arguments[0])
+	}
 }
 
 func (this *ArrayAgg) Default() value.Value {
@@ -30,7 +36,7 @@ func (this *ArrayAgg) Default() value.Value {
 }
 
 func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

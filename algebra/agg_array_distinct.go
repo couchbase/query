@@ -16,20 +16,26 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type ArrayDistinct struct {
+type ArrayAggDistinct struct {
 	aggregateBase
 }
 
-func NewArrayDistinct(parameter expression.Expression) Aggregate {
-	return &ArrayDistinct{aggregateBase{parameter: parameter}}
+func NewArrayAggDistinct(argument expression.Expression) Aggregate {
+	return &ArrayAggDistinct{aggregateBase{argument: argument}}
 }
 
-func (this *ArrayDistinct) Default() value.Value {
+func (this *ArrayAggDistinct) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewArrayAggDistinct(arguments[0])
+	}
+}
+
+func (this *ArrayAggDistinct) Default() value.Value {
 	return value.NULL_VALUE
 }
 
-func (this *ArrayDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -41,11 +47,11 @@ func (this *ArrayDistinct) CumulateInitial(item, cumulative value.Value, context
 	return setAdd(cumulative, item)
 }
 
-func (this *ArrayDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
+func (this *ArrayAggDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateSets(part, cumulative)
 }
 
-func (this *ArrayDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
+func (this *ArrayAggDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
 	}

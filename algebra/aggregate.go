@@ -20,10 +20,10 @@ import (
 type Aggregates []Aggregate
 
 type Aggregate interface {
-	expression.Expression
+	expression.Function
 
 	Default() value.Value
-	Parameter() expression.Expression
+	Argument() expression.Expression
 
 	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
 	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
@@ -31,7 +31,7 @@ type Aggregate interface {
 }
 
 type aggregateBase struct {
-	parameter expression.Expression
+	argument expression.Expression
 }
 
 func (this *aggregateBase) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
@@ -47,13 +47,13 @@ func (this *aggregateBase) Evaluate(item value.Value, context expression.Context
 
 func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
 	return reflect.TypeOf(this) == reflect.TypeOf(other) &&
-		(this.parameter == nil && other.(Aggregate).Parameter() == nil) ||
-		this.parameter.EquivalentTo(other.(Aggregate).Parameter())
+		(this.argument == nil && other.(Aggregate).Argument() == nil) ||
+		this.argument.EquivalentTo(other.(Aggregate).Argument())
 }
 
 func (this *aggregateBase) Dependencies() expression.Expressions {
-	if this.parameter != nil {
-		return expression.Expressions{this.parameter}
+	if this.argument != nil {
+		return expression.Expressions{this.argument}
 	} else {
 		return nil
 	}
@@ -64,16 +64,16 @@ func (this *aggregateBase) Alias() string {
 }
 
 func (this *aggregateBase) Fold() expression.Expression {
-	if this.parameter != nil {
-		this.parameter = this.parameter.Fold()
+	if this.argument != nil {
+		this.argument = this.argument.Fold()
 	}
 
 	return this
 }
 
 func (this *aggregateBase) Formalize() {
-	if this.parameter != nil {
-		this.parameter.Formalize()
+	if this.argument != nil {
+		this.argument.Formalize()
 	}
 }
 
@@ -85,6 +85,14 @@ func (this *aggregateBase) Spans(index expression.Index) expression.Spans {
 	return nil
 }
 
-func (this *aggregateBase) Parameter() expression.Expression {
-	return this.parameter
+func (this *aggregateBase) MinArgs() int {
+	return 1
+}
+
+func (this *aggregateBase) MaxArgs() int {
+	return 1
+}
+
+func (this *aggregateBase) Argument() expression.Expression {
+	return this.argument
 }

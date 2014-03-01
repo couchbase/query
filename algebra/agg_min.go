@@ -18,8 +18,14 @@ type Min struct {
 	aggregateBase
 }
 
-func NewMin(parameter expression.Expression) Aggregate {
-	return &Min{aggregateBase{parameter: parameter}}
+func NewMin(argument expression.Expression) Aggregate {
+	return &Min{aggregateBase{argument: argument}}
+}
+
+func (this *Min) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewMin(arguments[0])
+	}
 }
 
 func (this *Min) Default() value.Value {
@@ -27,7 +33,7 @@ func (this *Min) Default() value.Value {
 }
 
 func (this *Min) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

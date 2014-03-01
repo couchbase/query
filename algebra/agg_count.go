@@ -20,19 +20,12 @@ type Count struct {
 	aggregateBase
 }
 
-func NewCount(parameter expression.Expression) Aggregate {
-	return &Count{aggregateBase{parameter: parameter}}
-}
-
-var _ZERO = value.NewValue(0)
-var _ONE = value.NewValue(1)
-
-func (this *Count) Default() value.Value {
-	return _ZERO
+func NewCount(argument expression.Expression) Aggregate {
+	return &Count{aggregateBase{argument: argument}}
 }
 
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
-	if this.parameter != nil {
+	if this.argument != nil {
 		return this.aggregateBase.Evaluate(item, context)
 	}
 
@@ -42,6 +35,7 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 		return this.aggregateBase.Evaluate(item, context)
 	}
 
+	// Full bucket count is short-circuited
 	count := item.(value.AnnotatedValue).GetAttachment("count")
 
 	switch count := count.(type) {
@@ -54,9 +48,27 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 	}
 }
 
+func (this *Count) MinArgs() int {
+	return 0
+}
+
+func (this *Count) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		if len(arguments) > 0 {
+			return NewCount(arguments[0])
+		} else {
+			return NewCount(nil)
+		}
+	}
+}
+
+func (this *Count) Default() value.Value {
+	return _ZERO
+}
+
 func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	if this.parameter != nil {
-		item, e := this.parameter.Evaluate(item, context)
+	if this.argument != nil {
+		item, e := this.argument.Evaluate(item, context)
 		if e != nil {
 			return nil, e
 		}
@@ -93,3 +105,6 @@ func (this *Count) cumulatePart(part, cumulative value.Value, context Context) (
 		return nil, fmt.Errorf("Invalid partial COUNT %v of type %T.", actual, actual)
 	}
 }
+
+var _ZERO = value.NewValue(0)
+var _ONE = value.NewValue(1)

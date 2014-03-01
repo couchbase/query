@@ -18,8 +18,14 @@ type Max struct {
 	aggregateBase
 }
 
-func NewMax(parameter expression.Expression) Aggregate {
-	return &Max{aggregateBase{parameter: parameter}}
+func NewMax(argument expression.Expression) Aggregate {
+	return &Max{aggregateBase{argument: argument}}
+}
+
+func (this *Max) Constructor() expression.FunctionConstructor {
+	return func(arguments expression.Expressions) expression.Function {
+		return NewMax(arguments[0])
+	}
 }
 
 func (this *Max) Default() value.Value {
@@ -27,7 +33,7 @@ func (this *Max) Default() value.Value {
 }
 
 func (this *Max) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.parameter.Evaluate(item, context)
+	item, e := this.argument.Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

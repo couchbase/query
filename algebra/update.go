@@ -124,15 +124,15 @@ func (this *UnsetTerm) UpdateFor() *UpdateFor {
 }
 
 type UpdateFor struct {
-	bindings []*Binding
+	bindings expression.Bindings
 	when     expression.Expression
 }
 
-func NewUpdateFor(bindings []*Binding, when expression.Expression) *UpdateFor {
+func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *UpdateFor {
 	return &UpdateFor{bindings, when}
 }
 
-func (this *UpdateFor) Bindings() []*Binding {
+func (this *UpdateFor) Bindings() expression.Bindings {
 	return this.bindings
 }
 

@@ -10,41 +10,44 @@
 package expression
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/value"
 )
 
-type Constant struct {
+type Identifier struct {
 	ExpressionBase
-	value value.Value
+	identifier string
 }
 
-func NewConstant(value value.Value) Expression {
-	return &Constant{
-		value: value,
+func NewIdentifier(identifier string) Expression {
+	return &Identifier{
+		identifier: identifier,
 	}
 }
 
-func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.value, nil
+func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
+	rv, ok := item.Field(this.identifier)
+	if !ok {
+		return nil, fmt.Errorf("Unbound identifier %s for value %v.", this.identifier, item)
+	}
+
+	return rv, nil
 }
 
-func (this *Constant) EquivalentTo(other Expression) bool {
+func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
-	case *Constant:
-		return this.value.Equals(other.value)
+	case *Identifier:
+		return this.identifier == other.identifier
 	default:
 		return false
 	}
 }
 
-func (this *Constant) Dependencies() Expressions {
+func (this *Identifier) Dependencies() Expressions {
 	return nil
 }
 
-func (this *Constant) Fold() Expression {
+func (this *Identifier) Fold() Expression {
 	return this
-}
-
-func (this *Constant) Value() value.Value {
-	return this.value
 }

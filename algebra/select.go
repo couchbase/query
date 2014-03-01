@@ -15,10 +15,10 @@ import (
 
 type Select struct {
 	from     FromTerm               `json:"from"`
-	let      Bindings               `json:"let"`
+	let      expression.Bindings    `json:"let"`
 	where    expression.Expression  `json:"where"`
 	group    expression.Expressions `json:"group"`
-	letting  Bindings               `json:"letting"`
+	letting  expression.Bindings    `json:"letting"`
 	having   expression.Expression  `json:"having"`
 	project  ResultTerms            `json:"project"`
 	distinct bool                   `json:"distinct"`
@@ -27,9 +27,10 @@ type Select struct {
 	limit    expression.Expression  `json:"limit"`
 }
 
-func NewSelect(from FromTerm, let Bindings, where expression.Expression, group expression.Expressions,
-	letting Bindings, having expression.Expression, project ResultTerms, distinct bool,
-	order SortTerms, offset expression.Expression, limit expression.Expression,
+func NewSelect(from FromTerm, let expression.Bindings, where expression.Expression,
+	group expression.Expressions, letting expression.Bindings, having expression.Expression,
+	project ResultTerms, distinct bool, order SortTerms, offset expression.Expression,
+	limit expression.Expression,
 ) *Select {
 	return &Select{from, let, where, group, letting, having,
 		project, distinct, order, offset, limit}
