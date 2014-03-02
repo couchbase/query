@@ -10,19 +10,14 @@
 package expression
 
 import (
-	"reflect"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-// Commutative and associative operators.
+// n-ary operators.
 type nAry interface {
 	Expression
 	evaluate(operands value.Values) (value.Value, error)
-	construct(constant value.Value, others Expressions) Expression
 }
-
-type nAryConstructor func(operands Expressions) Expression
 
 type nAryBase struct {
 	ExpressionBase
@@ -42,88 +37,47 @@ func (this *nAryBase) Evaluate(item value.Value, context Context) (value.Value, 
 	return nAry(this).evaluate(operands)
 }
 
-func (this *nAryBase) EquivalentTo(other Expression) bool {
-	if reflect.TypeOf(this) != reflect.TypeOf(other) {
-		return false
+func (this *nAryBase) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
 	}
 
-	that := other.(*nAryBase)
-	if len(this.operands) != len(that.operands) {
-		return false
-	}
-
-	found := make([]bool, len(this.operands))
-
-	for _, first := range this.operands {
-		for j, second := range that.operands {
-			if !found[j] && first.EquivalentTo(second) {
-				found[j] = true
-				break
-			}
-		}
-	}
-
-	for _, f := range found {
-		if !f {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (this *nAryBase) Dependencies() Expressions {
-	return this.operands
-}
-
-func (this *nAryBase) Fold() Expression {
-	operands := make(Expressions, 0, len(this.operands))
-	for _, o := range this.operands {
-		o = o.Fold()
-		if reflect.TypeOf(this) == reflect.TypeOf(o) {
-			// Associative, so promote subexpressions.
-			for _, oo := range o.(*nAryBase).operands {
-				operands = append(operands, oo)
-			}
-		} else {
-			operands = append(operands, o)
-		}
-	}
-
-	this.operands = operands
-
-	constants := make(value.Values, 0, len(operands))
-	others := make(Expressions, 0, len(operands))
-	for i, o := range operands {
+	constants := make(value.Values, 0, len(this.operands))
+	for i, o := range this.operands {
 		switch o := o.(type) {
 		case *Constant:
 			constants[i] = o.Value()
 		default:
-			others[i] = o
+			return this, nil
 		}
 	}
 
-	if len(constants) > 0 {
-		nary := nAry(this)
-		c, e := nary.evaluate(constants)
+	nary := nAry(this)
+	c, e := nary.evaluate(constants)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewConstant(c), nil
+}
+
+func (this *nAryBase) Children() Expressions {
+	return this.operands
+}
+
+func (this *nAryBase) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+	for i, o := range this.operands {
+		this.operands[i], e = visitor.Visit(o)
 		if e != nil {
-			return this
+			return nil, e
 		}
-
-		if len(others) == 0 {
-			return NewConstant(c)
-		}
-
-		return nary.construct(c, others)
 	}
 
-	return this
+	return this, nil
 }
 
 func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
-	panic("Must override.")
-}
-
-func (this *nAryBase) construct(constant value.Value, others Expressions) Expression {
 	panic("Must override.")
 }

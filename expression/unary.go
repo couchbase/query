@@ -10,12 +10,10 @@
 package expression
 
 import (
-	"reflect"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-// Commutative and associative operators.
+// Unary operators.
 type unary interface {
 	Expression
 	evaluate(operand value.Value) (value.Value, error)
@@ -35,26 +33,35 @@ func (this *unaryBase) Evaluate(item value.Value, context Context) (value.Value,
 	return unary(this).evaluate(operand)
 }
 
-func (this *unaryBase) EquivalentTo(other Expression) bool {
-	return (reflect.TypeOf(this) == reflect.TypeOf(other)) &&
-		this.operand.EquivalentTo(other.(*unaryBase).operand)
-}
+func (this *unaryBase) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
 
-func (this *unaryBase) Dependencies() Expressions {
-	return Expressions{this.operand}
-}
-
-func (this *unaryBase) Fold() Expression {
-	this.operand = this.operand.Fold()
 	switch o := this.operand.(type) {
 	case *Constant:
 		v, e := unary(this).evaluate(o.Value())
 		if e == nil {
-			return NewConstant(v)
+			return NewConstant(v), nil
 		}
 	}
 
-	return this
+	return this, nil
+}
+
+func (this *unaryBase) Children() Expressions {
+	return Expressions{this.operand}
+}
+
+func (this *unaryBase) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+	this.operand, e = visitor.Visit(this.operand)
+	if e != nil {
+		return nil, e
+	}
+
+	return this, nil
 }
 
 func (this *unaryBase) evaluate(operand value.Value) (value.Value, error) {

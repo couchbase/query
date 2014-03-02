@@ -37,12 +37,21 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Constant) Dependencies() Expressions {
+func (this *Constant) Fold() (Expression, error) {
+	return this, nil
+}
+
+func (this *Constant) Formalize(forbidden, allowed value.Value,
+	bucket string) (Expression, error) {
+	return this, nil
+}
+
+func (this *Constant) Children() Expressions {
 	return nil
 }
 
-func (this *Constant) Fold() Expression {
-	return this
+func (this *Constant) VisitChildren(visitor Visitor) (Expression, error) {
+	return this, nil
 }
 
 func (this *Constant) Value() value.Value {

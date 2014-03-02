@@ -16,7 +16,7 @@ type collMap struct {
 	when     Expression
 }
 
-func (this *collMap) Dependencies() Expressions {
+func (this *collMap) Children() Expressions {
 	d := make(Expressions, 0, 2+len(this.bindings))
 	d = append(d, this.mapping)
 
@@ -31,28 +31,28 @@ func (this *collMap) Dependencies() Expressions {
 	return d
 }
 
-func (this *collMap) Fold() Expression {
-	this.mapping = this.mapping.Fold()
+func (this *collMap) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+	this.mapping, e = visitor.Visit(this.mapping)
+	if e != nil {
+		return nil, e
+	}
+
 	for _, b := range this.bindings {
-		b.Fold()
+		_, e = b.Accept(visitor)
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	if this.when != nil {
-		this.when = this.when.Fold()
+		this.when, e = visitor.Visit(this.when)
+		if e != nil {
+			return nil, e
+		}
 	}
 
-	return this
-}
-
-func (this *collMap) Formalize() {
-	this.mapping.Formalize()
-	for _, b := range this.bindings {
-		b.Expression().Formalize()
-	}
-
-	if this.when != nil {
-		this.when.Formalize()
-	}
+	return this, nil
 }
 
 type collPred struct {
@@ -61,7 +61,7 @@ type collPred struct {
 	satisfies Expression
 }
 
-func (this *collPred) Dependencies() Expressions {
+func (this *collPred) Children() Expressions {
 	d := make(Expressions, 0, 1+len(this.bindings))
 	for _, b := range this.bindings {
 		d = append(d, b.Expression())
@@ -71,19 +71,19 @@ func (this *collPred) Dependencies() Expressions {
 	return d
 }
 
-func (this *collPred) Fold() Expression {
+func (this *collPred) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
 	for _, b := range this.bindings {
-		b.Fold()
+		_, e = b.Accept(visitor)
+		if e != nil {
+			return nil, e
+		}
 	}
 
-	this.satisfies = this.satisfies.Fold()
-	return this
-}
-
-func (this *collPred) Formalize() {
-	for _, b := range this.bindings {
-		b.Expression().Formalize()
+	this.satisfies, e = visitor.Visit(this.satisfies)
+	if e != nil {
+		return nil, e
 	}
 
-	this.satisfies.Formalize()
+	return this, nil
 }

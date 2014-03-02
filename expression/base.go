@@ -27,8 +27,8 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	ours := this.Dependencies()
-	theirs := other.Dependencies()
+	ours := Expression(this).Children()
+	theirs := other.Children()
 	if len(ours) != len(theirs) {
 		return false
 	}
@@ -42,22 +42,23 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *ExpressionBase) Dependencies() Expressions {
-	panic("Must override.")
-}
-
 func (this *ExpressionBase) Alias() string {
 	return ""
 }
 
-func (this *ExpressionBase) Fold() Expression {
-	panic("Must override.")
+func (this *ExpressionBase) Fold() (Expression, error) {
+	return Expression(this).VisitChildren(&Folder{})
 }
 
-func (this *ExpressionBase) Formalize() {
-	for _, d := range this.Dependencies() {
-		d.Formalize()
+func (this *ExpressionBase) Formalize(forbidden, allowed value.Value,
+	bucket string) (Expression, error) {
+	f := &Formalizer{
+		Forbidden: forbidden,
+		Allowed:   allowed,
+		Bucket:    bucket,
 	}
+
+	return Expression(this).VisitChildren(f)
 }
 
 func (this *ExpressionBase) SubsetOf(other Expression) bool {
@@ -66,4 +67,12 @@ func (this *ExpressionBase) SubsetOf(other Expression) bool {
 
 func (this *ExpressionBase) Spans(index Index) Spans {
 	return nil
+}
+
+func (this *ExpressionBase) Children() Expressions {
+	panic("Must override.")
+}
+
+func (this *ExpressionBase) VisitChildren(visitor Visitor) (Expression, error) {
+	panic("Must override.")
 }

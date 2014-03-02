@@ -29,7 +29,8 @@ func NewIdentifier(identifier string) Expression {
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, ok := item.Field(this.identifier)
 	if !ok {
-		return nil, fmt.Errorf("Unbound identifier %s for value %v.", this.identifier, item)
+		return nil, fmt.Errorf("Unbound identifier %s for value %v.",
+			this.identifier, item)
 	}
 
 	return rv, nil
@@ -44,10 +45,39 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Identifier) Dependencies() Expressions {
+func (this *Identifier) Fold() (Expression, error) {
+	return this, nil
+}
+
+// Formal notation; qualify fields with bucket name.
+// Identifiers in "forbidden" result in error.
+// Identifiers in "allowed" are left unmodified.
+// Any other identifier is qualified with bucket; if bucket is empty, then error.
+func (this *Identifier) Formalize(forbidden, allowed value.Value,
+	bucket string) (Expression, error) {
+	_, ok := forbidden.Field(this.identifier)
+	if ok {
+		return nil, fmt.Errorf("Disallowed reference to alias %v.",
+			this.identifier)
+	}
+
+	_, ok = allowed.Field(this.identifier)
+	if ok {
+		return this, nil
+	}
+
+	if bucket == "" {
+		return nil, fmt.Errorf("Ambiguous reference to field %v.",
+			this.identifier)
+	}
+
+	return NewField(NewIdentifier(bucket), this.identifier), nil
+}
+
+func (this *Identifier) Children() Expressions {
 	return nil
 }
 
-func (this *Identifier) Fold() Expression {
-	return this
+func (this *Identifier) VisitChildren(visitor Visitor) (Expression, error) {
+	return this, nil
 }

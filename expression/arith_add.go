@@ -14,13 +14,15 @@ import (
 )
 
 type Add struct {
-	nAryBase
+	caAryBase
 }
 
 func NewAdd(operands ...Expression) Expression {
 	return &Add{
-		nAryBase{
-			operands: operands,
+		caAryBase{
+			nAryBase{
+				operands: operands,
+			},
 		},
 	}
 }
@@ -48,7 +50,7 @@ func (this *Add) evaluate(operands value.Values) (value.Value, error) {
 func (this *Add) construct(constant value.Value, others Expressions) Expression {
 	if constant.Type() == value.MISSING {
 		return NewConstant(constant)
-	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 0.0 {
+	} else if constant.Type() != value.NUMBER && constant.Actual().(float64) == 0.0 {
 		return NewAdd(others...)
 	}
 

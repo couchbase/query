@@ -11,7 +11,6 @@ package algebra
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -31,6 +30,7 @@ type Aggregate interface {
 }
 
 type aggregateBase struct {
+	expression.ExpressionBase
 	argument expression.Expression
 }
 
@@ -45,13 +45,11 @@ func (this *aggregateBase) Evaluate(item value.Value, context expression.Context
 	return result, e
 }
 
-func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
-	return reflect.TypeOf(this) == reflect.TypeOf(other) &&
-		(this.argument == nil && other.(Aggregate).Argument() == nil) ||
-		this.argument.EquivalentTo(other.(Aggregate).Argument())
+func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
+	return false
 }
 
-func (this *aggregateBase) Dependencies() expression.Expressions {
+func (this *aggregateBase) Children() expression.Expressions {
 	if this.argument != nil {
 		return expression.Expressions{this.argument}
 	} else {
@@ -59,30 +57,16 @@ func (this *aggregateBase) Dependencies() expression.Expressions {
 	}
 }
 
-func (this *aggregateBase) Alias() string {
-	return ""
-}
-
-func (this *aggregateBase) Fold() expression.Expression {
+func (this *aggregateBase) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
 	if this.argument != nil {
-		this.argument = this.argument.Fold()
+		var e error
+		this.argument, e = visitor.Visit(this.argument)
+		if e != nil {
+			return nil, e
+		}
 	}
 
-	return this
-}
-
-func (this *aggregateBase) Formalize() {
-	if this.argument != nil {
-		this.argument.Formalize()
-	}
-}
-
-func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
-	return false
-}
-
-func (this *aggregateBase) Spans(index expression.Index) expression.Spans {
-	return nil
+	return this, nil
 }
 
 func (this *aggregateBase) MinArgs() int {

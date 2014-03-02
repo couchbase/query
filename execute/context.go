@@ -64,13 +64,13 @@ func (this *Context) Now() time.Time {
 	return this.now
 }
 
-func (this *Context) Argument(parameter string) value.Value {
+func (this *Context) Argument(parameter string) (value.Value, error) {
 	val, ok := this.arguments[parameter]
 	if !ok {
-		panic(fmt.Sprintf("No argument value for parameter %s.", parameter))
+		return nil, fmt.Errorf("No argument value for parameter %s.", parameter)
 	}
 
-	return val
+	return val, nil
 }
 
 func (this *Context) WarningChannel() err.ErrorChannel {

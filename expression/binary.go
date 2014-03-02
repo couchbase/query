@@ -10,12 +10,10 @@
 package expression
 
 import (
-	"reflect"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-// Commutative and associative operators.
+// Binary operators.
 type binary interface {
 	Expression
 	evaluate(first, second value.Value) (value.Value, error)
@@ -41,23 +39,11 @@ func (this *binaryBase) Evaluate(item value.Value, context Context) (value.Value
 	return binary(this).evaluate(first, second)
 }
 
-func (this *binaryBase) EquivalentTo(other Expression) bool {
-	if reflect.TypeOf(this) == reflect.TypeOf(other) {
-		o := other.(*binaryBase)
-		return this.first.EquivalentTo(o.first) &&
-			this.second.EquivalentTo(o.second)
+func (this *binaryBase) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
 	}
-
-	return false
-}
-
-func (this *binaryBase) Dependencies() Expressions {
-	return Expressions{this.first, this.second}
-}
-
-func (this *binaryBase) Fold() Expression {
-	this.first = this.first.Fold()
-	this.second = this.second.Fold()
 
 	switch f := this.first.(type) {
 	case *Constant:
@@ -65,12 +51,32 @@ func (this *binaryBase) Fold() Expression {
 		case *Constant:
 			v, e := binary(this).evaluate(f.Value(), s.Value())
 			if e == nil {
-				return NewConstant(v)
+				return NewConstant(v), nil
 			}
 		}
 	}
 
-	return this
+	return this, nil
+}
+
+func (this *binaryBase) Children() Expressions {
+	return Expressions{this.first, this.second}
+}
+
+func (this *binaryBase) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+
+	this.first, e = visitor.Visit(this.first)
+	if e != nil {
+		return nil, e
+	}
+
+	this.second, e = visitor.Visit(this.second)
+	if e != nil {
+		return nil, e
+	}
+
+	return this, nil
 }
 
 func (this *binaryBase) evaluate(first, second value.Value) (value.Value, error) {

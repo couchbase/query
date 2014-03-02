@@ -30,22 +30,24 @@ func NewLike(first, second Expression) Expression {
 	}
 }
 
-func (this *Like) Fold() Expression {
-	this.first = this.first.Fold()
-	this.second = this.second.Fold()
+func (this *Like) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
 
 	switch s := this.second.(type) {
 	case *Constant:
 		sv := s.Value()
 		if sv.Type() == value.MISSING {
-			return NewConstant(value.MISSING_VALUE)
+			return NewConstant(value.MISSING_VALUE), nil
 		} else if sv.Type() != value.STRING {
-			return NewConstant(value.NULL_VALUE)
+			return NewConstant(value.NULL_VALUE), nil
 		}
 
-		re, err := this.compile(sv.Actual().(string))
-		if err != nil {
-			return this
+		re, e := this.compile(sv.Actual().(string))
+		if e != nil {
+			return nil, e
 		}
 
 		this.re = re
@@ -53,13 +55,14 @@ func (this *Like) Fold() Expression {
 		switch f := this.first.(type) {
 		case *Constant:
 			v, e := this.evaluate(f.Value(), sv)
-			if e == nil {
-				return NewConstant(v)
+			if e != nil {
+				return nil, e
 			}
+			return NewConstant(v), nil
 		}
 	}
 
-	return this
+	return this, nil
 }
 
 func (this *Like) evaluate(first, second value.Value) (value.Value, error) {

@@ -28,6 +28,12 @@ func (this *Binding) Expression() Expression {
 	return this.expr
 }
 
-func (this *Binding) Fold() {
-	this.expr = this.expr.Fold()
+func (this *Binding) Accept(visitor Visitor) (Expression, error) {
+	var e error
+	this.expr, e = visitor.Visit(this.expr)
+	if e != nil {
+		return nil, e
+	}
+
+	return this.expr, nil
 }

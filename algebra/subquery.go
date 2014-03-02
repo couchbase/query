@@ -29,6 +29,10 @@ func (this *Subquery) Evaluate(item value.Value, context expression.Context) (va
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
 
-func (this *Subquery) Dependencies() expression.Expressions {
+func (this *Subquery) Children() expression.Expressions {
 	return nil
+}
+
+func (this *Subquery) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this, nil
 }

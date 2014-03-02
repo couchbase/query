@@ -14,13 +14,15 @@ import (
 )
 
 type Multiply struct {
-	nAryBase
+	caAryBase
 }
 
 func NewMultiply(operands ...Expression) Expression {
 	return &Multiply{
-		nAryBase{
-			operands: operands,
+		caAryBase{
+			nAryBase{
+				operands: operands,
+			},
 		},
 	}
 }
@@ -48,7 +50,7 @@ func (this *Multiply) evaluate(operands value.Values) (value.Value, error) {
 func (this *Multiply) construct(constant value.Value, others Expressions) Expression {
 	if constant.Type() == value.MISSING {
 		return NewConstant(constant)
-	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 1.0 {
+	} else if constant.Type() != value.NUMBER && constant.Actual().(float64) == 1.0 {
 		return NewMultiply(others...)
 	}
 

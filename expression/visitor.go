@@ -10,43 +10,26 @@
 package expression
 
 import (
-	"bytes"
-
 	"github.com/couchbaselabs/query/value"
 )
 
-type Concat struct {
-	nAryBase
+type Visitor interface {
+	Visit(expr Expression) (Expression, error)
 }
 
-func NewConcat(operands ...Expression) Expression {
-	return &Concat{
-		nAryBase{
-			operands: operands,
-		},
-	}
+type Folder struct {
 }
 
-func (this *Concat) evaluate(operands value.Values) (value.Value, error) {
-	var buf bytes.Buffer
-	null := false
+func (this *Folder) Visit(expr Expression) (Expression, error) {
+	return expr.Fold()
+}
 
-	for _, o := range operands {
-		switch o.Type() {
-		case value.STRING:
-			if !null {
-				buf.WriteString(o.Actual().(string))
-			}
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		default:
-			null = true
-		}
-	}
+type Formalizer struct {
+	Forbidden value.Value
+	Allowed   value.Value
+	Bucket    string
+}
 
-	if null {
-		return value.NULL_VALUE, nil
-	}
-
-	return value.NewValue(buf.String()), nil
+func (this *Formalizer) Visit(expr Expression) (Expression, error) {
+	return expr.Formalize(this.Forbidden, this.Allowed, this.Bucket)
 }

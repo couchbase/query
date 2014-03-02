@@ -14,13 +14,15 @@ import (
 )
 
 type And struct {
-	nAryBase
+	caAryBase
 }
 
 func NewAnd(operands ...Expression) Expression {
 	return &And{
-		nAryBase{
-			operands: operands,
+		caAryBase{
+			nAryBase{
+				operands: operands,
+			},
 		},
 	}
 }
@@ -52,7 +54,7 @@ func (this *And) evaluate(operands value.Values) (value.Value, error) {
 func (this *And) construct(constant value.Value, others Expressions) Expression {
 	if constant.Type() == value.MISSING {
 		return NewConstant(constant)
-	} else if constant.Type() == value.BOOLEAN && !constant.Actual().(bool) {
+	} else if constant.Type() > value.NULL && !constant.Truth() {
 		return NewConstant(value.NewValue(false))
 	}
 

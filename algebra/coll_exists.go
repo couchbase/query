@@ -41,23 +41,37 @@ func (this *Exists) Evaluate(item value.Value, context expression.Context) (valu
 	}
 }
 
-func (this *Exists) Dependencies() expression.Expressions {
-	return expression.Expressions{this.operand}
-}
+func (this *Exists) Fold() (expression.Expression, error) {
+	t, e := expression.Expression(this).VisitChildren(&expression.Folder{})
+	if e != nil {
+		return t, e
+	}
 
-func (this *Exists) Fold() expression.Expression {
-	this.operand = this.operand.Fold()
 	switch o := this.operand.(type) {
 	case *expression.Constant:
 		v, e := this.Evaluate(o.Value(), nil)
 		if e == nil {
-			return expression.NewConstant(v)
+			return expression.NewConstant(v), nil
 		}
 	case *Subquery:
 		o.query.SetLimit(_ONE_EXPR)
 	}
 
-	return this
+	return this, nil
+}
+
+func (this *Exists) Children() expression.Expressions {
+	return expression.Expressions{this.operand}
+}
+
+func (this *Exists) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	var e error
+	this.operand, e = visitor.Visit(this.operand)
+	if e != nil {
+		return nil, e
+	}
+
+	return this, nil
 }
 
 var _ONE_EXPR = expression.NewConstant(_ONE)

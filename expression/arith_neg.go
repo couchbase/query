@@ -25,16 +25,21 @@ func NewNegate(operand Expression) Expression {
 	}
 }
 
-func (this *Negate) Fold() Expression {
-	this.operand = this.operand.Fold()
+func (this *Negate) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
+
 	switch o := this.operand.(type) {
 	case *Constant:
 		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
+		if e != nil {
+			return nil, e
 		}
+		return NewConstant(v), nil
 	case *Negate:
-		return o.operand
+		return o.operand, nil
 	case *Add:
 		operands := make(Expressions, len(o.operands))
 		for i, oo := range o.operands {
@@ -44,7 +49,7 @@ func (this *Negate) Fold() Expression {
 		return add.Fold()
 	}
 
-	return this
+	return this, nil
 }
 
 func (this *Negate) evaluate(operand value.Value) (value.Value, error) {

@@ -73,7 +73,7 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	return ev, nil
 }
 
-func (this *SimpleCase) Dependencies() Expressions {
+func (this *SimpleCase) Children() Expressions {
 	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
 
 	rv = append(rv, this.searchTerm)
@@ -89,17 +89,31 @@ func (this *SimpleCase) Dependencies() Expressions {
 	return rv
 }
 
-func (this *SimpleCase) Fold() Expression {
-	this.searchTerm = this.searchTerm.Fold()
+func (this *SimpleCase) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+	this.searchTerm, e = visitor.Visit(this.searchTerm)
+	if e != nil {
+		return nil, e
+	}
 
 	for _, w := range this.whenTerms {
-		w.When = w.When.Fold()
-		w.Then = w.Then.Fold()
+		w.When, e = visitor.Visit(w.When)
+		if e != nil {
+			return nil, e
+		}
+
+		w.Then, e = visitor.Visit(w.Then)
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	if this.elseTerm != nil {
-		this.elseTerm = this.elseTerm.Fold()
+		this.elseTerm, e = visitor.Visit(this.elseTerm)
+		if e != nil {
+			return nil, e
+		}
 	}
 
-	return this
+	return this, nil
 }

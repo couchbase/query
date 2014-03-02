@@ -81,7 +81,7 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 }
 
-func (this *Slice) Dependencies() Expressions {
+func (this *Slice) Children() Expressions {
 	rv := make(Expressions, 0, 3)
 	rv = append(rv, this.source)
 	rv = append(rv, this.start)
@@ -93,13 +93,24 @@ func (this *Slice) Dependencies() Expressions {
 	return rv
 }
 
-func (this *Slice) Fold() Expression {
-	this.source = this.source.Fold()
-	this.start = this.start.Fold()
-
-	if this.end != nil {
-		this.end = this.end.Fold()
+func (this *Slice) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
+	this.source, e = visitor.Visit(this.source)
+	if e != nil {
+		return nil, e
 	}
 
-	return this
+	this.start, e = visitor.Visit(this.start)
+	if e != nil {
+		return nil, e
+	}
+
+	if this.end != nil {
+		this.end, e = visitor.Visit(this.end)
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	return this, nil
 }

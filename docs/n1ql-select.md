@@ -1396,8 +1396,7 @@ __REGEXP\_REPLACE(expr, pattern, repl [, n])__ - new string with
 occurences of _pattern_ replaced with _repl_. If _n_ is given, at most
 _n_ replacements are performed.
 
-__REPEAT(expr, count)__ - string formed by repeating _expr_ _count_
-times.
+__REPEAT(expr, n)__ - string formed by repeating _expr_ __ times.
 
 __REPLACE(expr, substr1, substr2 [, n])__ - string with all occurences
 of _substr1_ replaced with _substr2_. If _n_ is given, at most _n_
@@ -1524,8 +1523,8 @@ __ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
 __ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
 _value_ removed.
 
-__ARRAY\_REPEAT(value, count)__ - new array with _value_ repeated
-_count_ times.
+__ARRAY\_REPEAT(value, n)__ - new array with _value_ repeated _n_
+times.
 
 __ARRAY\_REPLACE(expr, value1, value2 [, n])__ - new array with all
 occurences of _value1_ replaced with _value2_. If _n_ is given, at
@@ -1559,6 +1558,12 @@ value:
 * array - the number of elements in the array
 * object - the number of key/value pairs in the object
 * any other value - NULL
+
+__DECODE\_JSON(expr)__ - unmarshals the JSON-encoded string into a
+N1QL value; the empty string is NULL.
+
+__ENCODE\_JSON(expr)__ - marshal the N1QL value into a JSON-encoded
+string; MISSING becomes the empty string.
 
 __ENCODED\_SIZE(expr)__ - number of bytes in an uncompressed JSON
 encoding of the value. The exact size is

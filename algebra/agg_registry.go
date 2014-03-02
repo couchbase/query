@@ -9,12 +9,16 @@
 
 package algebra
 
+import (
+	"strings"
+)
+
 func GetAggregate(name string, distinct bool) (Aggregate, bool) {
 	if distinct {
-		rv, ok := _DISTINCT_AGGREGATES[name]
+		rv, ok := _DISTINCT_AGGREGATES[strings.ToUpper(name)]
 		return rv, ok
 	} else {
-		rv, ok := _OTHER_AGGREGATES[name]
+		rv, ok := _OTHER_AGGREGATES[strings.ToUpper(name)]
 		return rv, ok
 	}
 }

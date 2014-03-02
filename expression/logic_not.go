@@ -25,19 +25,24 @@ func NewNot(operand Expression) Expression {
 	}
 }
 
-func (this *Not) Fold() Expression {
-	this.operand = this.operand.Fold()
+func (this *Not) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
+
 	switch o := this.operand.(type) {
 	case *Constant:
 		v, e := this.evaluate(o.Value())
-		if e == nil {
-			return NewConstant(v)
+		if e != nil {
+			return nil, e
 		}
+		return NewConstant(v), nil
 	case *Not:
-		return o.operand
+		return o.operand, nil
 	}
 
-	return this
+	return this, nil
 }
 
 func (this *Not) evaluate(operand value.Value) (value.Value, error) {

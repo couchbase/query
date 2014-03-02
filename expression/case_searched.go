@@ -55,7 +55,7 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	return ev, nil
 }
 
-func (this *SearchedCase) Dependencies() Expressions {
+func (this *SearchedCase) Children() Expressions {
 	rv := make(Expressions, 0, 1+(len(this.whenTerms)<<1))
 
 	for _, w := range this.whenTerms {
@@ -70,15 +70,26 @@ func (this *SearchedCase) Dependencies() Expressions {
 	return rv
 }
 
-func (this *SearchedCase) Fold() Expression {
+func (this *SearchedCase) VisitChildren(visitor Visitor) (Expression, error) {
+	var e error
 	for _, w := range this.whenTerms {
-		w.When = w.When.Fold()
-		w.Then = w.Then.Fold()
+		w.When, e = visitor.Visit(w.When)
+		if e != nil {
+			return nil, e
+		}
+
+		w.Then, e = visitor.Visit(w.Then)
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	if this.elseTerm != nil {
-		this.elseTerm = this.elseTerm.Fold()
+		this.elseTerm, e = visitor.Visit(this.elseTerm)
+		if e != nil {
+			return nil, e
+		}
 	}
 
-	return this
+	return this, nil
 }

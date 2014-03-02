@@ -44,5 +44,9 @@ func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
 		return value.MISSING_VALUE, nil
 	}
 
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
 	return value.NULL_VALUE, nil
 }

@@ -10,14 +10,14 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Let struct {
-	bindings algebra.Bindings
+	bindings expression.Bindings
 }
 
-func NewLet(bindings algebra.Bindings) *Let {
+func NewLet(bindings expression.Bindings) *Let {
 	return &Let{
 		bindings: bindings,
 	}
@@ -27,6 +27,6 @@ func (this *Let) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLet(this)
 }
 
-func (this *Let) Bindings() algebra.Bindings {
+func (this *Let) Bindings() expression.Bindings {
 	return this.bindings
 }
