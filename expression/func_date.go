@@ -49,10 +49,44 @@ func (this *ClockNowStr) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(str), nil
 }
 
-func (this *ClockNowStr) MinArgs() int { return 0 }
-
-func (this *ClockNowStr) MaxArgs() int { return 0 }
-
 func (this *ClockNowStr) Constructor() FunctionConstructor {
+	return func(Expressions) Function { return this }
+}
+
+type NowMillis struct {
+	ExpressionBase
+}
+
+func NewNowMillis() Function {
+	return &NowMillis{}
+}
+
+func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	nanos := context.(Context).Now().UnixNano()
+	return value.NewValue(float64(nanos) / (1000000.0)), nil
+}
+
+func (this *NowMillis) MinArgs() int { return 0 }
+
+func (this *NowMillis) MaxArgs() int { return 0 }
+
+func (this *NowMillis) Constructor() FunctionConstructor {
+	return func(Expressions) Function { return this }
+}
+
+type NowStr struct {
+	ExpressionBase
+}
+
+func NewNowStr() Function {
+	return &NowStr{}
+}
+
+func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	str := context.(Context).Now().String()
+	return value.NewValue(str), nil
+}
+
+func (this *NowStr) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }

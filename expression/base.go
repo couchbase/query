@@ -76,3 +76,7 @@ func (this *ExpressionBase) Children() Expressions {
 func (this *ExpressionBase) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
 }
+
+func (this *ExpressionBase) MinArgs() int { return 0 }
+
+func (this *ExpressionBase) MaxArgs() int { return 0 }

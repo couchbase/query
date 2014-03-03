@@ -143,11 +143,7 @@ func (this *LTrim) evaluate(operands value.Values) (value.Value, error) {
 	return value.NewValue(rv), nil
 }
 
-func (this *LTrim) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewLTrim(args)
-	}
-}
+func (this *LTrim) Constructor() FunctionConstructor { return NewLTrim }
 
 var _WHITESPACE = value.NewValue(" \t\n\f\r")
 
@@ -268,11 +264,7 @@ func (this *Replace) MinArgs() int { return 3 }
 
 func (this *Replace) MaxArgs() int { return 4 }
 
-func (this *Replace) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewReplace(args)
-	}
-}
+func (this *Replace) Constructor() FunctionConstructor { return NewReplace }
 
 type RTrim struct {
 	nAryBase
@@ -313,11 +305,7 @@ func (this *RTrim) evaluate(operands value.Values) (value.Value, error) {
 	return value.NewValue(rv), nil
 }
 
-func (this *RTrim) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRTrim(args)
-	}
-}
+func (this *RTrim) Constructor() FunctionConstructor { return NewRTrim }
 
 type Split struct {
 	nAryBase
@@ -366,11 +354,7 @@ func (this *Split) evaluate(operands value.Values) (value.Value, error) {
 	return value.NewValue(rv), nil
 }
 
-func (this *Split) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewSplit(args)
-	}
-}
+func (this *Split) Constructor() FunctionConstructor { return NewSplit }
 
 type Substr struct {
 	nAryBase
@@ -429,18 +413,14 @@ func (this *Substr) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	length := int(operands[2].Actual().(float64))
-	if pos+length > len(str) {
+	if length < 0 || pos+length > len(str) {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(str[pos : pos+length]), nil
 }
 
-func (this *Substr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewSubstr(args)
-	}
-}
+func (this *Substr) Constructor() FunctionConstructor { return NewSubstr }
 
 type Title struct {
 	unaryBase
@@ -510,11 +490,7 @@ func (this *Trim) evaluate(operands value.Values) (value.Value, error) {
 	return value.NewValue(rv), nil
 }
 
-func (this *Trim) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewTrim(args)
-	}
-}
+func (this *Trim) Constructor() FunctionConstructor { return NewTrim }
 
 type Upper struct {
 	unaryBase

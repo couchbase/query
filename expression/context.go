@@ -9,5 +9,10 @@
 
 package expression
 
+import (
+	"time"
+)
+
 type Context interface {
+	Now() time.Time
 }

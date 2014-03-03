@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"time"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -42,3 +44,17 @@ const (
 	HIGH
 	BOTH
 )
+
+type IndexContext struct {
+	now time.Time
+}
+
+func NewIndexContext() Context {
+	return &IndexContext{
+		now: time.Now(),
+	}
+}
+
+func (this *IndexContext) Now() time.Time {
+	return this.now
+}

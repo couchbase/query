@@ -10,8 +10,6 @@
 package algebra
 
 import (
-	"time"
-
 	"github.com/couchbaselabs/query/err"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -19,7 +17,6 @@ import (
 
 type Context interface {
 	expression.Context
-	Now() time.Time
 	Argument(parameter string) (value.Value, error)
 	WarningChannel() err.ErrorChannel
 	ErrorChannel() err.ErrorChannel

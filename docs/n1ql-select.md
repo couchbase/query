@@ -1443,8 +1443,6 @@ __CEIL(expr)__ - smallest integer not less than the number.
 
 __COS(expr)__ - cosine.
 
-__COT(expr)__ - cotangent.
-
 __DEGREES(expr)__ - radians to degrees.
 
 __EXP(expr)__ - _e_\*\*expr.
