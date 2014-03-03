@@ -70,9 +70,9 @@ func (this *ExpressionBase) Spans(index Index) Spans {
 }
 
 func (this *ExpressionBase) Children() Expressions {
-	panic("Must override.")
+	return nil
 }
 
 func (this *ExpressionBase) VisitChildren(visitor Visitor) (Expression, error) {
-	panic("Must override.")
+	return this, nil
 }

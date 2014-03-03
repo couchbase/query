@@ -69,14 +69,8 @@ func (this *aggregateBase) VisitChildren(visitor expression.Visitor) (expression
 	return this, nil
 }
 
-func (this *aggregateBase) MinArgs() int {
-	return 1
-}
+func (this *aggregateBase) MinArgs() int { return 1 }
 
-func (this *aggregateBase) MaxArgs() int {
-	return 1
-}
+func (this *aggregateBase) MaxArgs() int { return 1 }
 
-func (this *aggregateBase) Argument() expression.Expression {
-	return this.argument
-}
+func (this *aggregateBase) Argument() expression.Expression { return this.argument }

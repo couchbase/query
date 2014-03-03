@@ -11,6 +11,8 @@ package algebra
 
 import (
 	"strings"
+
+	"github.com/couchbaselabs/query/expression"
 )
 
 func GetAggregate(name string, distinct bool) (Aggregate, bool) {
@@ -37,4 +39,15 @@ var _OTHER_AGGREGATES = map[string]Aggregate{
 	"MAX":       &Max{},
 	"MIN":       &Min{},
 	"SUM":       &Sum{},
+}
+
+func GetFunction(name string) (expression.Function, bool) {
+	rv, ok := _FUNCTIONS[strings.ToUpper(name)]
+	return rv, ok
+}
+
+var _FUNCTIONS = map[string]expression.Function{
+	// Date functions
+	"NOW_MILLIS": &NowMillis{},
+	"NOW_STR":    &NowStr{},
 }

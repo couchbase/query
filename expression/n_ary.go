@@ -43,7 +43,7 @@ func (this *nAryBase) Fold() (Expression, error) {
 		return t, e
 	}
 
-	constants := make(value.Values, 0, len(this.operands))
+	constants := make(value.Values, len(this.operands))
 	for i, o := range this.operands {
 		switch o := o.(type) {
 		case *Constant:

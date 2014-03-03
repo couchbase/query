@@ -16,53 +16,18 @@ import (
 )
 
 type Like struct {
-	binaryBase
-	re *regexp.Regexp
+	reBinaryBase
 }
 
 func NewLike(first, second Expression) Expression {
 	return &Like{
-		binaryBase: binaryBase{
-			first:  first,
-			second: second,
+		reBinaryBase{
+			binaryBase: binaryBase{
+				first:  first,
+				second: second,
+			},
 		},
-		re: nil,
 	}
-}
-
-func (this *Like) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	switch s := this.second.(type) {
-	case *Constant:
-		sv := s.Value()
-		if sv.Type() == value.MISSING {
-			return NewConstant(value.MISSING_VALUE), nil
-		} else if sv.Type() != value.STRING {
-			return NewConstant(value.NULL_VALUE), nil
-		}
-
-		re, e := this.compile(sv.Actual().(string))
-		if e != nil {
-			return nil, e
-		}
-
-		this.re = re
-
-		switch f := this.first.(type) {
-		case *Constant:
-			v, e := this.evaluate(f.Value(), sv)
-			if e != nil {
-				return nil, e
-			}
-			return NewConstant(v), nil
-		}
-	}
-
-	return this, nil
 }
 
 func (this *Like) evaluate(first, second value.Value) (value.Value, error) {

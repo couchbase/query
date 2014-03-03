@@ -1399,10 +1399,10 @@ __REGEXP\_REPLACE(expr, pattern, repl [, n])__ - new string with
 occurences of _pattern_ replaced with _repl_. If _n_ is given, at most
 _n_ replacements are performed.
 
-__REPEAT(expr, n)__ - string formed by repeating _expr_ __ times.
+__REPEAT(expr, n)__ - string formed by repeating _expr_ _n_ times.
 
-__REPLACE(expr, substr1, substr2 [, n])__ - string with all occurences
-of _substr1_ replaced with _substr2_. If _n_ is given, at most _n_
+__REPLACE(expr, substr, repl [, n])__ - string with all occurences of
+_substr_ replaced with _repl_. If _n_ is given, at most _n_
 replacements are performed.
 
 __RTRIM(expr, [, chars])__ - string with all ending chars removed

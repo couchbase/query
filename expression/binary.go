@@ -10,6 +10,9 @@
 package expression
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -79,6 +82,43 @@ func (this *binaryBase) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
 }
 
+func (this *binaryBase) MinArgs() int { return 2 }
+
+func (this *binaryBase) MaxArgs() int { return 2 }
+
 func (this *binaryBase) evaluate(first, second value.Value) (value.Value, error) {
 	panic("Must override.")
+}
+
+type reBinaryBase struct {
+	binaryBase
+	re *regexp.Regexp
+}
+
+func (this *reBinaryBase) Fold() (Expression, error) {
+	var e error
+	this.second, e = this.second.Fold()
+	if e != nil {
+		return nil, e
+	}
+
+	switch s := this.second.(type) {
+	case *Constant:
+		sv := s.Value()
+		if sv.Type() == value.MISSING {
+			return NewConstant(value.MISSING_VALUE), nil
+		} else if sv.Type() != value.STRING {
+			sa := sv.Actual()
+			return nil, fmt.Errorf("Invalid LIKE pattern %v of type %T.", sa, sa)
+		}
+
+		re, e := regexp.Compile(sv.Actual().(string))
+		if e != nil {
+			return nil, e
+		}
+
+		this.re = re
+	}
+
+	return this.binaryBase.Fold()
 }

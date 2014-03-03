@@ -64,6 +64,10 @@ func (this *unaryBase) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
 }
 
+func (this *unaryBase) MinArgs() int { return 1 }
+
+func (this *unaryBase) MaxArgs() int { return 1 }
+
 func (this *unaryBase) evaluate(operand value.Value) (value.Value, error) {
 	panic("Must override.")
 }
