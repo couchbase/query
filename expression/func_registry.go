@@ -19,10 +19,11 @@ func GetFunction(name string) (Function, bool) {
 }
 
 var _FUNCTIONS = map[string]Function{
-/*
-		// Date functions
-		"CLOCK_NOW_MILLIS":  &ClockNowMillis{},
-		"CLOCK_NOW_STR":     &ClockNowStr{},
+	// Date functions
+	"CLOCK_NOW_MILLIS": &ClockNowMillis{},
+	"CLOCK_NOW_STR":    &ClockNowStr{},
+
+	/*
 		"DATE_ADD_MILLIS":   &DateAddMillis{},
 		"DATE_ADD_STR":      &DateAddStr{},
 		"DATE_DIFF_MILLIS":  &DateDiffMillis{},
@@ -35,6 +36,7 @@ var _FUNCTIONS = map[string]Function{
 		"NOW_MILLIS":        &NowMillis{},
 		"NOW_STR":           &NowStr{},
 		"STR_TO_MILLIS":     &StrToMillis{},
+	*/
 
 	// String functions
 	"CONTAINS":        &Contains{},
@@ -56,101 +58,102 @@ var _FUNCTIONS = map[string]Function{
 	"TRIM":            &Trim{},
 	"UPPER":           &Upper{},
 
-	// Number functions
-	"ABS":     &Abs{},
-	"ACOS":    &Acos{},
-	"ASIN":    &Asin{},
-	"ATAN":    &Atan{},
-	"ATAN2":   &Atan2{},
-	"CEIL":    &Ceil{},
-	"COS":     &Cos{},
-	"COT":     &Cot{},
-	"DEGREES": &Degrees{},
-	"EXP":     &Exp{},
-	"LN":      &Ln{},
-	"LOG":     &Log{},
-	"FLOOR":   &Floor{},
-	"PI":      &PI{},
-	"POWER":   &Power{},
-	"RADIANS": &Radians{},
-	"RANDOM":  &Random{},
-	"ROUND":   &Round{},
-	"SIGN":    &Sign{},
-	"SIN":     &Sin{},
-	"SQRT":    &Sqrt{},
-	"TAN":     &Tan{},
-	"TRUNC":   &Trunc{},
+	/*
+		// Number functions
+		"ABS":     &Abs{},
+		"ACOS":    &Acos{},
+		"ASIN":    &Asin{},
+		"ATAN":    &Atan{},
+		"ATAN2":   &Atan2{},
+		"CEIL":    &Ceil{},
+		"COS":     &Cos{},
+		"COT":     &Cot{},
+		"DEGREES": &Degrees{},
+		"EXP":     &Exp{},
+		"LN":      &Ln{},
+		"LOG":     &Log{},
+		"FLOOR":   &Floor{},
+		"PI":      &PI{},
+		"POWER":   &Power{},
+		"RADIANS": &Radians{},
+		"RANDOM":  &Random{},
+		"ROUND":   &Round{},
+		"SIGN":    &Sign{},
+		"SIN":     &Sin{},
+		"SQRT":    &Sqrt{},
+		"TAN":     &Tan{},
+		"TRUNC":   &Trunc{},
 
-		// Array functions
-		"ARRAY_ADD":      &ArrayAdd{},
-		"ARRAY_APPEND":   &ArrayAppend{},
-		"ARRAY_CONCAT":   &ArrayConcat{},
-		"ARRAY_CONTAINS": &ArrayContains{},
-		"ARRAY_DISTINCT": &ArrayDistinct{},
-		"ARRAY_IFNULL":   &ArrayIfNull{},
-		"ARRAY_LENGTH":   &ArrayLength{},
-		"ARRAY_MAX":      &ArrayMax{},
-		"ARRAY_MIN":      &ArrayMin{},
-		"ARRAY_POSITION": &ArrayPosition{},
-		"ARRAY_PREPEND":  &ArrayPrepend{},
-		"ARRAY_REMOVE":   &ArrayRemove{},
-		"ARRAY_REPEAT":   &ArrayRepeat{},
-		"ARRAY_REPLACE":  &ArrayReplace{},
-		"ARRAY_REVERSE":  &ArrayReverse{},
-		"ARRAY_SORT":     &ArraySqrt{},
+			// Array functions
+			"ARRAY_ADD":      &ArrayAdd{},
+			"ARRAY_APPEND":   &ArrayAppend{},
+			"ARRAY_CONCAT":   &ArrayConcat{},
+			"ARRAY_CONTAINS": &ArrayContains{},
+			"ARRAY_DISTINCT": &ArrayDistinct{},
+			"ARRAY_IFNULL":   &ArrayIfNull{},
+			"ARRAY_LENGTH":   &ArrayLength{},
+			"ARRAY_MAX":      &ArrayMax{},
+			"ARRAY_MIN":      &ArrayMin{},
+			"ARRAY_POSITION": &ArrayPosition{},
+			"ARRAY_PREPEND":  &ArrayPrepend{},
+			"ARRAY_REMOVE":   &ArrayRemove{},
+			"ARRAY_REPEAT":   &ArrayRepeat{},
+			"ARRAY_REPLACE":  &ArrayReplace{},
+			"ARRAY_REVERSE":  &ArrayReverse{},
+			"ARRAY_SORT":     &ArraySqrt{},
 
-		// Object functions
-		"OBJECT_KEYS":   &ObjectKeys{},
-		"OBJECT_LENGTH": &ObjectLength{},
-		"OBJECT_VALUES": &ObjectValues{},
+			// Object functions
+			"OBJECT_KEYS":   &ObjectKeys{},
+			"OBJECT_LENGTH": &ObjectLength{},
+			"OBJECT_VALUES": &ObjectValues{},
 
-		// JSON functions
-		"POLY_LENGTH":  &PolyLength{},
-		"DECODE_JSON":  &DecodeJSON{},
-		"ENCODE_JSON":  &EncodeJSON{},
-		"ENCODED_SIZE": &EncodedSize{},
+			// JSON functions
+			"POLY_LENGTH":  &PolyLength{},
+			"DECODE_JSON":  &DecodeJSON{},
+			"ENCODE_JSON":  &EncodeJSON{},
+			"ENCODED_SIZE": &EncodedSize{},
 
-		// Comparison functions
-		"GREATEST": &Greatest{},
-		"LEAST":    &Least{},
+			// Comparison functions
+			"GREATEST": &Greatest{},
+			"LEAST":    &Least{},
 
-		// Conditional functions for unknowns
-		"IFMISSING":       &IfMissing{},
-		"IFMISSINGORNULL": &IfMisingOrNull{},
-		"IFNULL":          &IfNull{},
-		"MISSINGIF":       &MissingIf{},
-		"NULLIF":          &NullIf{},
+			// Conditional functions for unknowns
+			"IFMISSING":       &IfMissing{},
+			"IFMISSINGORNULL": &IfMisingOrNull{},
+			"IFNULL":          &IfNull{},
+			"MISSINGIF":       &MissingIf{},
+			"NULLIF":          &NullIf{},
 
-		// Conditional functions for numbers
-		"IFINF":      &IfInf{},
-		"IFNAN":      &IfNaN{},
-		"IFNANORINF": &IfNaNOrInf{},
-		"IFNEGINF":   &IfNegInf{},
-		"IFPOSINF":   &IfPosInf{},
-		"FIRSTNUM":   &FirstNum{},
-		"NANIF":      &NaNIf{},
-		"NEGNINFIF":  &NegInfIf{},
-		"POSINFIF":   &PosInfIf{},
+			// Conditional functions for numbers
+			"IFINF":      &IfInf{},
+			"IFNAN":      &IfNaN{},
+			"IFNANORINF": &IfNaNOrInf{},
+			"IFNEGINF":   &IfNegInf{},
+			"IFPOSINF":   &IfPosInf{},
+			"FIRSTNUM":   &FirstNum{},
+			"NANIF":      &NaNIf{},
+			"NEGNINFIF":  &NegInfIf{},
+			"POSINFIF":   &PosInfIf{},
 
-		// Meta and value functions
-		"BASE64_VALUE": &Base64Value{},
-		"META":         &Meta{},
-		"VALUE":        &Value{},
+			// Meta and value functions
+			"BASE64_VALUE": &Base64Value{},
+			"META":         &Meta{},
+			"VALUE":        &Value{},
 
-		// Type checking functions
-		"IS_ARRAY":  &IsArray{},
-		"IS_ATOM":   &IsAtom{},
-		"IS_BOOL":   &IsBool{},
-		"IS_NUM":    &IsNum{},
-		"IS_OBJ":    &IsObj{},
-		"IS_STR":    &IsStr{},
-		"TYPE_NAME": &TypeName{},
+			// Type checking functions
+			"IS_ARRAY":  &IsArray{},
+			"IS_ATOM":   &IsAtom{},
+			"IS_BOOL":   &IsBool{},
+			"IS_NUM":    &IsNum{},
+			"IS_OBJ":    &IsObj{},
+			"IS_STR":    &IsStr{},
+			"TYPE_NAME": &TypeName{},
 
-		// Type conversion functions
-		"TO_ARRAY": &ToArray{},
-		"TO_ATOM":  &ToAtom{},
-		"TO_BOOL":  &ToBool{},
-		"TO_NUM":   &ToNum{},
-		"TO_STR":   &ToStr{},
-*/
+			// Type conversion functions
+			"TO_ARRAY": &ToArray{},
+			"TO_ATOM":  &ToAtom{},
+			"TO_BOOL":  &ToBool{},
+			"TO_NUM":   &ToNum{},
+			"TO_STR":   &ToStr{},
+	*/
 }

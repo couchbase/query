@@ -1380,7 +1380,7 @@ __LENGTH(expr)__ - length of the string value.
 
 __LOWER(expr)__ - lowercase of the string value.
 
-__LTRIM(expr [, chars])__ - string with all beginning chars removed
+__LTRIM(expr [, chars])__ - string with all leading chars removed
 (whitespace by default).
 
 __POSITION(expr, substr)__ - the first position of the substring
@@ -1405,12 +1405,12 @@ __REPLACE(expr, substr, repl [, n])__ - string with all occurences of
 _substr_ replaced with _repl_. If _n_ is given, at most _n_
 replacements are performed.
 
-__RTRIM(expr, [, chars])__ - string with all ending chars removed
+__RTRIM(expr, [, chars])__ - string with all trailing chars removed
 (whitespace by default).
 
 __SPLIT(expr [, sep])__ - splits the string into an array of
-substrings separated by _sep_. If _sep_ is not given, a single space
-character is used.
+substrings separated by _sep_. If _sep_ is not given, any combination
+of whitespace characters is used.
 
 __SUBSTR(expr, position [, length])__ - substring from the integer
 _position_ of the given _length_, or to the end of the string. The
@@ -1422,7 +1422,7 @@ __TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
 first letter of each word is uppercase and every other letter is
 lowercase.
 
-__TRIM(expr [, chars])__ - string with all beginning and ending chars
+__TRIM(expr [, chars])__ - string with all leading and trailing chars
 removed (whitespace by default).
 
 __UPPER(expr)__ - uppercase of the string value.

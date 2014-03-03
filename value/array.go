@@ -87,7 +87,7 @@ func (this sliceValue) SetField(field string, val interface{}) error {
 
 func (this sliceValue) Index(index int) (Value, bool) {
 	if index < 0 {
-		index = len(this) - index
+		index = len(this) + index
 	}
 
 	if index >= 0 && index < len(this) {
@@ -100,7 +100,7 @@ func (this sliceValue) Index(index int) (Value, bool) {
 // NOTE: Slices do NOT extend beyond length.
 func (this sliceValue) SetIndex(index int, val interface{}) error {
 	if index < 0 {
-		index = len(this) - index
+		index = len(this) + index
 	}
 
 	if index < 0 || index >= len(this) {
@@ -113,11 +113,11 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 
 func (this sliceValue) Slice(start, end int) (Value, bool) {
 	if start < 0 {
-		start = len(this) - start
+		start = len(this) + start
 	}
 
 	if end < 0 {
-		end = len(this) - end
+		end = len(this) + end
 	}
 
 	if start <= end && start >= 0 && end <= len(this) {
@@ -203,7 +203,7 @@ func (this *listValue) SetField(field string, val interface{}) error {
 
 func (this *listValue) Index(index int) (Value, bool) {
 	if index < 0 {
-		index = len(this.actual) - index
+		index = len(this.actual) + index
 	}
 
 	if index >= 0 && index < len(this.actual) {
@@ -215,7 +215,7 @@ func (this *listValue) Index(index int) (Value, bool) {
 
 func (this *listValue) SetIndex(index int, val interface{}) error {
 	if index < 0 {
-		index = len(this.actual) - index
+		index = len(this.actual) + index
 	}
 
 	if index < 0 {
@@ -238,11 +238,11 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 
 func (this *listValue) Slice(start, end int) (Value, bool) {
 	if start < 0 {
-		start = len(this.actual) - start
+		start = len(this.actual) + start
 	}
 
 	if end < 0 {
-		end = len(this.actual) - end
+		end = len(this.actual) + end
 	}
 
 	if start <= end && start >= 0 && end <= len(this.actual) {
