@@ -1409,19 +1409,14 @@ __RTRIM(expr, [, chars])__ - string with all ending chars removed
 (whitespace by default).
 
 __SPLIT(expr [, sep])__ - splits the string into an array of
-substrings separated by any combination of characters in _sep_. If
-_sep_ is not given, any combination of whitespace characters is used.
+substrings separated by _sep_. If _sep_ is not given, a single space
+character is used.
 
-__SUBSTR(expr, position)__ - substring from the integer _position_ to
-the end of the string. The position is 0-based, i.e. the first
-position is 0. If _position_ is negative, it is counted from the end
-of the string; -1 is the last position in the string.
-
-__SUBSTR(expr, position, length)__ - substring of the given _length_
-from the integer _position_ to the end of the string. The position is
-0-based, i.e. the first position is 0. If _position_ is negative, it
-is counted from the end of the string; -1 is the last position in the
-string.
+__SUBSTR(expr, position [, length])__ - substring from the integer
+_position_ of the given _length_, or to the end of the string. The
+position is 0-based, i.e. the first position is 0. If _position_ is
+negative, it is counted from the end of the string; -1 is the last
+position in the string.
 
 __TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
 first letter of each word is uppercase and every other letter is
@@ -1466,16 +1461,11 @@ __POWER(expr1, expr2)__ - expr1\*\*expr2.
 
 __RADIANS(expr)__ - degrees to radians.
 
-__RANDOM()__ - pseudorandom number.
+__RANDOM([expr])__ - pseudorandom number with optional seed.
 
-__RANDOM(expr)__ - pseudorandom number with seed.
-
-__ROUND(expr)__ - rounds the number to the nearest integer; same as
-ROUND(value, 0).
-
-__ROUND(expr, digits)__ - rounds the value to the given number of
-integer digits to the right of the decimal point (left if digits is
-negative).
+__ROUND(expr [, digits])__ - rounds the value to the given number of
+integer digits to the right of the decimal point (left if _digits_ is
+negative). _digits_ is 0 if not given.
 
 __SIGN(expr)__ - -1, 0, or 1 for negative, zero, or positive numbers
 respectively.
@@ -1486,12 +1476,9 @@ __SQRT(expr)__ - square root.
 
 __TAN(expr)__ - tangent.
 
-__TRUNC(expr)__ - truncates the number towards zero; same as
-TRUNC(value, 0).
-
-__TRUNC(expr, digits)__ - truncates the number to the given number of
-integer digits to the right of the decimal point (left if digits is
-negative).
+__TRUNC(expr [, digits])__ - truncates the number to the given number
+of integer digits to the right of the decimal point (left if _digits_
+is negative). _digits_ is 0 if not given.
 
 ### Array functions
 
@@ -1623,19 +1610,14 @@ __POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
 
 ### Meta and value functions
 
-__BASE64\_VALUE()__ - base64-encoded value of the current primary
-document.
+__BASE64\_VALUE([expr])__ - base64-encoded value of the document
+containing _expr_, or the primary document.
 
-__BASE64\_VALUE(expr)__ - base64-encoded value of the document
-containing _expr_.
+__META([expr])__ - meta data for the document containing _expr_, or
+the primary document.
 
-__META()__ - meta data for the current primary document.
-
-__META(expr)__ - meta data for the document containing _expr_.
-
-__VALUE()__ - value of the current primary document.
-
-__VALUE(expr)__ - value of the document containing _expr_.
+__VALUE([expr])__ - value of the document containing _expr_, or the
+primary document.
 
 ### Type checking functions
 
