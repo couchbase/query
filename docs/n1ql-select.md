@@ -1353,6 +1353,8 @@ the given date part string is the least significant.
 __DATE\_TRUNC\_STR(expr, part)__ - truncates ISO 8601 timestamp so
 that the given date part string is the least significant.
 
+__DATE\_UTC\_STR(expr)__ - converts the ISO 8601 timestamp to UTC.
+
 __MILLIS\_TO\_STR(expr)__ - converts UNIX milliseconds to string in
 ISO 8601 format.
 
@@ -1378,7 +1380,8 @@ __LENGTH(expr)__ - length of the string value.
 
 __LOWER(expr)__ - lowercase of the string value.
 
-__LTRIM(expr)__ - string with all beginning whitespace removed.
+__LTRIM(expr [, chars])__ - string with all beginning chars removed
+(whitespace by default).
 
 __POSITION(expr, substr)__ - the first position of the substring
 within the string, or -1. The position is 0-based.
@@ -1402,7 +1405,8 @@ __REPLACE(expr, substr1, substr2 [, n])__ - string with all occurences
 of _substr1_ replaced with _substr2_. If _n_ is given, at most _n_
 replacements are performed.
 
-__RTRIM(expr)__ - string with all ending whitespace removed.
+__RTRIM(expr, [, chars])__ - string with all ending chars removed
+(whitespace by default).
 
 __SPLIT(expr [, sep])__ - splits the string into an array of
 substrings separated by any combination of characters in _sep_. If
@@ -1423,8 +1427,8 @@ __TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
 first letter of each word is uppercase and every other letter is
 lowercase.
 
-__TRIM(expr)__ - string with all beginning and ending whitespace
-removed.
+__TRIM(expr [, chars])__ - string with all beginning and ending chars
+removed (whitespace by default).
 
 __UPPER(expr)__ - uppercase of the string value.
 
