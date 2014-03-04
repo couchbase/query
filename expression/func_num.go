@@ -521,6 +521,84 @@ func (this *Random) MaxArgs() int { return 1 }
 
 func (this *Random) Constructor() FunctionConstructor { return NewRandom }
 
+type Round struct {
+	nAryBase
+	precision int
+}
+
+func NewRound(arguments Expressions) Function {
+	return &Round{
+		nAryBase: nAryBase{
+			operands: arguments,
+		},
+	}
+}
+
+func (this *Round) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
+
+	if len(this.operands) < 2 {
+		return this, nil
+	}
+
+	switch o := this.operands[1].(type) {
+	case *Constant:
+		v := o.Value().Actual()
+		switch v := v.(type) {
+		case float64:
+			if v != math.Trunc(v) {
+				return nil, fmt.Errorf("Non-integer ROUND precision %v.", v)
+			}
+			this.precision = int(v)
+			this.operands = nil
+		default:
+			return nil, fmt.Errorf("Invalid ROUND precision %v of type %T.", v, v)
+		}
+	}
+
+	return this, nil
+}
+
+func (this *Round) evaluate(args value.Values) (value.Value, error) {
+	arg := args[0]
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	v := arg.Actual().(float64)
+
+	if len(this.operands) == 0 {
+		return value.NewValue(roundFloat(v, this.precision)), nil
+	}
+
+	p := 0
+	prec := args[1]
+	if prec.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if prec.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	} else {
+		pf := prec.Actual().(float64)
+		if pf != math.Trunc(pf) {
+			return value.NULL_VALUE, nil
+		}
+		p = int(pf)
+	}
+
+	return value.NewValue(roundFloat(v, p)), nil
+}
+
+func (this *Round) MinArgs() int { return 1 }
+
+func (this *Round) MaxArgs() int { return 2 }
+
+func (this *Round) Constructor() FunctionConstructor { return NewRound }
+
 type Sign struct {
 	unaryBase
 }
@@ -639,6 +717,112 @@ func (this *Tan) Constructor() FunctionConstructor {
 	return func(args Expressions) Function {
 		return NewTan(args[0])
 	}
+}
+
+type Trunc struct {
+	nAryBase
+	precision int
+}
+
+func NewTrunc(arguments Expressions) Function {
+	return &Trunc{
+		nAryBase: nAryBase{
+			operands: arguments,
+		},
+	}
+}
+
+func (this *Trunc) Fold() (Expression, error) {
+	t, e := Expression(this).VisitChildren(&Folder{})
+	if e != nil {
+		return t, e
+	}
+
+	if len(this.operands) < 2 {
+		return this, nil
+	}
+
+	switch o := this.operands[1].(type) {
+	case *Constant:
+		v := o.Value().Actual()
+		switch v := v.(type) {
+		case float64:
+			if v != math.Trunc(v) {
+				return nil, fmt.Errorf("Non-integer TRUNC precision %v.", v)
+			}
+			this.precision = int(v)
+			this.operands = nil
+		default:
+			return nil, fmt.Errorf("Invalid TRUNC precision %v of type %T.", v, v)
+		}
+	}
+
+	return this, nil
+}
+
+func (this *Trunc) evaluate(args value.Values) (value.Value, error) {
+	arg := args[0]
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	v := arg.Actual().(float64)
+
+	if len(this.operands) == 0 {
+		return value.NewValue(truncateFloat(v, this.precision)), nil
+	}
+
+	p := 0
+	prec := args[1]
+	if prec.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if prec.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	} else {
+		pf := prec.Actual().(float64)
+		if pf != math.Trunc(pf) {
+			return value.NULL_VALUE, nil
+		}
+		p = int(pf)
+	}
+
+	return value.NewValue(truncateFloat(v, p)), nil
+}
+
+func (this *Trunc) MinArgs() int { return 1 }
+
+func (this *Trunc) MaxArgs() int { return 2 }
+
+func (this *Trunc) Constructor() FunctionConstructor { return NewTrunc }
+
+func truncateFloat(x float64, prec int) float64 {
+	pow := math.Pow(10, float64(prec))
+	intermed := x * pow
+	rounder := math.Floor(intermed)
+	return rounder / pow
+}
+
+func roundFloat(x float64, prec int) float64 {
+	if math.IsNaN(x) || math.IsInf(x, 0) {
+		return x
+	}
+
+	sign := 1.0
+	if x < 0 {
+		sign = -1
+		x = -x
+	}
+
+	pow := math.Pow(10, float64(prec))
+	intermed := x * pow
+	rounder := math.Floor(intermed + 0.5)
+	if rounder == math.Trunc(rounder) && math.Mod(rounder, 2) != 0 {
+		// For frac 0.5, round towards even
+		rounder--
+	}
+	return sign * rounder / pow
 }
 
 var _DEG_TO_RAD = NewConstant(value.NewValue(math.Pi / 180.0))

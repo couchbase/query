@@ -37,10 +37,7 @@ var _FUNCTIONS = map[string]Function{
 
 	"NOW_MILLIS": &NowMillis{},
 	"NOW_STR":    &NowStr{},
-
-	/*
-		"STR_TO_MILLIS":     &StrToMillis{},
-	*/
+	// "STR_TO_MILLIS":     &StrToMillis{},
 
 	// String functions
 	"CONTAINS":        &Contains{},
@@ -79,12 +76,12 @@ var _FUNCTIONS = map[string]Function{
 	"POWER":   &Power{},
 	"RADIANS": &Radians{},
 	"RANDOM":  &Random{},
-	// "ROUND":  &Round{},
-	"SIGN": &Sign{},
-	"SIN":  &Sin{},
-	"SQRT": &Sqrt{},
-	"TAN":  &Tan{},
-	// "TRUNC":  &Trunc{},
+	"ROUND":   &Round{},
+	"SIGN":    &Sign{},
+	"SIN":     &Sin{},
+	"SQRT":    &Sqrt{},
+	"TAN":     &Tan{},
+	"TRUNC":   &Trunc{},
 
 	/*
 		// Array functions
