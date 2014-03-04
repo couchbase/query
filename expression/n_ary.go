@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -77,6 +79,10 @@ func (this *nAryBase) VisitChildren(visitor Visitor) (Expression, error) {
 
 	return this, nil
 }
+
+func (this *nAryBase) MinArgs() int { return 1 }
+
+func (this *nAryBase) MaxArgs() int { return math.MaxInt32 }
 
 func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
 	panic("Must override.")

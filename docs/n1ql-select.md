@@ -1480,9 +1480,6 @@ is negative). _digits_ is 0 if not given.
 
 ### Array functions
 
-__ARRAY\_ADD(expr, value)__ - new array with _value_ appended, if
-_value_ is not already present; else unmodified input array.
-
 __ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
 
 __ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
@@ -1508,6 +1505,9 @@ __ARRAY\_POSITION(expr, value)__ - the first position of _value_ within
 the array, or -1. The position is 0-based.
 
 __ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
+
+__ARRAY\_PUT(expr, value)__ - new array with _value_ appended, if
+_value_ is not already present; else unmodified input array.
 
 __ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
 _value_ removed.

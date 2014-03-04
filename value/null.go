@@ -12,7 +12,7 @@ package value
 type nullValue struct {
 }
 
-var NULL_VALUE = &nullValue{}
+var NULL_VALUE Value = &nullValue{}
 
 func NewNullValue() Value {
 	return NULL_VALUE

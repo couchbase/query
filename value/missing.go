@@ -16,7 +16,7 @@ import (
 // Missing value
 type missingValue string
 
-var MISSING_VALUE = missingValue("")
+var MISSING_VALUE Value = missingValue("")
 
 func NewMissingValue() Value {
 	return MISSING_VALUE
