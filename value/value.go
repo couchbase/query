@@ -146,6 +146,25 @@ const (
 	OBJECT
 )
 
+func TypeName(t int) (string, bool) {
+	if t >= 0 && t < len(_TYPE_NAMES) {
+		return _TYPE_NAMES[t], true
+	} else {
+		return "", false
+	}
+}
+
+var _TYPE_NAMES = []string{
+	MISSING:  "missing",
+	NULL:     "null",
+	NOT_JSON: "not_json",
+	BOOLEAN:  "boolean",
+	NUMBER:   "number",
+	STRING:   "string",
+	ARRAY:    "array",
+	OBJECT:   "object",
+}
+
 type copyFunc func(interface{}) interface{}
 
 func self(val interface{}) interface{} {

@@ -53,7 +53,6 @@ func (this stringValue) Collate(other Value) int {
 	default:
 		return STRING - other.Type()
 	}
-
 }
 
 func (this stringValue) Truth() bool {

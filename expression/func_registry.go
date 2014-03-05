@@ -139,21 +139,21 @@ var _FUNCTIONS = map[string]Function{
 		"BASE64_VALUE": &Base64Value{},
 		"META":         &Meta{},
 		"VALUE":        &Value{},
-
-		// Type checking functions
-		"IS_ARRAY":  &IsArray{},
-		"IS_ATOM":   &IsAtom{},
-		"IS_BOOL":   &IsBool{},
-		"IS_NUM":    &IsNum{},
-		"IS_OBJ":    &IsObj{},
-		"IS_STR":    &IsStr{},
-		"TYPE_NAME": &TypeName{},
-
-		// Type conversion functions
-		"TO_ARRAY": &ToArray{},
-		"TO_ATOM":  &ToAtom{},
-		"TO_BOOL":  &ToBool{},
-		"TO_NUM":   &ToNum{},
-		"TO_STR":   &ToStr{},
 	*/
+
+	// Type checking functions
+	"IS_ARRAY":  &IsArray{},
+	"IS_ATOM":   &IsAtom{},
+	"IS_BOOL":   &IsBool{},
+	"IS_NUM":    &IsNum{},
+	"IS_OBJ":    &IsObj{},
+	"IS_STR":    &IsStr{},
+	"TYPE_NAME": &TypeName{},
+
+	// Type conversion functions
+	"TO_ARRAY": &ToArray{},
+	"TO_ATOM":  &ToAtom{},
+	"TO_BOOL":  &ToBool{},
+	"TO_NUM":   &ToNum{},
+	"TO_STR":   &ToStr{},
 }
