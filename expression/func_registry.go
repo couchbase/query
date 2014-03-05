@@ -116,25 +116,25 @@ var _FUNCTIONS = map[string]Function{
 	"GREATEST": &Greatest{},
 	"LEAST":    &Least{},
 
+	// Conditional functions for unknowns
+	"IFMISSING":       &IfMissing{},
+	"IFMISSINGORNULL": &IfMissingOrNull{},
+	"IFNULL":          &IfNull{},
+	"MISSINGIF":       &MissingIf{},
+	"NULLIF":          &NullIf{},
+
+	// Conditional functions for numbers
+	"IFINF":      &IfInf{},
+	"IFNAN":      &IfNaN{},
+	"IFNANORINF": &IfNaNOrInf{},
+	"IFNEGINF":   &IfNegInf{},
+	"IFPOSINF":   &IfPosInf{},
+	"FIRSTNUM":   &FirstNum{},
+	"NANIF":      &NaNIf{},
+	"NEGNINFIF":  &NegInfIf{},
+	"POSINFIF":   &PosInfIf{},
+
 	/*
-		// Conditional functions for unknowns
-		"IFMISSING":       &IfMissing{},
-		"IFMISSINGORNULL": &IfMisingOrNull{},
-		"IFNULL":          &IfNull{},
-		"MISSINGIF":       &MissingIf{},
-		"NULLIF":          &NullIf{},
-
-		// Conditional functions for numbers
-		"IFINF":      &IfInf{},
-		"IFNAN":      &IfNaN{},
-		"IFNANORINF": &IfNaNOrInf{},
-		"IFNEGINF":   &IfNegInf{},
-		"IFPOSINF":   &IfPosInf{},
-		"FIRSTNUM":   &FirstNum{},
-		"NANIF":      &NaNIf{},
-		"NEGNINFIF":  &NegInfIf{},
-		"POSINFIF":   &PosInfIf{},
-
 		// Meta and value functions
 		"BASE64_VALUE": &Base64Value{},
 		"META":         &Meta{},
