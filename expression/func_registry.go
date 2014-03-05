@@ -22,22 +22,20 @@ var _FUNCTIONS = map[string]Function{
 	// Date functions
 	"CLOCK_NOW_MILLIS": &ClockNowMillis{},
 	"CLOCK_NOW_STR":    &ClockNowStr{},
-
+	"DATE_ADD_MILLIS":  &DateAddMillis{},
+	"DATE_ADD_STR":     &DateAddStr{},
 	/*
-		"DATE_ADD_MILLIS":   &DateAddMillis{},
-		"DATE_ADD_STR":      &DateAddStr{},
 		"DATE_DIFF_MILLIS":  &DateDiffMillis{},
 		"DATE_DIFF_STR":     &DateDiffStr{},
-		"DATE_PART_MILLIS":  &DatePartMillis{},
-		"DATE_PART_STR":     &DatePartStr{},
-		"DATE_TRUNC_MILLIS": &DateTruncMillis{},
-		"DATE_TRUNC_STR":    &DateTruncStr{},
-		"MILLIS_TO_STR":     &MillisToStr{},
 	*/
-
-	"NOW_MILLIS": &NowMillis{},
-	"NOW_STR":    &NowStr{},
-	// "STR_TO_MILLIS":     &StrToMillis{},
+	"DATE_PART_MILLIS":  &DatePartMillis{},
+	"DATE_PART_STR":     &DatePartStr{},
+	"DATE_TRUNC_MILLIS": &DateTruncMillis{},
+	"DATE_TRUNC_STR":    &DateTruncStr{},
+	"MILLIS_TO_STR":     &MillisToStr{},
+	"NOW_MILLIS":        &NowMillis{},
+	"NOW_STR":           &NowStr{},
+	"STR_TO_MILLIS":     &StrToMillis{},
 
 	// String functions
 	"CONTAINS":        &Contains{},

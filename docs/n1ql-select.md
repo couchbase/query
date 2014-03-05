@@ -1297,13 +1297,18 @@ __DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
 are used to define an interval or duration, which is then added (or
 subtracted) to the UNIX timestamp, returning the result. Parts:
 
+* __"millenium"__
+* __"century"__
+* __"decade"__
 * __"year"__
-* __"month"__ - 1 to 12
-* __"day"__ - 1 to 31
-* __"hour"__ - 0 to 23
-* __"minute"__ - 0 to 59
-* __"second"__ - 0 to 59
-* __"millisecond"__ - 0 to 999
+* __"quarter"__
+* __"month"__
+* __"week"__
+* __"day"__
+* __"hour"_
+* __"minute"__
+* __"second"__
+* __"millisecond"__
 
 __DATE\_ADD\_STR(expr, n, part)__ - date arithmetic. _n_ and _part_
 are used to define an interval or duration, which is then added (or
@@ -1341,7 +1346,7 @@ the following date part strings.
 * __"iso\_dow"__ - 1 to 7
 * __"timezone"__ - offset from UTC in seconds
 * __"timezone\_hour"__ - hour component of timezone offset
-* __"timezone\_minute"__ - minute component of timezone offset
+* __"timezone\_minute"__ - 0 to 59; minute component of timezone offset
 
 __DATE\_PART\_STR(expr, part)__ - date part as an integer. The date
 expr is a string in a supported format, and part is one of the
