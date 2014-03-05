@@ -277,7 +277,7 @@ func (this *ArrayMin) evaluate(operand value.Value) (value.Value, error) {
 	for _, a := range oa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL &&
-			(rv.Type() == value.NULL || v.Collate(rv) < 0) {
+			(rv == value.NULL_VALUE || v.Collate(rv) < 0) {
 			rv = v
 		}
 	}

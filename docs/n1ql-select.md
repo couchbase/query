@@ -1537,17 +1537,6 @@ in N1QL collation order of the corresponding keys.
 
 ### JSON functions
 
-__POLY\_LENGTH(expr)__ - length of the value after evaluating the
-expression.  The exact meaning of length depends on the type of the
-value:
-
-* MISSING - MISSING
-* NULL - NULL
-* string - the length of the string
-* array - the number of elements in the array
-* object - the number of key/value pairs in the object
-* any other value - NULL
-
 __DECODE\_JSON(expr)__ - unmarshals the JSON-encoded string into a
 N1QL value; the empty string is NULL.
 
@@ -1558,6 +1547,17 @@ __ENCODED\_SIZE(expr)__ - number of bytes in an uncompressed JSON
 encoding of the value. The exact size is
 implementation-dependent. Always returns an integer, and never MISSING
 or NULL; returns 0 for MISSING.
+
+__POLY\_LENGTH(expr)__ - length of the value after evaluating the
+expression.  The exact meaning of length depends on the type of the
+value:
+
+* MISSING - MISSING
+* NULL - NULL
+* string - the length of the string
+* array - the number of elements in the array
+* object - the number of key/value pairs in the object
+* any other value - NULL
 
 ### Comparison functions
 

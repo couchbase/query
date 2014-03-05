@@ -83,40 +83,40 @@ var _FUNCTIONS = map[string]Function{
 	"TAN":     &Tan{},
 	"TRUNC":   &Trunc{},
 
+	// Array functions
+	"ARRAY_APPEND":   &ArrayAppend{},
+	"ARRAY_CONCAT":   &ArrayConcat{},
+	"ARRAY_CONTAINS": &ArrayContains{},
+	"ARRAY_DISTINCT": &ArrayDistinct{},
+	"ARRAY_IFNULL":   &ArrayIfNull{},
+	"ARRAY_LENGTH":   &ArrayLength{},
+	"ARRAY_MAX":      &ArrayMax{},
+	"ARRAY_MIN":      &ArrayMin{},
+	"ARRAY_POSITION": &ArrayPosition{},
+	"ARRAY_PREPEND":  &ArrayPrepend{},
+	"ARRAY_PUT":      &ArrayPut{},
+	"ARRAY_REMOVE":   &ArrayRemove{},
+	"ARRAY_REPEAT":   &ArrayRepeat{},
+	"ARRAY_REPLACE":  &ArrayReplace{},
+	"ARRAY_REVERSE":  &ArrayReverse{},
+	"ARRAY_SORT":     &ArraySort{},
+
+	// Object functions
+	"OBJECT_KEYS":   &ObjectKeys{},
+	"OBJECT_LENGTH": &ObjectLength{},
+	"OBJECT_VALUES": &ObjectValues{},
+
+	// JSON functions
+	"DECODE_JSON":  &DecodeJSON{},
+	"ENCODE_JSON":  &EncodeJSON{},
+	"ENCODED_SIZE": &EncodedSize{},
+	"POLY_LENGTH":  &PolyLength{},
+
+	// Comparison functions
+	"GREATEST": &Greatest{},
+	"LEAST":    &Least{},
+
 	/*
-		// Array functions
-		"ARRAY_ADD":      &ArrayAdd{},
-		"ARRAY_APPEND":   &ArrayAppend{},
-		"ARRAY_CONCAT":   &ArrayConcat{},
-		"ARRAY_CONTAINS": &ArrayContains{},
-		"ARRAY_DISTINCT": &ArrayDistinct{},
-		"ARRAY_IFNULL":   &ArrayIfNull{},
-		"ARRAY_LENGTH":   &ArrayLength{},
-		"ARRAY_MAX":      &ArrayMax{},
-		"ARRAY_MIN":      &ArrayMin{},
-		"ARRAY_POSITION": &ArrayPosition{},
-		"ARRAY_PREPEND":  &ArrayPrepend{},
-		"ARRAY_REMOVE":   &ArrayRemove{},
-		"ARRAY_REPEAT":   &ArrayRepeat{},
-		"ARRAY_REPLACE":  &ArrayReplace{},
-		"ARRAY_REVERSE":  &ArrayReverse{},
-		"ARRAY_SORT":     &ArraySqrt{},
-
-		// Object functions
-		"OBJECT_KEYS":   &ObjectKeys{},
-		"OBJECT_LENGTH": &ObjectLength{},
-		"OBJECT_VALUES": &ObjectValues{},
-
-		// JSON functions
-		"POLY_LENGTH":  &PolyLength{},
-		"DECODE_JSON":  &DecodeJSON{},
-		"ENCODE_JSON":  &EncodeJSON{},
-		"ENCODED_SIZE": &EncodedSize{},
-
-		// Comparison functions
-		"GREATEST": &Greatest{},
-		"LEAST":    &Least{},
-
 		// Conditional functions for unknowns
 		"IFMISSING":       &IfMissing{},
 		"IFMISSINGORNULL": &IfMisingOrNull{},
