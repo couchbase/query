@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-02-24
+* Modified: 2014-03-05
 
 ## Introduction
 
@@ -1305,7 +1305,7 @@ subtracted) to the UNIX timestamp, returning the result. Parts:
 * __"month"__
 * __"week"__
 * __"day"__
-* __"hour"_
+* __"hour"__
 * __"minute"__
 * __"second"__
 * __"millisecond"__
@@ -2137,16 +2137,18 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Cleaned up usage of KEY and kEYS.
 * 2014-02-18 - SELECT list
     * Require SELECT list
-* 2013-12-18 - Array expansion
+* 2014-02-18 - Array expansion
     * Removed array expansion for now.
-* 2013-12-22 - Functions
+* 2014-02-22 - Functions
     * Expanded set of functions.
-* 2013-12-23 - Keywords
+* 2014-02-23 - Keywords
     * Updated list of keywords and reserved words.
-* 2013-12-23 - Functions
+* 2014-02-23 - Functions
     * Added regexp and date arithmetic functions.
-* 2013-12-23 - Trig functions
+* 2014-02-23 - Trig functions
     * Added trig functions.
+* 2014-03-05 - Functions
+    * Updated function lists and desccriptions.
 
 ### Open issues
 
