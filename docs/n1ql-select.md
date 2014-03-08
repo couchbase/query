@@ -1319,6 +1319,17 @@ __DATE\_DIFF\_MILLIS(expr1, expr2, part)__ - date arithmetic. returns
 the elapsed time between two UNIX timestamps, as an integer whose unit
 is _part_.
 
+* __"millenium"__
+* __"century"__
+* __"decade"__
+* __"year"__
+* __"week"__
+* __"day"__
+* __"hour"__
+* __"minute"__
+* __"second"__
+* __"millisecond"__
+
 __DATE\_DIFF\_STR(expr1, expr2, part)__ - date arithmetic. returns the
 elapsed time between two date strings in a supported format, as an
 integer whose unit is _part_.
@@ -1358,10 +1369,14 @@ the given date part string is the least significant.
 __DATE\_TRUNC\_STR(expr, part)__ - truncates ISO 8601 timestamp so
 that the given date part string is the least significant.
 
-__DATE\_UTC\_STR(expr)__ - converts the ISO 8601 timestamp to UTC.
+__MILLIS\_TO\_STR(expr [, fmt ])__ - converts UNIX milliseconds to
+string in a supported format.
 
-__MILLIS\_TO\_STR(expr)__ - converts UNIX milliseconds to string in
-ISO 8601 format.
+__MILLIS\_TO\_UTC(expr [, fmt ])__ - converts the UNIX timestamp to a
+UTC string in a supported format.
+
+__MILLIS\_TO\_ZONE\_NAME(expr, tz_name [, fmt ])__ - converts the
+UNIX timestamp to a string in the named time zone.
 
 __NOW\_MILLIS()__ - statement timestamp as UNIX milliseconds; does not
 vary during a query.
@@ -1371,6 +1386,11 @@ __NOW\_STR()__ - statement timestamp as a string in ISO 8601 / RFC
 
 __STR\_TO\_MILLIS(expr)__ - converts date in a supported format to
 UNIX milliseconds.
+
+__STR\_TO\_UTC(expr)__ - converts the ISO 8601 timestamp to UTC.
+
+__STR\_TO\_ZONE\_NAME(expr, tz_name)__ - converts the supported
+timestamp string to the named time zone.
 
 ### String functions
 

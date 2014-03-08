@@ -20,22 +20,24 @@ func GetFunction(name string) (Function, bool) {
 
 var _FUNCTIONS = map[string]Function{
 	// Date functions
-	"CLOCK_NOW_MILLIS": &ClockNowMillis{},
-	"CLOCK_NOW_STR":    &ClockNowStr{},
-	"DATE_ADD_MILLIS":  &DateAddMillis{},
-	"DATE_ADD_STR":     &DateAddStr{},
-	/*
-		"DATE_DIFF_MILLIS":  &DateDiffMillis{},
-		"DATE_DIFF_STR":     &DateDiffStr{},
-	*/
-	"DATE_PART_MILLIS":  &DatePartMillis{},
-	"DATE_PART_STR":     &DatePartStr{},
-	"DATE_TRUNC_MILLIS": &DateTruncMillis{},
-	"DATE_TRUNC_STR":    &DateTruncStr{},
-	"MILLIS_TO_STR":     &MillisToStr{},
-	"NOW_MILLIS":        &NowMillis{},
-	"NOW_STR":           &NowStr{},
-	"STR_TO_MILLIS":     &StrToMillis{},
+	"CLOCK_NOW_MILLIS":    &ClockNowMillis{},
+	"CLOCK_NOW_STR":       &ClockNowStr{},
+	"DATE_ADD_MILLIS":     &DateAddMillis{},
+	"DATE_ADD_STR":        &DateAddStr{},
+	"DATE_DIFF_MILLIS":    &DateDiffMillis{},
+	"DATE_DIFF_STR":       &DateDiffStr{},
+	"DATE_PART_MILLIS":    &DatePartMillis{},
+	"DATE_PART_STR":       &DatePartStr{},
+	"DATE_TRUNC_MILLIS":   &DateTruncMillis{},
+	"DATE_TRUNC_STR":      &DateTruncStr{},
+	"MILLIS_TO_STR":       &MillisToStr{},
+	"MILLIS_TO_UTC":       &MillisToUTC{},
+	"MILLIS_TO_ZONE_NAME": &MillisToZoneName{},
+	"NOW_MILLIS":          &NowMillis{},
+	"NOW_STR":             &NowStr{},
+	"STR_TO_MILLIS":       &StrToMillis{},
+	"STR_TO_UTC":          &StrToUTC{},
+	"STR_TO_ZONE_NAME":    &StrToZoneName{},
 
 	// String functions
 	"CONTAINS":        &Contains{},

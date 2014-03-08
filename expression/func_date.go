@@ -72,7 +72,7 @@ func (this *DateAddMillis) evaluate(args value.Values) (value.Value, error) {
 	nv := args[1]
 	pv := args[2]
 
-	if pv.Type() == value.MISSING || nv.Type() == value.MISSING ||
+	if ev.Type() == value.MISSING || nv.Type() == value.MISSING ||
 		pv.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if ev.Type() != value.NUMBER || nv.Type() != value.NUMBER ||
@@ -118,7 +118,7 @@ func (this *DateAddStr) evaluate(args value.Values) (value.Value, error) {
 	nv := args[1]
 	pv := args[2]
 
-	if pv.Type() == value.MISSING || nv.Type() == value.MISSING ||
+	if ev.Type() == value.MISSING || nv.Type() == value.MISSING ||
 		pv.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if ev.Type() != value.STRING || nv.Type() != value.NUMBER ||
@@ -151,6 +151,100 @@ func (this *DateAddStr) MinArgs() int { return 3 }
 func (this *DateAddStr) MaxArgs() int { return 3 }
 
 func (this *DateAddStr) Constructor() FunctionConstructor { return NewDateAddStr }
+
+type DateDiffMillis struct {
+	nAryBase
+}
+
+func NewDateDiffMillis(args Expressions) Function {
+	return &DateDiffMillis{
+		nAryBase{
+			operands: args,
+		},
+	}
+}
+
+func (this *DateDiffMillis) evaluate(args value.Values) (value.Value, error) {
+	dv1 := args[0]
+	dv2 := args[1]
+	pv := args[2]
+
+	if dv2.Type() == value.MISSING || dv2.Type() == value.MISSING ||
+		pv.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if dv1.Type() != value.NUMBER || dv2.Type() != value.NUMBER ||
+		pv.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	da1 := dv1.Actual().(float64)
+	da2 := dv2.Actual().(float64)
+	pa := pv.Actual().(string)
+	diff, e := dateDiff(millisToTime(da1), millisToTime(da2), pa)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(float64(diff)), nil
+}
+
+func (this *DateDiffMillis) MinArgs() int { return 3 }
+
+func (this *DateDiffMillis) MaxArgs() int { return 3 }
+
+func (this *DateDiffMillis) Constructor() FunctionConstructor { return NewDateDiffMillis }
+
+type DateDiffStr struct {
+	nAryBase
+}
+
+func NewDateDiffStr(args Expressions) Function {
+	return &DateDiffStr{
+		nAryBase{
+			operands: args,
+		},
+	}
+}
+
+func (this *DateDiffStr) evaluate(args value.Values) (value.Value, error) {
+	dv1 := args[0]
+	dv2 := args[1]
+	pv := args[2]
+
+	if dv2.Type() == value.MISSING || dv2.Type() == value.MISSING ||
+		pv.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if dv1.Type() != value.STRING || dv2.Type() != value.STRING ||
+		pv.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	da1 := dv1.Actual().(string)
+	t1, e := strToTime(da1)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	da2 := dv2.Actual().(string)
+	t2, e := strToTime(da2)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	pa := pv.Actual().(string)
+	diff, e := dateDiff(t1, t2, pa)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(float64(diff)), nil
+}
+
+func (this *DateDiffStr) MinArgs() int { return 3 }
+
+func (this *DateDiffStr) MaxArgs() int { return 3 }
+
+func (this *DateDiffStr) Constructor() FunctionConstructor { return NewDateDiffStr }
 
 type DatePartMillis struct {
 	binaryBase
@@ -309,70 +403,123 @@ func (this *DateTruncStr) Constructor() FunctionConstructor {
 	}
 }
 
-type DateUTCStr struct {
-	unaryBase
+type MillisToStr struct {
+	nAryBase
 }
 
-func NewDateUTCStr(operand Expression) Function {
-	return &DateUTCStr{
-		unaryBase{
-			operand: operand,
+func NewMillisToStr(args Expressions) Function {
+	return &MillisToStr{
+		nAryBase{
+			operands: args,
 		},
 	}
 }
 
-func (this *DateUTCStr) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *MillisToStr) evaluate(args value.Values) (value.Value, error) {
+	ev := args[0]
+	fv := _DEFAULT_FMT_VALUE
+	if len(args) > 1 {
+		fv = args[1]
+	}
+
+	if ev.Type() == value.MISSING || fv.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if ev.Type() != value.NUMBER || fv.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	str := operand.Actual().(string)
-	t, e := strToTime(str)
+	millis := ev.Actual().(float64)
+	fmt := fv.Actual().(string)
+	t := millisToTime(millis)
+	return value.NewValue(timeToStr(t, fmt)), nil
+}
+
+func (this *MillisToStr) MinArgs() int { return 1 }
+
+func (this *MillisToStr) MaxArgs() int { return 2 }
+
+func (this *MillisToStr) Constructor() FunctionConstructor { return NewMillisToStr }
+
+type MillisToUTC struct {
+	nAryBase
+}
+
+func NewMillisToUTC(args Expressions) Function {
+	return &MillisToUTC{
+		nAryBase{
+			operands: args,
+		},
+	}
+}
+
+func (this *MillisToUTC) evaluate(args value.Values) (value.Value, error) {
+	ev := args[0]
+	fv := _DEFAULT_FMT_VALUE
+	if len(args) > 1 {
+		fv = args[1]
+	}
+
+	if ev.Type() == value.MISSING || fv.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if ev.Type() != value.NUMBER || fv.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	millis := ev.Actual().(float64)
+	fmt := fv.Actual().(string)
+	t := millisToTime(millis).UTC()
+	return value.NewValue(timeToStr(t, fmt)), nil
+}
+
+func (this *MillisToUTC) MinArgs() int { return 1 }
+
+func (this *MillisToUTC) MaxArgs() int { return 2 }
+
+func (this *MillisToUTC) Constructor() FunctionConstructor { return NewMillisToUTC }
+
+type MillisToZoneName struct {
+	nAryBase
+}
+
+func NewMillisToZoneName(args Expressions) Function {
+	return &MillisToZoneName{
+		nAryBase{
+			operands: args,
+		},
+	}
+}
+
+func (this *MillisToZoneName) evaluate(args value.Values) (value.Value, error) {
+	ev := args[0]
+	zv := args[1]
+	fv := _DEFAULT_FMT_VALUE
+	if len(args) > 2 {
+		fv = args[2]
+	}
+
+	if ev.Type() == value.MISSING || zv.Type() == value.MISSING || fv.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if ev.Type() != value.NUMBER || zv.Type() != value.STRING || fv.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	millis := ev.Actual().(float64)
+	tz := zv.Actual().(string)
+	loc, e := time.LoadLocation(tz)
 	if e != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	t = t.UTC()
-	return value.NewValue(timeToStr(t, str)), nil
+	fmt := fv.Actual().(string)
+	t := millisToTime(millis).In(loc)
+	return value.NewValue(timeToStr(t, fmt)), nil
 }
 
-func (this *DateUTCStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDateUTCStr(args[0])
-	}
-}
+func (this *MillisToZoneName) MinArgs() int { return 2 }
 
-type MillisToStr struct {
-	unaryBase
-}
+func (this *MillisToZoneName) MaxArgs() int { return 3 }
 
-func NewMillisToStr(operand Expression) Function {
-	return &MillisToStr{
-		unaryBase{
-			operand: operand,
-		},
-	}
-}
-
-func (this *MillisToStr) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
-		return value.NULL_VALUE, nil
-	}
-
-	millis := operand.Actual().(float64)
-	t := millisToTime(millis)
-	return value.NewValue(timeToStr(t, "")), nil
-}
-
-func (this *MillisToStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewMillisToStr(args[0])
-	}
-}
+func (this *MillisToZoneName) Constructor() FunctionConstructor { return NewMillisToZoneName }
 
 type NowMillis struct {
 	ExpressionBase
@@ -416,22 +563,22 @@ type StrToMillis struct {
 	unaryBase
 }
 
-func NewStrToMillis(operand Expression) Function {
+func NewStrToMillis(arg Expression) Function {
 	return &StrToMillis{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *StrToMillis) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *StrToMillis) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	str := operand.Actual().(string)
+	str := arg.Actual().(string)
 	t, e := strToTime(str)
 	if e != nil {
 		return value.NULL_VALUE, nil
@@ -443,6 +590,82 @@ func (this *StrToMillis) evaluate(operand value.Value) (value.Value, error) {
 func (this *StrToMillis) Constructor() FunctionConstructor {
 	return func(args Expressions) Function {
 		return NewStrToMillis(args[0])
+	}
+}
+
+type StrToUTC struct {
+	unaryBase
+}
+
+func NewStrToUTC(arg Expression) Function {
+	return &StrToUTC{
+		unaryBase{
+			operand: arg,
+		},
+	}
+}
+
+func (this *StrToUTC) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := arg.Actual().(string)
+	t, e := strToTime(str)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	t = t.UTC()
+	return value.NewValue(timeToStr(t, str)), nil
+}
+
+func (this *StrToUTC) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewStrToUTC(args[0])
+	}
+}
+
+type StrToZoneName struct {
+	binaryBase
+}
+
+func NewStrToZoneName(first, second Expression) Function {
+	return &StrToZoneName{
+		binaryBase{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *StrToZoneName) evaluate(first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	t, e := strToTime(str)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	tz := second.Actual().(string)
+	loc, e := time.LoadLocation(tz)
+	if e != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(timeToStr(t.In(loc), str)), nil
+}
+
+func (this *StrToZoneName) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewStrToZoneName(args[0], args[1])
 	}
 }
 
@@ -460,10 +683,6 @@ func strToTime(s string) (time.Time, error) {
 }
 
 func timeToStr(t time.Time, format string) string {
-	if format == "" {
-		format = _DEFAULT_FORMAT
-	}
-
 	return t.Format(format)
 }
 
@@ -489,6 +708,8 @@ var _DATE_FORMATS = []string{
 }
 
 const _DEFAULT_FORMAT = "2006-01-02 15:04:05.999Z07:00"
+
+var _DEFAULT_FMT_VALUE = value.NewValue(_DEFAULT_FORMAT)
 
 func datePart(t time.Time, part string) (int, error) {
 	switch part {
@@ -627,4 +848,137 @@ func timeTrunc(t time.Time, part string) (time.Time, error) {
 	default:
 		return t, fmt.Errorf("Unsupported date trunc part %s.", part)
 	}
+}
+
+func dateDiff(t1, t2 time.Time, part string) (int64, error) {
+	diff := diffDates(t1, t2)
+	return diffPart(t1, t2, diff, part)
+}
+
+func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
+	switch part {
+	case "millisecond":
+		sec, e := diffPart(t1, t2, diff, "second")
+		if e != nil {
+			return 0, e
+		}
+		return (sec * 1000) + int64(diff.millisecond), nil
+	case "second":
+		min, e := diffPart(t1, t2, diff, "min")
+		if e != nil {
+			return 0, e
+		}
+		return (min * 60) + int64(diff.second), nil
+	case "minute":
+		hour, e := diffPart(t1, t2, diff, "hour")
+		if e != nil {
+			return 0, e
+		}
+		return (hour * 60) + int64(diff.minute), nil
+	case "hour":
+		day, e := diffPart(t1, t2, diff, "day")
+		if e != nil {
+			return 0, e
+		}
+		return (day * 24) + int64(diff.hour), nil
+	case "day":
+		days := (diff.year * 365) + diff.doy
+		if diff.year != 0 {
+			days += leapYearsBetween(t1.Year(), t2.Year())
+		}
+		return int64(days), nil
+	case "week":
+		day, e := diffPart(t1, t2, diff, "day")
+		if e != nil {
+			return 0, e
+		}
+		return day / 7, nil
+	case "year":
+		return int64(diff.year), nil
+	case "decade":
+		return int64(diff.year) / 10, nil
+	case "century":
+		return int64(diff.year) / 100, nil
+	case "millenium":
+		return int64(diff.year) / 1000, nil
+	default:
+		return 0, fmt.Errorf("Unsupported date diff part %s.", part)
+	}
+}
+
+func diffDates(t1, t2 time.Time) *date {
+	var d1, d2, diff date
+	setDate(&d1, t1)
+	setDate(&d2, t2)
+
+	if d1.millisecond < d2.millisecond {
+		d1.millisecond += 1000
+		d1.second--
+	}
+	diff.millisecond = d1.millisecond - d2.millisecond
+
+	if d1.second < d2.second {
+		d1.second += 60
+		d1.minute--
+	}
+	diff.second = d1.second - d2.second
+
+	if d1.minute < d2.minute {
+		d1.minute += 60
+		d1.hour--
+	}
+	diff.minute = d1.minute - d2.minute
+
+	if d1.hour < d2.hour {
+		d1.hour += 24
+		d1.doy--
+	}
+	diff.hour = d1.hour - d2.hour
+
+	if d1.doy < d2.doy {
+		if isLeapYear(d2.year) {
+			d2.doy -= 366
+		} else {
+			d2.doy -= 365
+		}
+		d2.year++
+	}
+	diff.doy = d1.doy - d2.doy
+
+	diff.year = d1.year - d2.year
+	return &diff
+}
+
+type date struct {
+	year        int
+	doy         int
+	hour        int
+	minute      int
+	second      int
+	millisecond int
+}
+
+func setDate(d *date, t time.Time) {
+	d.year = t.Year()
+	d.doy = t.YearDay()
+	d.hour, d.minute, d.second = t.Clock()
+	d.millisecond = t.Nanosecond() / 1000000
+}
+
+func leapYearsBetween(end, start int) int {
+	return leapYearsWithin(end) - leapYearsWithin(start)
+}
+
+func leapYearsWithin(year int) int {
+	if year > 0 {
+		year--
+	} else {
+		year++
+	}
+
+	return (year / 4) - (year / 100) + (year / 400)
+}
+
+func isLeapYear(year int) bool {
+	return year%400 == 0 || (year%4 == 0 && year%100 != 0)
 }
