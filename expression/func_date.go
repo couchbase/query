@@ -30,30 +30,43 @@ func (this *ClockNowMillis) Evaluate(item value.Value, context Context) (value.V
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
-func (this *ClockNowMillis) MinArgs() int { return 0 }
-
-func (this *ClockNowMillis) MaxArgs() int { return 0 }
-
 func (this *ClockNowMillis) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }
 
 type ClockNowStr struct {
-	ExpressionBase
+	nAryBase
 }
 
-func NewClockNowStr() Function {
-	return &ClockNowStr{}
+func NewClockNowStr(args Expressions) Function {
+	return &ClockNowStr{
+		nAryBase{
+			operands: args,
+		},
+	}
 }
 
-func (this *ClockNowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	str := time.Now().String()
-	return value.NewValue(str), nil
+func (this *ClockNowStr) evaluate(args value.Values) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	return value.NewValue(timeToStr(time.Now(), fmt)), nil
 }
 
-func (this *ClockNowStr) Constructor() FunctionConstructor {
-	return func(Expressions) Function { return this }
-}
+func (this *ClockNowStr) MinArgs() int { return 0 }
+
+func (this *ClockNowStr) MaxArgs() int { return 1 }
+
+func (this *ClockNowStr) Constructor() FunctionConstructor { return NewClockNowStr }
 
 type DateAddMillis struct {
 	nAryBase
@@ -534,30 +547,57 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
-func (this *NowMillis) MinArgs() int { return 0 }
-
-func (this *NowMillis) MaxArgs() int { return 0 }
-
 func (this *NowMillis) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }
 
 type NowStr struct {
-	ExpressionBase
+	nAryBase
 }
 
-func NewNowStr() Function {
-	return &NowStr{}
+func NewNowStr(args Expressions) Function {
+	return &NowStr{
+		nAryBase{
+			operands: args,
+		},
+	}
 }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	str := context.(Context).Now().String()
-	return value.NewValue(str), nil
+	var e error
+	args := make([]value.Value, len(this.operands))
+	for i, o := range this.operands {
+		args[i], e = o.Evaluate(item, context)
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	fmt := _DEFAULT_FORMAT
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	now := context.(Context).Now()
+	return value.NewValue(timeToStr(now, fmt)), nil
 }
 
-func (this *NowStr) Constructor() FunctionConstructor {
-	return func(Expressions) Function { return this }
+func (this *NowStr) Fold() (Expression, error) {
+	return Expression(this).VisitChildren(&Folder{})
 }
+
+func (this *NowStr) MinArgs() int { return 0 }
+
+func (this *NowStr) MaxArgs() int { return 1 }
+
+func (this *NowStr) Constructor() FunctionConstructor { return NewNowStr }
 
 type StrToMillis struct {
 	unaryBase

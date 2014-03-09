@@ -18,22 +18,22 @@ type DecodeJSON struct {
 	unaryBase
 }
 
-func NewDecodeJSON(operand Expression) Function {
+func NewDecodeJSON(arg Expression) Function {
 	return &DecodeJSON{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *DecodeJSON) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *DecodeJSON) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	s := operand.Actual().(string)
+	s := arg.Actual().(string)
 	var p interface{}
 	err := json.Unmarshal([]byte(s), &p)
 	if err != nil {
@@ -53,16 +53,16 @@ type EncodeJSON struct {
 	unaryBase
 }
 
-func NewEncodeJSON(operand Expression) Function {
+func NewEncodeJSON(arg Expression) Function {
 	return &EncodeJSON{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *EncodeJSON) evaluate(operand value.Value) (value.Value, error) {
-	return value.NewValue(string(operand.Bytes())), nil
+func (this *EncodeJSON) evaluate(arg value.Value) (value.Value, error) {
+	return value.NewValue(string(arg.Bytes())), nil
 }
 
 func (this *EncodeJSON) Constructor() FunctionConstructor {
@@ -75,16 +75,16 @@ type EncodedSize struct {
 	unaryBase
 }
 
-func NewEncodedSize(operand Expression) Function {
+func NewEncodedSize(arg Expression) Function {
 	return &EncodedSize{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *EncodedSize) evaluate(operand value.Value) (value.Value, error) {
-	return value.NewValue(float64(len(operand.Bytes()))), nil
+func (this *EncodedSize) evaluate(arg value.Value) (value.Value, error) {
+	return value.NewValue(float64(len(arg.Bytes()))), nil
 }
 
 func (this *EncodedSize) Constructor() FunctionConstructor {
@@ -97,20 +97,20 @@ type PolyLength struct {
 	unaryBase
 }
 
-func NewPolyLength(operand Expression) Function {
+func NewPolyLength(arg Expression) Function {
 	return &PolyLength{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *PolyLength) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *PolyLength) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
-	switch oa := operand.Actual().(type) {
+	switch oa := arg.Actual().(type) {
 	case string:
 		return value.NewValue(float64(len(oa))), nil
 	case []interface{}:

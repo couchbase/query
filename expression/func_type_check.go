@@ -17,20 +17,20 @@ type IsArray struct {
 	unaryBase
 }
 
-func NewIsArray(operand Expression) Function {
+func NewIsArray(arg Expression) Function {
 	return &IsArray{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsArray) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsArray) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	return value.NewValue(operand.Type() == value.ARRAY), nil
+	return value.NewValue(arg.Type() == value.ARRAY), nil
 }
 
 func (this *IsArray) Constructor() FunctionConstructor {
@@ -43,20 +43,20 @@ type IsAtom struct {
 	unaryBase
 }
 
-func NewIsAtom(operand Expression) Function {
+func NewIsAtom(arg Expression) Function {
 	return &IsAtom{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsAtom) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsAtom) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	switch operand.Type() {
+	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING:
 		return value.NewValue(true), nil
 	default:
@@ -74,20 +74,20 @@ type IsBool struct {
 	unaryBase
 }
 
-func NewIsBool(operand Expression) Function {
+func NewIsBool(arg Expression) Function {
 	return &IsBool{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsBool) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsBool) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	return value.NewValue(operand.Type() == value.BOOLEAN), nil
+	return value.NewValue(arg.Type() == value.BOOLEAN), nil
 }
 
 func (this *IsBool) Constructor() FunctionConstructor {
@@ -100,20 +100,20 @@ type IsNum struct {
 	unaryBase
 }
 
-func NewIsNum(operand Expression) Function {
+func NewIsNum(arg Expression) Function {
 	return &IsNum{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsNum) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsNum) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	return value.NewValue(operand.Type() == value.NUMBER), nil
+	return value.NewValue(arg.Type() == value.NUMBER), nil
 }
 
 func (this *IsNum) Constructor() FunctionConstructor {
@@ -126,20 +126,20 @@ type IsObj struct {
 	unaryBase
 }
 
-func NewIsObj(operand Expression) Function {
+func NewIsObj(arg Expression) Function {
 	return &IsObj{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsObj) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsObj) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	return value.NewValue(operand.Type() == value.OBJECT), nil
+	return value.NewValue(arg.Type() == value.OBJECT), nil
 }
 
 func (this *IsObj) Constructor() FunctionConstructor {
@@ -152,20 +152,20 @@ type IsStr struct {
 	unaryBase
 }
 
-func NewIsStr(operand Expression) Function {
+func NewIsStr(arg Expression) Function {
 	return &IsStr{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *IsStr) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
+func (this *IsStr) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
 	}
 
-	return value.NewValue(operand.Type() == value.STRING), nil
+	return value.NewValue(arg.Type() == value.STRING), nil
 }
 
 func (this *IsStr) Constructor() FunctionConstructor {
@@ -178,16 +178,16 @@ type TypeName struct {
 	unaryBase
 }
 
-func NewTypeName(operand Expression) Function {
+func NewTypeName(arg Expression) Function {
 	return &TypeName{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *TypeName) evaluate(operand value.Value) (value.Value, error) {
-	tn, _ := value.TypeName(operand.Type())
+func (this *TypeName) evaluate(arg value.Value) (value.Value, error) {
+	tn, _ := value.TypeName(arg.Type())
 	return value.NewValue(tn), nil
 }
 

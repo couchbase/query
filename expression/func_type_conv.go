@@ -21,22 +21,22 @@ type ToArray struct {
 	unaryBase
 }
 
-func NewToArray(operand Expression) Function {
+func NewToArray(arg Expression) Function {
 	return &ToArray{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ToArray) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() <= value.NULL {
-		return operand, nil
-	} else if operand.Type() == value.ARRAY {
-		return operand, nil
+func (this *ToArray) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() <= value.NULL {
+		return arg, nil
+	} else if arg.Type() == value.ARRAY {
+		return arg, nil
 	}
 
-	return value.NewValue([]interface{}{operand}), nil
+	return value.NewValue([]interface{}{arg}), nil
 }
 
 func (this *ToArray) Constructor() FunctionConstructor {
@@ -49,20 +49,20 @@ type ToAtom struct {
 	unaryBase
 }
 
-func NewToAtom(operand Expression) Function {
+func NewToAtom(arg Expression) Function {
 	return &ToAtom{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ToAtom) evaluate(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
+func (this *ToAtom) evaluate(arg value.Value) (value.Value, error) {
+	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING, value.MISSING, value.NULL:
-		return operand, nil
+		return arg, nil
 	default:
-		switch a := operand.Actual().(type) {
+		switch a := arg.Actual().(type) {
 		case []interface{}:
 			if len(a) == 1 {
 				return value.NewValue(a[0]), nil
@@ -89,20 +89,20 @@ type ToBool struct {
 	unaryBase
 }
 
-func NewToBool(operand Expression) Function {
+func NewToBool(arg Expression) Function {
 	return &ToBool{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ToBool) evaluate(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
+func (this *ToBool) evaluate(arg value.Value) (value.Value, error) {
+	switch arg.Type() {
 	case value.MISSING, value.NULL, value.BOOLEAN:
-		return operand, nil
+		return arg, nil
 	default:
-		switch a := operand.Actual().(type) {
+		switch a := arg.Actual().(type) {
 		case float64:
 			if a == 0 || math.IsNaN(a) {
 				return value.NewValue(false), nil
@@ -135,20 +135,20 @@ type ToNum struct {
 	unaryBase
 }
 
-func NewToNum(operand Expression) Function {
+func NewToNum(arg Expression) Function {
 	return &ToNum{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ToNum) evaluate(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
+func (this *ToNum) evaluate(arg value.Value) (value.Value, error) {
+	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
-		return operand, nil
+		return arg, nil
 	default:
-		switch a := operand.Actual().(type) {
+		switch a := arg.Actual().(type) {
 		case bool:
 			if a {
 				return value.NewValue(1.0), nil
@@ -176,20 +176,20 @@ type ToStr struct {
 	unaryBase
 }
 
-func NewToStr(operand Expression) Function {
+func NewToStr(arg Expression) Function {
 	return &ToStr{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ToStr) evaluate(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
+func (this *ToStr) evaluate(arg value.Value) (value.Value, error) {
+	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:
-		return operand, nil
+		return arg, nil
 	case value.BOOLEAN, value.NUMBER:
-		return value.NewValue(fmt.Sprint(operand.Actual())), nil
+		return value.NewValue(fmt.Sprint(arg.Actual())), nil
 	default:
 		return value.NULL_VALUE, nil
 	}

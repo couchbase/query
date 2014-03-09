@@ -121,23 +121,23 @@ type ArrayDistinct struct {
 	unaryBase
 }
 
-func NewArrayDistinct(operand Expression) Function {
+func NewArrayDistinct(arg Expression) Function {
 	return &ArrayDistinct{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayDistinct) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayDistinct) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
 	set := value.NewSet(16)
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	for _, a := range oa {
 		set.Add(value.NewValue(a))
 	}
@@ -155,22 +155,22 @@ type ArrayIfNull struct {
 	unaryBase
 }
 
-func NewArrayIfNull(operand Expression) Function {
+func NewArrayIfNull(arg Expression) Function {
 	return &ArrayIfNull{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayIfNull) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayIfNull) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	for _, a := range oa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL {
@@ -191,22 +191,22 @@ type ArrayLength struct {
 	unaryBase
 }
 
-func NewArrayLength(operand Expression) Function {
+func NewArrayLength(arg Expression) Function {
 	return &ArrayLength{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayLength) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayLength) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	return value.NewValue(float64(len(oa))), nil
 }
 
@@ -220,23 +220,23 @@ type ArrayMax struct {
 	unaryBase
 }
 
-func NewArrayMax(operand Expression) Function {
+func NewArrayMax(arg Expression) Function {
 	return &ArrayMax{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayMax) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayMax) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
 	rv := value.NULL_VALUE
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	for _, a := range oa {
 		v := value.NewValue(a)
 		if v.Collate(rv) > 0 {
@@ -257,23 +257,23 @@ type ArrayMin struct {
 	unaryBase
 }
 
-func NewArrayMin(operand Expression) Function {
+func NewArrayMin(arg Expression) Function {
 	return &ArrayMin{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayMin) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayMin) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
 	rv := value.NULL_VALUE
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	for _, a := range oa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL &&
@@ -532,22 +532,22 @@ type ArrayReverse struct {
 	unaryBase
 }
 
-func NewArrayReverse(operand Expression) Function {
+func NewArrayReverse(arg Expression) Function {
 	return &ArrayReverse{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArrayReverse) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArrayReverse) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().([]interface{})
+	oa := arg.Actual().([]interface{})
 	n := len(oa)
 	ra := make([]interface{}, n)
 	n--
@@ -568,22 +568,22 @@ type ArraySort struct {
 	unaryBase
 }
 
-func NewArraySort(operand Expression) Function {
+func NewArraySort(arg Expression) Function {
 	return &ArraySort{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ArraySort) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ArraySort) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.ARRAY {
+	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	cv := operand.Copy()
+	cv := arg.Copy()
 	sorter := value.NewSorter(cv)
 	sort.Sort(sorter)
 	return cv, nil

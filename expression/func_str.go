@@ -50,22 +50,22 @@ type Length struct {
 	unaryBase
 }
 
-func NewLength(operand Expression) Function {
+func NewLength(arg Expression) Function {
 	return &Length{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Length) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Length) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	rv := len(operand.Actual().(string))
+	rv := len(arg.Actual().(string))
 	return value.NewValue(float64(rv)), nil
 }
 
@@ -79,22 +79,22 @@ type Lower struct {
 	unaryBase
 }
 
-func NewLower(operand Expression) Function {
+func NewLower(arg Expression) Function {
 	return &Lower{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Lower) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Lower) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToLower(operand.Actual().(string))
+	rv := strings.ToLower(arg.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -108,10 +108,10 @@ type LTrim struct {
 	nAryBase
 }
 
-func NewLTrim(operands Expressions) Function {
+func NewLTrim(args Expressions) Function {
 	return &LTrim{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -120,9 +120,9 @@ func (this *LTrim) MinArgs() int { return 1 }
 
 func (this *LTrim) MaxArgs() int { return 2 }
 
-func (this *LTrim) evaluate(operands value.Values) (value.Value, error) {
+func (this *LTrim) evaluate(args value.Values) (value.Value, error) {
 	null := false
-	for _, o := range operands {
+	for _, o := range args {
 		if o.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if o.Type() != value.STRING {
@@ -135,11 +135,11 @@ func (this *LTrim) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	chars := _WHITESPACE
-	if len(operands) > 1 {
-		chars = operands[1]
+	if len(args) > 1 {
+		chars = args[1]
 	}
 
-	rv := strings.TrimLeft(operands[0].Actual().(string), chars.Actual().(string))
+	rv := strings.TrimLeft(args[0].Actual().(string), chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -216,20 +216,20 @@ type Replace struct {
 	nAryBase
 }
 
-func NewReplace(operands Expressions) Function {
+func NewReplace(args Expressions) Function {
 	return &Replace{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
 
-func (this *Replace) evaluate(operands value.Values) (value.Value, error) {
+func (this *Replace) evaluate(args value.Values) (value.Value, error) {
 	null := false
 	for i := 0; i < 3; i++ {
-		if operands[i].Type() == value.MISSING {
+		if args[i].Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
-		} else if operands[i].Type() != value.STRING {
+		} else if args[i].Type() != value.STRING {
 			null = true
 		}
 	}
@@ -238,17 +238,17 @@ func (this *Replace) evaluate(operands value.Values) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	if len(operands) == 4 && operands[3].Type() != value.NUMBER {
+	if len(args) == 4 && args[3].Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	f := operands[0].Actual().(string)
-	s := operands[1].Actual().(string)
-	r := operands[2].Actual().(string)
+	f := args[0].Actual().(string)
+	s := args[1].Actual().(string)
+	r := args[2].Actual().(string)
 	n := -1
 
-	if len(operands) == 4 {
-		nf := operands[3].Actual().(float64)
+	if len(args) == 4 {
+		nf := args[3].Actual().(float64)
 		if nf != math.Trunc(nf) {
 			return value.NULL_VALUE, nil
 		}
@@ -270,10 +270,10 @@ type RTrim struct {
 	nAryBase
 }
 
-func NewRTrim(operands Expressions) Function {
+func NewRTrim(args Expressions) Function {
 	return &RTrim{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -282,9 +282,9 @@ func (this *RTrim) MinArgs() int { return 1 }
 
 func (this *RTrim) MaxArgs() int { return 2 }
 
-func (this *RTrim) evaluate(operands value.Values) (value.Value, error) {
+func (this *RTrim) evaluate(args value.Values) (value.Value, error) {
 	null := false
-	for _, o := range operands {
+	for _, o := range args {
 		if o.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if o.Type() != value.STRING {
@@ -297,11 +297,11 @@ func (this *RTrim) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	chars := _WHITESPACE
-	if len(operands) > 1 {
-		chars = operands[1]
+	if len(args) > 1 {
+		chars = args[1]
 	}
 
-	rv := strings.TrimRight(operands[0].Actual().(string), chars.Actual().(string))
+	rv := strings.TrimRight(args[0].Actual().(string), chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -311,10 +311,10 @@ type Split struct {
 	nAryBase
 }
 
-func NewSplit(operands Expressions) Function {
+func NewSplit(args Expressions) Function {
 	return &Split{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -323,9 +323,9 @@ func (this *Split) MinArgs() int { return 1 }
 
 func (this *Split) MaxArgs() int { return 2 }
 
-func (this *Split) evaluate(operands value.Values) (value.Value, error) {
+func (this *Split) evaluate(args value.Values) (value.Value, error) {
 	null := false
-	for _, o := range operands {
+	for _, o := range args {
 		if o.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if o.Type() != value.STRING {
@@ -338,12 +338,12 @@ func (this *Split) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	var sa []string
-	if len(operands) > 1 {
-		sep := operands[1]
-		sa = strings.Split(operands[0].Actual().(string),
+	if len(args) > 1 {
+		sep := args[1]
+		sa = strings.Split(args[0].Actual().(string),
 			sep.Actual().(string))
 	} else {
-		sa = strings.Fields(operands[0].Actual().(string))
+		sa = strings.Fields(args[0].Actual().(string))
 	}
 
 	rv := make([]interface{}, len(sa))
@@ -360,10 +360,10 @@ type Substr struct {
 	nAryBase
 }
 
-func NewSubstr(operands Expressions) Function {
+func NewSubstr(args Expressions) Function {
 	return &Substr{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -372,21 +372,21 @@ func (this *Substr) MinArgs() int { return 2 }
 
 func (this *Substr) MaxArgs() int { return 3 }
 
-func (this *Substr) evaluate(operands value.Values) (value.Value, error) {
+func (this *Substr) evaluate(args value.Values) (value.Value, error) {
 	null := false
-	if operands[0].Type() == value.MISSING {
+	if args[0].Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operands[0].Type() != value.STRING {
+	} else if args[0].Type() != value.STRING {
 		null = true
 	}
 
-	for i := 1; i < len(operands); i++ {
-		if operands[i].Type() == value.MISSING {
+	for i := 1; i < len(args); i++ {
+		if args[i].Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
-		} else if operands[i].Type() != value.NUMBER {
+		} else if args[i].Type() != value.NUMBER {
 			null = true
 		} else {
-			vf := operands[i].Actual().(float64)
+			vf := args[i].Actual().(float64)
 			if vf != math.Trunc(vf) {
 				null = true
 			}
@@ -397,8 +397,8 @@ func (this *Substr) evaluate(operands value.Values) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	str := operands[0].Actual().(string)
-	pos := int(operands[1].Actual().(float64))
+	str := args[0].Actual().(string)
+	pos := int(args[1].Actual().(float64))
 
 	if pos < 0 {
 		pos = len(str) + pos
@@ -408,11 +408,11 @@ func (this *Substr) evaluate(operands value.Values) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	if len(operands) == 2 {
+	if len(args) == 2 {
 		return value.NewValue(str[pos:]), nil
 	}
 
-	length := int(operands[2].Actual().(float64))
+	length := int(args[2].Actual().(float64))
 	if length < 0 || pos+length > len(str) {
 		return value.NULL_VALUE, nil
 	}
@@ -426,22 +426,22 @@ type Title struct {
 	unaryBase
 }
 
-func NewTitle(operand Expression) Function {
+func NewTitle(arg Expression) Function {
 	return &Title{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Title) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Title) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToTitle(operand.Actual().(string))
+	rv := strings.ToTitle(arg.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -455,10 +455,10 @@ type Trim struct {
 	nAryBase
 }
 
-func NewTrim(operands Expressions) Function {
+func NewTrim(args Expressions) Function {
 	return &Trim{
 		nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -467,9 +467,9 @@ func (this *Trim) MinArgs() int { return 1 }
 
 func (this *Trim) MaxArgs() int { return 2 }
 
-func (this *Trim) evaluate(operands value.Values) (value.Value, error) {
+func (this *Trim) evaluate(args value.Values) (value.Value, error) {
 	null := false
-	for _, o := range operands {
+	for _, o := range args {
 		if o.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if o.Type() != value.STRING {
@@ -482,11 +482,11 @@ func (this *Trim) evaluate(operands value.Values) (value.Value, error) {
 	}
 
 	chars := _WHITESPACE
-	if len(operands) > 1 {
-		chars = operands[1]
+	if len(args) > 1 {
+		chars = args[1]
 	}
 
-	rv := strings.Trim(operands[0].Actual().(string), chars.Actual().(string))
+	rv := strings.Trim(args[0].Actual().(string), chars.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
@@ -496,22 +496,22 @@ type Upper struct {
 	unaryBase
 }
 
-func NewUpper(operand Expression) Function {
+func NewUpper(arg Expression) Function {
 	return &Upper{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Upper) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Upper) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.STRING {
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToUpper(operand.Actual().(string))
+	rv := strings.ToUpper(arg.Actual().(string))
 	return value.NewValue(rv), nil
 }
 

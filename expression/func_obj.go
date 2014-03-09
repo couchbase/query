@@ -19,22 +19,22 @@ type ObjectKeys struct {
 	unaryBase
 }
 
-func NewObjectKeys(operand Expression) Function {
+func NewObjectKeys(arg Expression) Function {
 	return &ObjectKeys{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ObjectKeys) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ObjectKeys) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.OBJECT {
+	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]interface{})
 	keys := make(sort.StringSlice, 0, len(oa))
 	for key, _ := range oa {
 		keys = append(keys, key)
@@ -59,22 +59,22 @@ type ObjectLength struct {
 	unaryBase
 }
 
-func NewObjectLength(operand Expression) Function {
+func NewObjectLength(arg Expression) Function {
 	return &ObjectLength{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ObjectLength) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ObjectLength) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.OBJECT {
+	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]interface{})
 	return value.NewValue(float64(len(oa))), nil
 }
 
@@ -88,22 +88,22 @@ type ObjectValues struct {
 	unaryBase
 }
 
-func NewObjectValues(operand Expression) Function {
+func NewObjectValues(arg Expression) Function {
 	return &ObjectValues{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *ObjectValues) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *ObjectValues) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.OBJECT {
+	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := operand.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]interface{})
 	keys := make(sort.StringSlice, 0, len(oa))
 	for key, _ := range oa {
 		keys = append(keys, key)

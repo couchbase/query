@@ -156,10 +156,10 @@ type RegexpReplace struct {
 	re *regexp.Regexp
 }
 
-func NewRegexpReplace(operands Expressions) Function {
+func NewRegexpReplace(args Expressions) Function {
 	return &RegexpReplace{
 		nAryBase: nAryBase{
-			operands: operands,
+			operands: args,
 		},
 	}
 }
@@ -192,12 +192,12 @@ func (this *RegexpReplace) Fold() (Expression, error) {
 	return this.nAryBase.Fold()
 }
 
-func (this *RegexpReplace) evaluate(operands value.Values) (value.Value, error) {
+func (this *RegexpReplace) evaluate(args value.Values) (value.Value, error) {
 	null := false
 	for i := 0; i < 3; i++ {
-		if operands[i].Type() == value.MISSING {
+		if args[i].Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
-		} else if operands[i].Type() != value.STRING {
+		} else if args[i].Type() != value.STRING {
 			null = true
 		}
 	}
@@ -206,13 +206,13 @@ func (this *RegexpReplace) evaluate(operands value.Values) (value.Value, error) 
 		return value.NULL_VALUE, nil
 	}
 
-	if len(operands) == 4 && operands[3].Type() != value.NUMBER {
+	if len(args) == 4 && args[3].Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	f := operands[0].Actual().(string)
-	s := operands[1].Actual().(string)
-	r := operands[2].Actual().(string)
+	f := args[0].Actual().(string)
+	s := args[1].Actual().(string)
+	r := args[2].Actual().(string)
 
 	re := this.re
 	if re == nil {
@@ -223,11 +223,11 @@ func (this *RegexpReplace) evaluate(operands value.Values) (value.Value, error) 
 		}
 	}
 
-	if len(operands) == 3 {
+	if len(args) == 3 {
 		return value.NewValue(re.ReplaceAllLiteralString(f, r)), nil
 	}
 
-	nf := operands[3].Actual().(float64)
+	nf := args[3].Actual().(float64)
 	if nf != math.Trunc(nf) {
 		return value.NULL_VALUE, nil
 	}

@@ -21,22 +21,22 @@ type Abs struct {
 	unaryBase
 }
 
-func NewAbs(operand Expression) Function {
+func NewAbs(arg Expression) Function {
 	return &Abs{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Abs) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Abs) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Abs(operand.Actual().(float64))), nil
+	return value.NewValue(math.Abs(arg.Actual().(float64))), nil
 }
 
 func (this *Abs) Constructor() FunctionConstructor {
@@ -49,22 +49,22 @@ type Acos struct {
 	unaryBase
 }
 
-func NewAcos(operand Expression) Function {
+func NewAcos(arg Expression) Function {
 	return &Acos{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Acos) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Acos) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Acos(operand.Actual().(float64))), nil
+	return value.NewValue(math.Acos(arg.Actual().(float64))), nil
 }
 
 func (this *Acos) Constructor() FunctionConstructor {
@@ -77,22 +77,22 @@ type Asin struct {
 	unaryBase
 }
 
-func NewAsin(operand Expression) Function {
+func NewAsin(arg Expression) Function {
 	return &Asin{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Asin) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Asin) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Asin(operand.Actual().(float64))), nil
+	return value.NewValue(math.Asin(arg.Actual().(float64))), nil
 }
 
 func (this *Asin) Constructor() FunctionConstructor {
@@ -105,22 +105,22 @@ type Atan struct {
 	unaryBase
 }
 
-func NewAtan(operand Expression) Function {
+func NewAtan(arg Expression) Function {
 	return &Atan{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Atan) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Atan) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Atan(operand.Actual().(float64))), nil
+	return value.NewValue(math.Atan(arg.Actual().(float64))), nil
 }
 
 func (this *Atan) Constructor() FunctionConstructor {
@@ -164,22 +164,22 @@ type Ceil struct {
 	unaryBase
 }
 
-func NewCeil(operand Expression) Function {
+func NewCeil(arg Expression) Function {
 	return &Ceil{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Ceil) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Ceil) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Ceil(operand.Actual().(float64))), nil
+	return value.NewValue(math.Ceil(arg.Actual().(float64))), nil
 }
 
 func (this *Ceil) Constructor() FunctionConstructor {
@@ -192,22 +192,22 @@ type Cos struct {
 	unaryBase
 }
 
-func NewCos(operand Expression) Function {
+func NewCos(arg Expression) Function {
 	return &Cos{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Cos) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Cos) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Cos(operand.Actual().(float64))), nil
+	return value.NewValue(math.Cos(arg.Actual().(float64))), nil
 }
 
 func (this *Cos) Constructor() FunctionConstructor {
@@ -220,10 +220,10 @@ type Degrees struct {
 	unaryBase
 }
 
-func NewDegrees(operand Expression) Function {
+func NewDegrees(arg Expression) Function {
 	return &Degrees{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
@@ -232,14 +232,14 @@ func (this *Degrees) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _RAD_TO_DEG).Fold()
 }
 
-func (this *Degrees) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Degrees) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(operand.Actual().(float64) * 180.0 / math.Pi), nil
+	return value.NewValue(arg.Actual().(float64) * 180.0 / math.Pi), nil
 }
 
 func (this *Degrees) Constructor() FunctionConstructor {
@@ -252,22 +252,22 @@ type Exp struct {
 	unaryBase
 }
 
-func NewExp(operand Expression) Function {
+func NewExp(arg Expression) Function {
 	return &Exp{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Exp) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Exp) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Exp(operand.Actual().(float64))), nil
+	return value.NewValue(math.Exp(arg.Actual().(float64))), nil
 }
 
 func (this *Exp) Constructor() FunctionConstructor {
@@ -280,22 +280,22 @@ type Ln struct {
 	unaryBase
 }
 
-func NewLn(operand Expression) Function {
+func NewLn(arg Expression) Function {
 	return &Ln{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Ln) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Ln) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Log(operand.Actual().(float64))), nil
+	return value.NewValue(math.Log(arg.Actual().(float64))), nil
 }
 
 func (this *Ln) Constructor() FunctionConstructor {
@@ -308,22 +308,22 @@ type Log struct {
 	unaryBase
 }
 
-func NewLog(operand Expression) Function {
+func NewLog(arg Expression) Function {
 	return &Log{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Log) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Log) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Log10(operand.Actual().(float64))), nil
+	return value.NewValue(math.Log10(arg.Actual().(float64))), nil
 }
 
 func (this *Log) Constructor() FunctionConstructor {
@@ -336,22 +336,22 @@ type Floor struct {
 	unaryBase
 }
 
-func NewFloor(operand Expression) Function {
+func NewFloor(arg Expression) Function {
 	return &Floor{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Floor) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Floor) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Floor(operand.Actual().(float64))), nil
+	return value.NewValue(math.Floor(arg.Actual().(float64))), nil
 }
 
 func (this *Floor) Constructor() FunctionConstructor {
@@ -419,10 +419,10 @@ type Radians struct {
 	unaryBase
 }
 
-func NewRadians(operand Expression) Function {
+func NewRadians(arg Expression) Function {
 	return &Radians{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
@@ -431,14 +431,14 @@ func (this *Radians) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _DEG_TO_RAD).Fold()
 }
 
-func (this *Radians) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Radians) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(operand.Actual().(float64) * math.Pi / 180.0), nil
+	return value.NewValue(arg.Actual().(float64) * math.Pi / 180.0), nil
 }
 
 func (this *Radians) Constructor() FunctionConstructor {
@@ -603,22 +603,22 @@ type Sign struct {
 	unaryBase
 }
 
-func NewSign(operand Expression) Function {
+func NewSign(arg Expression) Function {
 	return &Sign{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Sign) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Sign) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	f := operand.Actual().(float64)
+	f := arg.Actual().(float64)
 	s := 0.0
 	if f < 0.0 {
 		s = -1.0
@@ -639,22 +639,22 @@ type Sin struct {
 	unaryBase
 }
 
-func NewSin(operand Expression) Function {
+func NewSin(arg Expression) Function {
 	return &Sin{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Sin) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Sin) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Sin(operand.Actual().(float64))), nil
+	return value.NewValue(math.Sin(arg.Actual().(float64))), nil
 }
 
 func (this *Sin) Constructor() FunctionConstructor {
@@ -667,22 +667,22 @@ type Sqrt struct {
 	unaryBase
 }
 
-func NewSqrt(operand Expression) Function {
+func NewSqrt(arg Expression) Function {
 	return &Sqrt{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Sqrt) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Sqrt) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Sqrt(operand.Actual().(float64))), nil
+	return value.NewValue(math.Sqrt(arg.Actual().(float64))), nil
 }
 
 func (this *Sqrt) Constructor() FunctionConstructor {
@@ -695,22 +695,22 @@ type Tan struct {
 	unaryBase
 }
 
-func NewTan(operand Expression) Function {
+func NewTan(arg Expression) Function {
 	return &Tan{
 		unaryBase{
-			operand: operand,
+			operand: arg,
 		},
 	}
 }
 
-func (this *Tan) evaluate(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
+func (this *Tan) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if operand.Type() != value.NUMBER {
+	} else if arg.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(math.Tan(operand.Actual().(float64))), nil
+	return value.NewValue(math.Tan(arg.Actual().(float64))), nil
 }
 
 func (this *Tan) Constructor() FunctionConstructor {

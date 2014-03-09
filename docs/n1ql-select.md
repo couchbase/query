@@ -1281,7 +1281,7 @@ line-comment:
 
 ## Appendix - Scalar functions
 
-Function names are case in-sensitive. Scalar functions return MISSING
+Function names are case-insensitive. Scalar functions return MISSING
 if any argument is MISSING, and then NULL if any argument is NULL or
 not of the required type.
 
@@ -1290,8 +1290,8 @@ not of the required type.
 __CLOCK\_NOW\_MILLIS()__ - system clock at function evaluation time,
 as UNIX milliseconds; varies during a query.
 
-__CLOCK\_NOW\_STR()__ - system clock at function evaluation time, as a
-string in ISO 8601 / RFC 3339 format; varies during a query.
+__CLOCK\_NOW\_STR([ fmt ])__ - system clock at function evaluation
+time, as a string in a supported format; varies during a query.
 
 __DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
 are used to define an interval or duration, which is then added (or
@@ -1381,8 +1381,8 @@ UNIX timestamp to a string in the named time zone.
 __NOW\_MILLIS()__ - statement timestamp as UNIX milliseconds; does not
 vary during a query.
 
-__NOW\_STR()__ - statement timestamp as a string in ISO 8601 / RFC
-3339 format; does not vary during a query.
+__NOW\_STR([ fmt ])__ - statement timestamp as a string in a supported
+format; does not vary during a query.
 
 __STR\_TO\_MILLIS(expr)__ - converts date in a supported format to
 UNIX milliseconds.
@@ -1405,7 +1405,7 @@ __LENGTH(expr)__ - length of the string value.
 
 __LOWER(expr)__ - lowercase of the string value.
 
-__LTRIM(expr [, chars])__ - string with all leading chars removed
+__LTRIM(expr [, chars ])__ - string with all leading chars removed
 (whitespace by default).
 
 __POSITION(expr, substr)__ - the first position of the substring
@@ -1420,24 +1420,24 @@ regular expression pattern.
 __REGEXP\_POSITION(expr, pattern)__ - first position of the regular
 expression pattern within the string, or -1.
 
-__REGEXP\_REPLACE(expr, pattern, repl [, n])__ - new string with
+__REGEXP\_REPLACE(expr, pattern, repl [, n ])__ - new string with
 occurences of _pattern_ replaced with _repl_. If _n_ is given, at most
 _n_ replacements are performed.
 
 __REPEAT(expr, n)__ - string formed by repeating _expr_ _n_ times.
 
-__REPLACE(expr, substr, repl [, n])__ - string with all occurences of
+__REPLACE(expr, substr, repl [, n ])__ - string with all occurences of
 _substr_ replaced with _repl_. If _n_ is given, at most _n_
 replacements are performed.
 
-__RTRIM(expr, [, chars])__ - string with all trailing chars removed
+__RTRIM(expr, [, chars ])__ - string with all trailing chars removed
 (whitespace by default).
 
-__SPLIT(expr [, sep])__ - splits the string into an array of
+__SPLIT(expr [, sep ])__ - splits the string into an array of
 substrings separated by _sep_. If _sep_ is not given, any combination
 of whitespace characters is used.
 
-__SUBSTR(expr, position [, length])__ - substring from the integer
+__SUBSTR(expr, position [, length ])__ - substring from the integer
 _position_ of the given _length_, or to the end of the string. The
 position is 0-based, i.e. the first position is 0. If _position_ is
 negative, it is counted from the end of the string; -1 is the last
@@ -1447,7 +1447,7 @@ __TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
 first letter of each word is uppercase and every other letter is
 lowercase.
 
-__TRIM(expr [, chars])__ - string with all leading and trailing chars
+__TRIM(expr [, chars ])__ - string with all leading and trailing chars
 removed (whitespace by default).
 
 __UPPER(expr)__ - uppercase of the string value.
@@ -1484,9 +1484,9 @@ __POWER(expr1, expr2)__ - expr1\*\*expr2.
 
 __RADIANS(expr)__ - degrees to radians.
 
-__RANDOM([expr])__ - pseudorandom number with optional seed.
+__RANDOM([ expr ])__ - pseudorandom number with optional seed.
 
-__ROUND(expr [, digits])__ - rounds the value to the given number of
+__ROUND(expr [, digits ])__ - rounds the value to the given number of
 integer digits to the right of the decimal point (left if _digits_ is
 negative). _digits_ is 0 if not given.
 
@@ -1499,7 +1499,7 @@ __SQRT(expr)__ - square root.
 
 __TAN(expr)__ - tangent.
 
-__TRUNC(expr [, digits])__ - truncates the number to the given number
+__TRUNC(expr [, digits ])__ - truncates the number to the given number
 of integer digits to the right of the decimal point (left if _digits_
 is negative). _digits_ is 0 if not given.
 
@@ -1540,7 +1540,7 @@ _value_ removed.
 __ARRAY\_REPEAT(value, n)__ - new array with _value_ repeated _n_
 times.
 
-__ARRAY\_REPLACE(expr, value1, value2 [, n])__ - new array with all
+__ARRAY\_REPLACE(expr, value1, value2 [, n ])__ - new array with all
 occurences of _value1_ replaced with _value2_. If _n_ is given, at
 most _n_ replacements are performed.
 
@@ -1633,13 +1633,13 @@ __POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
 
 ### Meta and value functions
 
-__BASE64\_VALUE([expr])__ - base64-encoded value of the document
+__BASE64\_VALUE([ expr ])__ - base64-encoded value of the document
 containing _expr_, or the primary document.
 
-__META([expr])__ - meta data for the document containing _expr_, or
+__META([ expr ])__ - meta data for the document containing _expr_, or
 the primary document.
 
-__VALUE([expr])__ - value of the document containing _expr_, or the
+__VALUE([ expr ])__ - value of the document containing _expr_, or the
 primary document.
 
 ### Type checking functions
