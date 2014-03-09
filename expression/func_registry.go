@@ -134,12 +134,10 @@ var _FUNCTIONS = map[string]Function{
 	"NEGNINFIF":  &NegInfIf{},
 	"POSINFIF":   &PosInfIf{},
 
-	/*
-		// Meta and value functions
-		"BASE64_VALUE": &Base64Value{},
-		"META":         &Meta{},
-		"VALUE":        &Value{},
-	*/
+	// Meta and value functions
+	"BASE64_VALUE": &Base64Value{},
+	"META":         &Meta{},
+	"VALUE":        &Value{},
 
 	// Type checking functions
 	"IS_ARRAY":  &IsArray{},
