@@ -5,10 +5,10 @@
 /*
  *  select statement
  */
-select ::= select-core ('UNION' 'ALL'? select-core)* order-by-clause? limit-clause? offset-clause?
-select-core ::= select-from-core | from-select-core
-select-from-core ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
-from-select-core ::= from-clause let-clause? where-clause? group-by-clause? select-clause
+select ::= subselect ('UNION' 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
+subselect ::= select-from | from-select
+select-from ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
+from-select ::= from-clause let-clause? where-clause? group-by-clause? select-clause
 
 /*
  *  select clause

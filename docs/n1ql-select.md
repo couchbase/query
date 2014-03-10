@@ -29,17 +29,17 @@ _select:_
 In N1QL, SELECT statements can begin with either SELECT or FROM. The
 behavior is the same in either case.
 
-_select-core:_
+_subselect:_
 
-![](diagram/select-core.png)
+![](diagram/subselect.png)
 
-_select-from-core:_
+_select-from:_
 
-![](diagram/select-from-core.png)
+![](diagram/select-from.png)
 
-_from-select-core:_
+_from-select:_
 
-![](diagram/from-select-core.png)
+![](diagram/from-select.png)
 
 ### SELECT clause
 
