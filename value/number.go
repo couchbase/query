@@ -80,6 +80,10 @@ func (this floatValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+func (this floatValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
 func (this floatValue) Index(index int) (Value, bool) {
 	return NULL_VALUE, false
 }

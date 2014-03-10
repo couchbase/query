@@ -77,6 +77,9 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return nil, e
 	}
 
+	if v.Type() == value.MISSING {
+	}
+
 	if t.Path() != nil {
 		t.Path().Set(clone, v)
 		return clone, nil

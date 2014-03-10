@@ -83,6 +83,10 @@ func (this stringValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+func (this stringValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
 func (this stringValue) Index(index int) (Value, bool) {
 	return NULL_VALUE, false
 }

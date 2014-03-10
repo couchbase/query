@@ -58,6 +58,7 @@ type Value interface {
 	Bytes() []byte                                // JSON byte encoding
 	Field(field string) (Value, bool)             // Object field dereference, or MISSING; true if found
 	SetField(field string, val interface{}) error // Object field setting
+	UnsetField(field string) error                // Object field unsetting
 	Index(index int) (Value, bool)                // Array index dereference, or MISSING; true if found
 	SetIndex(index int, val interface{}) error    // Array index setting
 	Slice(start, end int) (Value, bool)           // Array slicing; true if found

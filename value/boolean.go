@@ -85,6 +85,10 @@ func (this boolValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+func (this boolValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
 func (this boolValue) Index(index int) (Value, bool) {
 	return NULL_VALUE, false
 }

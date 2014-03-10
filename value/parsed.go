@@ -10,6 +10,7 @@
 package value
 
 import (
+	"bytes"
 	"strconv"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
@@ -36,14 +37,30 @@ func (this *parsedValue) Actual() interface{} {
 }
 
 func (this *parsedValue) Equals(other Value) bool {
+	if this.parsedType == NOT_JSON {
+		return bytes.Equal(this.raw, other.Bytes())
+	}
+
 	return this.parse().Equals(other)
 }
 
 func (this *parsedValue) Collate(other Value) int {
+	if this.parsedType == NOT_JSON {
+		if other.Type() != NOT_JSON {
+			return -other.Collate(this)
+		}
+
+		return bytes.Compare(this.raw, other.Bytes())
+	}
+
 	return this.parse().Collate(other)
 }
 
 func (this *parsedValue) Truth() bool {
+	if this.parsedType == NOT_JSON {
+		return true
+	}
+
 	return this.parse().Truth()
 }
 
@@ -107,6 +124,14 @@ func (this *parsedValue) SetField(field string, val interface{}) error {
 	return this.parse().SetField(field, val)
 }
 
+func (this *parsedValue) UnsetField(field string) error {
+	if this.parsedType != OBJECT {
+		return Unsettable(field)
+	}
+
+	return this.parse().UnsetField(field)
+}
+
 func (this *parsedValue) Index(index int) (Value, bool) {
 	if this.parsed != nil {
 		return this.parsed.Index(index)
@@ -138,6 +163,10 @@ func (this *parsedValue) SetIndex(index int, val interface{}) error {
 }
 
 func (this *parsedValue) Slice(start, end int) (Value, bool) {
+	if this.parsedType != ARRAY {
+		return NULL_VALUE, false
+	}
+
 	return this.parse().Slice(start, end)
 }
 

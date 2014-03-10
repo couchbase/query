@@ -85,6 +85,10 @@ func (this sliceValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+func (this sliceValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
 func (this sliceValue) Index(index int) (Value, bool) {
 	if index < 0 {
 		index = len(this) + index
@@ -198,6 +202,10 @@ func (this *listValue) Field(field string) (Value, bool) {
 }
 
 func (this *listValue) SetField(field string, val interface{}) error {
+	return Unsettable(field)
+}
+
+func (this *listValue) UnsetField(field string) error {
 	return Unsettable(field)
 }
 

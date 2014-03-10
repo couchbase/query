@@ -28,12 +28,12 @@ func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) ([]value
 }
 
 func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, context *Context) ([]value.Value, error) {
-	n := 0
+	n := -1
 	for _, a := range arrays {
 		act := a.Actual()
 		switch act := act.(type) {
 		case []interface{}:
-			if n == 0 || len(act) < n {
+			if n < 0 || len(act) < n {
 				n = len(act)
 			}
 		}
@@ -44,7 +44,9 @@ func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, conte
 		rv[i] = value.NewCorrelatedValue(make(map[string]interface{}, len(f.Bindings())), val)
 		for j, b := range f.Bindings() {
 			v, _ := arrays[j].Index(i)
-			rv[i].SetField(b.Variable(), v)
+			if v.Type() != value.MISSING {
+				rv[i].SetField(b.Variable(), v)
+			}
 		}
 	}
 

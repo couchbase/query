@@ -1565,7 +1565,7 @@ in N1QL collation order of the corresponding keys.
 __DECODE\_JSON(expr)__ - unmarshals the JSON-encoded string into a
 N1QL value; the empty string is NULL.
 
-__ENCODE\_JSON(expr)__ - marshal the N1QL value into a JSON-encoded
+__ENCODE\_JSON(expr)__ - marshals the N1QL value into a JSON-encoded
 string; MISSING becomes the empty string.
 
 __ENCODED\_SIZE(expr)__ - number of bytes in an uncompressed JSON

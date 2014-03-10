@@ -72,6 +72,10 @@ func (this missingValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+func (this missingValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
 func (this missingValue) Index(index int) (Value, bool) {
 	return missingIndex(index), false
 }
