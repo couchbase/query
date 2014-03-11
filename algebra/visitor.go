@@ -12,6 +12,9 @@ package algebra
 type Visitor interface {
 	// Select
 	VisitSelect(node *Select) (interface{}, error)
+	VisitSubselect(node *Subselect) (interface{}, error)
+	VisitUnion(node *Union) (interface{}, error)
+	VisitUnionAll(node *UnionAll) (interface{}, error)
 
 	// FromTerm
 	VisitBucketTerm(node *BucketTerm) (interface{}, error)

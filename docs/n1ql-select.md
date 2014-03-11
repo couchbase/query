@@ -129,7 +129,8 @@ _having-clause:_
 
 ### UNION [ ALL ]
 
-UNION and UNION ALL are used to combine results from multiple SELECTs.
+UNION and UNION ALL are used to combine results from multiple
+sub-selects.
 
 UNION returns distinct results, such that there are no duplicates.
 

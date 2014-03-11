@@ -14,54 +14,18 @@ import (
 )
 
 type Select struct {
-	from     FromTerm               `json:"from"`
-	let      expression.Bindings    `json:"let"`
-	where    expression.Expression  `json:"where"`
-	group    expression.Expressions `json:"group"`
-	letting  expression.Bindings    `json:"letting"`
-	having   expression.Expression  `json:"having"`
-	project  ResultTerms            `json:"project"`
-	distinct bool                   `json:"distinct"`
-	order    SortTerms              `json:"order"`
-	offset   expression.Expression  `json:"offset"`
-	limit    expression.Expression  `json:"limit"`
-}
-
-func NewSelect(from FromTerm, let expression.Bindings, where expression.Expression,
-	group expression.Expressions, letting expression.Bindings, having expression.Expression,
-	project ResultTerms, distinct bool, order SortTerms, offset expression.Expression,
-	limit expression.Expression,
-) *Select {
-	return &Select{from, let, where, group, letting, having,
-		project, distinct, order, offset, limit}
+	subresult Subresult             `json:"subresult"`
+	order     SortTerms             `json:"order"`
+	offset    expression.Expression `json:"offset"`
+	limit     expression.Expression `json:"limit"`
 }
 
 func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
-func (this *Select) From() FromTerm {
-	return this.from
-}
-
-func (this *Select) Where() expression.Expression {
-	return this.where
-}
-
-func (this *Select) Group() expression.Expressions {
-	return this.group
-}
-
-func (this *Select) Having() expression.Expression {
-	return this.having
-}
-
-func (this *Select) Project() ResultTerms {
-	return this.project
-}
-
-func (this *Select) Distinct() bool {
-	return this.distinct
+func (this *Select) Subresult() Subresult {
+	return this.subresult
 }
 
 func (this *Select) Order() SortTerms {
@@ -80,10 +44,6 @@ func (this *Select) SetLimit(limit expression.Expression) {
 	this.limit = limit
 }
 
-func (this *Select) IsCorrelated() bool {
-	return true // FIXME
-}
-
 type SortTerms []*SortTerm
 
 type SortTerm struct {
@@ -97,4 +57,110 @@ func (this *SortTerm) Expression() expression.Expression {
 
 func (this *SortTerm) Descending() bool {
 	return this.descending
+}
+
+type Subresult interface {
+	Node
+	IsCorrelated() bool
+}
+
+type Subselect struct {
+	from     FromTerm               `json:"from"`
+	let      expression.Bindings    `json:"let"`
+	where    expression.Expression  `json:"where"`
+	group    expression.Expressions `json:"group"`
+	letting  expression.Bindings    `json:"letting"`
+	having   expression.Expression  `json:"having"`
+	project  ResultTerms            `json:"project"`
+	distinct bool                   `json:"distinct"`
+}
+
+func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expression,
+	group expression.Expressions, letting expression.Bindings, having expression.Expression,
+	project ResultTerms, distinct bool,
+) *Subselect {
+	return &Subselect{from, let, where, group, letting, having, project, distinct}
+}
+
+func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSubselect(this)
+}
+
+func (this *Subselect) From() FromTerm {
+	return this.from
+}
+
+func (this *Subselect) Where() expression.Expression {
+	return this.where
+}
+
+func (this *Subselect) Group() expression.Expressions {
+	return this.group
+}
+
+func (this *Subselect) Having() expression.Expression {
+	return this.having
+}
+
+func (this *Subselect) Project() ResultTerms {
+	return this.project
+}
+
+func (this *Subselect) Distinct() bool {
+	return this.distinct
+}
+
+func (this *Subselect) IsCorrelated() bool {
+	return true // FIXME
+}
+
+type binarySubresult struct {
+	first  Subresult `json:"first"`
+	second Subresult `json:"second"`
+}
+
+func (this *binarySubresult) IsCorrelated() bool {
+	return this.first.IsCorrelated() || this.second.IsCorrelated()
+}
+
+func (this *binarySubresult) First() Subresult {
+	return this.first
+}
+
+func (this *binarySubresult) Second() Subresult {
+	return this.second
+}
+
+type Union struct {
+	binarySubresult
+}
+
+func NewUnion(first, second Subresult) Subresult {
+	return &Union{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *Union) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnion(this)
+}
+
+type UnionAll struct {
+	binarySubresult
+}
+
+func NewUnionAll(first, second Subresult) Subresult {
+	return &UnionAll{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnionAll(this)
 }

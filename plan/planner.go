@@ -38,6 +38,18 @@ func (this *Planner) VisitSelect(node *algebra.Select) (interface{}, error) {
 	return nil, nil
 }
 
+func (this *Planner) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *Planner) VisitUnion(node *algebra.Union) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *Planner) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *Planner) VisitBucketTerm(node *algebra.BucketTerm) (interface{}, error) {
 	return nil, nil
 }
