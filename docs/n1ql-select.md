@@ -1396,8 +1396,8 @@ the given date part string is the least significant.
 __DATE\_TRUNC\_STR(expr, part)__ - truncates ISO 8601 timestamp so
 that the given date part string is the least significant.
 
-__MILLIS(expr), __STR\_TO\_MILLIS(expr)__ - converts date in a
-supported format to UNIX milliseconds.
+__MILLIS(expr), STR\_TO\_MILLIS(expr)__ - converts date in a supported
+format to UNIX milliseconds.
 
 __MILLIS\_TO\_STR(expr [, fmt ])__ - converts UNIX milliseconds to
 string in a supported format.
@@ -1414,8 +1414,8 @@ vary during a query.
 __NOW\_STR([ fmt ])__ - statement timestamp as a string in a supported
 format; does not vary during a query.
 
-__STR\_TO\_MILLIS(expr)__, __MILLIS(expr)__ - converts date in a
-supported format to UNIX milliseconds.
+__STR\_TO\_MILLIS(expr), MILLIS(expr)__ - converts date in a supported
+format to UNIX milliseconds.
 
 __STR\_TO\_UTC(expr)__ - converts the ISO 8601 timestamp to UTC.
 
@@ -1427,9 +1427,8 @@ timestamp string to the named time zone.
 __CONTAINS(expr, substr)__ - true if the string contains the
 substring.
 
-__INITCAP(expr)__, __TITLE(expr)__ - converts the string so that the
-first letter of each word is uppercase and every other letter is
-lowercase.
+__INITCAP(expr), TITLE(expr)__ - converts the string so that the first
+letter of each word is uppercase and every other letter is lowercase.
 
 __LENGTH(expr)__ - length of the string value.
 
@@ -1473,9 +1472,8 @@ position is 0-based, i.e. the first position is 0. If _position_ is
 negative, it is counted from the end of the string; -1 is the last
 position in the string.
 
-__TITLE(expr)__, __INITCAP(expr)__ - converts the string so that the
-first letter of each word is uppercase and every other letter is
-lowercase.
+__TITLE(expr), INITCAP(expr)__ - converts the string so that the first
+letter of each word is uppercase and every other letter is lowercase.
 
 __TRIM(expr [, chars ])__ - string with all leading and trailing chars
 removed (whitespace by default).
