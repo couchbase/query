@@ -1396,6 +1396,9 @@ the given date part string is the least significant.
 __DATE\_TRUNC\_STR(expr, part)__ - truncates ISO 8601 timestamp so
 that the given date part string is the least significant.
 
+__MILLIS(expr), __STR\_TO\_MILLIS(expr)__ - converts date in a
+supported format to UNIX milliseconds.
+
 __MILLIS\_TO\_STR(expr [, fmt ])__ - converts UNIX milliseconds to
 string in a supported format.
 
@@ -1411,8 +1414,8 @@ vary during a query.
 __NOW\_STR([ fmt ])__ - statement timestamp as a string in a supported
 format; does not vary during a query.
 
-__STR\_TO\_MILLIS(expr)__ - converts date in a supported format to
-UNIX milliseconds.
+__STR\_TO\_MILLIS(expr)__, __MILLIS(expr)__ - converts date in a
+supported format to UNIX milliseconds.
 
 __STR\_TO\_UTC(expr)__ - converts the ISO 8601 timestamp to UTC.
 
@@ -2070,9 +2073,6 @@ The following features are not supported in DP3.
   spec.
 
 #### Functions
-
-* In DP3, not all functions are provided. Only the DP2 functions, plus
-  the array, date, and type functions mentioned above, are provided.
 
 * In DP3, not all functions are provided. Only the DP2 functions, plus
   the array, date, and type functions mentioned above, are provided.

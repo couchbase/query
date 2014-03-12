@@ -30,6 +30,7 @@ var _FUNCTIONS = map[string]Function{
 	"DATE_PART_STR":       &DatePartStr{},
 	"DATE_TRUNC_MILLIS":   &DateTruncMillis{},
 	"DATE_TRUNC_STR":      &DateTruncStr{},
+	"MILLIS":              &StrToMillis{},
 	"MILLIS_TO_STR":       &MillisToStr{},
 	"MILLIS_TO_UTC":       &MillisToUTC{},
 	"MILLIS_TO_ZONE_NAME": &MillisToZoneName{},
