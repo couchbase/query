@@ -2055,11 +2055,11 @@ The following features are not supported in DP3.
 
 * In DP3, the syntax for qualifying buckets with pool names is
 
-    : pool-name . bucket-name
+        : pool-name . bucket-name
 
 and not
 
-    pool-name : bucket-name
+        pool-name : bucket-name
 
 as specified in this document.
 
