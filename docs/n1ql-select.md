@@ -943,7 +943,7 @@ _collection-expr:_
 
 ![](diagram/collection-expr.png)
 
-#### Exists
+#### EXISTS
 
 _exists-expr:_
 
@@ -952,7 +952,7 @@ _exists-expr:_
 EXISTS evaluates to TRUE if the value is an array and contains at
 least one element.
 
-#### In
+#### IN
 
 _in-expr:_
 
