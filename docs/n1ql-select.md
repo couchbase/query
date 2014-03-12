@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-03-05
+* Modified: 2014-03-11
 
 ## Introduction
 
@@ -2051,6 +2051,18 @@ The following features are not supported in DP3.
 * In DP3, not all functions are provided. Only the DP2 functions, plus
   the array, date, and type functions mentioned above, are provided.
 
+#### Pools
+
+* In DP3, the syntax for qualifying buckets with pool names is
+
+    : pool-name . bucket-name
+
+and not
+
+    pool-name : bucket-name
+
+as specified in this document.
+
 ## About this document
 
 The
@@ -2170,6 +2182,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added trig functions.
 * 2014-03-05 - Functions
     * Updated function lists and desccriptions.
+* 2014-03-11 - DP3 pool syntax
+    * Added diff about DP3 pool syntax
 
 ### Open issues
 
