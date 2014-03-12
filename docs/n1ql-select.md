@@ -781,7 +781,8 @@ nested-expr:
 
 Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
-notation (`[position]`) to access elements inside an array or object.
+notation (`[position]` or `[start:end?]`) to access elements inside an
+array or object.
 
 Consider the following object:
 
@@ -789,12 +790,26 @@ Consider the following object:
       "address": {
         "city": "Mountain View"
       },
-      "revisions": [2013]
+      "revisions": [2013, 2012, 2011, 2010]
     }
 
  The expression `address.city` evalutes to the value `"Mountain View"`.
 
  The expression `revisions[0]` evaluates to the value `2013`.
+
+#### Array slicing
+
+The form `source-array [ start : end ]` is called array slicing. It
+returns a new array containing a subset of the source array,
+containing the elements from position `start` to `end-1`. The element
+at `start` is included, while the element at `end` is not. If `end` is
+omitted, all elements beginning with `start` are included.
+
+The expression `revisions[1:3]` evaluates to the array value `[2012,
+2011]`.
+
+The expression `revisions[1:]` evaluates to the array value `[2012,
+2011, 2010]`.
 
 ### Case
 
@@ -928,12 +943,16 @@ _collection-expr:_
 
 ![](diagram/collection-expr.png)
 
+#### Exists
+
 _exists-expr:_
 
 ![](diagram/exists-expr.png)
 
 EXISTS evaluates to TRUE if the value is an array and contains at
 least one element.
+
+#### In
 
 _in-expr:_
 
@@ -942,10 +961,13 @@ _in-expr:_
 IN evaluates to TRUE if the right-hand-side value is an array and
 contains the left-hand-side value.
 
-_collection-cond:_
+#### ANY, SOME, and EVERY
 
-Collection predicates allow you to test a boolean condition over the
-elements of a collection.
+Collection predicates (ANY, SOME, EVERY) allow you to test a boolean
+condition over the elements of a collection. ANY, SOME, and EVERY
+expressions evaluate to a boolean value.
+
+_collection-cond:_
 
 ![](diagram/collection-cond.png)
 
@@ -953,10 +975,14 @@ _variable:_
 
 ![](diagram/variable.png)
 
-_collection-xform:_
+#### ARRAY and FIRST
 
-Collection transforms allow you to map and filter the elements of a
-collection.
+Collection transforms (ARRAY and FIRST) allow you to map and filter
+the elements of a collection. ARRAY evaluates to an array of the
+operand expression, while FIRST evaluates to a single element based on
+the operand expression.
+
+_collection-xform:_
 
 ![](diagram/collection-xform.png)
 
@@ -2055,13 +2081,13 @@ The following features are not supported in DP3.
 
 * In DP3, the syntax for qualifying buckets with pool names is
 
-        : pool-name . bucket-name
+    : pool-name . bucket-name
 
-and not
+  and not
 
-        pool-name : bucket-name
+    pool-name : bucket-name
 
-as specified in this document.
+  as specified in this document.
 
 ## About this document
 
