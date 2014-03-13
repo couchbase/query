@@ -803,7 +803,8 @@ The form `source-array [ start : end ]` is called array slicing. It
 returns a new array containing a subset of the source array,
 containing the elements from position `start` to `end-1`. The element
 at `start` is included, while the element at `end` is not. If `end` is
-omitted, all elements beginning with `start` are included.
+omitted, all elements from `start` to the end of the source array are
+included.
 
 The expression `revisions[1:3]` evaluates to the array value `[2012,
 2011]`.
