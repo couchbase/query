@@ -1045,20 +1045,22 @@ In this query `beer.name` is simply a more formal way of expressing
 The following operators are supported by N1QL.  The list is ordered
 from highest to lowest precedence.
 
-* CASE/WHEN/THEN/ELSE/END
+* CASE
 * . 
 * [] 
 * \- (unary)
 * \* / %
 * \+ \- (binary)
-* IS VALUED, IS NULL, IS MISSING
-* IS NOT VALUED, IS NOT NULL, IS NOT MISSING
+* IS
+* IN
+* BETWEEN
 * LIKE
 * < <= > >=
 * =, ==, <>, !=
 * NOT
 * AND
 * OR
+* UNION
 
 Parentheses allow for grouping expressions to override the order of
 operations. They have the highest precedence.
