@@ -265,6 +265,12 @@ running instances.
 Golang channels are used extensively to implement concurrency and
 signaling.
 
+#### Subquery execution
+
+The __Context__ object supports subquery execution. It performs
+planning, execution, and collection of subquery results. It also
+performs plan and result caching for uncorrelated subqueries.
+
 ### Catalog
 
 The catalog package defines the interface to the underlying database
