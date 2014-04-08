@@ -2075,8 +2075,20 @@ The following features are not supported in DP3.
 
 #### Functions
 
-* In DP3, not all functions are provided. Only the DP2 functions, plus
-  the array, date, and type functions mentioned above, are provided.
+* In DP3, not all functions are provided. Only the DP2 functions, the
+  type functions mentioned above, and the functions listed below, are
+  provided.
+    * ARRAY\_CONCAT
+    * ARRAY\_APPEND
+    * ARRAY\_PREPEND
+    * ARRAY\_REMOVE
+    * ARRAY\_LENGTH
+    * DATE\_PART\_STR
+    * NOW\_STR
+    * DATE\_PART\_MILLIS
+    * NOW\_MILLIS
+    * STR\_TO\_MILLIS
+    * MILLIS\_TO\_STR, MILLIS
 
 #### Pools
 
