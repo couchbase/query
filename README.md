@@ -13,8 +13,11 @@ Developer Preview 4, Beta and GA.
 
 The goals of this DP4 implementation are:
 
-* Language completeness for GA (as opposed to system completeness)
+* Language completeness for GA (as opposed to system and operational
+  completeness)
+
 * GA-caliber implementation, quality, and performance
+
 * Source code aesthetics
     + design, object orientation
     + Data structures, algorithms
