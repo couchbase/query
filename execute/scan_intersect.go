@@ -16,7 +16,7 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type MultipleScan struct {
+type IntersectScan struct {
 	base
 	scans        []Operator
 	counts       map[string]int
@@ -24,8 +24,8 @@ type MultipleScan struct {
 	childChannel StopChannel
 }
 
-func NewMultipleScan(scans []Operator) *MultipleScan {
-	rv := &MultipleScan{
+func NewIntersectScan(scans []Operator) *IntersectScan {
+	rv := &IntersectScan{
 		base:         newBase(),
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
@@ -35,24 +35,24 @@ func NewMultipleScan(scans []Operator) *MultipleScan {
 	return rv
 }
 
-func (this *MultipleScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMultipleScan(this)
+func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIntersectScan(this)
 }
 
-func (this *MultipleScan) Copy() Operator {
+func (this *IntersectScan) Copy() Operator {
 	scans := make([]Operator, len(this.scans))
 	for i, s := range this.scans {
 		scans[i] = s.Copy()
 	}
 
-	return &MultipleScan{
+	return &IntersectScan{
 		base:         this.base.copy(),
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
 }
 
-func (this *MultipleScan) RunOnce(context *Context, parent value.Value) {
+func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
@@ -106,11 +106,11 @@ func (this *MultipleScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *MultipleScan) ChildChannel() StopChannel {
+func (this *IntersectScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *MultipleScan) processKey(item value.AnnotatedValue, context *Context) bool {
+func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Context) bool {
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -142,7 +142,7 @@ func (this *MultipleScan) processKey(item value.AnnotatedValue, context *Context
 	return true
 }
 
-func (this *MultipleScan) sendItems() {
+func (this *IntersectScan) sendItems() {
 	n := len(this.scans)
 	for key, av := range this.values {
 		if this.counts[key] == n && !this.sendItem(av) {
@@ -151,7 +151,7 @@ func (this *MultipleScan) sendItems() {
 	}
 }
 
-func (this *MultipleScan) notifyScans() {
+func (this *IntersectScan) notifyScans() {
 	for _, s := range this.scans {
 		select {
 		case s.StopChannel() <- false:

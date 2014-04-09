@@ -122,19 +122,19 @@ func (this *CountScan) Bucket() catalog.Bucket {
 	return this.bucket
 }
 
-// MultipleScan scans multiple indexes and intersects the results.
-type MultipleScan struct {
+// IntersectScan scans multiple indexes and intersects the results.
+type IntersectScan struct {
 	scans []Operator
 }
 
-func NewMultipleScan(scans ...Operator) *MultipleScan {
-	return &MultipleScan{scans}
+func NewIntersectScan(scans ...Operator) *IntersectScan {
+	return &IntersectScan{scans}
 }
 
-func (this *MultipleScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitMultipleScan(this)
+func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIntersectScan(this)
 }
 
-func (this *MultipleScan) Scans() []Operator {
+func (this *IntersectScan) Scans() []Operator {
 	return this.scans
 }
