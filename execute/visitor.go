@@ -51,7 +51,7 @@ type Visitor interface {
 	VisitDistinct(op *Distinct) (interface{}, error)
 
 	// Union [ All ]
-	VisitAll(op *All) (interface{}, error)
+	VisitUnionAll(op *UnionAll) (interface{}, error)
 
 	// Order
 	VisitOrder(op *Order) (interface{}, error)

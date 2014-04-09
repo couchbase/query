@@ -9,18 +9,18 @@
 
 package plan
 
-type All struct {
+type UnionAll struct {
 	children []Operator
 }
 
-func NewAll(children ...Operator) *All {
-	return &All{children}
+func NewUnionAll(children ...Operator) *UnionAll {
+	return &UnionAll{children}
 }
 
-func (this *All) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAll(this)
+func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnionAll(this)
 }
 
-func (this *All) Children() []Operator {
+func (this *UnionAll) Children() []Operator {
 	return this.children
 }

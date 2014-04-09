@@ -13,14 +13,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type All struct {
+type UnionAll struct {
 	base
 	children     []Operator
 	childChannel StopChannel
 }
 
-func NewAll(children []Operator) *All {
-	rv := &All{
+func NewUnionAll(children []Operator) *UnionAll {
+	rv := &UnionAll{
 		base:         newBase(),
 		children:     children,
 		childChannel: make(StopChannel, len(children)),
@@ -30,12 +30,12 @@ func NewAll(children []Operator) *All {
 	return rv
 }
 
-func (this *All) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAll(this)
+func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnionAll(this)
 }
 
-func (this *All) Copy() Operator {
-	rv := &All{
+func (this *UnionAll) Copy() Operator {
+	rv := &UnionAll{
 		base:         this.base.copy(),
 		childChannel: make(StopChannel, len(this.children)),
 	}
@@ -49,7 +49,7 @@ func (this *All) Copy() Operator {
 	return rv
 }
 
-func (this *All) RunOnce(context *Context, parent value.Value) {
+func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
@@ -80,6 +80,6 @@ func (this *All) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *All) ChildChannel() StopChannel {
+func (this *UnionAll) ChildChannel() StopChannel {
 	return this.childChannel
 }

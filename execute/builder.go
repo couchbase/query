@@ -135,7 +135,7 @@ func (this *Builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 }
 
 // Union [ All ]
-func (this *Builder) VisitAll(plan *plan.All) (interface{}, error) {
+func (this *Builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 	children := make([]Operator, len(plan.Children()))
 	for i, child := range plan.Children() {
 		c, e := child.Accept(this)
@@ -146,7 +146,7 @@ func (this *Builder) VisitAll(plan *plan.All) (interface{}, error) {
 		children[i] = c.(Operator)
 	}
 
-	return NewAll(children), nil
+	return NewUnionAll(children), nil
 }
 
 // Order
