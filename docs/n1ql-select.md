@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-03-11
+* Modified: 2014-04-12
 
 ## Introduction
 
@@ -1321,7 +1321,22 @@ __CLOCK\_NOW\_MILLIS()__ - system clock at function evaluation time,
 as UNIX milliseconds; varies during a query.
 
 __CLOCK\_NOW\_STR([ fmt ])__ - system clock at function evaluation
-time, as a string in a supported format; varies during a query.
+time, as a string in a supported format; varies during a
+query. Supported formats:
+
+* __"2006-01-02T15:04:05.999Z07:00"__ - Default format. (ISO8601 / RFC3339)
+* __"2006-01-02T15:04:05Z07:00"__ (ISO8601 / RFC3339)
+* __"2006-01-02T15:04:05.999"__
+* __"2006-01-02T15:04:05"__
+* __"2006-01-02 15:04:05.999Z07:00"__
+* __"2006-01-02 15:04:05Z07:00"__
+* __"2006-01-02 15:04:05.999"__
+* __"2006-01-02 15:04:05"__
+* __"2006-01-02"__
+* __"15:04:05.999Z07:00"__
+* __"15:04:05Z07:00"__
+* __"15:04:05.999"__
+* __"15:04:05"__
 
 __DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
 are used to define an interval or duration, which is then added (or
@@ -2223,6 +2238,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Updated function lists and desccriptions.
 * 2014-03-11 - DP3 pool syntax
     * Added diff about DP3 pool syntax
+* 2014-04-12 - Date formats
+    * Listed the supported date formats.
 
 ### Open issues
 
