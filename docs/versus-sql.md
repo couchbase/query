@@ -1,10 +1,10 @@
 Introduction
 -------------
-This is a basic introduction of a mapping of SQL concepts to UnQL 2013. It is neither a tutorial nor a complete introduction to UnQL, and so is suitable for a casual reading. For anything more serious, please refer to [UnQL 2013 Specification](unql-2013.md) and the to be written tutorials.
+This is a basic introduction of a mapping of SQL concepts to N1QL. It is neither a tutorial nor a complete introduction to N1QL, and so is suitable for a casual reading. For anything more serious, please refer to [N1QL SELECT Specification](n1ql-select.md) and to the [N1QL Community page](http://query.couchbase.com).
 
 Fundamental differences
 ------------------------
-The most important difference versus traditional SQL and UnQL are not lingual but the data model. In traditional SQL, data is constrained to tables with a uniform structure, and many such tables exist.
+The most important difference versus traditional SQL and N1QL are not lingual but the data model. In traditional SQL, data is constrained to tables with a uniform structure, and many such tables exist.
 
 
     EMPLOYEE
@@ -30,7 +30,7 @@ The most important difference versus traditional SQL and UnQL are not lingual bu
     -----------------------------------
 
 
-In UnQL, the data exists as free form documents, gathered as large collections called buckets. There is no uniformity and there is no logical proximity of objects of the same data shape in a bucket.  
+In N1QL, the data exists as free form documents, gathered as large collections called buckets. There is no uniformity and there is no logical proximity of objects of the same data shape in a bucket.  
 
     (HRData bucket)
     {
@@ -69,7 +69,7 @@ When one runs a query in SQL, a set of rows, consisting of one or more columns e
     Jamie | Couchbase
     ----------------
 
-In UnQL, a query returns a set of documents. The returned document set may be uniform, but it need not be. Typically, specifying a SELECT with fixed set of attribute ('column') names results in a uniform set of documents. SELECT with a wildcard('*'') results in non-uniform result set. The only guarantee is that every returned document meets the query criteria.
+In N1QL, a query returns a set of documents. The returned document set may be uniform, but it need not be. Typically, specifying a SELECT with fixed set of attribute ('column') names results in a uniform set of documents. SELECT with a wildcard('*'') results in non-uniform result set. The only guarantee is that every returned document meets the query criteria.
 
     SELECT Name, History
     FROM HRData
@@ -80,7 +80,7 @@ In UnQL, a query returns a set of documents. The returned document set may be un
         [
           ['Yahoo', 2005, 2006],
           ['Oracle', 2006, 2012],
-          ['Couchbase', 2012]
+          ['Couchbase', 2012, null]
         ]
     }
     {
@@ -88,7 +88,7 @@ In UnQL, a query returns a set of documents. The returned document set may be un
     }
 
 
-Like SQL, UnQL allows renaming fields using the AS keyword. However, UnQL also allows reshaping the data, which has no analog in SQL. This is done by embedding the attributes of the statement in the desired result object shape.
+Like SQL, N1QL allows renaming fields using the AS keyword. However, N1QL also allows reshaping the data, which has no analog in SQL. This is done by embedding the attributes of the statement in the desired result object shape.
 
 
     SELECT Name, History, {'FullTime': true} AS 'Status'
@@ -100,7 +100,7 @@ Like SQL, UnQL allows renaming fields using the AS keyword. However, UnQL also a
         [
           ['Yahoo', 2005, 2006],
           ['Oracle', 2006, 2012],
-          ['Couchbase', 2012]
+          ['Couchbase', 2012, null]
         ],
         'Status': { 'FullTime': true }
     }
@@ -112,7 +112,7 @@ Like SQL, UnQL allows renaming fields using the AS keyword. However, UnQL also a
 
 Selection differences
 ---------------------
-The major difference between UnQL and SQL is that there are no tables in UnQL database. Hence, the FROM clause is used to select between data sources, i.e., buckets. If HRData is a bucket, the following will select the Name attribute from all documents in HRData bucket that have a Name attribute defined.
+The major difference between N1QL and SQL is that there are no tables in N1QL database. Hence, the FROM clause is used to select between data sources, i.e., buckets. If HRData is a bucket, the following will select the Name attribute from all documents in HRData bucket that have a Name attribute defined.
 
     SELECT Name FROM HRData
 
@@ -144,19 +144,34 @@ The selected fields can also be renamed using the AS oeprator, just like in SQL.
 
 Join differences
 ----------------
-We colloquially categorize joins that one encounters in relational databases as "bad joins" and "good joins". Bad joins are what one would perform to compose an object that got shredded while being stored into tables. These account for bulk of the joins one would encounter with a business application running against a relational database. These joins are unnecessary in documenta databases that UnQL operates on because objects are stored as documents, where there is no shredding.
+We colloquially categorize joins that one encounters in relational databases as "bad joins" and "good joins". Bad joins are what one would perform to compose an object that got shredded while being stored into tables. These account for bulk of the joins one would encounter with a business application running against a relational database. These joins are unnecessary in documenta databases that N1QL operates on because objects are stored as documents, where there is no shredding.
 
 "Good joins" are where the relationship between the joined item has a real world representation as well. An example would be the relation between an expense report and a reimbursement check. In most business applications today, these joins are represented using application logic and not as database joins, as the latter is too restrictive to model the real world relationships.
 
-### Joins in UnQL
-The UnQL language in the first revision does not specify join behavior, except for self joins. It reserves all join related keywords so that the topic can be dealt with in a future version. Unlike SQL, UnQL is substantially usable without joins as there is no need to join tables to recompose documents.
+### Join operations in N1QL
 
-### Self Joins
-A self join is a trivial join where one part of the document is joined with another part of itself. It is largely a convenience construct. Self joins in UnQL are expressed on the "FROM" clause of the statement, similar to implicit inner joins in a SQL statement. Unlike SQL, the joined parts can refer only to sub parts of a single document and not across documents in this revision of UnQL.
+N1QL provides three kinds of join operations--join, nest, and unnest.
 
-The self join is effected using a new keyword, OVER.
+#### Joins
 
-    SELECT Name, Job FROM HRData OVER HRData.History AS Job
+Joins in N1QL are similar to SQL, except that the join condition must be based on primary key lookups. The keyword KEYS is provided for specifying the join condition. If we had a second bucket whose primary keys were company names, the following query would return each employee's name and the address of his or her first job.
+
+SELECT h.Name, firstjob.Address FROM HRData AS h JOIN Company AS firstjob KEYS [ h.History[0][0] ]
+
+#### Nests
+
+Nests in N1QL make use of the document model to provide another type of join operation. Whereas a standard join produces a result for every matching combination of left and right hand inputs, a nest produces a result for every left hand input. For each left hand input, the matching right hand inputs are collected into an array, whis is then embedded in the result. Like JOIN, NEST requires a KEYS clause.
+
+The following query returns each employee's name and an array containing the addresses of all his or her jobs.
+
+SELECT h.Name, jobAddress FROM HRData AS h NEST Company.Address AS jobAddress KEYS ARRAY hi[0] FOR hi IN h.History END
+
+#### Unnests
+An unnest is a trivial join where one part of the document is joined with another part of itself. It is largely a convenience construct. Unnests in N1QL are expressed on the "FROM" clause of the statement, similar to implicit inner joins in a SQL statement. Unlike standard joins, the joined parts of an unnest can refer only to sub parts of a single document and not across documents.
+
+The unnest is effected using a new keyword, UNNEST.
+
+    SELECT Name, Job FROM HRData UNNEST HRData.History AS Job
 
     {
         'Name': Jamie
@@ -171,20 +186,20 @@ The self join is effected using a new keyword, OVER.
         'Job': ['Couchbase', 2012]
     }
 
-The over keyword does a cartesian product of the parent element with the child elements. This is not a join in the traditional SQL sense because at no point where two documents involved. The join result was generated from a single document.
+The UNNEST keyword does a cartesian product of the parent element with the child elements. This is not a join in the traditional SQL sense because at no point where two documents involved. The join result was generated from a single document.
 
 
 Filtering differences
 ---------------------
-UnQL uses WHERE clause similar to SQL. The '.' and the '[]' operator can be used for accessing nested and array elements, similar to usage in select clauses. 
+N1QL uses WHERE clause similar to SQL. The '.' and the '[]' operator can be used for accessing nested and array elements, similar to usage in select clauses. 
 
-A minor deviation is that the expressions follow JavaScript semantcis. For example, undefined values are recognized as distinct from null and a complementary set of operators like IS MISSING are added in addition to standard operators like IS NULL. Further, JavaScript conversions, for example from non-zero integer values to boolean value true, are supported as well. 
+A minor deviation is expression semantics. For example, undefined values are recognized as distinct from null and a complementary set of operators like IS MISSING are added in addition to standard operators like IS NULL. Furthermore, new conversions, for example from non-zero integer values to boolean value true, are supported as well. 
 
-In general, expressions behave as a subset of JavaScript expressions, and most standard SQL functions like LOWER() are defined.
+In general, most standard SQL functions like LOWER() are defined.
 
-In addition to standard filtering predicates, two new operators are introduced, ANY and ALL. These operators help in dealing with arrays in documents. The ANY will apply a filter on each element, and return true if any element meets the condition. The ALL does the same, except it reutrns true only if all elements matched the condition. These operators are used in conjection with OVER which specifies which sub element array to iterate over.
+In addition to standard filtering predicates, two new operators are introduced, ANY and EVERY. These operators help in dealing with arrays in documents. The ANY will apply a filter on each element, and return true if any element meets the condition. EVERY does the same, except it returns true only if all elements matched the condition. These operators are used in conjuncction with SATISFIES and END.
 
-    SELECT Name WHERE ANY Job[0] = 'Couchbase' OVER History
+    SELECT Name FROM HRData WHERE ANY h IN History SATISFIES h.Job[0] = 'Couchbase' END
 
     {
         'Name': Jamie
