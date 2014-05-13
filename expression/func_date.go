@@ -12,6 +12,7 @@ package expression
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/couchbaselabs/query/value"
@@ -755,7 +756,9 @@ const _DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 var _DEFAULT_FMT_VALUE = value.NewValue(_DEFAULT_FORMAT)
 
 func datePart(t time.Time, part string) (int, error) {
-	switch part {
+	p := strings.ToLower(part)
+
+	switch p {
 	case "millennium":
 		return (t.Year() / 1000) + 1, nil
 	case "century":
@@ -813,7 +816,9 @@ func datePart(t time.Time, part string) (int, error) {
 }
 
 func dateAdd(t time.Time, n int, part string) (time.Time, error) {
-	switch part {
+	p := strings.ToLower(part)
+
+	switch p {
 	case "millennium":
 		return t.AddDate(n*1000, 0, 0), nil
 	case "century":
@@ -844,7 +849,9 @@ func dateAdd(t time.Time, n int, part string) (time.Time, error) {
 }
 
 func dateTrunc(t time.Time, part string) (time.Time, error) {
-	switch part {
+	p := strings.ToLower(part)
+
+	switch p {
 	case "millennium":
 		t = yearTrunc(t)
 		return t.AddDate(-(t.Year() % 1000), 0, 0), nil
@@ -862,7 +869,7 @@ func dateTrunc(t time.Time, part string) (time.Time, error) {
 	case "month":
 		return monthTrunc(t), nil
 	default:
-		return timeTrunc(t, part)
+		return timeTrunc(t, p)
 	}
 }
 
@@ -899,7 +906,9 @@ func dateDiff(t1, t2 time.Time, part string) (int64, error) {
 }
 
 func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
-	switch part {
+	p := strings.ToLower(part)
+
+	switch p {
 	case "millisecond":
 		sec, e := diffPart(t1, t2, diff, "second")
 		if e != nil {
