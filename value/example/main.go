@@ -23,8 +23,8 @@ func main() {
 	doc := value.NewValueFromBytes(bytes)
 
 	// attempt to access a nested Value
-	docType, err := doc.Field("type")
-	if err != nil {
+	docType, ok := doc.Field("type")
+	if !ok {
 		panic("No property type exists.")
 	}
 
