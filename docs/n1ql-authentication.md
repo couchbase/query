@@ -73,14 +73,14 @@ This has the following implications:
 * Because the back end manages data and resources that may be
   protected, authentication must pass through N1QL on to the back end.
 
-## N1QL authentication model
+## The N1QL authentication model
 
 The N1QL authentication model builds upon the successful
 authentication model. For back ends that implement the successful
-model, N1QL simply accepts an identity and a secret from each client,
-and uses those to authenticate the client against the back end. For
-purposes of this document, that specification is sufficient for such
-back ends.
+authentication model, N1QL simply accepts an identity and a secret
+from each client, and uses those to authenticate the client against
+the back end. For purposes of this document, that specification is
+sufficient for such back ends.
 
 In the case of Couchbase server, the back end currently uses a
 non-standard authentication model, which comes in two parts:
@@ -104,26 +104,28 @@ with its type in order to simulate an identity:
   bucket-name is the name of the bucket. It will authenticate using
   the bucket's password.
 
-If Couchbase adds other types of authentication in the future
+If Couchbase adds other types of credentials in the future
 (e.g. users), they will also be prefixed with their type when
 authenticating through N1QL.
 
-This enables N1QL to support current and future authentication types
-in Couchbase, while supporting other back ends and clients using the
-standard successful model.
+This enables N1QL to support current and future credential types in
+Couchbase, while supporting standard back ends and clients using the
+successful authentication model.
 
-N1QL will also support unauthenticated users by not authenticating to
-the back end.
+N1QL will also support unauthenticated users by simply not
+authenticating to the back end, and allowing the back end to allow or
+reject operations accordingly.
 
 ## Authorization
 
 N1QL will not make authorization decisions; instead, it will perform
 authentication and defer to the back end to either allow or reject the
-requested access.
+requested operation.
 
 In the case of Couchbase Administrator, N1QL will use the
-Administrator's credential to obtain bucket passwords. This is
-consistent with the Administrator's current capabilities in Couchbase.
+Administrator's credential to obtain bucket credentials, which will
+then be used to access protected buckets. This is consistent with the
+Administrator's current capabilities in Couchbase.
 
 ## About this Document
 
