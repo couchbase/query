@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-authentication](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-authentication.md)
-* Modified: 2014-05-22
+* Modified: 2014-05-23
 
 ## Introduction
 
@@ -104,9 +104,18 @@ with its type in order to simulate an identity:
   bucket-name is the name of the bucket. It will authenticate using
   the bucket's password.
 
+Couchbase server may choose to add a new credential specifically for
+query. For example, this credential may enable retrieval of SASL
+bucket passwords and access to SASL bucket data, while not allowing
+non-query Administrator operations (e.g. operational actions). Such a
+credential would use a type specified by N1QL and a name and password
+specified by Couchbase server. For example, the simulated identity
+might be "admin:Query", and it could authenticate using the same
+Couchbase server REST API as "admin:Administrator".
+
 If Couchbase adds other types of credentials in the future
-(e.g. users), they will also be prefixed with their type when
-authenticating through N1QL.
+(e.g. users), they will also be prefixed with their N1QL-assigned
+types when authenticating through N1QL.
 
 This enables N1QL to support current and future credential types in
 Couchbase, while supporting standard back ends and clients using the
@@ -131,7 +140,10 @@ Administrator's current capabilities in Couchbase.
 
 ### Document History
 
-* 2014-05-22 - Initial version
+* 2014-05-22 - Initial version.
+
+* 2014-05-23 - Addressed feedback from John Liang and Cihan Biyikoglu
+  on Query credential and privileges.
 
 ### Open Issues
 
