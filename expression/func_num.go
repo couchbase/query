@@ -800,7 +800,7 @@ func (this *Trunc) Constructor() FunctionConstructor { return NewTrunc }
 func truncateFloat(x float64, prec int) float64 {
 	pow := math.Pow(10, float64(prec))
 	intermed := x * pow
-	rounder := math.Floor(intermed)
+	rounder := math.Trunc(intermed)
 	return rounder / pow
 }
 
