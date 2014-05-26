@@ -1,7 +1,7 @@
 # Query README
 
 * Latest: [Query README](https://github.com/couchbaselabs/query/blob/master/README.md)
-* Modified: 2014-04-08
+* Modified: 2014-05-26
 
 ## Introduction
 
@@ -19,7 +19,7 @@ The goals of this DP4 implementation are:
 * GA-caliber implementation, quality, and performance
 
 * Source code aesthetics
-    + design, object orientation
+    + Design, object orientation
     + Data structures, algorithms
     + Modularity, readability
     + Documentation, comments
@@ -51,10 +51,16 @@ The N1QL DP4 implementation provides the following features:
 ## Deployment architecture
 
 The query engine is a multi-threaded server that runs on a single
-node. When deployed on a cluster, multiple instances ARE deployed
+node. When deployed on a cluster, multiple instances are deployed on
 separate nodes. This is only for load-balancing and availability. In
 particular, the query engine does __not__ perform distributed query
 processing, and separate instances do not communicate or interact.
+
+In production, users will have the option of colocating query engines
+on KV and index nodes, or deploying query engines on dedicated query
+nodes. Because the query engine is highly data-parallel, we have a
+goal of achieving good speedup on dedicated query nodes with high
+numbers of cores.
 
 The remainder of this document refers to a single instance of the
 query engine. At this time, load balancing, availability, and liveness
@@ -149,6 +155,30 @@ It includes aggregate functions, subquery expressions, parameter
 expressions, bucket references, and all the N1QL statements and
 clauses.
 
+#### Aggregate functions
+
+* __ARRAY\_AGG(expr)__
+
+* __ARRAY\_AGG(DISTINCT expr)__
+
+* __AVG(expr)__
+
+* __AVG(DISTINCT expr)__
+
+* __COUNT(*)__
+
+* __COUNT(expr)__
+
+* __COUNT(DISTINCT expr)__
+
+* __MAX(expr)__
+
+* __MIN(expr)__
+
+* __SUM(expr)__
+
+* __SUM(DISTINCT expr)__
+
 ### Plan
 
 The plan package implements executable representations of
@@ -184,7 +214,7 @@ Plans include the following operators:
       the bucket size as the result of a scan, without actually
       performing a full scan of the bucket.
 
-    * __MultipleScan__: A container that scans its child scanners and
+    * __IntersectScan__: A container that scans its child scanners and
       intersects the results. Used for scanning multiple secondary
       indexes concurrently for a single query.
 
@@ -290,12 +320,87 @@ Some key differences from the previous catalog API:
 
 ### Parse
 
+This package will contain the parser and lexer.
+
 ### Server
 
+This package will contain the main engine executable and listener.
+
 ### Shell
+
+This package will contain the client command-line shell.
 
 ### Sort
 
 This package provides a parallel sort. It was copied from the Golang
 source and basic parallelism was added, but it has not been
 fine-tuned.
+
+## Data parallelism
+
+The query engine is designed to be highly data-parallel. By
+data-parallel, we mean that individual stages of the execution
+pipeline are parallelized over their input data. This is in addition
+to the parallelism achieved by giving each stage its own goroutine.
+
+Below, N1QL statement execution pipelines are listed, along with the
+data-parallelization and serialization points.
+
+### SELECT
+
+1. Scan
+1. __Parallelize__
+1. Fetch
+1. Join / Nest / Unnest
+1. Let (Common subexpressions)
+1. Where (Filter)
+1. GroupBy: Initial
+1. GroupBy: Intermediate
+1. __Serialize__
+1. GroupBy: Final
+1. __Parallelize__
+1. Letting (common aggregate subexpressions)
+1. Having (aggregate filtering)
+1. __Serialize__
+1. Order By (Sort)
+1. __Parallelize__
+1. Select (Projection)
+1. __Serialize__
+1. Distinct (De-duplication)
+1. Offset (Skipping)
+1. Limit
+
+### INSERT
+
+1. Scan
+1. __Parallelize__
+1. SendInsert
+1. Returning (Projection)
+
+### DELETE
+
+1. Scan
+1. __Parallelize__
+1. Fetch
+1. Let (Common subexpressions)
+1. Where (Filter)
+1. __Serialize__
+1. Limit
+1. __Parallelize__
+1. SendDelete
+1. Returning (Projection)
+
+### UPDATE
+
+1. Scan
+1. __Parallelize__
+1. Fetch
+1. Let (Common subexpressions)
+1. Where (Filter)
+1. __Serialize__
+1. Limit
+1. __Parallelize__
+1. Clone
+1. Set / Unset
+1. SendUpdate
+1. Returning (Projection)
