@@ -11,43 +11,29 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
+// Exists inherits from expression.Exists to set LIMIT 1 on
+// subqueries.
 type Exists struct {
-	expression.ExpressionBase
-	operand expression.Expression
+	expression.Exists
 }
 
-func NewExists(operand expression.Expression) expression.Expression {
+func NewExists(operand expression.Expression) *Exists {
 	return &Exists{
-		operand: operand,
+		*(expression.NewExists(operand)),
 	}
 }
 
-func (this *Exists) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
-	operand, e := this.operand.Evaluate(item, context)
-	if e != nil {
-		return nil, e
-	}
-
-	if operand.Type() == value.ARRAY {
-		a := operand.Actual().([]interface{})
-		return value.NewValue(len(a) > 0), nil
-	} else if operand.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else {
-		return value.NULL_VALUE, nil
-	}
-}
-
+// Fold() overrides expression.Exists.Fold() to set LIMIT 1 on
+// subqueries.
 func (this *Exists) Fold() (expression.Expression, error) {
 	t, e := expression.Expression(this).VisitChildren(&expression.Folder{})
 	if e != nil {
 		return t, e
 	}
 
-	switch o := this.operand.(type) {
+	switch o := this.Operand().(type) {
 	case *expression.Constant:
 		v, e := this.Evaluate(o.Value(), nil)
 		if e == nil {
@@ -55,20 +41,6 @@ func (this *Exists) Fold() (expression.Expression, error) {
 		}
 	case *Subquery:
 		o.query.SetLimit(_ONE_EXPR)
-	}
-
-	return this, nil
-}
-
-func (this *Exists) Children() expression.Expressions {
-	return expression.Expressions{this.operand}
-}
-
-func (this *Exists) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	var e error
-	this.operand, e = visitor.Visit(this.operand)
-	if e != nil {
-		return nil, e
 	}
 
 	return this, nil
