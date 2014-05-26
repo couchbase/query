@@ -23,18 +23,19 @@ const (
 	LSM         IndexType = "lsm"
 )
 
-// Index is the base type for all indexes.
+// Index is the base type for indexes that actually exist and can be
+// scanned, manipulated, etc.
 type Index interface {
-	expression.Index
-	BucketId() string
-	Id() string
-	Name() string
-	Type() IndexType
-	Drop() err.Error // PrimaryIndexes cannot be dropped
-	Statistics(span *expression.Span) (Statistics, err.Error)
-	Scan(span *expression.Span, conn *IndexConnection)
-	CandidateMins(span *expression.Span, conn *IndexConnection)  // Anywhere from single min value to Scan()
-	CandidateMaxes(span *expression.Span, conn *IndexConnection) // Anywhere from single max value to Scan()
+	expression.Index                                             // Inherits from expression indexes
+	BucketId() string                                            // Id of the bucket to which this index belongs
+	Id() string                                                  // Id of this index
+	Name() string                                                // Name of this index
+	Type() IndexType                                             // Type of this index
+	Drop() err.Error                                             // Drop / delete this index
+	Statistics(span *expression.Span) (Statistics, err.Error)    // Obtain statistics for this index
+	Scan(span *expression.Span, conn *IndexConnection)           // Perform a scan on this index
+	CandidateMins(span *expression.Span, conn *IndexConnection)  // Return one or more min values within the given span; the actual min must be included
+	CandidateMaxes(span *expression.Span, conn *IndexConnection) // Return one or more max values within the given span; the actual max must be included
 }
 
 type IndexEntry struct {
@@ -48,7 +49,7 @@ type StopChannel chan bool
 // PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
 	Index
-	PrimaryScan(conn *IndexConnection)
+	PrimaryScan(conn *IndexConnection) // Scan all the entries in this index
 }
 
 // Statistics captures statistics for an index span.
@@ -61,8 +62,8 @@ type Statistics interface {
 }
 
 type IndexConnection struct {
-	entryChannel   EntryChannel     // Closed by index.
-	stopChannel    StopChannel      // Stop notification to index. Never closed, just garbage-collected.
+	entryChannel   EntryChannel     // Closed by the index when the scan is completed or aborted.
+	stopChannel    StopChannel      // Notifies index to stop scanning. Never closed, just garbage-collected.
 	warningChannel err.ErrorChannel // Written by index. Never closed, just garbage-collected.
 	errorChannel   err.ErrorChannel // Written by index. Never closed, just garbage-collected.
 }

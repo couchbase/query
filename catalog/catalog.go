@@ -13,6 +13,12 @@ Package catalog provides a common catalog abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
 
+The logical hierarchy for the query language is site -> pool -> bucket
+-> document. Indexes are also attached to buckets.
+
+TODO: This hierarchy should be revisited and aligned with long-term
+plans before query Beta / GA.
+
 */
 package catalog
 
@@ -27,56 +33,60 @@ const CHANNEL = "CATALOG"
 
 // Site represents a cluster or single-node server.
 type Site interface {
-	Id() string
-	Url() string
-	PoolIds() ([]string, err.Error)
-	PoolNames() ([]string, err.Error)
-	PoolById(id string) (Pool, err.Error)
-	PoolByName(name string) (Pool, err.Error)
+	Id() string                               // Id of this site
+	Url() string                              // URL to this site
+	PoolIds() ([]string, err.Error)           // Ids of the pools contained in this site
+	PoolNames() ([]string, err.Error)         // Names of the pools contained in this site
+	PoolById(id string) (Pool, err.Error)     // Find a pool in this site using the pool's Id
+	PoolByName(name string) (Pool, err.Error) // Find a pool in this site using the pool's name
 }
 
-// Pool represents a logical authentication, query, and resource
-// allocation boundary, as well as a grouping of buckets.
+// Pool represents a logical boundary that is within a site and above
+// a bucket. In the query language, a pool is only used as a namespace
+// to qualify bucket names. No assumptions are made about pools and
+// isolation, resource management, or any other concerns.
 type Pool interface {
-	SiteId() string
-	Id() string
-	Name() string
-	BucketIds() ([]string, err.Error)
-	BucketNames() ([]string, err.Error)
-	BucketById(name string) (Bucket, err.Error)
-	BucketByName(name string) (Bucket, err.Error)
+	SiteId() string                               // Id of the site that contains this pool
+	Id() string                                   // Id of this pool
+	Name() string                                 // Name of this pool
+	BucketIds() ([]string, err.Error)             // Ids of the buckets contained in this pool
+	BucketNames() ([]string, err.Error)           // Names of the buckets contained in this pool
+	BucketById(name string) (Bucket, err.Error)   // Find a bucket in this pool using the bucket's id
+	BucketByName(name string) (Bucket, err.Error) // Find a bucket in this pool using the bucket's name
 }
 
 // Bucket is a collection of key-value entries (typically
-// key-document, but not always).
+// key-document, but also key-counter, key-blob, etc.).
 type Bucket interface {
-	PoolId() string
-	Id() string
-	Name() string
-	Count() (int64, err.Error)
-	IndexIds() ([]string, err.Error)
-	IndexNames() ([]string, err.Error)
-	IndexById(id string) (Index, err.Error)
-	IndexByName(name string) (Index, err.Error)
-	IndexByPrimary() (PrimaryIndex, err.Error) // Returns the server-recommended primary index
-	Indexes() ([]Index, err.Error)
-	CreatePrimaryIndex() (PrimaryIndex, err.Error)
-	CreateIndex(name string, equal, ranje expression.CompositeExpression, using IndexType) (Index, err.Error)
+	PoolId() string                                // Id of the pool that contains this bucket
+	Id() string                                    // Id of this bucket
+	Name() string                                  // Name of this bucket
+	Count() (int64, err.Error)                     // Number of key-value entries in this bucket
+	IndexIds() ([]string, err.Error)               // Ids of the indexes defined on this bucket
+	IndexNames() ([]string, err.Error)             // Names of the indexes defined on this bucket
+	IndexById(id string) (Index, err.Error)        // Find an index on this bucket using the index's id
+	IndexByName(name string) (Index, err.Error)    // Find an index on this bucket using the index's name
+	IndexByPrimary() (PrimaryIndex, err.Error)     // Returns the server-recommended primary index
+	Indexes() ([]Index, err.Error)                 // Returns all the indexes defined on this bucket
+	CreatePrimaryIndex() (PrimaryIndex, err.Error) // Create or return a primary index on this bucket
+
+	CreateIndex(name string, equalKey, rangeKey expression.CompositeExpression, using IndexType) (Index, err.Error) // Create a secondary index on this bucket
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]value.Value, err.Error)
-	FetchOne(key string) (value.Value, err.Error)
+	Fetch(keys []string) ([]value.Value, err.Error) // Bulk key-value fetch from this bucket
+	FetchOne(key string) (value.Value, err.Error)   // Single key-value fetch from this bucket
 
 	// Used by DML statements
 	// For all these methods, nil input keys are replaced with auto-generated keys
-	Insert(inserts []Pair) ([]string, err.Error)
-	Update(updates []Pair) err.Error
-	Upsert(upserts []Pair) ([]string, err.Error)
-	Delete(deletes []string) err.Error
+	Insert(inserts []Pair) ([]string, err.Error) // Bulk key-value insert into this bucket; returns primary keys
+	Update(updates []Pair) err.Error             // Bulk key-value updates into this bucket
+	Upsert(upserts []Pair) ([]string, err.Error) // Bulk key-value upserts into this bucket; returns primary keys
+	Delete(deletes []string) err.Error           // Bulk key-value deletes from this bucket
 
-	Release()
+	Release() // Release any query engine resources held by this object
 }
 
+// Key-value pair
 type Pair struct {
 	Key   string
 	Value value.Value

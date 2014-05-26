@@ -15,11 +15,15 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+// Index is the functional abstraction of an expression index that can
+// include equality keys, range keys, and conditions. Index is defined
+// in this package to enable implementation of expression
+// satisfiability and index selection.
 type Index interface {
-	BucketPath() string
-	Equal() CompositeExpression
-	Range() CompositeExpression
-	Condition() Expression
+	BucketPath() string            // TODO: Not sure if this is needed here
+	EqualKey() CompositeExpression // Equality keys, if any
+	RangeKey() CompositeExpression // Range keys, if any
+	Condition() Expression         // Condition, if any
 }
 
 type Spans []*Span
