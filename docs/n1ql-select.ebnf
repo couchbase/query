@@ -135,4 +135,4 @@ hex-digit ::= [0-9a-fA-F]
  *  comments
  **/
 block-comment ::= '/*' ((text)? newline?)+ '*/'
-line-comment ::= ('--' | '//') (text)? newline?
+line-comment ::=  '--' (text)? newline?
