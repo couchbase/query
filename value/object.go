@@ -90,7 +90,8 @@ func (this objectValue) SetField(field string, val interface{}) error {
 }
 
 func (this objectValue) UnsetField(field string) error {
-	return Unsettable(field)
+	delete(this, field)
+	return nil
 }
 
 func (this objectValue) Index(index int) (Value, bool) {

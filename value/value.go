@@ -182,12 +182,14 @@ func identifyType(bytes []byte) int {
 			return ARRAY
 		case '"':
 			return STRING
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-':
 			return NUMBER
 		case 't', 'f':
 			return BOOLEAN
 		case 'n':
 			return NULL
+		case ' ', '\t', '\n':
+			continue
 		}
 	}
 	panic("Unable to identify type of valid JSON.")
