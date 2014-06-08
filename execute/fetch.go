@@ -83,14 +83,16 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	// Fetch
-	items, er := this.plan.Bucket().Fetch(keys)
+	pairs, er := this.plan.Bucket().Fetch(keys)
 	if er != nil {
 		context.ErrorChannel() <- er
 		return false
 	}
 
 	// Attach meta and send
-	for i, item := range items {
+	for i, pair := range pairs {
+		item := pair.Value
+
 		// Apply projection, if any
 		project := this.plan.Term().Project()
 		if project != nil {

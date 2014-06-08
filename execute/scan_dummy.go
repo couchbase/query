@@ -41,7 +41,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		cv := value.NewCorrelatedValue(nil, parent)
+		cv := value.NewScopeValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
 		this.sendItem(av)
 	})

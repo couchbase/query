@@ -14,12 +14,12 @@ import (
 )
 
 type Add struct {
-	caAryBase
+	caNAryBase
 }
 
 func NewAdd(operands ...Expression) Expression {
 	return &Add{
-		caAryBase{
+		caNAryBase{
 			nAryBase{
 				operands: operands,
 			},

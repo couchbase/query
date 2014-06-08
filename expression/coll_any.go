@@ -63,7 +63,7 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 	}
 
 	for i := 0; i < n; i++ {
-		cv := value.NewCorrelatedValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			cv.SetField(b.Variable(), barr[j][i])
 		}

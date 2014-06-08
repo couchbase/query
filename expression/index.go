@@ -20,22 +20,22 @@ import (
 // in this package to enable implementation of expression
 // satisfiability and index selection.
 type Index interface {
-	BucketPath() string            // TODO: Not sure if this is needed here
-	EqualKey() CompositeExpression // Equality keys, if any
-	RangeKey() CompositeExpression // Range keys, if any
-	Condition() Expression         // Condition, if any
+	BucketPath() string    // TODO: Not sure if this is needed here
+	EqualKey() Expressions // Equality keys, if any
+	RangeKey() Expressions // Range keys, if any
+	Condition() Expression // Condition, if any
 }
 
 type Spans []*Span
 
 type Span struct {
-	Equal value.CompositeValue
+	Equal value.Values
 	Range *Range
 }
 
 type Range struct {
-	Low       value.CompositeValue
-	High      value.CompositeValue
+	Low       value.Values
+	High      value.Values
 	Inclusion Inclusion
 }
 

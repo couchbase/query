@@ -78,7 +78,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
-	e := this.plan.Bucket().Update(pairs)
+	pairs, e := this.plan.Bucket().Update(pairs)
 	if e != nil {
 		context.ErrorChannel() <- e
 		this.batch = nil

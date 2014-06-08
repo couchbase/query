@@ -64,7 +64,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		select {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
-				cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
+				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 				ok = this.sendItem(av)

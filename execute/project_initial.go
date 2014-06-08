@@ -88,7 +88,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-	cv := value.NewCorrelatedValue(make(map[string]interface{}, n), item)
+	cv := value.NewScopeValue(make(map[string]interface{}, n), item)
 
 	pv := value.NewAnnotatedValue(cv)
 	pv.SetAttachments(item.Attachments())

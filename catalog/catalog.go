@@ -34,7 +34,7 @@ const CHANNEL = "CATALOG"
 // Site represents a cluster or single-node server.
 type Site interface {
 	Id() string                               // Id of this site
-	Url() string                              // URL to this site
+	URL() string                              // URL to this site
 	PoolIds() ([]string, err.Error)           // Ids of the pools contained in this site
 	PoolNames() ([]string, err.Error)         // Names of the pools contained in this site
 	PoolById(id string) (Pool, err.Error)     // Find a pool in this site using the pool's Id
@@ -70,18 +70,18 @@ type Bucket interface {
 	Indexes() ([]Index, err.Error)                 // Returns all the indexes defined on this bucket
 	CreatePrimaryIndex() (PrimaryIndex, err.Error) // Create or return a primary index on this bucket
 
-	CreateIndex(name string, equalKey, rangeKey expression.CompositeExpression, using IndexType) (Index, err.Error) // Create a secondary index on this bucket
+	CreateIndex(name string, equalKey, rangeKey expression.Expressions, using IndexType) (Index, err.Error) // Create a secondary index on this bucket
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]value.Value, err.Error) // Bulk key-value fetch from this bucket
-	FetchOne(key string) (value.Value, err.Error)   // Single key-value fetch from this bucket
+	Fetch(keys []string) ([]Pair, err.Error)      // Bulk key-value fetch from this bucket
+	FetchOne(key string) (value.Value, err.Error) // Single key-value fetch from this bucket
 
 	// Used by DML statements
-	// For all these methods, nil input keys are replaced with auto-generated keys
-	Insert(inserts []Pair) ([]string, err.Error) // Bulk key-value insert into this bucket; returns primary keys
-	Update(updates []Pair) err.Error             // Bulk key-value updates into this bucket
-	Upsert(upserts []Pair) ([]string, err.Error) // Bulk key-value upserts into this bucket; returns primary keys
-	Delete(deletes []string) err.Error           // Bulk key-value deletes from this bucket
+	// For insert and upsert, nil input keys are replaced with auto-generated keys
+	Insert(inserts []Pair) ([]Pair, err.Error) // Bulk key-value insert into this bucket
+	Update(updates []Pair) ([]Pair, err.Error) // Bulk key-value updates into this bucket
+	Upsert(upserts []Pair) ([]Pair, err.Error) // Bulk key-value upserts into this bucket
+	Delete(deletes []string) err.Error         // Bulk key-value deletes from this bucket
 
 	Release() // Release any query engine resources held by this object
 }

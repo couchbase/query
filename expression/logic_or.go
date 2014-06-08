@@ -14,12 +14,12 @@ import (
 )
 
 type Or struct {
-	caAryBase
+	caNAryBase
 }
 
 func NewOr(operands ...Expression) Expression {
 	return &Or{
-		caAryBase{
+		caNAryBase{
 			nAryBase{
 				operands: operands,
 			},

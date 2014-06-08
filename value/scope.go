@@ -9,37 +9,38 @@
 
 package value
 
-// CorrelatedValue enables subqueries.
-type correlatedValue struct {
+// ScopeValue provides alias scoping for subqueries, FORs, LETs,
+// projections, etc.
+type scopeValue struct {
 	Value
 	parent Value
 }
 
-// CorrelatedValue provides alias scoping for subqueries, FORs, LETs,
+// ScopeValue provides alias scoping for subqueries, FORs, LETs,
 // projections, etc.
-func NewCorrelatedValue(value interface{}, parent Value) Value {
-	return &correlatedValue{
+func NewScopeValue(value interface{}, parent Value) Value {
+	return &scopeValue{
 		Value:  NewValue(value),
 		parent: parent,
 	}
 }
 
-func (this *correlatedValue) Copy() Value {
-	return &correlatedValue{
+func (this *scopeValue) Copy() Value {
+	return &scopeValue{
 		Value:  this.Value.Copy(),
 		parent: this.parent,
 	}
 }
 
-func (this *correlatedValue) CopyForUpdate() Value {
-	return &correlatedValue{
+func (this *scopeValue) CopyForUpdate() Value {
+	return &scopeValue{
 		Value:  this.Value.CopyForUpdate(),
 		parent: this.parent,
 	}
 }
 
 // Search self, the parent. Implements scoping.
-func (this *correlatedValue) Field(field string) (Value, bool) {
+func (this *scopeValue) Field(field string) (Value, bool) {
 	result, ok := this.Value.Field(field)
 	if ok {
 		return result, true

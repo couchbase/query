@@ -14,12 +14,12 @@ import (
 )
 
 type Multiply struct {
-	caAryBase
+	caNAryBase
 }
 
 func NewMultiply(operands ...Expression) Expression {
 	return &Multiply{
-		caAryBase{
+		caNAryBase{
 			nAryBase{
 				operands: operands,
 			},

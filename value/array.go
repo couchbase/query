@@ -29,7 +29,7 @@ func (this sliceValue) Equals(other Value) bool {
 		return arrayEquals(this, other)
 	case *listValue:
 		return arrayEquals(this, other.actual)
-	case *correlatedValue:
+	case *scopeValue:
 		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
@@ -46,7 +46,7 @@ func (this sliceValue) Collate(other Value) int {
 		return arrayCollate(this, other)
 	case *listValue:
 		return arrayCollate(this, other.actual)
-	case *correlatedValue:
+	case *scopeValue:
 		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)
@@ -149,7 +149,7 @@ func (this *listValue) Equals(other Value) bool {
 		return arrayEquals(this.actual, other.actual)
 	case sliceValue:
 		return arrayEquals(this.actual, other)
-	case *correlatedValue:
+	case *scopeValue:
 		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
@@ -166,7 +166,7 @@ func (this *listValue) Collate(other Value) int {
 		return arrayCollate(this.actual, other.actual)
 	case sliceValue:
 		return arrayCollate(this.actual, other)
-	case *correlatedValue:
+	case *scopeValue:
 		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)

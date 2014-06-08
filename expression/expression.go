@@ -20,8 +20,7 @@ import (
 )
 
 type Expressions []Expression
-type CompositeExpression []Expression
-type CompositeExpressions []CompositeExpression
+type CompositeExpressions []Expressions
 
 type Expression interface {
 	// Evaluation.

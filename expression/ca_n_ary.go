@@ -16,22 +16,22 @@ import (
 )
 
 // Commutative and associative operators.
-type caAry interface {
+type caNAry interface {
 	nAry
 	construct(constant value.Value, others Expressions) Expression
 }
 
-type caAryBase struct {
+type caNAryBase struct {
 	nAryBase
 }
 
 // Commutative.
-func (this *caAryBase) EquivalentTo(other Expression) bool {
+func (this *caNAryBase) EquivalentTo(other Expression) bool {
 	if reflect.TypeOf(this) != reflect.TypeOf(other) {
 		return false
 	}
 
-	that := other.(*caAryBase)
+	that := other.(*caNAryBase)
 	if len(this.operands) != len(that.operands) {
 		return false
 	}
@@ -57,7 +57,7 @@ func (this *caAryBase) EquivalentTo(other Expression) bool {
 }
 
 // Associative.
-func (this *caAryBase) Fold() (Expression, error) {
+func (this *caNAryBase) Fold() (Expression, error) {
 	t, e := Expression(this).VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
@@ -67,7 +67,7 @@ func (this *caAryBase) Fold() (Expression, error) {
 	for _, o := range this.operands {
 		if reflect.TypeOf(this) == reflect.TypeOf(o) {
 			// Associative, so promote subexpressions.
-			for _, oo := range o.(*caAryBase).operands {
+			for _, oo := range o.(*caNAryBase).operands {
 				operands = append(operands, oo)
 			}
 		} else {
@@ -92,7 +92,7 @@ func (this *caAryBase) Fold() (Expression, error) {
 		return this, nil
 	}
 
-	ary := caAry(this)
+	ary := caNAry(this)
 	c, e := ary.evaluate(constants)
 	if e != nil {
 		return nil, e
@@ -105,6 +105,6 @@ func (this *caAryBase) Fold() (Expression, error) {
 	return ary.construct(c, others), nil
 }
 
-func (this *caAryBase) construct(constant value.Value, others Expressions) Expression {
+func (this *caNAryBase) construct(constant value.Value, others Expressions) Expression {
 	panic("Must override.")
 }

@@ -14,12 +14,12 @@ import (
 )
 
 type And struct {
-	caAryBase
+	caNAryBase
 }
 
 func NewAnd(operands ...Expression) Expression {
 	return &And{
-		caAryBase{
+		caNAryBase{
 			nAryBase{
 				operands: operands,
 			},

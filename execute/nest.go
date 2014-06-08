@@ -81,15 +81,17 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Fetch
-	nestItems, er := this.plan.Bucket().Fetch(keys)
+	pairs, er := this.plan.Bucket().Fetch(keys)
 	if er != nil {
 		context.ErrorChannel() <- er
 		return false
 	}
 
 	// Attach meta
-	nvs := make([]value.AnnotatedValue, len(nestItems))
-	for i, nestItem := range nestItems {
+	nvs := make([]value.AnnotatedValue, len(pairs))
+	for i, pair := range pairs {
+		nestItem := pair.Value
+
 		// Apply projection, if any
 		project := this.plan.Term().Right().Project()
 		if project != nil {

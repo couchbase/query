@@ -44,7 +44,7 @@ func (this *Let) RunOnce(context *Context, parent value.Value) {
 
 func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Bindings())
-	cv := value.NewCorrelatedValue(make(map[string]interface{}, n), item)
+	cv := value.NewScopeValue(make(map[string]interface{}, n), item)
 	lv := value.NewAnnotatedValue(cv)
 	lv.SetAttachments(item.Attachments())
 

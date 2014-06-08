@@ -39,12 +39,9 @@ const _MARSHAL_ERROR = "Unexpected marshal error on valid data."
 // A channel of Value objects
 type ValueChannel chan Value
 
-// A composite Value
-type CompositeValue []Value
-type CompositeValues []CompositeValue
-
-// A collection of Value objects
+// Value collections
 type Values []Value
+type CompositeValues []Values
 
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {

@@ -81,7 +81,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Fetch
-	joinItems, er := this.plan.Bucket().Fetch(keys)
+	pairs, er := this.plan.Bucket().Fetch(keys)
 	if er != nil {
 		context.ErrorChannel() <- er
 		return false
@@ -90,7 +90,9 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	found := false
 
 	// Attach and send
-	for i, joinItem := range joinItems {
+	for i, pair := range pairs {
+		joinItem := pair.Value
+
 		// Apply projection, if any
 		project := this.plan.Term().Right().Project()
 		if project != nil {
@@ -113,7 +115,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		jv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
 
 		var av value.AnnotatedValue
-		if i < len(joinItems)-1 {
+		if i < len(pairs)-1 {
 			av = item.Copy().(value.AnnotatedValue)
 		} else {
 			av = item

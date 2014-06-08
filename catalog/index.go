@@ -39,7 +39,7 @@ type Index interface {
 }
 
 type IndexEntry struct {
-	EntryKey   value.CompositeValue
+	EntryKey   value.Values
 	PrimaryKey string
 }
 

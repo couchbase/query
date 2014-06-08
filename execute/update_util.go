@@ -41,7 +41,7 @@ func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, conte
 
 	rv := make([]value.Value, n)
 	for i, _ := range rv {
-		rv[i] = value.NewCorrelatedValue(make(map[string]interface{}, len(f.Bindings())), val)
+		rv[i] = value.NewScopeValue(make(map[string]interface{}, len(f.Bindings())), val)
 		for j, b := range f.Bindings() {
 			v, _ := arrays[j].Index(i)
 			if v.Type() != value.MISSING {

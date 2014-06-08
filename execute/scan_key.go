@@ -64,7 +64,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		acts := actuals.([]interface{})
 
 		for _, key := range acts {
-			cv := value.NewCorrelatedValue(make(map[string]interface{}), parent)
+			cv := value.NewScopeValue(make(map[string]interface{}), parent)
 			av := value.NewAnnotatedValue(cv)
 			av.SetAttachment("meta", map[string]interface{}{"id": key})
 			if !this.sendItem(av) {

@@ -16,12 +16,12 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func eval(cx expression.CompositeExpression, context *Context, parent value.Value) (value.CompositeValue, bool) {
+func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool) {
 	if cx == nil {
 		return nil, true
 	}
 
-	cv := make(value.CompositeValue, len(cx))
+	cv := make(value.Values, len(cx))
 	var e error
 	for i, expr := range cx {
 		cv[i], e = expr.Evaluate(parent, context)

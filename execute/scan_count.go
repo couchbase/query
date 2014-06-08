@@ -48,7 +48,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		cv := value.NewCorrelatedValue(nil, parent)
+		cv := value.NewScopeValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
 		av.SetAttachment("count", value.NewValue(count))
 		this.sendItem(av)
