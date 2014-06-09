@@ -23,20 +23,49 @@ const (
 	LSM         IndexType = "lsm"
 )
 
-// Index is the base type for indexes that actually exist and can be
-// scanned, manipulated, etc.
+// Index is the base type for indexes.
 type Index interface {
-	expression.Index                                             // Inherits from expression indexes
-	BucketId() string                                            // Id of the bucket to which this index belongs
-	Id() string                                                  // Id of this index
-	Name() string                                                // Name of this index
-	Type() IndexType                                             // Type of this index
-	Drop() err.Error                                             // Drop / delete this index
-	Statistics(span *expression.Span) (Statistics, err.Error)    // Obtain statistics for this index
-	Scan(span *expression.Span, conn *IndexConnection)           // Perform a scan on this index
-	CandidateMins(span *expression.Span, conn *IndexConnection)  // Return one or more min values within the given span; the actual min must be included
-	CandidateMaxes(span *expression.Span, conn *IndexConnection) // Return one or more max values within the given span; the actual max must be included
+	BucketId() string                                    // Id of the bucket to which this index belongs
+	Id() string                                          // Id of this index
+	Name() string                                        // Name of this index
+	Type() IndexType                                     // Type of this index
+	Drop() err.Error                                     // Drop / delete this index
+	EqualKey() expression.Expressions                    // Equality keys
+	RangeKey() expression.Expressions                    // Range keys
+	Condition() expression.Expression                    // Condition, if any
+	Statistics(span *Span) (Statistics, err.Error)       // Obtain statistics for this index
+	Scan(span *Span, limit int64, conn *IndexConnection) // Perform a scan on this index
 }
+
+// PrimaryIndex represents primary key indexes.
+type PrimaryIndex interface {
+	ScanEntries(limit int64, conn *IndexConnection) // Perform a scan of all the entries in this index
+}
+
+type Range struct {
+	Low       value.Values
+	High      value.Values
+	Inclusion Inclusion
+}
+
+type Ranges []*Range
+
+// Inclusion controls how the boundary values of a range are treated.
+type Inclusion int
+
+const (
+	NEITHER Inclusion = 0x00
+	LOW               = 0x01
+	HIGH              = 0x10
+	BOTH              = LOW | HIGH
+)
+
+type Span struct {
+	Equal value.Values
+	Range *Range
+}
+
+type Spans []*Span
 
 type IndexEntry struct {
 	EntryKey   value.Values
@@ -46,17 +75,11 @@ type IndexEntry struct {
 type EntryChannel chan *IndexEntry
 type StopChannel chan bool
 
-// PrimaryIndex represents primary key indexes.
-type PrimaryIndex interface {
-	Index
-	PrimaryScan(conn *IndexConnection) // Scan all the entries in this index
-}
-
-// Statistics captures statistics for an index span.
+// Statistics captures statistics for a range.
 type Statistics interface {
 	Count() (int64, err.Error)
-	Min() (value.Value, err.Error)
-	Max() (value.Value, err.Error)
+	Min() (value.Values, err.Error)
+	Max() (value.Values, err.Error)
 	DistinctCount(int64, err.Error)
 	Bins() ([]Statistics, err.Error)
 }

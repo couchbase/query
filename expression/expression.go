@@ -45,9 +45,6 @@ type Expression interface {
 	// E.g. A < 5 is a subset of A < 10.
 	SubsetOf(other Expression) bool
 
-	// Index spans to satisfy this expression, or nil.
-	Spans(index Index) Spans
-
 	// Utility
 	Children() Expressions
 	VisitChildren(visitor Visitor) (Expression, error)

@@ -32,10 +32,10 @@ func (this *PrimaryScan) Index() catalog.PrimaryIndex {
 
 type IndexScan struct {
 	index catalog.Index
-	spans expression.Spans
+	spans catalog.Spans
 }
 
-func NewIndexScan(index catalog.Index, spans expression.Spans) *IndexScan {
+func NewIndexScan(index catalog.Index, spans catalog.Spans) *IndexScan {
 	return &IndexScan{index, spans}
 }
 
@@ -43,7 +43,7 @@ func (this *IndexScan) Index() catalog.Index {
 	return this.index
 }
 
-func (this *IndexScan) Spans() expression.Spans {
+func (this *IndexScan) Spans() catalog.Spans {
 	return this.spans
 }
 

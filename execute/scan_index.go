@@ -10,8 +10,9 @@
 package execute
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -52,7 +53,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *expression.Span) bool {
+func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *catalog.Span) bool {
 	conn := catalog.NewIndexConnection(
 		context.WarningChannel(),
 		context.ErrorChannel(),
@@ -60,7 +61,7 @@ func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *exp
 
 	defer notifyConn(conn) // Notify index that I have stopped
 
-	go this.plan.Index().Scan(span, conn)
+	go this.plan.Index().Scan(span, math.MaxInt64, conn)
 
 	var entry *catalog.IndexEntry
 

@@ -10,6 +10,8 @@
 package execute
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -55,7 +57,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 	defer notifyConn(conn) // Notify index that I have stopped
 
-	go this.plan.Index().PrimaryScan(conn)
+	go this.plan.Index().ScanEntries(math.MaxInt64, conn)
 
 	var entry *catalog.IndexEntry
 

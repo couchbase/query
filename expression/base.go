@@ -65,10 +65,6 @@ func (this *ExpressionBase) SubsetOf(other Expression) bool {
 	return this.EquivalentTo(other)
 }
 
-func (this *ExpressionBase) Spans(index Index) Spans {
-	return nil
-}
-
 func (this *ExpressionBase) Children() Expressions {
 	return nil
 }

@@ -11,42 +11,6 @@ package expression
 
 import (
 	"time"
-
-	"github.com/couchbaselabs/query/value"
-)
-
-// Index is the functional abstraction of an expression index that can
-// include equality keys, range keys, and conditions. Index is defined
-// in this package to enable implementation of expression
-// satisfiability and index selection.
-type Index interface {
-	BucketPath() string    // TODO: Not sure if this is needed here
-	EqualKey() Expressions // Equality keys, if any
-	RangeKey() Expressions // Range keys, if any
-	Condition() Expression // Condition, if any
-}
-
-type Spans []*Span
-
-type Span struct {
-	Equal value.Values
-	Range *Range
-}
-
-type Range struct {
-	Low       value.Values
-	High      value.Values
-	Inclusion Inclusion
-}
-
-// Inclusion controls how the boundary values of a range are treated.
-type Inclusion int
-
-const (
-	NEITHER Inclusion = iota
-	LOW
-	HIGH
-	BOTH
 )
 
 type IndexContext struct {
