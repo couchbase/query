@@ -50,11 +50,9 @@
 /\./              { logDebugTokens("DOT"); return DOT }
 /\+/              { logDebugTokens("PLUS"); return PLUS }
 /-/               { logDebugTokens("MINUS"); return MINUS }
-/\*/              { logDebugTokens("MULT"); return MULT }
+/\*/              { logDebugTokens("MULT"); return STAR }
 /\//              { logDebugTokens("DIV"); return DIV }
 /%/               { logDebugTokens("MOD"); return MOD }
-/[aA][nN][dD]/    { logDebugTokens("AND"); return AND }
-/[oO][rR]/        { logDebugTokens("OR"); return OR }
 /\=\=/            { logDebugTokens("EQ"); return EQ }
 /\=/              { logDebugTokens("EQ"); return EQ }
 /\!\=/            { logDebugTokens("NE"); return NE }
@@ -73,120 +71,23 @@
 /\[/              { logDebugTokens("LBRACKET"); return LBRACKET }
 /\]/              { logDebugTokens("RBRACKET"); return RBRACKET }
 
-/[nN][oO][tT]/    { logDebugTokens("NOT"); return NOT }
-/[lL][iI][kK][eE]/ { logDebugTokens("LIKE"); return LIKE }
-/[iI][sS]/        { logDebugTokens("IS"); return IS }
-/[mM][iI][sS][sS][iI][nN][gG]/
-                  { logDebugTokens("MISSING"); return MISSING }
-/[vV][aA][lL][uU][eE][dD]/
-                  { logDebugTokens("VALUED"); return VALUED }
-/[sS][eE][lL][eE][cC][tT]/
-                  { logDebugTokens("SELECT"); return SELECT }
-/[aA][sS]/        { logDebugTokens("AS"); return AS }
-/[iI][nN]/        { logDebugTokens("IN"); return IN }
-/[fF][rR][oO][mM]/
-                  { logDebugTokens("FROM"); return FROM }
-/[wW][hH][eE][rR][eE]/
-                  { logDebugTokens("WHERE"); return WHERE }
-/[oO][rR][dD][eE][rR]/
-                  { logDebugTokens("ORDER"); return ORDER }
-/[bB][yY]/        { logDebugTokens("BY"); return BY }
-/[aA][sS][cC]/    { logDebugTokens("ASC"); return ASC }
-/[dD][eE][sS][cC]/
-                  { logDebugTokens("DESC"); return DESC }
-/[lL][iI][mM][iI][tT]/
-                  { logDebugTokens("LIMIT"); return LIMIT }
-/[oO][fF][fF][sS][eE][tT]/
-                  { logDebugTokens("OFFSET"); return OFFSET }
-/[eE][xX][pP][lL][aA][iI][nN]/
-                  {
-                    logDebugTokens("EXPLAIN"); return EXPLAIN
-                  }
-/[dD][iI][sS][tT][iI][nN][cC][tT]/
-                  {
-                    logDebugTokens("DISTINCT"); return DISTINCT
-                  }
-/[uU][nN][iI][qQ][uU][eE]/
-                  {
-                    logDebugTokens("UNIQUE"); return UNIQUE
-                  }
-/[cC][aA][sS][eE]/
-                  {
-                    logDebugTokens("CASE"); return CASE
-                  }
-/[wW][hH][eE][nN]/
-                  {
-                    logDebugTokens("WHEN"); return WHEN
-                  }
-/[tT][hH][eE][nN]/
-                  {
-                    logDebugTokens("THEN"); return THEN
-                  }
-/[eE][lL][sS][eE]/
-                  {
-                    logDebugTokens("ELSE"); return ELSE
-                  }
-/[eE][nN][dD]/
-                  {
-                    logDebugTokens("END"); return END
-                  }
-/[aA][nN][yY]/    {
-                    logDebugTokens("ANY"); return ANY
-                  }
-/[fF][iI][rR][sS][tT]/
-                  {
-                    logDebugTokens("FIRST"); return FIRST
-                  }
 /[aA][lL][lL]/    {
                     logDebugTokens("ALL"); return ALL
-                  }
-/[gG][rR][oO][uU][pP]/
-                  {
-                    logDebugTokens("GROUP"); return GROUP
-                  }
-/[bB][yY]/        {
-                    logDebugTokens("BY"); return BY
-                  }
-/[hH][aA][vV][iI][nN][gG]/
-                  {
-                    logDebugTokens("HAVING"); return HAVING
-                  }
-/[cC][rR][eE][aA][tT][eE]/
-                  {
-                    logDebugTokens("CREATE"); return CREATE
-                  }
-/[dD][rR][oO][pP]/
-                  {
-                    logDebugTokens("DROP"); return DROP
-                  }
-/[vV][iI][eE][wW]/
-                  {
-                    logDebugTokens("VIEW"); return VIEW
-                  }
-/[uU][sS][iI][nN][gG]/
-                  {
-                    logDebugTokens("USING"); return USING
-                  }
-/[iI][nN][dD][eE][xX]/
-                  {
-                    logDebugTokens("INDEX"); return INDEX
-                  }
-/[oO][nN]/
-                  {
-                    logDebugTokens("ON"); return ON
-                  }
-/[pP][rR][iI][mM][aA][rR][yY]/
-                  {
-                    logDebugTokens("PRIMARY"); return PRIMARY
-                  }
-/[aA][rR][rR][aA][yY]/
-                  {
-                    logDebugTokens("ARRAY"); return ARRAY
                   }
 /[aA][lL][tT][eE][rR]/
                   {
                     logDebugTokens("ALTER"); return ALTER
                   }
+/[aA][nN][dD]/    { logDebugTokens("AND"); return AND }
+/[aA][nN][yY]/    {
+                    logDebugTokens("ANY"); return ANY
+                  }
+/[aA][rR][rR][aA][yY]/
+                  {
+                    logDebugTokens("ARRAY"); return ARRAY
+                  }
+/[aA][sS]/        { logDebugTokens("AS"); return AS }
+/[aA][sS][cC]/    { logDebugTokens("ASC"); return ASC }
 /[bB][eE][tT][wW][eE][eE][nN]/
                   {
                     logDebugTokens("BETWEEN"); return BETWEEN
@@ -194,6 +95,11 @@
 /[bB][uU][cC][kK][eE][tT]/
                   {
                     logDebugTokens("BUCKET"); return BUCKET
+                  }
+/[bB][yY]/        { logDebugTokens("BY"); return BY }
+/[cC][aA][sS][eE]/
+                  {
+                    logDebugTokens("CASE"); return CASE
                   }
 /[cC][aA][sS][tT]/
                   {
@@ -203,6 +109,10 @@
                   {
                     logDebugTokens("COLLATE"); return COLLATE
                   }
+/[cC][rR][eE][aA][tT][eE]/
+                  {
+                    logDebugTokens("CREATE"); return CREATE
+                  }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/
                   {
                     logDebugTokens("DATABASE"); return DATABASE
@@ -210,6 +120,16 @@
 /[dD][eE][lL][eE][tT][eE]/
                   {
                     logDebugTokens("DELETE"); return DELETE
+                  }
+/[dD][eE][sS][cC]/
+                  { logDebugTokens("DESC"); return DESC }
+/[dD][iI][sS][tT][iI][nN][cC][tT]/
+                  {
+                    logDebugTokens("DISTINCT"); return DISTINCT
+                  }
+/[dD][rR][oO][pP]/
+                  {
+                    logDebugTokens("DROP"); return DROP
                   }
 /[eE][aA][cC][hH]/
                   {
@@ -223,10 +143,59 @@
                   {
                     logDebugTokens("EXISTS"); return EXISTS
                   }
+/[eE][lL][sS][eE]/
+                  {
+                    logDebugTokens("ELSE"); return ELSE
+                  }
+/[eE][nN][dD]/
+                  {
+                    logDebugTokens("END"); return END
+                  }
+/[eE][vV][eE][rR][yY]/
+                  {
+                    logDebugTokens("EVERY"); return EVERY
+                  }
+/[eE][xX][iI][sS][tT][sS]/
+                  {
+                    logDebugTokens("EXISTS"); return EXISTS
+                  }
+/[eE][xX][pP][lL][aA][iI][nN]/
+                  {
+                    logDebugTokens("EXPLAIN"); return EXPLAIN
+                  }
+/[fF][aA][lL][sS][eE]/
+                  { logDebugTokens("FALSE"); return FALSE}
+/[fF][iI][rR][sS][tT]/
+                  {
+                    logDebugTokens("FIRST"); return FIRST
+                  }
+/[fF][oO][rR]/
+                  {
+                    logDebugTokens("FOR"); return FOR
+                  }
+/[fF][rR][oO][mM]/
+                  { logDebugTokens("FROM"); return FROM }
+/[gG][rR][oO][uU][pP]/
+                  {
+                    logDebugTokens("GROUP"); return GROUP
+                  }
+/[hH][aA][vV][iI][nN][gG]/
+                  {
+                    logDebugTokens("HAVING"); return HAVING
+                  }
 /[iI][fF]/        { logDebugTokens("IF"); return IF }
+/[iI][nN]/        { logDebugTokens("IN"); return IN }
+/[iI][nN][dD][eE][xX]/
+                  {
+                    logDebugTokens("INDEX"); return INDEX
+                  }
 /[iI][nN][lL][iI][nN][eE]/
                   {
                     logDebugTokens("INLINE"); return INLINE
+                  }
+/[iI][nN][nN][eE][rR]/
+                  {
+                    logDebugTokens("INNER"); return INNER
                   }
 /[iI][nN][sS][eE][rR][tT]/
                   {
@@ -240,41 +209,10 @@
                   {
                     logDebugTokens("INTO"); return INTO
                   }
+/[iI][sS]/        { logDebugTokens("IS"); return IS }
 /[jJ][oO][iI][nN]/
                   {
                     logDebugTokens("JOIN"); return JOIN
-                  }
-/[pP][aA][tT][hH]/
-                  {
-                    logDebugTokens("PATH"); return PATH
-                  }
-/[uU][nN][iI][oO][nN]/
-                  {
-                    logDebugTokens("UNION"); return UNION
-                  }
-/[uU][pP][dD][aA][tT][eE]/
-                  {
-                    logDebugTokens("UPDATE"); return UPDATE
-                  }
-/[pP][oO][oO][lL]/
-                  {
-                    logDebugTokens("POOL"); return POOL
-                  }
-/[sS][aA][tT][iI][sS][fF][iI][eE][sS]/
-                  {
-                    logDebugTokens("SATISFIES"); return SATISFIES
-                  }
-/[eE][vV][eE][rR][yY]/
-                  {
-                    logDebugTokens("EVERY"); return EVERY
-                  }
-/[uU][nN][nN][eE][sS][tT]/
-                  {
-                    logDebugTokens("UNNEST"); return UNNEST
-                  }
-/[fF][oO][rR]/
-                  {
-                    logDebugTokens("FOR"); return FOR
                   }
 /[kK][eE][yY]/
                   {
@@ -284,30 +222,140 @@
                   {
                     logDebugTokens("KEYS"); return KEYS
                   }
-/[iI][nN][nN][eE][rR]/
-                  {
-                    logDebugTokens("INNER"); return INNER
-                  }
-/[oO][uU][tT][eE][rR]/
-                  {
-                    logDebugTokens("OUTER"); return OUTER
-                  }
 /[lL][eE][fF][tT]/
                   {
                     logDebugTokens("LEFT"); return LEFT
                   }
+/[lL][eE][tT]/
+                  {
+                    logDebugTokens("LET"); return LET
+                  }
+/[lL][eE][tT][tT][iI][nN][gG]/
+                  {
+                    logDebugTokens("LETTING"); return LETTING
+                  }
+/[lL][iI][kK][eE]/ { logDebugTokens("LIKE"); return LIKE }
+/[lL][iI][mM][iI][tT]/
+                  { logDebugTokens("LIMIT"); return LIMIT }
+/[mM][aA][tT][cC][hH][eE][dD]/
+                  { logDebugTokens("MATCHED"); return MATCHED }
+/[mM][eE][rR][gG][eE]/
+                  { logDebugTokens("MERGE"); return MERGE }
+/[mM][iI][sS][sS][iI][nN][gG]/
+                  { logDebugTokens("MISSING"); return MISSING }
 /[nN][eE][sS][tT]/
                   {
                     logDebugTokens("NEST"); return NEST
                   }
-/[tT][rR][uU][eE]/
-                  { logDebugTokens("TRUE"); return TRUE}
-/[fF][aA][lL][sS][eE]/
-                  { logDebugTokens("FALSE"); return FALSE}
+/[nN][oO][tT]/    { logDebugTokens("NOT"); return NOT }
 /[nN][uU][lL][lL]/
                   { logDebugTokens("NULL"); return NULL}
+/[oO][fF][fF][sS][eE][tT]/
+                  { logDebugTokens("OFFSET"); return OFFSET }
+/[oO][nN]/
+                  {
+                    logDebugTokens("ON"); return ON
+                  }
+/[oO][rR]/
+                  {
+                    logDebugTokens("OR"); return OR
+                  }
+/[oO][rR][dD][eE][rR]/
+                  { logDebugTokens("ORDER"); return ORDER }
+/[oO][uU][tT][eE][rR]/
+                  {
+                    logDebugTokens("OUTER"); return OUTER
+                  }
+/[pP][aA][rR][tT][iI][tT][iI][oO][nN]/
+                  {
+                    logDebugTokens("PARTITION"); return PARTITION
+                  }
+/[pP][aA][tT][hH]/
+                  {
+                    logDebugTokens("PATH"); return PATH
+                  }
+/[pP][oO][oO][lL]/
+                  {
+                    logDebugTokens("POOL"); return POOL
+                  }
+/[pP][rR][iI][mM][aA][rR][yY]/
+                  {
+                    logDebugTokens("PRIMARY"); return PRIMARY
+                  }
+/[rR][aA][wW]/
+                  {
+                    logDebugTokens("RAW"); return RAW
+                  }
+/[rR][eE][nN][aA][mM][eE]/
+                  {
+                    logDebugTokens("RENAME"); return RENAME
+                  }
+/[rR][eE][tT][uU][rR][nN][iI][nN][gG]/
+                  {
+                    logDebugTokens("RETURNING"); return RETURNING
+                  }
+/[sS][aA][tT][iI][sS][fF][iI][eE][sS]/
+                  {
+                    logDebugTokens("SATISFIES"); return SATISFIES
+                  }
+/[sS][eE][tT]/
+                  { logDebugTokens("SET"); return SET }
+/[sS][oO][mM][eE]/
+                  { logDebugTokens("SOME"); return SOME }
+/[sS][eE][lL][eE][cC][tT]/
+                  { logDebugTokens("SELECT"); return SELECT }
+/[tT][hH][eE][nN]/
+                  {
+                    logDebugTokens("THEN"); return THEN
+                  }
+/[tT][oO]/
+                  {
+                    logDebugTokens("TO"); return TO
+                  }
+/[tT][rR][uU][eE]/
+                  { logDebugTokens("TRUE"); return TRUE}
+/[uU][nN][iI][oO][nN]/
+                  {
+                    logDebugTokens("UNION"); return UNION
+                  }
+/[uU][nN][iI][qQ][uU][eE]/
+                  {
+                    logDebugTokens("UNIQUE"); return UNIQUE
+                  }
+/[uU][nN][nN][eE][sS][tT]/
+                  {
+                    logDebugTokens("UNNEST"); return UNNEST
+                  }
+/[uU][nN][sS][eE][tT]/
+                  { logDebugTokens("UNSET"); return UNSET }
+/[uU][pP][dD][aA][tT][eE]/
+                  {
+                    logDebugTokens("UPDATE"); return UPDATE
+                  }
+/[uU][pP][sS][eE][rR][tT]/
+                  {
+                    logDebugTokens("UPSERT"); return UPSERT
+                  }
+/[uU][sS][iI][nN][gG]/
+                  {
+                    logDebugTokens("USING"); return USING
+                  }
+/[vV][aA][lL][uU][eE][dD]/
+                  { logDebugTokens("VALUED"); return VALUED }
+/[vV][aA][lL][uU][eE][sS]/
+                  { logDebugTokens("VALUES"); return VALUES }
+/[vV][iI][eE][wW]/
+                  {
+                    logDebugTokens("VIEW"); return VIEW
+                  }
+/[wW][hH][eE][rR][eE]/
+                  { logDebugTokens("WHERE"); return WHERE }
+/[wW][hH][eE][nN]/
+                  {
+                    logDebugTokens("WHEN"); return WHEN
+                  }
 
-/[a-zA-Z_][a-zA-Z0-9_]*/     {
+/[a-zA-Z_\$][a-zA-Z0-9_\$]*/     {
                     lval.s = yylex.Text();
                     logDebugTokens("IDENTIFIER - %s", lval.s);
                     return IDENTIFIER
