@@ -16,7 +16,7 @@ import (
 
 // Unmarshal a double quoted string. s must begin and end with double
 // quotes.
-func UnmarshaDoubleQuoted(s string) (t string, e error) {
+func UnmarshalDoubleQuoted(s string) (t string, e error) {
 	if !strings.ContainsRune(s, '\\') {
 		return s[1 : len(s)-1], nil
 	}
