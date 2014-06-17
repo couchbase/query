@@ -32,14 +32,6 @@ bucket-name:
 Indexes always use **case-insensitive** matching to match field names
 and paths.
 
-Indexes are automatically altered by
-
-    ALTER BUCKET RENAME subpath TO identifier
-
-As an optimization, indexes can use special-case logic to handle DML
-and DDL statements that affect all documents in a bucket, such as
-UPDATEs and DELETEs without WHERE clauses, and TRUNCATEs.
-
 Index names are unique per bucket.
 
 __index-stmt:__

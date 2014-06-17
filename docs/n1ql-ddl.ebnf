@@ -6,7 +6,7 @@
  *  ddl
  */
 
-ddl-stmt ::= index-stmt | bucket-stmt
+ddl-stmt ::= index-stmt
 
 index-stmt ::= create-index | drop-index | alter-index
 
