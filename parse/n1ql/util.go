@@ -48,3 +48,22 @@ func UnmarshalSingleQuoted(s string) (t string, e error) {
 
 	return t, e
 }
+
+// Unmarshal a back-quoted string. s must begin and end with back
+// quotes.
+func UnmarshalBackQuoted(s string) (t string, e error) {
+	s = s[1 : len(s)-1]
+	s = strings.Replace(s, "``", "`", -1)  // `` escapes `
+
+	if !strings.ContainsRune(s, '\\') {
+		return s, nil
+	}
+
+	var rv string
+	e = json.Unmarshal([]byte(`"`+s+`"`), &rv)
+	if e == nil {
+		t = rv
+	}
+
+	return t, e
+}

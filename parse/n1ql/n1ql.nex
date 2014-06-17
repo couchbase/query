@@ -10,6 +10,14 @@
                     return STRING
                   }
 
+/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/
+                  {
+                    // Escaped identifiers
+                    lval.s, _ = UnmarshalBackQuoted(yylex.Text())
+                    logDebugTokens("IDENTIFIER - %s", lval.s);
+                    return IDENTIFIER
+                  }
+
 /(0|[1-9][0-9]*)(\.[0-9]+)([eE][+\-]?[0-9]+)?/ {
                   // We differentiate NUMBER from INT
                     lval.f,_ = strconv.ParseFloat(yylex.Text(), 64);
@@ -55,6 +63,15 @@
 /\<\=/            { logDebugTokens("LTE"); return LTE }
 /\>/              { logDebugTokens("GT"); return GT }
 /\>\=/            { logDebugTokens("GTE"); return GTE }
+/\|\|/            { logDebugTokens("CONCAT"); return CONCAT }
+/\(/              { logDebugTokens("LPAREN"); return LPAREN }
+/\)/              { logDebugTokens("RPAREN"); return RPAREN }
+/\{/              { logDebugTokens("LBRACE"); return LBRACE }
+/\}/              { logDebugTokens("RBRACE"); return RBRACE }
+/\,/              { logDebugTokens("COMMA"); return COMMA }
+/\:/              { logDebugTokens("COLON"); return COLON }
+/\[/              { logDebugTokens("LBRACKET"); return LBRACKET }
+/\]/              { logDebugTokens("RBRACKET"); return RBRACKET }
 
 /[nN][oO][tT]/    { logDebugTokens("NOT"); return NOT }
 /[lL][iI][kK][eE]/ { logDebugTokens("LIKE"); return LIKE }
@@ -283,15 +300,6 @@
                   {
                     logDebugTokens("NEST"); return NEST
                   }
-/\|\|/            { logDebugTokens("CONCAT"); return CONCAT }
-/\(/              { logDebugTokens("LPAREN"); return LPAREN }
-/\)/              { logDebugTokens("RPAREN"); return RPAREN }
-/\{/              { logDebugTokens("LBRACE"); return LBRACE }
-/\}/              { logDebugTokens("RBRACE"); return RBRACE }
-/\,/              { logDebugTokens("COMMA"); return COMMA }
-/\:/              { logDebugTokens("COLON"); return COLON }
-/\[/              { logDebugTokens("LBRACKET"); return LBRACKET }
-/\]/              { logDebugTokens("RBRACKET"); return RBRACKET }
 /[tT][rR][uU][eE]/
                   { logDebugTokens("TRUE"); return TRUE}
 /[fF][aA][lL][sS][eE]/
@@ -301,14 +309,6 @@
 
 /[a-zA-Z_][a-zA-Z0-9_]*/     {
                     lval.s = yylex.Text();
-                    logDebugTokens("IDENTIFIER - %s", lval.s);
-                    return IDENTIFIER
-                  }
-
-/`((\\\")|(\\\\)|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])|[^`])+`/
-                  {
-                    //this rule allows for a wider range of identifiers by escaping them
-                    lval.s = yylex.Text()[1:len(yylex.Text())-1]
                     logDebugTokens("IDENTIFIER - %s", lval.s);
                     return IDENTIFIER
                   }
