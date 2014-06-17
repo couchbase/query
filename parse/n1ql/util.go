@@ -35,7 +35,6 @@ func UnmarshalDoubleQuoted(s string) (t string, e error) {
 func UnmarshalSingleQuoted(s string) (t string, e error) {
 	s = s[1 : len(s)-1]
 	s = strings.Replace(s, "''", "'", -1)  // '' escapes '
-	s = strings.Replace(s, "\\'", "'", -1) // \' escapes '
 
 	if !strings.ContainsRune(s, '\\') {
 		return s, nil
