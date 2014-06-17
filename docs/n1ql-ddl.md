@@ -27,25 +27,6 @@ bucket-name:
 
 ![](diagram/bucket-name.png)
 
-## View indexes
-
-View indexes always use **case-sensitive** matching to match field
-names and paths.
-
-View index names are unique per bucket.
-
-view-index-stmt:
-
-![](diagram/view-index-stmt.png)
-
-create-view-index:
-
-![](diagram/create-view-index.png)
-
-drop-view-index:
-
-![](diagram/drop-view-index.png)
-
 ## Indexes
 
 Indexes always use **case-insensitive** matching to match field names
@@ -61,33 +42,29 @@ UPDATEs and DELETEs without WHERE clauses, and TRUNCATEs.
 
 Index names are unique per bucket.
 
-index-stmt:
+__index-stmt:__
 
 ![](diagram/index-stmt.png)
 
-create-index:
+__create-index:__
 
 ![](diagram/create-index.png)
 
-drop-index:
+_partition:_
+
+![](diagram/partition.png)
+
+_using:_
+
+![](diagram/using.png)
+
+__drop-index:__
 
 ![](diagram/drop-index.png)
 
-alter-index:
+__alter-index:__
 
 ![](diagram/alter-index.png)
-
-## Buckets
-
-Some bucket DDL statements affect indexes.
-
-bucket-stmt:
-
-![](diagram/bucket-stmt.png)
-
-alter-bucket:
-
-![](diagram/alter-bucket.png)
 
 ## About this Document
 

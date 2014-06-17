@@ -6,37 +6,21 @@
  *  ddl
  */
 
-ddl-stmt ::= view-index-stmt | index-stmt | bucket-stmt
-
-view-index-stmt ::= create-view-index | drop-view-index
+ddl-stmt ::= index-stmt | bucket-stmt
 
 index-stmt ::= create-index | drop-index | alter-index
-
-bucket-stmt ::= alter-bucket
-
-
-/*
- *  view index
- */
-
-create-view-index ::= 'CREATE' 'VIEW' 'INDEX' identifier 'ON' (pool-name ':')? bucket-name '(' subpath (',' subpath)* ')'
-
-drop-view-index ::= 'DROP' 'VIEW' 'INDEX' (pool-name ':')? bucket-name '.' identifier
 
 
 /*
  *  index
  */
 
-create-index ::= 'CREATE' 'INDEX' identifier 'ON' (pool-name ':')? bucket-name '(' subpath (',' subpath)* ')'
+create-index ::= 'CREATE' 'INDEX' identifier 'ON' (pool-name ':')? bucket-name '(' subpath (',' subpath)* ')' partition? using?
+
+partition ::= 'PARTITION' 'BY' subpath (',' subpath)*
+
+using ::= 'USING' 'VIEW'
 
 drop-index ::= 'DROP' 'INDEX' (pool-name ':')? bucket-name '.' identifier
 
 alter-index ::= 'ALTER' 'INDEX' (pool-name ':')? bucket-name '.' identifier 'RENAME' 'TO' identifier
-
-
-/*
- *  bucket
- */
-
-alter-bucket ::= 'ALTER' 'BUCKET' (pool-name ':')? bucket-name 'RENAME' subpath 'TO' identifier
