@@ -15,9 +15,9 @@ index-stmt ::= create-index | drop-index | alter-index
  *  index
  */
 
-create-index ::= 'CREATE' 'INDEX' identifier 'ON' (pool-name ':')? bucket-name '(' subpath (',' subpath)* ')' partition? using?
+create-index ::= 'CREATE' 'INDEX' identifier 'ON' (pool-name ':')? bucket-name '(' expr (',' expr)* ')' partition? using?
 
-partition ::= 'PARTITION' 'BY' subpath (',' subpath)*
+partition ::= 'PARTITION' 'BY' expr (',' expr)*
 
 using ::= 'USING' 'VIEW'
 

@@ -75,6 +75,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 
 * 2013-07-30 - Initial checkin
 
+* 2014-06-18 - Syntax updates
+
 ### Open Issues
 
 This meta-section records open issues in this document, and will
