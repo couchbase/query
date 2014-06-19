@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+	<link href="tutorial.css" rel="stylesheet" />
+	<script src="jquery/jquery.js" type="text/javascript" charset="utf-8"></script>
+	<script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+	<script src="tutorial.js" type="text/javascript" charset="utf-8"></script>
+	<title>Couchbase Query Tutorial</title>
+</head>
+<body>
+	<div id="all">
+		<div id="info">
+			<div id="header">
+				<div id='title'>Query Language Tutorial</div>
+			</div>
+			<div id="slide">
+				<div id="content"></div>
+			</div>
+			<div id="footer">
+				<div id="prev" class="button">
+					<a>Prev</a>
+				</div>
+				<div id="index" class="button enabled">
+					<a>Index</a>
+				</div>
+				<div id="next" class="button">
+					<a>Next</a>
+				</div>
+			</div>
+		</div>
+		<div id="try">
+			<div id="input">
+				<div id="run" class="button enabled">
+					<a>Run</a>
+				</div>
+				<div id="query">
+					<pre id="iedit">Loading..</pre>
+				</div>
+			</div>
+			<div id="result">
+				<pre id="redit"></pre>
+			</div>
+		</div>
+	</div>
+	<!-- put slide count below before release. 0 = autodetect (slow) -->
+	<input id="max" type="hidden" value="50">
+</body>
+</html>
