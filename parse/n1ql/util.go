@@ -34,33 +34,32 @@ func UnmarshalDoubleQuoted(s string) (t string, e error) {
 // quotes.
 func UnmarshalSingleQuoted(s string) (t string, e error) {
 	s = s[1 : len(s)-1]
-	s = strings.Replace(s, "''", "'", -1)  // '' escapes '
-
-	if !strings.ContainsRune(s, '\\') {
-		return s, nil
-	}
-
-	var rv string
-	e = json.Unmarshal([]byte(`"`+s+`"`), &rv)
-	if e == nil {
-		t = rv
-	}
-
-	return t, e
+	s = strings.Replace(s, "''", "'", -1) // '' escapes '
+	return unmarshalUnquoted(s)
 }
 
 // Unmarshal a back-quoted string. s must begin and end with back
 // quotes.
 func UnmarshalBackQuoted(s string) (t string, e error) {
 	s = s[1 : len(s)-1]
-	s = strings.Replace(s, "``", "`", -1)  // `` escapes `
+	s = strings.Replace(s, "``", "`", -1) // `` escapes `
+	return unmarshalUnquoted(s)
+}
 
+// Unmarshal an unquoted string.
+func unmarshalUnquoted(s string) (t string, e error) {
 	if !strings.ContainsRune(s, '\\') {
 		return s, nil
 	}
 
+	buf := make([]byte, len(s)+2)
+	buf[0], buf[len(buf)-1] = `"`[0], `"`[0]
+	for i := 0; i < len(s); i++ {
+		buf[i+1] = s[i]
+	}
+
 	var rv string
-	e = json.Unmarshal([]byte(`"`+s+`"`), &rv)
+	e = json.Unmarshal(buf, &rv)
 	if e == nil {
 		t = rv
 	}
