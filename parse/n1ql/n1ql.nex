@@ -1,52 +1,42 @@
 /\"((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|[^\\\"])*\"/     {
-                    lval.s, _ = UnmarshalDoubleQuoted(yylex.Text())
+                    lval.s, _ = UnmarshalDoubleQuoted(yylex.Text());
                     logDebugTokens("STRING - %s", lval.s);
                     return STRING
                   }
-
 /'((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|('')|[^\\\"'])*'/     {
-                    lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
+                    lval.s, _ = UnmarshalSingleQuoted(yylex.Text());
                     logDebugTokens("STRING - %s", lval.s);
                     return STRING
                   }
-
-/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/
-                  {
+/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/ {
                     // Escaped identifiers
-                    lval.s, _ = UnmarshalBackQuoted(yylex.Text())
+                    lval.s, _ = UnmarshalBackQuoted(yylex.Text());
                     logDebugTokens("IDENTIFIER - %s", lval.s);
                     return IDENTIFIER
                   }
-
 /(0|[1-9][0-9]*)(\.[0-9]+)([eE][+\-]?[0-9]+)?/ {
                   // We differentiate NUMBER from INT
                     lval.f,_ = strconv.ParseFloat(yylex.Text(), 64);
                     logDebugTokens("NUMBER - %f", lval.f);
                     return NUMBER
                   }
-
 /(0|[1-9][0-9]*)([eE][+\-]?[0-9]+)/ {
                   // We differentiate NUMBER from INT
                     lval.f,_ = strconv.ParseFloat(yylex.Text(), 64);
                     logDebugTokens("NUMBER - %f", lval.f);
                     return NUMBER
                   }
-
 /0|[1-9][0-9]*/ {
                   // We differentiate NUMBER from INT
                     lval.n,_ = strconv.Atoi(yylex.Text());
                     logDebugTokens("INT - %d", lval.n);
                     return INT
                   }
-
 /(\/\*)([^\*]|(\*)+[^\/])*((\*)+\/)/ {
-	            logDebugTokens("BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */ }
+	            logDebugTokens("BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
                   }
-
 /"--"[^\n\r]*/    { logDebugTokens("LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */ }
-
 /[ \t\n\r\f]+/    { logDebugTokens("WHITESPACE (count=%d)", len(yylex.Text())) /* eat up whitespace */ }
-
 /\./              { logDebugTokens("DOT"); return DOT }
 /\+/              { logDebugTokens("PLUS"); return PLUS }
 /-/               { logDebugTokens("MINUS"); return MINUS }
@@ -70,168 +60,129 @@
 /\:/              { logDebugTokens("COLON"); return COLON }
 /\[/              { logDebugTokens("LBRACKET"); return LBRACKET }
 /\]/              { logDebugTokens("RBRACKET"); return RBRACKET }
-
 /[aA][lL][lL]/    {
                     logDebugTokens("ALL"); return ALL
                   }
-/[aA][lL][tT][eE][rR]/
-                  {
+/[aA][lL][tT][eE][rR]/ {
                     logDebugTokens("ALTER"); return ALTER
                   }
 /[aA][nN][dD]/    { logDebugTokens("AND"); return AND }
 /[aA][nN][yY]/    {
                     logDebugTokens("ANY"); return ANY
                   }
-/[aA][rR][rR][aA][yY]/
-                  {
+/[aA][rR][rR][aA][yY]/ {
                     logDebugTokens("ARRAY"); return ARRAY
                   }
 /[aA][sS]/        { logDebugTokens("AS"); return AS }
 /[aA][sS][cC]/    { logDebugTokens("ASC"); return ASC }
-/[bB][eE][tT][wW][eE][eE][nN]/
-                  {
+/[bB][eE][tT][wW][eE][eE][nN]/ {
                     logDebugTokens("BETWEEN"); return BETWEEN
                   }
-/[bB][uU][cC][kK][eE][tT]/
-                  {
+/[bB][uU][cC][kK][eE][tT]/ {
                     logDebugTokens("BUCKET"); return BUCKET
                   }
 /[bB][yY]/        { logDebugTokens("BY"); return BY }
-/[cC][aA][sS][eE]/
-                  {
+/[cC][aA][sS][eE]/ {
                     logDebugTokens("CASE"); return CASE
                   }
-/[cC][aA][sS][tT]/
-                  {
+/[cC][aA][sS][tT]/ {
                     logDebugTokens("CAST"); return CAST
                   }
-/[cC][oO][lL][lL][aA][tT][eE]/
-                  {
+/[cC][oO][lL][lL][aA][tT][eE]/ {
                     logDebugTokens("COLLATE"); return COLLATE
                   }
-/[cC][rR][eE][aA][tT][eE]/
-                  {
+/[cC][rR][eE][aA][tT][eE]/ {
                     logDebugTokens("CREATE"); return CREATE
                   }
-/[dD][aA][tT][aA][bB][aA][sS][eE]/
-                  {
+/[dD][aA][tT][aA][bB][aA][sS][eE]/ {
                     logDebugTokens("DATABASE"); return DATABASE
                   }
-/[dD][eE][lL][eE][tT][eE]/
-                  {
+/[dD][eE][lL][eE][tT][eE]/ {
                     logDebugTokens("DELETE"); return DELETE
                   }
-/[dD][eE][sS][cC]/
-                  { logDebugTokens("DESC"); return DESC }
-/[dD][iI][sS][tT][iI][nN][cC][tT]/
-                  {
+/[dD][eE][sS][cC]/ { logDebugTokens("DESC"); return DESC }
+/[dD][iI][sS][tT][iI][nN][cC][tT]/ {
                     logDebugTokens("DISTINCT"); return DISTINCT
                   }
-/[dD][rR][oO][pP]/
-                  {
+/[dD][rR][oO][pP]/ {
                     logDebugTokens("DROP"); return DROP
                   }
-/[eE][aA][cC][hH]/
-                  {
+/[eE][aA][cC][hH]/ {
                     logDebugTokens("EACH"); return EACH
                   }
-/[eE][xX][cC][eE][pP][tT]/
-                  {
+/[eE][xX][cC][eE][pP][tT]/ {
                     logDebugTokens("EXCEPT"); return EXCEPT
                   }
-/[eE][xX][iI][sS][tT][sS]/
-                  {
+/[eE][xX][iI][sS][tT][sS]/ {
                     logDebugTokens("EXISTS"); return EXISTS
                   }
-/[eE][lL][sS][eE]/
-                  {
+/[eE][lL][sS][eE]/ {
                     logDebugTokens("ELSE"); return ELSE
                   }
-/[eE][nN][dD]/
-                  {
+/[eE][nN][dD]/ {
                     logDebugTokens("END"); return END
                   }
-/[eE][vV][eE][rR][yY]/
-                  {
+/[eE][vV][eE][rR][yY]/ {
                     logDebugTokens("EVERY"); return EVERY
                   }
-/[eE][xX][iI][sS][tT][sS]/
-                  {
+/[eE][xX][iI][sS][tT][sS]/ {
                     logDebugTokens("EXISTS"); return EXISTS
                   }
-/[eE][xX][pP][lL][aA][iI][nN]/
-                  {
+/[eE][xX][pP][lL][aA][iI][nN]/ {
                     logDebugTokens("EXPLAIN"); return EXPLAIN
                   }
 /[fF][aA][lL][sS][eE]/
                   { logDebugTokens("FALSE"); return FALSE}
-/[fF][iI][rR][sS][tT]/
-                  {
+/[fF][iI][rR][sS][tT]/ {
                     logDebugTokens("FIRST"); return FIRST
                   }
-/[fF][oO][rR]/
-                  {
+/[fF][oO][rR]/ {
                     logDebugTokens("FOR"); return FOR
                   }
-/[fF][rR][oO][mM]/
-                  { logDebugTokens("FROM"); return FROM }
-/[gG][rR][oO][uU][pP]/
-                  {
+/[fF][rR][oO][mM]/ { logDebugTokens("FROM"); return FROM }
+/[gG][rR][oO][uU][pP]/ {
                     logDebugTokens("GROUP"); return GROUP
                   }
-/[hH][aA][vV][iI][nN][gG]/
-                  {
+/[hH][aA][vV][iI][nN][gG]/ {
                     logDebugTokens("HAVING"); return HAVING
                   }
 /[iI][fF]/        { logDebugTokens("IF"); return IF }
 /[iI][nN]/        { logDebugTokens("IN"); return IN }
-/[iI][nN][dD][eE][xX]/
-                  {
+/[iI][nN][dD][eE][xX]/ {
                     logDebugTokens("INDEX"); return INDEX
                   }
-/[iI][nN][lL][iI][nN][eE]/
-                  {
+/[iI][nN][lL][iI][nN][eE]/ {
                     logDebugTokens("INLINE"); return INLINE
                   }
-/[iI][nN][nN][eE][rR]/
-                  {
+/[iI][nN][nN][eE][rR]/ {
                     logDebugTokens("INNER"); return INNER
                   }
-/[iI][nN][sS][eE][rR][tT]/
-                  {
+/[iI][nN][sS][eE][rR][tT]/ {
                     logDebugTokens("INSERT"); return INSERT
                   }
-/[iI][nN][tT][eE][rR][sS][eE][cC][tT]/
-                  {
+/[iI][nN][tT][eE][rR][sS][eE][cC][tT]/ {
                     logDebugTokens("INTERSECT"); return INTERSECT
                   }
-/[iI][nN][tT][oO]/
-                  {
+/[iI][nN][tT][oO]/ {
                     logDebugTokens("INTO"); return INTO
                   }
 /[iI][sS]/        { logDebugTokens("IS"); return IS }
-/[jJ][oO][iI][nN]/
-                  {
+/[jJ][oO][iI][nN]/ {
                     logDebugTokens("JOIN"); return JOIN
                   }
-/[kK][eE][yY]/
-                  {
+/[kK][eE][yY]/ {
                     logDebugTokens("KEY"); return KEY
                   }
-/[kK][eE][yY][sS]/
-                  {
+/[kK][eE][yY][sS]/ {
                     logDebugTokens("KEYS"); return KEYS
                   }
-/[lL][eE][fF][tT]/
-                  {
+/[lL][eE][fF][tT]/ {
                     logDebugTokens("LEFT"); return LEFT
                   }
-/[lL][eE][tT]/
-                  {
+/[lL][eE][tT]/ {
                     logDebugTokens("LET"); return LET
                   }
-/[lL][eE][tT][tT][iI][nN][gG]/
-                  {
+/[lL][eE][tT][tT][iI][nN][gG]/ {
                     logDebugTokens("LETTING"); return LETTING
                   }
 /[lL][iI][kK][eE]/ { logDebugTokens("LIKE"); return LIKE }
@@ -243,118 +194,84 @@
                   { logDebugTokens("MERGE"); return MERGE }
 /[mM][iI][sS][sS][iI][nN][gG]/
                   { logDebugTokens("MISSING"); return MISSING }
-/[nN][eE][sS][tT]/
-                  {
+/[nN][eE][sS][tT]/ {
                     logDebugTokens("NEST"); return NEST
                   }
 /[nN][oO][tT]/    { logDebugTokens("NOT"); return NOT }
-/[nN][uU][lL][lL]/
-                  { logDebugTokens("NULL"); return NULL}
-/[oO][fF][fF][sS][eE][tT]/
-                  { logDebugTokens("OFFSET"); return OFFSET }
-/[oO][nN]/
-                  {
+/[nN][uU][lL][lL]/ { logDebugTokens("NULL"); return NULL}
+/[oO][fF][fF][sS][eE][tT]/ { logDebugTokens("OFFSET"); return OFFSET }
+/[oO][nN]/ {
                     logDebugTokens("ON"); return ON
                   }
-/[oO][rR]/
-                  {
+/[oO][rR]/ {
                     logDebugTokens("OR"); return OR
                   }
-/[oO][rR][dD][eE][rR]/
-                  { logDebugTokens("ORDER"); return ORDER }
-/[oO][uU][tT][eE][rR]/
-                  {
+/[oO][rR][dD][eE][rR]/ { logDebugTokens("ORDER"); return ORDER }
+/[oO][uU][tT][eE][rR]/ {
                     logDebugTokens("OUTER"); return OUTER
                   }
-/[pP][aA][rR][tT][iI][tT][iI][oO][nN]/
-                  {
+/[pP][aA][rR][tT][iI][tT][iI][oO][nN]/ {
                     logDebugTokens("PARTITION"); return PARTITION
                   }
-/[pP][aA][tT][hH]/
-                  {
+/[pP][aA][tT][hH]/ {
                     logDebugTokens("PATH"); return PATH
                   }
-/[pP][oO][oO][lL]/
-                  {
+/[pP][oO][oO][lL]/ {
                     logDebugTokens("POOL"); return POOL
                   }
-/[pP][rR][iI][mM][aA][rR][yY]/
-                  {
+/[pP][rR][iI][mM][aA][rR][yY]/ {
                     logDebugTokens("PRIMARY"); return PRIMARY
                   }
-/[rR][aA][wW]/
-                  {
+/[rR][aA][wW]/ {
                     logDebugTokens("RAW"); return RAW
                   }
-/[rR][eE][nN][aA][mM][eE]/
-                  {
+/[rR][eE][nN][aA][mM][eE]/ {
                     logDebugTokens("RENAME"); return RENAME
                   }
-/[rR][eE][tT][uU][rR][nN][iI][nN][gG]/
-                  {
+/[rR][eE][tT][uU][rR][nN][iI][nN][gG]/ {
                     logDebugTokens("RETURNING"); return RETURNING
                   }
-/[sS][aA][tT][iI][sS][fF][iI][eE][sS]/
-                  {
+/[sS][aA][tT][iI][sS][fF][iI][eE][sS]/ {
                     logDebugTokens("SATISFIES"); return SATISFIES
                   }
-/[sS][eE][tT]/
-                  { logDebugTokens("SET"); return SET }
-/[sS][oO][mM][eE]/
-                  { logDebugTokens("SOME"); return SOME }
-/[sS][eE][lL][eE][cC][tT]/
-                  { logDebugTokens("SELECT"); return SELECT }
-/[tT][hH][eE][nN]/
-                  {
+/[sS][eE][tT]/ { logDebugTokens("SET"); return SET }
+/[sS][oO][mM][eE]/ { logDebugTokens("SOME"); return SOME }
+/[sS][eE][lL][eE][cC][tT]/ { logDebugTokens("SELECT"); return SELECT }
+/[tT][hH][eE][nN]/ {
                     logDebugTokens("THEN"); return THEN
                   }
-/[tT][oO]/
-                  {
+/[tT][oO]/ {
                     logDebugTokens("TO"); return TO
                   }
-/[tT][rR][uU][eE]/
-                  { logDebugTokens("TRUE"); return TRUE}
-/[uU][nN][iI][oO][nN]/
-                  {
+/[tT][rR][uU][eE]/ { logDebugTokens("TRUE"); return TRUE}
+/[uU][nN][iI][oO][nN]/ {
                     logDebugTokens("UNION"); return UNION
                   }
-/[uU][nN][iI][qQ][uU][eE]/
-                  {
+/[uU][nN][iI][qQ][uU][eE]/ {
                     logDebugTokens("UNIQUE"); return UNIQUE
                   }
-/[uU][nN][nN][eE][sS][tT]/
-                  {
+/[uU][nN][nN][eE][sS][tT]/ {
                     logDebugTokens("UNNEST"); return UNNEST
                   }
-/[uU][nN][sS][eE][tT]/
-                  { logDebugTokens("UNSET"); return UNSET }
-/[uU][pP][dD][aA][tT][eE]/
-                  {
+/[uU][nN][sS][eE][tT]/ { logDebugTokens("UNSET"); return UNSET }
+/[uU][pP][dD][aA][tT][eE]/ {
                     logDebugTokens("UPDATE"); return UPDATE
                   }
-/[uU][pP][sS][eE][rR][tT]/
-                  {
+/[uU][pP][sS][eE][rR][tT]/ {
                     logDebugTokens("UPSERT"); return UPSERT
                   }
-/[uU][sS][iI][nN][gG]/
-                  {
+/[uU][sS][iI][nN][gG]/ {
                     logDebugTokens("USING"); return USING
                   }
-/[vV][aA][lL][uU][eE][dD]/
-                  { logDebugTokens("VALUED"); return VALUED }
-/[vV][aA][lL][uU][eE][sS]/
-                  { logDebugTokens("VALUES"); return VALUES }
-/[vV][iI][eE][wW]/
-                  {
+/[vV][aA][lL][uU][eE][dD]/ { logDebugTokens("VALUED"); return VALUED }
+/[vV][aA][lL][uU][eE][sS]/ { logDebugTokens("VALUES"); return VALUES }
+/[vV][iI][eE][wW]/ {
                     logDebugTokens("VIEW"); return VIEW
                   }
-/[wW][hH][eE][rR][eE]/
-                  { logDebugTokens("WHERE"); return WHERE }
-/[wW][hH][eE][nN]/
-                  {
+/[wW][hH][eE][rR][eE]/ { logDebugTokens("WHERE"); return WHERE }
+/[wW][hH][eE][nN]/ {
                     logDebugTokens("WHEN"); return WHEN
                   }
-
 /[a-zA-Z_\$][a-zA-Z0-9_\$]*/     {
                     lval.s = yylex.Text();
                     logDebugTokens("IDENTIFIER - %s", lval.s);
@@ -363,9 +280,9 @@
 //
 package n1ql
 
-import("strconv")
-import("github.com/couchbaselabs/clog")
+import "strconv"
+import "github.com/couchbaselabs/clog"
 
 func logDebugTokens(format string, v ...interface{}) {
-    clog.To(parser.SCANNER_CHANNEL, format, v...)
+    clog.To("LEXER", format, v...)
 }
