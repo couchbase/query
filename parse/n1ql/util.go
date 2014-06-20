@@ -35,7 +35,7 @@ func UnmarshalDoubleQuoted(s string) (t string, e error) {
 func UnmarshalSingleQuoted(s string) (t string, e error) {
 	s = s[1 : len(s)-1]
 	s = strings.Replace(s, "''", "'", -1) // '' escapes '
-	return unmarshalUnquoted(s)
+	return UnmarshalUnquoted(s)
 }
 
 // Unmarshal a back-quoted string. s must begin and end with back
@@ -43,17 +43,17 @@ func UnmarshalSingleQuoted(s string) (t string, e error) {
 func UnmarshalBackQuoted(s string) (t string, e error) {
 	s = s[1 : len(s)-1]
 	s = strings.Replace(s, "``", "`", -1) // `` escapes `
-	return unmarshalUnquoted(s)
+	return UnmarshalUnquoted(s)
 }
 
 // Unmarshal an unquoted string.
-func unmarshalUnquoted(s string) (t string, e error) {
+func UnmarshalUnquoted(s string) (t string, e error) {
 	if !strings.ContainsRune(s, '\\') {
 		return s, nil
 	}
 
 	buf := make([]byte, len(s)+2)
-	buf[0], buf[len(buf)-1] = `"`[0], `"`[0]
+	buf[0], buf[len(buf)-1] = byte('"'), byte('"')
 	for i := 0; i < len(s); i++ {
 		buf[i+1] = s[i]
 	}
