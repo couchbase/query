@@ -103,6 +103,7 @@ f float64
 %token VIEW
 %token WHERE
 %token WHEN
+%token WITH
 
 %token INT NUMBER IDENTIFIER STRING
 %token LPAREN RPAREN
