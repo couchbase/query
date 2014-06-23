@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-04-12
+* Modified: 2014-06-23
 
 ## Introduction
 
@@ -782,7 +782,7 @@ nested-expr:
 Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
 notation (`[position]` or `[start:end?]`) to access elements inside an
-array or object.
+array.
 
 Consider the following object:
 
@@ -2240,6 +2240,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added diff about DP3 pool syntax
 * 2014-04-12 - Date formats
     * Listed the supported date formats.
+* 2014-06-23 - Nested
+    * Allow expressions to select object fields.
 
 ### Open issues
 
