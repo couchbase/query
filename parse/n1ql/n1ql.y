@@ -115,7 +115,7 @@ f float64
 /* Precedence: lowest to highest */
 %left           UNION EXCEPT
 %left           INTERSECT
-%left           JOIN NEST UNNEST LEFT
+%left           JOIN NEST UNNEST INNER LEFT
 %left           OR
 %left           AND
 %right          NOT
