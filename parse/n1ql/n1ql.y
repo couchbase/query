@@ -75,6 +75,7 @@ f float64
 %token OR
 %token ORDER
 %token OUTER
+%token OVER
 %token PARTITION
 %token PATH
 %token POOL
@@ -89,6 +90,7 @@ f float64
 %token THEN
 %token TO
 %token TRUE
+%token UNDER
 %token UNION
 %token UNIQUE
 %token UNNEST
@@ -101,10 +103,12 @@ f float64
 %token VIEW
 %token WHERE
 %token WHEN
+
 %token INT NUMBER IDENTIFIER STRING
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET
 %token COMMA COLON
+
 %left OR
 %left AND
 %left EQ LT LTE GT GTE NE LIKE BETWEEN
@@ -113,6 +117,8 @@ f float64
 %left IS
 %right NOT
 %left DOT LBRACKET
+
+%start input
 
 %%
 
