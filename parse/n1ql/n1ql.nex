@@ -120,12 +120,6 @@
 /[eE][aA][cC][hH]/ {
                     logDebugTokens("EACH"); return EACH
                   }
-/[eE][xX][cC][eE][pP][tT]/ {
-                    logDebugTokens("EXCEPT"); return EXCEPT
-                  }
-/[eE][xX][iI][sS][tT][sS]/ {
-                    logDebugTokens("EXISTS"); return EXISTS
-                  }
 /[eE][lL][sS][eE]/ {
                     logDebugTokens("ELSE"); return ELSE
                   }
@@ -134,6 +128,9 @@
                   }
 /[eE][vV][eE][rR][yY]/ {
                     logDebugTokens("EVERY"); return EVERY
+                  }
+/[eE][xX][cC][eE][pP][tT]/ {
+                    logDebugTokens("EXCEPT"); return EXCEPT
                   }
 /[eE][xX][iI][sS][tT][sS]/ {
                     logDebugTokens("EXISTS"); return EXISTS
@@ -244,6 +241,9 @@
 /[rR][eE][tT][uU][rR][nN][iI][nN][gG]/ {
                     logDebugTokens("RETURNING"); return RETURNING
                   }
+/[rR][iI][gG][hH][tT]/ {
+                    logDebugTokens("RIGHT"); return RIGHT
+                  }
 /[sS][aA][tT][iI][sS][fF][iI][eE][sS]/ {
                     logDebugTokens("SATISFIES"); return SATISFIES
                   }
@@ -290,6 +290,9 @@
                   }
 /[wW][iI][tT][hH]/ {
                     logDebugTokens("WITH"); return WITH
+                  }
+/[xX][oO][rR]/ {
+                    logDebugTokens("XOR"); return XOR
                   }
 
 /[a-zA-Z_\$][a-zA-Z0-9_\$]*/     {

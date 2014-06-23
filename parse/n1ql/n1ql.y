@@ -83,6 +83,7 @@ f float64
 %token RAW
 %token RENAME
 %token RETURNING
+%token RIGHT
 %token SATISFIES
 %token SET
 %token SOME
@@ -104,20 +105,37 @@ f float64
 %token WHERE
 %token WHEN
 %token WITH
+%token XOR
 
 %token INT NUMBER IDENTIFIER STRING
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET
 %token COMMA COLON
 
-%left OR
-%left AND
-%left EQ LT LTE GT GTE NE LIKE BETWEEN
-%left PLUS MINUS
-%left STAR DIV MOD CONCAT
-%left IS
-%right NOT
-%left DOT LBRACKET
+/* Precedence: lowest to highest */
+%left           UNION EXCEPT
+%left           INTERSECT
+%left           JOIN NEST UNNEST LEFT
+%left           OR
+%left           AND
+%right          NOT
+%nonassoc       EQ NE
+%nonassoc       LT GT LTE GTE
+%nonassoc       LIKE
+%nonassoc       BETWEEN
+%nonassoc       IN
+%nonassoc       EXISTS
+%nonassoc       IS                              /* IS NULL, IS MISSING, IS VALUED, IS NOT NULL, etc. */
+%left           CONCAT
+%left           PLUS MINUS
+%left           STAR DIV MOD
+
+/* Unary operators */
+%right          UMINUS
+%left           DOT LBRACKET RBRACKET
+
+/* Override precedence */
+%left           LPAREN RPAREN
 
 %start input
 
@@ -125,5 +143,5 @@ f float64
 
 input:
 SELECT {
-	logDebugGrammar("INPUT")
+        logDebugGrammar("INPUT")
 }
