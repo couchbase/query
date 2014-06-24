@@ -52,7 +52,7 @@
 /\*/              { logDebugTokens("MULT"); return STAR }
 /\//              { logDebugTokens("DIV"); return DIV }
 /%/               { logDebugTokens("MOD"); return MOD }
-/\=\=/            { logDebugTokens("EQ"); return EQ }
+/\=\=/            { logDebugTokens("DEQ"); return DEQ }
 /\=/              { logDebugTokens("EQ"); return EQ }
 /\!\=/            { logDebugTokens("NE"); return NE }
 /\<\>/            { logDebugTokens("NE"); return NE }
