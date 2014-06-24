@@ -20,7 +20,7 @@ key-clause ::= 'KEY' expr
 
 values-clause ::= 'VALUES' expr (',' expr)*
 
-returning-clause ::= 'RETURNING' ((expr ('AS'? alias)? (',' expr ('AS'? alias)?)*) | 'RAW' expr)
+returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | 'RAW' expr)
 
 /*
  *  upsert

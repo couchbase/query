@@ -50,6 +50,10 @@ N1QL provides several data modification statements.
 
 ![](diagram/returning-clause.png)
 
+*result-expr:*
+
+![](diagram/result-expr.png)
+
 ## UPSERT
 
 *upsert:*
@@ -244,6 +248,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Require RETURNING list
 * 2014-06-24 - VALUES exprs
     * Changed VALUES to multiple exprs
+* 2014-06-24 - RETURNING star
+    * Allow star in RETURNING
 
 ### Open Issues
 
