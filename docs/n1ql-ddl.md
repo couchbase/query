@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2013-07-30
+* Modified: 2014-06-24
 
 ## Summary
 
@@ -42,6 +42,10 @@ __create-index:__
 
 ![](diagram/create-index.png)
 
+_bucket-spec:_
+
+![](diagram/bucket-spec.png)
+
 _partition:_
 
 ![](diagram/partition.png)
@@ -76,6 +80,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2013-07-30 - Initial checkin
 
 * 2014-06-18 - Syntax updates
+
+* 2014-06-24 - Bucket spec
+    * Factor out bucket spec in syntax diagrams
 
 ### Open Issues
 
