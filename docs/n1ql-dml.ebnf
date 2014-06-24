@@ -18,7 +18,7 @@ bucket-name ::= identifier
 
 key-clause ::= 'KEY' expr
 
-values-clause ::= 'VALUES' expr
+values-clause ::= 'VALUES' expr (',' expr)*
 
 returning-clause ::= 'RETURNING' ((expr ('AS'? alias)? (',' expr ('AS'? alias)?)*) | 'RAW' expr)
 

@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-02-18
+* Modified: 2014-06-24
 
 ## Introduction
 
@@ -242,6 +242,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Cleaned up usage of KEY and kEYS.
 * 2014-02-18 - RETURNING list
     * Require RETURNING list
+* 2014-06-24 - VALUES exprs
+    * Changed VALUES to multiple exprs
 
 ### Open Issues
 
