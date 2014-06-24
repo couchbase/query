@@ -299,6 +299,24 @@ from_path optional_as_alias optional_keys
 from_term optional_join_type joiner
 ;
 
+from_path :
+optional_pool_ref path
+;
+
+optional_pool_ref :
+/* empty */
+|
+pool_ref
+;
+
+pool_ref :
+pool_name COLON
+;
+
+pool_name :
+IDENTIFIER
+;
+
 optional_keys :
 /* empty */
 |
@@ -357,6 +375,7 @@ bindings COMMA binding
 binding :
 alias EQ expr
 ;
+
 
 /*************************************************
  *
@@ -417,6 +436,7 @@ having :
 HAVING expr
 ;
 
+
 /*************************************************
  *
  * ORDER BY clause
@@ -455,6 +475,7 @@ ASC
 DESC
 ;
 
+
 /*************************************************
  *
  * LIMIT clause
@@ -471,6 +492,7 @@ limit :
 LIMIT expr
 ;
 
+
 /*************************************************
  *
  * OFFSET clause
@@ -485,4 +507,318 @@ offset
 
 offset :
 OFFSET expr
+;
+
+
+/*************************************************
+ *
+ * INSERT
+ *
+ *************************************************/
+
+insert :
+INSERT INTO bucket_ref
+optional_key
+source
+optional_returning
+;
+
+bucket_ref :
+bucket_spec optional_as_alias
+;
+
+bucket_spec :
+optional_pool_ref bucket_name
+;
+
+bucket_name :
+IDENTIFIER
+;
+
+optional_key :
+/* empty */
+|
+key
+;
+
+key :
+KEY expr
+;
+
+source :
+values
+|
+select
+;
+
+values :
+VALUES exprs
+;
+
+optional_returning :
+/* empty */
+|
+returning
+;
+
+returning :
+RETURNING returns
+;
+
+returns :
+projects
+|
+RAW expr
+;
+
+
+/*************************************************
+ *
+ * UPSERT
+ *
+ *************************************************/
+
+upsert :
+UPSERT INTO bucket_ref
+optional_key
+source
+optional_returning
+;
+
+
+/*************************************************
+ *
+ * DELETE
+ *
+ *************************************************/
+
+delete :
+DELETE FROM bucket_ref optional_keys
+optional_where
+optional_limit
+optional_returning
+;
+
+
+/*************************************************
+ *
+ * UPDATE
+ *
+ *************************************************/
+
+update :
+UPDATE bucket_ref optional_keys
+set_unset
+optional_where
+optional_limit
+optional_returning
+;
+
+set_unset :
+set optional_unset
+|
+unset
+;
+
+set :
+SET set_paths
+;
+
+set_paths :
+set_path
+|
+set_paths COMMA set_path
+;
+
+set_path :
+path EQ expr optional_update_for
+;
+
+optional_update_for :
+/* empty */
+|
+update_for
+;
+
+update_for :
+FOR array_bindings optional_when END
+;
+
+array_bindings :
+array_binding
+|
+array_bindings COMMA array_binding
+;
+
+array_binding :
+variable IN path
+;
+
+variable :
+IDENTIFIER
+;
+
+optional_when :
+/* empty */
+|
+WHEN expr
+;
+
+optional_unset :
+/* empty */
+|
+unset
+;
+
+unset :
+UNSET unset_paths
+;
+
+unset_paths :
+unset_path
+|
+unset_paths COMMA unset_path
+;
+
+unset_path :
+path optional_update_for
+;
+
+
+/*************************************************
+ *
+ * MERGE
+ *
+ *************************************************/
+
+merge :
+MERGE INTO bucket_ref
+USING merge_source ON key
+optional_merge_update
+optional_merge_delete
+optional_merge_insert
+optional_limit
+optional_returning
+;
+
+merge_source :
+from_term
+|
+LPAREN select RPAREN as_alias
+;
+
+optional_merge_update :
+/* empty */
+|
+merge_update
+;
+
+optional_merge_delete :
+/* empty */
+|
+merge_delete
+;
+
+optional_merge_insert :
+/* empty */
+|
+merge_insert
+;
+
+merge_update :
+WHEN MATCHED THEN UPDATE
+set_unset
+optional_where
+;
+
+merge_delete :
+WHEN MATCHED THEN DELETE
+optional_where
+;
+
+merge_insert :
+WHEN NOT MATCHED THEN INSERT expr
+optional_where
+;
+
+
+/*************************************************
+ *
+ * CREATE INDEX
+ *
+ *************************************************/
+
+create_index :
+CREATE INDEX index_name
+ON bucket_spec LPAREN exprs RPAREN
+optional_partition
+optional_using
+;
+
+index_name :
+IDENTIFIER
+;
+
+optional_partition :
+/* empty */
+|
+partition
+;
+
+partition :
+PARTITION BY exprs
+;
+
+optional_using:
+/* empty */
+|
+using
+;
+
+using :
+USING VIEW
+;
+
+
+/*************************************************
+ *
+ * DROP INDEX
+ *
+ *************************************************/
+
+drop_index :
+DROP INDEX bucket_spec DOT index_name
+;
+
+
+/*************************************************
+ *
+ * ALTER INDEX
+ *
+ *************************************************/
+
+alter_index :
+ALTER INDEX bucket_spec DOT index_name RENAME TO index_name
+;
+
+
+/*************************************************
+ *
+ * Path
+ *
+ *************************************************/
+
+path :
+IDENTIFIER
+;
+
+
+/*************************************************
+ *
+ * Expression
+ *
+ *************************************************/
+
+expr :
+NUMBER
 ;
