@@ -300,21 +300,8 @@ from_term optional_join_type joiner
 ;
 
 from_path :
-optional_pool_ref path
-;
-
-optional_pool_ref :
-/* empty */
-|
-pool_ref
-;
-
-pool_ref :
-pool_name COLON
-;
-
-pool_name :
-IDENTIFIER
+/* optional_pool_ref path */
+path
 ;
 
 optional_keys :
@@ -528,7 +515,17 @@ bucket_spec optional_as_alias
 ;
 
 bucket_spec :
-optional_pool_ref bucket_name
+pool_or_bucket_name optional_scoped_name
+;
+
+pool_or_bucket_name :
+IDENTIFIER
+;
+
+optional_scoped_name :
+/* empty */
+|
+COLON bucket_name
 ;
 
 bucket_name :
@@ -694,9 +691,7 @@ path optional_update_for
 merge :
 MERGE INTO bucket_ref
 USING merge_source ON key
-optional_merge_update
-optional_merge_delete
-optional_merge_insert
+WHEN merge_actions
 optional_limit
 optional_returning
 ;
@@ -707,37 +702,52 @@ from_term
 LPAREN select RPAREN as_alias
 ;
 
-optional_merge_update :
-/* empty */
+merge_actions :
+MATCHED THEN merge_update_delete_insert
 |
-merge_update
+NOT MATCHED THEN merge_insert
 ;
 
-optional_merge_delete :
-/* empty */
+merge_update_delete_insert :
+merge_update
+optional_merge_delete_insert
 |
 merge_delete
+optional_merge_insert
+;
+
+optional_merge_delete_insert :
+/* empty */
+|
+WHEN merge_delete_insert
+;
+
+merge_delete_insert :
+MATCHED THEN merge_delete
+optional_merge_insert
+|
+NOT MATCHED THEN merge_insert
 ;
 
 optional_merge_insert :
 /* empty */
 |
-merge_insert
+WHEN NOT MATCHED THEN merge_insert
 ;
 
 merge_update :
-WHEN MATCHED THEN UPDATE
+UPDATE
 set_unset
 optional_where
 ;
 
 merge_delete :
-WHEN MATCHED THEN DELETE
+DELETE
 optional_where
 ;
 
 merge_insert :
-WHEN NOT MATCHED THEN INSERT expr
+INSERT expr
 optional_where
 ;
 
