@@ -300,8 +300,16 @@ from_term optional_join_type joiner
 ;
 
 from_path :
-/* optional_pool_ref path */
-path
+IDENTIFIER
+optional_from_subpath
+;
+
+optional_from_subpath :
+/* empty */
+|
+COLON path
+|
+DOT path
 ;
 
 optional_keys :
