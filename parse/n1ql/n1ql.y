@@ -846,10 +846,37 @@ path LBRACKET expr RBRACKET
 expr:
 c_expr
 |
+/* Nested */
+expr DOT IDENTIFIER
+|
+expr DOT LPAREN expr RPAREN
+|
+expr LBRACKET expr RBRACKET
+|
+expr LBRACKET expr COLON RBRACKET
+|
+expr LBRACKET expr COLON expr RBRACKET
+|
+/* Arithmetic */
+expr PLUS expr
+|
+expr MINUS expr
+|
+expr STAR expr
+|
+expr DIV expr
+|
+expr MOD expr
+|
+/* Concat */
+expr CONCAT expr
+|
 /* Logical */
 expr AND expr
 |
 expr OR expr
+|
+NOT expr
 |
 /* Comparison */
 expr EQ expr
@@ -866,30 +893,31 @@ expr LTE expr
 |
 expr GTE expr
 |
+expr BETWEEN b_expr AND b_expr
+|
+expr NOT BETWEEN b_expr AND b_expr
+|
 expr LIKE expr
 |
 expr NOT LIKE expr
 |
-expr is
-|
-/* Arithmetic */
-expr PLUS expr
-|
-expr MINUS expr
-|
-expr STAR expr
-|
-expr DIV expr
-|
-expr MOD expr
-|
-/* Concat */
-expr CONCAT expr
-|
-/* In */
 expr IN expr
 |
 expr NOT IN expr
+|
+expr IS NULL
+|
+expr IS NOT NULL
+|
+expr IS MISSING
+|
+expr IS NOT MISSING
+|
+expr IS VALUED
+|
+expr IS NOT VALUED
+|
+EXISTS expr
 ;
 
 c_expr:
@@ -902,6 +930,9 @@ IDENTIFIER
 /* Function */
 function_expr
 |
+/* Prefix */
+MINUS expr %prec UMINUS
+|
 /* Case */
 case_expr
 |
@@ -910,20 +941,35 @@ collection_expr
 |
 /* Grouping and subquery */
 group_or_subquery_expr
-|
-/* Prefix */
-prefix_expr
+;
+
+b_expr:
+c_expr
 |
 /* Nested */
-expr DOT IDENTIFIER
+b_expr DOT IDENTIFIER
 |
-expr DOT LPAREN expr RPAREN
+b_expr DOT LPAREN expr RPAREN
 |
-expr LBRACKET expr RBRACKET
+b_expr LBRACKET expr RBRACKET
 |
-expr LBRACKET expr COLON RBRACKET
+b_expr LBRACKET expr COLON RBRACKET
 |
-expr LBRACKET expr COLON expr RBRACKET
+b_expr LBRACKET expr COLON expr RBRACKET
+|
+/* Arithmetic */
+b_expr PLUS b_expr
+|
+b_expr MINUS b_expr
+|
+b_expr STAR b_expr
+|
+b_expr DIV b_expr
+|
+b_expr MOD b_expr
+|
+/* Concat */
+b_expr CONCAT b_expr
 ;
 
 
@@ -1016,44 +1062,6 @@ optional_else:
 ELSE expr
 ;
 
-
-/*************************************************
- *
- * Prefix
- *
- *************************************************/
-
-prefix_expr:
-MINUS expr %prec UMINUS
-|
-NOT expr
-|
-EXISTS expr
-;
-
-optional_not:
-/* empty */
-|
-NOT
-;
-
-/*
-between:
-BETWEEN b_expr AND b_expr
-;
-*/
-
-is:
-IS optional_not null_missing_valued
-;
-
-null_missing_valued:
-NULL
-|
-MISSING
-|
-VALUED
-;
 
 /*************************************************
  *
