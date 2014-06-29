@@ -36,11 +36,11 @@ func (this *In) evaluate(first, second value.Value) (value.Value, error) {
 	sa := second.Actual().([]interface{})
 	for _, s := range sa {
 		if first.Equals(value.NewValue(s)) {
-			return value.NewValue(true), nil
+			return value.TRUE_VALUE, nil
 		}
 	}
 
-	return value.NewValue(false), nil
+	return value.FALSE_VALUE, nil
 }
 
 func NewNotIn(first, second Expression) Expression {

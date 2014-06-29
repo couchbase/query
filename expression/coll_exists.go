@@ -74,6 +74,3 @@ func (this *Exists) VisitChildren(visitor Visitor) (Expression, error) {
 func (this *Exists) Operand() Expression {
 	return this.operand
 }
-
-var _ONE = value.NewValue(1)
-var _ONE_EXPR = NewConstant(_ONE)

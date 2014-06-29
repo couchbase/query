@@ -1,40 +1,40 @@
 /\"((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|[^\\\"])*\"/     {
-                    lval.s, _ = UnmarshalDoubleQuoted(yylex.Text());
-                    logDebugTokens("STRING - %s", lval.s);
+                    lval.s, _ = UnmarshalDoubleQuoted(yylex.Text())
+                    logDebugTokens("STRING - %s", lval.s)
                     return STRING
                   }
 
 /'((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|('')|[^\\\"'])*'/     {
-                    lval.s, _ = UnmarshalSingleQuoted(yylex.Text());
-                    logDebugTokens("STRING - %s", lval.s);
+                    lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
+                    logDebugTokens("STRING - %s", lval.s)
                     return STRING
                   }
 
 /`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/ {
                     // Escaped identifiers
-                    lval.s, _ = UnmarshalBackQuoted(yylex.Text());
-                    logDebugTokens("IDENTIFIER - %s", lval.s);
+                    lval.s, _ = UnmarshalBackQuoted(yylex.Text())
+                    logDebugTokens("IDENTIFIER - %s", lval.s)
                     return IDENTIFIER
                   }
 
 /(0|[1-9][0-9]*)\.[0-9]+([eE][+\-]?[0-9]+)?/ {
                   // We differentiate NUMBER from INT
-                    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64);
-                    logDebugTokens("NUMBER - %f", lval.f);
+                    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64)
+                    logDebugTokens("NUMBER - %f", lval.f)
                     return NUMBER
                   }
 
 /(0|[1-9][0-9]*)[eE][+\-]?[0-9]+/ {
                   // We differentiate NUMBER from INT
-                    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64);
-                    logDebugTokens("NUMBER - %f", lval.f);
+                    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64)
+                    logDebugTokens("NUMBER - %f", lval.f)
                     return NUMBER
                   }
 
 /0|[1-9][0-9]*/ {
                   // We differentiate NUMBER from INT
-                    lval.n,_ = strconv.Atoi(yylex.Text());
-                    logDebugTokens("INT - %d", lval.n);
+                    lval.n,_ = strconv.Atoi(yylex.Text())
+                    logDebugTokens("INT - %d", lval.n)
                     return INT
                   }
 
@@ -57,9 +57,9 @@
 /\!\=/            { logDebugTokens("NE"); return NE }
 /\<\>/            { logDebugTokens("NE"); return NE }
 /\</              { logDebugTokens("LT"); return LT }
-/\<\=/            { logDebugTokens("LTE"); return LTE }
+/\<\=/            { logDebugTokens("LTE"); return LE }
 /\>/              { logDebugTokens("GT"); return GT }
-/\>\=/            { logDebugTokens("GTE"); return GTE }
+/\>\=/            { logDebugTokens("GTE"); return GE }
 /\|\|/            { logDebugTokens("CONCAT"); return CONCAT }
 /\(/              { logDebugTokens("LPAREN"); return LPAREN }
 /\)/              { logDebugTokens("RPAREN"); return RPAREN }
@@ -98,6 +98,9 @@
 /[cC][aA][sS][tT]/ {
                     logDebugTokens("CAST"); return CAST
                   }
+/[cC][lL][uU][sS][tT][eE][rR]/ {
+                    logDebugTokens("CLUSTER"); return CLUSTER
+                  }
 /[cC][oO][lL][lL][aA][tT][eE]/ {
                     logDebugTokens("COLLATE"); return COLLATE
                   }
@@ -106,6 +109,12 @@
                   }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/ {
                     logDebugTokens("DATABASE"); return DATABASE
+                  }
+/[dD][aA][tT][aA][sS][eE][tT]/ {
+                    logDebugTokens("DATASET"); return DATASET
+                  }
+/[dD][aA][tT][aA][tT][aA][gG]/ {
+                    logDebugTokens("DATATAG"); return DATATAG
                   }
 /[dD][eE][lL][eE][tT][eE]/ {
                     logDebugTokens("DELETE"); return DELETE
@@ -235,6 +244,9 @@
 /[rR][aA][wW]/ {
                     logDebugTokens("RAW"); return RAW
                   }
+/[rR][eE][aA][lL][mM]/ {
+                    logDebugTokens("REALM"); return REALM
+                  }
 /[rR][eE][nN][aA][mM][eE]/ {
                     logDebugTokens("RENAME"); return RENAME
                   }
@@ -296,8 +308,8 @@
                   }
 
 /[a-zA-Z_\$][a-zA-Z0-9_\$]*/     {
-                    lval.s = yylex.Text();
-                    logDebugTokens("IDENTIFIER - %s", lval.s);
+                    lval.s = yylex.Text()
+                    logDebugTokens("IDENTIFIER - %s", lval.s)
                     return IDENTIFIER
                   }
 //

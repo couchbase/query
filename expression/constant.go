@@ -18,6 +18,11 @@ type Constant struct {
 	value value.Value
 }
 
+var FALSE_EXPR = NewConstant(value.FALSE_VALUE)
+var TRUE_EXPR = NewConstant(value.TRUE_VALUE)
+var ZERO_EXPR = NewConstant(value.ZERO_VALUE)
+var ONE_EXPR = NewConstant(value.ONE_VALUE)
+
 func NewConstant(value value.Value) Expression {
 	return &Constant{
 		value: value,

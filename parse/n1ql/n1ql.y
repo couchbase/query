@@ -2,6 +2,9 @@
 package n1ql
 
 import "github.com/couchbaselabs/clog"
+import "github.com/couchbaselabs/query/algebra"
+import "github.com/couchbaselabs/query/expression"
+import "github.com/couchbaselabs/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
     clog.To("PARSER", format, v...)
@@ -12,6 +15,18 @@ func logDebugGrammar(format string, v ...interface{}) {
 s string
 n int
 f float64
+b bool
+
+literal     interface{}
+node        algebra.Node
+subselect   *algebra.Subselect
+fromTerm    algebra.FromTerm
+binding     *expression.Binding
+bindings    expression.Bindings
+expr        expression.Expression
+exprs       expression.Expressions
+resultTerm  algebra.ResultTerm
+resultTerms algebra.ResultTerms
 }
 
 %token ALL
@@ -26,9 +41,12 @@ f float64
 %token BY
 %token CASE
 %token CAST
+%token CLUSTER
 %token COLLATE
 %token CREATE
 %token DATABASE
+%token DATASET
+%token DATATAG
 %token DELETE
 %token DESC
 %token DISTINCT
@@ -81,6 +99,7 @@ f float64
 %token POOL
 %token PRIMARY
 %token RAW
+%token REALM
 %token RENAME
 %token RETURNING
 %token RIGHT
@@ -120,7 +139,7 @@ f float64
 %left           AND
 %right          NOT
 %nonassoc       EQ DEQ NE
-%nonassoc       LT GT LTE GTE
+%nonassoc       LT GT LE GE
 %nonassoc       LIKE
 %nonassoc       BETWEEN
 %nonassoc       IN
@@ -136,6 +155,28 @@ f float64
 
 /* Override precedence */
 %left           LPAREN RPAREN
+
+/* Types */
+%type <literal>      literal
+
+%type <expr>         expr c_expr b_expr
+%type <exprs>        exprs
+%type <binding>      binding
+%type <bindings>     bindings
+
+%type <s>            alias as_alias variable
+
+%type <subselect>    subselect
+%type <subselect>    select_from
+%type <subselect>    from_select
+%type <fromTerm>     from
+%type <bindings>     optional_let let
+%type <expr>         optional_where where
+%type <exprs>        optional_group_by, group_by
+%type <bindings>     optional_letting letting
+%type <expr>         optional_having having
+%type <resultTerm>   project
+%type <resultTerms>  projection select_clause
 
 %start input
 
@@ -203,17 +244,9 @@ subselects UNION ALL subselect
 ;
 
 subselect:
-select_from
-|
 from_select
-;
-
-select_from:
-select_clause
-optional_from
-optional_let
-optional_where
-optional_group_by
+|
+select_from
 ;
 
 from_select:
@@ -222,6 +255,20 @@ optional_let
 optional_where
 optional_group_by
 select_clause
+{
+  $$ = nil
+}
+;
+
+select_from:
+select_clause
+optional_from
+optional_let
+optional_where
+optional_group_by
+{
+  $$ = nil
+}
 ;
 
 
@@ -234,6 +281,9 @@ select_clause
 select_clause:
 SELECT
 projection
+{
+  $$ = $2
+}
 ;
 
 projection:
@@ -244,24 +294,45 @@ DISTINCT projects
 ALL projects
 |
 RAW expr
+{
+  $$ = alebgra.ResultTerms{algebra.NewResultTerm($2, false, "")}
+}
 ;
 
 projects:
 project
+{
+  $$ = algebra.ResultTerms{$1}
+}
 |
 projects COMMA project
+{
+  $$ = append($1, $3...)
+}
 ;
 
 project:
 STAR
+{
+  $$ = algebra.NewResultTerm(nil, true, "")
+}
 |
 expr DOT STAR
+{
+  $$ = algebra.NewResultTerm($1, true, "")
+}
 |
 expr optional_as_alias
+{
+  $$ = algebra.NewResultTerm($1, false, $2)
+}
 ;
 
 optional_as_alias:
 /* empty */
+{
+  $$ = ""
+}
 |
 as_alias
 ;
@@ -270,6 +341,9 @@ as_alias:
 alias
 |
 AS alias
+{
+  $$ = $1
+}
 ;
 
 alias:
@@ -353,22 +427,37 @@ UNNEST from_path optional_as_alias
 
 optional_let:
 /* empty */
+{
+  $$ = nil
+}
 |
 let
 ;
 
 let:
 LET bindings
+{
+  $$ = $2
+}
 ;
 
 bindings:
 binding
+{
+  $$ = algebra.Bindings{$1}
+}
 |
 bindings COMMA binding
+{
+  $$ = append($1, $3...)
+}
 ;
 
 binding:
 alias EQ expr
+{
+  $$ = expression.NewBinding($1, $3)
+}
 ;
 
 
@@ -380,12 +469,18 @@ alias EQ expr
 
 optional_where:
 /* empty */
+{
+  $$ = nil
+}
 |
 where
 ;
 
 where:
 WHERE expr
+{
+  $$ = $2
+}
 ;
 
 
@@ -397,38 +492,62 @@ WHERE expr
 
 optional_group_by:
 /* empty */
+{
+  $$ = nil
+}
 |
 group_by
 ;
 
 group_by:
 GROUP BY exprs optional_letting optional_having
+{
+  $$ = $3
+}
 ;
 
 exprs:
 expr
+{
+  $$ = expression.Expressions{$1}
+}
 |
 exprs COMMA expr
+{
+  $$ = append($1, $3...)
+}
 ;
 
 optional_letting:
 /* empty */
+{
+  $$ = nil
+}
 |
 letting
 ;
 
 letting:
 LETTING bindings
+{
+  $$ = $2
+}
 ;
 
 optional_having:
 /* empty */
+{
+  $$ = nil
+}
 |
 having
 ;
 
 having:
 HAVING expr
+{
+  $$ = $2
+}
 ;
 
 
@@ -665,8 +784,14 @@ IDENTIFIER
 
 optional_when:
 /* empty */
+{
+  $$ = nil
+}
 |
 WHEN expr
+{
+  $$ = $2
+}
 ;
 
 optional_unset:
@@ -848,76 +973,178 @@ c_expr
 |
 /* Nested */
 expr DOT IDENTIFIER
+{
+  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+}
 |
 expr DOT LPAREN expr RPAREN
+{
+  $$ = expression.NewField($1, $4)
+}
 |
 expr LBRACKET expr RBRACKET
+{
+  $$ = expression.NewElement($1, $3)
+}
 |
 expr LBRACKET expr COLON RBRACKET
+{
+  $$ = expression.NewSlice($1, $3, nil)
+}
 |
 expr LBRACKET expr COLON expr RBRACKET
+{
+  $$ = expression.NewSlice($1, $3, $5)
+}
 |
 /* Arithmetic */
 expr PLUS expr
+{
+  $$ = expression.NewAdd($1, $3)
+}
 |
 expr MINUS expr
+{
+  $$ = expression.NewSubtract($1, $3)
+}
 |
 expr STAR expr
+{
+  $$ = expression.NewMultiply($1, $3)
+}
 |
 expr DIV expr
+{
+  $$ = expression.NewDivide($1, $3)
+}
 |
 expr MOD expr
+{
+  $$ = expression.NewModulo($1, $3)
+}
 |
 /* Concat */
 expr CONCAT expr
+{
+  $$ = expression.NewConcat($1, $3)
+}
 |
 /* Logical */
 expr AND expr
+{
+  $$ = expression.NewAnd($1, $3)
+}
 |
 expr OR expr
+{
+  $$ = expression.NewOr($1, $3)
+}
 |
 NOT expr
+{
+  $$ = expression.NewNot($2)
+}
 |
 /* Comparison */
 expr EQ expr
+{
+  $$ = expression.NewEQ($1, $3)
+}
 |
 expr DEQ expr
+{
+  $$ = expression.NewEQ($1, $3)
+}
 |
 expr NE expr
+{
+  $$ = expression.NewNE($1, $3)
+}
 |
 expr LT expr
+{
+  $$ = expression.NewLT($1, $3)
+}
 |
 expr GT expr
+{
+  $$ = expression.NewGT($1, $3)
+}
 |
-expr LTE expr
+expr LE expr
+{
+  $$ = expression.NewLE($1, $3)
+}
 |
-expr GTE expr
+expr GE expr
+{
+  $$ = expression.NewGE($1, $3)
+}
 |
 expr BETWEEN b_expr AND b_expr
+{
+  $$ = expression.NewBetween($1, $3, $5)
+}
 |
 expr NOT BETWEEN b_expr AND b_expr
+{
+  $$ = expression.NewNotBetween($1, $3, $5)
+}
 |
 expr LIKE expr
+{
+  $$ = expression.NewLike($1, $3)
+}
 |
 expr NOT LIKE expr
+{
+  $$ = expression.NewNotLike($1, $3)
+}
 |
 expr IN expr
+{
+  $$ = expression.NewIn($1, $3)
+}
 |
 expr NOT IN expr
+{
+  $$ = expression.NewNotIn($1, $3)
+}
 |
 expr IS NULL
+{
+  $$ = expression.NewIsNull($1)
+}
 |
 expr IS NOT NULL
+{
+  $$ = expression.NewIsNotNull($1)
+}
 |
 expr IS MISSING
+{
+  $$ = expression.NewIsMissing($1)
+}
 |
 expr IS NOT MISSING
+{
+  $$ = expression.NewIsNotMissing($1)
+}
 |
 expr IS VALUED
+{
+  $$ = expression.NewIsValued($1)
+}
 |
 expr IS NOT VALUED
+{
+  $$ = expression.NewIsNotValued($1)
+}
 |
 EXISTS expr
+{
+  $$ = expression.NewExists($1)
+}
 ;
 
 c_expr:
@@ -926,12 +1153,18 @@ literal
 |
 /* Identifier */
 IDENTIFIER
+{
+  $$ = expression.NewIdentifier($1)
+}
 |
 /* Function */
 function_expr
 |
 /* Prefix */
 MINUS expr %prec UMINUS
+{
+  $$ = expression.NewNegate($2)
+}
 |
 /* Case */
 case_expr
@@ -948,28 +1181,61 @@ c_expr
 |
 /* Nested */
 b_expr DOT IDENTIFIER
+{
+  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+}
 |
 b_expr DOT LPAREN expr RPAREN
+{
+  $$ = expression.NewField($1, $4)
+}
 |
 b_expr LBRACKET expr RBRACKET
+{
+  $$ = expression.NewElement($1, $3)
+}
 |
 b_expr LBRACKET expr COLON RBRACKET
+{
+  $$ = expression.NewSlice($1, $3, nil)
+}
 |
 b_expr LBRACKET expr COLON expr RBRACKET
+{
+  $$ = expression.NewSlice($1, $3, $5)
+}
 |
 /* Arithmetic */
 b_expr PLUS b_expr
+{
+  $$ = expression.NewAdd($1, $3)
+}
 |
 b_expr MINUS b_expr
+{
+  $$ = expression.NewSubtract($1, $3)
+}
 |
 b_expr STAR b_expr
+{
+  $$ = expression.NewMultiply($1, $3)
+}
 |
 b_expr DIV b_expr
+{
+  $$ = expression.NewDivide($1, $3)
+}
 |
 b_expr MOD b_expr
+{
+  $$ = expression.NewModulo($1, $3)
+}
 |
 /* Concat */
 b_expr CONCAT b_expr
+{
+  $$ = expression.NewConcat($1, $3)
+}
 ;
 
 
@@ -981,10 +1247,19 @@ b_expr CONCAT b_expr
 
 literal:
 NULL
+{
+  $$ = nil
+}
 |
 FALSE
+{
+  $$ = false
+}
 |
 TRUE
+{
+  $$ = true
+}
 |
 NUMBER
 |
@@ -1120,8 +1395,14 @@ variable IN expr
 
 optional_satisfies:
 /* empty */
+{
+  $$ = nil
+}
 |
 SATISFIES expr
+{
+  $$ = $2
+}
 ;
 
 collection_xform:
@@ -1143,10 +1424,16 @@ expr FOR coll_bindings optional_when END
 
 group_or_subquery_expr:
 LPAREN group_or_subquery RPAREN
+{
+  $$ = $2
+}
 ;
 
 group_or_subquery:
 expr
 |
 select
+{
+  $$ = algebra.NewSubquery($1)
+}
 ;

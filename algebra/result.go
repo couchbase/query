@@ -16,17 +16,25 @@ import (
 type ResultTerms []*ResultTerm
 
 type ResultTerm struct {
-	star bool                  `json:"star"`
 	expr expression.Expression `json:"expr"`
+	star bool                  `json:"star"`
 	as   string                `json:"as"`
 }
 
-func (this *ResultTerm) Star() bool {
-	return this.star
+func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
+	return &ResultTerm{
+		expr: expr,
+		star: star,
+		as: as,
+	}
 }
 
 func (this *ResultTerm) Expression() expression.Expression {
 	return this.expr
+}
+
+func (this *ResultTerm) Star() bool {
+	return this.star
 }
 
 func (this *ResultTerm) As() string {

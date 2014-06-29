@@ -37,6 +37,6 @@ func (this *EQ) evaluate(first, second value.Value) (value.Value, error) {
 	return value.NewValue(first.Collate(second) == 0), nil
 }
 
-func NewNEQ(first, second Expression) Expression {
+func NewNE(first, second Expression) Expression {
 	return NewNot(NewEQ(first, second))
 }
