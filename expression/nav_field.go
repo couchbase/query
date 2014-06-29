@@ -14,20 +14,31 @@ import (
 )
 
 type Field struct {
-	unaryBase
-	field string
+	binaryBase
 }
 
-func NewField(operand Expression, field string) Expression {
+func NewField(first, second Expression) Expression {
 	return &Field{
-		unaryBase: unaryBase{
-			operand: operand,
+		binaryBase{
+			first:  first,
+			second: second,
 		},
-		field: field,
 	}
 }
 
-func (this *Field) evaluate(operand value.Value) (value.Value, error) {
-	v, _ := operand.Field(this.field)
-	return v, nil
+func (this *Field) evaluate(first, second value.Value) (value.Value, error) {
+	switch second.Type() {
+	case value.STRING:
+		s := second.Actual().(string)
+		v, _ := first.Field(s)
+		return v, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	}
+
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	return value.NULL_VALUE, nil
 }

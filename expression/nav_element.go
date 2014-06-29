@@ -36,10 +36,6 @@ func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
 			v, _ := first.Index(int(s))
 			return v, nil
 		}
-	case value.STRING:
-		s := second.Actual().(string)
-		v, _ := first.Field(s)
-		return v, nil
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
 	}

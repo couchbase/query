@@ -71,7 +71,9 @@ func (this *Identifier) Formalize(forbidden, allowed value.Value,
 			this.identifier)
 	}
 
-	return NewField(NewIdentifier(bucket), this.identifier), nil
+	return NewField(NewIdentifier(bucket),
+			NewConstant(value.NewValue(this.identifier))),
+		nil
 }
 
 func (this *Identifier) Children() Expressions {

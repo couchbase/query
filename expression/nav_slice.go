@@ -30,7 +30,7 @@ func NewSlice(source, start, end Expression) Expression {
 	}
 }
 
-func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
 	source, e := this.source.Evaluate(item, context)
 	if e != nil {
 		return nil, e
@@ -73,12 +73,17 @@ func (this *Slice) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	if source.Type() == value.ARRAY {
-		rv, _ := source.Slice(int(sa), ev)
-		return rv, nil
-	} else {
+	if source.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
+
+	if this.end != nil {
+		rv, _ = source.Slice(int(sa), ev)
+	} else {
+		rv, _ = source.SliceTail(int(sa))
+	}
+
+	return
 }
 
 func (this *Slice) Children() Expressions {
