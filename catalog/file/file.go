@@ -397,7 +397,7 @@ func (pi *primaryIndex) Statistics(span *catalog.Span) (catalog.Statistics, err.
 	return nil, nil
 }
 
-func (pi *primaryIndex) Scan(span *catalog.Span, limit int64, conn *catalog.IndexConnection) {
+func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	// For primary indexes, bounds must always be strings, so we

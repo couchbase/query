@@ -25,16 +25,16 @@ const (
 
 // Index is the base type for indexes.
 type Index interface {
-	BucketId() string                                    // Id of the bucket to which this index belongs
-	Id() string                                          // Id of this index
-	Name() string                                        // Name of this index
-	Type() IndexType                                     // Type of this index
-	Drop() err.Error                                     // Drop / delete this index
-	EqualKey() expression.Expressions                    // Equality keys
-	RangeKey() expression.Expressions                    // Range keys
-	Condition() expression.Expression                    // Condition, if any
-	Statistics(span *Span) (Statistics, err.Error)       // Obtain statistics for this index
-	Scan(span *Span, limit int64, conn *IndexConnection) // Perform a scan on this index
+	BucketId() string                                                   // Id of the bucket to which this index belongs
+	Id() string                                                         // Id of this index
+	Name() string                                                       // Name of this index
+	Type() IndexType                                                    // Type of this index
+	Drop() err.Error                                                    // Drop / delete this index
+	EqualKey() expression.Expressions                                   // Equality keys
+	RangeKey() expression.Expressions                                   // Range keys
+	Condition() expression.Expression                                   // Condition, if any
+	Statistics(span *Span) (Statistics, err.Error)                      // Obtain statistics for this index
+	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
 // PrimaryIndex represents primary key indexes.

@@ -190,7 +190,7 @@ func (pi *dualIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	conn.EntryChannel() <- &entry
 }
 
-func (pi *dualIndex) Scan(span *catalog.Span, limit int64, conn *catalog.IndexConnection) {
+func (pi *dualIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""

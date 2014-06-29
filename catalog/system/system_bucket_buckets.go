@@ -238,7 +238,7 @@ func (pi *bucketIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	}
 }
 
-func (pi *bucketIndex) Scan(span catalog.Span, limit int64, conn *catalog.IndexConnection) {
+func (pi *bucketIndex) Scan(span catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
