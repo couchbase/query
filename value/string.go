@@ -15,6 +15,8 @@ import (
 
 type stringValue string
 
+var EMPTY_STRING_VALUE = NewValue("")
+
 func (this stringValue) Type() int {
 	return STRING
 }

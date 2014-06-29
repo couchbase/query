@@ -15,6 +15,8 @@ import (
 
 type sliceValue []interface{}
 
+var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
+
 func (this sliceValue) Type() int {
 	return ARRAY
 }

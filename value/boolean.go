@@ -13,6 +13,9 @@ import ()
 
 type boolValue bool
 
+var FALSE_VALUE = NewValue(false)
+var TRUE_VALUE = NewValue(true)
+
 func (this boolValue) Type() int {
 	return BOOLEAN
 }

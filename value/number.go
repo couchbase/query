@@ -17,6 +17,9 @@ import (
 
 type floatValue float64
 
+var ZERO_VALUE = NewValue(0.0)
+var ONE_VALUE = NewValue(1.0)
+
 func (this floatValue) Type() int {
 	return NUMBER
 }
