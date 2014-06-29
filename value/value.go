@@ -59,6 +59,7 @@ type Value interface {
 	Index(index int) (Value, bool)                // Array index dereference, or MISSING; true if found
 	SetIndex(index int, val interface{}) error    // Array index setting
 	Slice(start, end int) (Value, bool)           // Array slicing; true if found
+	SliceTail(start int) (Value, bool)            // Array slicing; true if found
 }
 
 var _CONVERSIONS = []reflect.Type{

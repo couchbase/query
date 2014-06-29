@@ -88,6 +88,10 @@ func (this missingValue) Slice(start, end int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
+func (this missingValue) SliceTail(start int) (Value, bool) {
+	return MISSING_VALUE, false
+}
+
 func missingField(field string) Value {
 	return missingValue(field)
 }

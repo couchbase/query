@@ -170,6 +170,14 @@ func (this *parsedValue) Slice(start, end int) (Value, bool) {
 	return this.parse().Slice(start, end)
 }
 
+func (this *parsedValue) SliceTail(start int) (Value, bool) {
+	if this.parsedType != ARRAY {
+		return NULL_VALUE, false
+	}
+
+	return this.parse().SliceTail(start)
+}
+
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
 		if this.parsedType == NOT_JSON {

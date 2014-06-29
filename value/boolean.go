@@ -100,3 +100,7 @@ func (this boolValue) SetIndex(index int, val interface{}) error {
 func (this boolValue) Slice(start, end int) (Value, bool) {
 	return NULL_VALUE, false
 }
+
+func (this boolValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}

@@ -75,3 +75,7 @@ func (this *nullValue) SetIndex(index int, val interface{}) error {
 func (this *nullValue) Slice(start, end int) (Value, bool) {
 	return NULL_VALUE, false
 }
+
+func (this *nullValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}

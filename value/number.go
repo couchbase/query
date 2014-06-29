@@ -95,3 +95,7 @@ func (this floatValue) SetIndex(index int, val interface{}) error {
 func (this floatValue) Slice(start, end int) (Value, bool) {
 	return NULL_VALUE, false
 }
+
+func (this floatValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}

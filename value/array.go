@@ -131,6 +131,18 @@ func (this sliceValue) Slice(start, end int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
+func (this sliceValue) SliceTail(start int) (Value, bool) {
+	if start < 0 {
+		start = len(this) + start
+	}
+
+	if start >= 0 {
+		return NewValue(this[start:]), true
+	}
+
+	return MISSING_VALUE, false
+}
+
 type listValue struct {
 	actual []interface{}
 }
@@ -255,6 +267,18 @@ func (this *listValue) Slice(start, end int) (Value, bool) {
 
 	if start <= end && start >= 0 && end <= len(this.actual) {
 		return NewValue(this.actual[start:end]), true
+	}
+
+	return MISSING_VALUE, false
+}
+
+func (this *listValue) SliceTail(start int) (Value, bool) {
+	if start < 0 {
+		start = len(this.actual) + start
+	}
+
+	if start >= 0 {
+		return NewValue(this.actual[start:]), true
 	}
 
 	return MISSING_VALUE, false

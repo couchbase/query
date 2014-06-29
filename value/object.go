@@ -106,6 +106,10 @@ func (this objectValue) Slice(start, end int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
+func (this objectValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}
+
 func objectEquals(obj1, obj2 map[string]interface{}) bool {
 	if len(obj1) != len(obj2) {
 		return false
