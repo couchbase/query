@@ -15,9 +15,11 @@ func logDebugGrammar(format string, v ...interface{}) {
 s string
 n int
 f float64
-b bool
 
 literal     interface{}
+whenTerm    *expression.WhenTerm
+whenTerms   expression.WhenTerms
+
 node        algebra.Node
 subselect   *algebra.Subselect
 fromTerm    algebra.FromTerm
@@ -157,7 +159,13 @@ resultTerms algebra.ResultTerms
 %left           LPAREN RPAREN
 
 /* Types */
-%type <literal>      literal
+%type <s>            STRING
+%type <s>            IDENTIFIER
+%type <f>            NUMBER
+%type <n>            INT
+%type <literal>      literal object array
+%type <binding>      member
+%type <bindings>     members optional_members
 
 %type <expr>         expr c_expr b_expr
 %type <exprs>        exprs
@@ -165,6 +173,13 @@ resultTerms algebra.ResultTerms
 %type <bindings>     bindings
 
 %type <s>            alias as_alias variable
+
+%type <expr>         case_expr simple_or_searched_case simple_case searched_case optional_else
+%type <whenTerms>    when_thens
+
+%type <expr>         collection_expr collection_cond collection_xform
+%type <binding>      coll_binding
+%type <bindings>     coll_bindings
 
 %type <subselect>    subselect
 %type <subselect>    select_from
@@ -307,7 +322,7 @@ project
 |
 projects COMMA project
 {
-  $$ = append($1, $3...)
+  $$ = append($1, $3)
 }
 ;
 
@@ -342,7 +357,7 @@ alias
 |
 AS alias
 {
-  $$ = $1
+  $$ = $2
 }
 ;
 
@@ -449,7 +464,7 @@ binding
 |
 bindings COMMA binding
 {
-  $$ = append($1, $3...)
+  $$ = append($1, $3)
 }
 ;
 
@@ -514,7 +529,7 @@ expr
 |
 exprs COMMA expr
 {
-  $$ = append($1, $3...)
+  $$ = append($1, $3)
 }
 ;
 
@@ -1263,6 +1278,8 @@ TRUE
 |
 NUMBER
 |
+INT
+|
 STRING
 |
 object
@@ -1272,30 +1289,51 @@ array
 
 object:
 LBRACE optional_members RBRACE
+{
+  $$ = expression.NewObjectLiteral($2)
+}
 ;
 
 optional_members:
 /* empty */
+{
+  $$ = nil
+}
 |
 members
 ;
 
 members:
-pair
+member
+{
+  $$ = expression.Bindings{$1}
+}
 |
-members COMMA pair
+members COMMA member
+{
+  $$ = append($1, $3)
+}
 ;
 
-pair:
-STRING COMMA expr
+member:
+STRING COLON expr
+{
+  $$ = expression.NewBinding($1, $3)
+}
 ;
 
 array:
 LBRACKET optional_exprs RBRACKET
+{
+  $$ = expression.NewArrayLiteral($2)
+}
 ;
 
 optional_exprs:
 /* empty */
+{
+  $$ = nil
+}
 |
 exprs
 ;
@@ -1308,7 +1346,10 @@ exprs
  *************************************************/
 
 case_expr:
-CASE simple_or_searched_case optional_else END
+CASE simple_or_searched_case END
+{
+  $$ = $2
+}
 ;
 
 simple_or_searched_case:
@@ -1318,23 +1359,42 @@ searched_case
 ;
 
 simple_case:
-expr when_thens
+expr when_thens optional_else
+{
+  $$ = expression.NewSimpleCase($1, $2, $3)
+}
 ;
 
 when_thens:
 WHEN expr THEN expr
+{
+  $$ = expression.WhenTerms{&expression.WhenTerm{$2, $4}}
+}
 |
 when_thens WHEN expr THEN expr
+{
+  $$ = append($1, &expression.WhenTerm{$3, $5})
+}
 ;
 
 searched_case:
 when_thens
+optional_else
+{
+  $$ = expression.NewSearchedCase($1, $2)
+}
 ;
 
 optional_else:
 /* empty */
+{
+  $$ = nil
+}
 |
 ELSE expr
+{
+  $$ = $2
+}
 ;
 
 
@@ -1372,33 +1432,42 @@ collection_xform
 ;
 
 collection_cond:
-ANY coll_cond
+ANY coll_bindings satisfies END
+{
+  $$ = expression.NewAny($2, $3)
+}
 |
-SOME coll_cond
+SOME coll_bindings satisfies END
+{
+  $$ = expression.NewAny($2, $3)
+}
 |
-EVERY coll_cond
-;
-
-coll_cond:
-coll_bindings optional_satisfies END
+EVERY coll_bindings satisfies END
+{
+  $$ = expression.NewEvery($2, $3)
+}
 ;
 
 coll_bindings:
 coll_binding
+{
+  $$ = expression.Bindings{$1}
+}
 |
 coll_bindings COMMA coll_binding
+{
+  $$ = append($1, $3)
+}
 ;
 
 coll_binding:
 variable IN expr
+{
+  $$ = expression.NewBinding($1, $3)
+}
 ;
 
-optional_satisfies:
-/* empty */
-{
-  $$ = nil
-}
-|
+satisfies:
 SATISFIES expr
 {
   $$ = $2
@@ -1406,13 +1475,15 @@ SATISFIES expr
 ;
 
 collection_xform:
-ARRAY coll_xform
+ARRAY expr FOR coll_bindings optional_when END
+{
+  $$ = expression.NewArray($2, $4, $5)
+}
 |
-FIRST coll_xform
-;
-
-coll_xform:
-expr FOR coll_bindings optional_when END
+FIRST expr FOR coll_bindings optional_when END
+{
+  $$ = expression.NewFirst($2, $4, $5)
+}
 ;
 
 
