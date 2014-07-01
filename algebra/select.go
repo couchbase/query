@@ -48,7 +48,14 @@ type SortTerms []*SortTerm
 
 type SortTerm struct {
 	expr       expression.Expression `json:"expr"`
-	descending bool                  `json:"asc"`
+	descending bool                  `json:"desc"`
+}
+
+func NewSortTerm(expr expression.Expression, descending bool) *SortTerm {
+	return &SortTerm{
+		expr:       expr,
+		descending: descending,
+	}
 }
 
 func (this *SortTerm) Expression() expression.Expression {

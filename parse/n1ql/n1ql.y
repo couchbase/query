@@ -15,20 +15,25 @@ func logDebugGrammar(format string, v ...interface{}) {
 s string
 n int
 f float64
+b bool
 
-literal     interface{}
-whenTerm    *expression.WhenTerm
-whenTerms   expression.WhenTerms
-
-node        algebra.Node
-subselect   *algebra.Subselect
-fromTerm    algebra.FromTerm
-binding     *expression.Binding
-bindings    expression.Bindings
 expr        expression.Expression
 exprs       expression.Expressions
+whenTerm    *expression.WhenTerm
+whenTerms   expression.WhenTerms
+binding     *expression.Binding
+bindings    expression.Bindings
+
+node        algebra.Node
+fullselect  *algebra.Select
+subselect   *algebra.Subselect
+fromTerm    algebra.FromTerm
+bucketTerm  *algebra.BucketTerm
+path        algebra.Path
+groupBy     *algebra.GroupBy
 resultTerm  algebra.ResultTerm
 resultTerms algebra.ResultTerms
+projection  *algebra.Projection
 }
 
 %token ALL
@@ -163,16 +168,16 @@ resultTerms algebra.ResultTerms
 %type <s>            IDENTIFIER
 %type <f>            NUMBER
 %type <n>            INT
-%type <literal>      literal object array
+%type <expr>         literal object array
 %type <binding>      member
 %type <bindings>     members optional_members
 
 %type <expr>         expr c_expr b_expr
-%type <exprs>        exprs
+%type <exprs>        exprs optional_exprs
 %type <binding>      binding
 %type <bindings>     bindings
 
-%type <s>            alias as_alias variable
+%type <s>            alias as_alias optional_as_alias variable
 
 %type <expr>         case_expr simple_or_searched_case simple_case searched_case optional_else
 %type <whenTerms>    when_thens
@@ -180,18 +185,37 @@ resultTerms algebra.ResultTerms
 %type <expr>         collection_expr collection_cond collection_xform
 %type <binding>      coll_binding
 %type <bindings>     coll_bindings
+%type <expr>         satisfies
+%type <expr>         optional_when
 
+%type <expr>         function_expr
+%type <s>            function_name
+
+%type <expr>         group_or_subquery_expr group_or_subquery
+
+%type <fullselect>   fullselect
 %type <subselect>    subselect
 %type <subselect>    select_from
 %type <subselect>    from_select
-%type <fromTerm>     from
+%type <fromTerm>     from_term from optional_from
+%type <bucketTerm>   bucket_term
+%type <b>            optional_join_type
+%type <path>         path optional_subpath
+%type <s>            pool_name bucket_name
+%type <expr>         keys optional_keys
 %type <bindings>     optional_let let
 %type <expr>         optional_where where
-%type <exprs>        optional_group_by, group_by
+%type <groupBy>      optional_group_by group_by
 %type <bindings>     optional_letting letting
 %type <expr>         optional_having having
 %type <resultTerm>   project
-%type <resultTerms>  projection select_clause
+%type <resultTerms>  projects
+%type <projection>   projection select_clause
+%type <sortTerm>     sort_term
+%type <sortTerms>    sort_terms order_by optional_order_by
+%type <expr>         limit optional_limit
+%type <expr>         offset optional_offset
+%type <b>            dir optional_dir
 
 %start input
 
@@ -216,7 +240,7 @@ ddl_stmt
 ;
 
 select_stmt:
-select
+fullselect
 ;
 
 dml_stmt:
@@ -243,11 +267,11 @@ drop_index
 alter_index
 ;
 
-select:
-subselects
-optional_order_by
-optional_limit
-optional_offset
+fullselect:
+subselects optional_order_by optional_limit optional_offset
+{
+  $$ = nil
+}
 ;
 
 subselects:
@@ -265,22 +289,14 @@ select_from
 ;
 
 from_select:
-from
-optional_let
-optional_where
-optional_group_by
-select_clause
+from optional_let optional_where optional_group_by select_clause
 {
   $$ = nil
 }
 ;
 
 select_from:
-select_clause
-optional_from
-optional_let
-optional_where
-optional_group_by
+select_clause optional_from optional_let optional_where optional_group_by
 {
   $$ = nil
 }
@@ -303,14 +319,28 @@ projection
 
 projection:
 projects
+{
+  $$ = algebra.NewProjection($1, false)
+}
 |
 DISTINCT projects
+{
+  $$ = algebra.NewProjection($2, true)
+}
 |
 ALL projects
+{
+  $$ = algebra.NewProjection($2, false)
+}
 |
 RAW expr
 {
-  $$ = alebgra.ResultTerms{algebra.NewResultTerm($2, false, "")}
+  $$ = algebra.NewRawProjection($2, false)
+}
+|
+DISTINCT RAW expr
+{
+  $$ = algebra.NewRawProjection($3, true)
 }
 ;
 
@@ -374,63 +404,111 @@ IDENTIFIER
 
 optional_from:
 /* empty */
+{
+  $$ = nil
+}
 |
 from
 ;
 
 from:
 FROM from_term
+{
+  $$ = $2
+}
 ;
 
 from_term:
-from_path optional_as_alias optional_keys
+bucket_term
+{
+  $$ = $1
+}
 |
-from_term optional_join_type joiner
+from_term optional_join_type JOIN bucket_term
+{
+  $$ = algebra.NewJoin($1, $2, $4)
+}
+|
+from_term optional_join_type NEST bucket_term
+{
+  $$ = algebra.NewNest($1, $2, $4)
+}
+|
+from_term optional_join_type UNNEST path optional_as_alias
+{
+  $$ = algebra.NewUnnest($1, $2, $4, $5)
+}
 ;
 
-from_path:
+bucket_term:
+pool_name COLON bucket_name optional_subpath optional_as_alias optional_keys
+{
+  $$ = algebra.NewBucketTerm($1, $3, $4, $5, $6)
+}
+|
+bucket_name optional_subpath optional_as_alias optional_keys
+{
+  $$ = algebra.NewBucketTerm("". $1, $2, $3, $4)
+}
+;
+
+pool_name:
 IDENTIFIER
-optional_from_subpath
 ;
 
-optional_from_subpath:
+bucket_name:
+IDENTIFIER
+;
+
+optional_subpath:
 /* empty */
-|
-COLON path
+{
+  $$ = nil
+}
 |
 DOT path
+{
+  $$ = $2
+}
 ;
 
 optional_keys:
 /* empty */
+{
+  $$ = nil
+}
 |
 keys
 ;
 
 keys:
 KEYS expr
+{
+  $$ = $2
+}
 ;
 
 optional_join_type:
 /* empty */
+{
+  $$ = false
+}
 |
 INNER
+{
+  $$ = false
+}
 |
 LEFT optional_outer
+{
+  $$ = true
+}
 ;
 
 optional_outer:
 /* empty */
 |
 OUTER
-;
-
-joiner:
-JOIN from_path optional_as_alias optional_keys
-|
-NEST from_path optional_as_alias optional_keys
-|
-UNNEST from_path optional_as_alias
 ;
 
 
@@ -517,7 +595,7 @@ group_by
 group_by:
 GROUP BY exprs optional_letting optional_having
 {
-  $$ = $3
+  $$ = algebra.NewGroupBy($3, $4, $5)
 }
 ;
 
@@ -574,34 +652,58 @@ HAVING expr
 
 optional_order_by:
 /* empty */
+{
+  $$ = nil
+}
 |
 order_by
 ;
 
 order_by:
-ORDER BY order_terms
+ORDER BY sort_terms
+{
+  $$ = $3
+}
 ;
 
-order_terms:
-order_term
+sort_terms:
+sort_term
+{
+  $$ = algebra.SortTerms{$1}
+}
 |
-order_terms COMMA order_term
+sort_terms COMMA sort_term
+{
+  $$ = append($1, $3)
+}
 ;
 
-order_term:
+sort_term:
 expr optional_dir
+{
+  $$ = algebra.NewSortTerm($1, $2)
+}
 ;
 
 optional_dir:
 /* empty */
+{
+  $$ = false
+}
 |
 dir
 ;
 
 dir:
 ASC
+{
+  $$ = false
+}
 |
 DESC
+{
+  $$ = true
+}
 ;
 
 
@@ -613,12 +715,18 @@ DESC
 
 optional_limit:
 /* empty */
+{
+  $$ = nil
+}
 |
 limit
 ;
 
 limit:
 LIMIT expr
+{
+  $$ = $2
+}
 ;
 
 
@@ -630,12 +738,18 @@ LIMIT expr
 
 optional_offset:
 /* empty */
+{
+  $$ = nil
+}
 |
 offset
 ;
 
 offset:
 OFFSET expr
+{
+  $$ = $2
+}
 ;
 
 
@@ -670,10 +784,6 @@ optional_scoped_name:
 COLON bucket_name
 ;
 
-bucket_name:
-IDENTIFIER
-;
-
 optional_key:
 /* empty */
 |
@@ -687,7 +797,7 @@ KEY expr
 source:
 values
 |
-select
+fullselect
 ;
 
 values:
@@ -847,7 +957,7 @@ optional_returning
 merge_source:
 from_term
 |
-LPAREN select RPAREN as_alias
+LPAREN fullselect RPAREN as_alias
 ;
 
 merge_actions:
@@ -968,12 +1078,24 @@ ALTER INDEX bucket_spec DOT index_name RENAME TO index_name
 
 path:
 IDENTIFIER
+{
+  $$ = expression.NewIdentifier($1)
+}
 |
 path DOT IDENTIFIER
+{
+  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+}
 |
 path DOT LPAREN expr RPAREN
+{
+  $$ = expression.NewField($1, $4)
+}
 |
 path LBRACKET expr RBRACKET
+{
+  $$ = expression.NewElement($1, $3)
+}
 ;
 
 
@@ -1103,7 +1225,7 @@ expr BETWEEN b_expr AND b_expr
 |
 expr NOT BETWEEN b_expr AND b_expr
 {
-  $$ = expression.NewNotBetween($1, $3, $5)
+  $$ = expression.NewNotBetween($1, $4, $6)
 }
 |
 expr LIKE expr
@@ -1113,7 +1235,7 @@ expr LIKE expr
 |
 expr NOT LIKE expr
 {
-  $$ = expression.NewNotLike($1, $3)
+  $$ = expression.NewNotLike($1, $4)
 }
 |
 expr IN expr
@@ -1123,7 +1245,7 @@ expr IN expr
 |
 expr NOT IN expr
 {
-  $$ = expression.NewNotIn($1, $3)
+  $$ = expression.NewNotIn($1, $4)
 }
 |
 expr IS NULL
@@ -1158,7 +1280,7 @@ expr IS NOT VALUED
 |
 EXISTS expr
 {
-  $$ = expression.NewExists($1)
+  $$ = expression.NewExists($2)
 }
 ;
 
@@ -1263,24 +1385,33 @@ b_expr CONCAT b_expr
 literal:
 NULL
 {
-  $$ = nil
+  $$ = expression.NULL_EXPR
 }
 |
 FALSE
 {
-  $$ = false
+  $$ = expression.FALSE_EXPR
 }
 |
 TRUE
 {
-  $$ = true
+  $$ = expression.TRUE_EXPR
 }
 |
 NUMBER
+{
+  $$ = expression.NewConstant(value.NewValue($1))
+}
 |
 INT
+{
+  $$ = expression.NewConstant(value.NewValue($1))
+}
 |
 STRING
+{
+  $$ = expression.NewConstant(value.NewValue($1))
+}
 |
 object
 |
@@ -1405,13 +1536,37 @@ ELSE expr
  *************************************************/
 
 function_expr:
-function_name LPAREN RPAREN
-|
-function_name LPAREN exprs RPAREN
+function_name LPAREN optional_exprs RPAREN
+{
+  $$ = nil;
+  agg, ok := algebra.GetAggregate($1, false);
+  if ok {
+    $$ = agg.Constructor()($3);
+  } else {
+    f, ok := expression.GetFunction($1);
+    if ok {
+      $$ = f.Constructor()($3)
+    }
+  }
+}
 |
 function_name LPAREN DISTINCT exprs RPAREN
+{
+  $$ = nil;
+  agg, ok := algebra.GetAggregate($1, true);
+  if ok {
+      $$ = agg.Constructor()($4)
+  }
+}
 |
 function_name LPAREN STAR RPAREN
+{
+  $$ = nil;
+  agg, ok := algebra.GetAggregate($1, false);
+  if ok {
+      $$ = agg.Constructor()(nil)
+  }
+}
 ;
 
 function_name:
@@ -1503,7 +1658,7 @@ LPAREN group_or_subquery RPAREN
 group_or_subquery:
 expr
 |
-select
+fullselect
 {
   $$ = algebra.NewSubquery($1)
 }
