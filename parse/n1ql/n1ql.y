@@ -30,10 +30,12 @@ subselect   *algebra.Subselect
 fromTerm    algebra.FromTerm
 bucketTerm  *algebra.BucketTerm
 path        algebra.Path
-groupBy     *algebra.GroupBy
-resultTerm  algebra.ResultTerm
+group       *algebra.Group
+resultTerm  *algebra.ResultTerm
 resultTerms algebra.ResultTerms
 projection  *algebra.Projection
+sortTerm    *algebra.SortTerm
+sortTerms   algebra.SortTerms
 }
 
 %token ALL
@@ -191,7 +193,7 @@ projection  *algebra.Projection
 %type <expr>         function_expr
 %type <s>            function_name
 
-%type <expr>         group_or_subquery_expr group_or_subquery
+%type <expr>         paren_or_subquery_expr paren_or_subquery
 
 %type <fullselect>   fullselect
 %type <subselect>    subselect
@@ -205,7 +207,7 @@ projection  *algebra.Projection
 %type <expr>         keys optional_keys
 %type <bindings>     optional_let let
 %type <expr>         optional_where where
-%type <groupBy>      optional_group_by group_by
+%type <group>        optional_group group
 %type <bindings>     optional_letting letting
 %type <expr>         optional_having having
 %type <resultTerm>   project
@@ -289,14 +291,14 @@ select_from
 ;
 
 from_select:
-from optional_let optional_where optional_group_by select_clause
+from optional_let optional_where optional_group select_clause
 {
-  $$ = nil
+  $$ = algebra.NewSubselect($1, $2, $3, $4, $5)
 }
 ;
 
 select_from:
-select_clause optional_from optional_let optional_where optional_group_by
+select_clause optional_from optional_let optional_where optional_group
 {
   $$ = nil
 }
@@ -320,27 +322,27 @@ projection
 projection:
 projects
 {
-  $$ = algebra.NewProjection($1, false)
+  $$ = algebra.NewProjection(false, $1)
 }
 |
 DISTINCT projects
 {
-  $$ = algebra.NewProjection($2, true)
+  $$ = algebra.NewProjection(true, $2)
 }
 |
 ALL projects
 {
-  $$ = algebra.NewProjection($2, false)
+  $$ = algebra.NewProjection(false, $2)
 }
 |
 RAW expr
 {
-  $$ = algebra.NewRawProjection($2, false)
+  $$ = algebra.NewRawProjection(false, $2)
 }
 |
 DISTINCT RAW expr
 {
-  $$ = algebra.NewRawProjection($3, true)
+  $$ = algebra.NewRawProjection(true, $3)
 }
 ;
 
@@ -448,7 +450,7 @@ pool_name COLON bucket_name optional_subpath optional_as_alias optional_keys
 |
 bucket_name optional_subpath optional_as_alias optional_keys
 {
-  $$ = algebra.NewBucketTerm("". $1, $2, $3, $4)
+  $$ = algebra.NewBucketTerm("", $1, $2, $3, $4)
 }
 ;
 
@@ -537,7 +539,7 @@ LET bindings
 bindings:
 binding
 {
-  $$ = algebra.Bindings{$1}
+  $$ = expression.Bindings{$1}
 }
 |
 bindings COMMA binding
@@ -583,19 +585,19 @@ WHERE expr
  *
  *************************************************/
 
-optional_group_by:
+optional_group:
 /* empty */
 {
   $$ = nil
 }
 |
-group_by
+group
 ;
 
-group_by:
+group:
 GROUP BY exprs optional_letting optional_having
 {
-  $$ = algebra.NewGroupBy($3, $4, $5)
+  $$ = algebra.NewGroup($3, $4, $5)
 }
 ;
 
@@ -1310,7 +1312,7 @@ case_expr
 collection_expr
 |
 /* Grouping and subquery */
-group_or_subquery_expr
+paren_or_subquery_expr
 ;
 
 b_expr:
@@ -1644,18 +1646,18 @@ FIRST expr FOR coll_bindings optional_when END
 
 /*************************************************
  *
- * Grouping and subquery
+ * Parentheses and subquery
  *
  *************************************************/
 
-group_or_subquery_expr:
-LPAREN group_or_subquery RPAREN
+paren_or_subquery_expr:
+LPAREN paren_or_subquery RPAREN
 {
   $$ = $2
 }
 ;
 
-group_or_subquery:
+paren_or_subquery:
 expr
 |
 fullselect

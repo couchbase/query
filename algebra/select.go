@@ -72,21 +72,16 @@ type Subresult interface {
 }
 
 type Subselect struct {
-	from     FromTerm               `json:"from"`
-	let      expression.Bindings    `json:"let"`
-	where    expression.Expression  `json:"where"`
-	group    expression.Expressions `json:"group"`
-	letting  expression.Bindings    `json:"letting"`
-	having   expression.Expression  `json:"having"`
-	project  ResultTerms            `json:"project"`
-	distinct bool                   `json:"distinct"`
+	from       FromTerm              `json:"from"`
+	let        expression.Bindings   `json:"let"`
+	where      expression.Expression `json:"where"`
+	group      *Group                `json:"group"`
+	projection *Projection           `json:"projection"`
 }
 
 func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expression,
-	group expression.Expressions, letting expression.Bindings, having expression.Expression,
-	project ResultTerms, distinct bool,
-) *Subselect {
-	return &Subselect{from, let, where, group, letting, having, project, distinct}
+	group *Group, projection *Projection) *Subselect {
+	return &Subselect{from, let, where, group, projection}
 }
 
 func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
@@ -101,24 +96,42 @@ func (this *Subselect) Where() expression.Expression {
 	return this.where
 }
 
-func (this *Subselect) Group() expression.Expressions {
+func (this *Subselect) Group() *Group {
 	return this.group
 }
 
-func (this *Subselect) Having() expression.Expression {
-	return this.having
-}
-
-func (this *Subselect) Project() ResultTerms {
-	return this.project
-}
-
-func (this *Subselect) Distinct() bool {
-	return this.distinct
+func (this *Subselect) Projection() *Projection {
+	return this.projection
 }
 
 func (this *Subselect) IsCorrelated() bool {
 	return true // FIXME
+}
+
+type Group struct {
+	by      expression.Expressions `json:by`
+	letting expression.Bindings    `json:"letting"`
+	having  expression.Expression  `json:"having"`
+}
+
+func NewGroup(by expression.Expressions, letting expression.Bindings, having expression.Expression) *Group {
+	return &Group{
+		by:      by,
+		letting: letting,
+		having:  having,
+	}
+}
+
+func (this *Group) By() expression.Expressions {
+	return this.by
+}
+
+func (this *Group) Letting() expression.Bindings {
+	return this.letting
+}
+
+func (this *Group) Having() expression.Expression {
+	return this.having
 }
 
 type binarySubresult struct {

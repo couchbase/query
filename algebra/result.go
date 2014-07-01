@@ -13,6 +13,40 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
+type Projection struct {
+	distinct bool        `json:"distinct"`
+	raw      bool        `json:"raw"`
+	terms    ResultTerms `json:terms`
+}
+
+func NewProjection(distinct bool, terms ResultTerms) *Projection {
+	return &Projection{
+		distinct: distinct,
+		raw:      false,
+		terms:    terms,
+	}
+}
+
+func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
+	return &Projection{
+		distinct: distinct,
+		raw:      true,
+		terms:    ResultTerms{NewResultTerm(expr, false, "")},
+	}
+}
+
+func (this *Projection) Distinct() bool {
+	return this.distinct
+}
+
+func (this *Projection) Raw() bool {
+	return this.raw
+}
+
+func (this *Projection) Terms() ResultTerms {
+	return this.terms
+}
+
 type ResultTerms []*ResultTerm
 
 type ResultTerm struct {
@@ -25,7 +59,7 @@ func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm
 	return &ResultTerm{
 		expr: expr,
 		star: star,
-		as: as,
+		as:   as,
 	}
 }
 
