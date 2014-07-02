@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-06-24
+* Modified: 2014-07-02
 
 ## Introduction
 
@@ -250,6 +250,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Changed VALUES to multiple exprs
 * 2014-06-24 - RETURNING star
     * Allow star in RETURNING
+* 2014-07-02 - MERGE source
+    * Support VALUES as MERGE source
+    * Allow JOIN sources to be aliased
 
 ### Open Issues
 
