@@ -26,6 +26,7 @@ bindings    expression.Bindings
 
 node        algebra.Node
 fullselect  *algebra.Select
+subresult   algebra.Subresult
 subselect   *algebra.Subselect
 fromTerm    algebra.FromTerm
 bucketTerm  *algebra.BucketTerm
@@ -196,6 +197,7 @@ sortTerms   algebra.SortTerms
 %type <expr>         paren_or_subquery_expr paren_or_subquery
 
 %type <fullselect>   fullselect
+%type <subresult>    subselects
 %type <subselect>    subselect
 %type <subselect>    select_from
 %type <subselect>    from_select
@@ -272,16 +274,25 @@ alter_index
 fullselect:
 subselects optional_order_by optional_limit optional_offset
 {
-  $$ = nil
+  $$ = algebra.NewSelect($1, $2, $3, $4)
 }
 ;
 
 subselects:
 subselect
+{
+  $$ = $1
+}
 |
 subselects UNION subselect
+{
+  $$ = algebra.NewUnion($1, $3)
+}
 |
 subselects UNION ALL subselect
+{
+  $$ = algebra.NewUnionAll($1, $4)
+}
 ;
 
 subselect:
@@ -300,7 +311,7 @@ from optional_let optional_where optional_group select_clause
 select_from:
 select_clause optional_from optional_let optional_where optional_group
 {
-  $$ = nil
+  $$ = algebra.NewSubselect($2, $3, $4, $5, $1)
 }
 ;
 
