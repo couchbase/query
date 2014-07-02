@@ -9,11 +9,27 @@
 
 package expression
 
-type Function interface {
-	Expression
-	MinArgs() int
-	MaxArgs() int
-	Constructor() FunctionConstructor
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
+type ArrayLiteral struct {
+	nAryBase
 }
 
-type FunctionConstructor func(arguments Expressions) Function
+func NewArrayLiteral(exprs Expressions) Expression {
+	return &ArrayLiteral{
+		nAryBase{
+			operands: exprs,
+		},
+	}
+}
+
+func (this *ArrayLiteral) evaluate(operands value.Values) (value.Value, error) {
+	a := make([]interface{}, len(operands))
+	for i, o := range operands {
+		a[i] = o
+	}
+
+	return value.NewValue(a), nil
+}
