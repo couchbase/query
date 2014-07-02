@@ -20,7 +20,7 @@ type Identifier struct {
 	identifier string
 }
 
-func NewIdentifier(identifier string) Expression {
+func NewIdentifier(identifier string) Path {
 	return &Identifier{
 		identifier: identifier,
 	}
@@ -82,4 +82,14 @@ func (this *Identifier) Children() Expressions {
 
 func (this *Identifier) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
+}
+
+func (this *Identifier) Set(item, val value.Value, context Context) bool {
+	er := item.SetField(this.identifier, val)
+	return er == nil
+}
+
+func (this *Identifier) Unset(item value.Value, context Context) bool {
+	er := item.UnsetField(this.identifier)
+	return er == nil
 }

@@ -29,7 +29,7 @@ fullselect  *algebra.Select
 subselect   *algebra.Subselect
 fromTerm    algebra.FromTerm
 bucketTerm  *algebra.BucketTerm
-path        algebra.Path
+path        expression.Path
 group       *algebra.Group
 resultTerm  *algebra.ResultTerm
 resultTerms algebra.ResultTerms

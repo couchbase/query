@@ -7,17 +7,16 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package expression
 
 import (
-	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Paths []Path
 
 type Path interface {
-	expression.Expression
-	Set(item, val value.Value) bool
-	Unset(item value.Value) bool
+	Expression
+	Set(item, val value.Value, context Context) bool
+	Unset(item value.Value, context Context) bool
 }

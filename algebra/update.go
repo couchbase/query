@@ -85,16 +85,16 @@ func (this *Unset) Terms() []*UnsetTerm {
 }
 
 type SetTerm struct {
-	path      Path                  `json:"path"`
+	path      expression.Path       `json:"path"`
 	value     expression.Expression `json:"value"`
 	updateFor *UpdateFor            `json:"path-for"`
 }
 
-func NewSetTerm(path Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
+func NewSetTerm(path expression.Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
 	return &SetTerm{path, value, updateFor}
 }
 
-func (this *SetTerm) Path() Path {
+func (this *SetTerm) Path() expression.Path {
 	return this.path
 }
 
@@ -107,15 +107,15 @@ func (this *SetTerm) UpdateFor() *UpdateFor {
 }
 
 type UnsetTerm struct {
-	path      Path       `json:"path"`
-	updateFor *UpdateFor `json:"path-for"`
+	path      expression.Path `json:"path"`
+	updateFor *UpdateFor      `json:"path-for"`
 }
 
-func NewUnsetTerm(path Path, updateFor *UpdateFor) *UnsetTerm {
+func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
 	return &UnsetTerm{path, updateFor}
 }
 
-func (this *UnsetTerm) Path() Path {
+func (this *UnsetTerm) Path() expression.Path {
 	return this.path
 }
 

@@ -17,7 +17,7 @@ type Field struct {
 	binaryBase
 }
 
-func NewField(first, second Expression) Expression {
+func NewField(first, second Expression) Path {
 	return &Field{
 		binaryBase{
 			first:  first,
@@ -41,4 +41,34 @@ func (this *Field) evaluate(first, second value.Value) (value.Value, error) {
 	}
 
 	return value.NULL_VALUE, nil
+}
+
+func (this *Field) Set(item, val value.Value, context Context) bool {
+	second, er := this.second.Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
+	switch second.Type() {
+	case value.STRING:
+		er := item.SetField(second.Actual().(string), val)
+		return er == nil
+	default:
+		return false
+	}
+}
+
+func (this *Field) Unset(item value.Value, context Context) bool {
+	second, er := this.second.Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
+	switch second.Type() {
+	case value.STRING:
+		er := item.UnsetField(second.Actual().(string))
+		return er == nil
+	default:
+		return false
+	}
 }

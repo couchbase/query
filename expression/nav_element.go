@@ -19,7 +19,7 @@ type Element struct {
 	binaryBase
 }
 
-func NewElement(first, second Expression) Expression {
+func NewElement(first, second Expression) Path {
 	return &Element{
 		binaryBase{
 			first:  first,
@@ -45,4 +45,26 @@ func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
 	}
 
 	return value.NULL_VALUE, nil
+}
+
+func (this *Element) Set(item, val value.Value, context Context) bool {
+	second, er := this.second.Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
+	switch second.Type() {
+	case value.NUMBER:
+		s := second.Actual().(float64)
+		if s == math.Trunc(s) {
+			er := item.SetIndex(int(s), val)
+			return er == nil
+		}
+	}
+
+	return false
+}
+
+func (this *Element) Unset(item value.Value, context Context) bool {
+	return false
 }

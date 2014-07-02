@@ -22,12 +22,12 @@ type FromTerm interface {
 type BucketTerm struct {
 	pool    string
 	bucket  string
-	project Path
+	project expression.Path
 	as      string
 	keys    expression.Expression
 }
 
-func NewBucketTerm(pool, bucket string, project Path, as string, keys expression.Expression) *BucketTerm {
+func NewBucketTerm(pool, bucket string, project expression.Path, as string, keys expression.Expression) *BucketTerm {
 	return &BucketTerm{pool, bucket, project, as, keys}
 }
 
@@ -57,7 +57,7 @@ func (this *BucketTerm) Bucket() string {
 	return this.bucket
 }
 
-func (this *BucketTerm) Project() Path {
+func (this *BucketTerm) Project() expression.Path {
 	return this.project
 }
 
@@ -71,11 +71,11 @@ func (this *BucketTerm) Keys() expression.Expression {
 
 // For subqueries.
 type ParentTerm struct {
-	project Path
+	project expression.Path
 	as      string
 }
 
-func NewParentTerm(project Path, as string) *ParentTerm {
+func NewParentTerm(project expression.Path, as string) *ParentTerm {
 	return &ParentTerm{project, as}
 }
 
@@ -91,7 +91,7 @@ func (this *ParentTerm) Alias() string {
 	return this.as
 }
 
-func (this *ParentTerm) Project() Path {
+func (this *ParentTerm) Project() expression.Path {
 	return this.project
 }
 
@@ -170,11 +170,11 @@ func (this *Nest) Outer() bool {
 type Unnest struct {
 	left    FromTerm
 	outer   bool
-	project Path
+	project expression.Path
 	as      string
 }
 
-func NewUnnest(left FromTerm, outer bool, project Path, as string) *Unnest {
+func NewUnnest(left FromTerm, outer bool, project expression.Path, as string) *Unnest {
 	return &Unnest{left, outer, project, as}
 }
 
@@ -202,7 +202,7 @@ func (this *Unnest) Outer() bool {
 	return this.outer
 }
 
-func (this *Unnest) Project() Path {
+func (this *Unnest) Project() expression.Path {
 	return this.project
 }
 
