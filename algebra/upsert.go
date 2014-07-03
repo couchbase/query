@@ -13,7 +13,7 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-type Insert struct {
+type Upsert struct {
 	bucket    *BucketRef             `json:"bucket"`
 	key       expression.Expression  `json:"key"`
 	values    expression.Expressions `json:"values"`
@@ -22,9 +22,9 @@ type Insert struct {
 	returning *Projection            `json:"returning"`
 }
 
-func NewInsertValues(bucket *BucketRef, key expression.Expression,
-	values expression.Expressions, as string, returning *Projection) *Insert {
-	return &Insert{
+func NewUpsertValues(bucket *BucketRef, key expression.Expression,
+	values expression.Expressions, as string, returning *Projection) *Upsert {
+	return &Upsert{
 		bucket:    bucket,
 		key:       key,
 		values:    values,
@@ -34,9 +34,9 @@ func NewInsertValues(bucket *BucketRef, key expression.Expression,
 	}
 }
 
-func NewInsertSelect(bucket *BucketRef, key expression.Expression,
-	query *Select, as string, returning *Projection) *Insert {
-	return &Insert{
+func NewUpsertSelect(bucket *BucketRef, key expression.Expression,
+	query *Select, as string, returning *Projection) *Upsert {
+	return &Upsert{
 		bucket:    bucket,
 		key:       key,
 		values:    nil,
@@ -46,6 +46,6 @@ func NewInsertSelect(bucket *BucketRef, key expression.Expression,
 	}
 }
 
-func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitInsert(this)
+func (this *Upsert) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUpsert(this)
 }

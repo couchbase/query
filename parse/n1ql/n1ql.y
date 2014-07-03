@@ -17,26 +17,38 @@ n int
 f float64
 b bool
 
-expr        expression.Expression
-exprs       expression.Expressions
-whenTerm    *expression.WhenTerm
-whenTerms   expression.WhenTerms
-binding     *expression.Binding
-bindings    expression.Bindings
+expr         expression.Expression
+exprs        expression.Expressions
+whenTerm     *expression.WhenTerm
+whenTerms    expression.WhenTerms
+binding      *expression.Binding
+bindings     expression.Bindings
 
-node        algebra.Node
-fullselect  *algebra.Select
-subresult   algebra.Subresult
-subselect   *algebra.Subselect
-fromTerm    algebra.FromTerm
-bucketTerm  *algebra.BucketTerm
-path        expression.Path
-group       *algebra.Group
-resultTerm  *algebra.ResultTerm
-resultTerms algebra.ResultTerms
-projection  *algebra.Projection
-sortTerm    *algebra.SortTerm
-sortTerms   algebra.SortTerms
+explain      *algebra.Explain
+fullselect   *algebra.Select
+subresult    algebra.Subresult
+subselect    *algebra.Subselect
+fromTerm     algebra.FromTerm
+bucketTerm   *algebra.BucketTerm
+path         expression.Path
+group        *algebra.Group
+resultTerm   *algebra.ResultTerm
+resultTerms  algebra.ResultTerms
+projection   *algebra.Projection
+sortTerm     *algebra.SortTerm
+sortTerms    algebra.SortTerms
+
+statement    algebra.Statement
+set          *algebra.Set
+unset        *algebra.Unset
+set_term     *algebra.SetTerm
+set_terms    algebra.SetTerms
+unset_term   *algebra.UnsetTerm
+unset_terms  algebra.UnsetTerms
+update_for   *algebra.UpdateFor
+merge_update *algebra.MergeUpdate
+merge_delete *algebra.MergeDelete
+merge_insert *algebra.MergeInsert
 }
 
 %token ALL
@@ -173,53 +185,78 @@ sortTerms   algebra.SortTerms
 %type <n>            INT
 %type <expr>         literal object array
 %type <binding>      member
-%type <bindings>     members optional_members
+%type <bindings>     members opt_members
 
 %type <expr>         expr c_expr b_expr
-%type <exprs>        exprs optional_exprs
+%type <exprs>        exprs opt_exprs
 %type <binding>      binding
 %type <bindings>     bindings
 
-%type <s>            alias as_alias optional_as_alias variable
+%type <s>            alias as_alias opt_as_alias variable
 
-%type <expr>         case_expr simple_or_searched_case simple_case searched_case optional_else
+%type <expr>         case_expr simple_or_searched_case simple_case searched_case opt_else
 %type <whenTerms>    when_thens
 
 %type <expr>         collection_expr collection_cond collection_xform
 %type <binding>      coll_binding
 %type <bindings>     coll_bindings
 %type <expr>         satisfies
-%type <expr>         optional_when
+%type <expr>         opt_when
 
 %type <expr>         function_expr
 %type <s>            function_name
 
 %type <expr>         paren_or_subquery_expr paren_or_subquery
 
+%type <explain>      explain
 %type <fullselect>   fullselect
 %type <subresult>    subselects
 %type <subselect>    subselect
 %type <subselect>    select_from
 %type <subselect>    from_select
-%type <fromTerm>     from_term from optional_from
+%type <fromTerm>     from_term from opt_from
 %type <bucketTerm>   bucket_term
-%type <b>            optional_join_type
-%type <path>         path optional_subpath
+%type <b>            opt_join_type
+%type <path>         path opt_subpath
 %type <s>            pool_name bucket_name
-%type <expr>         keys optional_keys
-%type <bindings>     optional_let let
-%type <expr>         optional_where where
-%type <group>        optional_group group
-%type <bindings>     optional_letting letting
-%type <expr>         optional_having having
+%type <expr>         keys opt_keys
+%type <bindings>     opt_let let
+%type <expr>         opt_where where
+%type <group>        opt_group group
+%type <bindings>     opt_letting letting
+%type <expr>         opt_having having
 %type <resultTerm>   project
 %type <resultTerms>  projects
 %type <projection>   projection select_clause
 %type <sortTerm>     sort_term
-%type <sortTerms>    sort_terms order_by optional_order_by
-%type <expr>         limit optional_limit
-%type <expr>         offset optional_offset
-%type <b>            dir optional_dir
+%type <sortTerms>    sort_terms order_by opt_order_by
+%type <expr>         limit opt_limit
+%type <expr>         offset opt_offset
+%type <b>            dir opt_dir
+
+%type <statement>    stmt select_stmt dml_stmt ddl_stmt
+%type <statement>    insert upsert delete update merge
+%type <statement>    index_stmt create_index drop_index alter_index
+
+%type <bucketRef>    bucket_ref
+%type <exprs>        values
+%type <expr>         key opt_key
+%type <projection>   returns returning opt_returning
+%type <binding>      update_binding
+%type <bindings>     update_bindings opt_update_bindings
+%type <expr>         path_expr
+%type <set>          set
+%type <set_term>     set_term
+%type <set_terms>    set_terms
+%type <unset>        unset
+%type <unset_term>   unset_term
+%type <unset_terms>  unset_terms
+%type <update_for>   update_for opt_update_for
+%type <binding>      update_binding
+%type <bindings>     update_bindings
+%type <merge_update> merge_update
+%type <merge_delete> merge_delete
+%type <merge_insert> merge_insert
 
 %start input
 
@@ -233,6 +270,9 @@ stmt
 
 explain:
 EXPLAIN stmt
+{
+  $$ = algebra.NewExplain($2)
+}
 ;
 
 stmt:
@@ -245,6 +285,9 @@ ddl_stmt
 
 select_stmt:
 fullselect
+{
+  $$ = $1
+}
 ;
 
 dml_stmt:
@@ -272,7 +315,7 @@ alter_index
 ;
 
 fullselect:
-subselects optional_order_by optional_limit optional_offset
+subselects opt_order_by opt_limit opt_offset
 {
   $$ = algebra.NewSelect($1, $2, $3, $4)
 }
@@ -302,14 +345,14 @@ select_from
 ;
 
 from_select:
-from optional_let optional_where optional_group select_clause
+from opt_let opt_where opt_group select_clause
 {
   $$ = algebra.NewSubselect($1, $2, $3, $4, $5)
 }
 ;
 
 select_from:
-select_clause optional_from optional_let optional_where optional_group
+select_clause opt_from opt_let opt_where opt_group
 {
   $$ = algebra.NewSubselect($2, $3, $4, $5, $1)
 }
@@ -380,13 +423,13 @@ expr DOT STAR
   $$ = algebra.NewResultTerm($1, true, "")
 }
 |
-expr optional_as_alias
+expr opt_as_alias
 {
   $$ = algebra.NewResultTerm($1, false, $2)
 }
 ;
 
-optional_as_alias:
+opt_as_alias:
 /* empty */
 {
   $$ = ""
@@ -415,7 +458,7 @@ IDENTIFIER
  *
  *************************************************/
 
-optional_from:
+opt_from:
 /* empty */
 {
   $$ = nil
@@ -437,29 +480,29 @@ bucket_term
   $$ = $1
 }
 |
-from_term optional_join_type JOIN bucket_term
+from_term opt_join_type JOIN bucket_term
 {
   $$ = algebra.NewJoin($1, $2, $4)
 }
 |
-from_term optional_join_type NEST bucket_term
+from_term opt_join_type NEST bucket_term
 {
   $$ = algebra.NewNest($1, $2, $4)
 }
 |
-from_term optional_join_type UNNEST path optional_as_alias
+from_term opt_join_type UNNEST path opt_as_alias
 {
   $$ = algebra.NewUnnest($1, $2, $4, $5)
 }
 ;
 
 bucket_term:
-pool_name COLON bucket_name optional_subpath optional_as_alias optional_keys
+pool_name COLON bucket_name opt_subpath opt_as_alias opt_keys
 {
   $$ = algebra.NewBucketTerm($1, $3, $4, $5, $6)
 }
 |
-bucket_name optional_subpath optional_as_alias optional_keys
+bucket_name opt_subpath opt_as_alias opt_keys
 {
   $$ = algebra.NewBucketTerm("", $1, $2, $3, $4)
 }
@@ -473,7 +516,7 @@ bucket_name:
 IDENTIFIER
 ;
 
-optional_subpath:
+opt_subpath:
 /* empty */
 {
   $$ = nil
@@ -485,7 +528,7 @@ DOT path
 }
 ;
 
-optional_keys:
+opt_keys:
 /* empty */
 {
   $$ = nil
@@ -501,7 +544,7 @@ KEYS expr
 }
 ;
 
-optional_join_type:
+opt_join_type:
 /* empty */
 {
   $$ = false
@@ -512,13 +555,13 @@ INNER
   $$ = false
 }
 |
-LEFT optional_outer
+LEFT opt_outer
 {
   $$ = true
 }
 ;
 
-optional_outer:
+opt_outer:
 /* empty */
 |
 OUTER
@@ -531,7 +574,7 @@ OUTER
  *
  *************************************************/
 
-optional_let:
+opt_let:
 /* empty */
 {
   $$ = nil
@@ -573,7 +616,7 @@ alias EQ expr
  *
  *************************************************/
 
-optional_where:
+opt_where:
 /* empty */
 {
   $$ = nil
@@ -596,7 +639,7 @@ WHERE expr
  *
  *************************************************/
 
-optional_group:
+opt_group:
 /* empty */
 {
   $$ = nil
@@ -606,7 +649,7 @@ group
 ;
 
 group:
-GROUP BY exprs optional_letting optional_having
+GROUP BY exprs opt_letting opt_having
 {
   $$ = algebra.NewGroup($3, $4, $5)
 }
@@ -624,7 +667,7 @@ exprs COMMA expr
 }
 ;
 
-optional_letting:
+opt_letting:
 /* empty */
 {
   $$ = nil
@@ -640,7 +683,7 @@ LETTING bindings
 }
 ;
 
-optional_having:
+opt_having:
 /* empty */
 {
   $$ = nil
@@ -663,7 +706,7 @@ HAVING expr
  *
  *************************************************/
 
-optional_order_by:
+opt_order_by:
 /* empty */
 {
   $$ = nil
@@ -692,13 +735,13 @@ sort_terms COMMA sort_term
 ;
 
 sort_term:
-expr optional_dir
+expr opt_dir
 {
   $$ = algebra.NewSortTerm($1, $2)
 }
 ;
 
-optional_dir:
+opt_dir:
 /* empty */
 {
   $$ = false
@@ -726,7 +769,7 @@ DESC
  *
  *************************************************/
 
-optional_limit:
+opt_limit:
 /* empty */
 {
   $$ = nil
@@ -749,7 +792,7 @@ LIMIT expr
  *
  *************************************************/
 
-optional_offset:
+opt_offset:
 /* empty */
 {
   $$ = nil
@@ -773,64 +816,78 @@ OFFSET expr
  *************************************************/
 
 insert:
-INSERT INTO bucket_ref
-optional_key
-source
-optional_returning
+INSERT INTO bucket_ref opt_key values opt_returning
+{
+  $$ = algebra.NewInsertValues($3, $4, $5, $6)
+}
+|
+INSERT INTO bucket_ref opt_key fullselect opt_returning
+{
+  $$ = algebra.NewInsertSelect($3, $4, $5, $6)
+}
 ;
 
 bucket_ref:
-bucket_spec optional_as_alias
-;
-
-bucket_spec:
-pool_or_bucket_name optional_scoped_name
-;
-
-pool_or_bucket_name:
-IDENTIFIER
-;
-
-optional_scoped_name:
-/* empty */
+pool_name COLON bucket_name opt_as_alias
+{
+  $$ = algebra.NewBucketRef($1, $3, $4)
+}
 |
-COLON bucket_name
+bucket_name opt_as_alias
+{
+  $$ = algebra.NewBucketRef("", $1, $2)
+}
 ;
 
-optional_key:
+opt_key:
 /* empty */
+{
+  $$ = nil
+}
 |
 key
 ;
 
 key:
 KEY expr
-;
-
-source:
-values
-|
-fullselect
+{
+  $$ = $2
+}
 ;
 
 values:
 VALUES exprs
+{
+  $$ = $2
+}
 ;
 
-optional_returning:
+opt_returning:
 /* empty */
+{
+  $$ = nil
+}
 |
 returning
 ;
 
 returning:
 RETURNING returns
+{
+  $$ = $2
+}
 ;
 
 returns:
 projects
+{
+  $$ = algebra.NewProjection(false, $1)
+}
 |
 RAW expr
+{
+  $$ = algebra.NewRawProjection(false, $2)
+}
 ;
 
 
@@ -841,10 +898,15 @@ RAW expr
  *************************************************/
 
 upsert:
-UPSERT INTO bucket_ref
-optional_key
-source
-optional_returning
+UPSERT INTO bucket_ref key values opt_returning
+{
+  $$ = algebra.NewUpsert($3, $4, $5, $6)
+}
+|
+UPSERT INTO bucket_ref key fullselect opt_returning
+{
+  $$ = algebra.NewUpsert($3, $4, $5, $6)
+}
 ;
 
 
@@ -855,10 +917,10 @@ optional_returning
  *************************************************/
 
 delete:
-DELETE FROM bucket_ref optional_keys
-optional_where
-optional_limit
-optional_returning
+DELETE FROM bucket_ref opt_keys opt_where opt_limit opt_returning
+{
+  $$ = algebra.NewDelete($3, $4, $5, $6, $7)
+}
 ;
 
 
@@ -869,58 +931,95 @@ optional_returning
  *************************************************/
 
 update:
-UPDATE bucket_ref optional_keys
-set_unset
-optional_where
-optional_limit
-optional_returning
-;
-
-set_unset:
-set optional_unset
+UPDATE bucket_ref opt_keys set unset opt_where opt_limit opt_returning
+{
+  $$ = algebra.NewUpdate($2, $3, $4, $5, $6, $7, $8)
+}
 |
-unset
+UPDATE bucket_ref opt_keys set opt_where opt_limit opt_returning
+{
+  $$ = algebra.NewUpdate($2, $3, $4, nil, $5, $6, $7)
+}
+|
+UPDATE bucket_ref opt_keys unset opt_where opt_limit opt_returning
+{
+  $$ = algebra.NewUpdate($2, $3, nil, $4, $5, $6, $7)
+}
 ;
 
 set:
-SET set_paths
+SET set_terms
+{
+  $$ = algebra.NewSet($2)
+}
 ;
 
-set_paths:
-set_path
+set_terms:
+set_term
+{
+  $$ = algebra.SetTerms{$1}
+}
 |
-set_paths COMMA set_path
+set_terms COMMA set_term
+{
+  $$ = append($1, $3)
+}
 ;
 
-set_path:
-path EQ expr optional_update_for
+set_term:
+path EQ expr opt_update_for
+{
+  $$ = algebra.NewSetTerm($1, $3, $4)
+}
 ;
 
-optional_update_for:
+opt_update_for:
 /* empty */
+{
+  $$ = nil
+}
 |
 update_for
 ;
 
 update_for:
-FOR update_bindings optional_when END
+FOR update_bindings opt_when END
+{
+  $$ = algebra.NewUpdateFor($2, $3)
+}
 ;
 
 update_bindings:
 update_binding
+{
+  $$ = expression.Bindings{$1}
+}
 |
 update_bindings COMMA update_binding
+{
+  $$ = append($1, $3)
+}
 ;
 
 update_binding:
-variable IN path
+variable IN path_expr
+{
+  $$ = expression.NewBinding($1, $3)
+}
 ;
 
 variable:
 IDENTIFIER
 ;
 
-optional_when:
+path_expr:
+path
+{
+  $$ = $1
+}
+;
+
+opt_when:
 /* empty */
 {
   $$ = nil
@@ -932,24 +1031,30 @@ WHEN expr
 }
 ;
 
-optional_unset:
-/* empty */
-|
-unset
-;
-
 unset:
-UNSET unset_paths
+UNSET unset_terms
+{
+  $$ = $2
+}
 ;
 
-unset_paths:
-unset_path
+unset_terms:
+unset_term
+{
+  $$ = algebra.UnsetTerms{$1}
+}
 |
-unset_paths COMMA unset_path
+unset_terms COMMA unset_term
+{
+  $$ = append($1, $3)
+}
 ;
 
-unset_path:
-path optional_update_for
+unset_term:
+path opt_update_for
+{
+  $$ = algebra.NewUnsetTerm($1, $2)
+}
 ;
 
 
@@ -960,66 +1065,71 @@ path optional_update_for
  *************************************************/
 
 merge:
-MERGE INTO bucket_ref
-USING merge_source ON key
-WHEN merge_actions
-optional_limit
-optional_returning
-;
-
-merge_source:
-from_term
+MERGE INTO bucket_ref USING bucket_term opt_as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+{
+  $$ = algebra.NewMergeFrom($3, $5, $6, $8, $9, $10, $11, $12, $13)
+}
 |
-LPAREN fullselect RPAREN as_alias
-;
-
-merge_actions:
-MATCHED THEN merge_update_delete_insert
+MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+{
+  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11, $12, $13, $14, $15)
+}
 |
-NOT MATCHED THEN merge_insert
-;
-
-merge_update_delete_insert:
-merge_update
-optional_merge_delete_insert
+MERGE INTO bucket_ref USING LPAREN fullselect RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+{
+  $$ = algebra.NewMergeSelect($3, $6, $8, $10, $11, $12, $13, $14, $15)
+}
 |
-merge_delete
-optional_merge_insert
-;
-
-optional_merge_delete_insert:
-/* empty */
-|
-WHEN merge_delete_insert
-;
-
-merge_delete_insert:
-MATCHED THEN merge_delete
-optional_merge_insert
-|
-NOT MATCHED THEN merge_insert
-;
-
-optional_merge_insert:
-/* empty */
-|
-WHEN NOT MATCHED THEN merge_insert
+MERGE INTO bucket_ref USING LPAREN values RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+{
+  $$ = algebra.NewMergeValues($3, $6, $8, $10, $11, $12, $13, $14, $15)
+}
 ;
 
 merge_update:
-UPDATE
-set_unset
-optional_where
+/* empty */
+{
+  $$ = nil
+}
+|
+WHEN MATCHED THEN UPDATE set opt_where
+{
+  $$ = algebra.NewMergeUpdate($5, nil, $6)
+}
+|
+WHEN MATCHED THEN UPDATE set unset opt_where
+{
+  $$ = algebra.NewMergeUpdate($5, $6, $7)
+}
+|
+WHEN MATCHED THEN UPDATE unset opt_where
+{
+  $$ = algebra.NewMergeUpdate(nil, $5, $6)
+}
 ;
 
 merge_delete:
-DELETE
-optional_where
+/* empty */
+{
+  $$ = nil
+}
+|
+WHEN MATCHED THEN DELETE opt_where
+{
+  $$ = algebra.NewMergeDelete($5)
+}
 ;
 
 merge_insert:
-INSERT expr
-optional_where
+/* empty */
+{
+  $$ = nil
+}
+|
+WHEN NOT MATCHED THEN INSERT expr opt_where
+{
+  $$ = algebra.NewMergeInsert($6, $7)
+}
 ;
 
 
@@ -1032,15 +1142,15 @@ optional_where
 create_index:
 CREATE INDEX index_name
 ON bucket_spec LPAREN exprs RPAREN
-optional_partition
-optional_using
+opt_partition
+opt_using
 ;
 
 index_name:
 IDENTIFIER
 ;
 
-optional_partition:
+opt_partition:
 /* empty */
 |
 partition
@@ -1050,7 +1160,7 @@ partition:
 PARTITION BY exprs
 ;
 
-optional_using:
+opt_using:
 /* empty */
 |
 using
@@ -1432,13 +1542,13 @@ array
 ;
 
 object:
-LBRACE optional_members RBRACE
+LBRACE opt_members RBRACE
 {
   $$ = expression.NewObjectLiteral($2)
 }
 ;
 
-optional_members:
+opt_members:
 /* empty */
 {
   $$ = nil
@@ -1467,13 +1577,13 @@ STRING COLON expr
 ;
 
 array:
-LBRACKET optional_exprs RBRACKET
+LBRACKET opt_exprs RBRACKET
 {
   $$ = expression.NewArrayLiteral($2)
 }
 ;
 
-optional_exprs:
+opt_exprs:
 /* empty */
 {
   $$ = nil
@@ -1503,7 +1613,7 @@ searched_case
 ;
 
 simple_case:
-expr when_thens optional_else
+expr when_thens opt_else
 {
   $$ = expression.NewSimpleCase($1, $2, $3)
 }
@@ -1523,13 +1633,13 @@ when_thens WHEN expr THEN expr
 
 searched_case:
 when_thens
-optional_else
+opt_else
 {
   $$ = expression.NewSearchedCase($1, $2)
 }
 ;
 
-optional_else:
+opt_else:
 /* empty */
 {
   $$ = nil
@@ -1549,7 +1659,7 @@ ELSE expr
  *************************************************/
 
 function_expr:
-function_name LPAREN optional_exprs RPAREN
+function_name LPAREN opt_exprs RPAREN
 {
   $$ = nil;
   agg, ok := algebra.GetAggregate($1, false);
@@ -1643,12 +1753,12 @@ SATISFIES expr
 ;
 
 collection_xform:
-ARRAY expr FOR coll_bindings optional_when END
+ARRAY expr FOR coll_bindings opt_when END
 {
   $$ = expression.NewArray($2, $4, $5)
 }
 |
-FIRST expr FOR coll_bindings optional_when END
+FIRST expr FOR coll_bindings opt_when END
 {
   $$ = expression.NewFirst($2, $4, $5)
 }

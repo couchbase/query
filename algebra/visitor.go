@@ -26,6 +26,9 @@ type Visitor interface {
 	// Insert
 	VisitInsert(node *Insert) (interface{}, error)
 
+	// Upsert
+	VisitUpsert(node *Upsert) (interface{}, error)
+
 	// Delete
 	VisitDelete(node *Delete) (interface{}, error)
 

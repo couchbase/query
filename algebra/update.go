@@ -61,28 +61,30 @@ func (this *Update) Returning() ResultTerms {
 }
 
 type Set struct {
-	terms []*SetTerm
+	terms SetTerms
 }
 
-func NewSet(terms []*SetTerm) *Set {
+func NewSet(terms SetTerms) *Set {
 	return &Set{terms}
 }
 
-func (this *Set) Terms() []*SetTerm {
+func (this *Set) Terms() SetTerms {
 	return this.terms
 }
 
 type Unset struct {
-	terms []*UnsetTerm
+	terms UnsetTerms
 }
 
-func NewUnset(terms []*UnsetTerm) *Unset {
+func NewUnset(terms UnsetTerms) *Unset {
 	return &Unset{terms}
 }
 
-func (this *Unset) Terms() []*UnsetTerm {
+func (this *Unset) Terms() UnsetTerms {
 	return this.terms
 }
+
+type SetTerms []*SetTerm
 
 type SetTerm struct {
 	path      expression.Path       `json:"path"`
@@ -105,6 +107,8 @@ func (this *SetTerm) Value() expression.Expression {
 func (this *SetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
 }
+
+type UnsetTerms []*UnsetTerm
 
 type UnsetTerm struct {
 	path      expression.Path `json:"path"`
