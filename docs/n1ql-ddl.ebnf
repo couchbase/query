@@ -15,14 +15,16 @@ index-stmt ::= create-index | drop-index | alter-index
  *  index
  */
 
-create-index ::= 'CREATE' 'INDEX' identifier 'ON' bucket-spec '(' expr (',' expr)* ')' partition? using?
+create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-bucket-ref '(' expr (',' expr)* ')' partition? using?
 
-bucket-spec ::= (pool-name ':')? bucket-name
+index-name ::= identifier
+
+named-bucket-ref ::= (pool-name ':')? bucket-name
 
 partition ::= 'PARTITION' 'BY' expr (',' expr)*
 
 using ::= 'USING' 'VIEW'
 
-drop-index ::= 'DROP' 'INDEX' bucket-spec '.' identifier
+drop-index ::= 'DROP' 'INDEX' named-bucket-ref '.' index-name
 
-alter-index ::= 'ALTER' 'INDEX' bucket-spec '.' identifier 'RENAME' 'TO' identifier
+alter-index ::= 'ALTER' 'INDEX' named-bucket-ref '.' index-name 'RENAME' 'TO' index-name

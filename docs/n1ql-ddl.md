@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2014-06-24
+* Modified: 2014-07-03
 
 ## Summary
 
@@ -23,10 +23,6 @@ ddl-stmt:
 
 ![](diagram/ddl-stmt.png)
 
-bucket-name:
-
-![](diagram/bucket-name.png)
-
 ## Indexes
 
 Indexes always use **case-insensitive** matching to match field names
@@ -42,9 +38,17 @@ __create-index:__
 
 ![](diagram/create-index.png)
 
+_index-name:_
+
+![](diagram/index-name.png)
+
 _bucket-spec:_
 
 ![](diagram/bucket-spec.png)
+
+bucket-name:
+
+![](diagram/bucket-name.png)
 
 _partition:_
 
@@ -78,11 +82,12 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 ### Document History
 
 * 2013-07-30 - Initial checkin
-
 * 2014-06-18 - Syntax updates
-
 * 2014-06-24 - Bucket spec
     * Factor out bucket spec in syntax diagrams
+* 2014-06-24 - named-bucket-ref
+    * Renamed bucket-spec to named-bucket-ref
+    * Factored out index-name
 
 ### Open Issues
 
