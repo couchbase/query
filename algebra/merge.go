@@ -27,39 +27,6 @@ type Merge struct {
 	returning ResultTerms            `json:"returning"`
 }
 
-type MergeUpdate struct {
-	set   *Set                  `json:"set"`
-	unset *Unset                `json:"unset"`
-	where expression.Expression `json:"where"`
-}
-
-type MergeDelete struct {
-	where expression.Expression `json:"where"`
-}
-
-type MergeInsert struct {
-	value expression.Expression `json:"value"`
-	where expression.Expression `json:"where"`
-}
-
-func NewMergeFrom(bucket *BucketRef, from FromTerm, as string, key expression.Expression,
-	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
-	limit expression.Expression, returning ResultTerms) *Merge {
-	return &Merge{
-		bucket:    bucket,
-		from:      from,
-		query:     nil,
-		values:    nil,
-		as:        as,
-		key:       key,
-		update:    update,
-		delete:    delete,
-		insert:    insert,
-		limit:     limit,
-		returning: returning,
-	}
-}
-
 func NewMergeSelect(bucket *BucketRef, query *Select, as string, key expression.Expression,
 	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
 	limit expression.Expression, returning ResultTerms) *Merge {
@@ -98,6 +65,53 @@ func NewMergeValues(bucket *BucketRef, values expression.Expressions, as string,
 
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
+}
+
+type MergeActions struct {
+	Update *MergeUpdate
+	Delete *MergeDelete
+	Insert *MergeInsert
+}
+
+func NewMergeActions(update *MergeUpdate, delete *MergeDelete, insert *MergeInsert) *MergeActions {
+	return &MergeActions{
+		Update: update,
+		Delete: delete,
+		Insert: insert,
+	}
+}
+
+type MergeUpdate struct {
+	set   *Set                  `json:"set"`
+	unset *Unset                `json:"unset"`
+	where expression.Expression `json:"where"`
+}
+
+type MergeDelete struct {
+	where expression.Expression `json:"where"`
+}
+
+type MergeInsert struct {
+	value expression.Expression `json:"value"`
+	where expression.Expression `json:"where"`
+}
+
+func NewMergeFrom(bucket *BucketRef, from FromTerm, as string, key expression.Expression,
+	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
+	limit expression.Expression, returning ResultTerms) *Merge {
+	return &Merge{
+		bucket:    bucket,
+		from:      from,
+		query:     nil,
+		values:    nil,
+		as:        as,
+		key:       key,
+		update:    update,
+		delete:    delete,
+		insert:    insert,
+		limit:     limit,
+		returning: returning,
+	}
 }
 
 func NewMergeUpdate(set *Set, unset *Unset, where expression.Expression) *MergeUpdate {

@@ -3,6 +3,7 @@ package n1ql
 
 import "github.com/couchbaselabs/clog"
 import "github.com/couchbaselabs/query/algebra"
+import "github.com/couchbaselabs/query/catalog"
 import "github.com/couchbaselabs/query/expression"
 import "github.com/couchbaselabs/query/value"
 
@@ -17,38 +18,49 @@ n int
 f float64
 b bool
 
-expr         expression.Expression
-exprs        expression.Expressions
-whenTerm     *expression.WhenTerm
-whenTerms    expression.WhenTerms
-binding      *expression.Binding
-bindings     expression.Bindings
+expr             expression.Expression
+exprs            expression.Expressions
+whenTerm         *expression.WhenTerm
+whenTerms        expression.WhenTerms
+binding          *expression.Binding
+bindings         expression.Bindings
 
-explain      *algebra.Explain
-fullselect   *algebra.Select
-subresult    algebra.Subresult
-subselect    *algebra.Subselect
-fromTerm     algebra.FromTerm
-bucketTerm   *algebra.BucketTerm
-path         expression.Path
-group        *algebra.Group
-resultTerm   *algebra.ResultTerm
-resultTerms  algebra.ResultTerms
-projection   *algebra.Projection
-sortTerm     *algebra.SortTerm
-sortTerms    algebra.SortTerms
+explain          *algebra.Explain
 
-statement    algebra.Statement
-set          *algebra.Set
-unset        *algebra.Unset
-set_term     *algebra.SetTerm
-set_terms    algebra.SetTerms
-unset_term   *algebra.UnsetTerm
-unset_terms  algebra.UnsetTerms
-update_for   *algebra.UpdateFor
-merge_update *algebra.MergeUpdate
-merge_delete *algebra.MergeDelete
-merge_insert *algebra.MergeInsert
+statement        algebra.Statement
+
+fullselect       *algebra.Select
+subresult        algebra.Subresult
+subselect        *algebra.Subselect
+fromTerm         algebra.FromTerm
+bucketTerm       *algebra.BucketTerm
+path             expression.Path
+group            *algebra.Group
+resultTerm       *algebra.ResultTerm
+resultTerms      algebra.ResultTerms
+projection       *algebra.Projection
+sortTerm         *algebra.SortTerm
+sortTerms        algebra.SortTerms
+
+set              *algebra.Set
+unset            *algebra.Unset
+set_term         *algebra.SetTerm
+set_terms        algebra.SetTerms
+unset_term       *algebra.UnsetTerm
+unset_terms      algebra.UnsetTerms
+update_for       *algebra.UpdateFor
+merge_actions    *algebra.MergeActions
+merge_update     *algebra.MergeUpdate
+merge_delete     *algebra.MergeDelete
+merge_insert     *algebra.MergeInsert
+
+named_bucket_ref *algebra.NamedBucketRef
+
+create_index     *algebra.CreateIndex
+drop_index       *algebra.DropIndex
+alter_index      *algebra.AlterIndex
+index_type       catalog.IndexType
+rename           algebra.Rename
 }
 
 %token ALL
@@ -179,84 +191,91 @@ merge_insert *algebra.MergeInsert
 %left           LPAREN RPAREN
 
 /* Types */
-%type <s>            STRING
-%type <s>            IDENTIFIER
-%type <f>            NUMBER
-%type <n>            INT
-%type <expr>         literal object array
-%type <binding>      member
-%type <bindings>     members opt_members
+%type <s>                STRING
+%type <s>                IDENTIFIER
+%type <f>                NUMBER
+%type <n>                INT
+%type <expr>             literal object array
+%type <binding>          member
+%type <bindings>         members opt_members
 
-%type <expr>         expr c_expr b_expr
-%type <exprs>        exprs opt_exprs
-%type <binding>      binding
-%type <bindings>     bindings
+%type <expr>             expr c_expr b_expr
+%type <exprs>            exprs opt_exprs
+%type <binding>          binding
+%type <bindings>         bindings
 
-%type <s>            alias as_alias opt_as_alias variable
+%type <s>                alias as_alias opt_as_alias variable
 
-%type <expr>         case_expr simple_or_searched_case simple_case searched_case opt_else
-%type <whenTerms>    when_thens
+%type <expr>             case_expr simple_or_searched_case simple_case searched_case opt_else
+%type <whenTerms>        when_thens
 
-%type <expr>         collection_expr collection_cond collection_xform
-%type <binding>      coll_binding
-%type <bindings>     coll_bindings
-%type <expr>         satisfies
-%type <expr>         opt_when
+%type <expr>             collection_expr collection_cond collection_xform
+%type <binding>          coll_binding
+%type <bindings>         coll_bindings
+%type <expr>             satisfies
+%type <expr>             opt_when
 
-%type <expr>         function_expr
-%type <s>            function_name
+%type <expr>             function_expr
+%type <s>                function_name
 
-%type <expr>         paren_or_subquery_expr paren_or_subquery
+%type <expr>             paren_or_subquery_expr paren_or_subquery
 
-%type <explain>      explain
-%type <fullselect>   fullselect
-%type <subresult>    subselects
-%type <subselect>    subselect
-%type <subselect>    select_from
-%type <subselect>    from_select
-%type <fromTerm>     from_term from opt_from
-%type <bucketTerm>   bucket_term
-%type <b>            opt_join_type
-%type <path>         path opt_subpath
-%type <s>            pool_name bucket_name
-%type <expr>         keys opt_keys
-%type <bindings>     opt_let let
-%type <expr>         opt_where where
-%type <group>        opt_group group
-%type <bindings>     opt_letting letting
-%type <expr>         opt_having having
-%type <resultTerm>   project
-%type <resultTerms>  projects
-%type <projection>   projection select_clause
-%type <sortTerm>     sort_term
-%type <sortTerms>    sort_terms order_by opt_order_by
-%type <expr>         limit opt_limit
-%type <expr>         offset opt_offset
-%type <b>            dir opt_dir
+%type <explain>          explain
+%type <fullselect>       fullselect
+%type <subresult>        subselects
+%type <subselect>        subselect
+%type <subselect>        select_from
+%type <subselect>        from_select
+%type <fromTerm>         from_term from opt_from
+%type <bucketTerm>       bucket_term
+%type <b>                opt_join_type
+%type <path>             path opt_subpath
+%type <s>                pool_name bucket_name
+%type <expr>             keys opt_keys
+%type <bindings>         opt_let let
+%type <expr>             opt_where where
+%type <group>            opt_group group
+%type <bindings>         opt_letting letting
+%type <expr>             opt_having having
+%type <resultTerm>       project
+%type <resultTerms>      projects
+%type <projection>       projection select_clause
+%type <sortTerm>         sort_term
+%type <sortTerms>        sort_terms order_by opt_order_by
+%type <expr>             limit opt_limit
+%type <expr>             offset opt_offset
+%type <b>                dir opt_dir
 
-%type <statement>    stmt select_stmt dml_stmt ddl_stmt
-%type <statement>    insert upsert delete update merge
-%type <statement>    index_stmt create_index drop_index alter_index
+%type <statement>        stmt select_stmt dml_stmt ddl_stmt
+%type <statement>        insert upsert delete update merge
+%type <statement>        index_stmt create_index drop_index alter_index
 
-%type <bucketRef>    bucket_ref
-%type <exprs>        values
-%type <expr>         key opt_key
-%type <projection>   returns returning opt_returning
-%type <binding>      update_binding
-%type <bindings>     update_bindings opt_update_bindings
-%type <expr>         path_expr
-%type <set>          set
-%type <set_term>     set_term
-%type <set_terms>    set_terms
-%type <unset>        unset
-%type <unset_term>   unset_term
-%type <unset_terms>  unset_terms
-%type <update_for>   update_for opt_update_for
-%type <binding>      update_binding
-%type <bindings>     update_bindings
-%type <merge_update> merge_update
-%type <merge_delete> merge_delete
-%type <merge_insert> merge_insert
+%type <bucketRef>        bucket_ref
+%type <exprs>            values
+%type <expr>             key opt_key
+%type <projection>       returns returning opt_returning
+%type <binding>          update_binding
+%type <bindings>         update_bindings
+%type <expr>             path_expr
+%type <set>              set
+%type <set_term>         set_term
+%type <set_terms>        set_terms
+%type <unset>            unset
+%type <unset_term>       unset_term
+%type <unset_terms>      unset_terms
+%type <update_for>       update_for opt_update_for
+%type <binding>          update_binding
+%type <bindings>         update_bindings
+%type <merge_actions>    merge_actions opt_merge_delete_insert
+%type <merge_update>     merge_update
+%type <merge_delete>     merge_delete
+%type <merge_insert>     merge_insert opt_merge_insert
+
+%type <s>                index_name
+%type <named_bucket_ref> named_bucket_ref
+%type <exprs>            index_partition
+%type <index_type>       index_using
+%type <rename>           rename
 
 %start input
 
@@ -1065,70 +1084,106 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO bucket_ref USING bucket_term opt_as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+MERGE INTO bucket_ref USING bucket_term ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeFrom($3, $5, $6, $8, $9, $10, $11, $12, $13)
+  $$ = algebra.NewMergeFrom($3, $5, $7, $8.Update, $8.Delete, $8.Insert, $9, $10)
 }
 |
-MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11, $12, $13, $14, $15)
+  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 |
-MERGE INTO bucket_ref USING LPAREN fullselect RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+MERGE INTO bucket_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeSelect($3, $6, $8, $10, $11, $12, $13, $14, $15)
+  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 |
-MERGE INTO bucket_ref USING LPAREN values RPAREN as_alias ON key merge_update merge_delete merge_insert opt_limit opt_returning
+MERGE INTO bucket_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeValues($3, $6, $8, $10, $11, $12, $13, $14, $15)
+  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+}
+;
+
+merge_actions:
+/* empty */
+{
+  $$ = algebra.NewMergeActions(nil, nil, nil)
+}
+|
+WHEN MATCHED THEN UPDATE merge_update opt_merge_delete_insert
+{
+  $$ = algebra.NewMergeActions($5, $6.Delete, $6.Insert)
+}
+|
+WHEN MATCHED THEN DELETE merge_delete opt_merge_insert
+{
+  $$ = algebra.NewMergeActions(nil, $5, $6)
+}
+|
+WHEN NOT MATCHED THEN INSERT merge_insert
+{
+  $$ = algebra.NewMergeActions(nil, nil, $6)
+}
+;
+
+opt_merge_delete_insert:
+/* empty */
+{
+  $$ = algebra.NewMergeActions(nil, nil, nil)
+}
+|
+WHEN MATCHED THEN DELETE merge_delete opt_merge_insert
+{
+  $$ = algebra.NewMergeActions(nil, $5, $6)
+}
+|
+WHEN NOT MATCHED THEN INSERT merge_insert
+{
+  $$ = algebra.NewMergeActions(nil, nil, $6)
+}
+;
+
+opt_merge_insert:
+/* empty */
+{
+  $$ = nil
+}
+|
+WHEN NOT MATCHED THEN INSERT merge_insert
+{
+  $$ = $6
 }
 ;
 
 merge_update:
-/* empty */
+set opt_where
 {
-  $$ = nil
+  $$ = algebra.NewMergeUpdate($1, nil, $2)
 }
 |
-WHEN MATCHED THEN UPDATE set opt_where
+set unset opt_where
 {
-  $$ = algebra.NewMergeUpdate($5, nil, $6)
+  $$ = algebra.NewMergeUpdate($1, $2, $3)
 }
 |
-WHEN MATCHED THEN UPDATE set unset opt_where
+unset opt_where
 {
-  $$ = algebra.NewMergeUpdate($5, $6, $7)
-}
-|
-WHEN MATCHED THEN UPDATE unset opt_where
-{
-  $$ = algebra.NewMergeUpdate(nil, $5, $6)
+  $$ = algebra.NewMergeUpdate(nil, $1, $2)
 }
 ;
 
 merge_delete:
-/* empty */
+opt_where
 {
-  $$ = nil
-}
-|
-WHEN MATCHED THEN DELETE opt_where
-{
-  $$ = algebra.NewMergeDelete($5)
+  $$ = algebra.NewMergeDelete($1)
 }
 ;
 
 merge_insert:
-/* empty */
+expr opt_where
 {
-  $$ = nil
-}
-|
-WHEN NOT MATCHED THEN INSERT expr opt_where
-{
-  $$ = algebra.NewMergeInsert($6, $7)
+  $$ = algebra.NewMergeInsert($1, $2)
 }
 ;
 
@@ -1140,34 +1195,50 @@ WHEN NOT MATCHED THEN INSERT expr opt_where
  *************************************************/
 
 create_index:
-CREATE INDEX index_name
-ON bucket_spec LPAREN exprs RPAREN
-opt_partition
-opt_using
+CREATE INDEX index_name ON named_bucket_ref LPAREN exprs RPAREN index_partition index_using
+{
+  $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10)
+}
 ;
 
 index_name:
 IDENTIFIER
 ;
 
-opt_partition:
-/* empty */
+named_bucket_ref:
+bucket_name
+{
+  $$ = algebra.NewNamedBucketRef("", $1)
+}
 |
-partition
+pool_name COLON bucket_name
+{
+  $$ = algebra.NewNamedBucketRef($1, $3)
+}
 ;
 
-partition:
+index_partition:
+/* empty */
+{
+  $$ = nil
+}
+|
 PARTITION BY exprs
+{
+  $$ = $3
+}
 ;
 
-opt_using:
+index_using:
 /* empty */
+{
+  $$ = catalog.VIEW
+}
 |
-using
-;
-
-using:
 USING VIEW
+{
+  $$ = catalog.VIEW
+}
 ;
 
 
@@ -1178,9 +1249,11 @@ USING VIEW
  *************************************************/
 
 drop_index:
-DROP INDEX bucket_spec DOT index_name
+DROP INDEX named_bucket_ref DOT index_name
+{
+  $$ = algebra.NewDropIndex($3, $5)
+}
 ;
-
 
 /*************************************************
  *
@@ -1189,7 +1262,21 @@ DROP INDEX bucket_spec DOT index_name
  *************************************************/
 
 alter_index:
-ALTER INDEX bucket_spec DOT index_name RENAME TO index_name
+ALTER INDEX named_bucket_ref DOT index_name rename
+{
+  $$ = algebra.NewAlterIndex($3, $5, $6)
+}
+
+rename:
+/* empty */
+{
+  $$ = nil
+}
+|
+RENAME TO index_name
+{
+  $$ = algebra.Rename($3)
+}
 ;
 
 

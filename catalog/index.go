@@ -18,6 +18,7 @@ import (
 type IndexType string
 
 const (
+	DEFAULT     IndexType = "default"     // default may vary per backend
 	UNSPECIFIED IndexType = "unspecified" // used by non-view primary_indexes
 	VIEW        IndexType = "view"
 	LSM         IndexType = "lsm"
