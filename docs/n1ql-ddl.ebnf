@@ -21,7 +21,7 @@ index-name ::= identifier
 
 named-bucket-ref ::= (pool-name ':')? bucket-name
 
-partition ::= 'PARTITION' 'BY' expr (',' expr)*
+partition ::= 'PARTITION' 'BY' expr
 
 using ::= 'USING' 'VIEW'
 

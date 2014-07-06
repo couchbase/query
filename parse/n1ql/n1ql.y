@@ -42,25 +42,24 @@ projection       *algebra.Projection
 sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
 
+bucketRef        *algebra.BucketRef
+
 set              *algebra.Set
 unset            *algebra.Unset
-set_term         *algebra.SetTerm
-set_terms        algebra.SetTerms
-unset_term       *algebra.UnsetTerm
-unset_terms      algebra.UnsetTerms
-update_for       *algebra.UpdateFor
-merge_actions    *algebra.MergeActions
-merge_update     *algebra.MergeUpdate
-merge_delete     *algebra.MergeDelete
-merge_insert     *algebra.MergeInsert
+setTerm          *algebra.SetTerm
+setTerms         algebra.SetTerms
+unsetTerm        *algebra.UnsetTerm
+unsetTerms       algebra.UnsetTerms
+updateFor        *algebra.UpdateFor
+mergeActions     *algebra.MergeActions
+mergeUpdate      *algebra.MergeUpdate
+mergeDelete      *algebra.MergeDelete
+mergeInsert      *algebra.MergeInsert
 
-named_bucket_ref *algebra.NamedBucketRef
-
-create_index     *algebra.CreateIndex
-drop_index       *algebra.DropIndex
-alter_index      *algebra.AlterIndex
-index_type       catalog.IndexType
-rename           algebra.Rename
+createIndex      *algebra.CreateIndex
+dropIndex        *algebra.DropIndex
+alterIndex       *algebra.AlterIndex
+indexType        catalog.IndexType
 }
 
 %token ALL
@@ -258,24 +257,24 @@ rename           algebra.Rename
 %type <bindings>         update_bindings
 %type <expr>             path_expr
 %type <set>              set
-%type <set_term>         set_term
-%type <set_terms>        set_terms
+%type <setTerm>          set_term
+%type <setTerms>         set_terms
 %type <unset>            unset
-%type <unset_term>       unset_term
-%type <unset_terms>      unset_terms
-%type <update_for>       update_for opt_update_for
+%type <unsetTerm>        unset_term
+%type <unsetTerms>       unset_terms
+%type <updateFor>        update_for opt_update_for
 %type <binding>          update_binding
 %type <bindings>         update_bindings
-%type <merge_actions>    merge_actions opt_merge_delete_insert
-%type <merge_update>     merge_update
-%type <merge_delete>     merge_delete
-%type <merge_insert>     merge_insert opt_merge_insert
+%type <mergeActions>     merge_actions opt_merge_delete_insert
+%type <mergeUpdate>      merge_update
+%type <mergeDelete>      merge_delete
+%type <mergeInsert>      merge_insert opt_merge_insert
 
 %type <s>                index_name
-%type <named_bucket_ref> named_bucket_ref
-%type <exprs>            index_partition
-%type <index_type>       index_using
-%type <rename>           rename
+%type <bucketRef>        named_bucket_ref
+%type <expr>             index_partition
+%type <indexType>        index_using
+%type <s>                rename
 
 %start input
 
@@ -919,12 +918,12 @@ RAW expr
 upsert:
 UPSERT INTO bucket_ref key values opt_returning
 {
-  $$ = algebra.NewUpsert($3, $4, $5, $6)
+  $$ = algebra.NewUpsertValues($3, $4, $5, $6)
 }
 |
 UPSERT INTO bucket_ref key fullselect opt_returning
 {
-  $$ = algebra.NewUpsert($3, $4, $5, $6)
+  $$ = algebra.NewUpsertSelect($3, $4, $5, $6)
 }
 ;
 
@@ -1053,7 +1052,7 @@ WHEN expr
 unset:
 UNSET unset_terms
 {
-  $$ = $2
+  $$ = algebra.NewUnset($2)
 }
 ;
 
@@ -1086,7 +1085,7 @@ path opt_update_for
 merge:
 MERGE INTO bucket_ref USING bucket_term ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeFrom($3, $5, $7, $8.Update, $8.Delete, $8.Insert, $9, $10)
+  $$ = algebra.NewMergeFrom($3, $5, "", $7, $8.Update, $8.Delete, $8.Insert, $9, $10)
 }
 |
 MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
@@ -1096,12 +1095,12 @@ MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_action
 |
 MERGE INTO bucket_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+  $$ = algebra.NewMergeSelect($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 |
 MERGE INTO bucket_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-  $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+  $$ = algebra.NewMergeValues($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 ;
 
@@ -1208,12 +1207,12 @@ IDENTIFIER
 named_bucket_ref:
 bucket_name
 {
-  $$ = algebra.NewNamedBucketRef("", $1)
+  $$ = algebra.NewBucketRef("", $1, "")
 }
 |
 pool_name COLON bucket_name
 {
-  $$ = algebra.NewNamedBucketRef($1, $3)
+  $$ = algebra.NewBucketRef($1, $3, "")
 }
 ;
 
@@ -1223,7 +1222,7 @@ index_partition:
   $$ = nil
 }
 |
-PARTITION BY exprs
+PARTITION BY expr
 {
   $$ = $3
 }
@@ -1270,12 +1269,12 @@ ALTER INDEX named_bucket_ref DOT index_name rename
 rename:
 /* empty */
 {
-  $$ = nil
+  $$ = ""
 }
 |
 RENAME TO index_name
 {
-  $$ = algebra.Rename($3)
+  $$ = $3
 }
 ;
 

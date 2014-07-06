@@ -10,31 +10,29 @@
 package algebra
 
 type Visitor interface {
-	// Select
+	// SELECT
 	VisitSelect(node *Select) (interface{}, error)
 	VisitSubselect(node *Subselect) (interface{}, error)
 	VisitUnion(node *Union) (interface{}, error)
 	VisitUnionAll(node *UnionAll) (interface{}, error)
-
-	// FromTerm
 	VisitBucketTerm(node *BucketTerm) (interface{}, error)
 	VisitParentTerm(node *ParentTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)
 
-	// Insert
+	// DML
 	VisitInsert(node *Insert) (interface{}, error)
-
-	// Upsert
 	VisitUpsert(node *Upsert) (interface{}, error)
-
-	// Delete
 	VisitDelete(node *Delete) (interface{}, error)
-
-	// Update
 	VisitUpdate(node *Update) (interface{}, error)
-
-	// Merge
 	VisitMerge(node *Merge) (interface{}, error)
+
+	// DDL
+	VisitCreateIndex(node *CreateIndex) (interface{}, error)
+	VisitDropIndex(node *DropIndex) (interface{}, error)
+	VisitAlterIndex(node *AlterIndex) (interface{}, error)
+
+	// EXPLAIN
+	VisitExplain(node *Explain) (interface{}, error)
 }

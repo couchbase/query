@@ -9,23 +9,14 @@
 
 package algebra
 
-import (
-	"github.com/couchbaselabs/query/expression"
-)
-
-type Delete struct {
-	bucket    *BucketRef            `json:"bucket"`
-	keys      expression.Expression `json:"keys"`
-	where     expression.Expression `json:"where"`
-	limit     expression.Expression `json:"limit"`
-	returning *Projection           `json:"returning"`
+type Explain struct {
+	stmt Statement `json:"Statement"`
 }
 
-func NewDelete(bucket *BucketRef, keys, where, limit expression.Expression,
-	returning *Projection) *Delete {
-	return &Delete{bucket, keys, where, limit, returning}
+func NewExplain(stmt Statement) *Explain {
+	return &Explain{stmt}
 }
 
-func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitDelete(this)
+func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitExplain(this)
 }

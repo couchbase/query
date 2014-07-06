@@ -18,30 +18,27 @@ type Insert struct {
 	key       expression.Expression  `json:"key"`
 	values    expression.Expressions `json:"values"`
 	query     *Select                `json:"query"`
-	as        string                 `json:"as"`
 	returning *Projection            `json:"returning"`
 }
 
 func NewInsertValues(bucket *BucketRef, key expression.Expression,
-	values expression.Expressions, as string, returning *Projection) *Insert {
+	values expression.Expressions, returning *Projection) *Insert {
 	return &Insert{
 		bucket:    bucket,
 		key:       key,
 		values:    values,
 		query:     nil,
-		as:        as,
 		returning: returning,
 	}
 }
 
 func NewInsertSelect(bucket *BucketRef, key expression.Expression,
-	query *Select, as string, returning *Projection) *Insert {
+	query *Select, returning *Projection) *Insert {
 	return &Insert{
 		bucket:    bucket,
 		key:       key,
 		values:    nil,
 		query:     query,
-		as:        as,
 		returning: returning,
 	}
 }

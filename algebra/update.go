@@ -20,11 +20,11 @@ type Update struct {
 	unset     *Unset                `json:"unset"`
 	where     expression.Expression `json:"where"`
 	limit     expression.Expression `json:"limit"`
-	returning ResultTerms           `json:"returning"`
+	returning *Projection           `json:"returning"`
 }
 
 func NewUpdate(bucket *BucketRef, keys expression.Expression, set *Set, unset *Unset,
-	where, limit expression.Expression, returning ResultTerms) *Update {
+	where, limit expression.Expression, returning *Projection) *Update {
 	return &Update{bucket, keys, set, unset, where, limit, returning}
 }
 
@@ -56,7 +56,7 @@ func (this *Update) Limit() expression.Expression {
 	return this.limit
 }
 
-func (this *Update) Returning() ResultTerms {
+func (this *Update) Returning() *Projection {
 	return this.returning
 }
 

@@ -18,30 +18,27 @@ type Upsert struct {
 	key       expression.Expression  `json:"key"`
 	values    expression.Expressions `json:"values"`
 	query     *Select                `json:"query"`
-	as        string                 `json:"as"`
 	returning *Projection            `json:"returning"`
 }
 
 func NewUpsertValues(bucket *BucketRef, key expression.Expression,
-	values expression.Expressions, as string, returning *Projection) *Upsert {
+	values expression.Expressions, returning *Projection) *Upsert {
 	return &Upsert{
 		bucket:    bucket,
 		key:       key,
 		values:    values,
 		query:     nil,
-		as:        as,
 		returning: returning,
 	}
 }
 
 func NewUpsertSelect(bucket *BucketRef, key expression.Expression,
-	query *Select, as string, returning *Projection) *Upsert {
+	query *Select, returning *Projection) *Upsert {
 	return &Upsert{
 		bucket:    bucket,
 		key:       key,
 		values:    nil,
 		query:     query,
-		as:        as,
 		returning: returning,
 	}
 }
