@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -197,16 +197,16 @@ func TestMockIndex(t *testing.T) {
 	}
 
 	expected_error := "Invalid lower bound 4 of type float64."
-	if err.Error() != expected_error {
-		t.Errorf("Unexpected error message %s (expected %s)", err.Error(), expected_error)
+	if errors.Error() != expected_error {
+		t.Errorf("Unexpected error message %s (expected %s)", errors.Error(), expected_error)
 	}
 
 }
 
 // Helper function to scan the all_docs index of given bucket with given span
-func doIndexScan(t *testing.T, b catalog.Bucket, span catalog.Span) (e []*catalog.IndexEntry, excp err.Error) {
-	warnChan := make(err.ErrorChannel)
-	errChan := make(err.ErrorChannel)
+func doIndexScan(t *testing.T, b catalog.Bucket, span catalog.Span) (e []*catalog.IndexEntry, excp errors.Error) {
+	warnChan := make(errors.ErrorChannel)
+	errChan := make(errors.ErrorChannel)
 	defer close(warnChan)
 	defer close(errChan)
 	conn := catalog.NewIndexConnection(warnChan, errChan)

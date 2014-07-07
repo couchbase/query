@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -41,7 +41,7 @@ func (b *bucketbucket) Name() string {
 	return b.name
 }
 
-func (b *bucketbucket) Count() (int64, err.Error) {
+func (b *bucketbucket) Count() (int64, errors.Error) {
 	count := int64(0)
 	poolIds, excp := b.pool.site.actualSite.PoolIds()
 	if excp == nil {
@@ -52,22 +52,22 @@ func (b *bucketbucket) Count() (int64, err.Error) {
 				if excp == nil {
 					count += int64(len(bucketIds))
 				} else {
-					return 0, err.NewError(excp, "")
+					return 0, errors.NewError(excp, "")
 				}
 			} else {
-				return 0, err.NewError(excp, "")
+				return 0, errors.NewError(excp, "")
 			}
 		}
 		return count, nil
 	}
-	return 0, err.NewError(excp, "")
+	return 0, errors.NewError(excp, "")
 }
 
-func (b *bucketbucket) IndexIds() ([]string, err.Error) {
+func (b *bucketbucket) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *bucketbucket) IndexNames() ([]string, err.Error) {
+func (b *bucketbucket) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -75,23 +75,23 @@ func (b *bucketbucket) IndexNames() ([]string, err.Error) {
 	return rv, nil
 }
 
-func (b *bucketbucket) IndexById(id string) (catalog.Index, err.Error) {
+func (b *bucketbucket) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *bucketbucket) IndexByName(name string) (catalog.Index, err.Error) {
+func (b *bucketbucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
-		return nil, err.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
 	}
 	return index, nil
 }
 
-func (b *bucketbucket) IndexByPrimary() (catalog.PrimaryIndex, err.Error) {
+func (b *bucketbucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *bucketbucket) Indexes() ([]catalog.Index, err.Error) {
+func (b *bucketbucket) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -99,19 +99,19 @@ func (b *bucketbucket) Indexes() ([]catalog.Index, err.Error) {
 	return rv, nil
 }
 
-func (b *bucketbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, err.Error) {
+func (b *bucketbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
 
-	return nil, err.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucketbucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, err.Error) {
-	return nil, err.NewError(nil, "Not supported.")
+func (b *bucketbucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucketbucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
+func (b *bucketbucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -125,7 +125,7 @@ func (b *bucketbucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
 	return rv, nil
 }
 
-func (b *bucketbucket) FetchOne(key string) (value.Value, err.Error) {
+func (b *bucketbucket) FetchOne(key string) (value.Value, errors.Error) {
 	ids := strings.SplitN(key, "/", 2)
 
 	pool, err := b.pool.site.actualSite.PoolById(ids[0])
@@ -144,27 +144,27 @@ func (b *bucketbucket) FetchOne(key string) (value.Value, err.Error) {
 	return nil, err
 }
 
-func (b *bucketbucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucketbucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucketbucket) Update(updates []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucketbucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucketbucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucketbucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucketbucket) Delete(deletes []string) err.Error {
+func (b *bucketbucket) Delete(deletes []string) errors.Error {
 	// FIXME
-	return err.NewError(nil, "Not yet implemented.")
+	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func newBucketsBucket(p *pool) (*bucketbucket, err.Error) {
+func newBucketsBucket(p *pool) (*bucketbucket, errors.Error) {
 	b := new(bucketbucket)
 	b.pool = p
 	b.name = BUCKET_NAME_BUCKETS
@@ -195,8 +195,8 @@ func (pi *bucketIndex) Type() catalog.IndexType {
 	return catalog.UNSPECIFIED
 }
 
-func (pi *bucketIndex) Drop() err.Error {
-	return err.NewError(nil, "Primary index cannot be dropped.")
+func (pi *bucketIndex) Drop() errors.Error {
+	return errors.NewError(nil, "Primary index cannot be dropped.")
 }
 
 func (pi *bucketIndex) EqualKey() expression.Expressions {
@@ -211,7 +211,7 @@ func (pi *bucketIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *bucketIndex) Statistics(span *catalog.Span) (catalog.Statistics, err.Error) {
+func (pi *bucketIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
 	return nil, nil
 }
 
@@ -248,7 +248,7 @@ func (pi *bucketIndex) Scan(span catalog.Span, distinct bool, limit int64, conn 
 	case string:
 		val = a
 	default:
-		conn.SendError(err.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
+		conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
 		return
 	}
 

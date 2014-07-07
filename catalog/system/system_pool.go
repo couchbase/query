@@ -11,7 +11,7 @@ package system
 
 import (
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 )
 
 type pool struct {
@@ -33,11 +33,11 @@ func (p *pool) Name() string {
 	return p.name
 }
 
-func (p *pool) BucketIds() ([]string, err.Error) {
+func (p *pool) BucketIds() ([]string, errors.Error) {
 	return p.BucketNames()
 }
 
-func (p *pool) BucketNames() ([]string, err.Error) {
+func (p *pool) BucketNames() ([]string, errors.Error) {
 	rv := make([]string, len(p.buckets))
 	i := 0
 	for k, _ := range p.buckets {
@@ -47,21 +47,21 @@ func (p *pool) BucketNames() ([]string, err.Error) {
 	return rv, nil
 }
 
-func (p *pool) BucketById(id string) (catalog.Bucket, err.Error) {
+func (p *pool) BucketById(id string) (catalog.Bucket, errors.Error) {
 	return p.BucketByName(id)
 }
 
-func (p *pool) BucketByName(name string) (catalog.Bucket, err.Error) {
+func (p *pool) BucketByName(name string) (catalog.Bucket, errors.Error) {
 	b, ok := p.buckets[name]
 	if !ok {
-		return nil, err.NewError(nil, "Bucket "+name+" not found.")
+		return nil, errors.NewError(nil, "Bucket "+name+" not found.")
 	}
 
 	return b, nil
 }
 
 // newPool creates a new pool.
-func newPool(s *site) (*pool, err.Error) {
+func newPool(s *site) (*pool, errors.Error) {
 	p := new(pool)
 	p.site = s
 	p.id = POOL_ID
@@ -75,7 +75,7 @@ func newPool(s *site) (*pool, err.Error) {
 	return p, nil
 }
 
-func (p *pool) loadBuckets() (e err.Error) {
+func (p *pool) loadBuckets() (e errors.Error) {
 
 	sb, e := newSitesBucket(p)
 	if e != nil {

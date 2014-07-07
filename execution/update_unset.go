@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -49,7 +49,7 @@ func (this *Unset) RunOnce(context *Context, parent value.Value) {
 func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool {
 	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
 	if !ok {
-		context.ErrorChannel() <- err.NewError(nil,
+		context.ErrorChannel() <- errors.NewError(nil,
 			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone))
 		return false
 	}

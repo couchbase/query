@@ -12,7 +12,7 @@ package execution
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -48,7 +48,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 
 		vals, e := this.plan.Values().Evaluate(parent, context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating VALUES.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating VALUES.")
 			return
 		}
 

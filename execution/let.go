@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -51,7 +51,7 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 	for _, b := range this.plan.Bindings() {
 		v, e := b.Expression().Evaluate(item, context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating LET.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating LET.")
 			return false
 		}
 

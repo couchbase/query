@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -47,7 +47,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluating JOIN keys.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluating JOIN keys.")
 		return false
 	}
 
@@ -73,7 +73,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		case string:
 			keys[i] = key
 		default:
-			context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+			context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
 				"Missing or invalid join key %v of type %T.",
 				key, key))
 			return false
@@ -99,7 +99,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			var e error
 			joinItem, e = project.Evaluate(joinItem, context)
 			if e != nil {
-				context.ErrorChannel() <- err.NewError(e,
+				context.ErrorChannel() <- errors.NewError(e,
 					"Error evaluating join path.")
 				return false
 			}

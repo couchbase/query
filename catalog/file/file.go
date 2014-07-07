@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -43,32 +43,32 @@ func (s *site) URL() string {
 	return "file://" + s.path
 }
 
-func (s *site) PoolIds() ([]string, err.Error) {
+func (s *site) PoolIds() ([]string, errors.Error) {
 	return s.PoolNames()
 }
 
-func (s *site) PoolNames() ([]string, err.Error) {
+func (s *site) PoolNames() ([]string, errors.Error) {
 	return s.poolNames, nil
 }
 
-func (s *site) PoolById(id string) (p catalog.Pool, e err.Error) {
+func (s *site) PoolById(id string) (p catalog.Pool, e errors.Error) {
 	return s.PoolByName(id)
 }
 
-func (s *site) PoolByName(name string) (p catalog.Pool, e err.Error) {
+func (s *site) PoolByName(name string) (p catalog.Pool, e errors.Error) {
 	p, ok := s.pools[strings.ToUpper(name)]
 	if !ok {
-		e = err.NewError(nil, "Pool "+name+" not found.")
+		e = errors.NewError(nil, "Pool "+name+" not found.")
 	}
 
 	return
 }
 
 // NewSite creates a new file-based site for the given filepath.
-func NewSite(path string) (s catalog.Site, e err.Error) {
+func NewSite(path string) (s catalog.Site, e errors.Error) {
 	path, er := filepath.Abs(path)
 	if er != nil {
-		return nil, err.NewError(er, "")
+		return nil, errors.NewError(er, "")
 	}
 
 	fs := &site{path: path}
@@ -82,10 +82,10 @@ func NewSite(path string) (s catalog.Site, e err.Error) {
 	return
 }
 
-func (s *site) loadPools() (e err.Error) {
+func (s *site) loadPools() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(s.path)
 	if er != nil {
-		return err.NewError(er, "")
+		return errors.NewError(er, "")
 	}
 
 	s.pools = make(map[string]*pool, len(dirEntries))
@@ -97,7 +97,7 @@ func (s *site) loadPools() (e err.Error) {
 			s.poolNames = append(s.poolNames, dirEntry.Name())
 			diru := strings.ToUpper(dirEntry.Name())
 			if _, ok := s.pools[diru]; ok {
-				return err.NewError(nil, "Duplicate pool name "+dirEntry.Name())
+				return errors.NewError(nil, "Duplicate pool name "+dirEntry.Name())
 			}
 
 			p, e = newPool(s, dirEntry.Name())
@@ -132,22 +132,22 @@ func (p *pool) Name() string {
 	return p.name
 }
 
-func (p *pool) BucketIds() ([]string, err.Error) {
+func (p *pool) BucketIds() ([]string, errors.Error) {
 	return p.BucketNames()
 }
 
-func (p *pool) BucketNames() ([]string, err.Error) {
+func (p *pool) BucketNames() ([]string, errors.Error) {
 	return p.bucketNames, nil
 }
 
-func (p *pool) BucketById(id string) (b catalog.Bucket, e err.Error) {
+func (p *pool) BucketById(id string) (b catalog.Bucket, e errors.Error) {
 	return p.BucketByName(id)
 }
 
-func (p *pool) BucketByName(name string) (b catalog.Bucket, e err.Error) {
+func (p *pool) BucketByName(name string) (b catalog.Bucket, e errors.Error) {
 	b, ok := p.buckets[strings.ToUpper(name)]
 	if !ok {
-		e = err.NewError(nil, "Bucket "+name+" not found.")
+		e = errors.NewError(nil, "Bucket "+name+" not found.")
 	}
 
 	return
@@ -158,7 +158,7 @@ func (p *pool) path() string {
 }
 
 // newPool creates a new pool.
-func newPool(s *site, dir string) (p *pool, e err.Error) {
+func newPool(s *site, dir string) (p *pool, e errors.Error) {
 	p = new(pool)
 	p.site = s
 	p.name = dir
@@ -167,10 +167,10 @@ func newPool(s *site, dir string) (p *pool, e err.Error) {
 	return
 }
 
-func (p *pool) loadBuckets() (e err.Error) {
+func (p *pool) loadBuckets() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(p.path())
 	if er != nil {
-		return err.NewError(er, "")
+		return errors.NewError(er, "")
 	}
 
 	p.buckets = make(map[string]*bucket, len(dirEntries))
@@ -181,7 +181,7 @@ func (p *pool) loadBuckets() (e err.Error) {
 		if dirEntry.IsDir() {
 			diru := strings.ToUpper(dirEntry.Name())
 			if _, ok := p.buckets[diru]; ok {
-				return err.NewError(nil, "Duplicate bucket name "+dirEntry.Name())
+				return errors.NewError(nil, "Duplicate bucket name "+dirEntry.Name())
 			}
 
 			b, e = newBucket(p, dirEntry.Name())
@@ -217,15 +217,15 @@ func (b *bucket) Name() string {
 	return b.name
 }
 
-func (b *bucket) Count() (int64, err.Error) {
+func (b *bucket) Count() (int64, errors.Error) {
 	dirEntries, er := ioutil.ReadDir(b.path())
 	if er != nil {
-		return 0, err.NewError(er, "")
+		return 0, errors.NewError(er, "")
 	}
 	return int64(len(dirEntries)), nil
 }
 
-func (b *bucket) IndexIds() ([]string, err.Error) {
+func (b *bucket) IndexIds() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -233,7 +233,7 @@ func (b *bucket) IndexIds() ([]string, err.Error) {
 	return rv, nil
 }
 
-func (b *bucket) IndexNames() ([]string, err.Error) {
+func (b *bucket) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -241,23 +241,23 @@ func (b *bucket) IndexNames() ([]string, err.Error) {
 	return rv, nil
 }
 
-func (b *bucket) IndexById(id string) (catalog.Index, err.Error) {
+func (b *bucket) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *bucket) IndexByName(name string) (catalog.Index, err.Error) {
+func (b *bucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
-		return nil, err.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
 	}
 	return index, nil
 }
 
-func (b *bucket) IndexByPrimary() (catalog.PrimaryIndex, err.Error) {
+func (b *bucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *bucket) Indexes() ([]catalog.Index, err.Error) {
+func (b *bucket) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -265,19 +265,19 @@ func (b *bucket) Indexes() ([]catalog.Index, err.Error) {
 	return rv, nil
 }
 
-func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, err.Error) {
+func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
 
-	return nil, err.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, err.Error) {
-	return nil, err.NewError(nil, "Not supported.")
+func (b *bucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
+func (b *bucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -292,7 +292,7 @@ func (b *bucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
 	return rv, nil
 }
 
-func (b *bucket) FetchOne(key string) (value.Value, err.Error) {
+func (b *bucket) FetchOne(key string) (value.Value, errors.Error) {
 	path := filepath.Join(b.path(), key+".json")
 	item, e := fetch(path)
 	if e != nil {
@@ -302,24 +302,24 @@ func (b *bucket) FetchOne(key string) (value.Value, err.Error) {
 	return item, e
 }
 
-func (b *bucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Update(updates []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *bucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Delete(deletes []string) err.Error {
+func (b *bucket) Delete(deletes []string) errors.Error {
 	// FIXME
-	return err.NewError(nil, "Not yet implemented.")
+	return errors.NewError(nil, "Not yet implemented.")
 }
 
 func (b *bucket) Release() {
@@ -330,18 +330,18 @@ func (b *bucket) path() string {
 }
 
 // newBucket creates a new bucket.
-func newBucket(p *pool, dir string) (b *bucket, e err.Error) {
+func newBucket(p *pool, dir string) (b *bucket, e errors.Error) {
 	b = new(bucket)
 	b.pool = p
 	b.name = dir
 
 	fi, er := os.Stat(b.path())
 	if er != nil {
-		return nil, err.NewError(er, "")
+		return nil, errors.NewError(er, "")
 	}
 
 	if !fi.IsDir() {
-		return nil, err.NewError(nil, "Bucket path must be a directory.")
+		return nil, errors.NewError(nil, "Bucket path must be a directory.")
 	}
 
 	b.indexes = make(map[string]catalog.Index, 1)
@@ -376,8 +376,8 @@ func (pi *primaryIndex) Type() catalog.IndexType {
 	return catalog.UNSPECIFIED
 }
 
-func (pi *primaryIndex) Drop() err.Error {
-	return err.NewError(nil, "This primary index cannot be dropped.")
+func (pi *primaryIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
 func (pi *primaryIndex) EqualKey() expression.Expressions {
@@ -393,7 +393,7 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *primaryIndex) Statistics(span *catalog.Span) (catalog.Statistics, err.Error) {
+func (pi *primaryIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
 	return nil, nil
 }
 
@@ -411,7 +411,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			low = a
 		default:
-			conn.SendError(err.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
+			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
 			return
 		}
 	}
@@ -423,14 +423,14 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			high = a
 		default:
-			conn.SendError(err.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
+			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
 			return
 		}
 	}
 
 	dirEntries, er := ioutil.ReadDir(pi.bucket.path())
 	if er != nil {
-		conn.SendError(err.NewError(er, ""))
+		conn.SendError(errors.NewError(er, ""))
 		return
 	}
 
@@ -469,7 +469,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 
 	dirEntries, er := ioutil.ReadDir(pi.bucket.path())
 	if er != nil {
-		conn.SendError(err.NewError(er, ""))
+		conn.SendError(errors.NewError(er, ""))
 		return
 	}
 
@@ -484,14 +484,14 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 	}
 }
 
-func fetch(path string) (item value.Value, e err.Error) {
+func fetch(path string) (item value.Value, e errors.Error) {
 	bytes, er := ioutil.ReadFile(path)
 	if er != nil {
 		if os.IsNotExist(er) {
 			// file doesn't exist should simply return nil, nil
 			return
 		}
-		return nil, err.NewError(er, "")
+		return nil, errors.NewError(er, "")
 	}
 
 	doc := value.NewAnnotatedValue(value.NewValueFromBytes(bytes))

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -41,15 +41,15 @@ func (b *sitebucket) Name() string {
 	return b.name
 }
 
-func (b *sitebucket) Count() (int64, err.Error) {
+func (b *sitebucket) Count() (int64, errors.Error) {
 	return 1, nil
 }
 
-func (b *sitebucket) IndexIds() ([]string, err.Error) {
+func (b *sitebucket) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *sitebucket) IndexNames() ([]string, err.Error) {
+func (b *sitebucket) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -57,23 +57,23 @@ func (b *sitebucket) IndexNames() ([]string, err.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) IndexById(id string) (catalog.Index, err.Error) {
+func (b *sitebucket) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *sitebucket) IndexByName(name string) (catalog.Index, err.Error) {
+func (b *sitebucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
-		return nil, err.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
 	}
 	return index, nil
 }
 
-func (b *sitebucket) IndexByPrimary() (catalog.PrimaryIndex, err.Error) {
+func (b *sitebucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *sitebucket) Indexes() ([]catalog.Index, err.Error) {
+func (b *sitebucket) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -81,19 +81,19 @@ func (b *sitebucket) Indexes() ([]catalog.Index, err.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) CreatePrimaryIndex() (catalog.PrimaryIndex, err.Error) {
+func (b *sitebucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
 
-	return nil, err.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *sitebucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, err.Error) {
-	return nil, err.NewError(nil, "Not supported.")
+func (b *sitebucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *sitebucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
+func (b *sitebucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -107,7 +107,7 @@ func (b *sitebucket) Fetch(keys []string) ([]catalog.Pair, err.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) FetchOne(key string) (value.Value, err.Error) {
+func (b *sitebucket) FetchOne(key string) (value.Value, errors.Error) {
 	if key == b.pool.site.actualSite.Id() {
 		doc := value.NewValue(map[string]interface{}{
 			"id":  b.pool.site.actualSite.Id(),
@@ -115,30 +115,30 @@ func (b *sitebucket) FetchOne(key string) (value.Value, err.Error) {
 		})
 		return doc, nil
 	}
-	return nil, err.NewError(nil, "Not Found")
+	return nil, errors.NewError(nil, "Not Found")
 }
 
-func (b *sitebucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *sitebucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Update(updates []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *sitebucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, err.Error) {
+func (b *sitebucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
-	return nil, err.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Delete(deletes []string) err.Error {
+func (b *sitebucket) Delete(deletes []string) errors.Error {
 	// FIXME
-	return err.NewError(nil, "Not yet implemented.")
+	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func newSitesBucket(p *pool) (*sitebucket, err.Error) {
+func newSitesBucket(p *pool) (*sitebucket, errors.Error) {
 	b := new(sitebucket)
 	b.pool = p
 	b.name = BUCKET_NAME_SITES
@@ -169,8 +169,8 @@ func (pi *siteIndex) Type() catalog.IndexType {
 	return catalog.UNSPECIFIED
 }
 
-func (pi *siteIndex) Drop() err.Error {
-	return err.NewError(nil, "Primary index cannot be dropped.")
+func (pi *siteIndex) Drop() errors.Error {
+	return errors.NewError(nil, "Primary index cannot be dropped.")
 }
 
 func (pi *siteIndex) EqualKey() expression.Expressions {
@@ -185,7 +185,7 @@ func (pi *siteIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *siteIndex) Statistics(span *catalog.Span) (catalog.Statistics, err.Error) {
+func (pi *siteIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
 	return nil, nil
 }
 
@@ -206,7 +206,7 @@ func (pi *siteIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *
 	case string:
 		val = a
 	default:
-		conn.SendError(err.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
+		conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
 		return
 	}
 

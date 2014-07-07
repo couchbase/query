@@ -11,7 +11,7 @@ package system
 
 import (
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 )
 
 const POOL_ID = "system"
@@ -35,7 +35,7 @@ func (s *site) URL() string {
 	return s.actualSite.URL()
 }
 
-func (s *site) PoolIds() ([]string, err.Error) {
+func (s *site) PoolIds() ([]string, errors.Error) {
 	poolIds, err := s.actualSite.PoolIds()
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (s *site) PoolIds() ([]string, err.Error) {
 	return poolIds, err
 }
 
-func (s *site) PoolNames() ([]string, err.Error) {
+func (s *site) PoolNames() ([]string, errors.Error) {
 	poolNames, err := s.actualSite.PoolNames()
 	if err != nil {
 		return nil, err
@@ -53,21 +53,21 @@ func (s *site) PoolNames() ([]string, err.Error) {
 	return poolNames, err
 }
 
-func (s *site) PoolById(id string) (catalog.Pool, err.Error) {
+func (s *site) PoolById(id string) (catalog.Pool, errors.Error) {
 	if id == POOL_ID {
 		return s.systemCatalogPool, nil
 	}
 	return s.actualSite.PoolById(id)
 }
 
-func (s *site) PoolByName(name string) (catalog.Pool, err.Error) {
+func (s *site) PoolByName(name string) (catalog.Pool, errors.Error) {
 	if name == POOL_NAME {
 		return s.systemCatalogPool, nil
 	}
 	return s.actualSite.PoolByName(name)
 }
 
-func NewSite(actualSite catalog.Site) (catalog.Site, err.Error) {
+func NewSite(actualSite catalog.Site) (catalog.Site, errors.Error) {
 	s := &site{actualSite: actualSite}
 
 	e := s.loadPool()
@@ -78,7 +78,7 @@ func NewSite(actualSite catalog.Site) (catalog.Site, err.Error) {
 	return s, e
 }
 
-func (s *site) loadPool() err.Error {
+func (s *site) loadPool() errors.Error {
 	p, e := newPool(s)
 	if e != nil {
 		return e

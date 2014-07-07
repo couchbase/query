@@ -14,7 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/catalog/mock"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 )
 
 func TestSystem(t *testing.T) {
@@ -127,9 +127,9 @@ func TestSystem(t *testing.T) {
 
 // Helper function to perform a primary index scan on the given bucket. Returns a map of
 // all primary key names.
-func doPrimaryIndexScan(t *testing.T, b catalog.Bucket) (m map[string]bool, excp err.Error) {
-	warnChan := make(err.ErrorChannel)
-	errChan := make(err.ErrorChannel)
+func doPrimaryIndexScan(t *testing.T, b catalog.Bucket) (m map[string]bool, excp errors.Error) {
+	warnChan := make(errors.ErrorChannel)
+	errChan := make(errors.ErrorChannel)
 	defer close(warnChan)
 	defer close(errChan)
 	conn := catalog.NewIndexConnection(warnChan, errChan)

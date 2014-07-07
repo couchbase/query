@@ -23,7 +23,7 @@ plans before query Beta / GA.
 package catalog
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -33,12 +33,12 @@ const CHANNEL = "CATALOG"
 
 // Site represents a cluster or single-node server.
 type Site interface {
-	Id() string                               // Id of this site
-	URL() string                              // URL to this site
-	PoolIds() ([]string, err.Error)           // Ids of the pools contained in this site
-	PoolNames() ([]string, err.Error)         // Names of the pools contained in this site
-	PoolById(id string) (Pool, err.Error)     // Find a pool in this site using the pool's Id
-	PoolByName(name string) (Pool, err.Error) // Find a pool in this site using the pool's name
+	Id() string                                  // Id of this site
+	URL() string                                 // URL to this site
+	PoolIds() ([]string, errors.Error)           // Ids of the pools contained in this site
+	PoolNames() ([]string, errors.Error)         // Names of the pools contained in this site
+	PoolById(id string) (Pool, errors.Error)     // Find a pool in this site using the pool's Id
+	PoolByName(name string) (Pool, errors.Error) // Find a pool in this site using the pool's name
 }
 
 // Pool represents a logical boundary that is within a site and above
@@ -46,42 +46,42 @@ type Site interface {
 // to qualify bucket names. No assumptions are made about pools and
 // isolation, resource management, or any other concerns.
 type Pool interface {
-	SiteId() string                               // Id of the site that contains this pool
-	Id() string                                   // Id of this pool
-	Name() string                                 // Name of this pool
-	BucketIds() ([]string, err.Error)             // Ids of the buckets contained in this pool
-	BucketNames() ([]string, err.Error)           // Names of the buckets contained in this pool
-	BucketById(name string) (Bucket, err.Error)   // Find a bucket in this pool using the bucket's id
-	BucketByName(name string) (Bucket, err.Error) // Find a bucket in this pool using the bucket's name
+	SiteId() string                                  // Id of the site that contains this pool
+	Id() string                                      // Id of this pool
+	Name() string                                    // Name of this pool
+	BucketIds() ([]string, errors.Error)             // Ids of the buckets contained in this pool
+	BucketNames() ([]string, errors.Error)           // Names of the buckets contained in this pool
+	BucketById(name string) (Bucket, errors.Error)   // Find a bucket in this pool using the bucket's id
+	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this pool using the bucket's name
 }
 
 // Bucket is a collection of key-value entries (typically
 // key-document, but also key-counter, key-blob, etc.).
 type Bucket interface {
-	PoolId() string                                // Id of the pool that contains this bucket
-	Id() string                                    // Id of this bucket
-	Name() string                                  // Name of this bucket
-	Count() (int64, err.Error)                     // Number of key-value entries in this bucket
-	IndexIds() ([]string, err.Error)               // Ids of the indexes defined on this bucket
-	IndexNames() ([]string, err.Error)             // Names of the indexes defined on this bucket
-	IndexById(id string) (Index, err.Error)        // Find an index on this bucket using the index's id
-	IndexByName(name string) (Index, err.Error)    // Find an index on this bucket using the index's name
-	IndexByPrimary() (PrimaryIndex, err.Error)     // Returns the server-recommended primary index
-	Indexes() ([]Index, err.Error)                 // Returns all the indexes defined on this bucket
-	CreatePrimaryIndex() (PrimaryIndex, err.Error) // Create or return a primary index on this bucket
+	PoolId() string                                   // Id of the pool that contains this bucket
+	Id() string                                       // Id of this bucket
+	Name() string                                     // Name of this bucket
+	Count() (int64, errors.Error)                     // Number of key-value entries in this bucket
+	IndexIds() ([]string, errors.Error)               // Ids of the indexes defined on this bucket
+	IndexNames() ([]string, errors.Error)             // Names of the indexes defined on this bucket
+	IndexById(id string) (Index, errors.Error)        // Find an index on this bucket using the index's id
+	IndexByName(name string) (Index, errors.Error)    // Find an index on this bucket using the index's name
+	IndexByPrimary() (PrimaryIndex, errors.Error)     // Returns the server-recommended primary index
+	Indexes() ([]Index, errors.Error)                 // Returns all the indexes defined on this bucket
+	CreatePrimaryIndex() (PrimaryIndex, errors.Error) // Create or return a primary index on this bucket
 
-	CreateIndex(name string, equalKey, rangeKey expression.Expressions, using IndexType) (Index, err.Error) // Create a secondary index on this bucket
+	CreateIndex(name string, equalKey, rangeKey expression.Expressions, using IndexType) (Index, errors.Error) // Create a secondary index on this bucket
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]Pair, err.Error)      // Bulk key-value fetch from this bucket
-	FetchOne(key string) (value.Value, err.Error) // Single key-value fetch from this bucket
+	Fetch(keys []string) ([]Pair, errors.Error)      // Bulk key-value fetch from this bucket
+	FetchOne(key string) (value.Value, errors.Error) // Single key-value fetch from this bucket
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	Insert(inserts []Pair) ([]Pair, err.Error) // Bulk key-value insert into this bucket
-	Update(updates []Pair) ([]Pair, err.Error) // Bulk key-value updates into this bucket
-	Upsert(upserts []Pair) ([]Pair, err.Error) // Bulk key-value upserts into this bucket
-	Delete(deletes []string) err.Error         // Bulk key-value deletes from this bucket
+	Insert(inserts []Pair) ([]Pair, errors.Error) // Bulk key-value insert into this bucket
+	Update(updates []Pair) ([]Pair, errors.Error) // Bulk key-value updates into this bucket
+	Upsert(upserts []Pair) ([]Pair, errors.Error) // Bulk key-value upserts into this bucket
+	Delete(deletes []string) errors.Error         // Bulk key-value deletes from this bucket
 
 	Release() // Release any query engine resources held by this object
 }

@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -58,7 +58,7 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 	case value.Value:
 		item = value.NewAnnotatedValue(project)
 	default:
-		context.ErrorChannel() <- err.NewError(nil,
+		context.ErrorChannel() <- errors.NewError(nil,
 			fmt.Sprintf("Invalid or missing projection %v.", project))
 		return false
 	}
@@ -66,7 +66,7 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 	item.SetAttachment("project", item)
 	e := this.set.Add(item)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "")
+		context.ErrorChannel() <- errors.NewError(e, "")
 		return false
 	}
 

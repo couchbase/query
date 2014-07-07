@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -49,7 +49,7 @@ func (this *Limit) RunOnce(context *Context, parent value.Value) {
 func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 	val, e := this.plan.Expression().Evaluate(parent, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluating LIMIT.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluating LIMIT.")
 		return false
 	}
 
@@ -62,7 +62,7 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 		}
 	}
 
-	context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf("Invalid LIMIT value %v.", actual))
+	context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf("Invalid LIMIT value %v.", actual))
 	return false
 }
 

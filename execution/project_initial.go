@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -75,7 +75,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		// Raw projection of single expression
 		val, e := expr.Evaluate(item, context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
 			return false
 		}
 		item.SetAttachment("project", val)
@@ -100,7 +100,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		if term.Alias() != "" {
 			val, e := term.Result().Expression().Evaluate(item, context)
 			if e != nil {
-				context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+				context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
 				return false
 			}
 
@@ -117,7 +117,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				var e error
 				starValue, e = term.Result().Expression().Evaluate(item, context)
 				if e != nil {
-					context.ErrorChannel() <- err.NewError(e, "Error evaluating projection.")
+					context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
 					return false
 				}
 			}

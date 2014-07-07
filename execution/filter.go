@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -45,7 +45,7 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
 	val, e := this.plan.Condition().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluating filter.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluating filter.")
 		return false
 	}
 

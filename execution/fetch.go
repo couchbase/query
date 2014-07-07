@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -70,13 +70,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			case string:
 				keys[i] = key
 			default:
-				context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+				context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
 					key, key))
 				return false
 			}
 		default:
-			context.ErrorChannel() <- err.NewError(nil,
+			context.ErrorChannel() <- errors.NewError(nil,
 				"Missing or invalid meta for primary key.")
 			return false
 		}
@@ -99,7 +99,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			var e error
 			item, e = project.Evaluate(item, context)
 			if e != nil {
-				context.ErrorChannel() <- err.NewError(e,
+				context.ErrorChannel() <- errors.NewError(e,
 					"Error evaluating fetch path.")
 				return false
 			}

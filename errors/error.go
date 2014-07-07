@@ -14,7 +14,7 @@ include error codes and will eventually provide multi-language
 messages.
 
 */
-package err
+package errors
 
 import (
 	"encoding/json"

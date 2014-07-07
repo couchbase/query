@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -69,7 +69,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		if key != nil {
 			k, e := key.Evaluate(av, context)
 			if e != nil {
-				context.WarningChannel() <- err.NewError(e,
+				context.WarningChannel() <- errors.NewError(e,
 					fmt.Sprintf("Error evaluating INSERT key for value %v.", av.GetValue()))
 				continue
 			}
@@ -78,7 +78,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			case string:
 				pair.Key = k
 			default:
-				context.WarningChannel() <- err.NewError(nil,
+				context.WarningChannel() <- errors.NewError(nil,
 					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k))
 				continue
 			}

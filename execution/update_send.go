@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -72,7 +72,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		case value.AnnotatedValue:
 			pairs[i].Value = clone
 		default:
-			context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+			context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone))
 			return false
 		}

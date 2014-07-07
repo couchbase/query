@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -45,7 +45,7 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
 	pv, e := this.plan.Term().Project().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluating UNNEST path.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluating UNNEST path.")
 		return false
 	}
 

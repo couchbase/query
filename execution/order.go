@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/sort"
 	"github.com/couchbaselabs/query/value"
@@ -95,13 +95,13 @@ func (this *Order) Less(i, j int) bool {
 	for _, term := range this.plan.Terms() {
 		e1, e = term.Expression().Evaluate(v1, this.context)
 		if e != nil {
-			this.context.ErrorChannel() <- err.NewError(e, "Error evaluating ORDER BY.")
+			this.context.ErrorChannel() <- errors.NewError(e, "Error evaluating ORDER BY.")
 			return false
 		}
 
 		e2, e = term.Expression().Evaluate(v2, this.context)
 		if e != nil {
-			this.context.ErrorChannel() <- err.NewError(e, "Error evaluating ORDER BY.")
+			this.context.ErrorChannel() <- errors.NewError(e, "Error evaluating ORDER BY.")
 			return false
 		}
 

@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -101,14 +101,14 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluatating MERGE key.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluatating MERGE key.")
 		return false
 	}
 
 	ka := kv.Actual()
 	k, ok := ka.(string)
 	if !ok {
-		context.ErrorChannel() <- err.NewError(nil,
+		context.ErrorChannel() <- errors.NewError(nil,
 			fmt.Sprintf("Invalid MERGE key %v of type %T.", ka, ka))
 		return false
 	}

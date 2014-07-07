@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -49,7 +49,7 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
 	if !ok {
-		context.ErrorChannel() <- err.NewError(nil,
+		context.ErrorChannel() <- errors.NewError(nil,
 			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone))
 		return false
 	}
@@ -58,7 +58,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	for _, t := range this.plan.Node().Terms() {
 		clone, e = setPath(t, clone, item, context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating SET clause.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating SET clause.")
 			return false
 		}
 	}

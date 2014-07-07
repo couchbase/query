@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -27,10 +27,10 @@ type Context struct {
 	now       time.Time
 	arguments map[string]value.Value
 
-	warningChannel err.ErrorChannel // Never closed, just garbage-collected
-	errorChannel   err.ErrorChannel // Never closed, just garbage-collected
-	warnings       []err.Error
-	errors         []err.Error
+	warningChannel errors.ErrorChannel // Never closed, just garbage-collected
+	errorChannel   errors.ErrorChannel // Never closed, just garbage-collected
+	warnings       []errors.Error
+	errors         []errors.Error
 
 	subplans   *subqueryMap
 	subresults *subqueryMap
@@ -41,10 +41,10 @@ func NewContext() *Context {
 	rv := &Context{}
 	rv.now = time.Now()
 	rv.arguments = make(map[string]value.Value)
-	rv.warningChannel = make(err.ErrorChannel, _BUFFER_CAP)
-	rv.errorChannel = make(err.ErrorChannel, _BUFFER_CAP)
-	rv.warnings = make([]err.Error, 0, _BUFFER_CAP)
-	rv.errors = make([]err.Error, 0, _BUFFER_CAP)
+	rv.warningChannel = make(errors.ErrorChannel, _BUFFER_CAP)
+	rv.errorChannel = make(errors.ErrorChannel, _BUFFER_CAP)
+	rv.warnings = make([]errors.Error, 0, _BUFFER_CAP)
+	rv.errors = make([]errors.Error, 0, _BUFFER_CAP)
 	rv.subplans = newSubqueryMap()
 	rv.subresults = newSubqueryMap()
 
@@ -73,11 +73,11 @@ func (this *Context) Argument(parameter string) (value.Value, error) {
 	return val, nil
 }
 
-func (this *Context) WarningChannel() err.ErrorChannel {
+func (this *Context) WarningChannel() errors.ErrorChannel {
 	return this.warningChannel
 }
 
-func (this *Context) ErrorChannel() err.ErrorChannel {
+func (this *Context) ErrorChannel() errors.ErrorChannel {
 	return this.errorChannel
 }
 
@@ -130,16 +130,16 @@ func (this *Context) Stream(item value.Value) bool {
 	return true
 }
 
-func (this *Context) Warnings() []err.Error {
+func (this *Context) Warnings() []errors.Error {
 	return this.warnings
 }
 
-func (this *Context) Errors() []err.Error {
+func (this *Context) Errors() []errors.Error {
 	return this.errors
 }
 
-func (this *Context) drain(channel err.ErrorChannel, buf *[]err.Error) {
-	var e err.Error
+func (this *Context) drain(channel errors.ErrorChannel, buf *[]errors.Error) {
+	var e errors.Error
 	for {
 		e = <-channel
 
@@ -151,9 +151,9 @@ func (this *Context) drain(channel err.ErrorChannel, buf *[]err.Error) {
 	}
 }
 
-func collect(e err.Error, buf *[]err.Error) {
+func collect(e errors.Error, buf *[]errors.Error) {
 	if len(*buf) == cap(*buf) {
-		b := make([]err.Error, len(*buf), len(*buf)<<1)
+		b := make([]errors.Error, len(*buf), len(*buf)<<1)
 		copy(b, *buf)
 		*buf = b
 	}

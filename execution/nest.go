@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -47,7 +47,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- err.NewError(e, "Error evaluating NEST keys.")
+		context.ErrorChannel() <- errors.NewError(e, "Error evaluating NEST keys.")
 		return false
 	}
 
@@ -73,7 +73,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		case string:
 			keys[i] = key
 		default:
-			context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+			context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
 				"Missing or invalid nest key %v of type %T.",
 				key, key))
 			return false
@@ -98,7 +98,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 			var e error
 			nestItem, e = project.Evaluate(nestItem, context)
 			if e != nil {
-				context.ErrorChannel() <- err.NewError(e,
+				context.ErrorChannel() <- errors.NewError(e,
 					"Error evaluating nest path.")
 				return false
 			}

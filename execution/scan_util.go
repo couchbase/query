@@ -11,7 +11,7 @@ package execution
 
 import (
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,7 +26,7 @@ func eval(cx expression.Expressions, context *Context, parent value.Value) (valu
 	for i, expr := range cx {
 		cv[i], e = expr.Evaluate(parent, context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating filter term.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating filter term.")
 			return nil, false
 		}
 	}

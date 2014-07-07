@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -59,7 +59,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.ErrorChannel() <- err.NewError(e, "Error evaluating GROUP key.")
+			context.ErrorChannel() <- errors.NewError(e, "Error evaluating GROUP key.")
 			return false
 		}
 	}
@@ -67,7 +67,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	// Get or seed the group value
 	gv := this.groups[gk]
 	if gv != nil {
-		context.ErrorChannel() <- err.NewError(nil, "Duplicate final GROUP.")
+		context.ErrorChannel() <- errors.NewError(nil, "Duplicate final GROUP.")
 		return false
 	}
 
@@ -81,7 +81,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		for agg, val := range aggregates {
 			v, e := agg.ComputeFinal(val, context)
 			if e != nil {
-				context.ErrorChannel() <- err.NewError(
+				context.ErrorChannel() <- errors.NewError(
 					e, "Error updating GROUP value.")
 				return false
 			}
@@ -89,7 +89,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		}
 		return true
 	default:
-		context.ErrorChannel() <- err.NewError(nil, fmt.Sprintf(
+		context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
 			"Invalid or missing aggregates of type %T.", aggregates))
 		return false
 	}

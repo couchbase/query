@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -18,7 +18,7 @@ import (
 type Context interface {
 	expression.Context
 	Argument(parameter string) (value.Value, error)
-	WarningChannel() err.ErrorChannel
-	ErrorChannel() err.ErrorChannel
+	WarningChannel() errors.ErrorChannel
+	ErrorChannel() errors.ErrorChannel
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

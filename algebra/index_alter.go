@@ -10,16 +10,16 @@
 package algebra
 
 type AlterIndex struct {
-	bucket    *BucketRef             `json:"bucket"`
-	name      string                 `json:"name"`
-	rename    string                 `json:"rename"`
+	bucket *BucketRef `json:"bucket"`
+	name   string     `json:"name"`
+	rename string     `json:"rename"`
 }
 
 func NewAlterIndex(bucket *BucketRef, name, rename string) *AlterIndex {
 	return &AlterIndex{
-		bucket:    bucket,
-		name:      name,
-		rename:    rename,
+		bucket: bucket,
+		name:   name,
+		rename: rename,
 	}
 }
 

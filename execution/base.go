@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -196,14 +196,14 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 func (this *base) requireKey(item value.AnnotatedValue, context *Context) (string, bool) {
 	mv := item.GetAttachment("meta")
 	if mv == nil {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find meta.")
+		context.ErrorChannel() <- errors.NewError(nil, "Unable to find meta.")
 		return "", false
 	}
 
 	meta := mv.(map[string]interface{})
 	key, ok := meta["id"]
 	if !ok {
-		context.ErrorChannel() <- err.NewError(nil, "Unable to find key.")
+		context.ErrorChannel() <- errors.NewError(nil, "Unable to find key.")
 		return "", false
 	}
 
@@ -211,7 +211,7 @@ func (this *base) requireKey(item value.AnnotatedValue, context *Context) (strin
 	case string:
 		return key, true
 	default:
-		e := err.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
+		e := errors.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
 		context.ErrorChannel() <- e
 		return "", false
 	}

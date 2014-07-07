@@ -10,7 +10,7 @@
 package catalog
 
 import (
-	"github.com/couchbaselabs/query/err"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -30,11 +30,11 @@ type Index interface {
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index
-	Drop() err.Error                                                    // Drop / delete this index
+	Drop() errors.Error                                                 // Drop / delete this index
 	EqualKey() expression.Expressions                                   // Equality keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any
-	Statistics(span *Span) (Statistics, err.Error)                      // Obtain statistics for this index
+	Statistics(span *Span) (Statistics, errors.Error)                   // Obtain statistics for this index
 	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
@@ -78,23 +78,23 @@ type StopChannel chan bool
 
 // Statistics captures statistics for a range.
 type Statistics interface {
-	Count() (int64, err.Error)
-	Min() (value.Values, err.Error)
-	Max() (value.Values, err.Error)
-	DistinctCount(int64, err.Error)
-	Bins() ([]Statistics, err.Error)
+	Count() (int64, errors.Error)
+	Min() (value.Values, errors.Error)
+	Max() (value.Values, errors.Error)
+	DistinctCount(int64, errors.Error)
+	Bins() ([]Statistics, errors.Error)
 }
 
 type IndexConnection struct {
-	entryChannel   EntryChannel     // Closed by the index when the scan is completed or aborted.
-	stopChannel    StopChannel      // Notifies index to stop scanning. Never closed, just garbage-collected.
-	warningChannel err.ErrorChannel // Written by index. Never closed, just garbage-collected.
-	errorChannel   err.ErrorChannel // Written by index. Never closed, just garbage-collected.
+	entryChannel   EntryChannel        // Closed by the index when the scan is completed or aborted.
+	stopChannel    StopChannel         // Notifies index to stop scanning. Never closed, just garbage-collected.
+	warningChannel errors.ErrorChannel // Written by index. Never closed, just garbage-collected.
+	errorChannel   errors.ErrorChannel // Written by index. Never closed, just garbage-collected.
 }
 
 const _ENTRY_CAP = 1024
 
-func NewIndexConnection(warningChannel, errorChannel err.ErrorChannel) *IndexConnection {
+func NewIndexConnection(warningChannel, errorChannel errors.ErrorChannel) *IndexConnection {
 	return &IndexConnection{
 		entryChannel:   make(EntryChannel, _ENTRY_CAP),
 		stopChannel:    make(StopChannel, 1),
@@ -111,10 +111,10 @@ func (this *IndexConnection) StopChannel() StopChannel {
 	return this.stopChannel
 }
 
-func (this *IndexConnection) SendWarning(e err.Error) {
+func (this *IndexConnection) SendWarning(e errors.Error) {
 	this.warningChannel <- e
 }
 
-func (this *IndexConnection) SendError(e err.Error) {
+func (this *IndexConnection) SendError(e errors.Error) {
 	this.errorChannel <- e
 }
