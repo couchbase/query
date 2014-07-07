@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execute
+package execution
 
 import (
 	"fmt"
@@ -66,7 +66,7 @@ func unsetPath(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Contex
 		return unsetFor(t, clone, context)
 	}
 
-	t.Path().Unset(clone)
+	t.Path().Unset(clone, context)
 	return nil
 }
 
@@ -94,7 +94,7 @@ func unsetFor(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context
 			}
 		}
 
-		t.Path().Unset(cvals[i])
+		t.Path().Unset(cvals[i], context)
 	}
 
 	return nil

@@ -9,11 +9,11 @@
 
 /*
 
-Package execute provides query execution. The execution is
+Package execution provides query execution. The execution is
 data-parallel to the extent possible.
 
 */
-package execute
+package execution
 
 import (
 	"github.com/couchbaselabs/query/value"

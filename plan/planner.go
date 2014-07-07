@@ -34,6 +34,8 @@ func Plan(node algebra.Node) (Operator, error) {
 type Planner struct {
 }
 
+// SELECT
+
 func (this *Planner) VisitSelect(node *algebra.Select) (interface{}, error) {
 	return nil, nil
 }
@@ -70,7 +72,13 @@ func (this *Planner) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	return nil, nil
 }
 
+// DML
+
 func (this *Planner) VisitInsert(node *algebra.Insert) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *Planner) VisitUpsert(node *algebra.Upsert) (interface{}, error) {
 	return nil, nil
 }
 
@@ -83,5 +91,25 @@ func (this *Planner) VisitUpdate(node *algebra.Update) (interface{}, error) {
 }
 
 func (this *Planner) VisitMerge(node *algebra.Merge) (interface{}, error) {
+	return nil, nil
+}
+
+// DDL
+
+func (this *Planner) VisitCreateIndex(node *algebra.CreateIndex) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *Planner) VisitDropIndex(node *algebra.DropIndex) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *Planner) VisitAlterIndex(node *algebra.AlterIndex) (interface{}, error) {
+	return nil, nil
+}
+
+// EXPLAIN
+
+func (this *Planner) VisitExplain(node *algebra.Explain) (interface{}, error) {
 	return nil, nil
 }

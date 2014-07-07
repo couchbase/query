@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execute
+package execution
 
 import (
 	"fmt"
@@ -81,7 +81,7 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 	}
 
 	if t.Path() != nil {
-		t.Path().Set(clone, v)
+		t.Path().Set(clone, v, context)
 		return clone, nil
 	} else {
 		av := value.NewAnnotatedValue(v)
@@ -135,7 +135,7 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 			}
 		}
 
-		t.Path().Set(cvals[i], v)
+		t.Path().Set(cvals[i], v, context)
 	}
 
 	// Set array elements

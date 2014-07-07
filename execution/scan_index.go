@@ -7,11 +7,9 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execute
+package execution
 
 import (
-	"math"
-
 	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -61,7 +59,7 @@ func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *cat
 
 	defer notifyConn(conn) // Notify index that I have stopped
 
-	go this.plan.Index().Scan(span, math.MaxInt64, conn)
+	go this.plan.Index().Scan(span, this.plan.Distinct(), this.plan.Limit(), conn)
 
 	var entry *catalog.IndexEntry
 

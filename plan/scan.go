@@ -31,12 +31,14 @@ func (this *PrimaryScan) Index() catalog.PrimaryIndex {
 }
 
 type IndexScan struct {
-	index catalog.Index
-	spans catalog.Spans
+	index    catalog.Index
+	spans    catalog.Spans
+	distinct bool
+	limit    int64
 }
 
-func NewIndexScan(index catalog.Index, spans catalog.Spans) *IndexScan {
-	return &IndexScan{index, spans}
+func NewIndexScan(index catalog.Index, spans catalog.Spans, distinct bool, limit int64) *IndexScan {
+	return &IndexScan{index, spans, distinct, limit}
 }
 
 func (this *IndexScan) Index() catalog.Index {
@@ -45,6 +47,14 @@ func (this *IndexScan) Index() catalog.Index {
 
 func (this *IndexScan) Spans() catalog.Spans {
 	return this.spans
+}
+
+func (this *IndexScan) Distinct() bool {
+	return this.distinct
+}
+
+func (this *IndexScan) Limit() int64 {
+	return this.limit
 }
 
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).
