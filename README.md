@@ -289,9 +289,9 @@ Plans include the following operators:
 
     * __Merge__
 
-### Execute
+### Execution
 
-The execute package implements query execution. The objects in this
+The execution package implements query execution. The objects in this
 package mirror those in the plan package, except that these are the
 running instances.
 
@@ -318,7 +318,7 @@ Some key differences from the previous catalog API:
 * Generalized index interface that supports any combination of hash
   and range indexing
 
-### Parse
+### Parser
 
 This package will contain the parser and lexer.
 
