@@ -9,10 +9,6 @@
 
 package execution
 
-import (
-	_ "fmt"
-)
-
 type Visitor interface {
 	// Scan
 	VisitPrimaryScan(op *PrimaryScan) (interface{}, error)
@@ -63,6 +59,9 @@ type Visitor interface {
 	// Insert
 	VisitSendInsert(op *SendInsert) (interface{}, error)
 
+	// Insert
+	VisitSendUpsert(op *SendUpsert) (interface{}, error)
+
 	// Delete
 	VisitSendDelete(op *SendDelete) (interface{}, error)
 
@@ -83,4 +82,9 @@ type Visitor interface {
 	VisitStream(op *Stream) (interface{}, error)
 	VisitCollect(op *Collect) (interface{}, error)
 	VisitChannel(op *Channel) (interface{}, error)
+
+	// Index DDL
+	VisitCreateIndex(op *CreateIndex) (interface{}, error)
+	VisitDropIndex(op *DropIndex) (interface{}, error)
+	VisitAlterIndex(op *AlterIndex) (interface{}, error)
 }

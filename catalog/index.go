@@ -31,6 +31,7 @@ type Index interface {
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index
 	Drop() errors.Error                                                 // Drop / delete this index
+	Rename(newName string) errors.Error                                 // Rename this index
 	EqualKey() expression.Expressions                                   // Equality keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any
@@ -41,6 +42,21 @@ type Index interface {
 // PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
 	ScanEntries(limit int64, conn *IndexConnection) // Perform a scan of all the entries in this index
+}
+
+// SecondaryIndex is the base type secondary indexes.
+type SecondaryIndex interface {
+	BucketId() string                                                   // Id of the bucket to which this index belongs
+	Id() string                                                         // Id of this index
+	Name() string                                                       // Name of this index
+	Type() IndexType                                                    // Type of this index
+	Drop() errors.Error                                                 // Drop / delete this index
+	Rename(newName string) errors.Error                                 // Rename this index
+	EqualKey() expression.Expressions                                   // Equality keys
+	RangeKey() expression.Expressions                                   // Range keys
+	Condition() expression.Expression                                   // Condition, if any
+	Statistics(span *Span) (Statistics, errors.Error)                   // Obtain statistics for this index
+	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
 type Range struct {

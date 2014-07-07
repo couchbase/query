@@ -113,9 +113,9 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
-	bv, er := this.plan.Bucket().FetchOne(k)
-	if er != nil {
-		context.ErrorChannel() <- er
+	bv, err := this.plan.Bucket().FetchOne(k)
+	if err != nil {
+		context.ErrorChannel() <- err
 		return false
 	}
 

@@ -83,9 +83,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	// Fetch
-	pairs, er := this.plan.Bucket().Fetch(keys)
-	if er != nil {
-		context.ErrorChannel() <- er
+	pairs, err := this.plan.Bucket().Fetch(keys)
+	if err != nil {
+		context.ErrorChannel() <- err
 		return false
 	}
 

@@ -28,7 +28,7 @@ func Build(plan plan.Operator) (Operator, error) {
 	case Operator:
 		return ex, nil
 	default:
-		panic(fmt.Sprintf("Expected execute.Operator instead of %T.", ex))
+		panic(fmt.Sprintf("Expected execution.Operator instead of %T.", ex))
 	}
 }
 
@@ -168,6 +168,11 @@ func (this *Builder) VisitSendInsert(plan *plan.SendInsert) (interface{}, error)
 	return NewSendInsert(plan), nil
 }
 
+// Upsert
+func (this *Builder) VisitSendUpsert(plan *plan.SendUpsert) (interface{}, error) {
+	return NewSendUpsert(plan), nil
+}
+
 // Delete
 func (this *Builder) VisitSendDelete(plan *plan.SendDelete) (interface{}, error) {
 	return NewSendDelete(plan), nil
@@ -269,4 +274,19 @@ func (this *Builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
 // Channel
 func (this *Builder) VisitChannel(plan *plan.Channel) (interface{}, error) {
 	return NewChannel(), nil
+}
+
+// CreateIndex
+func (this *Builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
+	return NewCreateIndex(plan), nil
+}
+
+// DropIndex
+func (this *Builder) VisitDropIndex(plan *plan.DropIndex) (interface{}, error) {
+	return NewDropIndex(plan), nil
+}
+
+// AlterIndex
+func (this *Builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error) {
+	return NewAlterIndex(plan), nil
 }
