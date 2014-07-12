@@ -42,9 +42,7 @@ type builder struct {
 
 func newBuilder(site catalog.Site) *builder {
 	return &builder{
-		site:        site,
-		children:    make([]Operator, 0, 8),
-		subChildren: make([]Operator, 0, 16),
+		site: site,
 	}
 }
 
@@ -91,6 +89,9 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 }
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+	this.children = make([]Operator, 0, 8)
+	this.subChildren = make([]Operator, 0, 16)
+
 	if node.From() != nil {
 		_, err := node.From().Accept(this)
 		if err != nil {
@@ -196,18 +197,18 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	return NewUnionAll(first.(Operator), second.(Operator)), nil
 }
 
-func (this *builder) VisitBucketTerm(node *algebra.BucketTerm) (interface{}, error) {
-	pool, err := this.site.PoolByName(node.Pool())
+func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+	namespace, err := this.site.NamespaceByName(node.Namespace())
 	if err != nil {
 		return nil, err
 	}
 
-	bucket, err := pool.BucketByName(node.Bucket())
+	keyspace, err := namespace.KeyspaceByName(node.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	index, err := bucket.IndexByPrimary()
+	index, err := keyspace.IndexByPrimary()
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +216,7 @@ func (this *builder) VisitBucketTerm(node *algebra.BucketTerm) (interface{}, err
 	scan := NewPrimaryScan(index)
 	this.children = append(this.children, scan)
 
-	fetch := NewFetch(bucket, node)
+	fetch := NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
 	return fetch, nil
 }
@@ -230,17 +231,17 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	pool, err := this.site.PoolByName(node.Right().Pool())
+	namespace, err := this.site.NamespaceByName(node.Right().Namespace())
 	if err != nil {
 		return nil, err
 	}
 
-	bucket, err := pool.BucketByName(node.Right().Bucket())
+	keyspace, err := namespace.KeyspaceByName(node.Right().Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	join := NewJoin(bucket, node)
+	join := NewJoin(keyspace, node)
 	this.subChildren = append(this.subChildren, join)
 
 	return join, nil
@@ -252,17 +253,17 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
-	pool, err := this.site.PoolByName(node.Right().Pool())
+	namespace, err := this.site.NamespaceByName(node.Right().Namespace())
 	if err != nil {
 		return nil, err
 	}
 
-	bucket, err := pool.BucketByName(node.Right().Bucket())
+	keyspace, err := namespace.KeyspaceByName(node.Right().Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	nest := NewNest(bucket, node)
+	nest := NewNest(keyspace, node)
 	this.subChildren = append(this.subChildren, nest)
 
 	return nest, nil

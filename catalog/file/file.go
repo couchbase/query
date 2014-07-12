@@ -30,9 +30,9 @@ import (
 
 // site is the root for the file-based Site.
 type site struct {
-	path      string
-	pools     map[string]*pool
-	poolNames []string
+	path           string
+	namespaces     map[string]*namespace
+	namespaceNames []string
 }
 
 func (s *site) Id() string {
@@ -43,22 +43,22 @@ func (s *site) URL() string {
 	return "file://" + s.path
 }
 
-func (s *site) PoolIds() ([]string, errors.Error) {
-	return s.PoolNames()
+func (s *site) NamespaceIds() ([]string, errors.Error) {
+	return s.NamespaceNames()
 }
 
-func (s *site) PoolNames() ([]string, errors.Error) {
-	return s.poolNames, nil
+func (s *site) NamespaceNames() ([]string, errors.Error) {
+	return s.namespaceNames, nil
 }
 
-func (s *site) PoolById(id string) (p catalog.Pool, e errors.Error) {
-	return s.PoolByName(id)
+func (s *site) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+	return s.NamespaceByName(id)
 }
 
-func (s *site) PoolByName(name string) (p catalog.Pool, e errors.Error) {
-	p, ok := s.pools[strings.ToUpper(name)]
+func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+	p, ok := s.namespaces[strings.ToUpper(name)]
 	if !ok {
-		e = errors.NewError(nil, "Pool "+name+" not found.")
+		e = errors.NewError(nil, "Namespace "+name+" not found.")
 	}
 
 	return
@@ -73,7 +73,7 @@ func NewSite(path string) (s catalog.Site, e errors.Error) {
 
 	fs := &site{path: path}
 
-	e = fs.loadPools()
+	e = fs.loadNamespaces()
 	if e != nil {
 		return
 	}
@@ -82,142 +82,142 @@ func NewSite(path string) (s catalog.Site, e errors.Error) {
 	return
 }
 
-func (s *site) loadPools() (e errors.Error) {
+func (s *site) loadNamespaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(s.path)
 	if er != nil {
 		return errors.NewError(er, "")
 	}
 
-	s.pools = make(map[string]*pool, len(dirEntries))
-	s.poolNames = make([]string, 0, len(dirEntries))
+	s.namespaces = make(map[string]*namespace, len(dirEntries))
+	s.namespaceNames = make([]string, 0, len(dirEntries))
 
-	var p *pool
+	var p *namespace
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
-			s.poolNames = append(s.poolNames, dirEntry.Name())
+			s.namespaceNames = append(s.namespaceNames, dirEntry.Name())
 			diru := strings.ToUpper(dirEntry.Name())
-			if _, ok := s.pools[diru]; ok {
-				return errors.NewError(nil, "Duplicate pool name "+dirEntry.Name())
+			if _, ok := s.namespaces[diru]; ok {
+				return errors.NewError(nil, "Duplicate namespace name "+dirEntry.Name())
 			}
 
-			p, e = newPool(s, dirEntry.Name())
+			p, e = newNamespace(s, dirEntry.Name())
 			if e != nil {
 				return
 			}
 
-			s.pools[diru] = p
+			s.namespaces[diru] = p
 		}
 	}
 
 	return
 }
 
-// pool represents a file-based Pool.
-type pool struct {
-	site        *site
-	name        string
-	buckets     map[string]*bucket
-	bucketNames []string
+// namespace represents a file-based Namespace.
+type namespace struct {
+	site          *site
+	name          string
+	keyspaces     map[string]*keyspace
+	keyspaceNames []string
 }
 
-func (p *pool) SiteId() string {
+func (p *namespace) SiteId() string {
 	return p.site.Id()
 }
 
-func (p *pool) Id() string {
+func (p *namespace) Id() string {
 	return p.Name()
 }
 
-func (p *pool) Name() string {
+func (p *namespace) Name() string {
 	return p.name
 }
 
-func (p *pool) BucketIds() ([]string, errors.Error) {
-	return p.BucketNames()
+func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
+	return p.KeyspaceNames()
 }
 
-func (p *pool) BucketNames() ([]string, errors.Error) {
-	return p.bucketNames, nil
+func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
+	return p.keyspaceNames, nil
 }
 
-func (p *pool) BucketById(id string) (b catalog.Bucket, e errors.Error) {
-	return p.BucketByName(id)
+func (p *namespace) KeyspaceById(id string) (b catalog.Keyspace, e errors.Error) {
+	return p.KeyspaceByName(id)
 }
 
-func (p *pool) BucketByName(name string) (b catalog.Bucket, e errors.Error) {
-	b, ok := p.buckets[strings.ToUpper(name)]
+func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Error) {
+	b, ok := p.keyspaces[strings.ToUpper(name)]
 	if !ok {
-		e = errors.NewError(nil, "Bucket "+name+" not found.")
+		e = errors.NewError(nil, "Keyspace "+name+" not found.")
 	}
 
 	return
 }
 
-func (p *pool) path() string {
+func (p *namespace) path() string {
 	return filepath.Join(p.site.path, p.name)
 }
 
-// newPool creates a new pool.
-func newPool(s *site, dir string) (p *pool, e errors.Error) {
-	p = new(pool)
+// newNamespace creates a new namespace.
+func newNamespace(s *site, dir string) (p *namespace, e errors.Error) {
+	p = new(namespace)
 	p.site = s
 	p.name = dir
 
-	e = p.loadBuckets()
+	e = p.loadKeyspaces()
 	return
 }
 
-func (p *pool) loadBuckets() (e errors.Error) {
+func (p *namespace) loadKeyspaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(p.path())
 	if er != nil {
 		return errors.NewError(er, "")
 	}
 
-	p.buckets = make(map[string]*bucket, len(dirEntries))
-	p.bucketNames = make([]string, 0, len(dirEntries))
+	p.keyspaces = make(map[string]*keyspace, len(dirEntries))
+	p.keyspaceNames = make([]string, 0, len(dirEntries))
 
-	var b *bucket
+	var b *keyspace
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
 			diru := strings.ToUpper(dirEntry.Name())
-			if _, ok := p.buckets[diru]; ok {
-				return errors.NewError(nil, "Duplicate bucket name "+dirEntry.Name())
+			if _, ok := p.keyspaces[diru]; ok {
+				return errors.NewError(nil, "Duplicate keyspace name "+dirEntry.Name())
 			}
 
-			b, e = newBucket(p, dirEntry.Name())
+			b, e = newKeyspace(p, dirEntry.Name())
 			if e != nil {
 				return
 			}
 
-			p.buckets[diru] = b
-			p.bucketNames = append(p.bucketNames, b.Name())
+			p.keyspaces[diru] = b
+			p.keyspaceNames = append(p.keyspaceNames, b.Name())
 		}
 	}
 
 	return
 }
 
-// bucket is a file-based bucket.
-type bucket struct {
-	pool    *pool
-	name    string
-	indexes map[string]catalog.Index
-	primary catalog.PrimaryIndex
+// keyspace is a file-based keyspace.
+type keyspace struct {
+	namespace *namespace
+	name      string
+	indexes   map[string]catalog.Index
+	primary   catalog.PrimaryIndex
 }
 
-func (b *bucket) PoolId() string {
-	return b.pool.Id()
+func (b *keyspace) NamespaceId() string {
+	return b.namespace.Id()
 }
 
-func (b *bucket) Id() string {
+func (b *keyspace) Id() string {
 	return b.Name()
 }
 
-func (b *bucket) Name() string {
+func (b *keyspace) Name() string {
 	return b.name
 }
 
-func (b *bucket) Count() (int64, errors.Error) {
+func (b *keyspace) Count() (int64, errors.Error) {
 	dirEntries, er := ioutil.ReadDir(b.path())
 	if er != nil {
 		return 0, errors.NewError(er, "")
@@ -225,7 +225,7 @@ func (b *bucket) Count() (int64, errors.Error) {
 	return int64(len(dirEntries)), nil
 }
 
-func (b *bucket) IndexIds() ([]string, errors.Error) {
+func (b *keyspace) IndexIds() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -233,7 +233,7 @@ func (b *bucket) IndexIds() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) IndexNames() ([]string, errors.Error) {
+func (b *keyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -241,11 +241,11 @@ func (b *bucket) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *bucket) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -253,11 +253,11 @@ func (b *bucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *bucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *bucket) Indexes() ([]catalog.Index, errors.Error) {
+func (b *keyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -265,7 +265,7 @@ func (b *bucket) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -273,11 +273,11 @@ func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -292,7 +292,7 @@ func (b *bucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) FetchOne(key string) (value.Value, errors.Error) {
+func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 	path := filepath.Join(b.path(), key+".json")
 	item, e := fetch(path)
 	if e != nil {
@@ -302,37 +302,37 @@ func (b *bucket) FetchOne(key string) (value.Value, errors.Error) {
 	return item, e
 }
 
-func (b *bucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Delete(deletes []string) errors.Error {
+func (b *keyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Release() {
+func (b *keyspace) Release() {
 }
 
-func (b *bucket) path() string {
-	return filepath.Join(b.pool.path(), b.name)
+func (b *keyspace) path() string {
+	return filepath.Join(b.namespace.path(), b.name)
 }
 
-// newBucket creates a new bucket.
-func newBucket(p *pool, dir string) (b *bucket, e errors.Error) {
-	b = new(bucket)
-	b.pool = p
+// newKeyspace creates a new keyspace.
+func newKeyspace(p *namespace, dir string) (b *keyspace, e errors.Error) {
+	b = new(keyspace)
+	b.namespace = p
 	b.name = dir
 
 	fi, er := os.Stat(b.path())
@@ -341,27 +341,27 @@ func newBucket(p *pool, dir string) (b *bucket, e errors.Error) {
 	}
 
 	if !fi.IsDir() {
-		return nil, errors.NewError(nil, "Bucket path must be a directory.")
+		return nil, errors.NewError(nil, "Keyspace path must be a directory.")
 	}
 
 	b.indexes = make(map[string]catalog.Index, 1)
 	pi := new(primaryIndex)
 	b.primary = pi
-	pi.bucket = b
+	pi.keyspace = b
 	pi.name = "#primary"
 	b.indexes[pi.name] = pi
 
 	return
 }
 
-// primaryIndex performs full bucket scans.
+// primaryIndex performs full keyspace scans.
 type primaryIndex struct {
-	name   string
-	bucket *bucket
+	name     string
+	keyspace *keyspace
 }
 
-func (pi *primaryIndex) BucketId() string {
-	return pi.bucket.Id()
+func (pi *primaryIndex) KeyspaceId() string {
+	return pi.keyspace.Id()
 }
 
 func (pi *primaryIndex) Id() string {
@@ -428,7 +428,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		}
 	}
 
-	dirEntries, er := ioutil.ReadDir(pi.bucket.path())
+	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
 		conn.SendError(errors.NewError(er, ""))
 		return
@@ -467,7 +467,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	dirEntries, er := ioutil.ReadDir(pi.bucket.path())
+	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
 		conn.SendError(errors.NewError(er, ""))
 		return

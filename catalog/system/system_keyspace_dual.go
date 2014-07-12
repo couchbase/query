@@ -19,37 +19,37 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type dualbucket struct {
-	pool    *pool
-	name    string
-	indexes map[string]catalog.Index
-	primary catalog.PrimaryIndex
+type dualkeyspace struct {
+	namespace *namespace
+	name      string
+	indexes   map[string]catalog.Index
+	primary   catalog.PrimaryIndex
 }
 
-func (b *dualbucket) Release() {
+func (b *dualkeyspace) Release() {
 }
 
-func (b *dualbucket) PoolId() string {
-	return b.pool.Id()
+func (b *dualkeyspace) NamespaceId() string {
+	return b.namespace.Id()
 }
 
-func (b *dualbucket) Id() string {
+func (b *dualkeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *dualbucket) Name() string {
+func (b *dualkeyspace) Name() string {
 	return b.name
 }
 
-func (b *dualbucket) Count() (int64, errors.Error) {
+func (b *dualkeyspace) Count() (int64, errors.Error) {
 	return 1, nil
 }
 
-func (b *dualbucket) IndexIds() ([]string, errors.Error) {
+func (b *dualkeyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *dualbucket) IndexNames() ([]string, errors.Error) {
+func (b *dualkeyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -57,11 +57,11 @@ func (b *dualbucket) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualbucket) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *dualkeyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *dualbucket) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *dualkeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -69,11 +69,11 @@ func (b *dualbucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *dualbucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualkeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *dualbucket) Indexes() ([]catalog.Index, errors.Error) {
+func (b *dualkeyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -81,7 +81,7 @@ func (b *dualbucket) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualkeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -89,11 +89,11 @@ func (b *dualbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualbucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *dualkeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualbucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *dualkeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -107,48 +107,48 @@ func (b *dualbucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualbucket) FetchOne(key string) (value.Value, errors.Error) {
+func (b *dualkeyspace) FetchOne(key string) (value.Value, errors.Error) {
 	doc := map[string]interface{}{}
 	return value.NewValue(doc), nil
 }
 
-func (b *dualbucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualkeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualbucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualkeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualbucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualkeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualbucket) Delete(deletes []string) errors.Error {
+func (b *dualkeyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func newDualBucket(p *pool) (*dualbucket, errors.Error) {
-	b := new(dualbucket)
-	b.pool = p
-	b.name = BUCKET_NAME_DUAL
+func newDualKeyspace(p *namespace) (*dualkeyspace, errors.Error) {
+	b := new(dualkeyspace)
+	b.namespace = p
+	b.name = KEYSPACE_NAME_DUAL
 
-	b.primary = &dualIndex{name: "primary", bucket: b}
+	b.primary = &dualIndex{name: "primary", keyspace: b}
 
 	return b, nil
 }
 
 type dualIndex struct {
-	name   string
-	bucket *dualbucket
+	name     string
+	keyspace *dualkeyspace
 }
 
-func (pi *dualIndex) BucketId() string {
-	return pi.bucket.Id()
+func (pi *dualIndex) KeyspaceId() string {
+	return pi.keyspace.Id()
 }
 
 func (pi *dualIndex) Id() string {
@@ -186,7 +186,7 @@ func (pi *dualIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.
 func (pi *dualIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	entry := catalog.IndexEntry{PrimaryKey: BUCKET_NAME_DUAL}
+	entry := catalog.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
 	conn.EntryChannel() <- &entry
 }
 
@@ -204,8 +204,8 @@ func (pi *dualIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *
 		return
 	}
 
-	if strings.EqualFold(val, BUCKET_NAME_DUAL) {
-		entry := catalog.IndexEntry{PrimaryKey: BUCKET_NAME_DUAL}
+	if strings.EqualFold(val, KEYSPACE_NAME_DUAL) {
+		entry := catalog.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
 		conn.EntryChannel() <- &entry
 	}
 }

@@ -104,6 +104,9 @@
 /[cC][oO][lL][lL][aA][tT][eE]/ {
                     logDebugTokens("COLLATE"); return COLLATE
                   }
+/[cC][oO][lL][lL][eE][cC][tT][iI][oO][nN]/ {
+                    logDebugTokens("COLLECTION"); return COLLECTION
+                  }
 /[cC][rR][eE][aA][tT][eE]/ {
                     logDebugTokens("CREATE"); return CREATE
                   }
@@ -192,6 +195,9 @@
 /[kK][eE][yY][sS]/ {
                     logDebugTokens("KEYS"); return KEYS
                   }
+/[kK][eE][yY][sS][pP][aA][cC][eE]/ {
+                    logDebugTokens("KEYSPACE"); return KEYSPACE
+                  }
 /[lL][eE][fF][tT]/ {
                     logDebugTokens("LEFT"); return LEFT
                   }
@@ -210,6 +216,9 @@
                   { logDebugTokens("MERGE"); return MERGE }
 /[mM][iI][sS][sS][iI][nN][gG]/
                   { logDebugTokens("MISSING"); return MISSING }
+/[nN][aA][mM][eE][sS][pP][aA][cC][eE]/ {
+                    logDebugTokens("NAMESPACE"); return NAMESPACE
+                  }
 /[nN][eE][sS][tT]/ {
                     logDebugTokens("NEST"); return NEST
                   }

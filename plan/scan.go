@@ -117,19 +117,19 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
 type CountScan struct {
-	bucket catalog.Bucket
+	keyspace catalog.Keyspace
 }
 
-func NewCountScan(bucket catalog.Bucket) *CountScan {
-	return &CountScan{bucket}
+func NewCountScan(keyspace catalog.Keyspace) *CountScan {
+	return &CountScan{keyspace}
 }
 
 func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCountScan(this)
 }
 
-func (this *CountScan) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *CountScan) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
 // IntersectScan scans multiple indexes and intersects the results.

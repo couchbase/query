@@ -15,21 +15,21 @@ import (
 )
 
 type Join struct {
-	bucket catalog.Bucket
-	term   *algebra.Join
-	alias  string
+	keyspace catalog.Keyspace
+	term     *algebra.Join
+	alias    string
 }
 
-func NewJoin(bucket catalog.Bucket, term *algebra.Join) *Join {
-	return &Join{bucket, term, term.Alias()}
+func NewJoin(keyspace catalog.Keyspace, term *algebra.Join) *Join {
+	return &Join{keyspace, term, term.Alias()}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
-func (this *Join) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *Join) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
 func (this *Join) Term() *algebra.Join {
@@ -41,21 +41,21 @@ func (this *Join) Alias() string {
 }
 
 type Nest struct {
-	bucket catalog.Bucket
-	term   *algebra.Nest
-	alias  string
+	keyspace catalog.Keyspace
+	term     *algebra.Nest
+	alias    string
 }
 
-func NewNest(bucket catalog.Bucket, term *algebra.Nest) *Nest {
-	return &Nest{bucket, term, term.Alias()}
+func NewNest(keyspace catalog.Keyspace, term *algebra.Nest) *Nest {
+	return &Nest{keyspace, term, term.Alias()}
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
-func (this *Nest) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *Nest) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
 func (this *Nest) Term() *algebra.Nest {

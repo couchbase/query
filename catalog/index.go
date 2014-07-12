@@ -26,12 +26,12 @@ const (
 
 // Index is the base type for indexes.
 type Index interface {
-	BucketId() string                                                   // Id of the bucket to which this index belongs
-	Id() string                                                         // Id of this index
-	Name() string                                                       // Name of this index
-	Type() IndexType                                                    // Type of this index
-	Drop() errors.Error                                                 // Drop / delete this index
-	Rename(newName string) errors.Error                                 // Rename this index
+	KeyspaceId() string // Id of the keyspace to which this index belongs
+	Id() string         // Id of this index
+	Name() string       // Name of this index
+	Type() IndexType    // Type of this index
+	Drop() errors.Error // Drop / delete this index
+	//Rename(newName string) errors.Error                                 // Rename this index
 	EqualKey() expression.Expressions                                   // Equality keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any
@@ -46,7 +46,7 @@ type PrimaryIndex interface {
 
 // SecondaryIndex is the base type secondary indexes.
 type SecondaryIndex interface {
-	BucketId() string                                                   // Id of the bucket to which this index belongs
+	KeyspaceId() string                                                 // Id of the keyspace to which this index belongs
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index

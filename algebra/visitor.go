@@ -15,7 +15,7 @@ type Visitor interface {
 	VisitSubselect(node *Subselect) (interface{}, error)
 	VisitUnion(node *Union) (interface{}, error)
 	VisitUnionAll(node *UnionAll) (interface{}, error)
-	VisitBucketTerm(node *BucketTerm) (interface{}, error)
+	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
 	VisitParentTerm(node *ParentTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)

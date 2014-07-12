@@ -15,15 +15,15 @@ import (
 )
 
 type Fetch struct {
-	bucket catalog.Bucket
-	term   *algebra.BucketTerm
-	alias  string
+	keyspace catalog.Keyspace
+	term     *algebra.KeyspaceTerm
+	alias    string
 }
 
-func NewFetch(bucket catalog.Bucket, term *algebra.BucketTerm) *Fetch {
+func NewFetch(keyspace catalog.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
 	return &Fetch{
-		bucket: bucket,
-		term:   term,
+		keyspace: keyspace,
+		term:     term,
 	}
 }
 
@@ -31,11 +31,11 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFetch(this)
 }
 
-func (this *Fetch) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *Fetch) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
-func (this *Fetch) Term() *algebra.BucketTerm {
+func (this *Fetch) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 

@@ -28,9 +28,9 @@ type Unset struct {
 	node *algebra.Unset
 }
 
-// Send to bucket
+// Send to keyspace
 type SendUpdate struct {
-	bucket catalog.Bucket
+	keyspace catalog.Keyspace
 }
 
 func NewClone() *Clone {
@@ -65,14 +65,14 @@ func (this *Unset) Node() *algebra.Unset {
 	return this.node
 }
 
-func NewSendUpdate(bucket catalog.Bucket) *SendUpdate {
-	return &SendUpdate{bucket}
+func NewSendUpdate(keyspace catalog.Keyspace) *SendUpdate {
+	return &SendUpdate{keyspace}
 }
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpdate(this)
 }
 
-func (this *SendUpdate) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *SendUpdate) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }

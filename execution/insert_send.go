@@ -92,7 +92,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	this.batch = nil
 
 	// Perform the actual INSERT
-	keys, e := this.plan.Bucket().Insert(pairs)
+	keys, e := this.plan.Keyspace().Insert(pairs)
 	if e != nil {
 		context.ErrorChannel() <- e
 		return false

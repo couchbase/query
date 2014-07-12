@@ -64,7 +64,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		keys[i] = key
 	}
 
-	e := this.plan.Bucket().Delete(keys)
+	e := this.plan.Keyspace().Delete(keys)
 	if e != nil {
 		context.ErrorChannel() <- e
 		this.batch = nil

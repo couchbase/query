@@ -10,14 +10,14 @@
 package algebra
 
 type DropIndex struct {
-	bucket *BucketRef `json:"bucket"`
-	name   string     `json:"name"`
+	keyspace *KeyspaceRef `json:"keyspace"`
+	name     string       `json:"name"`
 }
 
-func NewDropIndex(bucket *BucketRef, name string) *DropIndex {
+func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
 	return &DropIndex{
-		bucket: bucket,
-		name:   name,
+		keyspace: keyspace,
+		name:     name,
 	}
 }
 

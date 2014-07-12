@@ -19,37 +19,37 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type sitebucket struct {
-	pool    *pool
-	name    string
-	indexes map[string]catalog.Index
-	primary catalog.PrimaryIndex
+type sitekeyspace struct {
+	namespace *namespace
+	name      string
+	indexes   map[string]catalog.Index
+	primary   catalog.PrimaryIndex
 }
 
-func (b *sitebucket) Release() {
+func (b *sitekeyspace) Release() {
 }
 
-func (b *sitebucket) PoolId() string {
-	return b.pool.Id()
+func (b *sitekeyspace) NamespaceId() string {
+	return b.namespace.Id()
 }
 
-func (b *sitebucket) Id() string {
+func (b *sitekeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *sitebucket) Name() string {
+func (b *sitekeyspace) Name() string {
 	return b.name
 }
 
-func (b *sitebucket) Count() (int64, errors.Error) {
+func (b *sitekeyspace) Count() (int64, errors.Error) {
 	return 1, nil
 }
 
-func (b *sitebucket) IndexIds() ([]string, errors.Error) {
+func (b *sitekeyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *sitebucket) IndexNames() ([]string, errors.Error) {
+func (b *sitekeyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -57,11 +57,11 @@ func (b *sitebucket) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *sitekeyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *sitebucket) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *sitekeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -69,11 +69,11 @@ func (b *sitebucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *sitebucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *sitekeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *sitebucket) Indexes() ([]catalog.Index, errors.Error) {
+func (b *sitekeyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -81,7 +81,7 @@ func (b *sitebucket) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *sitekeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -89,11 +89,11 @@ func (b *sitebucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *sitebucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *sitekeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *sitebucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *sitekeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -107,53 +107,53 @@ func (b *sitebucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *sitebucket) FetchOne(key string) (value.Value, errors.Error) {
-	if key == b.pool.site.actualSite.Id() {
+func (b *sitekeyspace) FetchOne(key string) (value.Value, errors.Error) {
+	if key == b.namespace.site.actualSite.Id() {
 		doc := value.NewValue(map[string]interface{}{
-			"id":  b.pool.site.actualSite.Id(),
-			"url": b.pool.site.actualSite.URL(),
+			"id":  b.namespace.site.actualSite.Id(),
+			"url": b.namespace.site.actualSite.URL(),
 		})
 		return doc, nil
 	}
 	return nil, errors.NewError(nil, "Not Found")
 }
 
-func (b *sitebucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *sitekeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *sitekeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *sitekeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *sitebucket) Delete(deletes []string) errors.Error {
+func (b *sitekeyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func newSitesBucket(p *pool) (*sitebucket, errors.Error) {
-	b := new(sitebucket)
-	b.pool = p
-	b.name = BUCKET_NAME_SITES
+func newSitesKeyspace(p *namespace) (*sitekeyspace, errors.Error) {
+	b := new(sitekeyspace)
+	b.namespace = p
+	b.name = KEYSPACE_NAME_SITES
 
-	b.primary = &siteIndex{name: "primary", bucket: b}
+	b.primary = &siteIndex{name: "primary", keyspace: b}
 
 	return b, nil
 }
 
 type siteIndex struct {
-	name   string
-	bucket *sitebucket
+	name     string
+	keyspace *sitekeyspace
 }
 
-func (pi *siteIndex) BucketId() string {
+func (pi *siteIndex) KeyspaceId() string {
 	return pi.name
 }
 
@@ -192,7 +192,7 @@ func (pi *siteIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.
 func (pi *siteIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	entry := catalog.IndexEntry{PrimaryKey: pi.bucket.pool.site.actualSite.Id()}
+	entry := catalog.IndexEntry{PrimaryKey: pi.keyspace.namespace.site.actualSite.Id()}
 	conn.EntryChannel() <- &entry
 }
 
@@ -210,8 +210,8 @@ func (pi *siteIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *
 		return
 	}
 
-	if strings.EqualFold(val, pi.bucket.pool.site.actualSite.Id()) {
-		entry := catalog.IndexEntry{PrimaryKey: pi.bucket.pool.site.actualSite.Id()}
+	if strings.EqualFold(val, pi.keyspace.namespace.site.actualSite.Id()) {
+		entry := catalog.IndexEntry{PrimaryKey: pi.keyspace.namespace.site.actualSite.Id()}
 		conn.EntryChannel() <- &entry
 	}
 }

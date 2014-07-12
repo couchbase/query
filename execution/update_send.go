@@ -18,7 +18,7 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-// Send to bucket
+// Send to keyspace
 type SendUpdate struct {
 	base
 	plan *plan.SendUpdate
@@ -78,7 +78,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
-	pairs, e := this.plan.Bucket().Update(pairs)
+	pairs, e := this.plan.Keyspace().Update(pairs)
 	if e != nil {
 		context.ErrorChannel() <- e
 		this.batch = nil

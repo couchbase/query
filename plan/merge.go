@@ -16,26 +16,26 @@ import (
 )
 
 type Merge struct {
-	bucket catalog.Bucket
-	ref    *algebra.BucketRef
-	key    expression.Expression
-	update Operator
-	delete Operator
-	insert Operator
-	alias  string
+	keyspace catalog.Keyspace
+	ref      *algebra.KeyspaceRef
+	key      expression.Expression
+	update   Operator
+	delete   Operator
+	insert   Operator
+	alias    string
 }
 
-func NewMerge(bucket catalog.Bucket, ref *algebra.BucketRef,
+func NewMerge(keyspace catalog.Keyspace, ref *algebra.KeyspaceRef,
 	key expression.Expression, update, delete, insert Operator) *Merge {
-	return &Merge{bucket, ref, key, update, delete, insert, ""}
+	return &Merge{keyspace, ref, key, update, delete, insert, ""}
 }
 
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
 }
 
-func (this *Merge) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *Merge) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
 func (this *Merge) Key() expression.Expression {

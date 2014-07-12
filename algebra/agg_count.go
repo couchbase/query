@@ -35,7 +35,7 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 		return this.aggregateBase.Evaluate(item, context)
 	}
 
-	// Full bucket count is short-circuited
+	// Full keyspace count is short-circuited
 	count := item.(value.AnnotatedValue).GetAttachment("count")
 
 	switch count := count.(type) {

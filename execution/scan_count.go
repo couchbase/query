@@ -42,7 +42,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		count, e := this.plan.Bucket().Count()
+		count, e := this.plan.Keyspace().Count()
 		if e != nil {
 			context.ErrorChannel() <- e
 			return

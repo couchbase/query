@@ -14,17 +14,17 @@ import (
 )
 
 type Insert struct {
-	bucket    *BucketRef             `json:"bucket"`
+	keyspace  *KeyspaceRef           `json:"keyspace"`
 	key       expression.Expression  `json:"key"`
 	values    expression.Expressions `json:"values"`
 	query     *Select                `json:"query"`
 	returning *Projection            `json:"returning"`
 }
 
-func NewInsertValues(bucket *BucketRef, key expression.Expression,
+func NewInsertValues(keyspace *KeyspaceRef, key expression.Expression,
 	values expression.Expressions, returning *Projection) *Insert {
 	return &Insert{
-		bucket:    bucket,
+		keyspace:  keyspace,
 		key:       key,
 		values:    values,
 		query:     nil,
@@ -32,10 +32,10 @@ func NewInsertValues(bucket *BucketRef, key expression.Expression,
 	}
 }
 
-func NewInsertSelect(bucket *BucketRef, key expression.Expression,
+func NewInsertSelect(keyspace *KeyspaceRef, key expression.Expression,
 	query *Select, returning *Projection) *Insert {
 	return &Insert{
-		bucket:    bucket,
+		keyspace:  keyspace,
 		key:       key,
 		values:    nil,
 		query:     query,

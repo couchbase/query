@@ -20,41 +20,41 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type indexbucket struct {
-	pool    *pool
-	name    string
-	indexes map[string]catalog.Index
-	primary catalog.PrimaryIndex
+type indexkeyspace struct {
+	namespace *namespace
+	name      string
+	indexes   map[string]catalog.Index
+	primary   catalog.PrimaryIndex
 }
 
-func (b *indexbucket) Release() {
+func (b *indexkeyspace) Release() {
 }
 
-func (b *indexbucket) PoolId() string {
-	return b.pool.Id()
+func (b *indexkeyspace) NamespaceId() string {
+	return b.namespace.Id()
 }
 
-func (b *indexbucket) Id() string {
+func (b *indexkeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *indexbucket) Name() string {
+func (b *indexkeyspace) Name() string {
 	return b.name
 }
 
-func (b *indexbucket) Count() (int64, errors.Error) {
+func (b *indexkeyspace) Count() (int64, errors.Error) {
 	count := int64(0)
-	poolIds, excp := b.pool.site.actualSite.PoolIds()
+	namespaceIds, excp := b.namespace.site.actualSite.NamespaceIds()
 	if excp == nil {
-		for _, poolId := range poolIds {
-			pool, excp := b.pool.site.actualSite.PoolById(poolId)
+		for _, namespaceId := range namespaceIds {
+			namespace, excp := b.namespace.site.actualSite.NamespaceById(namespaceId)
 			if excp == nil {
-				bucketIds, excp := pool.BucketIds()
+				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
-					for _, bucketId := range bucketIds {
-						bucket, excp := pool.BucketById(bucketId)
+					for _, keyspaceId := range keyspaceIds {
+						keyspace, excp := namespace.KeyspaceById(keyspaceId)
 						if excp == nil {
-							indexIds, excp := bucket.IndexIds()
+							indexIds, excp := keyspace.IndexIds()
 							if excp == nil {
 								count += int64(len(indexIds))
 							} else {
@@ -76,11 +76,11 @@ func (b *indexbucket) Count() (int64, errors.Error) {
 	return 0, errors.NewError(excp, "")
 }
 
-func (b *indexbucket) IndexIds() ([]string, errors.Error) {
+func (b *indexkeyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *indexbucket) IndexNames() ([]string, errors.Error) {
+func (b *indexkeyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -88,11 +88,11 @@ func (b *indexbucket) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *indexbucket) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *indexkeyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *indexbucket) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *indexkeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -100,11 +100,11 @@ func (b *indexbucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *indexbucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *indexkeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *indexbucket) Indexes() ([]catalog.Index, errors.Error) {
+func (b *indexkeyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -112,7 +112,7 @@ func (b *indexbucket) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *indexbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *indexkeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -120,11 +120,11 @@ func (b *indexbucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) 
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *indexbucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *indexkeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *indexbucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *indexkeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -138,23 +138,23 @@ func (b *indexbucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *indexbucket) FetchOne(key string) (value.Value, errors.Error) {
+func (b *indexkeyspace) FetchOne(key string) (value.Value, errors.Error) {
 	ids := strings.SplitN(key, "/", 3)
 
-	pool, err := b.pool.site.actualSite.PoolById(ids[0])
-	if pool != nil {
-		bucket, _ := pool.BucketById(ids[1])
-		if bucket != nil {
-			index, _ := bucket.IndexById(ids[2])
+	namespace, err := b.namespace.site.actualSite.NamespaceById(ids[0])
+	if namespace != nil {
+		keyspace, _ := namespace.KeyspaceById(ids[1])
+		if keyspace != nil {
+			index, _ := keyspace.IndexById(ids[2])
 			if index != nil {
 				doc := value.NewValue(map[string]interface{}{
-					"id":         index.Id(),
-					"name":       index.Name(),
-					"bucket_id":  bucket.Id(),
-					"pool_id":    pool.Id(),
-					"site_id":    b.pool.site.actualSite.Id(),
-					"index_key":  catalogObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.EqualKey())),
-					"index_type": catalogObjectToJSONSafe(index.Type()),
+					"id":           index.Id(),
+					"name":         index.Name(),
+					"keyspace_id":  keyspace.Id(),
+					"namespace_id": namespace.Id(),
+					"site_id":      b.namespace.site.actualSite.Id(),
+					"index_key":    catalogObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.EqualKey())),
+					"index_type":   catalogObjectToJSONSafe(index.Type()),
 				})
 				return doc, nil
 			}
@@ -182,43 +182,43 @@ func catalogObjectToJSONSafe(catobj interface{}) interface{} {
 	return rv
 }
 
-func newIndexesBucket(p *pool) (*indexbucket, errors.Error) {
-	b := new(indexbucket)
-	b.pool = p
-	b.name = BUCKET_NAME_INDEXES
+func newIndexesKeyspace(p *namespace) (*indexkeyspace, errors.Error) {
+	b := new(indexkeyspace)
+	b.namespace = p
+	b.name = KEYSPACE_NAME_INDEXES
 
-	b.primary = &indexIndex{name: "primary", bucket: b}
+	b.primary = &indexIndex{name: "primary", keyspace: b}
 
 	return b, nil
 }
 
-func (b *indexbucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *indexkeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *indexbucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *indexkeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *indexbucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *indexkeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *indexbucket) Delete(deletes []string) errors.Error {
+func (b *indexkeyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
 type indexIndex struct {
-	name   string
-	bucket *indexbucket
+	name     string
+	keyspace *indexkeyspace
 }
 
-func (pi *indexIndex) BucketId() string {
-	return pi.bucket.Id()
+func (pi *indexIndex) KeyspaceId() string {
+	return pi.keyspace.Id()
 }
 
 func (pi *indexIndex) Id() string {
@@ -256,24 +256,24 @@ func (pi *indexIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors
 func (pi *indexIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	poolIds, err := pi.bucket.pool.site.actualSite.PoolIds()
+	namespaceIds, err := pi.keyspace.namespace.site.actualSite.NamespaceIds()
 	if err == nil {
-		for _, poolId := range poolIds {
-			pool, err := pi.bucket.pool.site.actualSite.PoolById(poolId)
+		for _, namespaceId := range namespaceIds {
+			namespace, err := pi.keyspace.namespace.site.actualSite.NamespaceById(namespaceId)
 			if err == nil {
-				bucketIds, err := pool.BucketIds()
+				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
-					for _, bucketId := range bucketIds {
-						bucket, err := pool.BucketById(bucketId)
+					for _, keyspaceId := range keyspaceIds {
+						keyspace, err := namespace.KeyspaceById(keyspaceId)
 						if err == nil {
-							indexIds, err := bucket.IndexIds()
+							indexIds, err := keyspace.IndexIds()
 							if err == nil {
 								for i, indexId := range indexIds {
 									if limit > 0 && int64(i) > limit {
 										break
 									}
 
-									entry := catalog.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", poolId, bucketId, indexId)}
+									entry := catalog.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
 									conn.EntryChannel() <- &entry
 								}
 							}
@@ -304,19 +304,19 @@ func (pi *indexIndex) Scan(span catalog.Span, distinct bool, limit int64, conn *
 		return
 	}
 
-	pool, _ := pi.bucket.pool.site.actualSite.PoolById(ids[0])
-	if pool == nil {
+	namespace, _ := pi.keyspace.namespace.site.actualSite.NamespaceById(ids[0])
+	if namespace == nil {
 		return
 	}
 
-	bucket, _ := pool.BucketById(ids[1])
-	if bucket == nil {
+	keyspace, _ := namespace.KeyspaceById(ids[1])
+	if keyspace == nil {
 		return
 	}
 
-	index, _ := bucket.IndexById(ids[2])
-	if bucket != nil {
-		entry := catalog.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", pool.Id(), bucket.Id(), index.Id())}
+	index, _ := keyspace.IndexById(ids[2])
+	if keyspace != nil {
+		entry := catalog.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespace.Id(), keyspace.Id(), index.Id())}
 		conn.EntryChannel() <- &entry
 	}
 }

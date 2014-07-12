@@ -9,12 +9,12 @@
 
 package algebra
 
-type BucketRef struct {
-	pool   string `json:"pool"`
-	bucket string `json:"bucket"`
-	as     string `json:"as"`
+type KeyspaceRef struct {
+	namespace string `json:"namespace"`
+	keyspace  string `json:"keyspace"`
+	as        string `json:"as"`
 }
 
-func NewBucketRef(pool, bucket, as string) *BucketRef {
-	return &BucketRef{pool, bucket, as}
+func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
+	return &KeyspaceRef{namespace, keyspace, as}
 }

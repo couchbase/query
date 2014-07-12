@@ -14,7 +14,7 @@ import (
 )
 
 type Merge struct {
-	bucket    *BucketRef             `json:"bucket"`
+	keyspace  *KeyspaceRef           `json:"keyspace"`
 	from      FromTerm               `json:"from"`
 	query     *Select                `json:"query"`
 	values    expression.Expressions `json:"values"`
@@ -27,11 +27,11 @@ type Merge struct {
 	returning *Projection            `json:"returning"`
 }
 
-func NewMergeSelect(bucket *BucketRef, query *Select, as string, key expression.Expression,
+func NewMergeSelect(keyspace *KeyspaceRef, query *Select, as string, key expression.Expression,
 	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
 	limit expression.Expression, returning *Projection) *Merge {
 	return &Merge{
-		bucket:    bucket,
+		keyspace:  keyspace,
 		from:      nil,
 		query:     query,
 		values:    nil,
@@ -45,11 +45,11 @@ func NewMergeSelect(bucket *BucketRef, query *Select, as string, key expression.
 	}
 }
 
-func NewMergeValues(bucket *BucketRef, values expression.Expressions, as string,
+func NewMergeValues(keyspace *KeyspaceRef, values expression.Expressions, as string,
 	key expression.Expression, update *MergeUpdate, delete *MergeDelete,
 	insert *MergeInsert, limit expression.Expression, returning *Projection) *Merge {
 	return &Merge{
-		bucket:    bucket,
+		keyspace:  keyspace,
 		from:      nil,
 		query:     nil,
 		values:    values,
@@ -96,11 +96,11 @@ type MergeInsert struct {
 	where expression.Expression `json:"where"`
 }
 
-func NewMergeFrom(bucket *BucketRef, from FromTerm, as string, key expression.Expression,
+func NewMergeFrom(keyspace *KeyspaceRef, from FromTerm, as string, key expression.Expression,
 	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
 	limit expression.Expression, returning *Projection) *Merge {
 	return &Merge{
-		bucket:    bucket,
+		keyspace:  keyspace,
 		from:      from,
 		query:     nil,
 		values:    nil,

@@ -113,7 +113,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
-	bv, err := this.plan.Bucket().FetchOne(k)
+	bv, err := this.plan.Keyspace().FetchOne(k)
 	if err != nil {
 		context.ErrorChannel() <- err
 		return false

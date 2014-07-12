@@ -19,53 +19,53 @@ type FromTerm interface {
 	Alias() string
 }
 
-type BucketTerm struct {
-	pool    string
-	bucket  string
-	project expression.Path
-	as      string
-	keys    expression.Expression
+type KeyspaceTerm struct {
+	namespace string
+	keyspace  string
+	project   expression.Path
+	as        string
+	keys      expression.Expression
 }
 
-func NewBucketTerm(pool, bucket string, project expression.Path, as string, keys expression.Expression) *BucketTerm {
-	return &BucketTerm{pool, bucket, project, as, keys}
+func NewKeyspaceTerm(namespace, keyspace string, project expression.Path, as string, keys expression.Expression) *KeyspaceTerm {
+	return &KeyspaceTerm{namespace, keyspace, project, as, keys}
 }
 
-func (this *BucketTerm) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitBucketTerm(this)
+func (this *KeyspaceTerm) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitKeyspaceTerm(this)
 }
 
-func (this *BucketTerm) PrimaryTerm() FromTerm {
+func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
 	return this
 }
 
-func (this *BucketTerm) Alias() string {
+func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
 		return this.as
 	} else if this.project != nil {
 		return this.project.Alias()
 	} else {
-		return this.bucket
+		return this.keyspace
 	}
 }
 
-func (this *BucketTerm) Pool() string {
-	return this.pool
+func (this *KeyspaceTerm) Namespace() string {
+	return this.namespace
 }
 
-func (this *BucketTerm) Bucket() string {
-	return this.bucket
+func (this *KeyspaceTerm) Keyspace() string {
+	return this.keyspace
 }
 
-func (this *BucketTerm) Project() expression.Path {
+func (this *KeyspaceTerm) Project() expression.Path {
 	return this.project
 }
 
-func (this *BucketTerm) As() string {
+func (this *KeyspaceTerm) As() string {
 	return this.as
 }
 
-func (this *BucketTerm) Keys() expression.Expression {
+func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
 }
 
@@ -101,11 +101,11 @@ func (this *ParentTerm) As() string {
 
 type Join struct {
 	left  FromTerm
-	right *BucketTerm
+	right *KeyspaceTerm
 	outer bool
 }
 
-func NewJoin(left FromTerm, outer bool, right *BucketTerm) *Join {
+func NewJoin(left FromTerm, outer bool, right *KeyspaceTerm) *Join {
 	return &Join{left, right, outer}
 }
 
@@ -125,7 +125,7 @@ func (this *Join) Left() FromTerm {
 	return this.left
 }
 
-func (this *Join) Right() *BucketTerm {
+func (this *Join) Right() *KeyspaceTerm {
 	return this.right
 }
 
@@ -135,11 +135,11 @@ func (this *Join) Outer() bool {
 
 type Nest struct {
 	left  FromTerm
-	right *BucketTerm
+	right *KeyspaceTerm
 	outer bool
 }
 
-func NewNest(left FromTerm, outer bool, right *BucketTerm) *Nest {
+func NewNest(left FromTerm, outer bool, right *KeyspaceTerm) *Nest {
 	return &Nest{left, right, outer}
 }
 
@@ -159,7 +159,7 @@ func (this *Nest) Left() FromTerm {
 	return this.left
 }
 
-func (this *Nest) Right() *BucketTerm {
+func (this *Nest) Right() *KeyspaceTerm {
 	return this.right
 }
 

@@ -81,7 +81,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Fetch
-	pairs, err := this.plan.Bucket().Fetch(keys)
+	pairs, err := this.plan.Keyspace().Fetch(keys)
 	if err != nil {
 		context.ErrorChannel() <- err
 		return false

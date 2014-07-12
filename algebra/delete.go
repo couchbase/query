@@ -14,16 +14,16 @@ import (
 )
 
 type Delete struct {
-	bucket    *BucketRef            `json:"bucket"`
+	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
 	where     expression.Expression `json:"where"`
 	limit     expression.Expression `json:"limit"`
 	returning *Projection           `json:"returning"`
 }
 
-func NewDelete(bucket *BucketRef, keys, where, limit expression.Expression,
+func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
 	returning *Projection) *Delete {
-	return &Delete{bucket, keys, where, limit, returning}
+	return &Delete{keyspace, keys, where, limit, returning}
 }
 
 func (this *Delete) Accept(visitor Visitor) (interface{}, error) {

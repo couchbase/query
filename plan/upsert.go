@@ -15,20 +15,20 @@ import (
 )
 
 type SendUpsert struct {
-	bucket catalog.Bucket
-	key    expression.Expression
+	keyspace catalog.Keyspace
+	key      expression.Expression
 }
 
-func NewSendUpsert(bucket catalog.Bucket, key expression.Expression) *SendUpsert {
-	return &SendUpsert{bucket, key}
+func NewSendUpsert(keyspace catalog.Keyspace, key expression.Expression) *SendUpsert {
+	return &SendUpsert{keyspace, key}
 }
 
 func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpsert(this)
 }
 
-func (this *SendUpsert) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *SendUpsert) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
 
 func (this *SendUpsert) Key() expression.Expression {

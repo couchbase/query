@@ -29,17 +29,17 @@ import (
 )
 
 const (
-	DEFAULT_NUM_POOLS   = 1
-	DEFAULT_NUM_BUCKETS = 1
-	DEFAULT_NUM_ITEMS   = 100000
+	DEFAULT_NUM_NAMESPACES = 1
+	DEFAULT_NUM_KEYSPACES  = 1
+	DEFAULT_NUM_ITEMS      = 100000
 )
 
 // site is the root for the mock-based Site.
 type site struct {
-	path      string
-	pools     map[string]*pool
-	poolNames []string
-	params    map[string]int
+	path           string
+	namespaces     map[string]*namespace
+	namespaceNames []string
+	params         map[string]int
 }
 
 func (s *site) Id() string {
@@ -50,98 +50,98 @@ func (s *site) URL() string {
 	return "mock:" + s.path
 }
 
-func (s *site) PoolIds() ([]string, errors.Error) {
-	return s.PoolNames()
+func (s *site) NamespaceIds() ([]string, errors.Error) {
+	return s.NamespaceNames()
 }
 
-func (s *site) PoolNames() ([]string, errors.Error) {
-	return s.poolNames, nil
+func (s *site) NamespaceNames() ([]string, errors.Error) {
+	return s.namespaceNames, nil
 }
 
-func (s *site) PoolById(id string) (p catalog.Pool, e errors.Error) {
-	return s.PoolByName(id)
+func (s *site) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+	return s.NamespaceByName(id)
 }
 
-func (s *site) PoolByName(name string) (p catalog.Pool, e errors.Error) {
-	p, ok := s.pools[name]
+func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+	p, ok := s.namespaces[name]
 	if !ok {
-		p, e = nil, errors.NewError(nil, "Pool "+name+" not found.")
+		p, e = nil, errors.NewError(nil, "Namespace "+name+" not found.")
 	}
 
 	return
 }
 
-// pool represents a mock-based Pool.
-type pool struct {
-	site        *site
-	name        string
-	buckets     map[string]*bucket
-	bucketNames []string
+// namespace represents a mock-based Namespace.
+type namespace struct {
+	site          *site
+	name          string
+	keyspaces     map[string]*keyspace
+	keyspaceNames []string
 }
 
-func (p *pool) SiteId() string {
+func (p *namespace) SiteId() string {
 	return p.site.Id()
 }
 
-func (p *pool) Id() string {
+func (p *namespace) Id() string {
 	return p.Name()
 }
 
-func (p *pool) Name() string {
+func (p *namespace) Name() string {
 	return p.name
 }
 
-func (p *pool) BucketIds() ([]string, errors.Error) {
-	return p.BucketNames()
+func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
+	return p.KeyspaceNames()
 }
 
-func (p *pool) BucketNames() ([]string, errors.Error) {
-	return p.bucketNames, nil
+func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
+	return p.keyspaceNames, nil
 }
 
-func (p *pool) BucketById(id string) (b catalog.Bucket, e errors.Error) {
-	return p.BucketByName(id)
+func (p *namespace) KeyspaceById(id string) (b catalog.Keyspace, e errors.Error) {
+	return p.KeyspaceByName(id)
 }
 
-func (p *pool) BucketByName(name string) (b catalog.Bucket, e errors.Error) {
-	b, ok := p.buckets[name]
+func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Error) {
+	b, ok := p.keyspaces[name]
 	if !ok {
-		b, e = nil, errors.NewError(nil, "Bucket "+name+" not found.")
+		b, e = nil, errors.NewError(nil, "Keyspace "+name+" not found.")
 	}
 
 	return
 }
 
-// bucket is a mock-based bucket.
-type bucket struct {
-	pool    *pool
-	name    string
-	nitems  int
-	indexes map[string]catalog.Index
-	primary catalog.PrimaryIndex
+// keyspace is a mock-based keyspace.
+type keyspace struct {
+	namespace *namespace
+	name      string
+	nitems    int
+	indexes   map[string]catalog.Index
+	primary   catalog.PrimaryIndex
 }
 
-func (b *bucket) PoolId() string {
-	return b.pool.Id()
+func (b *keyspace) NamespaceId() string {
+	return b.namespace.Id()
 }
 
-func (b *bucket) Id() string {
+func (b *keyspace) Id() string {
 	return b.Name()
 }
 
-func (b *bucket) Name() string {
+func (b *keyspace) Name() string {
 	return b.name
 }
 
-func (b *bucket) Count() (int64, errors.Error) {
+func (b *keyspace) Count() (int64, errors.Error) {
 	return int64(b.nitems), nil
 }
 
-func (b *bucket) IndexIds() ([]string, errors.Error) {
+func (b *keyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *bucket) IndexNames() ([]string, errors.Error) {
+func (b *keyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -149,11 +149,11 @@ func (b *bucket) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *bucket) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -161,11 +161,11 @@ func (b *bucket) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *bucket) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *bucket) Indexes() ([]catalog.Index, errors.Error) {
+func (b *keyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -173,7 +173,7 @@ func (b *bucket) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -181,11 +181,11 @@ func (b *bucket) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *bucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -200,7 +200,7 @@ func (b *bucket) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *bucket) FetchOne(key string) (value.Value, errors.Error) {
+func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 	i, e := strconv.Atoi(key)
 	if e != nil {
 		return nil, errors.NewError(e, fmt.Sprintf("no mock item: %v", key))
@@ -209,7 +209,7 @@ func (b *bucket) FetchOne(key string) (value.Value, errors.Error) {
 	}
 }
 
-// generate a mock document - used by FetchOne to mock a document in the bucket
+// generate a mock document - used by FetchOne to mock a document in the keyspace
 func genItem(i int, nitems int) (value.Value, errors.Error) {
 	if i < 0 || i >= nitems {
 		return nil, errors.NewError(nil,
@@ -221,38 +221,38 @@ func genItem(i int, nitems int) (value.Value, errors.Error) {
 	return doc, nil
 }
 
-func (b *bucket) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Delete(deletes []string) errors.Error {
+func (b *keyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *bucket) Release() {
+func (b *keyspace) Release() {
 }
 
 // NewSite creates a new mock site for the given "path".  The path has
 // prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:
-//     mock:pools=2,buckets=5,items=50000
-// The above means 2 pools.
-// And, each pool has 5 buckets.
-// And, each bucket with 50000 items.
+//     mock:namespaces=2,keyspaces=5,items=50000
+// The above means 2 namespaces.
+// And, each namespace has 5 keyspaces.
+// And, each keyspace with 50000 items.
 // By default, you get...
-//     mock:pools=1,buckets=1,items=100000
+//     mock:namespaces=1,keyspaces=1,items=100000
 // Which is what you'd get by specifying a path of just...
 //     mock:
 func NewSite(path string) (catalog.Site, errors.Error) {
@@ -273,23 +273,23 @@ func NewSite(path string) (catalog.Site, errors.Error) {
 		}
 		params[pair[0]] = v
 	}
-	npools := paramVal(params, "pools", DEFAULT_NUM_POOLS)
-	nbuckets := paramVal(params, "buckets", DEFAULT_NUM_BUCKETS)
+	nnamespaces := paramVal(params, "namespaces", DEFAULT_NUM_NAMESPACES)
+	nkeyspaces := paramVal(params, "keyspaces", DEFAULT_NUM_KEYSPACES)
 	nitems := paramVal(params, "items", DEFAULT_NUM_ITEMS)
-	s := &site{path: path, params: params, pools: map[string]*pool{}, poolNames: []string{}}
-	for i := 0; i < npools; i++ {
-		p := &pool{site: s, name: "p" + strconv.Itoa(i), buckets: map[string]*bucket{}, bucketNames: []string{}}
-		for j := 0; j < nbuckets; j++ {
-			b := &bucket{pool: p, name: "b" + strconv.Itoa(j), nitems: nitems,
+	s := &site{path: path, params: params, namespaces: map[string]*namespace{}, namespaceNames: []string{}}
+	for i := 0; i < nnamespaces; i++ {
+		p := &namespace{site: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
+		for j := 0; j < nkeyspaces; j++ {
+			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems,
 				indexes: map[string]catalog.Index{}}
-			pi := &primaryIndex{name: "all_docs", bucket: b}
+			pi := &primaryIndex{name: "all_docs", keyspace: b}
 			b.primary = pi
 			b.indexes["all_docs"] = pi
-			p.buckets[b.name] = b
-			p.bucketNames = append(p.bucketNames, b.name)
+			p.keyspaces[b.name] = b
+			p.keyspaceNames = append(p.keyspaceNames, b.name)
 		}
-		s.pools[p.name] = p
-		s.poolNames = append(s.poolNames, p.name)
+		s.namespaces[p.name] = p
+		s.namespaceNames = append(s.namespaceNames, p.name)
 	}
 	return s, nil
 }
@@ -302,14 +302,14 @@ func paramVal(params map[string]int, key string, defaultVal int) int {
 	return defaultVal
 }
 
-// primaryIndex performs full bucket scans.
+// primaryIndex performs full keyspace scans.
 type primaryIndex struct {
-	name   string
-	bucket *bucket
+	name     string
+	keyspace *keyspace
 }
 
-func (pi *primaryIndex) BucketId() string {
-	return pi.bucket.Id()
+func (pi *primaryIndex) KeyspaceId() string {
+	return pi.keyspace.Id()
 }
 
 func (pi *primaryIndex) Id() string {
@@ -375,9 +375,9 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 	}
 
 	if limit == 0 {
-		limit = int64(pi.bucket.nitems)
+		limit = int64(pi.keyspace.nitems)
 	}
-	for i := 0; i < pi.bucket.nitems && int64(i) < limit; i++ {
+	for i := 0; i < pi.keyspace.nitems && int64(i) < limit; i++ {
 		id := strconv.Itoa(i)
 
 		if low != "" &&
@@ -403,10 +403,10 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 	defer close(conn.EntryChannel())
 
 	if limit == 0 {
-		limit = int64(pi.bucket.nitems)
+		limit = int64(pi.keyspace.nitems)
 	}
 
-	for i := 0; i < pi.bucket.nitems && int64(i) < limit; i++ {
+	for i := 0; i < pi.keyspace.nitems && int64(i) < limit; i++ {
 		entry := catalog.IndexEntry{PrimaryKey: strconv.Itoa(i)}
 		conn.EntryChannel() <- &entry
 	}

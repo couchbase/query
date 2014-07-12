@@ -33,7 +33,7 @@ fullselect       *algebra.Select
 subresult        algebra.Subresult
 subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
-bucketTerm       *algebra.BucketTerm
+keyspaceTerm     *algebra.KeyspaceTerm
 path             expression.Path
 group            *algebra.Group
 resultTerm       *algebra.ResultTerm
@@ -42,7 +42,7 @@ projection       *algebra.Projection
 sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
 
-bucketRef        *algebra.BucketRef
+keyspaceRef      *algebra.KeyspaceRef
 
 set              *algebra.Set
 unset            *algebra.Unset
@@ -76,6 +76,7 @@ indexType        catalog.IndexType
 %token CAST
 %token CLUSTER
 %token COLLATE
+%token COLLECTION
 %token CREATE
 %token DATABASE
 %token DATASET
@@ -110,6 +111,7 @@ indexType        catalog.IndexType
 %token JOIN
 %token KEY
 %token KEYS
+%token KEYSPACE
 %token LEFT
 %token LET
 %token LETTING
@@ -118,6 +120,7 @@ indexType        catalog.IndexType
 %token MATCHED
 %token MERGE
 %token MISSING
+%token NAMESPACE
 %token NEST
 %token NOT
 %token NULL
@@ -226,10 +229,10 @@ indexType        catalog.IndexType
 %type <subselect>        select_from
 %type <subselect>        from_select
 %type <fromTerm>         from_term from opt_from
-%type <bucketTerm>       bucket_term
+%type <keyspaceTerm>     keyspace_term
 %type <b>                opt_join_type
 %type <path>             path opt_subpath
-%type <s>                pool_name bucket_name
+%type <s>                namespace_name keyspace_name
 %type <expr>             keys opt_keys
 %type <bindings>         opt_let let
 %type <expr>             opt_where where
@@ -249,7 +252,7 @@ indexType        catalog.IndexType
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index
 
-%type <bucketRef>        bucket_ref
+%type <keyspaceRef>      keyspace_ref
 %type <exprs>            values
 %type <expr>             key opt_key
 %type <projection>       returns returning opt_returning
@@ -271,7 +274,7 @@ indexType        catalog.IndexType
 %type <mergeInsert>      merge_insert opt_merge_insert
 
 %type <s>                index_name
-%type <bucketRef>        named_bucket_ref
+%type <keyspaceRef>      named_keyspace_ref
 %type <expr>             index_partition
 %type <indexType>        index_using
 %type <s>                rename
@@ -493,17 +496,17 @@ FROM from_term
 ;
 
 from_term:
-bucket_term
+keyspace_term
 {
   $$ = $1
 }
 |
-from_term opt_join_type JOIN bucket_term
+from_term opt_join_type JOIN keyspace_term
 {
   $$ = algebra.NewJoin($1, $2, $4)
 }
 |
-from_term opt_join_type NEST bucket_term
+from_term opt_join_type NEST keyspace_term
 {
   $$ = algebra.NewNest($1, $2, $4)
 }
@@ -514,23 +517,23 @@ from_term opt_join_type UNNEST path opt_as_alias
 }
 ;
 
-bucket_term:
-pool_name COLON bucket_name opt_subpath opt_as_alias opt_keys
+keyspace_term:
+namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_keys
 {
-  $$ = algebra.NewBucketTerm($1, $3, $4, $5, $6)
+  $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
 }
 |
-bucket_name opt_subpath opt_as_alias opt_keys
+keyspace_name opt_subpath opt_as_alias opt_keys
 {
-  $$ = algebra.NewBucketTerm("", $1, $2, $3, $4)
+  $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
 }
 ;
 
-pool_name:
+namespace_name:
 IDENTIFIER
 ;
 
-bucket_name:
+keyspace_name:
 IDENTIFIER
 ;
 
@@ -834,26 +837,26 @@ OFFSET expr
  *************************************************/
 
 insert:
-INSERT INTO bucket_ref opt_key values opt_returning
+INSERT INTO keyspace_ref opt_key values opt_returning
 {
   $$ = algebra.NewInsertValues($3, $4, $5, $6)
 }
 |
-INSERT INTO bucket_ref opt_key fullselect opt_returning
+INSERT INTO keyspace_ref opt_key fullselect opt_returning
 {
   $$ = algebra.NewInsertSelect($3, $4, $5, $6)
 }
 ;
 
-bucket_ref:
-pool_name COLON bucket_name opt_as_alias
+keyspace_ref:
+namespace_name COLON keyspace_name opt_as_alias
 {
-  $$ = algebra.NewBucketRef($1, $3, $4)
+  $$ = algebra.NewKeyspaceRef($1, $3, $4)
 }
 |
-bucket_name opt_as_alias
+keyspace_name opt_as_alias
 {
-  $$ = algebra.NewBucketRef("", $1, $2)
+  $$ = algebra.NewKeyspaceRef("", $1, $2)
 }
 ;
 
@@ -916,12 +919,12 @@ RAW expr
  *************************************************/
 
 upsert:
-UPSERT INTO bucket_ref key values opt_returning
+UPSERT INTO keyspace_ref key values opt_returning
 {
   $$ = algebra.NewUpsertValues($3, $4, $5, $6)
 }
 |
-UPSERT INTO bucket_ref key fullselect opt_returning
+UPSERT INTO keyspace_ref key fullselect opt_returning
 {
   $$ = algebra.NewUpsertSelect($3, $4, $5, $6)
 }
@@ -935,7 +938,7 @@ UPSERT INTO bucket_ref key fullselect opt_returning
  *************************************************/
 
 delete:
-DELETE FROM bucket_ref opt_keys opt_where opt_limit opt_returning
+DELETE FROM keyspace_ref opt_keys opt_where opt_limit opt_returning
 {
   $$ = algebra.NewDelete($3, $4, $5, $6, $7)
 }
@@ -949,17 +952,17 @@ DELETE FROM bucket_ref opt_keys opt_where opt_limit opt_returning
  *************************************************/
 
 update:
-UPDATE bucket_ref opt_keys set unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_keys set unset opt_where opt_limit opt_returning
 {
   $$ = algebra.NewUpdate($2, $3, $4, $5, $6, $7, $8)
 }
 |
-UPDATE bucket_ref opt_keys set opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_keys set opt_where opt_limit opt_returning
 {
   $$ = algebra.NewUpdate($2, $3, $4, nil, $5, $6, $7)
 }
 |
-UPDATE bucket_ref opt_keys unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_keys unset opt_where opt_limit opt_returning
 {
   $$ = algebra.NewUpdate($2, $3, nil, $4, $5, $6, $7)
 }
@@ -1083,22 +1086,22 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO bucket_ref USING bucket_term ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING keyspace_term ON key merge_actions opt_limit opt_returning
 {
   $$ = algebra.NewMergeFrom($3, $5, "", $7, $8.Update, $8.Delete, $8.Insert, $9, $10)
 }
 |
-MERGE INTO bucket_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
   $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 |
-MERGE INTO bucket_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
   $$ = algebra.NewMergeSelect($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
 |
-MERGE INTO bucket_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
   $$ = algebra.NewMergeValues($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
 }
@@ -1194,7 +1197,7 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE INDEX index_name ON named_bucket_ref LPAREN exprs RPAREN index_partition index_using
+CREATE INDEX index_name ON named_keyspace_ref LPAREN exprs RPAREN index_partition index_using
 {
   $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10)
 }
@@ -1204,15 +1207,15 @@ index_name:
 IDENTIFIER
 ;
 
-named_bucket_ref:
-bucket_name
+named_keyspace_ref:
+keyspace_name
 {
-  $$ = algebra.NewBucketRef("", $1, "")
+  $$ = algebra.NewKeyspaceRef("", $1, "")
 }
 |
-pool_name COLON bucket_name
+namespace_name COLON keyspace_name
 {
-  $$ = algebra.NewBucketRef($1, $3, "")
+  $$ = algebra.NewKeyspaceRef($1, $3, "")
 }
 ;
 
@@ -1248,7 +1251,7 @@ USING VIEW
  *************************************************/
 
 drop_index:
-DROP INDEX named_bucket_ref DOT index_name
+DROP INDEX named_keyspace_ref DOT index_name
 {
   $$ = algebra.NewDropIndex($3, $5)
 }
@@ -1261,7 +1264,7 @@ DROP INDEX named_bucket_ref DOT index_name
  *************************************************/
 
 alter_index:
-ALTER INDEX named_bucket_ref DOT index_name rename
+ALTER INDEX named_keyspace_ref DOT index_name rename
 {
   $$ = algebra.NewAlterIndex($3, $5, $6)
 }

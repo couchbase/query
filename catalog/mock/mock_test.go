@@ -27,76 +27,76 @@ func TestMock(t *testing.T) {
 		t.Errorf("expected site URL to be same")
 	}
 
-	n, err := s.PoolIds()
-	if err != nil || len(n) != DEFAULT_NUM_POOLS {
-		t.Errorf("expected num pools to be same")
+	n, err := s.NamespaceIds()
+	if err != nil || len(n) != DEFAULT_NUM_NAMESPACES {
+		t.Errorf("expected num namespaces to be same")
 	}
 
-	n, err = s.PoolNames()
-	if err != nil || len(n) != DEFAULT_NUM_POOLS {
-		t.Errorf("expected num pools to be same")
+	n, err = s.NamespaceNames()
+	if err != nil || len(n) != DEFAULT_NUM_NAMESPACES {
+		t.Errorf("expected num namespaces to be same")
 	}
 
-	p, err := s.PoolById("not-a-pool")
+	p, err := s.NamespaceById("not-a-namespace")
 	if err == nil || p != nil {
-		t.Errorf("expected not-a-pool")
+		t.Errorf("expected not-a-namespace")
 	}
 
-	p, err = s.PoolByName("not-a-pool")
+	p, err = s.NamespaceByName("not-a-namespace")
 	if err == nil || p != nil {
-		t.Errorf("expected not-a-pool")
+		t.Errorf("expected not-a-namespace")
 	}
 
-	p, err = s.PoolById("p0")
+	p, err = s.NamespaceById("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected pool p0")
+		t.Errorf("expected namespace p0")
 	}
 
 	if p.Id() != "p0" {
 		t.Errorf("expected p0 id")
 	}
 
-	p, err = s.PoolByName("p0")
+	p, err = s.NamespaceByName("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected pool p0")
+		t.Errorf("expected namespace p0")
 	}
 
 	if p.Name() != "p0" {
 		t.Errorf("expected p0 name")
 	}
 
-	n, err = p.BucketIds()
-	if err != nil || len(n) != DEFAULT_NUM_BUCKETS {
-		t.Errorf("expected num buckets to be same")
+	n, err = p.KeyspaceIds()
+	if err != nil || len(n) != DEFAULT_NUM_KEYSPACES {
+		t.Errorf("expected num keyspaces to be same")
 	}
 
-	n, err = p.BucketNames()
-	if err != nil || len(n) != DEFAULT_NUM_BUCKETS {
-		t.Errorf("expected num buckets to be same")
+	n, err = p.KeyspaceNames()
+	if err != nil || len(n) != DEFAULT_NUM_KEYSPACES {
+		t.Errorf("expected num keyspaces to be same")
 	}
 
-	b, err := p.BucketById("not-a-bucket")
+	b, err := p.KeyspaceById("not-a-keyspace")
 	if err == nil || b != nil {
-		t.Errorf("expected not-a-bucket")
+		t.Errorf("expected not-a-keyspace")
 	}
 
-	b, err = p.BucketByName("not-a-bucket")
+	b, err = p.KeyspaceByName("not-a-keyspace")
 	if err == nil || b != nil {
-		t.Errorf("expected not-a-bucket")
+		t.Errorf("expected not-a-keyspace")
 	}
 
-	b, err = p.BucketById("b0")
+	b, err = p.KeyspaceById("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected bucket b0")
+		t.Errorf("expected keyspace b0")
 	}
 
 	if b.Id() != "b0" {
 		t.Errorf("expected b0 id")
 	}
 
-	b, err = p.BucketByName("b0")
+	b, err = p.KeyspaceByName("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected bucket b0")
+		t.Errorf("expected keyspace b0")
 	}
 
 	if b.Name() != "b0" {
@@ -148,14 +148,14 @@ func TestMockIndex(t *testing.T) {
 		t.Errorf("failed to create site: %v", err)
 	}
 
-	p, err := s.PoolById("p0")
+	p, err := s.NamespaceById("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected pool p0")
+		t.Errorf("expected namespace p0")
 	}
 
-	b, err := p.BucketById("b0")
+	b, err := p.KeyspaceById("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected bucket b0")
+		t.Errorf("expected keyspace b0")
 	}
 
 	// Do a scan from keys 4 to 6 with Inclusion set to NEITHER - expect 1 result with key 5
@@ -203,8 +203,8 @@ func TestMockIndex(t *testing.T) {
 
 }
 
-// Helper function to scan the all_docs index of given bucket with given span
-func doIndexScan(t *testing.T, b catalog.Bucket, span catalog.Span) (e []*catalog.IndexEntry, excp errors.Error) {
+// Helper function to scan the all_docs index of given keyspace with given span
+func doIndexScan(t *testing.T, b catalog.Keyspace, span catalog.Span) (e []*catalog.IndexEntry, excp errors.Error) {
 	warnChan := make(errors.ErrorChannel)
 	errChan := make(errors.ErrorChannel)
 	defer close(warnChan)
@@ -215,7 +215,7 @@ func doIndexScan(t *testing.T, b catalog.Bucket, span catalog.Span) (e []*catalo
 
 	nitems, excp := b.Count()
 	if excp != nil {
-		t.Errorf("failed to get bucket count")
+		t.Errorf("failed to get keyspace count")
 		return
 	}
 

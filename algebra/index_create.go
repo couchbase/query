@@ -16,17 +16,17 @@ import (
 
 type CreateIndex struct {
 	name      string                 `json:"name"`
-	bucket    *BucketRef             `json:"bucket"`
+	keyspace  *KeyspaceRef           `json:"keyspace"`
 	exprs     expression.Expressions `json:"expressions"`
 	partition expression.Expression  `json:"partition"`
 	using     catalog.IndexType      `json:"using"`
 }
 
-func NewCreateIndex(name string, bucket *BucketRef, exprs expression.Expressions,
+func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
 	partition expression.Expression, using catalog.IndexType) *CreateIndex {
 	return &CreateIndex{
 		name:      name,
-		bucket:    bucket,
+		keyspace:  keyspace,
 		exprs:     exprs,
 		partition: partition,
 		using:     using,

@@ -14,17 +14,17 @@ import (
 	"github.com/couchbaselabs/query/errors"
 )
 
-const POOL_ID = "system"
-const POOL_NAME = "system"
-const BUCKET_NAME_SITES = "sites"
-const BUCKET_NAME_POOLS = "pools"
-const BUCKET_NAME_BUCKETS = "buckets"
-const BUCKET_NAME_INDEXES = "indexes"
-const BUCKET_NAME_DUAL = "dual"
+const NAMESPACE_ID = "system"
+const NAMESPACE_NAME = "system"
+const KEYSPACE_NAME_SITES = "sites"
+const KEYSPACE_NAME_NAMESPACES = "namespaces"
+const KEYSPACE_NAME_KEYSPACES = "keyspaces"
+const KEYSPACE_NAME_INDEXES = "indexes"
+const KEYSPACE_NAME_DUAL = "dual"
 
 type site struct {
-	actualSite        catalog.Site
-	systemCatalogPool *pool
+	actualSite             catalog.Site
+	systemCatalogNamespace *namespace
 }
 
 func (s *site) Id() string {
@@ -35,42 +35,42 @@ func (s *site) URL() string {
 	return s.actualSite.URL()
 }
 
-func (s *site) PoolIds() ([]string, errors.Error) {
-	poolIds, err := s.actualSite.PoolIds()
+func (s *site) NamespaceIds() ([]string, errors.Error) {
+	namespaceIds, err := s.actualSite.NamespaceIds()
 	if err != nil {
 		return nil, err
 	}
-	poolIds = append(poolIds, s.systemCatalogPool.Id())
-	return poolIds, err
+	namespaceIds = append(namespaceIds, s.systemCatalogNamespace.Id())
+	return namespaceIds, err
 }
 
-func (s *site) PoolNames() ([]string, errors.Error) {
-	poolNames, err := s.actualSite.PoolNames()
+func (s *site) NamespaceNames() ([]string, errors.Error) {
+	namespaceNames, err := s.actualSite.NamespaceNames()
 	if err != nil {
 		return nil, err
 	}
-	poolNames = append(poolNames, s.systemCatalogPool.Name())
-	return poolNames, err
+	namespaceNames = append(namespaceNames, s.systemCatalogNamespace.Name())
+	return namespaceNames, err
 }
 
-func (s *site) PoolById(id string) (catalog.Pool, errors.Error) {
-	if id == POOL_ID {
-		return s.systemCatalogPool, nil
+func (s *site) NamespaceById(id string) (catalog.Namespace, errors.Error) {
+	if id == NAMESPACE_ID {
+		return s.systemCatalogNamespace, nil
 	}
-	return s.actualSite.PoolById(id)
+	return s.actualSite.NamespaceById(id)
 }
 
-func (s *site) PoolByName(name string) (catalog.Pool, errors.Error) {
-	if name == POOL_NAME {
-		return s.systemCatalogPool, nil
+func (s *site) NamespaceByName(name string) (catalog.Namespace, errors.Error) {
+	if name == NAMESPACE_NAME {
+		return s.systemCatalogNamespace, nil
 	}
-	return s.actualSite.PoolByName(name)
+	return s.actualSite.NamespaceByName(name)
 }
 
 func NewSite(actualSite catalog.Site) (catalog.Site, errors.Error) {
 	s := &site{actualSite: actualSite}
 
-	e := s.loadPool()
+	e := s.loadNamespace()
 	if e != nil {
 		return nil, e
 	}
@@ -78,12 +78,12 @@ func NewSite(actualSite catalog.Site) (catalog.Site, errors.Error) {
 	return s, e
 }
 
-func (s *site) loadPool() errors.Error {
-	p, e := newPool(s)
+func (s *site) loadNamespace() errors.Error {
+	p, e := newNamespace(s)
 	if e != nil {
 		return e
 	}
 
-	s.systemCatalogPool = p
+	s.systemCatalogNamespace = p
 	return nil
 }

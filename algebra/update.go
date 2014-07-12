@@ -14,7 +14,7 @@ import (
 )
 
 type Update struct {
-	bucket    *BucketRef            `json:"bucket"`
+	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
 	set       *Set                  `json:"set"`
 	unset     *Unset                `json:"unset"`
@@ -23,17 +23,17 @@ type Update struct {
 	returning *Projection           `json:"returning"`
 }
 
-func NewUpdate(bucket *BucketRef, keys expression.Expression, set *Set, unset *Unset,
+func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, set *Set, unset *Unset,
 	where, limit expression.Expression, returning *Projection) *Update {
-	return &Update{bucket, keys, set, unset, where, limit, returning}
+	return &Update{keyspace, keys, set, unset, where, limit, returning}
 }
 
 func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
-func (this *Update) BucketRef() *BucketRef {
-	return this.bucket
+func (this *Update) KeyspaceRef() *KeyspaceRef {
+	return this.keyspace
 }
 
 func (this *Update) Keys() expression.Expression {

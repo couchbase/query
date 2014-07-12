@@ -14,17 +14,17 @@ import (
 )
 
 type SendDelete struct {
-	bucket catalog.Bucket
+	keyspace catalog.Keyspace
 }
 
-func NewSendDelete(bucket catalog.Bucket) *SendDelete {
-	return &SendDelete{bucket}
+func NewSendDelete(keyspace catalog.Keyspace) *SendDelete {
+	return &SendDelete{keyspace}
 }
 
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendDelete(this)
 }
 
-func (this *SendDelete) Bucket() catalog.Bucket {
-	return this.bucket
+func (this *SendDelete) Keyspace() catalog.Keyspace {
+	return this.keyspace
 }
