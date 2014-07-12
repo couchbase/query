@@ -210,6 +210,8 @@
 /[lL][iI][kK][eE]/ { logDebugTokens("LIKE"); return LIKE }
 /[lL][iI][mM][iI][tT]/
                   { logDebugTokens("LIMIT"); return LIMIT }
+/[mM][aA][pP]/
+                  { logDebugTokens("MAP"); return MAP }
 /[mM][aA][tT][cC][hH][eE][dD]/
                   { logDebugTokens("MATCHED"); return MATCHED }
 /[mM][eE][rR][gG][eE]/
@@ -255,6 +257,9 @@
                   }
 /[rR][eE][aA][lL][mM]/ {
                     logDebugTokens("REALM"); return REALM
+                  }
+/[rR][eE][dD][uU][cC][eE]/ {
+                    logDebugTokens("REDUCE"); return REDUCE
                   }
 /[rR][eE][nN][aA][mM][eE]/ {
                     logDebugTokens("RENAME"); return RENAME

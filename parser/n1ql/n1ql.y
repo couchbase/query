@@ -117,6 +117,7 @@ indexType        catalog.IndexType
 %token LETTING
 %token LIKE
 %token LIMIT
+%token MAP
 %token MATCHED
 %token MERGE
 %token MISSING
@@ -136,6 +137,7 @@ indexType        catalog.IndexType
 %token PRIMARY
 %token RAW
 %token REALM
+%token REDUCE
 %token RENAME
 %token RETURNING
 %token RIGHT
