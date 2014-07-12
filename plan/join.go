@@ -20,8 +20,8 @@ type Join struct {
 	alias  string
 }
 
-func NewJoin(bucket catalog.Bucket, term *algebra.Join, alias string) *Join {
-	return &Join{bucket, term, alias}
+func NewJoin(bucket catalog.Bucket, term *algebra.Join) *Join {
+	return &Join{bucket, term, term.Alias()}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -46,8 +46,8 @@ type Nest struct {
 	alias  string
 }
 
-func NewNest(bucket catalog.Bucket, term *algebra.Nest, alias string) *Nest {
-	return &Nest{bucket, term, alias}
+func NewNest(bucket catalog.Bucket, term *algebra.Nest) *Nest {
+	return &Nest{bucket, term, term.Alias()}
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
@@ -71,8 +71,8 @@ type Unnest struct {
 	alias string
 }
 
-func NewUnnest(term *algebra.Unnest, alias string) *Unnest {
-	return &Unnest{term, alias}
+func NewUnnest(term *algebra.Unnest) *Unnest {
+	return &Unnest{term, term.Alias()}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {

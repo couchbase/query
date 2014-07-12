@@ -13,11 +13,12 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/expression"
 )
 
-func Build(node algebra.Node) (Operator, error) {
-	builder := newBuilder()
+func Build(node algebra.Node, site catalog.Site) (Operator, error) {
+	builder := newBuilder(site)
 	op, err := node.Accept(builder)
 
 	if err != nil {
@@ -33,15 +34,17 @@ func Build(node algebra.Node) (Operator, error) {
 }
 
 type builder struct {
+	site           catalog.Site
 	projectInitial bool
 	children       []Operator
 	subChildren    []Operator
 }
 
-func newBuilder() *builder {
+func newBuilder(site catalog.Site) *builder {
 	return &builder{
+		site:        site,
 		children:    make([]Operator, 0, 8),
-		subChildren: make([]Operator, 0, 8),
+		subChildren: make([]Operator, 0, 16),
 	}
 }
 
@@ -89,12 +92,10 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	if node.From() != nil {
-		op, err := node.From().Accept(this)
+		_, err := node.From().Accept(this)
 		if err != nil {
 			return nil, err
 		}
-
-		this.children = append(this.children, op.(Operator))
 	}
 
 	if node.Let() != nil {
@@ -196,7 +197,27 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitBucketTerm(node *algebra.BucketTerm) (interface{}, error) {
-	return nil, nil
+	pool, err := this.site.PoolByName(node.Pool())
+	if err != nil {
+		return nil, err
+	}
+
+	bucket, err := pool.BucketByName(node.Bucket())
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := bucket.IndexByPrimary()
+	if err != nil {
+		return nil, err
+	}
+
+	scan := NewPrimaryScan(index)
+	this.children = append(this.children, scan)
+
+	fetch := NewFetch(bucket, node)
+	this.subChildren = append(this.subChildren, fetch)
+	return fetch, nil
 }
 
 func (this *builder) VisitParentTerm(node *algebra.ParentTerm) (interface{}, error) {
@@ -204,15 +225,59 @@ func (this *builder) VisitParentTerm(node *algebra.ParentTerm) (interface{}, err
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	return nil, nil
+	_, err := node.Left().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := this.site.PoolByName(node.Right().Pool())
+	if err != nil {
+		return nil, err
+	}
+
+	bucket, err := pool.BucketByName(node.Right().Bucket())
+	if err != nil {
+		return nil, err
+	}
+
+	join := NewJoin(bucket, node)
+	this.subChildren = append(this.subChildren, join)
+
+	return join, nil
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	return nil, nil
+	_, err := node.Left().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := this.site.PoolByName(node.Right().Pool())
+	if err != nil {
+		return nil, err
+	}
+
+	bucket, err := pool.BucketByName(node.Right().Bucket())
+	if err != nil {
+		return nil, err
+	}
+
+	nest := NewNest(bucket, node)
+	this.subChildren = append(this.subChildren, nest)
+
+	return nest, nil
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	return nil, nil
+	_, err := node.Left().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	unnest := NewUnnest(node)
+	this.subChildren = append(this.subChildren, unnest)
+
+	return unnest, nil
 }
 
 // DML

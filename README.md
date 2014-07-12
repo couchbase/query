@@ -38,6 +38,7 @@ The N1QL DP4 implementation provides the following features:
 
 * __DML__
     + __INSERT__
+    + __UPSERT__
     + __UPDATE__
     + __DELETE__
     + __UPSERT__

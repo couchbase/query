@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/catalog"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -24,6 +25,7 @@ const _BUFFER_CAP = 1024
 
 // Context.Close() must be invoked to release resources.
 type Context struct {
+	site      catalog.Site
 	now       time.Time
 	arguments map[string]value.Value
 
@@ -37,8 +39,9 @@ type Context struct {
 }
 
 // Context.Close() must be invoked to release resources.
-func NewContext() *Context {
+func NewContext(site catalog.Site) *Context {
 	rv := &Context{}
+	rv.site = site
 	rv.now = time.Now()
 	rv.arguments = make(map[string]value.Value)
 	rv.warningChannel = make(errors.ErrorChannel, _BUFFER_CAP)
@@ -58,6 +61,10 @@ func NewContext() *Context {
 func (this *Context) Close() {
 	this.warningChannel <- nil
 	this.errorChannel <- nil
+}
+
+func (this *Context) Site() catalog.Site {
+	return this.site
 }
 
 func (this *Context) Now() time.Time {
@@ -91,7 +98,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = plan.Build(query)
+		subplan, err = plan.Build(query, this.site)
 		if err != nil {
 			return nil, err
 		}
