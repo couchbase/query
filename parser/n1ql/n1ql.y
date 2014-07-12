@@ -335,7 +335,7 @@ alter_index
 fullselect:
 subselects opt_order_by opt_limit opt_offset
 {
-  $$ = algebra.NewSelect($1, $2, $3, $4)
+  $$ = algebra.NewSelect($1, $2, $4, $3) /* OFFSET precedes LIMIT */
 }
 ;
 

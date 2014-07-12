@@ -17,10 +17,6 @@ type Offset struct {
 	expr expression.Expression
 }
 
-type Limit struct {
-	expr expression.Expression
-}
-
 func NewOffset(expr expression.Expression) *Offset {
 	return &Offset{expr}
 }
@@ -31,6 +27,10 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Offset) Expression() expression.Expression {
 	return this.expr
+}
+
+type Limit struct {
+	expr expression.Expression
 }
 
 func NewLimit(expr expression.Expression) *Limit {

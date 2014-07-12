@@ -91,7 +91,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = plan.Plan(query)
+		subplan, err = plan.Build(query)
 		if err != nil {
 			return nil, err
 		}

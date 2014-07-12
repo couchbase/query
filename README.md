@@ -110,9 +110,9 @@ This package also provides collation, sorting, and sets
 * __BooleanValue__, __NumberValue__, __StringValue__, __NullValue__,
   __ArrayValue__, __ObjectValue__: JSON values.
 
-### Err
+### Errors
 
-The err package provides a dictionary of error codes and
+The errors package provides a dictionary of error codes and
 messages. When fully implemented, the error codes will mirror SQL, and
 the error messages will be localizable.
 

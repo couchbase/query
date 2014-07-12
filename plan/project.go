@@ -21,10 +21,12 @@ type ProjectTerm struct {
 }
 
 type InitialProject struct {
-	terms ProjectTerms
+	projection *algebra.Projection
+	terms      ProjectTerms
 }
 
-func NewInitialProject(results algebra.ResultTerms) *InitialProject {
+func NewInitialProject(projection *algebra.Projection) *InitialProject {
+	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 	a := 1
 
@@ -38,12 +40,17 @@ func NewInitialProject(results algebra.ResultTerms) *InitialProject {
 	}
 
 	return &InitialProject{
-		terms: terms,
+		projection: projection,
+		terms:      terms,
 	}
 }
 
 func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialProject(this)
+}
+
+func (this *InitialProject) Projection() *algebra.Projection {
+	return this.projection
 }
 
 func (this *InitialProject) Terms() ProjectTerms {

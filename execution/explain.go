@@ -10,37 +10,38 @@
 package execution
 
 import (
+	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type ParentScan struct {
+type Explain struct {
 	base
+	plan plan.Operator
 }
 
-func NewParentScan() *ParentScan {
-	rv := &ParentScan{
+func NewExplain(plan plan.Operator) *Explain {
+	rv := &Explain{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitParentScan(this)
+func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitExplain(this)
 }
 
-func (this *ParentScan) Copy() Operator {
-	return &ParentScan{this.base.copy()}
+func (this *Explain) Copy() Operator {
+	return &Explain{this.base.copy(), this.plan}
 }
 
-func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
+func (this *Explain) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		// Shallow copy of the parent includes
-		// correlated and annotated aspects
-		this.sendItem(parent.Copy().(value.AnnotatedValue))
+		// TODO: Perform EXPLAIN
 	})
 }

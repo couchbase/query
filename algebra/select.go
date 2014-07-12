@@ -16,16 +16,16 @@ import (
 type Select struct {
 	subresult Subresult             `json:"subresult"`
 	order     SortTerms             `json:"order"`
-	limit     expression.Expression `json:"limit"`
 	offset    expression.Expression `json:"offset"`
+	limit     expression.Expression `json:"limit"`
 }
 
-func NewSelect(subresult Subresult, order SortTerms, limit, offset expression.Expression) *Select {
+func NewSelect(subresult Subresult, order SortTerms, offset, limit expression.Expression) *Select {
 	return &Select{
 		subresult: subresult,
 		order:     order,
-		limit:     limit,
 		offset:    offset,
+		limit:     limit,
 	}
 }
 
@@ -41,16 +41,16 @@ func (this *Select) Order() SortTerms {
 	return this.order
 }
 
+func (this *Select) Offset() expression.Expression {
+	return this.offset
+}
+
 func (this *Select) Limit() expression.Expression {
 	return this.limit
 }
 
 func (this *Select) SetLimit(limit expression.Expression) {
 	this.limit = limit
-}
-
-func (this *Select) Offset() expression.Expression {
-	return this.offset
 }
 
 type SortTerms []*SortTerm
@@ -99,6 +99,10 @@ func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Subselect) From() FromTerm {
 	return this.from
+}
+
+func (this *Subselect) Let() expression.Bindings {
+	return this.let
 }
 
 func (this *Subselect) Where() expression.Expression {

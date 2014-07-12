@@ -290,3 +290,8 @@ func (this *Builder) VisitDropIndex(plan *plan.DropIndex) (interface{}, error) {
 func (this *Builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error) {
 	return NewAlterIndex(plan), nil
 }
+
+// Explain
+func (this *Builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
+	return NewExplain(plan.Operator()), nil
+}

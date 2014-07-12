@@ -7,20 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package plan
 
 type Explain struct {
-	stmt Statement `json:"Statement"`
+	op Operator
 }
 
-func NewExplain(stmt Statement) *Explain {
-	return &Explain{stmt}
+func NewExplain(op Operator) *Explain {
+	return &Explain{
+		op: op,
+	}
 }
 
 func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExplain(this)
 }
 
-func (this *Explain) Statement() Statement {
-	return this.stmt
+func (this *Explain) Operator() Operator {
+	return this.op
 }
