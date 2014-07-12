@@ -334,7 +334,7 @@ func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) 
 
 		if ok {
 			if len(aggs) == cap(aggs) {
-				aggs2 := make(algebra.Aggregates, len(aggs), (cap(aggs)+1)<<1)
+				aggs2 := make(algebra.Aggregates, len(aggs), (len(aggs)+1)<<1)
 				for i, a := range aggs {
 					aggs2[i] = a
 				}

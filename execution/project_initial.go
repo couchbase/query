@@ -50,8 +50,8 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		return this.processTerms(item, context)
 	}
 
-	// Raw value
 	if n == 0 {
+		// No terms; send raw value
 		item.SetAttachment("project", item.GetValue())
 		return this.sendItem(item)
 	}
@@ -59,31 +59,30 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	// n == 1
 	result := terms[0].Result()
 	expr := result.Expression()
-	alias := terms[0].Alias()
 
 	// Special cases
 	if expr == nil {
-		// Unprefixed star or raw value
-		if item.Type() == value.OBJECT || !result.Star() {
+		// Unprefixed star or raw projection of item
+		if item.Type() == value.OBJECT || this.plan.Projection().Raw() {
 			item.SetAttachment("project", item.GetValue())
 		} else {
 			item.SetAttachment("project",
 				value.NewValue(map[string]interface{}{}))
 		}
 		return this.sendItem(item)
-	} else if alias == "" && !result.Star() {
-		// Raw projection of single expression
-		val, e := expr.Evaluate(item, context)
-		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
+	} else if this.plan.Projection().Raw() {
+		// Raw projection of an expression
+		val, err := expr.Evaluate(item, context)
+		if err != nil {
+			context.ErrorChannel() <- errors.NewError(err, "Error evaluating projection.")
 			return false
 		}
 		item.SetAttachment("project", val)
 		return this.sendItem(item)
+	} else {
+		// Default
+		return this.processTerms(item, context)
 	}
-
-	// Default
-	return this.processTerms(item, context)
 }
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
@@ -98,9 +97,9 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 
 	for _, term := range this.plan.Terms() {
 		if term.Alias() != "" {
-			val, e := term.Result().Expression().Evaluate(item, context)
-			if e != nil {
-				context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
+			val, err := term.Result().Expression().Evaluate(item, context)
+			if err != nil {
+				context.ErrorChannel() <- errors.NewError(err, "Error evaluating projection.")
 				return false
 			}
 
@@ -114,10 +113,10 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			// Star
 			starValue := item.(value.Value)
 			if term.Result().Expression() != nil {
-				var e error
-				starValue, e = term.Result().Expression().Evaluate(item, context)
-				if e != nil {
-					context.ErrorChannel() <- errors.NewError(e, "Error evaluating projection.")
+				var err error
+				starValue, err = term.Result().Expression().Evaluate(item, context)
+				if err != nil {
+					context.ErrorChannel() <- errors.NewError(err, "Error evaluating projection.")
 					return false
 				}
 			}

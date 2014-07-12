@@ -33,11 +33,11 @@ func NewObjectLiteral(bindings Bindings) Expression {
 func (this *ObjectLiteral) Evaluate(item value.Value, context Context) (value.Value, error) {
 	m := make(map[string]interface{}, len(this.bindings))
 
-	var er error
-	for b, e := range this.bindings {
-		m[b], er = e.Evaluate(item, context)
-		if er != nil {
-			return nil, er
+	var err error
+	for key, expr := range this.bindings {
+		m[key], err = expr.Evaluate(item, context)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -50,13 +50,13 @@ func (this *ObjectLiteral) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	if (len(this.bindings) != len(ol.bindings)) {
+	if len(this.bindings) != len(ol.bindings) {
 		return false
 	}
 
-	for b, e := range this.bindings {
-		oe, ok := ol.bindings[b]
-		if !ok || !e.EquivalentTo(oe) {
+	for key, expr := range this.bindings {
+		oexpr, ok := ol.bindings[key]
+		if !ok || !expr.EquivalentTo(oexpr) {
 			return false
 		}
 	}
@@ -65,16 +65,16 @@ func (this *ObjectLiteral) EquivalentTo(other Expression) bool {
 }
 
 func (this *ObjectLiteral) Fold() (Expression, error) {
-	v, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return v, e
+	_, err := this.VisitChildren(&Folder{})
+	if err != nil {
+		return nil, err
 	}
 
 	c := make(map[string]interface{}, len(this.bindings))
-	for b, e := range this.bindings {
-		switch e := e.(type) {
+	for key, expr := range this.bindings {
+		switch expr := expr.(type) {
 		case *Constant:
-			c[b] = e.Value()
+			c[key] = expr.Value()
 		default:
 			return this, nil
 		}
@@ -85,23 +85,21 @@ func (this *ObjectLiteral) Fold() (Expression, error) {
 
 func (this *ObjectLiteral) Children() Expressions {
 	rv := make(Expressions, 0, len(this.bindings))
-	for _, e := range this.bindings {
-		rv = append(rv, e)
+	for _, expr := range this.bindings {
+		rv = append(rv, expr)
 	}
 
 	return rv
 }
 
 func (this *ObjectLiteral) VisitChildren(visitor Visitor) (Expression, error) {
-	var ve Expression
-	var re error
-	for v, e := range this.bindings {
-		ve, re = visitor.Visit(e)
-		if re != nil {
-			return nil, re
+	for key, expr := range this.bindings {
+		vexpr, err := visitor.Visit(expr)
+		if err != nil {
+			return nil, err
 		}
 
-		this.bindings[v] = ve
+		this.bindings[key] = vexpr
 	}
 
 	return this, nil
