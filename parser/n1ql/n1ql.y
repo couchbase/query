@@ -513,7 +513,7 @@ from_term opt_join_type NEST keyspace_term
   $$ = algebra.NewNest($1, $2, $4)
 }
 |
-from_term opt_join_type UNNEST path opt_as_alias
+from_term opt_join_type UNNEST expr opt_as_alias
 {
   $$ = algebra.NewUnnest($1, $2, $4, $5)
 }

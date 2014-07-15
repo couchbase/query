@@ -29,7 +29,7 @@ keys-clause ::= 'KEYS' expr
 join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? keys-clause
 join-type ::= 'INNER' | 'LEFT' 'OUTER'?
 nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? keys-clause
-unnest-clause ::= join-type? 'UNNEST' path ('AS'? alias)?
+unnest-clause ::= join-type? 'UNNEST' expr ('AS'? alias)?
 
 /*
  *  let clause

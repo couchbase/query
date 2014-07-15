@@ -168,14 +168,14 @@ func (this *Nest) Outer() bool {
 }
 
 type Unnest struct {
-	left    FromTerm
-	outer   bool
-	project expression.Path
-	as      string
+	left  FromTerm
+	outer bool
+	expr  expression.Expression
+	as    string
 }
 
-func NewUnnest(left FromTerm, outer bool, project expression.Path, as string) *Unnest {
-	return &Unnest{left, outer, project, as}
+func NewUnnest(left FromTerm, outer bool, expr expression.Expression, as string) *Unnest {
+	return &Unnest{left, outer, expr, as}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
@@ -190,7 +190,7 @@ func (this *Unnest) Alias() string {
 	if this.as != "" {
 		return this.as
 	} else {
-		return this.project.Alias()
+		return this.expr.Alias()
 	}
 }
 
@@ -202,8 +202,8 @@ func (this *Unnest) Outer() bool {
 	return this.outer
 }
 
-func (this *Unnest) Project() expression.Path {
-	return this.project
+func (this *Unnest) Expression() expression.Expression {
+	return this.expr
 }
 
 func (this *Unnest) As() string {

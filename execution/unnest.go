@@ -43,13 +43,13 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
-	pv, e := this.plan.Term().Project().Evaluate(item, context)
-	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "Error evaluating UNNEST path.")
+	ev, err := this.plan.Term().Expression().Evaluate(item, context)
+	if err != nil {
+		context.ErrorChannel() <- errors.NewError(err, "Error evaluating UNNEST path.")
 		return false
 	}
 
-	actuals := pv.Actual()
+	actuals := ev.Actual()
 	switch actuals.(type) {
 	case []interface{}:
 	case nil:

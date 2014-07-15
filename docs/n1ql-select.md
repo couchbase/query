@@ -3,6 +3,7 @@
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
 * Modified: 2014-06-23
+* Modified: 2014-07-15
 
 ## Introduction
 
@@ -2251,6 +2252,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Listed the supported date formats.
 * 2014-06-23 - Nested
     * Allow expressions to select object fields.
+* 2014-06-23 - UNNEST
+    * Allow UNNEST of non-path expressions.
 
 ### Open issues
 
