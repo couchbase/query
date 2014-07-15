@@ -1553,10 +1553,16 @@ is negative). _digits_ is 0 if not given.
 
 __ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
 
+__ARRAY\_AVG(expr)__ - arithmetic mean (average) of all the non-NULL
+number values in the array, or NULL if there are no such values.
+
 __ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
 the input arrays.
 
 __ARRAY\_CONTAINS(expr, value)__ - true if the array contains _value._
+
+__ARRAY\_COUNT(expr)__ - count of all the non-NULL values in the
+array, or zero if there are no such values.
 
 __ARRAY\_DISTINCT(expr)__ - new array with distinct elements of input
 array.
@@ -1595,6 +1601,9 @@ in reverse order.
 
 __ARRAY\_SORT(expr)__ - new array with elements sorted in N1QL
 collation order.
+
+__ARRAY\_SUM(expr)__ - sum of all the non-NULL number values in the
+array, or zero if there are no such values.
 
 ### Object functions
 
@@ -1798,7 +1807,7 @@ in N1QL collation order.
 __MIN(expr)__ - minimum non-NULL, non-MISSING value in the group,
 in N1QL collation order.
 
-__SUM(expr)__ - arithmetic sum of all the number values in the group.
+__SUM(expr)__ - sum of all the number values in the group.
 
 __SUM(DISTINCT expr)__ - arithmetic sum of all the distinct number
 values in the group.

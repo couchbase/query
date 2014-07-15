@@ -86,8 +86,10 @@ var _FUNCTIONS = map[string]Function{
 
 	// Array functions
 	"ARRAY_APPEND":   &ArrayAppend{},
+	"ARRAY_AVG":      &ArrayAvg{},
 	"ARRAY_CONCAT":   &ArrayConcat{},
 	"ARRAY_CONTAINS": &ArrayContains{},
+	"ARRAY_COUNT":    &ArrayCount{},
 	"ARRAY_DISTINCT": &ArrayDistinct{},
 	"ARRAY_IFNULL":   &ArrayIfNull{},
 	"ARRAY_LENGTH":   &ArrayLength{},
@@ -101,6 +103,7 @@ var _FUNCTIONS = map[string]Function{
 	"ARRAY_REPLACE":  &ArrayReplace{},
 	"ARRAY_REVERSE":  &ArrayReverse{},
 	"ARRAY_SORT":     &ArraySort{},
+	"ARRAY_SUM":      &ArraySum{},
 
 	// Object functions
 	"OBJECT_KEYS":   &ObjectKeys{},

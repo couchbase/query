@@ -16,6 +16,12 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// ArrayAppend
+//
+///////////////////////////////////////////////////
+
 type ArrayAppend struct {
 	binaryBase
 }
@@ -49,6 +55,61 @@ func (this *ArrayAppend) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// ArrayAvg
+//
+///////////////////////////////////////////////////
+
+type ArrayAvg struct {
+	unaryBase
+}
+
+func NewArrayAvg(arg Expression) Function {
+	return &ArrayAvg{
+		unaryBase{
+			operand: arg,
+		},
+	}
+}
+
+func (this *ArrayAvg) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	sum := 0.0
+	count := 0
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
+		v := value.NewValue(a)
+		if v.Type() == value.NUMBER {
+			sum += v.Actual().(float64)
+			count++
+		}
+	}
+
+	if count == 0 {
+		return value.NULL_VALUE, nil
+	} else {
+		return value.NewValue(sum / float64(count)), nil
+	}
+}
+
+func (this *ArrayAvg) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewArrayAvg(args[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ArrayConcat
+//
+///////////////////////////////////////////////////
+
 type ArrayConcat struct {
 	binaryBase
 }
@@ -80,6 +141,12 @@ func (this *ArrayConcat) Constructor() FunctionConstructor {
 		return NewArrayConcat(args[0], args[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayContains
+//
+///////////////////////////////////////////////////
 
 type ArrayContains struct {
 	binaryBase
@@ -117,6 +184,55 @@ func (this *ArrayContains) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// ArrayCount
+//
+///////////////////////////////////////////////////
+
+type ArrayCount struct {
+	unaryBase
+}
+
+func NewArrayCount(arg Expression) Function {
+	return &ArrayCount{
+		unaryBase{
+			operand: arg,
+		},
+	}
+}
+
+func (this *ArrayCount) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	count := 0
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
+		v := value.NewValue(a)
+		if v.Type() > value.NULL {
+			count++
+		}
+	}
+
+	return value.NewValue(count), nil
+}
+
+func (this *ArrayCount) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewArrayCount(args[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ArrayDistinct
+//
+///////////////////////////////////////////////////
+
 type ArrayDistinct struct {
 	unaryBase
 }
@@ -137,8 +253,8 @@ func (this *ArrayDistinct) evaluate(arg value.Value) (value.Value, error) {
 	}
 
 	set := value.NewSet(16)
-	oa := arg.Actual().([]interface{})
-	for _, a := range oa {
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
 		set.Add(value.NewValue(a))
 	}
 
@@ -150,6 +266,12 @@ func (this *ArrayDistinct) Constructor() FunctionConstructor {
 		return NewArrayDistinct(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayIfNull
+//
+///////////////////////////////////////////////////
 
 type ArrayIfNull struct {
 	unaryBase
@@ -170,8 +292,8 @@ func (this *ArrayIfNull) evaluate(arg value.Value) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().([]interface{})
-	for _, a := range oa {
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL {
 			return v, nil
@@ -186,6 +308,12 @@ func (this *ArrayIfNull) Constructor() FunctionConstructor {
 		return NewArrayIfNull(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayLength
+//
+///////////////////////////////////////////////////
 
 type ArrayLength struct {
 	unaryBase
@@ -206,8 +334,8 @@ func (this *ArrayLength) evaluate(arg value.Value) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().([]interface{})
-	return value.NewValue(float64(len(oa))), nil
+	aa := arg.Actual().([]interface{})
+	return value.NewValue(float64(len(aa))), nil
 }
 
 func (this *ArrayLength) Constructor() FunctionConstructor {
@@ -215,6 +343,12 @@ func (this *ArrayLength) Constructor() FunctionConstructor {
 		return NewArrayLength(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayMax
+//
+///////////////////////////////////////////////////
 
 type ArrayMax struct {
 	unaryBase
@@ -236,8 +370,8 @@ func (this *ArrayMax) evaluate(arg value.Value) (value.Value, error) {
 	}
 
 	rv := value.NULL_VALUE
-	oa := arg.Actual().([]interface{})
-	for _, a := range oa {
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Collate(rv) > 0 {
 			rv = v
@@ -252,6 +386,12 @@ func (this *ArrayMax) Constructor() FunctionConstructor {
 		return NewArrayMax(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayMin
+//
+///////////////////////////////////////////////////
 
 type ArrayMin struct {
 	unaryBase
@@ -273,8 +413,8 @@ func (this *ArrayMin) evaluate(arg value.Value) (value.Value, error) {
 	}
 
 	rv := value.NULL_VALUE
-	oa := arg.Actual().([]interface{})
-	for _, a := range oa {
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL &&
 			(rv == value.NULL_VALUE || v.Collate(rv) < 0) {
@@ -290,6 +430,12 @@ func (this *ArrayMin) Constructor() FunctionConstructor {
 		return NewArrayMin(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayPosition
+//
+///////////////////////////////////////////////////
 
 type ArrayPosition struct {
 	binaryBase
@@ -327,6 +473,12 @@ func (this *ArrayPosition) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// ArrayPrepend
+//
+///////////////////////////////////////////////////
+
 type ArrayPrepend struct {
 	binaryBase
 }
@@ -361,6 +513,12 @@ func (this *ArrayPrepend) Constructor() FunctionConstructor {
 		return NewArrayPrepend(args[0], args[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayPut
+//
+///////////////////////////////////////////////////
 
 type ArrayPut struct {
 	binaryBase
@@ -402,6 +560,12 @@ func (this *ArrayPut) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// ArrayRemove
+//
+///////////////////////////////////////////////////
+
 type ArrayRemove struct {
 	binaryBase
 }
@@ -440,6 +604,12 @@ func (this *ArrayRemove) Constructor() FunctionConstructor {
 		return NewArrayRemove(args[0], args[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayRepeat
+//
+///////////////////////////////////////////////////
 
 type ArrayRepeat struct {
 	binaryBase
@@ -480,6 +650,12 @@ func (this *ArrayRepeat) Constructor() FunctionConstructor {
 		return NewArrayRepeat(args[0], args[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArrayReplace
+//
+///////////////////////////////////////////////////
 
 type ArrayReplace struct {
 	nAryBase
@@ -528,6 +704,12 @@ func (this *ArrayReplace) MaxArgs() int { return 4 }
 
 func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayReplace }
 
+///////////////////////////////////////////////////
+//
+// ArrayReverse
+//
+///////////////////////////////////////////////////
+
 type ArrayReverse struct {
 	unaryBase
 }
@@ -547,12 +729,12 @@ func (this *ArrayReverse) evaluate(arg value.Value) (value.Value, error) {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().([]interface{})
-	n := len(oa)
+	aa := arg.Actual().([]interface{})
+	n := len(aa)
 	ra := make([]interface{}, n)
 	n--
-	for i, _ := range oa {
-		ra[i] = oa[n-i]
+	for i, _ := range aa {
+		ra[i] = aa[n-i]
 	}
 
 	return value.NewValue(ra), nil
@@ -563,6 +745,12 @@ func (this *ArrayReverse) Constructor() FunctionConstructor {
 		return NewArrayReverse(args[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArraySort
+//
+///////////////////////////////////////////////////
 
 type ArraySort struct {
 	unaryBase
@@ -592,5 +780,48 @@ func (this *ArraySort) evaluate(arg value.Value) (value.Value, error) {
 func (this *ArraySort) Constructor() FunctionConstructor {
 	return func(args Expressions) Function {
 		return NewArraySort(args[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ArraySum
+//
+///////////////////////////////////////////////////
+
+type ArraySum struct {
+	unaryBase
+}
+
+func NewArraySum(arg Expression) Function {
+	return &ArraySum{
+		unaryBase{
+			operand: arg,
+		},
+	}
+}
+
+func (this *ArraySum) evaluate(arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	sum := 0.0
+	aa := arg.Actual().([]interface{})
+	for _, a := range aa {
+		v := value.NewValue(a)
+		if v.Type() == value.NUMBER {
+			sum += v.Actual().(float64)
+		}
+	}
+
+	return value.NewValue(sum), nil
+}
+
+func (this *ArraySum) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewArraySum(args[0])
 	}
 }
