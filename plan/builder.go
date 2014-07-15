@@ -107,11 +107,22 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.subChildren = append(this.subChildren, NewFilter(node.Where()))
 	}
 
-	group := node.Group()
+	// Check for aggregates
+	aggs := make(algebra.Aggregates, 0, 16)
 	projection := node.Projection()
+	if projection != nil {
+		for _, term := range projection.Terms() {
+			aggs = collectAggregates(aggs, term.Expression())
+		}
+	}
+
+	group := node.Group()
+	if group == nil && len(aggs) > 0 {
+		group = algebra.NewGroup(nil, nil, nil)
+	}
 
 	if group != nil {
-		this.visitGroup(group, projection)
+		this.visitGroup(group, aggs)
 	}
 
 	this.subChildren = append(this.subChildren, NewInitialProject(projection))
@@ -129,9 +140,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	return NewSequence(this.children...), nil
 }
 
-func (this *builder) visitGroup(group *algebra.Group, projection *algebra.Projection) {
-	aggs := make(algebra.Aggregates, 0, 16)
-
+func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 	letting := group.Letting()
 	for _, binding := range letting {
 		aggs = collectAggregates(aggs, binding.Expression())
@@ -142,15 +151,10 @@ func (this *builder) visitGroup(group *algebra.Group, projection *algebra.Projec
 		aggs = collectAggregates(aggs, having)
 	}
 
-	if projection != nil {
-		for _, term := range projection.Terms() {
-			aggs = collectAggregates(aggs, term.Expression())
-		}
-	}
-
 	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggs))
 	this.subChildren = append(this.subChildren, NewIntermediateGroup(group.By(), aggs))
 	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
+	this.children = append(this.children, NewIntermediateGroup(group.By(), aggs))
 	this.children = append(this.children, NewFinalGroup(group.By(), aggs))
 	this.subChildren = make([]Operator, 0, 4)
 
