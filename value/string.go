@@ -104,3 +104,7 @@ func (this stringValue) Slice(start, end int) (Value, bool) {
 func (this stringValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
+
+func (this stringValue) Descendants(buffer Values) Values {
+	return append(buffer, this)
+}

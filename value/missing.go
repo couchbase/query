@@ -92,6 +92,10 @@ func (this missingValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
+func (this missingValue) Descendants(buffer Values) Values {
+	return buffer
+}
+
 func missingField(field string) Value {
 	return missingValue(field)
 }

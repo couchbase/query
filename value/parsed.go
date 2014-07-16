@@ -194,3 +194,7 @@ func (this *parsedValue) parse() Value {
 
 	return this.parsed
 }
+
+func (this *parsedValue) Descendants(buffer Values) Values {
+	return this.parse().Descendants(buffer)
+}

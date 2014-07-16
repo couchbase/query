@@ -102,3 +102,7 @@ func (this floatValue) Slice(start, end int) (Value, bool) {
 func (this floatValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
+
+func (this floatValue) Descendants(buffer Values) Values {
+	return append(buffer, this)
+}

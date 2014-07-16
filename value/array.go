@@ -145,6 +145,21 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
+func (this sliceValue) Descendants(buffer Values) Values {
+	if cap(buffer) < len(buffer)+len(this)+1 {
+		buf2 := make(Values, len(buffer), (len(buffer)+len(this)+1)<<1)
+		copy(buf2, buffer)
+		buffer = buf2
+	}
+
+	buffer = append(buffer, this)
+	for _, child := range this {
+		buffer = NewValue(child).Descendants(buffer)
+	}
+
+	return buffer
+}
+
 type listValue struct {
 	actual []interface{}
 }
@@ -284,6 +299,21 @@ func (this *listValue) SliceTail(start int) (Value, bool) {
 	}
 
 	return MISSING_VALUE, false
+}
+
+func (this *listValue) Descendants(buffer Values) Values {
+	if cap(buffer) < len(buffer)+len(this.actual)+1 {
+		buf2 := make(Values, len(buffer), (len(buffer)+len(this.actual)+1)<<1)
+		copy(buf2, buffer)
+		buffer = buf2
+	}
+
+	buffer = append(buffer, NewValue(this.actual))
+	for _, child := range this.actual {
+		buffer = NewValue(child).Descendants(buffer)
+	}
+
+	return buffer
 }
 
 func arrayEquals(array1, array2 []interface{}) bool {

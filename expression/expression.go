@@ -23,7 +23,7 @@ type Expressions []Expression
 type CompositeExpressions []Expressions
 
 type Expression interface {
-	// Evaluation.
+	// Evaluate this expression for the given value and context.
 	Evaluate(item value.Value, context Context) (value.Value, error)
 
 	// Is this expression equivalent to the other.

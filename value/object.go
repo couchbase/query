@@ -112,6 +112,23 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
+func (this objectValue) Descendants(buffer Values) Values {
+	keys := sortedKeys(this)
+
+	if cap(buffer) < len(buffer)+len(this)+1 {
+		buf2 := make(Values, len(buffer), (len(buffer)+len(this)+1)<<1)
+		copy(buf2, buffer)
+		buffer = buf2
+	}
+
+	buffer = append(buffer, this)
+	for _, key := range keys {
+		buffer = NewValue(this[key]).Descendants(buffer)
+	}
+
+	return buffer
+}
+
 func objectEquals(obj1, obj2 map[string]interface{}) bool {
 	if len(obj1) != len(obj2) {
 		return false
@@ -189,4 +206,14 @@ func copyMap(source map[string]interface{}, copier copyFunc) map[string]interfac
 	}
 
 	return result
+}
+
+func sortedKeys(obj map[string]interface{}) []string {
+	keys := make([]string, 0, len(obj))
+	for key, _ := range obj {
+		keys = append(keys, key)
+	}
+
+	sort.StringSlice(keys).Sort()
+	return keys
 }

@@ -32,9 +32,9 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 
 	barr := make([][]interface{}, len(this.bindings))
 	for i, b := range this.bindings {
-		bv, e := b.Expression().Evaluate(item, context)
-		if e != nil {
-			return nil, e
+		bv, err := b.Expression().Evaluate(item, context)
+		if err != nil {
+			return nil, err
 		}
 
 		switch bv.Type() {
@@ -68,9 +68,9 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 			cv.SetField(b.Variable(), barr[j][i])
 		}
 
-		sv, e := this.satisfies.Evaluate(cv, context)
-		if e != nil {
-			return nil, e
+		sv, err := this.satisfies.Evaluate(cv, context)
+		if err != nil {
+			return nil, err
 		}
 
 		if sv.Truth() {
