@@ -69,12 +69,12 @@ func (this *parsedValue) Copy() Value {
 		return this.parsed.Copy()
 	}
 
-	rv := parsedValue{
+	rv := &parsedValue{
 		raw:        this.raw,
 		parsedType: this.parsedType,
 	}
 
-	return &rv
+	return rv
 }
 
 func (this *parsedValue) CopyForUpdate() Value {
@@ -179,13 +179,17 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
+	if this.parsedType == NOT_JSON {
+		return append(buffer, this)
+	}
+
 	return this.parse().Descendants(buffer)
 }
 
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
 		if this.parsedType == NOT_JSON {
-			return nil
+			panic("Attempt to parse non-JSON value.")
 		}
 
 		var p interface{}
