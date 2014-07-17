@@ -97,6 +97,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		scan := NewDummyScan()
+		this.children = append(this.children, scan)
 	}
 
 	if node.Let() != nil {
@@ -212,13 +215,18 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
-	index, err := keyspace.IndexByPrimary()
-	if err != nil {
-		return nil, err
-	}
+	if node.Keys() != nil {
+		scan := NewKeyScan(node.Keys())
+		this.children = append(this.children, scan)
+	} else {
+		index, err := keyspace.IndexByPrimary()
+		if err != nil {
+			return nil, err
+		}
 
-	scan := NewPrimaryScan(index)
-	this.children = append(this.children, scan)
+		scan := NewPrimaryScan(index)
+		this.children = append(this.children, scan)
+	}
 
 	fetch := NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
