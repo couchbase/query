@@ -108,20 +108,18 @@ func NewValueFromBytes(bytes []byte) Value {
 		parsedType = identifyType(bytes)
 
 		switch parsedType {
-		case NUMBER, STRING, BOOLEAN:
+		case NUMBER, STRING, BOOLEAN, NULL:
 			var p interface{}
 			err := json.Unmarshal(bytes, &p)
 			if err != nil {
-				panic("Unexpected parse error on valid JSON.")
+				panic("Parse error on JSON data.")
 			}
 
 			return NewValue(p)
-		case NULL:
-			return NULL_VALUE
 		}
 	}
 
-	rv := parsedValue{
+	rv := &parsedValue{
 		raw: bytes,
 	}
 
@@ -131,7 +129,7 @@ func NewValueFromBytes(bytes []byte) Value {
 		rv.parsedType = parsedType
 	}
 
-	return &rv
+	return rv
 }
 
 // The data types supported by Value
@@ -194,6 +192,6 @@ func identifyType(bytes []byte) int {
 			continue
 		}
 	}
-	panic("Unable to identify type of valid JSON.")
-	return -1
+
+	panic("Unable to identify type of JSON data.")
 }
