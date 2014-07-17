@@ -72,9 +72,9 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return setFor(t, clone, item, context)
 	}
 
-	v, e := t.Value().Evaluate(item, context)
-	if e != nil {
-		return nil, e
+	v, err := t.Value().Evaluate(item, context)
+	if err != nil {
+		return nil, err
 	}
 
 	if v.Type() == value.MISSING {
@@ -91,24 +91,24 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 }
 
 func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
-	carrays, e := arraysFor(t.UpdateFor(), clone, context)
-	if e != nil {
-		return nil, e
+	carrays, err := arraysFor(t.UpdateFor(), clone, context)
+	if err != nil {
+		return nil, err
 	}
 
-	cvals, e := buildFor(t.UpdateFor(), clone, carrays, context)
-	if e != nil {
-		return nil, e
+	cvals, err := buildFor(t.UpdateFor(), clone, carrays, context)
+	if err != nil {
+		return nil, err
 	}
 
-	iarrays, e := arraysFor(t.UpdateFor(), item, context)
-	if e != nil {
-		return nil, e
+	iarrays, err := arraysFor(t.UpdateFor(), item, context)
+	if err != nil {
+		return nil, err
 	}
 
-	ivals, e := buildFor(t.UpdateFor(), item, iarrays, context)
-	if e != nil {
-		return nil, e
+	ivals, err := buildFor(t.UpdateFor(), item, iarrays, context)
+	if err != nil {
+		return nil, err
 	}
 
 	// Clone may have been shortened by previous SET term
@@ -119,15 +119,15 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 
 	when := t.UpdateFor().When()
 	for i := 0; i < n; i++ {
-		v, e := t.Value().Evaluate(ivals[i], context)
-		if e != nil {
-			return nil, e
+		v, err := t.Value().Evaluate(ivals[i], context)
+		if err != nil {
+			return nil, err
 		}
 
 		if when != nil {
-			w, e := when.Evaluate(ivals[i], context)
-			if e != nil {
-				return nil, e
+			w, err := when.Evaluate(ivals[i], context)
+			if err != nil {
+				return nil, err
 			}
 
 			if !w.Truth() {

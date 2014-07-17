@@ -103,6 +103,6 @@ func (this floatValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this floatValue) Descendants(buffer Values) Values {
+func (this floatValue) Descendants(buffer []interface{}) []interface{} {
 	return append(buffer, this)
 }

@@ -37,6 +37,11 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 			return nil, err
 		}
 
+		if b.Descend() {
+			buffer := make([]interface{}, 0, 256)
+			bv = value.NewValue(bv.Descendants(buffer))
+		}
+
 		switch bv.Type() {
 		case value.ARRAY:
 			barr[i] = bv.Actual().([]interface{})

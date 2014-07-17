@@ -14,10 +14,15 @@ type Bindings []*Binding
 type Binding struct {
 	variable string
 	expr     Expression
+	descend  bool
 }
 
 func NewBinding(variable string, expr Expression) *Binding {
-	return &Binding{variable, expr}
+	return &Binding{variable, expr, false}
+}
+
+func NewDescendantBinding(variable string, expr Expression) *Binding {
+	return &Binding{variable, expr, true}
 }
 
 func (this *Binding) Variable() string {
@@ -26,6 +31,10 @@ func (this *Binding) Variable() string {
 
 func (this *Binding) Expression() Expression {
 	return this.expr
+}
+
+func (this *Binding) Descend() bool {
+	return this.descend
 }
 
 func (this *Binding) Accept(visitor Visitor) (Expression, error) {

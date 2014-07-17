@@ -15,12 +15,17 @@ import (
 )
 
 func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) ([]value.Value, error) {
-	var e error
+	var err error
 	arrays := make([]value.Value, len(f.Bindings()))
 	for i, b := range f.Bindings() {
-		arrays[i], e = b.Expression().Evaluate(val, context)
-		if e != nil {
-			return nil, e
+		arrays[i], err = b.Expression().Evaluate(val, context)
+		if err != nil {
+			return nil, err
+		}
+
+		if b.Descend() {
+			buffer := make([]interface{}, 0, 256)
+			arrays[i] = value.NewValue(arrays[i].Descendants(buffer))
 		}
 	}
 
@@ -39,12 +44,16 @@ func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, conte
 		}
 	}
 
+	if n < 0 {
+		return nil, nil
+	}
+
 	rv := make([]value.Value, n)
 	for i, _ := range rv {
 		rv[i] = value.NewScopeValue(make(map[string]interface{}, len(f.Bindings())), val)
 		for j, b := range f.Bindings() {
-			v, _ := arrays[j].Index(i)
-			if v.Type() != value.MISSING {
+			v, ok := arrays[j].Index(i)
+			if ok {
 				rv[i].SetField(b.Variable(), v)
 			}
 		}

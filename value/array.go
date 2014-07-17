@@ -145,9 +145,9 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
-func (this sliceValue) Descendants(buffer Values) Values {
+func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
 	if cap(buffer) < len(buffer)+len(this)+1 {
-		buf2 := make(Values, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
@@ -301,9 +301,9 @@ func (this *listValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
-func (this *listValue) Descendants(buffer Values) Values {
+func (this *listValue) Descendants(buffer []interface{}) []interface{} {
 	if cap(buffer) < len(buffer)+len(this.actual)+1 {
-		buf2 := make(Values, len(buffer), (len(buffer)+len(this.actual)+1)<<1)
+		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this.actual)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}

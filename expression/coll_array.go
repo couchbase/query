@@ -33,9 +33,14 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 
 	barr := make([][]interface{}, len(this.bindings))
 	for i, b := range this.bindings {
-		bv, e := b.Expression().Evaluate(item, context)
-		if e != nil {
-			return nil, e
+		bv, err := b.Expression().Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+
+		if b.Descend() {
+			buffer := make([]interface{}, 0, 256)
+			bv = value.NewValue(bv.Descendants(buffer))
 		}
 
 		switch bv.Type() {

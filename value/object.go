@@ -112,11 +112,11 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this objectValue) Descendants(buffer Values) Values {
+func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 	keys := sortedKeys(this)
 
 	if cap(buffer) < len(buffer)+len(this)+1 {
-		buf2 := make(Values, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}

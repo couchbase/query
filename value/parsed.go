@@ -178,6 +178,10 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 	return this.parse().SliceTail(start)
 }
 
+func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
+	return this.parse().Descendants(buffer)
+}
+
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
 		if this.parsedType == NOT_JSON {
@@ -193,8 +197,4 @@ func (this *parsedValue) parse() Value {
 	}
 
 	return this.parsed
-}
-
-func (this *parsedValue) Descendants(buffer Values) Values {
-	return this.parse().Descendants(buffer)
 }

@@ -45,22 +45,22 @@ type CompositeValues []Values
 
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {
-	Type() int                                    // Data type constant
-	Actual() interface{}                          // Native Go representation
-	Equals(other Value) bool                      // Faster than Collate()
-	Collate(other Value) int                      // -int if this precedes other
-	Truth() bool                                  // Truth value
-	Copy() Value                                  // Shallow copy
-	CopyForUpdate() Value                         // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
-	Bytes() []byte                                // JSON byte encoding
-	Field(field string) (Value, bool)             // Object field dereference, or MISSING; true if found
-	SetField(field string, val interface{}) error // Object field setting
-	UnsetField(field string) error                // Object field unsetting
-	Index(index int) (Value, bool)                // Array index dereference, or MISSING; true if found
-	SetIndex(index int, val interface{}) error    // Array index setting
-	Slice(start, end int) (Value, bool)           // Array slicing; true if found
-	SliceTail(start int) (Value, bool)            // Array slicing; true if found
-	Descendants(buffer Values) Values             // Depth-first listing of this value and all its descendants
+	Type() int                                      // Data type constant
+	Actual() interface{}                            // Native Go representation
+	Equals(other Value) bool                        // Faster than Collate()
+	Collate(other Value) int                        // -int if this precedes other
+	Truth() bool                                    // Truth value
+	Copy() Value                                    // Shallow copy
+	CopyForUpdate() Value                           // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
+	Bytes() []byte                                  // JSON byte encoding
+	Field(field string) (Value, bool)               // Object field dereference, or MISSING; true if found
+	SetField(field string, val interface{}) error   // Object field setting
+	UnsetField(field string) error                  // Object field unsetting
+	Index(index int) (Value, bool)                  // Array index dereference, or MISSING; true if found
+	SetIndex(index int, val interface{}) error      // Array index setting
+	Slice(start, end int) (Value, bool)             // Array slicing; true if found
+	SliceTail(start int) (Value, bool)              // Array slicing; true if found
+	Descendants(buffer []interface{}) []interface{} // Depth-first listing of this value and all its descendants
 }
 
 var _CONVERSIONS = []reflect.Type{

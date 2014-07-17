@@ -1029,6 +1029,11 @@ variable IN path_expr
 {
   $$ = expression.NewBinding($1, $3)
 }
+|
+variable UNDER path_expr
+{
+  $$ = expression.NewDescendantBinding($1, $3)
+}
 ;
 
 variable:
@@ -1833,6 +1838,11 @@ coll_binding:
 variable IN expr
 {
   $$ = expression.NewBinding($1, $3)
+}
+|
+variable UNDER expr
+{
+  $$ = expression.NewDescendantBinding($1, $3)
 }
 ;
 

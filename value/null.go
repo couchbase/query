@@ -80,6 +80,6 @@ func (this *nullValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this *nullValue) Descendants(buffer Values) Values {
+func (this *nullValue) Descendants(buffer []interface{}) []interface{} {
 	return append(buffer, this)
 }
