@@ -70,14 +70,14 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			case string:
 				keys[i] = key
 			default:
-				context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
+				context.Error(errors.NewError(nil, fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
-					key, key))
+					key, key)))
 				return false
 			}
 		default:
-			context.ErrorChannel() <- errors.NewError(nil,
-				"Missing or invalid meta for primary key.")
+			context.Error(errors.NewError(nil,
+				"Missing or invalid meta for primary key."))
 			return false
 		}
 	}
@@ -85,7 +85,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	// Fetch
 	pairs, err := this.plan.Keyspace().Fetch(keys)
 	if err != nil {
-		context.ErrorChannel() <- err
+		context.Error(err)
 		return false
 	}
 
@@ -99,8 +99,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			var e error
 			item, e = project.Evaluate(item, context)
 			if e != nil {
-				context.ErrorChannel() <- errors.NewError(e,
-					"Error evaluating fetch path.")
+				context.Error(errors.NewError(e,
+					"Error evaluating fetch path."))
 				return false
 			}
 

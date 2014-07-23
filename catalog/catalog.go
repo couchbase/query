@@ -13,7 +13,7 @@ Package catalog provides a common catalog abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
 
-The logical hierarchy for the query language is site -> namespace -> bucket
+The logical hierarchy for the query language is datastore -> namespace -> bucket
 -> document. Indexes are also attached to buckets.
 
 TODO: This hierarchy should be revisited and aligned with long-term
@@ -31,22 +31,22 @@ import (
 // log channel for the catalog lifecycle
 const CHANNEL = "CATALOG"
 
-// Site represents a cluster or single-node server.
-type Site interface {
-	Id() string                                            // Id of this site
-	URL() string                                           // URL to this site
-	NamespaceIds() ([]string, errors.Error)                // Ids of the namespaces contained in this site
-	NamespaceNames() ([]string, errors.Error)              // Names of the namespaces contained in this site
-	NamespaceById(id string) (Namespace, errors.Error)     // Find a namespace in this site using the namespace's Id
-	NamespaceByName(name string) (Namespace, errors.Error) // Find a namespace in this site using the namespace's name
+// Datastore represents a cluster or single-node server.
+type Datastore interface {
+	Id() string                                            // Id of this datastore
+	URL() string                                           // URL to this datastore
+	NamespaceIds() ([]string, errors.Error)                // Ids of the namespaces contained in this datastore
+	NamespaceNames() ([]string, errors.Error)              // Names of the namespaces contained in this datastore
+	NamespaceById(id string) (Namespace, errors.Error)     // Find a namespace in this datastore using the namespace's Id
+	NamespaceByName(name string) (Namespace, errors.Error) // Find a namespace in this datastore using the namespace's name
 }
 
-// Namespace represents a logical boundary that is within a site and above
+// Namespace represents a logical boundary that is within a datastore and above
 // a keyspace. In the query language, a namespace is only used as a namespace
 // to qualify keyspace names. No assumptions are made about namespaces and
 // isolation, resource management, or any other concerns.
 type Namespace interface {
-	SiteId() string                                      // Id of the site that contains this namespace
+	DatastoreId() string                                 // Id of the datastore that contains this namespace
 	Id() string                                          // Id of this namespace
 	Name() string                                        // Name of this namespace
 	KeyspaceIds() ([]string, errors.Error)               // Ids of the keyspaces contained in this namespace
@@ -55,8 +55,9 @@ type Namespace interface {
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this namespace using the keyspace's name
 }
 
-// Keyspace is a collection of key-value entries (typically
-// key-document, but also key-counter, key-blob, etc.).
+// Keyspace is a map of key-value entries (typically key-document, but
+// also key-counter, key-blob, etc.). Keys are unique within a
+// keyspace.
 type Keyspace interface {
 	NamespaceId() string                              // Id of the namespace that contains this keyspace
 	Id() string                                       // Id of this keyspace

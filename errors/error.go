@@ -34,6 +34,8 @@ const (
 	DEBUG
 )
 
+type Errors []Error
+
 // Error will eventually include code, message key, and internal error
 // object (cause) and message
 type Error interface {

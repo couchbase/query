@@ -101,21 +101,24 @@ type Statistics interface {
 	Bins() ([]Statistics, errors.Error)
 }
 
+type Context interface {
+	Error(errors.Error)
+	Warning(errors.Error)
+}
+
 type IndexConnection struct {
-	entryChannel   EntryChannel        // Closed by the index when the scan is completed or aborted.
-	stopChannel    StopChannel         // Notifies index to stop scanning. Never closed, just garbage-collected.
-	warningChannel errors.ErrorChannel // Written by index. Never closed, just garbage-collected.
-	errorChannel   errors.ErrorChannel // Written by index. Never closed, just garbage-collected.
+	entryChannel EntryChannel // Closed by the index when the scan is completed or aborted.
+	stopChannel  StopChannel  // Notifies index to stop scanning. Never closed, just garbage-collected.
+	context      Context
 }
 
 const _ENTRY_CAP = 1024
 
-func NewIndexConnection(warningChannel, errorChannel errors.ErrorChannel) *IndexConnection {
+func NewIndexConnection(context Context) *IndexConnection {
 	return &IndexConnection{
-		entryChannel:   make(EntryChannel, _ENTRY_CAP),
-		stopChannel:    make(StopChannel, 1),
-		warningChannel: warningChannel,
-		errorChannel:   errorChannel,
+		entryChannel: make(EntryChannel, _ENTRY_CAP),
+		stopChannel:  make(StopChannel, 1),
+		context:      context,
 	}
 }
 
@@ -127,10 +130,10 @@ func (this *IndexConnection) StopChannel() StopChannel {
 	return this.stopChannel
 }
 
-func (this *IndexConnection) SendWarning(e errors.Error) {
-	this.warningChannel <- e
+func (this *IndexConnection) Error(err errors.Error) {
+	this.context.Error(err)
 }
 
-func (this *IndexConnection) SendError(e errors.Error) {
-	this.errorChannel <- e
+func (this *IndexConnection) Warning(wrn errors.Error) {
+	this.context.Warning(wrn)
 }

@@ -58,15 +58,15 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 	case value.Value:
 		item = value.NewAnnotatedValue(project)
 	default:
-		context.ErrorChannel() <- errors.NewError(nil,
-			fmt.Sprintf("Invalid or missing projection %v.", project))
+		context.Error(errors.NewError(nil,
+			fmt.Sprintf("Invalid or missing projection %v.", project)))
 		return false
 	}
 
 	item.SetAttachment("project", item)
 	e := this.set.Add(item)
 	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "")
+		context.Error(errors.NewError(e, ""))
 		return false
 	}
 

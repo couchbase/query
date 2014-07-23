@@ -16,27 +16,27 @@ import (
 
 const NAMESPACE_ID = "system"
 const NAMESPACE_NAME = "system"
-const KEYSPACE_NAME_SITES = "sites"
+const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_KEYSPACES = "keyspaces"
 const KEYSPACE_NAME_INDEXES = "indexes"
 const KEYSPACE_NAME_DUAL = "dual"
 
-type site struct {
-	actualSite             catalog.Site
+type datastore struct {
+	actualDatastore        catalog.Datastore
 	systemCatalogNamespace *namespace
 }
 
-func (s *site) Id() string {
-	return s.actualSite.Id()
+func (s *datastore) Id() string {
+	return s.actualDatastore.Id()
 }
 
-func (s *site) URL() string {
-	return s.actualSite.URL()
+func (s *datastore) URL() string {
+	return s.actualDatastore.URL()
 }
 
-func (s *site) NamespaceIds() ([]string, errors.Error) {
-	namespaceIds, err := s.actualSite.NamespaceIds()
+func (s *datastore) NamespaceIds() ([]string, errors.Error) {
+	namespaceIds, err := s.actualDatastore.NamespaceIds()
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +44,8 @@ func (s *site) NamespaceIds() ([]string, errors.Error) {
 	return namespaceIds, err
 }
 
-func (s *site) NamespaceNames() ([]string, errors.Error) {
-	namespaceNames, err := s.actualSite.NamespaceNames()
+func (s *datastore) NamespaceNames() ([]string, errors.Error) {
+	namespaceNames, err := s.actualDatastore.NamespaceNames()
 	if err != nil {
 		return nil, err
 	}
@@ -53,22 +53,22 @@ func (s *site) NamespaceNames() ([]string, errors.Error) {
 	return namespaceNames, err
 }
 
-func (s *site) NamespaceById(id string) (catalog.Namespace, errors.Error) {
+func (s *datastore) NamespaceById(id string) (catalog.Namespace, errors.Error) {
 	if id == NAMESPACE_ID {
 		return s.systemCatalogNamespace, nil
 	}
-	return s.actualSite.NamespaceById(id)
+	return s.actualDatastore.NamespaceById(id)
 }
 
-func (s *site) NamespaceByName(name string) (catalog.Namespace, errors.Error) {
+func (s *datastore) NamespaceByName(name string) (catalog.Namespace, errors.Error) {
 	if name == NAMESPACE_NAME {
 		return s.systemCatalogNamespace, nil
 	}
-	return s.actualSite.NamespaceByName(name)
+	return s.actualDatastore.NamespaceByName(name)
 }
 
-func NewSite(actualSite catalog.Site) (catalog.Site, errors.Error) {
-	s := &site{actualSite: actualSite}
+func NewDatastore(actualDatastore catalog.Datastore) (catalog.Datastore, errors.Error) {
+	s := &datastore{actualDatastore: actualDatastore}
 
 	e := s.loadNamespace()
 	if e != nil {
@@ -78,7 +78,7 @@ func NewSite(actualSite catalog.Site) (catalog.Site, errors.Error) {
 	return s, e
 }
 
-func (s *site) loadNamespace() errors.Error {
+func (s *datastore) loadNamespace() errors.Error {
 	p, e := newNamespace(s)
 	if e != nil {
 		return e

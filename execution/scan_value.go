@@ -48,7 +48,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 
 		vals, e := this.plan.Values().Evaluate(parent, context)
 		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error evaluating VALUES.")
+			context.Error(errors.NewError(e, "Error evaluating VALUES."))
 			return
 		}
 

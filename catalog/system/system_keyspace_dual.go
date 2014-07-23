@@ -19,37 +19,37 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type dualkeyspace struct {
+type dualKeyspace struct {
 	namespace *namespace
 	name      string
 	indexes   map[string]catalog.Index
 	primary   catalog.PrimaryIndex
 }
 
-func (b *dualkeyspace) Release() {
+func (b *dualKeyspace) Release() {
 }
 
-func (b *dualkeyspace) NamespaceId() string {
+func (b *dualKeyspace) NamespaceId() string {
 	return b.namespace.Id()
 }
 
-func (b *dualkeyspace) Id() string {
+func (b *dualKeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *dualkeyspace) Name() string {
+func (b *dualKeyspace) Name() string {
 	return b.name
 }
 
-func (b *dualkeyspace) Count() (int64, errors.Error) {
+func (b *dualKeyspace) Count() (int64, errors.Error) {
 	return 1, nil
 }
 
-func (b *dualkeyspace) IndexIds() ([]string, errors.Error) {
+func (b *dualKeyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }
 
-func (b *dualkeyspace) IndexNames() ([]string, errors.Error) {
+func (b *dualKeyspace) IndexNames() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
 		rv = append(rv, name)
@@ -57,11 +57,11 @@ func (b *dualkeyspace) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualkeyspace) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) IndexById(id string) (catalog.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *dualkeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -69,11 +69,11 @@ func (b *dualkeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *dualkeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualKeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *dualkeyspace) Indexes() ([]catalog.Index, errors.Error) {
+func (b *dualKeyspace) Indexes() ([]catalog.Index, errors.Error) {
 	rv := make([]catalog.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -81,7 +81,7 @@ func (b *dualkeyspace) Indexes() ([]catalog.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualkeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualKeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -89,11 +89,11 @@ func (b *dualkeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error)
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualkeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualkeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	rv := make([]catalog.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
@@ -107,33 +107,33 @@ func (b *dualkeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualkeyspace) FetchOne(key string) (value.Value, errors.Error) {
+func (b *dualKeyspace) FetchOne(key string) (value.Value, errors.Error) {
 	doc := map[string]interface{}{}
 	return value.NewValue(doc), nil
 }
 
-func (b *dualkeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualkeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualkeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualkeyspace) Delete(deletes []string) errors.Error {
+func (b *dualKeyspace) Delete(deletes []string) errors.Error {
 	// FIXME
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func newDualKeyspace(p *namespace) (*dualkeyspace, errors.Error) {
-	b := new(dualkeyspace)
+func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
+	b := new(dualKeyspace)
 	b.namespace = p
 	b.name = KEYSPACE_NAME_DUAL
 
@@ -144,7 +144,7 @@ func newDualKeyspace(p *namespace) (*dualkeyspace, errors.Error) {
 
 type dualIndex struct {
 	name     string
-	keyspace *dualkeyspace
+	keyspace *dualKeyspace
 }
 
 func (pi *dualIndex) KeyspaceId() string {
@@ -200,7 +200,7 @@ func (pi *dualIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *
 	case string:
 		val = a
 	default:
-		conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
+		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
 		return
 	}
 

@@ -196,14 +196,14 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 func (this *base) requireKey(item value.AnnotatedValue, context *Context) (string, bool) {
 	mv := item.GetAttachment("meta")
 	if mv == nil {
-		context.ErrorChannel() <- errors.NewError(nil, "Unable to find meta.")
+		context.Error(errors.NewError(nil, "Unable to find meta."))
 		return "", false
 	}
 
 	meta := mv.(map[string]interface{})
 	key, ok := meta["id"]
 	if !ok {
-		context.ErrorChannel() <- errors.NewError(nil, "Unable to find key.")
+		context.Error(errors.NewError(nil, "Unable to find key."))
 		return "", false
 	}
 
@@ -212,7 +212,7 @@ func (this *base) requireKey(item value.AnnotatedValue, context *Context) (strin
 		return key, true
 	default:
 		e := errors.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
-		context.ErrorChannel() <- e
+		context.Error(e)
 		return "", false
 	}
 }

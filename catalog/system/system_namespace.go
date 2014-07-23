@@ -15,14 +15,14 @@ import (
 )
 
 type namespace struct {
-	site      *site
+	datastore *datastore
 	id        string
 	name      string
 	keyspaces map[string]catalog.Keyspace
 }
 
-func (p *namespace) SiteId() string {
-	return p.site.Id()
+func (p *namespace) DatastoreId() string {
+	return p.datastore.Id()
 }
 
 func (p *namespace) Id() string {
@@ -61,9 +61,9 @@ func (p *namespace) KeyspaceByName(name string) (catalog.Keyspace, errors.Error)
 }
 
 // newNamespace creates a new namespace.
-func newNamespace(s *site) (*namespace, errors.Error) {
+func newNamespace(s *datastore) (*namespace, errors.Error) {
 	p := new(namespace)
-	p.site = s
+	p.datastore = s
 	p.id = NAMESPACE_ID
 	p.name = NAMESPACE_NAME
 	p.keyspaces = make(map[string]catalog.Keyspace)
@@ -77,7 +77,7 @@ func newNamespace(s *site) (*namespace, errors.Error) {
 
 func (p *namespace) loadKeyspaces() (e errors.Error) {
 
-	sb, e := newSitesKeyspace(p)
+	sb, e := newDatastoresKeyspace(p)
 	if e != nil {
 		return e
 	}

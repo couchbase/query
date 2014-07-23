@@ -57,7 +57,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error evaluating GROUP key.")
+			context.Error(errors.NewError(e, "Error evaluating GROUP key."))
 			return false
 		}
 	}
@@ -80,7 +80,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	for agg, val := range aggregates {
 		v, e := agg.CumulateInitial(item, val, context)
 		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error updating GROUP value.")
+			context.Error(errors.NewError(e, "Error updating GROUP value."))
 			return false
 		}
 		aggregates[agg] = v

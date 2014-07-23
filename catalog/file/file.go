@@ -28,34 +28,34 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-// site is the root for the file-based Site.
-type site struct {
+// datastore is the root for the file-based Datastore.
+type datastore struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
 }
 
-func (s *site) Id() string {
+func (s *datastore) Id() string {
 	return s.path
 }
 
-func (s *site) URL() string {
+func (s *datastore) URL() string {
 	return "file://" + s.path
 }
 
-func (s *site) NamespaceIds() ([]string, errors.Error) {
+func (s *datastore) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
-func (s *site) NamespaceNames() ([]string, errors.Error) {
+func (s *datastore) NamespaceNames() ([]string, errors.Error) {
 	return s.namespaceNames, nil
 }
 
-func (s *site) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+func (s *datastore) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
 	return s.NamespaceByName(id)
 }
 
-func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
 	p, ok := s.namespaces[strings.ToUpper(name)]
 	if !ok {
 		e = errors.NewError(nil, "Namespace "+name+" not found.")
@@ -64,14 +64,14 @@ func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error
 	return
 }
 
-// NewSite creates a new file-based site for the given filepath.
-func NewSite(path string) (s catalog.Site, e errors.Error) {
+// NewDatastore creates a new file-based datastore for the given filepath.
+func NewDatastore(path string) (s catalog.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
 	if er != nil {
 		return nil, errors.NewError(er, "")
 	}
 
-	fs := &site{path: path}
+	fs := &datastore{path: path}
 
 	e = fs.loadNamespaces()
 	if e != nil {
@@ -82,7 +82,7 @@ func NewSite(path string) (s catalog.Site, e errors.Error) {
 	return
 }
 
-func (s *site) loadNamespaces() (e errors.Error) {
+func (s *datastore) loadNamespaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(s.path)
 	if er != nil {
 		return errors.NewError(er, "")
@@ -114,14 +114,14 @@ func (s *site) loadNamespaces() (e errors.Error) {
 
 // namespace represents a file-based Namespace.
 type namespace struct {
-	site          *site
+	datastore     *datastore
 	name          string
 	keyspaces     map[string]*keyspace
 	keyspaceNames []string
 }
 
-func (p *namespace) SiteId() string {
-	return p.site.Id()
+func (p *namespace) DatastoreId() string {
+	return p.datastore.Id()
 }
 
 func (p *namespace) Id() string {
@@ -154,13 +154,13 @@ func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Er
 }
 
 func (p *namespace) path() string {
-	return filepath.Join(p.site.path, p.name)
+	return filepath.Join(p.datastore.path, p.name)
 }
 
 // newNamespace creates a new namespace.
-func newNamespace(s *site, dir string) (p *namespace, e errors.Error) {
+func newNamespace(s *datastore, dir string) (p *namespace, e errors.Error) {
 	p = new(namespace)
-	p.site = s
+	p.datastore = s
 	p.name = dir
 
 	e = p.loadKeyspaces()
@@ -411,7 +411,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			low = a
 		default:
-			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
+			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
 			return
 		}
 	}
@@ -423,14 +423,14 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			high = a
 		default:
-			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
+			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
 			return
 		}
 	}
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
-		conn.SendError(errors.NewError(er, ""))
+		conn.Error(errors.NewError(er, ""))
 		return
 	}
 
@@ -469,7 +469,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
-		conn.SendError(errors.NewError(er, ""))
+		conn.Error(errors.NewError(er, ""))
 		return
 	}
 

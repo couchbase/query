@@ -19,18 +19,18 @@ import (
 
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
-	m, err := mock.NewSite("mock:namespaces=2,keyspaces=5,items=5000")
+	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")
 	if err != nil {
-		t.Errorf("failed to create mock site: %v", err)
+		t.Errorf("failed to create mock datastore: %v", err)
 	}
 
-	// Create systems site with mock m as the ActualSite
-	s, err := NewSite(m)
+	// Create systems datastore with mock m as the ActualDatastore
+	s, err := NewDatastore(m)
 	if err != nil {
-		t.Errorf("failed to create system site: %v", err)
+		t.Errorf("failed to create system datastore: %v", err)
 	}
 
-	// The systems site should have keyspaces "system", "namespaces", "keyspaces", "indexes"
+	// The systems datastore should have keyspaces "system", "namespaces", "keyspaces", "indexes"
 	p, err := s.NamespaceByName("system")
 	if err != nil {
 		t.Errorf("failed to get system namespace: %v", err)

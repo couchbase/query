@@ -11,16 +11,13 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type Context interface {
 	expression.Context
-	Site() catalog.Site
+	Datastore() catalog.Datastore
 	Argument(parameter string) (value.Value, error)
-	WarningChannel() errors.ErrorChannel
-	ErrorChannel() errors.ErrorChannel
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

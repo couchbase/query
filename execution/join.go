@@ -47,7 +47,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "Error evaluating JOIN keys.")
+		context.Error(errors.NewError(e, "Error evaluating JOIN keys."))
 		return false
 	}
 
@@ -73,9 +73,9 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		case string:
 			keys[i] = key
 		default:
-			context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
+			context.Error(errors.NewError(nil, fmt.Sprintf(
 				"Missing or invalid join key %v of type %T.",
-				key, key))
+				key, key)))
 			return false
 		}
 	}
@@ -83,7 +83,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	// Fetch
 	pairs, err := this.plan.Keyspace().Fetch(keys)
 	if err != nil {
-		context.ErrorChannel() <- err
+		context.Error(err)
 		return false
 	}
 
@@ -99,8 +99,8 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			var e error
 			joinItem, e = project.Evaluate(joinItem, context)
 			if e != nil {
-				context.ErrorChannel() <- errors.NewError(e,
-					"Error evaluating join path.")
+				context.Error(errors.NewError(e,
+					"Error evaluating join path."))
 				return false
 			}
 

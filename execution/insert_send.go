@@ -69,8 +69,8 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		if key != nil {
 			k, e := key.Evaluate(av, context)
 			if e != nil {
-				context.WarningChannel() <- errors.NewError(e,
-					fmt.Sprintf("Error evaluating INSERT key for value %v.", av.GetValue()))
+				context.Warning(errors.NewError(e,
+					fmt.Sprintf("Error evaluating INSERT key for value %v.", av.GetValue())))
 				continue
 			}
 
@@ -78,8 +78,8 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			case string:
 				pair.Key = k
 			default:
-				context.WarningChannel() <- errors.NewError(nil,
-					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k))
+				context.Warning(errors.NewError(nil,
+					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k)))
 				continue
 			}
 		}
@@ -94,7 +94,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	// Perform the actual INSERT
 	keys, e := this.plan.Keyspace().Insert(pairs)
 	if e != nil {
-		context.ErrorChannel() <- e
+		context.Error(e)
 		return false
 	}
 

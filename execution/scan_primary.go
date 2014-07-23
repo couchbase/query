@@ -50,11 +50,7 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
-	conn := catalog.NewIndexConnection(
-		context.WarningChannel(),
-		context.ErrorChannel(),
-	)
-
+	conn := catalog.NewIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
 	go this.plan.Index().ScanEntries(math.MaxInt64, conn)

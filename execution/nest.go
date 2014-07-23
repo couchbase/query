@@ -47,7 +47,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "Error evaluating NEST keys.")
+		context.Error(errors.NewError(e, "Error evaluating NEST keys."))
 		return false
 	}
 
@@ -73,9 +73,9 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		case string:
 			keys[i] = key
 		default:
-			context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf(
+			context.Error(errors.NewError(nil, fmt.Sprintf(
 				"Missing or invalid nest key %v of type %T.",
-				key, key))
+				key, key)))
 			return false
 		}
 	}
@@ -83,7 +83,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	// Fetch
 	pairs, err := this.plan.Keyspace().Fetch(keys)
 	if err != nil {
-		context.ErrorChannel() <- err
+		context.Error(err)
 		return false
 	}
 
@@ -98,8 +98,8 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 			var e error
 			nestItem, e = project.Evaluate(nestItem, context)
 			if e != nil {
-				context.ErrorChannel() <- errors.NewError(e,
-					"Error evaluating nest path.")
+				context.Error(errors.NewError(e,
+					"Error evaluating nest path."))
 				return false
 			}
 

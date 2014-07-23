@@ -21,50 +21,38 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-const _BUFFER_CAP = 1024
+type Output interface {
+	Result(item value.Value) bool
+	Error(err errors.Error)
+	Warning(wrn errors.Error)
+}
+
+const _MAX_ERRORS = 1024
 
 // Context.Close() must be invoked to release resources.
 type Context struct {
-	site      catalog.Site
-	now       time.Time
-	arguments map[string]value.Value
-
-	warningChannel errors.ErrorChannel // Never closed, just garbage-collected
-	errorChannel   errors.ErrorChannel // Never closed, just garbage-collected
-	warnings       []errors.Error
-	errors         []errors.Error
-
+	datastore  catalog.Datastore
+	now        time.Time
+	arguments  map[string]value.Value
+	output     Output
 	subplans   *subqueryMap
 	subresults *subqueryMap
 }
 
 // Context.Close() must be invoked to release resources.
-func NewContext(site catalog.Site) *Context {
+func NewContext(datastore catalog.Datastore, arguments map[string]value.Value, output Output) *Context {
 	rv := &Context{}
-	rv.site = site
+	rv.datastore = datastore
 	rv.now = time.Now()
-	rv.arguments = make(map[string]value.Value)
-	rv.warningChannel = make(errors.ErrorChannel, _BUFFER_CAP)
-	rv.errorChannel = make(errors.ErrorChannel, _BUFFER_CAP)
-	rv.warnings = make([]errors.Error, 0, _BUFFER_CAP)
-	rv.errors = make([]errors.Error, 0, _BUFFER_CAP)
+	rv.arguments = arguments
+	rv.output = output
 	rv.subplans = newSubqueryMap()
 	rv.subresults = newSubqueryMap()
-
-	go rv.drain(rv.warningChannel, &rv.warnings)
-	go rv.drain(rv.errorChannel, &rv.errors)
-
 	return rv
 }
 
-// Context.Close() must be invoked to release resources.
-func (this *Context) Close() {
-	this.warningChannel <- nil
-	this.errorChannel <- nil
-}
-
-func (this *Context) Site() catalog.Site {
-	return this.site
+func (this *Context) Datastore() catalog.Datastore {
+	return this.datastore
 }
 
 func (this *Context) Now() time.Time {
@@ -80,12 +68,12 @@ func (this *Context) Argument(parameter string) (value.Value, error) {
 	return val, nil
 }
 
-func (this *Context) WarningChannel() errors.ErrorChannel {
-	return this.warningChannel
+func (this *Context) Error(err errors.Error) {
+	this.output.Error(err)
 }
 
-func (this *Context) ErrorChannel() errors.ErrorChannel {
-	return this.errorChannel
+func (this *Context) Warning(wrn errors.Error) {
+	this.output.Warning(wrn)
 }
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
@@ -98,7 +86,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = plan.Build(query, this.site)
+		subplan, err = plan.Build(query, this.datastore, false)
 		if err != nil {
 			return nil, err
 		}
@@ -134,41 +122,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 }
 
 func (this *Context) Stream(item value.Value) bool {
-	return true
+	return this.output.Result(item)
 }
 
-func (this *Context) Warnings() []errors.Error {
-	return this.warnings
-}
-
-func (this *Context) Errors() []errors.Error {
-	return this.errors
-}
-
-func (this *Context) drain(channel errors.ErrorChannel, buf *[]errors.Error) {
-	var e errors.Error
-	for {
-		e = <-channel
-
-		if e == nil {
-			return
-		} else {
-			collect(e, buf)
-		}
-	}
-}
-
-func collect(e errors.Error, buf *[]errors.Error) {
-	if len(*buf) == cap(*buf) {
-		b := make([]errors.Error, len(*buf), len(*buf)<<1)
-		copy(b, *buf)
-		*buf = b
-	}
-
-	*buf = append(*buf, e)
-}
-
-// Mutex-synchronized map
+// Synchronized map
 type subqueryMap struct {
 	mutex   sync.RWMutex
 	entries map[*algebra.Select]interface{}

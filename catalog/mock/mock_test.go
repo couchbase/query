@@ -19,12 +19,12 @@ import (
 )
 
 func TestMock(t *testing.T) {
-	s, err := NewSite("mock:")
+	s, err := NewDatastore("mock:")
 	if err != nil {
-		t.Errorf("failed to create site: %v", err)
+		t.Errorf("failed to create datastore: %v", err)
 	}
 	if s.URL() != "mock:" {
-		t.Errorf("expected site URL to be same")
+		t.Errorf("expected datastore URL to be same")
 	}
 
 	n, err := s.NamespaceIds()
@@ -143,9 +143,9 @@ func TestMock(t *testing.T) {
 }
 
 func TestMockIndex(t *testing.T) {
-	s, err := NewSite("mock:")
+	s, err := NewDatastore("mock:")
 	if err != nil {
-		t.Errorf("failed to create site: %v", err)
+		t.Errorf("failed to create datastore: %v", err)
 	}
 
 	p, err := s.NamespaceById("p0")

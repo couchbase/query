@@ -17,8 +17,8 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func Build(node algebra.Node, site catalog.Site) (Operator, error) {
-	builder := newBuilder(site)
+func Build(node algebra.Node, datastore catalog.Datastore, stream bool) (Operator, error) {
+	builder := newBuilder(datastore)
 	op, err := node.Accept(builder)
 
 	if err != nil {
@@ -27,22 +27,26 @@ func Build(node algebra.Node, site catalog.Site) (Operator, error) {
 
 	switch op := op.(type) {
 	case Operator:
-		return op, nil
+		if stream {
+			return NewSequence(op, NewStream()), nil
+		} else {
+			return op, nil
+		}
 	default:
 		panic(fmt.Sprintf("Expected plan.Operator instead of %T.", op))
 	}
 }
 
 type builder struct {
-	site           catalog.Site
+	datastore      catalog.Datastore
 	projectInitial bool
 	children       []Operator
 	subChildren    []Operator
 }
 
-func newBuilder(site catalog.Site) *builder {
+func newBuilder(datastore catalog.Datastore) *builder {
 	return &builder{
-		site: site,
+		datastore: datastore,
 	}
 }
 
@@ -205,7 +209,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	namespace, err := this.site.NamespaceByName(node.Namespace())
+	namespace, err := this.datastore.NamespaceByName(node.Namespace())
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +247,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	namespace, err := this.site.NamespaceByName(node.Right().Namespace())
+	namespace, err := this.datastore.NamespaceByName(node.Right().Namespace())
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +269,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
-	namespace, err := this.site.NamespaceByName(node.Right().Namespace())
+	namespace, err := this.datastore.NamespaceByName(node.Right().Namespace())
 	if err != nil {
 		return nil, err
 	}

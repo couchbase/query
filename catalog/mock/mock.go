@@ -34,35 +34,35 @@ const (
 	DEFAULT_NUM_ITEMS      = 100000
 )
 
-// site is the root for the mock-based Site.
-type site struct {
+// datastore is the root for the mock-based Datastore.
+type datastore struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
 	params         map[string]int
 }
 
-func (s *site) Id() string {
+func (s *datastore) Id() string {
 	return s.URL()
 }
 
-func (s *site) URL() string {
+func (s *datastore) URL() string {
 	return "mock:" + s.path
 }
 
-func (s *site) NamespaceIds() ([]string, errors.Error) {
+func (s *datastore) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
-func (s *site) NamespaceNames() ([]string, errors.Error) {
+func (s *datastore) NamespaceNames() ([]string, errors.Error) {
 	return s.namespaceNames, nil
 }
 
-func (s *site) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+func (s *datastore) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
 	return s.NamespaceByName(id)
 }
 
-func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
 	p, ok := s.namespaces[name]
 	if !ok {
 		p, e = nil, errors.NewError(nil, "Namespace "+name+" not found.")
@@ -73,14 +73,14 @@ func (s *site) NamespaceByName(name string) (p catalog.Namespace, e errors.Error
 
 // namespace represents a mock-based Namespace.
 type namespace struct {
-	site          *site
+	datastore     *datastore
 	name          string
 	keyspaces     map[string]*keyspace
 	keyspaceNames []string
 }
 
-func (p *namespace) SiteId() string {
-	return p.site.Id()
+func (p *namespace) DatastoreId() string {
+	return p.datastore.Id()
 }
 
 func (p *namespace) Id() string {
@@ -244,7 +244,7 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 func (b *keyspace) Release() {
 }
 
-// NewSite creates a new mock site for the given "path".  The path has
+// NewDatastore creates a new mock datastore for the given "path".  The path has
 // prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:
 //     mock:namespaces=2,keyspaces=5,items=50000
@@ -255,7 +255,7 @@ func (b *keyspace) Release() {
 //     mock:namespaces=1,keyspaces=1,items=100000
 // Which is what you'd get by specifying a path of just...
 //     mock:
-func NewSite(path string) (catalog.Site, errors.Error) {
+func NewDatastore(path string) (catalog.Datastore, errors.Error) {
 	if strings.HasPrefix(path, "mock:") {
 		path = path[5:]
 	}
@@ -276,9 +276,9 @@ func NewSite(path string) (catalog.Site, errors.Error) {
 	nnamespaces := paramVal(params, "namespaces", DEFAULT_NUM_NAMESPACES)
 	nkeyspaces := paramVal(params, "keyspaces", DEFAULT_NUM_KEYSPACES)
 	nitems := paramVal(params, "items", DEFAULT_NUM_ITEMS)
-	s := &site{path: path, params: params, namespaces: map[string]*namespace{}, namespaceNames: []string{}}
+	s := &datastore{path: path, params: params, namespaces: map[string]*namespace{}, namespaceNames: []string{}}
 	for i := 0; i < nnamespaces; i++ {
-		p := &namespace{site: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
+		p := &namespace{datastore: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
 		for j := 0; j < nkeyspaces; j++ {
 			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems,
 				indexes: map[string]catalog.Index{}}
@@ -357,7 +357,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			low = a
 		default:
-			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
+			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
 			return
 		}
 	}
@@ -369,7 +369,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 		case string:
 			high = a
 		default:
-			conn.SendError(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
+			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
 			return
 		}
 	}

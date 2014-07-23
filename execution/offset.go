@@ -49,7 +49,7 @@ func (this *Offset) RunOnce(context *Context, parent value.Value) {
 func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
 	val, e := this.plan.Expression().Evaluate(parent, context)
 	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "Error evaluating OFFSET.")
+		context.Error(errors.NewError(e, "Error evaluating OFFSET."))
 		return false
 	}
 
@@ -62,7 +62,7 @@ func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
 		}
 	}
 
-	context.ErrorChannel() <- errors.NewError(nil, fmt.Sprintf("Invalid OFFSET value %v.", actual))
+	context.Error(errors.NewError(nil, fmt.Sprintf("Invalid OFFSET value %v.", actual)))
 	return false
 }
 

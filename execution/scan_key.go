@@ -48,7 +48,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 
 		keys, e := this.plan.Keys().Evaluate(parent, context)
 		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error evaluating KEYS.")
+			context.Error(errors.NewError(e, "Error evaluating KEYS."))
 			return
 		}
 

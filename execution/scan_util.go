@@ -26,7 +26,7 @@ func eval(cx expression.Expressions, context *Context, parent value.Value) (valu
 	for i, expr := range cx {
 		cv[i], e = expr.Evaluate(parent, context)
 		if e != nil {
-			context.ErrorChannel() <- errors.NewError(e, "Error evaluating filter term.")
+			context.Error(errors.NewError(e, "Error evaluating filter term."))
 			return nil, false
 		}
 	}

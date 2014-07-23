@@ -44,7 +44,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		count, e := this.plan.Keyspace().Count()
 		if e != nil {
-			context.ErrorChannel() <- e
+			context.Error(e)
 			return
 		}
 

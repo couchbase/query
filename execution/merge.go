@@ -101,21 +101,21 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
 	if e != nil {
-		context.ErrorChannel() <- errors.NewError(e, "Error evaluatating MERGE key.")
+		context.Error(errors.NewError(e, "Error evaluatating MERGE key."))
 		return false
 	}
 
 	ka := kv.Actual()
 	k, ok := ka.(string)
 	if !ok {
-		context.ErrorChannel() <- errors.NewError(nil,
-			fmt.Sprintf("Invalid MERGE key %v of type %T.", ka, ka))
+		context.Error(errors.NewError(nil,
+			fmt.Sprintf("Invalid MERGE key %v of type %T.", ka, ka)))
 		return false
 	}
 
 	bv, err := this.plan.Keyspace().FetchOne(k)
 	if err != nil {
-		context.ErrorChannel() <- err
+		context.Error(err)
 		return false
 	}
 

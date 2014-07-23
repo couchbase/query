@@ -52,11 +52,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *catalog.Span) bool {
-	conn := catalog.NewIndexConnection(
-		context.WarningChannel(),
-		context.ErrorChannel(),
-	)
-
+	conn := catalog.NewIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
 	go this.plan.Index().Scan(span, this.plan.Distinct(), this.plan.Limit(), conn)
