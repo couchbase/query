@@ -116,6 +116,9 @@
 /[dD][aA][tT][aA][sS][eE][tT]/ {
                     logDebugTokens("DATASET"); return DATASET
                   }
+/[dD][aA][tT][aA][sS][tT][oO][rR][eE]/ {
+                    logDebugTokens("DATASTORE"); return DATASTORE
+                  }
 /[dD][aA][tT][aA][tT][aA][gG]/ {
                     logDebugTokens("DATATAG"); return DATATAG
                   }

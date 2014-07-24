@@ -80,6 +80,7 @@ indexType        catalog.IndexType
 %token CREATE
 %token DATABASE
 %token DATASET
+%token DATASTORE
 %token DATATAG
 %token DELETE
 %token DESC
