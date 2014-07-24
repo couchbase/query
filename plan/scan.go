@@ -10,15 +10,15 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
 type PrimaryScan struct {
-	index catalog.PrimaryIndex
+	index datastore.PrimaryIndex
 }
 
-func NewPrimaryScan(index catalog.PrimaryIndex) *PrimaryScan {
+func NewPrimaryScan(index datastore.PrimaryIndex) *PrimaryScan {
 	return &PrimaryScan{index}
 }
 
@@ -26,26 +26,26 @@ func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitPrimaryScan(this)
 }
 
-func (this *PrimaryScan) Index() catalog.PrimaryIndex {
+func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 	return this.index
 }
 
 type IndexScan struct {
-	index    catalog.Index
-	spans    catalog.Spans
+	index    datastore.Index
+	spans    datastore.Spans
 	distinct bool
 	limit    int64
 }
 
-func NewIndexScan(index catalog.Index, spans catalog.Spans, distinct bool, limit int64) *IndexScan {
+func NewIndexScan(index datastore.Index, spans datastore.Spans, distinct bool, limit int64) *IndexScan {
 	return &IndexScan{index, spans, distinct, limit}
 }
 
-func (this *IndexScan) Index() catalog.Index {
+func (this *IndexScan) Index() datastore.Index {
 	return this.index
 }
 
-func (this *IndexScan) Spans() catalog.Spans {
+func (this *IndexScan) Spans() datastore.Spans {
 	return this.spans
 }
 
@@ -117,10 +117,10 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
 type CountScan struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 }
 
-func NewCountScan(keyspace catalog.Keyspace) *CountScan {
+func NewCountScan(keyspace datastore.Keyspace) *CountScan {
 	return &CountScan{keyspace}
 }
 
@@ -128,7 +128,7 @@ func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCountScan(this)
 }
 
-func (this *CountScan) Keyspace() catalog.Keyspace {
+func (this *CountScan) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

@@ -12,7 +12,7 @@ package system
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -21,8 +21,8 @@ import (
 type namespaceKeyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]catalog.Index
-	primary   catalog.PrimaryIndex
+	indexes   map[string]datastore.Index
+	primary   datastore.PrimaryIndex
 }
 
 func (b *namespaceKeyspace) Release() {
@@ -41,7 +41,7 @@ func (b *namespaceKeyspace) Name() string {
 }
 
 func (b *namespaceKeyspace) Count() (int64, errors.Error) {
-	namespaceIds, excp := b.namespace.datastore.actualDatastore.NamespaceIds()
+	namespaceIds, excp := b.namespace.store.actualStore.NamespaceIds()
 	if excp == nil {
 		return int64(len(namespaceIds)), nil
 	}
@@ -60,11 +60,11 @@ func (b *namespaceKeyspace) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *namespaceKeyspace) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *namespaceKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *namespaceKeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *namespaceKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -72,20 +72,20 @@ func (b *namespaceKeyspace) IndexByName(name string) (catalog.Index, errors.Erro
 	return index, nil
 }
 
-func (b *namespaceKeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *namespaceKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *namespaceKeyspace) Indexes() ([]catalog.Index, errors.Error) {
-	rv := make([]catalog.Index, 0, len(b.indexes))
+func (b *namespaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
 	}
 	return rv, nil
 }
 
-func (b *namespaceKeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
-	rv := make([]catalog.Pair, len(keys))
+func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
+	rv := make([]datastore.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -99,29 +99,29 @@ func (b *namespaceKeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) 
 }
 
 func (b *namespaceKeyspace) FetchOne(key string) (value.Value, errors.Error) {
-	namespace, excp := b.namespace.datastore.actualDatastore.NamespaceById(key)
+	namespace, excp := b.namespace.store.actualStore.NamespaceById(key)
 	if namespace != nil {
 		doc := value.NewValue(map[string]interface{}{
-			"id":           namespace.Id(),
-			"name":         namespace.Name(),
-			"datastore_id": b.namespace.datastore.actualDatastore.Id(),
+			"id":       namespace.Id(),
+			"name":     namespace.Name(),
+			"store_id": b.namespace.store.actualStore.Id(),
 		})
 		return doc, nil
 	}
 	return nil, errors.NewError(excp, "Not Found")
 }
 
-func (b *namespaceKeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *namespaceKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *namespaceKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *namespaceKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
@@ -131,7 +131,7 @@ func (b *namespaceKeyspace) Delete(deletes []string) errors.Error {
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *namespaceKeyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -139,7 +139,7 @@ func (b *namespaceKeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.E
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using datastore.IndexType) (datastore.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
@@ -170,8 +170,8 @@ func (pi *namespaceIndex) Name() string {
 	return pi.name
 }
 
-func (pi *namespaceIndex) Type() catalog.IndexType {
-	return catalog.UNSPECIFIED
+func (pi *namespaceIndex) Type() datastore.IndexType {
+	return datastore.UNSPECIFIED
 }
 
 func (pi *namespaceIndex) Drop() errors.Error {
@@ -190,27 +190,27 @@ func (pi *namespaceIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *namespaceIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
+func (pi *namespaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *namespaceIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
+func (pi *namespaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	namespaceIds, err := pi.keyspace.namespace.datastore.actualDatastore.NamespaceIds()
+	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
 	if err == nil {
 		for i, namespaceId := range namespaceIds {
 			if limit > 0 && int64(i) > limit {
 				break
 			}
 
-			entry := catalog.IndexEntry{PrimaryKey: namespaceId}
+			entry := datastore.IndexEntry{PrimaryKey: namespaceId}
 			conn.EntryChannel() <- &entry
 		}
 	}
 }
 
-func (pi *namespaceIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
+func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
@@ -224,9 +224,9 @@ func (pi *namespaceIndex) Scan(span *catalog.Span, distinct bool, limit int64, c
 		return
 	}
 
-	namespace, _ := pi.keyspace.namespace.datastore.actualDatastore.NamespaceById(val)
+	namespace, _ := pi.keyspace.namespace.store.actualStore.NamespaceById(val)
 	if namespace != nil {
-		entry := catalog.IndexEntry{PrimaryKey: namespace.Id()}
+		entry := datastore.IndexEntry{PrimaryKey: namespace.Id()}
 		conn.EntryChannel() <- &entry
 	}
 }

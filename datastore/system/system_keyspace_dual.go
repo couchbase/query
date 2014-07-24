@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -22,8 +22,8 @@ import (
 type dualKeyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]catalog.Index
-	primary   catalog.PrimaryIndex
+	indexes   map[string]datastore.Index
+	primary   datastore.PrimaryIndex
 }
 
 func (b *dualKeyspace) Release() {
@@ -57,11 +57,11 @@ func (b *dualKeyspace) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualKeyspace) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *dualKeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -69,19 +69,19 @@ func (b *dualKeyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *dualKeyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *dualKeyspace) Indexes() ([]catalog.Index, errors.Error) {
-	rv := make([]catalog.Index, 0, len(b.indexes))
+func (b *dualKeyspace) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
 	}
 	return rv, nil
 }
 
-func (b *dualKeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *dualKeyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -89,12 +89,12 @@ func (b *dualKeyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error)
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using datastore.IndexType) (datastore.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualKeyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
-	rv := make([]catalog.Pair, len(keys))
+func (b *dualKeyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
+	rv := make([]datastore.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -112,17 +112,17 @@ func (b *dualKeyspace) FetchOne(key string) (value.Value, errors.Error) {
 	return value.NewValue(doc), nil
 }
 
-func (b *dualKeyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualKeyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *dualKeyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *dualKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
@@ -159,8 +159,8 @@ func (pi *dualIndex) Name() string {
 	return pi.name
 }
 
-func (pi *dualIndex) Type() catalog.IndexType {
-	return catalog.UNSPECIFIED
+func (pi *dualIndex) Type() datastore.IndexType {
+	return datastore.UNSPECIFIED
 }
 
 func (pi *dualIndex) Drop() errors.Error {
@@ -179,18 +179,18 @@ func (pi *dualIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *dualIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
+func (pi *dualIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *dualIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
+func (pi *dualIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	entry := catalog.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
+	entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
 	conn.EntryChannel() <- &entry
 }
 
-func (pi *dualIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
+func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
@@ -205,7 +205,7 @@ func (pi *dualIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *
 	}
 
 	if strings.EqualFold(val, KEYSPACE_NAME_DUAL) {
-		entry := catalog.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
+		entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
 		conn.EntryChannel() <- &entry
 	}
 }

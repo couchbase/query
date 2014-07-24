@@ -12,7 +12,7 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -58,7 +58,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		return true
 	}
 
-	pairs := make([]catalog.Pair, len(this.batch))
+	pairs := make([]datastore.Pair, len(this.batch))
 
 	for i, av := range this.batch {
 		key, ok := this.requireKey(av, context)

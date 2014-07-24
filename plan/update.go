@@ -11,7 +11,7 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 )
 
 // Enable copy-before-write, so that all reads use old values
@@ -30,7 +30,7 @@ type Unset struct {
 
 // Send to keyspace
 type SendUpdate struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 }
 
 func NewClone() *Clone {
@@ -65,7 +65,7 @@ func (this *Unset) Node() *algebra.Unset {
 	return this.node
 }
 
-func NewSendUpdate(keyspace catalog.Keyspace) *SendUpdate {
+func NewSendUpdate(keyspace datastore.Keyspace) *SendUpdate {
 	return &SendUpdate{keyspace}
 }
 
@@ -73,6 +73,6 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpdate(this)
 }
 
-func (this *SendUpdate) Keyspace() catalog.Keyspace {
+func (this *SendUpdate) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }

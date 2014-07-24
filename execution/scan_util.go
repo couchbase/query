@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -34,7 +34,7 @@ func eval(cx expression.Expressions, context *Context, parent value.Value) (valu
 	return cv, true
 }
 
-func notifyConn(conn *catalog.IndexConnection) {
+func notifyConn(conn *datastore.IndexConnection) {
 	select {
 	case conn.StopChannel() <- false:
 	default:

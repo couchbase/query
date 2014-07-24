@@ -10,9 +10,9 @@
 /*
 
 Package mock provides a fake, mock 100%-in-memory implementation of
-the catalog package, which can be useful for testing.  Because it is
+the datastore package, which can be useful for testing.  Because it is
 memory-oriented, performance testing of higher layers may be easier
-with this mock catalog.
+with this mock datastore.
 
 */
 package mock
@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -34,35 +34,35 @@ const (
 	DEFAULT_NUM_ITEMS      = 100000
 )
 
-// datastore is the root for the mock-based Datastore.
-type datastore struct {
+// store is the root for the mock-based Store.
+type store struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
 	params         map[string]int
 }
 
-func (s *datastore) Id() string {
+func (s *store) Id() string {
 	return s.URL()
 }
 
-func (s *datastore) URL() string {
+func (s *store) URL() string {
 	return "mock:" + s.path
 }
 
-func (s *datastore) NamespaceIds() ([]string, errors.Error) {
+func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
-func (s *datastore) NamespaceNames() ([]string, errors.Error) {
+func (s *store) NamespaceNames() ([]string, errors.Error) {
 	return s.namespaceNames, nil
 }
 
-func (s *datastore) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error) {
 	return s.NamespaceByName(id)
 }
 
-func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaces[name]
 	if !ok {
 		p, e = nil, errors.NewError(nil, "Namespace "+name+" not found.")
@@ -73,14 +73,14 @@ func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.
 
 // namespace represents a mock-based Namespace.
 type namespace struct {
-	datastore     *datastore
+	store         *store
 	name          string
 	keyspaces     map[string]*keyspace
 	keyspaceNames []string
 }
 
 func (p *namespace) DatastoreId() string {
-	return p.datastore.Id()
+	return p.store.Id()
 }
 
 func (p *namespace) Id() string {
@@ -99,11 +99,11 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
-func (p *namespace) KeyspaceById(id string) (b catalog.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceById(id string) (b datastore.Keyspace, e errors.Error) {
 	return p.KeyspaceByName(id)
 }
 
-func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
 	b, ok := p.keyspaces[name]
 	if !ok {
 		b, e = nil, errors.NewError(nil, "Keyspace "+name+" not found.")
@@ -117,8 +117,8 @@ type keyspace struct {
 	namespace *namespace
 	name      string
 	nitems    int
-	indexes   map[string]catalog.Index
-	primary   catalog.PrimaryIndex
+	indexes   map[string]datastore.Index
+	primary   datastore.PrimaryIndex
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -149,11 +149,11 @@ func (b *keyspace) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -161,19 +161,19 @@ func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *keyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *keyspace) Indexes() ([]catalog.Index, errors.Error) {
-	rv := make([]catalog.Index, 0, len(b.indexes))
+func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
 	}
 	return rv, nil
 }
 
-func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -181,12 +181,12 @@ func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using datastore.IndexType) (datastore.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *keyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
-	rv := make([]catalog.Pair, len(keys))
+func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
+	rv := make([]datastore.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -221,17 +221,17 @@ func genItem(i int, nitems int) (value.Value, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
@@ -244,7 +244,7 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 func (b *keyspace) Release() {
 }
 
-// NewDatastore creates a new mock datastore for the given "path".  The path has
+// NewStore creates a new mock store for the given "path".  The path has
 // prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:
 //     mock:namespaces=2,keyspaces=5,items=50000
@@ -255,7 +255,7 @@ func (b *keyspace) Release() {
 //     mock:namespaces=1,keyspaces=1,items=100000
 // Which is what you'd get by specifying a path of just...
 //     mock:
-func NewDatastore(path string) (catalog.Datastore, errors.Error) {
+func NewStore(path string) (datastore.Datastore, errors.Error) {
 	if strings.HasPrefix(path, "mock:") {
 		path = path[5:]
 	}
@@ -276,12 +276,12 @@ func NewDatastore(path string) (catalog.Datastore, errors.Error) {
 	nnamespaces := paramVal(params, "namespaces", DEFAULT_NUM_NAMESPACES)
 	nkeyspaces := paramVal(params, "keyspaces", DEFAULT_NUM_KEYSPACES)
 	nitems := paramVal(params, "items", DEFAULT_NUM_ITEMS)
-	s := &datastore{path: path, params: params, namespaces: map[string]*namespace{}, namespaceNames: []string{}}
+	s := &store{path: path, params: params, namespaces: map[string]*namespace{}, namespaceNames: []string{}}
 	for i := 0; i < nnamespaces; i++ {
-		p := &namespace{datastore: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
+		p := &namespace{store: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
 		for j := 0; j < nkeyspaces; j++ {
 			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems,
-				indexes: map[string]catalog.Index{}}
+				indexes: map[string]datastore.Index{}}
 			pi := &primaryIndex{name: "all_docs", keyspace: b}
 			b.primary = pi
 			b.indexes["all_docs"] = pi
@@ -320,8 +320,8 @@ func (pi *primaryIndex) Name() string {
 	return pi.name
 }
 
-func (pi *primaryIndex) Type() catalog.IndexType {
-	return catalog.UNSPECIFIED
+func (pi *primaryIndex) Type() datastore.IndexType {
+	return datastore.UNSPECIFIED
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
@@ -340,11 +340,11 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *primaryIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
+func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
+func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
@@ -382,7 +382,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 
 		if low != "" &&
 			(id < low ||
-				(id == low && (span.Range.Inclusion&catalog.LOW == 0))) {
+				(id == low && (span.Range.Inclusion&datastore.LOW == 0))) {
 			continue
 		}
 
@@ -390,16 +390,16 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 
 		if high != "" &&
 			(id > high ||
-				(id == high && (span.Range.Inclusion&catalog.HIGH == 0))) {
+				(id == high && (span.Range.Inclusion&datastore.HIGH == 0))) {
 			break
 		}
 
-		entry := catalog.IndexEntry{PrimaryKey: id}
+		entry := datastore.IndexEntry{PrimaryKey: id}
 		conn.EntryChannel() <- &entry
 	}
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
+func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	if limit == 0 {
@@ -407,7 +407,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 	}
 
 	for i := 0; i < pi.keyspace.nitems && int64(i) < limit; i++ {
-		entry := catalog.IndexEntry{PrimaryKey: strconv.Itoa(i)}
+		entry := datastore.IndexEntry{PrimaryKey: strconv.Itoa(i)}
 		conn.EntryChannel() <- &entry
 	}
 }

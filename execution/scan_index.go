@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -51,13 +51,13 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *catalog.Span) bool {
-	conn := catalog.NewIndexConnection(context)
+func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *datastore.Span) bool {
+	conn := datastore.NewIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
 	go this.plan.Index().Scan(span, this.plan.Distinct(), this.plan.Limit(), conn)
 
-	var entry *catalog.IndexEntry
+	var entry *datastore.IndexEntry
 
 	ok := true
 	for ok {

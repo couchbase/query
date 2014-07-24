@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package catalog
+package datastore
 
 import (
 	"github.com/couchbaselabs/query/errors"

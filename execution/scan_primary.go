@@ -12,7 +12,7 @@ package execution
 import (
 	"math"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -50,12 +50,12 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
-	conn := catalog.NewIndexConnection(context)
+	conn := datastore.NewIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
 	go this.plan.Index().ScanEntries(math.MaxInt64, conn)
 
-	var entry *catalog.IndexEntry
+	var entry *datastore.IndexEntry
 
 	ok := true
 	for ok {

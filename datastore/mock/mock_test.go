@@ -13,18 +13,18 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
 func TestMock(t *testing.T) {
-	s, err := NewDatastore("mock:")
+	s, err := NewStore("mock:")
 	if err != nil {
-		t.Errorf("failed to create datastore: %v", err)
+		t.Errorf("failed to create store: %v", err)
 	}
 	if s.URL() != "mock:" {
-		t.Errorf("expected datastore URL to be same")
+		t.Errorf("expected store URL to be same")
 	}
 
 	n, err := s.NamespaceIds()
@@ -143,9 +143,9 @@ func TestMock(t *testing.T) {
 }
 
 func TestMockIndex(t *testing.T) {
-	s, err := NewDatastore("mock:")
+	s, err := NewStore("mock:")
 	if err != nil {
-		t.Errorf("failed to create datastore: %v", err)
+		t.Errorf("failed to create store: %v", err)
 	}
 
 	p, err := s.NamespaceById("p0")
@@ -161,7 +161,7 @@ func TestMockIndex(t *testing.T) {
 	// Do a scan from keys 4 to 6 with Inclusion set to NEITHER - expect 1 result with key 5
 	lo := []value.Value{value.NewValue("4")}
 	hi := []value.Value{value.NewValue("6")}
-	span := catalog.Span{Range: &catalog.Range{Inclusion: catalog.NEITHER, Low: lo, High: hi}}
+	span := datastore.Span{Range: &datastore.Range{Inclusion: datastore.NEITHER, Low: lo, High: hi}}
 	items, err := doIndexScan(t, b, span)
 
 	if err != nil {
@@ -177,7 +177,7 @@ func TestMockIndex(t *testing.T) {
 	}
 
 	// Do a scan from keys 4 to 6 with Inclusion set to BOTH - expect 3 results
-	span.Range.Inclusion = catalog.BOTH
+	span.Range.Inclusion = datastore.BOTH
 	items, err = doIndexScan(t, b, span)
 
 	if err != nil {
@@ -204,14 +204,14 @@ func TestMockIndex(t *testing.T) {
 }
 
 // Helper function to scan the all_docs index of given keyspace with given span
-func doIndexScan(t *testing.T, b catalog.Keyspace, span catalog.Span) (e []*catalog.IndexEntry, excp errors.Error) {
+func doIndexScan(t *testing.T, b datastore.Keyspace, span datastore.Span) (e []*datastore.IndexEntry, excp errors.Error) {
 	warnChan := make(errors.ErrorChannel)
 	errChan := make(errors.ErrorChannel)
 	defer close(warnChan)
 	defer close(errChan)
-	conn := catalog.NewIndexConnection(warnChan, errChan)
+	conn := datastore.NewIndexConnection(warnChan, errChan)
 
-	e = []*catalog.IndexEntry{}
+	e = []*datastore.IndexEntry{}
 
 	nitems, excp := b.Count()
 	if excp != nil {

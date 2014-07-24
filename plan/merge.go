@@ -11,12 +11,12 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
 type Merge struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	ref      *algebra.KeyspaceRef
 	key      expression.Expression
 	update   Operator
@@ -25,7 +25,7 @@ type Merge struct {
 	alias    string
 }
 
-func NewMerge(keyspace catalog.Keyspace, ref *algebra.KeyspaceRef,
+func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 	key expression.Expression, update, delete, insert Operator) *Merge {
 	return &Merge{keyspace, ref, key, update, delete, insert, ""}
 }
@@ -34,7 +34,7 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
 }
 
-func (this *Merge) Keyspace() catalog.Keyspace {
+func (this *Merge) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

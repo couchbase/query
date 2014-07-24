@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -19,11 +19,11 @@ type CreateIndex struct {
 	keyspace  *KeyspaceRef           `json:"keyspace"`
 	exprs     expression.Expressions `json:"expressions"`
 	partition expression.Expression  `json:"partition"`
-	using     catalog.IndexType      `json:"using"`
+	using     datastore.IndexType    `json:"using"`
 }
 
 func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
-	partition expression.Expression, using catalog.IndexType) *CreateIndex {
+	partition expression.Expression, using datastore.IndexType) *CreateIndex {
 	return &CreateIndex{
 		name:      name,
 		keyspace:  keyspace,

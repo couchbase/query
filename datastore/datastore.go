@@ -9,7 +9,7 @@
 
 /*
 
-Package catalog provides a common catalog abstraction over storage
+Package datastore provides a common datastore abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
 
@@ -20,7 +20,7 @@ TODO: This hierarchy should be revisited and aligned with long-term
 plans before query Beta / GA.
 
 */
-package catalog
+package datastore
 
 import (
 	"github.com/couchbaselabs/query/errors"
@@ -28,8 +28,8 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-// log channel for the catalog lifecycle
-const CHANNEL = "CATALOG"
+// log channel for the datastore lifecycle
+const CHANNEL = "DATASTORE"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {

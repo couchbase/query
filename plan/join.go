@@ -11,16 +11,16 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 )
 
 type Join struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	term     *algebra.Join
 	alias    string
 }
 
-func NewJoin(keyspace catalog.Keyspace, term *algebra.Join) *Join {
+func NewJoin(keyspace datastore.Keyspace, term *algebra.Join) *Join {
 	return &Join{keyspace, term, term.Alias()}
 }
 
@@ -28,7 +28,7 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
-func (this *Join) Keyspace() catalog.Keyspace {
+func (this *Join) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
@@ -41,12 +41,12 @@ func (this *Join) Alias() string {
 }
 
 type Nest struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	term     *algebra.Nest
 	alias    string
 }
 
-func NewNest(keyspace catalog.Keyspace, term *algebra.Nest) *Nest {
+func NewNest(keyspace datastore.Keyspace, term *algebra.Nest) *Nest {
 	return &Nest{keyspace, term, term.Alias()}
 }
 
@@ -54,7 +54,7 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
-func (this *Nest) Keyspace() catalog.Keyspace {
+func (this *Nest) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

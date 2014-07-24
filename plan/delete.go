@@ -10,14 +10,14 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 )
 
 type SendDelete struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 }
 
-func NewSendDelete(keyspace catalog.Keyspace) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace) *SendDelete {
 	return &SendDelete{keyspace}
 }
 
@@ -25,6 +25,6 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendDelete(this)
 }
 
-func (this *SendDelete) Keyspace() catalog.Keyspace {
+func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }

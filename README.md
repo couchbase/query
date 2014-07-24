@@ -305,12 +305,13 @@ The __Context__ object supports subquery execution. It performs
 planning, execution, and collection of subquery results. It also
 performs plan and result caching for uncorrelated subqueries.
 
-### Catalog
+### Datastore
 
-The catalog package defines the interface to the underlying database
+The datastore package defines the interface to the underlying database
 server.
 
-Some key differences from the previous catalog API:
+Some key differences from the previous datastore API (previously
+catalog API):
 
 * DML support
 

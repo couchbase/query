@@ -10,16 +10,16 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
 type SendUpsert struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	key      expression.Expression
 }
 
-func NewSendUpsert(keyspace catalog.Keyspace, key expression.Expression) *SendUpsert {
+func NewSendUpsert(keyspace datastore.Keyspace, key expression.Expression) *SendUpsert {
 	return &SendUpsert{keyspace, key}
 }
 
@@ -27,7 +27,7 @@ func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpsert(this)
 }
 
-func (this *SendUpsert) Keyspace() catalog.Keyspace {
+func (this *SendUpsert) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

@@ -10,16 +10,16 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
 type SendInsert struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	key      expression.Expression
 }
 
-func NewSendInsert(keyspace catalog.Keyspace, key expression.Expression) *SendInsert {
+func NewSendInsert(keyspace datastore.Keyspace, key expression.Expression) *SendInsert {
 	return &SendInsert{keyspace, key}
 }
 
@@ -27,7 +27,7 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendInsert(this)
 }
 
-func (this *SendInsert) Keyspace() catalog.Keyspace {
+func (this *SendInsert) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

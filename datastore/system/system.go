@@ -10,7 +10,7 @@
 package system
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 )
 
@@ -22,53 +22,53 @@ const KEYSPACE_NAME_KEYSPACES = "keyspaces"
 const KEYSPACE_NAME_INDEXES = "indexes"
 const KEYSPACE_NAME_DUAL = "dual"
 
-type datastore struct {
-	actualDatastore        catalog.Datastore
-	systemCatalogNamespace *namespace
+type store struct {
+	actualStore              datastore.Datastore
+	systemDatastoreNamespace *namespace
 }
 
-func (s *datastore) Id() string {
-	return s.actualDatastore.Id()
+func (s *store) Id() string {
+	return s.actualStore.Id()
 }
 
-func (s *datastore) URL() string {
-	return s.actualDatastore.URL()
+func (s *store) URL() string {
+	return s.actualStore.URL()
 }
 
-func (s *datastore) NamespaceIds() ([]string, errors.Error) {
-	namespaceIds, err := s.actualDatastore.NamespaceIds()
+func (s *store) NamespaceIds() ([]string, errors.Error) {
+	namespaceIds, err := s.actualStore.NamespaceIds()
 	if err != nil {
 		return nil, err
 	}
-	namespaceIds = append(namespaceIds, s.systemCatalogNamespace.Id())
+	namespaceIds = append(namespaceIds, s.systemDatastoreNamespace.Id())
 	return namespaceIds, err
 }
 
-func (s *datastore) NamespaceNames() ([]string, errors.Error) {
-	namespaceNames, err := s.actualDatastore.NamespaceNames()
+func (s *store) NamespaceNames() ([]string, errors.Error) {
+	namespaceNames, err := s.actualStore.NamespaceNames()
 	if err != nil {
 		return nil, err
 	}
-	namespaceNames = append(namespaceNames, s.systemCatalogNamespace.Name())
+	namespaceNames = append(namespaceNames, s.systemDatastoreNamespace.Name())
 	return namespaceNames, err
 }
 
-func (s *datastore) NamespaceById(id string) (catalog.Namespace, errors.Error) {
+func (s *store) NamespaceById(id string) (datastore.Namespace, errors.Error) {
 	if id == NAMESPACE_ID {
-		return s.systemCatalogNamespace, nil
+		return s.systemDatastoreNamespace, nil
 	}
-	return s.actualDatastore.NamespaceById(id)
+	return s.actualStore.NamespaceById(id)
 }
 
-func (s *datastore) NamespaceByName(name string) (catalog.Namespace, errors.Error) {
+func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error) {
 	if name == NAMESPACE_NAME {
-		return s.systemCatalogNamespace, nil
+		return s.systemDatastoreNamespace, nil
 	}
-	return s.actualDatastore.NamespaceByName(name)
+	return s.actualStore.NamespaceByName(name)
 }
 
-func NewDatastore(actualDatastore catalog.Datastore) (catalog.Datastore, errors.Error) {
-	s := &datastore{actualDatastore: actualDatastore}
+func NewStore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
+	s := &store{actualStore: actualStore}
 
 	e := s.loadNamespace()
 	if e != nil {
@@ -78,12 +78,12 @@ func NewDatastore(actualDatastore catalog.Datastore) (catalog.Datastore, errors.
 	return s, e
 }
 
-func (s *datastore) loadNamespace() errors.Error {
+func (s *store) loadNamespace() errors.Error {
 	p, e := newNamespace(s)
 	if e != nil {
 		return e
 	}
 
-	s.systemCatalogNamespace = p
+	s.systemDatastoreNamespace = p
 	return nil
 }

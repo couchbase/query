@@ -11,16 +11,16 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 )
 
 type Fetch struct {
-	keyspace catalog.Keyspace
+	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
 	alias    string
 }
 
-func NewFetch(keyspace catalog.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
 	return &Fetch{
 		keyspace: keyspace,
 		term:     term,
@@ -31,7 +31,7 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFetch(this)
 }
 
-func (this *Fetch) Keyspace() catalog.Keyspace {
+func (this *Fetch) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 

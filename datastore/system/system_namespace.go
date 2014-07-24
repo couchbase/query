@@ -10,19 +10,19 @@
 package system
 
 import (
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 )
 
 type namespace struct {
-	datastore *datastore
+	store     *store
 	id        string
 	name      string
-	keyspaces map[string]catalog.Keyspace
+	keyspaces map[string]datastore.Keyspace
 }
 
 func (p *namespace) DatastoreId() string {
-	return p.datastore.Id()
+	return p.store.Id()
 }
 
 func (p *namespace) Id() string {
@@ -47,11 +47,11 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) KeyspaceById(id string) (catalog.Keyspace, errors.Error) {
+func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 	return p.KeyspaceByName(id)
 }
 
-func (p *namespace) KeyspaceByName(name string) (catalog.Keyspace, errors.Error) {
+func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
 	b, ok := p.keyspaces[name]
 	if !ok {
 		return nil, errors.NewError(nil, "Keyspace "+name+" not found.")
@@ -61,12 +61,12 @@ func (p *namespace) KeyspaceByName(name string) (catalog.Keyspace, errors.Error)
 }
 
 // newNamespace creates a new namespace.
-func newNamespace(s *datastore) (*namespace, errors.Error) {
+func newNamespace(s *store) (*namespace, errors.Error) {
 	p := new(namespace)
-	p.datastore = s
+	p.store = s
 	p.id = NAMESPACE_ID
 	p.name = NAMESPACE_NAME
-	p.keyspaces = make(map[string]catalog.Keyspace)
+	p.keyspaces = make(map[string]datastore.Keyspace)
 
 	e := p.loadKeyspaces()
 	if e != nil {
@@ -77,7 +77,7 @@ func newNamespace(s *datastore) (*namespace, errors.Error) {
 
 func (p *namespace) loadKeyspaces() (e errors.Error) {
 
-	sb, e := newDatastoresKeyspace(p)
+	sb, e := newStoresKeyspace(p)
 	if e != nil {
 		return e
 	}

@@ -9,7 +9,7 @@
 
 /*
 
-Package file provides a file-based implementation of the catalog
+Package file provides a file-based implementation of the datastore
 package.
 
 */
@@ -22,40 +22,40 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 // datastore is the root for the file-based Datastore.
-type datastore struct {
+type store struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
 }
 
-func (s *datastore) Id() string {
+func (s *store) Id() string {
 	return s.path
 }
 
-func (s *datastore) URL() string {
+func (s *store) URL() string {
 	return "file://" + s.path
 }
 
-func (s *datastore) NamespaceIds() ([]string, errors.Error) {
+func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
-func (s *datastore) NamespaceNames() ([]string, errors.Error) {
+func (s *store) NamespaceNames() ([]string, errors.Error) {
 	return s.namespaceNames, nil
 }
 
-func (s *datastore) NamespaceById(id string) (p catalog.Namespace, e errors.Error) {
+func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error) {
 	return s.NamespaceByName(id)
 }
 
-func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.Error) {
+func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaces[strings.ToUpper(name)]
 	if !ok {
 		e = errors.NewError(nil, "Namespace "+name+" not found.")
@@ -64,14 +64,14 @@ func (s *datastore) NamespaceByName(name string) (p catalog.Namespace, e errors.
 	return
 }
 
-// NewDatastore creates a new file-based datastore for the given filepath.
-func NewDatastore(path string) (s catalog.Datastore, e errors.Error) {
+// NewStore creates a new file-based store for the given filepath.
+func NewStore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
 	if er != nil {
 		return nil, errors.NewError(er, "")
 	}
 
-	fs := &datastore{path: path}
+	fs := &store{path: path}
 
 	e = fs.loadNamespaces()
 	if e != nil {
@@ -82,7 +82,7 @@ func NewDatastore(path string) (s catalog.Datastore, e errors.Error) {
 	return
 }
 
-func (s *datastore) loadNamespaces() (e errors.Error) {
+func (s *store) loadNamespaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(s.path)
 	if er != nil {
 		return errors.NewError(er, "")
@@ -114,14 +114,14 @@ func (s *datastore) loadNamespaces() (e errors.Error) {
 
 // namespace represents a file-based Namespace.
 type namespace struct {
-	datastore     *datastore
+	store         *store
 	name          string
 	keyspaces     map[string]*keyspace
 	keyspaceNames []string
 }
 
 func (p *namespace) DatastoreId() string {
-	return p.datastore.Id()
+	return p.store.Id()
 }
 
 func (p *namespace) Id() string {
@@ -140,11 +140,11 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
-func (p *namespace) KeyspaceById(id string) (b catalog.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceById(id string) (b datastore.Keyspace, e errors.Error) {
 	return p.KeyspaceByName(id)
 }
 
-func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
 	b, ok := p.keyspaces[strings.ToUpper(name)]
 	if !ok {
 		e = errors.NewError(nil, "Keyspace "+name+" not found.")
@@ -154,13 +154,13 @@ func (p *namespace) KeyspaceByName(name string) (b catalog.Keyspace, e errors.Er
 }
 
 func (p *namespace) path() string {
-	return filepath.Join(p.datastore.path, p.name)
+	return filepath.Join(p.store.path, p.name)
 }
 
 // newNamespace creates a new namespace.
-func newNamespace(s *datastore, dir string) (p *namespace, e errors.Error) {
+func newNamespace(s *store, dir string) (p *namespace, e errors.Error) {
 	p = new(namespace)
-	p.datastore = s
+	p.store = s
 	p.name = dir
 
 	e = p.loadKeyspaces()
@@ -201,8 +201,8 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 type keyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]catalog.Index
-	primary   catalog.PrimaryIndex
+	indexes   map[string]datastore.Index
+	primary   datastore.PrimaryIndex
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -241,11 +241,11 @@ func (b *keyspace) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) IndexById(id string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 	return b.IndexByName(id)
 }
 
-func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
+func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -253,19 +253,19 @@ func (b *keyspace) IndexByName(name string) (catalog.Index, errors.Error) {
 	return index, nil
 }
 
-func (b *keyspace) IndexByPrimary() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	return b.primary, nil
 }
 
-func (b *keyspace) Indexes() ([]catalog.Index, errors.Error) {
-	rv := make([]catalog.Index, 0, len(b.indexes))
+func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
 	}
 	return rv, nil
 }
 
-func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}
@@ -273,12 +273,12 @@ func (b *keyspace) CreatePrimaryIndex() (catalog.PrimaryIndex, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using catalog.IndexType) (catalog.Index, errors.Error) {
+func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using datastore.IndexType) (datastore.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *keyspace) Fetch(keys []string) ([]catalog.Pair, errors.Error) {
-	rv := make([]catalog.Pair, len(keys))
+func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
+	rv := make([]datastore.Pair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -302,17 +302,17 @@ func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 	return item, e
 }
 
-func (b *keyspace) Insert(inserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspace) Update(updates []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspace) Upsert(upserts []catalog.Pair) ([]catalog.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
@@ -344,7 +344,7 @@ func newKeyspace(p *namespace, dir string) (b *keyspace, e errors.Error) {
 		return nil, errors.NewError(nil, "Keyspace path must be a directory.")
 	}
 
-	b.indexes = make(map[string]catalog.Index, 1)
+	b.indexes = make(map[string]datastore.Index, 1)
 	pi := new(primaryIndex)
 	b.primary = pi
 	pi.keyspace = b
@@ -372,8 +372,8 @@ func (pi *primaryIndex) Name() string {
 	return pi.name
 }
 
-func (pi *primaryIndex) Type() catalog.IndexType {
-	return catalog.UNSPECIFIED
+func (pi *primaryIndex) Type() datastore.IndexType {
+	return datastore.UNSPECIFIED
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
@@ -393,11 +393,11 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *primaryIndex) Statistics(span *catalog.Span) (catalog.Statistics, errors.Error) {
+func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, conn *catalog.IndexConnection) {
+func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	// For primary indexes, bounds must always be strings, so we
@@ -444,7 +444,7 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 
 		if low != "" &&
 			(id < low ||
-				(id == low && (span.Range.Inclusion&catalog.LOW == 0))) {
+				(id == low && (span.Range.Inclusion&datastore.LOW == 0))) {
 			continue
 		}
 
@@ -452,19 +452,19 @@ func (pi *primaryIndex) Scan(span *catalog.Span, distinct bool, limit int64, con
 
 		if high != "" &&
 			(id > high ||
-				(id == high && (span.Range.Inclusion&catalog.HIGH == 0))) {
+				(id == high && (span.Range.Inclusion&datastore.HIGH == 0))) {
 			break
 		}
 
 		if !dirEntry.IsDir() {
-			entry := catalog.IndexEntry{PrimaryKey: id}
+			entry := datastore.IndexEntry{PrimaryKey: id}
 			conn.EntryChannel() <- &entry
 			n++
 		}
 	}
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) {
+func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
@@ -478,7 +478,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *catalog.IndexConnection) 
 			break
 		}
 		if !dirEntry.IsDir() {
-			entry := catalog.IndexEntry{PrimaryKey: documentPathToId(dirEntry.Name())}
+			entry := datastore.IndexEntry{PrimaryKey: documentPathToId(dirEntry.Name())}
 			conn.EntryChannel() <- &entry
 		}
 	}

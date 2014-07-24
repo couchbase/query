@@ -12,25 +12,25 @@ package system
 import (
 	"testing"
 
-	"github.com/couchbaselabs/query/catalog"
-	"github.com/couchbaselabs/query/catalog/mock"
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/datastore/mock"
 	"github.com/couchbaselabs/query/errors"
 )
 
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
-	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")
+	m, err := mock.NewStore("mock:namespaces=2,keyspaces=5,items=5000")
 	if err != nil {
-		t.Errorf("failed to create mock datastore: %v", err)
+		t.Errorf("failed to create mock store: %v", err)
 	}
 
-	// Create systems datastore with mock m as the ActualDatastore
-	s, err := NewDatastore(m)
+	// Create systems store with mock m as the ActualStore
+	s, err := NewStore(m)
 	if err != nil {
-		t.Errorf("failed to create system datastore: %v", err)
+		t.Errorf("failed to create system store: %v", err)
 	}
 
-	// The systems datastore should have keyspaces "system", "namespaces", "keyspaces", "indexes"
+	// The systems store should have keyspaces "system", "namespaces", "keyspaces", "indexes"
 	p, err := s.NamespaceByName("system")
 	if err != nil {
 		t.Errorf("failed to get system namespace: %v", err)
@@ -127,12 +127,12 @@ func TestSystem(t *testing.T) {
 
 // Helper function to perform a primary index scan on the given keyspace. Returns a map of
 // all primary key names.
-func doPrimaryIndexScan(t *testing.T, b catalog.Keyspace) (m map[string]bool, excp errors.Error) {
+func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, excp errors.Error) {
 	warnChan := make(errors.ErrorChannel)
 	errChan := make(errors.ErrorChannel)
 	defer close(warnChan)
 	defer close(errChan)
-	conn := catalog.NewIndexConnection(warnChan, errChan)
+	conn := datastore.NewIndexConnection(warnChan, errChan)
 
 	m = map[string]bool{}
 

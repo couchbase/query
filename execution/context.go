@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -31,7 +31,7 @@ const _MAX_ERRORS = 1024
 
 // Context.Close() must be invoked to release resources.
 type Context struct {
-	datastore  catalog.Datastore
+	datastore  datastore.Datastore
 	now        time.Time
 	arguments  map[string]value.Value
 	output     Output
@@ -40,7 +40,7 @@ type Context struct {
 }
 
 // Context.Close() must be invoked to release resources.
-func NewContext(datastore catalog.Datastore, arguments map[string]value.Value, output Output) *Context {
+func NewContext(datastore datastore.Datastore, arguments map[string]value.Value, output Output) *Context {
 	rv := &Context{}
 	rv.datastore = datastore
 	rv.now = time.Now()
@@ -51,7 +51,7 @@ func NewContext(datastore catalog.Datastore, arguments map[string]value.Value, o
 	return rv
 }
 
-func (this *Context) Datastore() catalog.Datastore {
+func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
 

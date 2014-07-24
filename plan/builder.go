@@ -13,11 +13,11 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/catalog"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
-func Build(node algebra.Node, datastore catalog.Datastore, stream bool) (Operator, error) {
+func Build(node algebra.Node, datastore datastore.Datastore, stream bool) (Operator, error) {
 	builder := newBuilder(datastore)
 	op, err := node.Accept(builder)
 
@@ -38,13 +38,13 @@ func Build(node algebra.Node, datastore catalog.Datastore, stream bool) (Operato
 }
 
 type builder struct {
-	datastore      catalog.Datastore
+	datastore      datastore.Datastore
 	projectInitial bool
 	children       []Operator
 	subChildren    []Operator
 }
 
-func newBuilder(datastore catalog.Datastore) *builder {
+func newBuilder(datastore datastore.Datastore) *builder {
 	return &builder{
 		datastore: datastore,
 	}

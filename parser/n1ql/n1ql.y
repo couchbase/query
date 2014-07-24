@@ -3,7 +3,7 @@ package n1ql
 
 import "github.com/couchbaselabs/clog"
 import "github.com/couchbaselabs/query/algebra"
-import "github.com/couchbaselabs/query/catalog"
+import "github.com/couchbaselabs/query/datastore"
 import "github.com/couchbaselabs/query/expression"
 import "github.com/couchbaselabs/query/value"
 
@@ -59,7 +59,7 @@ mergeInsert      *algebra.MergeInsert
 createIndex      *algebra.CreateIndex
 dropIndex        *algebra.DropIndex
 alterIndex       *algebra.AlterIndex
-indexType        catalog.IndexType
+indexType        datastore.IndexType
 }
 
 %token ALL
@@ -1242,12 +1242,12 @@ PARTITION BY expr
 index_using:
 /* empty */
 {
-  $$ = catalog.VIEW
+  $$ = datastore.VIEW
 }
 |
 USING VIEW
 {
-  $$ = catalog.VIEW
+  $$ = datastore.VIEW
 }
 ;
 
