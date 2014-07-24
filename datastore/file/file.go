@@ -65,7 +65,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 }
 
 // NewStore creates a new file-based store for the given filepath.
-func NewStore(path string) (s datastore.Datastore, e errors.Error) {
+func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
 	if er != nil {
 		return nil, errors.NewError(er, "")

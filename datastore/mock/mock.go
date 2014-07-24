@@ -244,18 +244,15 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 func (b *keyspace) Release() {
 }
 
-// NewStore creates a new mock store for the given "path".  The path has
-// prefix "mock:", with the rest of the path treated as a
+// NewDatastore creates a new mock store for the given "path".  The
+// path has prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:
-//     mock:namespaces=2,keyspaces=5,items=50000
-// The above means 2 namespaces.
-// And, each namespace has 5 keyspaces.
-// And, each keyspace with 50000 items.
-// By default, you get...
-//     mock:namespaces=1,keyspaces=1,items=100000
-// Which is what you'd get by specifying a path of just...
-//     mock:
-func NewStore(path string) (datastore.Datastore, errors.Error) {
+// mock:namespaces=2,keyspaces=5,items=50000 The above means 2
+// namespaces.  And, each namespace has 5 keyspaces.  And, each
+// keyspace with 50000 items.  By default, you get...
+// mock:namespaces=1,keyspaces=1,items=100000 Which is what you'd get
+// by specifying a path of just...  mock:
+func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 	if strings.HasPrefix(path, "mock:") {
 		path = path[5:]
 	}

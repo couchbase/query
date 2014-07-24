@@ -19,7 +19,7 @@ import (
 )
 
 func TestMock(t *testing.T) {
-	s, err := NewStore("mock:")
+	s, err := NewDatastore("mock:")
 	if err != nil {
 		t.Errorf("failed to create store: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestMock(t *testing.T) {
 }
 
 func TestMockIndex(t *testing.T) {
-	s, err := NewStore("mock:")
+	s, err := NewDatastore("mock:")
 	if err != nil {
 		t.Errorf("failed to create store: %v", err)
 	}

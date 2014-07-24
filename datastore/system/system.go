@@ -67,7 +67,7 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 	return s.actualStore.NamespaceByName(name)
 }
 
-func NewStore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
+func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
 	s := &store{actualStore: actualStore}
 
 	e := s.loadNamespace()
