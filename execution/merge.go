@@ -57,6 +57,10 @@ func (this *Merge) Copy() Operator {
 }
 
 func (this *Merge) RunOnce(context *Context, parent value.Value) {
+	if context.Readonly() {
+		return
+	}
+
 	this.once.Do(func() {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped

@@ -15,11 +15,14 @@ import (
 
 // Create index
 type CreateIndex struct {
+	readwrite
 	node *algebra.CreateIndex
 }
 
 func NewCreateIndex(node *algebra.CreateIndex) *CreateIndex {
-	return &CreateIndex{node}
+	return &CreateIndex{
+		node: node,
+	}
 }
 
 func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
@@ -32,11 +35,14 @@ func (this *CreateIndex) Node() *algebra.CreateIndex {
 
 // Drop index
 type DropIndex struct {
+	readwrite
 	node *algebra.DropIndex
 }
 
 func NewDropIndex(node *algebra.DropIndex) *DropIndex {
-	return &DropIndex{node}
+	return &DropIndex{
+		node: node,
+	}
 }
 
 func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
@@ -49,11 +55,14 @@ func (this *DropIndex) Node() *algebra.DropIndex {
 
 // Alter index
 type AlterIndex struct {
+	readwrite
 	node *algebra.AlterIndex
 }
 
 func NewAlterIndex(node *algebra.AlterIndex) *AlterIndex {
-	return &AlterIndex{node}
+	return &AlterIndex{
+		node: node,
+	}
 }
 
 func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {

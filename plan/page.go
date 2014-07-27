@@ -14,11 +14,14 @@ import (
 )
 
 type Offset struct {
+	readonly
 	expr expression.Expression
 }
 
 func NewOffset(expr expression.Expression) *Offset {
-	return &Offset{expr}
+	return &Offset{
+		expr: expr,
+	}
 }
 
 func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
@@ -30,11 +33,14 @@ func (this *Offset) Expression() expression.Expression {
 }
 
 type Limit struct {
+	readonly
 	expr expression.Expression
 }
 
 func NewLimit(expr expression.Expression) *Limit {
-	return &Limit{expr}
+	return &Limit{
+		expr: expr,
+	}
 }
 
 func (this *Limit) Accept(visitor Visitor) (interface{}, error) {

@@ -10,11 +10,14 @@
 package plan
 
 type UnionAll struct {
+	readonly
 	children []Operator
 }
 
 func NewUnionAll(children ...Operator) *UnionAll {
-	return &UnionAll{children}
+	return &UnionAll{
+		children: children,
+	}
 }
 
 func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {

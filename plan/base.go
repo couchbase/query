@@ -9,14 +9,16 @@
 
 package plan
 
-type Discard struct {
-	readonly
+type readonly struct {
 }
 
-func NewDiscard() *Discard {
-	return &Discard{}
+func (this *readonly) Readonly() bool {
+	return true
 }
 
-func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitDiscard(this)
+type readwrite struct {
+}
+
+func (this *readwrite) Readonly() bool {
+	return false
 }

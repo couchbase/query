@@ -17,8 +17,9 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func Build(node algebra.Node, datastore datastore.Datastore, stream bool) (Operator, error) {
-	builder := newBuilder(datastore)
+func Build(node algebra.Node, datastore datastore.Datastore,
+	namespace string, stream bool) (Operator, error) {
+	builder := newBuilder(datastore, namespace)
 	op, err := node.Accept(builder)
 
 	if err != nil {
@@ -39,14 +40,16 @@ func Build(node algebra.Node, datastore datastore.Datastore, stream bool) (Opera
 
 type builder struct {
 	datastore      datastore.Datastore
+	namespace      string
 	projectInitial bool
 	children       []Operator
 	subChildren    []Operator
 }
 
-func newBuilder(datastore datastore.Datastore) *builder {
+func newBuilder(datastore datastore.Datastore, namespace string) *builder {
 	return &builder{
 		datastore: datastore,
+		namespace: namespace,
 	}
 }
 
@@ -209,7 +212,12 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	namespace, err := this.datastore.NamespaceByName(node.Namespace())
+	ns := node.Namespace()
+	if ns == "" {
+		ns = this.namespace
+	}
+
+	namespace, err := this.datastore.NamespaceByName(ns)
 	if err != nil {
 		return nil, err
 	}

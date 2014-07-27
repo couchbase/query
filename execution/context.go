@@ -10,7 +10,6 @@
 package execution
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -27,45 +26,55 @@ type Output interface {
 	Warning(wrn errors.Error)
 }
 
-const _MAX_ERRORS = 1024
-
-// Context.Close() must be invoked to release resources.
 type Context struct {
-	datastore  datastore.Datastore
-	now        time.Time
-	arguments  map[string]value.Value
-	output     Output
-	subplans   *subqueryMap
-	subresults *subqueryMap
+	datastore   datastore.Datastore
+	systemstore datastore.Datastore
+	namespace   string
+	readonly    bool
+	now         time.Time
+	arguments   map[string]value.Value
+	output      Output
+	subplans    *subqueryMap
+	subresults  *subqueryMap
 }
 
-// Context.Close() must be invoked to release resources.
-func NewContext(datastore datastore.Datastore, arguments map[string]value.Value, output Output) *Context {
-	rv := &Context{}
-	rv.datastore = datastore
-	rv.now = time.Now()
-	rv.arguments = arguments
-	rv.output = output
-	rv.subplans = newSubqueryMap()
-	rv.subresults = newSubqueryMap()
-	return rv
+func NewContext(datastore, systemstore datastore.Datastore, namespace string,
+	arguments map[string]value.Value, output Output) *Context {
+	return &Context{
+		datastore:   datastore,
+		systemstore: systemstore,
+		namespace:   namespace,
+		now:         time.Now(),
+		arguments:   arguments,
+		output:      output,
+		subplans:    newSubqueryMap(),
+		subresults:  newSubqueryMap(),
+	}
 }
 
 func (this *Context) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
+func (this *Context) Systemstore() datastore.Datastore {
+	return this.systemstore
+}
+
+func (this *Context) Namespace() string {
+	return this.namespace
+}
+
+func (this *Context) Readonly() bool {
+	return this.readonly
+}
+
 func (this *Context) Now() time.Time {
 	return this.now
 }
 
-func (this *Context) Argument(parameter string) (value.Value, error) {
+func (this *Context) Argument(parameter string) (value.Value, bool) {
 	val, ok := this.arguments[parameter]
-	if !ok {
-		return nil, fmt.Errorf("No argument value for parameter %s.", parameter)
-	}
-
-	return val, nil
+	return val, ok
 }
 
 func (this *Context) Error(err errors.Error) {
@@ -86,7 +95,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = plan.Build(query, this.datastore, false)
+		subplan, err = plan.Build(query, this.datastore, this.namespace, false)
 		if err != nil {
 			return nil, err
 		}

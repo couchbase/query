@@ -16,4 +16,5 @@ package plan
 
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
+	Readonly() bool
 }

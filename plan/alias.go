@@ -10,11 +10,14 @@
 package plan
 
 type Alias struct {
+	readonly
 	alias string
 }
 
 func NewAlias(alias string) *Alias {
-	return &Alias{alias}
+	return &Alias{
+		alias: alias,
+	}
 }
 
 func (this *Alias) Accept(visitor Visitor) (interface{}, error) {

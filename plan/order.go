@@ -14,11 +14,14 @@ import (
 )
 
 type Order struct {
+	readonly
 	terms algebra.SortTerms
 }
 
 func NewOrder(terms algebra.SortTerms) *Order {
-	return &Order{terms}
+	return &Order{
+		terms: terms,
+	}
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {

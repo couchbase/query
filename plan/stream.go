@@ -10,6 +10,7 @@
 package plan
 
 type Stream struct {
+	readonly
 }
 
 func NewStream() *Stream {

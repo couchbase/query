@@ -16,6 +16,7 @@ import (
 
 // Grouping of input data. Parallelizable.
 type InitialGroup struct {
+	readonly
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }
@@ -41,6 +42,7 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
+	readonly
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }
@@ -66,6 +68,7 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 
 // Final grouping and aggregation.
 type FinalGroup struct {
+	readonly
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
 }

@@ -15,13 +15,18 @@ import (
 )
 
 type Join struct {
+	readonly
 	keyspace datastore.Keyspace
 	term     *algebra.Join
 	alias    string
 }
 
 func NewJoin(keyspace datastore.Keyspace, term *algebra.Join) *Join {
-	return &Join{keyspace, term, term.Alias()}
+	return &Join{
+		keyspace: keyspace,
+		term: term,
+		alias: term.Alias(),
+	}
 }
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
@@ -41,13 +46,18 @@ func (this *Join) Alias() string {
 }
 
 type Nest struct {
+	readonly
 	keyspace datastore.Keyspace
 	term     *algebra.Nest
 	alias    string
 }
 
 func NewNest(keyspace datastore.Keyspace, term *algebra.Nest) *Nest {
-	return &Nest{keyspace, term, term.Alias()}
+	return &Nest{
+		keyspace: keyspace,
+		term: term,
+		alias: term.Alias(),
+	}
 }
 
 func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
@@ -67,12 +77,16 @@ func (this *Nest) Alias() string {
 }
 
 type Unnest struct {
+	readonly
 	term  *algebra.Unnest
 	alias string
 }
 
 func NewUnnest(term *algebra.Unnest) *Unnest {
-	return &Unnest{term, term.Alias()}
+	return &Unnest{
+		term: term,
+		alias: term.Alias(),
+	}
 }
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {

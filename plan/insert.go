@@ -15,12 +15,16 @@ import (
 )
 
 type SendInsert struct {
+	readwrite
 	keyspace datastore.Keyspace
 	key      expression.Expression
 }
 
 func NewSendInsert(keyspace datastore.Keyspace, key expression.Expression) *SendInsert {
-	return &SendInsert{keyspace, key}
+	return &SendInsert{
+		keyspace: keyspace,
+		key: key,
+	}
 }
 
 func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {

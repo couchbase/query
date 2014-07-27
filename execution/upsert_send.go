@@ -42,7 +42,9 @@ func (this *SendUpsert) Copy() Operator {
 }
 
 func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	if !context.Readonly() {
+		this.runConsumer(this, context, parent)
+	}
 }
 
 func (this *SendUpsert) processItem(item value.AnnotatedValue, context *Context) bool {

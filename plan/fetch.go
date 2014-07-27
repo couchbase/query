@@ -15,6 +15,7 @@ import (
 )
 
 type Fetch struct {
+	readonly
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
 	alias    string
@@ -24,6 +25,7 @@ func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
 	return &Fetch{
 		keyspace: keyspace,
 		term:     term,
+		alias:    term.Alias(),
 	}
 }
 

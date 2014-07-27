@@ -18,6 +18,6 @@ import (
 type Context interface {
 	expression.Context
 	Datastore() datastore.Datastore
-	Argument(parameter string) (value.Value, error)
+	Argument(parameter string) (value.Value, bool)
 	EvaluateSubquery(query *Select, parent value.Value) (value.Value, error)
 }

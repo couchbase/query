@@ -21,6 +21,10 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitParallel(this)
 }
 
+func (this *Parallel) Readonly() bool {
+	return this.child.Readonly()
+}
+
 func (this *Parallel) Child() Operator {
 	return this.child
 }

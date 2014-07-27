@@ -21,6 +21,7 @@ type ProjectTerm struct {
 }
 
 type InitialProject struct {
+	readonly
 	projection *algebra.Projection
 	terms      ProjectTerms
 }
@@ -58,6 +59,7 @@ func (this *InitialProject) Terms() ProjectTerms {
 }
 
 type FinalProject struct {
+	readonly
 }
 
 func NewFinalProject() *FinalProject {

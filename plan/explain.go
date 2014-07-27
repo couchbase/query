@@ -10,6 +10,7 @@
 package plan
 
 type Explain struct {
+	readonly
 	op Operator
 }
 

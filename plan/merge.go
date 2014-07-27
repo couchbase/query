@@ -16,6 +16,7 @@ import (
 )
 
 type Merge struct {
+	readwrite
 	keyspace datastore.Keyspace
 	ref      *algebra.KeyspaceRef
 	key      expression.Expression
@@ -27,7 +28,15 @@ type Merge struct {
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 	key expression.Expression, update, delete, insert Operator) *Merge {
-	return &Merge{keyspace, ref, key, update, delete, insert, ""}
+	return &Merge{
+		keyspace: keyspace,
+		ref: ref,
+		key: key,
+		update: update,
+		delete: delete,
+		insert: insert,
+		alias: "",
+	}
 }
 
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {

@@ -10,6 +10,7 @@
 package plan
 
 type Distinct struct {
+	readonly
 }
 
 func NewDistinct() *Distinct {

@@ -16,20 +16,24 @@ import (
 
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
+	readonly
 }
 
 // Write to copy
 type Set struct {
+	readonly
 	node *algebra.Set
 }
 
 // Write to copy
 type Unset struct {
+	readonly
 	node *algebra.Unset
 }
 
 // Send to keyspace
 type SendUpdate struct {
+	readwrite
 	keyspace datastore.Keyspace
 }
 
@@ -42,7 +46,9 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func NewSet(node *algebra.Set) *Set {
-	return &Set{node}
+	return &Set{
+		node: node,
+	}
 }
 
 func (this *Set) Accept(visitor Visitor) (interface{}, error) {
@@ -54,7 +60,9 @@ func (this *Set) Node() *algebra.Set {
 }
 
 func NewUnset(node *algebra.Unset) *Unset {
-	return &Unset{node}
+	return &Unset{
+		node: node,
+	}
 }
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
@@ -66,7 +74,9 @@ func (this *Unset) Node() *algebra.Unset {
 }
 
 func NewSendUpdate(keyspace datastore.Keyspace) *SendUpdate {
-	return &SendUpdate{keyspace}
+	return &SendUpdate{
+		keyspace: keyspace,
+	}
 }
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {

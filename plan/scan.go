@@ -15,11 +15,14 @@ import (
 )
 
 type PrimaryScan struct {
+	readonly
 	index datastore.PrimaryIndex
 }
 
 func NewPrimaryScan(index datastore.PrimaryIndex) *PrimaryScan {
-	return &PrimaryScan{index}
+	return &PrimaryScan{
+		index: index,
+	}
 }
 
 func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
@@ -31,6 +34,7 @@ func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 }
 
 type IndexScan struct {
+	readonly
 	index    datastore.Index
 	spans    datastore.Spans
 	distinct bool
@@ -38,7 +42,12 @@ type IndexScan struct {
 }
 
 func NewIndexScan(index datastore.Index, spans datastore.Spans, distinct bool, limit int64) *IndexScan {
-	return &IndexScan{index, spans, distinct, limit}
+	return &IndexScan{
+		index:    index,
+		spans:    spans,
+		distinct: distinct,
+		limit:    limit,
+	}
 }
 
 func (this *IndexScan) Index() datastore.Index {
@@ -59,11 +68,14 @@ func (this *IndexScan) Limit() int64 {
 
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).
 type KeyScan struct {
+	readonly
 	keys expression.Expression
 }
 
 func NewKeyScan(keys expression.Expression) *KeyScan {
-	return &KeyScan{keys}
+	return &KeyScan{
+		keys: keys,
+	}
 }
 
 func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
@@ -76,6 +88,7 @@ func (this *KeyScan) Keys() expression.Expression {
 
 // ParentScan is used for UNNEST subqueries.
 type ParentScan struct {
+	readonly
 }
 
 func NewParentScan() *ParentScan {
@@ -88,11 +101,14 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
 type ValueScan struct {
+	readonly
 	values expression.Expression
 }
 
 func NewValueScan(values expression.Expression) *ValueScan {
-	return &ValueScan{values}
+	return &ValueScan{
+		values: values,
+	}
 }
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
@@ -105,6 +121,7 @@ func (this *ValueScan) Values() expression.Expression {
 
 // DummyScan is used for SELECTs with no FROM clause.
 type DummyScan struct {
+	readonly
 }
 
 func NewDummyScan() *DummyScan {
@@ -117,11 +134,14 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
 type CountScan struct {
+	readonly
 	keyspace datastore.Keyspace
 }
 
 func NewCountScan(keyspace datastore.Keyspace) *CountScan {
-	return &CountScan{keyspace}
+	return &CountScan{
+		keyspace: keyspace,
+	}
 }
 
 func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
@@ -134,11 +154,14 @@ func (this *CountScan) Keyspace() datastore.Keyspace {
 
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
+	readonly
 	scans []Operator
 }
 
 func NewIntersectScan(scans ...Operator) *IntersectScan {
-	return &IntersectScan{scans}
+	return &IntersectScan{
+		scans: scans,
+	}
 }
 
 func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {

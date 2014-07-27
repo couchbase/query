@@ -10,6 +10,7 @@
 package plan
 
 type Collect struct {
+	readonly
 }
 
 func NewCollect() *Collect {

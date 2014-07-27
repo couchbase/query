@@ -14,6 +14,7 @@ import (
 )
 
 type Let struct {
+	readonly
 	bindings expression.Bindings
 }
 

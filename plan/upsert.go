@@ -15,12 +15,16 @@ import (
 )
 
 type SendUpsert struct {
+	readwrite
 	keyspace datastore.Keyspace
 	key      expression.Expression
 }
 
 func NewSendUpsert(keyspace datastore.Keyspace, key expression.Expression) *SendUpsert {
-	return &SendUpsert{keyspace, key}
+	return &SendUpsert{
+		keyspace: keyspace,
+		key: key,
+	}
 }
 
 func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {

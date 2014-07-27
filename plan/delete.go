@@ -14,11 +14,14 @@ import (
 )
 
 type SendDelete struct {
+	readwrite
 	keyspace datastore.Keyspace
 }
 
 func NewSendDelete(keyspace datastore.Keyspace) *SendDelete {
-	return &SendDelete{keyspace}
+	return &SendDelete{
+		keyspace: keyspace,
+	}
 }
 
 func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {

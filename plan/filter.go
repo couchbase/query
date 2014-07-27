@@ -14,11 +14,14 @@ import (
 )
 
 type Filter struct {
+	readonly
 	cond expression.Expression
 }
 
 func NewFilter(cond expression.Expression) *Filter {
-	return &Filter{cond}
+	return &Filter{
+		cond: cond,
+	}
 }
 
 func (this *Filter) Accept(visitor Visitor) (interface{}, error) {

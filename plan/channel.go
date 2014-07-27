@@ -11,6 +11,7 @@ package plan
 
 // Dummy operator that simply wraps an item channel.
 type Channel struct {
+	readonly
 }
 
 func NewChannel() *Channel {

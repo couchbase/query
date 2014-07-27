@@ -21,6 +21,16 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSequence(this)
 }
 
+func (this *Sequence) Readonly() bool {
+	for _, child := range this.children {
+		if !child.Readonly() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this *Sequence) Children() []Operator {
 	return this.children
 }
