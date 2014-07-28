@@ -39,11 +39,12 @@ type Context struct {
 }
 
 func NewContext(datastore, systemstore datastore.Datastore, namespace string,
-	arguments map[string]value.Value, output Output) *Context {
+	readonly bool, arguments map[string]value.Value, output Output) *Context {
 	return &Context{
 		datastore:   datastore,
 		systemstore: systemstore,
 		namespace:   namespace,
+		readonly:    readonly,
 		now:         time.Now(),
 		arguments:   arguments,
 		output:      output,

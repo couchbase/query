@@ -25,8 +25,8 @@ whenTerms        expression.WhenTerms
 binding          *expression.Binding
 bindings         expression.Bindings
 
+node             algebra.Node
 explain          *algebra.Explain
-
 statement        algebra.Statement
 
 fullselect       *algebra.Select
@@ -225,6 +225,7 @@ indexType        datastore.IndexType
 
 %type <expr>             paren_or_subquery_expr paren_or_subquery
 
+%type <node>             input command
 %type <explain>          explain
 %type <fullselect>       fullselect
 %type <subresult>        subselects
@@ -287,9 +288,22 @@ indexType        datastore.IndexType
 %%
 
 input:
+command
+{
+  yylex.(*lexer).setNode($1)
+}
+;
+
+command:
 explain
+{
+  $$ = $1
+}
 |
 stmt
+{
+  $$ = $1
+}
 ;
 
 explain:
