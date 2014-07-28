@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-var tiServer = flag.String("engine", "http://localhost:8093/", "URL to tuqtng")
+var tiServer = flag.String("engine", "http://localhost:8093/", "URL to cbq-engine")
 
 func main() {
 	flag.Parse()
