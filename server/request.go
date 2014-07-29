@@ -25,6 +25,15 @@ type stopChannel chan bool
 const RESULT_CAP = 1 << 14
 const ERROR_CAP = 1 << 10
 
+type State string
+
+const (
+	PENDING   State = "pending"
+	COMPLETED State = "completed"
+	TIMEOUT   State = "timeout"
+	FATAL     State = "fatal"
+)
+
 type Request interface {
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -39,6 +48,7 @@ type Request interface {
 	Fail(err errors.Error)
 	Execute()
 	Expire()
+	State() State
 }
 
 type BaseRequest struct {
@@ -49,6 +59,7 @@ type BaseRequest struct {
 	command     string
 	plan        plan.Operator
 	arguments   map[string]value.Value
+	state       State
 	results     value.ValueChannel
 	errors      errors.ErrorChannel
 	warnings    errors.ErrorChannel
@@ -66,6 +77,7 @@ func NewBaseRequest(timeout time.Duration, namespace, command string,
 		command:     command,
 		plan:        plan,
 		arguments:   arguments,
+		state:       PENDING,
 		results:     make(value.ValueChannel, RESULT_CAP),
 		errors:      make(errors.ErrorChannel, ERROR_CAP),
 		warnings:    make(errors.ErrorChannel, ERROR_CAP),
@@ -101,11 +113,21 @@ func (this *BaseRequest) Arguments() map[string]value.Value {
 	return this.arguments
 }
 
+func (this *BaseRequest) Await() {
+	<-this.stop
+}
+
 func (this *BaseRequest) Servicing() {
 	this.serviceTime = time.Now()
 }
 
-func (this *BaseRequest) SendStop() {
+func (this *BaseRequest) State() State {
+	return this.state
+}
+
+func (this *BaseRequest) Stop(state State) {
+	this.state = state
+
 	select {
 	case this.stop <- false:
 	default:
@@ -123,7 +145,7 @@ func (this *BaseRequest) Fatal(err errors.Error) {
 	default:
 	}
 
-	this.SendStop()
+	this.Stop(FATAL)
 }
 
 func (this *BaseRequest) Error(err errors.Error) {
@@ -138,4 +160,16 @@ func (this *BaseRequest) Warning(wrn errors.Error) {
 	case this.warnings <- wrn:
 	default:
 	}
+}
+
+func (this *BaseRequest) Results() value.ValueChannel {
+	return this.results
+}
+
+func (this *BaseRequest) Errors() errors.ErrorChannel {
+	return this.errors
+}
+
+func (this *BaseRequest) Warnings() errors.ErrorChannel {
+	return this.warnings
 }
