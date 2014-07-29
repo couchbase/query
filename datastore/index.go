@@ -130,6 +130,10 @@ func (this *IndexConnection) StopChannel() StopChannel {
 	return this.stopChannel
 }
 
+func (this *IndexConnection) Fatal(err errors.Error) {
+	this.context.Fatal(err)
+}
+
 func (this *IndexConnection) Error(err errors.Error) {
 	this.context.Error(err)
 }

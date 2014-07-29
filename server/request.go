@@ -10,25 +10,132 @@
 package server
 
 import (
+	"sync"
 	"time"
 
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
 type RequestChannel chan Request
+type stopChannel chan bool
+
+const RESULT_CAP = 1 << 14
+const ERROR_CAP = 1 << 10
 
 type Request interface {
 	RequestTime() time.Time
+	ServiceTime() time.Time
 	Timeout() time.Duration
 	Namespace() string
 	Command() string
 	Plan() plan.Operator
 	Arguments() map[string]value.Value
 	Output() execution.Output
-	Fail(err error)
-	Start()
-	Finish()
+	Await()
+	Servicing()
+	Fail(err errors.Error)
+	Execute()
 	Expire()
+}
+
+type BaseRequest struct {
+	requestTime time.Time
+	serviceTime time.Time
+	timeout     time.Duration
+	namespace   string
+	command     string
+	plan        plan.Operator
+	arguments   map[string]value.Value
+	results     value.ValueChannel
+	errors      errors.ErrorChannel
+	warnings    errors.ErrorChannel
+	stop        stopChannel
+	once        sync.Once
+}
+
+func NewBaseRequest(timeout time.Duration, namespace, command string,
+	plan plan.Operator, arguments map[string]value.Value) *BaseRequest {
+	return &BaseRequest{
+		requestTime: time.Now(),
+		serviceTime: time.Now(),
+		timeout:     timeout,
+		namespace:   namespace,
+		command:     command,
+		plan:        plan,
+		arguments:   arguments,
+		results:     make(value.ValueChannel, RESULT_CAP),
+		errors:      make(errors.ErrorChannel, ERROR_CAP),
+		warnings:    make(errors.ErrorChannel, ERROR_CAP),
+		stop:        make(stopChannel, 1),
+	}
+}
+
+func (this *BaseRequest) RequestTime() time.Time {
+	return this.requestTime
+}
+
+func (this *BaseRequest) ServiceTime() time.Time {
+	return this.serviceTime
+}
+
+func (this *BaseRequest) Timeout() time.Duration {
+	return this.timeout
+}
+
+func (this *BaseRequest) Namespace() string {
+	return this.namespace
+}
+
+func (this *BaseRequest) Command() string {
+	return this.command
+}
+
+func (this *BaseRequest) Plan() plan.Operator {
+	return this.plan
+}
+
+func (this *BaseRequest) Arguments() map[string]value.Value {
+	return this.arguments
+}
+
+func (this *BaseRequest) Servicing() {
+	this.serviceTime = time.Now()
+}
+
+func (this *BaseRequest) SendStop() {
+	select {
+	case this.stop <- false:
+	default:
+	}
+}
+
+func (this *BaseRequest) Result(item value.Value) bool {
+	this.results <- item
+	return true
+}
+
+func (this *BaseRequest) Fatal(err errors.Error) {
+	select {
+	case this.errors <- err:
+	default:
+	}
+
+	this.SendStop()
+}
+
+func (this *BaseRequest) Error(err errors.Error) {
+	select {
+	case this.errors <- err:
+	default:
+	}
+}
+
+func (this *BaseRequest) Warning(wrn errors.Error) {
+	select {
+	case this.warnings <- wrn:
+	default:
+	}
 }

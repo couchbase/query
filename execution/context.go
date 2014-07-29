@@ -22,6 +22,7 @@ import (
 
 type Output interface {
 	Result(item value.Value) bool
+	Fatal(err errors.Error)
 	Error(err errors.Error)
 	Warning(wrn errors.Error)
 }
@@ -80,6 +81,10 @@ func (this *Context) Argument(parameter string) (value.Value, bool) {
 
 func (this *Context) Error(err errors.Error) {
 	this.output.Error(err)
+}
+
+func (this *Context) Fatal(err errors.Error) {
+	this.output.Fatal(err)
 }
 
 func (this *Context) Warning(wrn errors.Error) {

@@ -28,11 +28,11 @@ type base struct {
 	batch       []value.AnnotatedValue
 }
 
-const _ITEM_CHAN_CAP = 1024
+const _ITEM_CAP = 1024
 
 func newBase() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
+		itemChannel: make(value.AnnotatedChannel, _ITEM_CAP),
 		stopChannel: make(StopChannel, 1),
 	}
 }
@@ -79,7 +79,7 @@ func (this *base) SetParent(parent Parent) {
 
 func (this *base) copy() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, _ITEM_CHAN_CAP),
+		itemChannel: make(value.AnnotatedChannel, _ITEM_CAP),
 		stopChannel: make(StopChannel, 1),
 		input:       this.input,
 		output:      this.output,

@@ -3,10 +3,10 @@ cd parser/n1ql
 ./build.sh
 cd ../..
 
-echo cd server
-cd server
+echo cd server/main
+cd server/main
 ./build.sh
-cd ..
+cd ../..
 
 echo cd shell
 cd shell

@@ -10,7 +10,6 @@
 package server
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -74,60 +73,50 @@ func (this *Server) Serve() {
 }
 
 func (this *Server) doServe() {
-	var request Request
-	ok := true
-
-	for ok {
-		request, ok = <-this.channel
-		if request != nil {
-			this.serveRequest(request)
-		}
+	for request := range this.channel {
+		this.serviceRequest(request)
 	}
 }
 
-func (this *Server) serveRequest(request Request) {
+func (this *Server) serviceRequest(request Request) {
+	request.Servicing()
+
 	namespace := request.Namespace()
 	if namespace == "" {
 		namespace = this.namespace
 	}
 
-	plann := request.Plan()
-	if plann == nil {
-		node, err := n1ql.Parse(request.Command())
-		if err != nil {
-			request.Fail(err)
-			return
-		}
-
-		plann, err = plan.Build(node, this.datastore, namespace, true)
-		if err != nil {
-			request.Fail(err)
-			return
-		}
+	plann, ok := this.getPlan(request, namespace)
+	if !ok {
+		return
 	}
 
 	if this.readonly && !plann.Readonly() {
-		request.Fail(fmt.Errorf("The server is read-only and cannot execute this write request."))
+		request.Fail(errors.NewError(nil, "The server is read-only and cannot execute this write request."))
 		return
 	}
 
 	operator, err := execution.Build(plann)
 	if err != nil {
-		request.Fail(err)
+		request.Fail(errors.NewError(err, ""))
 		return
 	}
 
+	go request.Execute()
+
 	expire := func() {
-		operator.StopChannel() <- false
+		select {
+		case operator.StopChannel() <- false:
+		default:
+		}
+
 		request.Expire()
 	}
-
-	request.Start()
 
 	// Apply request timeout
 	var requestTimer *time.Timer
 	if request.Timeout() > 0 {
-		delay := request.Timeout() - time.Now().Sub(request.RequestTime())
+		delay := request.Timeout() - time.Since(request.RequestTime())
 		if delay <= 0 {
 			request.Expire()
 			return
@@ -153,6 +142,23 @@ func (this *Server) serveRequest(request Request) {
 	if serverTimer != nil {
 		serverTimer.Stop()
 	}
+}
 
-	request.Finish()
+func (this *Server) getPlan(request Request, namespace string) (plan.Operator, bool) {
+	plann := request.Plan()
+	if plann == nil {
+		node, err := n1ql.Parse(request.Command())
+		if err != nil {
+			request.Fail(errors.NewError(err, ""))
+			return nil, false
+		}
+
+		plann, err = plan.Build(node, this.datastore, namespace, true)
+		if err != nil {
+			request.Fail(errors.NewError(err, ""))
+			return nil, false
+		}
+	}
+
+	return plann, true
 }
