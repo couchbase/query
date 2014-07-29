@@ -102,6 +102,7 @@ type Statistics interface {
 }
 
 type Context interface {
+	Fatal(errors.Error)
 	Error(errors.Error)
 	Warning(errors.Error)
 }
