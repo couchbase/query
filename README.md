@@ -328,6 +328,23 @@ This package will contain the parser and lexer.
 
 This package will contain the main engine executable and listener.
 
+### Clustering
+
+This package defines the interface to the underlying cluster management
+system.
+
+It provides a common abstraction for cluster management, including
+configuration of and the lifecycle of a cluster.
+
+### Accounting
+
+This package will contain the interface to workload tracking and
+monitoring. Accounting data can cover metrics, statistics, event 
+and potentially log data.
+
+It provides a common abstraction for recording accounting data and
+services over accounting data.
+
 ### Shell
 
 This package will contain the client command-line shell.
