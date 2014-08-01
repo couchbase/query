@@ -146,7 +146,7 @@ func (this *Builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 		children[i] = c.(Operator)
 	}
 
-	return NewUnionAll(children), nil
+	return NewUnionAll(children...), nil
 }
 
 // Order

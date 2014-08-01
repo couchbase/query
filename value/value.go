@@ -22,6 +22,14 @@ import (
 	json "github.com/dustin/gojson"
 )
 
+type Tristate int
+
+const (
+	NONE Tristate = iota
+	FALSE
+	TRUE
+)
+
 // When you try to set a nested property or index that does not exist,
 // the return error will be Unsettable.
 type Unsettable string

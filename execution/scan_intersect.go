@@ -74,6 +74,13 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 		for ok {
 			select {
+			case <-this.stopChannel:
+				this.values = nil
+				break
+			default:
+			}
+
+			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
 					ok = this.processKey(item, context)

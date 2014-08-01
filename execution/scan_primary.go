@@ -60,6 +60,12 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	ok := true
 	for ok {
 		select {
+		case <-this.stopChannel:
+			return
+		default:
+		}
+
+		select {
 		case entry, ok = <-conn.EntryChannel():
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)

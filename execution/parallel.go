@@ -69,17 +69,19 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		for n > 0 {
 			select {
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(children...)
+			default:
+			}
+
+			select {
 			case <-this.childChannel: // Never closed
 				// Wait for all children
 				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				for _, child := range children {
-					select {
-					case child.StopChannel() <- false:
-					default:
-					}
-				}
+				notifyChildren(children...)
 			}
 		}
 	})

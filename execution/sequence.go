@@ -73,15 +73,19 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 		for {
 			select {
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(last_child)
+			default:
+			}
+
+			select {
 			case <-this.childChannel: // Never closed
 				// Wait for last child
 				return
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				select {
-				case last_child.StopChannel() <- false:
-				default:
-				}
+				notifyChildren(last_child)
 			}
 		}
 	})

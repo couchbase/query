@@ -19,7 +19,7 @@ type UnionAll struct {
 	childChannel StopChannel
 }
 
-func NewUnionAll(children []Operator) *UnionAll {
+func NewUnionAll(children ...Operator) *UnionAll {
 	rv := &UnionAll{
 		base:         newBase(),
 		children:     children,
@@ -64,17 +64,19 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 
 		for n > 0 {
 			select {
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(this.children...)
+			default:
+			}
+
+			select {
 			case <-this.childChannel: // Never closed
 				// Wait for all children
 				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				for _, child := range this.children {
-					select {
-					case child.StopChannel() <- false:
-					default:
-					}
-				}
+				notifyChildren(this.children...)
 			}
 		}
 	})

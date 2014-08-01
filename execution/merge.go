@@ -77,13 +77,19 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		for {
 			select {
+			case <-this.stopChannel: // Never closed
+				this.notifyChildren(update, delete, insert)
+			default:
+			}
+
+			select {
 			case item, ok = <-this.input.ItemChannel():
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
 				}
 
 				if !ok {
-					notifyChildren(update, delete, insert)
+					this.notifyChildren(update, delete, insert)
 				}
 			case <-this.childChannel: // Never closed
 				// Wait for all children
@@ -91,7 +97,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			case <-this.stopChannel: // Never closed
-				notifyChildren(update, delete, insert)
+				this.notifyChildren(update, delete, insert)
 			}
 		}
 	})
@@ -172,7 +178,7 @@ func (this *Merge) wrapChild(op Operator) Operator {
 	return seq
 }
 
-func notifyChildren(children ...Operator) {
+func (this *Merge) notifyChildren(children ...Operator) {
 	for _, child := range children {
 		if child == nil {
 			continue

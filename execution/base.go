@@ -115,6 +115,12 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 
 		for ok {
 			select {
+			case <-this.stopChannel: // Never closed
+				break
+			default:
+			}
+
+			select {
 			case item, ok = <-this.input.ItemChannel():
 				if ok {
 					ok = cons.processItem(item, context)

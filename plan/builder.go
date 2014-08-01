@@ -14,12 +14,13 @@ import (
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 )
 
 func Build(node algebra.Node, datastore datastore.Datastore,
-	namespace string, stream bool) (Operator, error) {
-	builder := newBuilder(datastore, namespace)
+	namespace string, subquery bool) (Operator, error) {
+	builder := newBuilder(datastore, namespace, subquery)
 	op, err := node.Accept(builder)
 
 	if err != nil {
@@ -28,7 +29,7 @@ func Build(node algebra.Node, datastore datastore.Datastore,
 
 	switch op := op.(type) {
 	case Operator:
-		if stream {
+		if !subquery {
 			return NewSequence(op, NewStream()), nil
 		} else {
 			return op, nil
@@ -41,15 +42,17 @@ func Build(node algebra.Node, datastore datastore.Datastore,
 type builder struct {
 	datastore      datastore.Datastore
 	namespace      string
+	subquery       bool
 	projectInitial bool
 	children       []Operator
 	subChildren    []Operator
 }
 
-func newBuilder(datastore datastore.Datastore, namespace string) *builder {
+func newBuilder(datastore datastore.Datastore, namespace string, subquery bool) *builder {
 	return &builder{
 		datastore: datastore,
 		namespace: namespace,
+		subquery:  subquery,
 	}
 }
 
@@ -231,6 +234,12 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		scan := NewKeyScan(node.Keys())
 		this.children = append(this.children, scan)
 	} else {
+		if this.subquery {
+			return nil, errors.NewError(nil, fmt.Sprintf(
+				"FROM in subquery must use KEYS clause: FROM %s.",
+				node.Keyspace()))
+		}
+
 		index, err := keyspace.IndexByPrimary()
 		if err != nil {
 			return nil, err
