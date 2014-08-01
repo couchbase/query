@@ -90,7 +90,7 @@ type spanScan struct {
 
 func newSpanScan(parent *IndexScan, span *datastore.Span) *spanScan {
 	rv := &spanScan{
-		base: newBase(),
+		base: newChildBase(),
 		plan: parent.plan,
 		span: span,
 	}
