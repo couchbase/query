@@ -78,6 +78,10 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
+func (this *IndexScan) ChildChannel() StopChannel {
+	return this.childChannel
+}
+
 type spanScan struct {
 	base
 	plan *plan.IndexScan
@@ -91,6 +95,7 @@ func newSpanScan(parent *IndexScan, span *datastore.Span) *spanScan {
 		span: span,
 	}
 
+	rv.parent = parent
 	rv.output = parent.output
 	return rv
 }
