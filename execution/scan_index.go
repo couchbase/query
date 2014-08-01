@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -17,7 +19,8 @@ import (
 
 type IndexScan struct {
 	base
-	plan *plan.IndexScan
+	plan         *plan.IndexScan
+	childChannel StopChannel
 }
 
 func NewIndexScan(plan *plan.IndexScan) *IndexScan {
@@ -35,7 +38,10 @@ func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IndexScan) Copy() Operator {
-	return &IndexScan{this.base.copy(), this.plan}
+	return &IndexScan{
+		base: this.base.copy(),
+		plan: this.plan,
+	}
 }
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
@@ -43,36 +49,91 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		for _, span := range this.plan.Spans() {
-			if !this.scanIndex(context, parent, span) {
-				return
+		spans := this.plan.Spans()
+		n := len(spans)
+		this.childChannel = make(StopChannel, n)
+		children := make([]Operator, n)
+		for i, span := range spans {
+			children[i] = newSpanScan(this.plan, span)
+			go children[i].RunOnce(context, parent)
+		}
+
+		for n > 0 {
+			select {
+			case <-this.stopChannel:
+				this.notifyStop()
+				notifyChildren(children...)
+			default:
+			}
+
+			select {
+			case <-this.childChannel: // Never closed
+				// Wait for all children
+				n--
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(children...)
 			}
 		}
 	})
 }
 
-func (this *IndexScan) scanIndex(context *Context, parent value.Value, span *datastore.Span) bool {
-	conn := datastore.NewIndexConnection(context)
-	defer notifyConn(conn) // Notify index that I have stopped
+type spanScan struct {
+	base
+	plan *plan.IndexScan
+	span *datastore.Span
+}
 
-	go this.plan.Index().Scan(span, this.plan.Distinct(), this.plan.Limit(), conn)
-
-	var entry *datastore.IndexEntry
-
-	ok := true
-	for ok {
-		select {
-		case entry, ok = <-conn.EntryChannel():
-			if ok {
-				cv := value.NewScopeValue(make(map[string]interface{}), parent)
-				av := value.NewAnnotatedValue(cv)
-				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
-				ok = this.sendItem(av)
-			}
-		case <-this.stopChannel:
-			return false
-		}
+func newSpanScan(plan *plan.IndexScan, span *datastore.Span) *spanScan {
+	rv := &spanScan{
+		base: newBase(),
+		plan: plan,
+		span: span,
 	}
 
-	return true
+	rv.output = rv
+	return rv
+}
+
+func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
+	panic(fmt.Sprintf("Internal operator spanScan visited by %v.", visitor))
+}
+
+func (this *spanScan) Copy() Operator {
+	return &spanScan{this.base.copy(), this.plan, this.span}
+}
+
+func (this *spanScan) RunOnce(context *Context, parent value.Value) {
+	this.once.Do(func() {
+		defer close(this.itemChannel) // Broadcast that I have stopped
+		defer this.notify()           // Notify that I have stopped
+
+		conn := datastore.NewIndexConnection(context)
+		defer notifyConn(conn) // Notify index that I have stopped
+
+		go this.plan.Index().Scan(this.span, this.plan.Distinct(), this.plan.Limit(), conn)
+
+		var entry *datastore.IndexEntry
+
+		ok := true
+		for ok {
+			select {
+			case <-this.stopChannel:
+				break
+			default:
+			}
+
+			select {
+			case entry, ok = <-conn.EntryChannel():
+				if ok {
+					cv := value.NewScopeValue(make(map[string]interface{}), parent)
+					av := value.NewAnnotatedValue(cv)
+					av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+					ok = this.sendItem(av)
+				}
+			case <-this.stopChannel:
+				break
+			}
+		}
+	})
 }

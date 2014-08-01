@@ -89,6 +89,12 @@ func (this *base) copy() base {
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
 	select {
+	case <-this.stopChannel: // Never closed
+		return false
+	default:
+	}
+
+	select {
 	case this.output.ItemChannel() <- item:
 		return true
 	case <-this.stopChannel: // Never closed
