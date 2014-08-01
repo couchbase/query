@@ -54,7 +54,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.childChannel = make(StopChannel, n)
 		children := make([]Operator, n)
 		for i, span := range spans {
-			children[i] = newSpanScan(this.plan, span)
+			children[i] = newSpanScan(this, span)
 			go children[i].RunOnce(context, parent)
 		}
 
@@ -84,14 +84,14 @@ type spanScan struct {
 	span *datastore.Span
 }
 
-func newSpanScan(plan *plan.IndexScan, span *datastore.Span) *spanScan {
+func newSpanScan(parent *IndexScan, span *datastore.Span) *spanScan {
 	rv := &spanScan{
 		base: newBase(),
-		plan: plan,
+		plan: parent.plan,
 		span: span,
 	}
 
-	rv.output = rv
+	rv.output = parent.output
 	return rv
 }
 
