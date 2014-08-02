@@ -16,19 +16,19 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/server"
-	//"github.com/couchbaselabs/query/value"
+	"github.com/couchbaselabs/query/value"
 )
 
 const MAX_REQUEST_BYTES = 1 << 20
 
-type HttpReceptor struct {
+type HttpEndpoint struct {
 	server  *server.Server
 	metrics bool
 	httpsrv http.Server
 }
 
-func NewHttpReceptor(server *server.Server, metrics bool, addr string) *HttpReceptor {
-	rv := &HttpReceptor{
+func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
+	rv := &HttpEndpoint{
 		server:  server,
 		metrics: metrics,
 	}
@@ -38,14 +38,22 @@ func NewHttpReceptor(server *server.Server, metrics bool, addr string) *HttpRece
 	return rv
 }
 
-func (this *HttpReceptor) ListenAndServe() error {
+func (this *HttpEndpoint) ListenAndServe() error {
 	return this.httpsrv.ListenAndServe()
 }
 
-func (this *HttpReceptor) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+// If the server channel is full and we are unable to queue a request,
+// we respond with a timeout status.
+func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	request := newHttpRequest(resp, req)
-	this.server.Channel() <- request
-	request.Await()
+	select {
+	case this.server.Channel() <- request:
+		// Wait until the request exits.
+		<-request.CloseNotify()
+	default:
+		// Timeout.
+		resp.WriteHeader(http.StatusServiceUnavailable)
+	}
 }
 
 type httpRequest struct {
@@ -55,9 +63,22 @@ type httpRequest struct {
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
-	rv := &httpRequest{}
+	// XXX TODO
+	base := &server.BaseRequest{}
+
+	rv := &httpRequest{
+		BaseRequest: *base,
+	}
 
 	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)
+
+	// Abort if client closes connection
+	closeNotify := resp.(http.CloseNotifier).CloseNotify()
+	go func() {
+		<-closeNotify
+		rv.Stop(server.TIMEOUT)
+	}()
+
 	return rv
 }
 
@@ -66,16 +87,63 @@ func (this *httpRequest) Output() execution.Output {
 }
 
 func (this *httpRequest) Fail(err errors.Error) {
-	this.resp.WriteHeader(http.StatusExpectationFailed)
+	defer this.Stop(server.FATAL)
+
+	this.resp.WriteHeader(http.StatusInternalServerError)
 	io.WriteString(this.resp, err.Error())
-	this.Stop(server.FATAL)
 }
 
-func (this *httpRequest) Execute() {
+func (this *httpRequest) Execute(stopNotify chan bool) {
+	defer this.Stop(server.COMPLETED)
+
+	this.NotifyStop(stopNotify)
+
 	this.resp.WriteHeader(http.StatusOK)
-	this.Stop(server.COMPLETED)
+	_ = this.writePrefix() &&
+		this.writeResults() &&
+		this.writeSuffix()
 }
 
 func (this *httpRequest) Expire() {
-	this.Stop(server.TIMEOUT)
+	defer this.Stop(server.TIMEOUT)
+
+	this.writeSuffix()
+}
+
+func (this *httpRequest) writePrefix() bool {
+	io.WriteString(this.resp, "{\n")
+	io.WriteString(this.resp, "  \"results\": [\n")
+	return true
+}
+
+func (this *httpRequest) writeResults() bool {
+	var item value.Value
+
+	ok := true
+	for ok {
+		select {
+		case <-this.StopExecute():
+			break
+		default:
+		}
+
+		select {
+		case item = <-this.Results():
+			ok = this.writeResult(item)
+		case <-this.StopExecute():
+			break
+		}
+	}
+
+	return ok
+}
+
+func (this *httpRequest) writeResult(item value.Value) bool {
+	// XXX TODO
+	return true
+}
+
+func (this *httpRequest) writeSuffix() bool {
+	// XXX TODO
+	return true
 }

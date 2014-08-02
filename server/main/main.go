@@ -18,18 +18,18 @@ import (
 	"github.com/couchbaselabs/clog"
 	"github.com/couchbaselabs/query/datastore/resolver"
 	"github.com/couchbaselabs/query/server"
-	//"github.com/couchbaselabs/query/server/http"
+	"github.com/couchbaselabs/query/server/http"
 )
 
 var VERSION = "0.7.0" // Build-time overriddable.
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://...) or dir:PATH")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
-var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server timeout; zero or negative value disables server timeout")
+var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
+var READONLY = flag.Bool("readonly", false, "Read-only mode")
+var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
 var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
-var READONLY = flag.Bool("readonly", false, "Read-only mode")
-var METRICS = flag.Bool("metrics", true, "Provide metrics")
 var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":8094", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
@@ -51,17 +51,15 @@ func main() {
 		return
 	}
 
-	server.Serve()
+	go server.Serve()
 
 	clog.Log("cbq-engine started...")
 	clog.Log("version: %s", VERSION)
 	clog.Log("datastore: %s", *DATASTORE)
 
-/*
-	receptor := http.NewHttpReceptor(server, *METRICS, *HTTP_ADDR)
-	er := receptor.ListenAndServe()
+	endpoint := http.NewHttpEndpoint(server, *METRICS, *HTTP_ADDR)
+	er := endpoint.ListenAndServe()
 	if er != nil {
 		clog.Log(fmt.Sprintf("cbq-engine exiting with error: %v", er))
 	}
-*/
 }

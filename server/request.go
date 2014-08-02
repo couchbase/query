@@ -10,7 +10,6 @@
 package server
 
 import (
-	"sync"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -20,7 +19,6 @@ import (
 )
 
 type RequestChannel chan Request
-type stopChannel chan bool
 
 const RESULT_CAP = 1 << 14
 const ERROR_CAP = 1 << 10
@@ -35,54 +33,102 @@ const (
 )
 
 type Request interface {
+	Command() string
+	Prepared() plan.Operator
+	Arguments() map[string]value.Value
+	Namespace() string
+	Timeout() time.Duration
+	Readonly() bool
+	Metrics() value.Tristate
 	RequestTime() time.Time
 	ServiceTime() time.Time
-	Timeout() time.Duration
-	Namespace() string
-	Command() string
-	Plan() plan.Operator
-	Arguments() map[string]value.Value
 	Output() execution.Output
-	Await()
+	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute()
+	Execute(notifyStop chan bool)
 	Expire()
 	State() State
 }
 
 type BaseRequest struct {
+	command     string
+	prepared    plan.Operator
+	arguments   map[string]value.Value
+	namespace   string
+	timeout     time.Duration
+	readonly    bool
+	metrics     value.Tristate
 	requestTime time.Time
 	serviceTime time.Time
-	timeout     time.Duration
-	namespace   string
-	command     string
-	plan        plan.Operator
-	arguments   map[string]value.Value
 	state       State
 	results     value.ValueChannel
 	errors      errors.ErrorChannel
 	warnings    errors.ErrorChannel
-	stop        stopChannel
-	once        sync.Once
+	closeNotify chan bool
+	stopNotify  chan bool
+	stopResult  chan bool
+	stopExecute chan bool
 }
 
-func NewBaseRequest(timeout time.Duration, namespace, command string,
-	plan plan.Operator, arguments map[string]value.Value) *BaseRequest {
-	return &BaseRequest{
+func NewBaseRequest(command string, prepared plan.Operator, arguments map[string]value.Value,
+	namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
+	rv := &BaseRequest{
+		command:     command,
+		prepared:    prepared,
+		arguments:   arguments,
+		namespace:   namespace,
+		readonly:    readonly,
+		metrics:     metrics,
 		requestTime: time.Now(),
 		serviceTime: time.Now(),
-		timeout:     timeout,
-		namespace:   namespace,
-		command:     command,
-		plan:        plan,
-		arguments:   arguments,
 		state:       PENDING,
 		results:     make(value.ValueChannel, RESULT_CAP),
 		errors:      make(errors.ErrorChannel, ERROR_CAP),
 		warnings:    make(errors.ErrorChannel, ERROR_CAP),
-		stop:        make(stopChannel, 1),
+		closeNotify: make(chan bool, 1),
+		stopResult:  make(chan bool, 1),
+		stopExecute: make(chan bool, 1),
 	}
+
+	return rv
+}
+
+func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
+	this.timeout = timeout
+
+	// Apply request timeout
+	if timeout > 0 {
+		time.AfterFunc(timeout, func() { request.Expire() })
+	}
+}
+
+func (this *BaseRequest) Command() string {
+	return this.command
+}
+
+func (this *BaseRequest) Prepared() plan.Operator {
+	return this.prepared
+}
+
+func (this *BaseRequest) Arguments() map[string]value.Value {
+	return this.arguments
+}
+
+func (this *BaseRequest) Namespace() string {
+	return this.namespace
+}
+
+func (this *BaseRequest) Timeout() time.Duration {
+	return this.timeout
+}
+
+func (this *BaseRequest) Readonly() bool {
+	return this.readonly
+}
+
+func (this *BaseRequest) Metrics() value.Tristate {
+	return this.metrics
 }
 
 func (this *BaseRequest) RequestTime() time.Time {
@@ -93,59 +139,37 @@ func (this *BaseRequest) ServiceTime() time.Time {
 	return this.serviceTime
 }
 
-func (this *BaseRequest) Timeout() time.Duration {
-	return this.timeout
+func (this *BaseRequest) State() State {
+	return this.state
 }
 
-func (this *BaseRequest) Namespace() string {
-	return this.namespace
-}
-
-func (this *BaseRequest) Command() string {
-	return this.command
-}
-
-func (this *BaseRequest) Plan() plan.Operator {
-	return this.plan
-}
-
-func (this *BaseRequest) Arguments() map[string]value.Value {
-	return this.arguments
-}
-
-func (this *BaseRequest) Await() {
-	<-this.stop
+func (this *BaseRequest) CloseNotify() chan bool {
+	return this.closeNotify
 }
 
 func (this *BaseRequest) Servicing() {
 	this.serviceTime = time.Now()
 }
 
-func (this *BaseRequest) State() State {
-	return this.state
-}
-
-func (this *BaseRequest) Stop(state State) {
-	this.state = state
-
+func (this *BaseRequest) Result(item value.Value) bool {
 	select {
-	case this.stop <- false:
+	case <-this.stopResult:
+		return false
 	default:
 	}
-}
 
-func (this *BaseRequest) Result(item value.Value) bool {
-	this.results <- item
-	return true
+	select {
+	case this.results <- item:
+		return true
+	case <-this.stopResult:
+		return false
+	}
 }
 
 func (this *BaseRequest) Fatal(err errors.Error) {
-	select {
-	case this.errors <- err:
-	default:
-	}
+	defer this.Stop(FATAL)
 
-	this.Stop(FATAL)
+	this.Error(err)
 }
 
 func (this *BaseRequest) Error(err errors.Error) {
@@ -172,4 +196,28 @@ func (this *BaseRequest) Errors() errors.ErrorChannel {
 
 func (this *BaseRequest) Warnings() errors.ErrorChannel {
 	return this.warnings
+}
+
+func (this *BaseRequest) NotifyStop(ch chan bool) {
+	this.stopNotify = ch
+}
+
+func (this *BaseRequest) StopExecute() chan bool {
+	return this.stopExecute
+}
+
+func (this *BaseRequest) Stop(state State) {
+	defer sendStop(this.closeNotify)
+	defer sendStop(this.stopNotify)
+	defer sendStop(this.stopResult)
+	defer sendStop(this.stopExecute)
+
+	this.state = state
+}
+
+func sendStop(ch chan bool) {
+	select {
+	case ch <- false:
+	default:
+	}
 }

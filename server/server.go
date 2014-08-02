@@ -86,79 +86,50 @@ func (this *Server) serviceRequest(request Request) {
 		namespace = this.namespace
 	}
 
-	plann, ok := this.getPlan(request, namespace)
-	if !ok {
-		return
-	}
-
-	if this.readonly && !plann.Readonly() {
-		request.Fail(errors.NewError(nil, "The server is read-only and cannot execute this write request."))
-		return
-	}
-
-	operator, err := execution.Build(plann)
+	prepared, err := this.getPrepared(request, namespace)
 	if err != nil {
 		request.Fail(errors.NewError(err, ""))
 		return
 	}
 
-	go request.Execute()
-
-	expire := func() {
-		select {
-		case operator.StopChannel() <- false:
-		default:
-		}
-
-		request.Expire()
+	if (this.readonly || request.Readonly()) && !prepared.Readonly() {
+		request.Fail(errors.NewError(nil, "The server or request is read-only"+
+			" and cannot accept this write command."))
+		return
 	}
 
-	// Apply request timeout
-	var requestTimer *time.Timer
-	if request.Timeout() > 0 {
-		delay := request.Timeout() - time.Since(request.RequestTime())
-		if delay <= 0 {
-			request.Expire()
-			return
-		}
-
-		requestTimer = time.AfterFunc(delay, expire)
+	operator, err := execution.Build(prepared)
+	if err != nil {
+		request.Fail(errors.NewError(err, ""))
+		return
 	}
 
-	// Apply server timeout
-	var serverTimer *time.Timer
+	// Apply server execution timeout
 	if this.timeout > 0 {
-		serverTimer = time.AfterFunc(this.timeout, expire)
+		timer := time.AfterFunc(this.timeout, func() { request.Expire() })
+		defer timer.Stop()
 	}
+
+	go request.Execute(operator.StopChannel())
 
 	context := execution.NewContext(this.datastore, this.systemstore,
 		namespace, this.readonly, request.Arguments(), request.Output())
 	operator.RunOnce(context, nil)
-
-	if requestTimer != nil {
-		requestTimer.Stop()
-	}
-
-	if serverTimer != nil {
-		serverTimer.Stop()
-	}
 }
 
-func (this *Server) getPlan(request Request, namespace string) (plan.Operator, bool) {
-	plann := request.Plan()
-	if plann == nil {
+func (this *Server) getPrepared(request Request, namespace string) (plan.Operator, error) {
+	prepared := request.Prepared()
+	if prepared == nil {
 		node, err := n1ql.Parse(request.Command())
 		if err != nil {
-			request.Fail(errors.NewError(err, ""))
-			return nil, false
+			return nil, err
 		}
 
-		plann, err = plan.Build(node, this.datastore, namespace, true)
+		prepared, err = plan.Build(node, this.datastore, namespace, false)
 		if err != nil {
-			request.Fail(errors.NewError(err, ""))
-			return nil, false
+			return nil, err
 		}
 	}
 
-	return plann, true
+	return prepared, nil
 }
