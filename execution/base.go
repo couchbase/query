@@ -31,13 +31,17 @@ type base struct {
 const _ITEM_CAP = 1024
 
 func newBase() base {
-	rv := newChildBase()
-	rv.itemChannel = make(value.AnnotatedChannel, _ITEM_CAP)
-	return rv
+	return base{
+		itemChannel: make(value.AnnotatedChannel, _ITEM_CAP),
+		stopChannel: make(StopChannel, 1),
+	}
 }
 
-func newChildBase() base {
+// The output of this operator will be redirected elsewhere, so we
+// allocate a minimal itemChannel.
+func newRedirectBase() base {
 	return base{
+		itemChannel: make(value.AnnotatedChannel),
 		stopChannel: make(StopChannel, 1),
 	}
 }

@@ -30,6 +30,18 @@ const (
 	TRUE
 )
 
+func ToTristate(b bool) Tristate {
+	if b {
+		return TRUE
+	} else {
+		return FALSE
+	}
+}
+
+func ToBool(t Tristate) bool {
+	return t == TRUE
+}
+
 // When you try to set a nested property or index that does not exist,
 // the return error will be Unsettable.
 type Unsettable string

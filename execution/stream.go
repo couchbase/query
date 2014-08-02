@@ -19,7 +19,7 @@ type Stream struct {
 
 func NewStream() *Stream {
 	rv := &Stream{
-		base: newBase(),
+		base: newRedirectBase(),
 	}
 
 	rv.output = rv
@@ -39,9 +39,9 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
-	return context.Stream(item)
+	return context.Result(item)
 }
 
 func (this *Stream) afterItems(context *Context) {
-	context.CloseStream()
+	context.CloseResults()
 }

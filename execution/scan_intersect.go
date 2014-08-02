@@ -60,12 +60,14 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer func() { this.values = nil }()
 
 		this.counts = make(map[string]int, 1024)
+		this.values = make(map[string]value.AnnotatedValue, 1024)
+
 		channel := NewChannel()
 
-		for _, s := range this.scans {
-			s.SetParent(this)
-			s.SetOutput(channel)
-			go s.RunOnce(context, parent)
+		for _, scan := range this.scans {
+			scan.SetParent(this)
+			scan.SetOutput(channel)
+			go scan.RunOnce(context, parent)
 		}
 
 		var item value.AnnotatedValue
@@ -84,9 +86,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
 					ok = this.processKey(item, context)
-					if !ok {
-						this.values = nil
-					}
 				}
 			case <-this.childChannel:
 				n--
@@ -104,11 +103,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			<-this.childChannel
 		}
 
-		select {
-		case channel.StopChannel() <- false:
-		default:
-		}
-
+		close(channel.ItemChannel())
 		this.sendItems()
 	})
 }

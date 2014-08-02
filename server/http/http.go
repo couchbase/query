@@ -10,11 +10,16 @@
 package http
 
 import (
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
+	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
 )
@@ -63,13 +68,57 @@ type httpRequest struct {
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
-	// XXX TODO
-	base := &server.BaseRequest{}
+	err := req.ParseForm()
 
-	rv := &httpRequest{
-		BaseRequest: *base,
+	var command string
+	if err == nil {
+		command, err = getCommand(req)
 	}
 
+	var prepared plan.Operator
+	if err == nil {
+		prepared, err = getPrepared(req)
+	}
+
+	if err == nil && command == "" && prepared == nil {
+		err = fmt.Errorf("Either command or prepared must be provided.")
+	}
+
+	var arguments map[string]value.Value
+	if err == nil {
+		arguments, err = getArguments(req)
+	}
+
+	var namespace string
+	if err == nil {
+		namespace, err = formValue(req, "namespace")
+	}
+
+	var timeout time.Duration
+	if err == nil {
+		timeout, err = getTimeout(req)
+	}
+
+	readonly := req.Method == "GET"
+	if err == nil {
+		readonly, err = getReadonly(req)
+	}
+
+	var metrics value.Tristate
+	if err == nil {
+		metrics, err = getMetrics(req)
+	}
+
+	base := server.NewBaseRequest(command, prepared, arguments, namespace, readonly, metrics)
+	rv := &httpRequest{
+		BaseRequest: *base,
+		resp:        resp,
+		req:         req,
+	}
+
+	rv.SetTimeout(rv, timeout)
+
+	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)
 
 	// Abort if client closes connection
@@ -78,6 +127,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		<-closeNotify
 		rv.Stop(server.TIMEOUT)
 	}()
+
+	if err != nil {
+		rv.Fail(errors.NewError(err, ""))
+	}
 
 	return rv
 }
@@ -90,7 +143,7 @@ func (this *httpRequest) Fail(err errors.Error) {
 	defer this.Stop(server.FATAL)
 
 	this.resp.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(this.resp, err.Error())
+	this.writeString(err.Error())
 }
 
 func (this *httpRequest) Execute(stopNotify chan bool) {
@@ -111,9 +164,7 @@ func (this *httpRequest) Expire() {
 }
 
 func (this *httpRequest) writePrefix() bool {
-	io.WriteString(this.resp, "{\n")
-	io.WriteString(this.resp, "  \"results\": [\n")
-	return true
+	return this.writeString("{\n  \"results\": [")
 }
 
 func (this *httpRequest) writeResults() bool {
@@ -149,5 +200,101 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 
 func (this *httpRequest) writeSuffix() bool {
 	// XXX TODO
-	return true
+	return this.writeString("\n  ]\n}\n")
+}
+
+func (this *httpRequest) writeString(s string) bool {
+	_, err := io.WriteString(this.resp, s)
+	return err == nil
+}
+
+func formValue(req *http.Request, field string) (string, error) {
+	values := req.Form[field]
+
+	switch len(values) {
+	case 0:
+		return "", nil
+	case 1:
+		return values[0], nil
+	default:
+		return "", fmt.Errorf("Multiple values for field %s.", field)
+	}
+}
+
+func getCommand(req *http.Request) (string, error) {
+	command, err := formValue(req, "command")
+	if err != nil {
+		return "", err
+	}
+
+	if command == "" && req.Method == "POST" {
+		bytes, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return "", err
+		}
+
+		command = string(bytes)
+	}
+
+	return command, nil
+}
+
+func getPrepared(req *http.Request) (plan.Operator, error) {
+	var prepared plan.Operator
+
+	prepared_field, err := formValue(req, "prepared")
+	if err == nil && prepared_field != "" {
+		// XXX TODO unmarshal
+		prepared = nil
+	}
+
+	return prepared, err
+}
+
+// XXX TODO
+func getArguments(req *http.Request) (map[string]value.Value, error) {
+	var arguments map[string]value.Value
+
+	// XXX TODO
+	return arguments, nil
+}
+
+func getTimeout(req *http.Request) (time.Duration, error) {
+	var timeout time.Duration
+
+	timeout_field, err := formValue(req, "timeout")
+	if err == nil && timeout_field != "" {
+		timeout, err = time.ParseDuration(timeout_field)
+	}
+
+	return timeout, err
+}
+
+func getReadonly(req *http.Request) (bool, error) {
+	readonly := req.Method == "GET"
+
+	readonly_field, err := formValue(req, "readonly")
+	if err == nil && readonly_field != "" {
+		readonly, err = strconv.ParseBool(readonly_field)
+		if err != nil && !readonly && req.Method == "GET" {
+			readonly = true
+			err = fmt.Errorf("readonly=false cannot be used with HTTP GET method.")
+		}
+	}
+
+	return readonly, err
+}
+
+func getMetrics(req *http.Request) (value.Tristate, error) {
+	var metrics value.Tristate
+
+	metrics_field, err := formValue(req, "metrics")
+	if err == nil && metrics_field != "" {
+		m, err := strconv.ParseBool(metrics_field)
+		if err == nil {
+			metrics = value.ToTristate(m)
+		}
+	}
+
+	return metrics, err
 }

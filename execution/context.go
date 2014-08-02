@@ -80,11 +80,11 @@ func (this *Context) Argument(parameter string) (value.Value, bool) {
 	return val, ok
 }
 
-func (this *Context) Stream(item value.Value) bool {
+func (this *Context) Result(item value.Value) bool {
 	return this.output.Result(item)
 }
 
-func (this *Context) CloseStream() {
+func (this *Context) CloseResults() {
 	this.output.CloseResults()
 }
 
