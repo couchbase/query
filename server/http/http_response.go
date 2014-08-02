@@ -10,6 +10,7 @@
 package http
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -78,8 +79,23 @@ func (this *httpRequest) writeResults() bool {
 }
 
 func (this *httpRequest) writeResult(item value.Value) bool {
-	// XXX TODO
-	return true
+	var rv bool
+	if this.resultCount == 0 {
+		rv = this.writeString("\n")
+	} else {
+		rv = this.writeString(",\n")
+	}
+
+	bytes, err := json.MarshalIndent(item.Actual(), "        ", "    ")
+	if err != nil {
+		return false
+	}
+
+	this.resultCount++
+
+	return rv &&
+		this.writeString("        ") &&
+		this.writeString(string(bytes))
 }
 
 func (this *httpRequest) writeSuffix() bool {

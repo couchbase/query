@@ -87,9 +87,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-	cv := value.NewScopeValue(make(map[string]interface{}, n), item)
+	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
 
-	pv := value.NewAnnotatedValue(cv)
+	pv := value.NewAnnotatedValue(sv)
 	pv.SetAttachments(item.Attachments())
 
 	project := value.NewValue(make(map[string]interface{}))

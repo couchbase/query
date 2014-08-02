@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"strconv"
+
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -20,11 +22,21 @@ type Projection struct {
 }
 
 func NewProjection(distinct bool, terms ResultTerms) *Projection {
-	return &Projection{
+	rv := &Projection{
 		distinct: distinct,
 		raw:      false,
 		terms:    terms,
 	}
+
+	a := 0
+	for _, term := range terms {
+		if term.Alias() == "" {
+			a++
+			term.auto = "$" + strconv.Itoa(a)
+		}
+	}
+
+	return rv
 }
 
 func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
@@ -53,6 +65,7 @@ type ResultTerm struct {
 	expr expression.Expression `json:"expr"`
 	star bool                  `json:"star"`
 	as   string                `json:"as"`
+	auto string
 }
 
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
@@ -80,6 +93,8 @@ func (this *ResultTerm) Alias() string {
 		return ""
 	} else if this.as != "" {
 		return this.as
+	} else if this.auto != "" {
+		return this.auto
 	} else {
 		return this.expr.Alias()
 	}
