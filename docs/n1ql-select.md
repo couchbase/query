@@ -2,8 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-06-23
-* Modified: 2014-07-15
+* Modified: 2014-08-02
 
 ## Introduction
 
@@ -1815,118 +1814,144 @@ values in the group.
 
 ## Appendix - Keywords
 
-The following keywords are reserved and cannot be used as identifiers
-without escaping.  All keywords are case-insensitive.
+The following keywords are reserved and cannot be used as unescaped
+identifiers.  All keywords are case-insensitive.
 
-Keywords cannot be escaped; therefore, escaped identifiers can overlap
-with keywords.
+Escaped identifiers can overlap with keywords.
+
+Some of these keywords are not currently implemented but are reserved
+for future use.
 
 * __ALL__
+* __ALTER__
 * __AND__
 * __ANY__
 * __ARRAY__
 * __AS__
 * __ASC__
+* __BEGIN__
 * __BETWEEN__
+* __BREAK__
 * __BUCKET__
 * __BY__
+* __CALL__
 * __CASE__
+* __CAST__
+* __CLUSTER__
+* __COLLATE__
+* __COLLECTION__
+* __COMMIT__
+* __CONNECT__
+* __CONTINUE__
 * __CREATE__
 * __DATABASE__
+* __DATASET__
+* __DATASTORE__
+* __DECLARE__
 * __DELETE__
 * __DESC__
 * __DISTINCT__
+* __DO__
 * __DROP__
+* __EACH__
 * __ELSE__
 * __END__
+* __EVERY__
+* __EXCEPT__
+* __EXECUTE__
 * __EXISTS__
 * __EXPLAIN__
-* __EVERY__
 * __FALSE__
 * __FIRST__
 * __FOR__
 * __FROM__
+* __FUNCTION__
+* __GRANT__
 * __GROUP__
 * __HAVING__
+* __IF__
 * __IN__
 * __INDEX__
+* __INLINE__
 * __INNER__
 * __INSERT__
+* __INTERSECT__
 * __INTO__
 * __IS__
 * __JOIN__
 * __KEY__
 * __KEYS__
+* __KEYSPACE__
 * __LEFT__
 * __LET__
 * __LETTING__
 * __LIKE__
 * __LIMIT__
+* __MAP__
 * __MATCHED__
 * __MERGE__
+* __MINUS__
 * __MISSING__
+* __NAMESPACE__
 * __NEST__
 * __NOT__
 * __NULL__
 * __OFFSET__
 * __ON__
+* __OPTION__
 * __OR__
 * __ORDER__
 * __OUTER__
+* __OVER__
+* __PARTITION__
+* __PATH__
+* __POOL__
+* __PREPARE__
+* __PRIMARY__
+* __PRIVATE__
+* __PRIVILEGE__
+* __PRIVILEGES__
+* __PROCEDURE__
+* __PUBLIC__
 * __RAW__
+* __REALM__
+* __REDUCE__
+* __RENAME__
+* __RETURN__
 * __RETURNING__
+* __REVOKE__
+* __RIGHT__
+* __ROLE__
+* __ROLLBACK__
 * __SATISFIES__
+* __SCHEMA__
 * __SELECT__
 * __SET__
 * __SOME__
+* __START__
 * __THEN__
+* __TO__
+* __TRANSACTION__
+* __TRIGGER__
 * __TRUE__
+* __TRUNCATE__
+* __TYPE__
+* __UNDER__
 * __UNION__
 * __UNIQUE__
 * __UNNEST__
 * __UNSET__
 * __UPDATE__
 * __UPSERT__
+* __USER__
 * __USING__
 * __VALUED__
 * __VALUES__
 * __VIEW__
 * __WHEN__
 * __WHERE__
-
-## Appendix - Reserved words
-
-The following keywords are reserved for future use and cannot be used
-as identifiers without escaping.  All keywords are case-insensitive.
-
-Keywords cannot be escaped; therefore, escaped identifiers can overlap
-with keywords.
-
-* __ALTER__
-* __BEGIN__
-* __BREAK__
-* __CALL__
-* __CAST__
-* __CLUSTER__
-* __COMMIT__
-* __CONTINUE__
-* __DATABASE__
-* __DECLARE__
-* __DO__
-* __EXCEPT__
-* __EXECUTE__
-* __IF__
-* __INTERSECT__
-* __OVER__
-* __POOL__
-* __PREPARE__
-* __RENAME__
-* __RETURN__
-* __ROLLBACK__
-* __START__
-* __TRANSACTION__
-* __TYPE__
 * __WHILE__
+* __WITH__
 * __WORK__
 * __XOR__
 
@@ -2254,6 +2279,12 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Allow expressions to select object fields.
 * 2014-06-23 - UNNEST
     * Allow UNNEST of non-path expressions.
+* 2014-07-31 - Keywords
+    * Updated list of keywords and reserved words.
+* 2014-08-02 - Keywords
+    * Updated list of keywords and reserved words.
+* 2014-08-02 - Identifiers
+    * Removed $ as a starting character for unescaped identifiers.
 
 ### Open issues
 
