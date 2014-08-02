@@ -11,55 +11,18 @@ package http
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
 )
 
 const MAX_REQUEST_BYTES = 1 << 20
-
-type HttpEndpoint struct {
-	server  *server.Server
-	metrics bool
-	httpsrv http.Server
-}
-
-func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
-	rv := &HttpEndpoint{
-		server:  server,
-		metrics: metrics,
-	}
-
-	rv.httpsrv.Addr = addr
-	rv.httpsrv.Handler = rv
-	return rv
-}
-
-func (this *HttpEndpoint) ListenAndServe() error {
-	return this.httpsrv.ListenAndServe()
-}
-
-// If the server channel is full and we are unable to queue a request,
-// we respond with a timeout status.
-func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	request := newHttpRequest(resp, req)
-	select {
-	case this.server.Channel() <- request:
-		// Wait until the request exits.
-		<-request.CloseNotify()
-	default:
-		// Timeout.
-		resp.WriteHeader(http.StatusServiceUnavailable)
-	}
-}
 
 type httpRequest struct {
 	server.BaseRequest
@@ -133,79 +96,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 	}
 
 	return rv
-}
-
-func (this *httpRequest) Output() execution.Output {
-	return this
-}
-
-func (this *httpRequest) Fail(err errors.Error) {
-	defer this.Stop(server.FATAL)
-
-	this.resp.WriteHeader(http.StatusInternalServerError)
-	this.writeString(err.Error())
-}
-
-func (this *httpRequest) Execute(stopNotify chan bool) {
-	defer this.Stop(server.COMPLETED)
-
-	this.NotifyStop(stopNotify)
-
-	this.resp.WriteHeader(http.StatusOK)
-	_ = this.writePrefix() &&
-		this.writeResults() &&
-		this.writeSuffix()
-}
-
-func (this *httpRequest) Expire() {
-	defer this.Stop(server.TIMEOUT)
-
-	this.writeSuffix()
-}
-
-func (this *httpRequest) writePrefix() bool {
-	return this.writeString("{\n  \"results\": [")
-}
-
-func (this *httpRequest) writeResults() bool {
-	var item value.Value
-
-	ok := true
-	for ok {
-		select {
-		case <-this.StopExecute():
-			return true
-		default:
-		}
-
-		select {
-		case item, ok = <-this.Results():
-			if ok {
-				if !this.writeResult(item) {
-					return false
-				}
-			}
-		case <-this.StopExecute():
-			return true
-		}
-	}
-
-	return true
-}
-
-func (this *httpRequest) writeResult(item value.Value) bool {
-	// XXX TODO
-	return true
-}
-
-func (this *httpRequest) writeSuffix() bool {
-	// XXX TODO
-	return this.writeString("\n  ]\n}\n")
-}
-
-func (this *httpRequest) writeString(s string) bool {
-	_, err := io.WriteString(this.resp, s)
-	return err == nil
 }
 
 func formValue(req *http.Request, field string) (string, error) {

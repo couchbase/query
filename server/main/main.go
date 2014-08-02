@@ -23,7 +23,7 @@ import (
 
 var VERSION = "0.7.0" // Build-time overriddable.
 
-var DATASTORE = flag.String("datastore", "", "Datastore address (http://...) or dir:PATH")
+var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
