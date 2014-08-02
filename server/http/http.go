@@ -123,19 +123,23 @@ func (this *httpRequest) writeResults() bool {
 	for ok {
 		select {
 		case <-this.StopExecute():
-			break
+			return true
 		default:
 		}
 
 		select {
-		case item = <-this.Results():
-			ok = this.writeResult(item)
+		case item, ok = <-this.Results():
+			if ok {
+				if !this.writeResult(item) {
+					return false
+				}
+			}
 		case <-this.StopExecute():
-			break
+			return true
 		}
 	}
 
-	return ok
+	return true
 }
 
 func (this *httpRequest) writeResult(item value.Value) bool {

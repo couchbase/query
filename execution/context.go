@@ -22,6 +22,7 @@ import (
 
 type Output interface {
 	Result(item value.Value) bool
+	CloseResults()
 	Fatal(err errors.Error)
 	Error(err errors.Error)
 	Warning(wrn errors.Error)
@@ -79,6 +80,14 @@ func (this *Context) Argument(parameter string) (value.Value, bool) {
 	return val, ok
 }
 
+func (this *Context) Stream(item value.Value) bool {
+	return this.output.Result(item)
+}
+
+func (this *Context) CloseStream() {
+	this.output.CloseResults()
+}
+
 func (this *Context) Error(err errors.Error) {
 	this.output.Error(err)
 }
@@ -134,10 +143,6 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 
 	return results, nil
-}
-
-func (this *Context) Stream(item value.Value) bool {
-	return this.output.Result(item)
 }
 
 // Synchronized map

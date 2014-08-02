@@ -166,6 +166,10 @@ func (this *BaseRequest) Result(item value.Value) bool {
 	}
 }
 
+func (this *BaseRequest) CloseResults() {
+	close(this.results)
+}
+
 func (this *BaseRequest) Fatal(err errors.Error) {
 	defer this.Stop(FATAL)
 

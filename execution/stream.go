@@ -41,3 +41,7 @@ func (this *Stream) RunOnce(context *Context, parent value.Value) {
 func (this *Stream) processItem(item value.AnnotatedValue, context *Context) bool {
 	return context.Stream(item)
 }
+
+func (this *Stream) afterItems(context *Context) {
+	context.CloseStream()
+}
