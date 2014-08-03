@@ -91,6 +91,10 @@ var _CONVERSIONS = []reflect.Type{
 
 // Bring a data object into the Value type system
 func NewValue(val interface{}) Value {
+	if val == nil {
+		return NULL_VALUE
+	}
+
 	switch val := val.(type) {
 	case Value:
 		return val
