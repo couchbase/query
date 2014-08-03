@@ -125,7 +125,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	projection := node.Projection()
 	if projection != nil {
 		for _, term := range projection.Terms() {
-			aggs = collectAggregates(aggs, term.Expression())
+			if term.Expression() != nil {
+				aggs = collectAggregates(aggs, term.Expression())
+			}
 		}
 	}
 
@@ -375,7 +377,10 @@ func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) 
 			aggs = append(aggs, agg)
 		}
 
-		aggs = collectAggregates(aggs, expr.Children()...)
+		children := expr.Children()
+		if len(children) > 0 {
+			aggs = collectAggregates(aggs, children...)
+		}
 	}
 
 	return aggs
