@@ -1910,7 +1910,6 @@ for future use.
 * __PRIMARY__
 * __PRIVATE__
 * __PRIVILEGE__
-* __PRIVILEGES__
 * __PROCEDURE__
 * __PUBLIC__
 * __RAW__
