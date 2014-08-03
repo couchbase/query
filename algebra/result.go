@@ -30,7 +30,7 @@ func NewProjection(distinct bool, terms ResultTerms) *Projection {
 
 	a := 0
 	for _, term := range terms {
-		if term.Alias() == "" {
+		if !term.Star() && term.Alias() == "" {
 			a++
 			term.auto = "$" + strconv.Itoa(a)
 		}
@@ -65,7 +65,7 @@ type ResultTerm struct {
 	expr expression.Expression `json:"expr"`
 	star bool                  `json:"star"`
 	as   string                `json:"as"`
-	auto string
+	auto string                `json:"auto"`
 }
 
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {

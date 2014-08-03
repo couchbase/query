@@ -27,12 +27,7 @@ func NewIdentifier(identifier string) Path {
 }
 
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
-	rv, ok := item.Field(this.identifier)
-	if !ok {
-		return nil, fmt.Errorf("Unbound identifier %s for value %v.",
-			this.identifier, item)
-	}
-
+	rv, _ := item.Field(this.identifier)
 	return rv, nil
 }
 
