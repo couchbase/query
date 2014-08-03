@@ -87,10 +87,10 @@ func (this objectValue) Field(field string) (Value, bool) {
 }
 
 func (this objectValue) SetField(field string, val interface{}) error {
-	_, ok := val.(missingValue)
-	if ok {
+	switch val := val.(type) {
+	case missingValue:
 		delete(this, field)
-	} else {
+	default:
 		this[field] = val
 	}
 
