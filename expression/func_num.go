@@ -887,7 +887,6 @@ func (this *Random) Constructor() FunctionConstructor { return NewRandom }
 
 type Round struct {
 	nAryBase
-	precision int
 }
 
 func NewRound(arguments Expressions) Function {
@@ -907,31 +906,7 @@ func (this *Round) EquivalentTo(other Expression) bool {
 }
 
 func (this *Round) Fold() (Expression, error) {
-	t, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	if len(this.operands) < 2 {
-		return this, nil
-	}
-
-	switch o := this.operands[1].(type) {
-	case *Constant:
-		v := o.Value().Actual()
-		switch v := v.(type) {
-		case float64:
-			if v != math.Trunc(v) {
-				return nil, fmt.Errorf("Non-integer ROUND precision %v.", v)
-			}
-			this.precision = int(v)
-			this.operands = nil
-		default:
-			return nil, fmt.Errorf("Invalid ROUND precision %v of type %T.", v, v)
-		}
-	}
-
-	return this, nil
+	return this.fold(this)
 }
 
 func (this *Round) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
@@ -956,8 +931,8 @@ func (this *Round) eval(args value.Values) (value.Value, error) {
 
 	v := arg.Actual().(float64)
 
-	if len(this.operands) == 0 {
-		return value.NewValue(roundFloat(v, this.precision)), nil
+	if len(this.operands) == 1 {
+		return value.NewValue(roundFloat(v, 0)), nil
 	}
 
 	p := 0
@@ -1201,7 +1176,6 @@ func (this *Tan) Constructor() FunctionConstructor {
 
 type Trunc struct {
 	nAryBase
-	precision int
 }
 
 func NewTrunc(arguments Expressions) Function {
@@ -1221,31 +1195,7 @@ func (this *Trunc) EquivalentTo(other Expression) bool {
 }
 
 func (this *Trunc) Fold() (Expression, error) {
-	t, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	if len(this.operands) < 2 {
-		return this, nil
-	}
-
-	switch o := this.operands[1].(type) {
-	case *Constant:
-		v := o.Value().Actual()
-		switch v := v.(type) {
-		case float64:
-			if v != math.Trunc(v) {
-				return nil, fmt.Errorf("Non-integer TRUNC precision %v.", v)
-			}
-			this.precision = int(v)
-			this.operands = nil
-		default:
-			return nil, fmt.Errorf("Invalid TRUNC precision %v of type %T.", v, v)
-		}
-	}
-
-	return this, nil
+	return this.fold(this)
 }
 
 func (this *Trunc) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
@@ -1270,8 +1220,8 @@ func (this *Trunc) eval(args value.Values) (value.Value, error) {
 
 	v := arg.Actual().(float64)
 
-	if len(this.operands) == 0 {
-		return value.NewValue(truncateFloat(v, this.precision)), nil
+	if len(this.operands) == 1 {
+		return value.NewValue(truncateFloat(v, 0)), nil
 	}
 
 	p := 0
@@ -1311,17 +1261,20 @@ func roundFloat(x float64, prec int) float64 {
 
 	sign := 1.0
 	if x < 0 {
-		sign = -1
+		sign = -1.0
 		x = -x
 	}
 
 	pow := math.Pow(10, float64(prec))
-	intermed := x * pow
-	rounder := math.Floor(intermed + 0.5)
+	intermed := (x + 0.5) * pow
+	rounder := math.Floor(intermed)
+/*
 	if rounder == math.Trunc(rounder) && math.Mod(rounder, 2) != 0 {
 		// For frac 0.5, round towards even
 		rounder--
 	}
+*/
+
 	return sign * rounder / pow
 }
 
