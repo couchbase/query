@@ -16,16 +16,15 @@ import (
 // Collect subquery results
 type Collect struct {
 	base
-	values []value.Value
-	length int
+	values []interface{}
 }
 
-const _COLLECT_BUF_CAP = 64
+const _COLLECT_CAP = 64
 
 func NewCollect() *Collect {
 	rv := &Collect{
 		base:   newBase(),
-		values: make([]value.Value, _COLLECT_BUF_CAP),
+		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 
 	rv.output = rv
@@ -39,7 +38,7 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) Copy() Operator {
 	return &Collect{
 		base:   this.base.copy(),
-		values: make([]value.Value, _COLLECT_BUF_CAP),
+		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 }
 
@@ -48,21 +47,16 @@ func (this *Collect) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bool {
-	if len(this.values) >= this.length {
-		values := make([]value.Value, this.length<<1)
+	if len(this.values) == cap(this.values) {
+		values := make([]interface{}, len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}
 
-	this.values[this.length] = item
-	this.length++
+	this.values = append(this.values, item.Actual())
 	return true
 }
 
-func (this *Collect) afterItems(context *Context) {
-	this.values = this.values[0:this.length]
-}
-
-func (this *Collect) Values() []value.Value {
-	return this.values
+func (this *Collect) Values() value.Value {
+	return value.NewValue(this.values)
 }

@@ -135,7 +135,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		_, ok = <-collect.Output().ItemChannel()
 	}
 
-	results := value.NewValue(collect.Values())
+	results := collect.Values()
 
 	// Cache results
 	if !planFound && !query.Subresult().IsCorrelated() {
