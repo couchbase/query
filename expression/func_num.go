@@ -1266,15 +1266,13 @@ func roundFloat(x float64, prec int) float64 {
 	}
 
 	pow := math.Pow(10, float64(prec))
-	intermed := x * pow
-	rounder := math.Floor(intermed + 0.5)
+	intermed := (x * pow) + 0.5
+	rounder := math.Floor(intermed)
 
-/*
 	// For frac 0.5, round towards even
 	if rounder == intermed && math.Mod(rounder, 2) != 0 {
 		rounder--
 	}
-*/
 
 	return sign * rounder / pow
 }
