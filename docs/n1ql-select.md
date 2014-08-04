@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-08-02
+* Modified: 2014-08-03
 
 ## Introduction
 
@@ -583,19 +583,19 @@ select one element.
 Array values - for each customer, the entire _address_ array is
 selected:
 
-        SELECT VALUE() FROM customer.address
+        SELECT a FROM customer.address a
 
 =>
 
         [
             {
-                "$1": [
+                "a": [
                           { "street" : "101 Main St.", "zip" : "94040" },
                           { "street" : "300 Broadway", "zip" : "10011" }
                       ]
             },
             {
-                "$1": [
+                "a": [
                           { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
                           { "street" : "4120 Alamo Dr.", "zip" : "75019" }
                       ]
@@ -1688,14 +1688,9 @@ __POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
 
 ### Meta and value functions
 
-__BASE64\_VALUE([ expr ])__ - base64-encoded value of the document
-containing _expr_, or the primary document.
+__BASE64(expr)__ - base64-encoding of expr.
 
-__META([ expr ])__ - meta data for the document containing _expr_, or
-the primary document.
-
-__VALUE([ expr ])__ - value of the document containing _expr_, or the
-primary document.
+__META(expr)__ - meta data for the document _expr_.
 
 ### Type checking functions
 
@@ -2284,6 +2279,10 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Updated list of keywords and reserved words.
 * 2014-08-02 - Identifiers
     * Removed $ as a starting character for unescaped identifiers.
+* 2014-08-03 - Meta functions
+    * Removed VALUE() function, which is superfluous
+    * Renamed BASE64_VALUE() to BASE64()
+    * Required argument to META() and BASE64()
 
 ### Open issues
 
