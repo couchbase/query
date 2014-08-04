@@ -18,80 +18,80 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type ClockNowMillis struct {
+type ClockMillis struct {
 	ExpressionBase
 }
 
-func NewClockNowMillis() Function {
-	return &ClockNowMillis{}
+func NewClockMillis() Function {
+	return &ClockMillis{}
 }
 
-func (this *ClockNowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := time.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
-func (this *ClockNowMillis) EquivalentTo(other Expression) bool {
+func (this *ClockMillis) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *ClockNowMillis) Fold() (Expression, error) {
+func (this *ClockMillis) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *ClockNowMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+func (this *ClockMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
 	return this, nil
 }
 
-func (this *ClockNowMillis) SubsetOf(other Expression) bool {
+func (this *ClockMillis) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
 }
 
-func (this *ClockNowMillis) VisitChildren(visitor Visitor) (Expression, error) {
+func (this *ClockMillis) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
 }
 
-func (this *ClockNowMillis) Constructor() FunctionConstructor {
+func (this *ClockMillis) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }
 
-type ClockNowStr struct {
+type ClockStr struct {
 	nAryBase
 }
 
-func NewClockNowStr(args Expressions) Function {
-	return &ClockNowStr{
+func NewClockStr(args Expressions) Function {
+	return &ClockStr{
 		nAryBase{
 			operands: args,
 		},
 	}
 }
 
-func (this *ClockNowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *ClockNowStr) EquivalentTo(other Expression) bool {
+func (this *ClockStr) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *ClockNowStr) Fold() (Expression, error) {
+func (this *ClockStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ClockNowStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+func (this *ClockStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
 	return this.formalize(this, forbidden, allowed, keyspace)
 }
 
-func (this *ClockNowStr) SubsetOf(other Expression) bool {
+func (this *ClockStr) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
 }
 
-func (this *ClockNowStr) VisitChildren(visitor Visitor) (Expression, error) {
+func (this *ClockStr) VisitChildren(visitor Visitor) (Expression, error) {
 	return this.visitChildren(this, visitor)
 }
 
-func (this *ClockNowStr) eval(args value.Values) (value.Value, error) {
+func (this *ClockStr) eval(args value.Values) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
 	if len(args) > 0 {
 		fv := args[0]
@@ -107,11 +107,11 @@ func (this *ClockNowStr) eval(args value.Values) (value.Value, error) {
 	return value.NewValue(timeToStr(time.Now(), fmt)), nil
 }
 
-func (this *ClockNowStr) MinArgs() int { return 0 }
+func (this *ClockStr) MinArgs() int { return 0 }
 
-func (this *ClockNowStr) MaxArgs() int { return 1 }
+func (this *ClockStr) MaxArgs() int { return 1 }
 
-func (this *ClockNowStr) Constructor() FunctionConstructor { return NewClockNowStr }
+func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
 
 type DateAddMillis struct {
 	nAryBase

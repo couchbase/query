@@ -20,8 +20,8 @@ func GetFunction(name string) (Function, bool) {
 
 var _FUNCTIONS = map[string]Function{
 	// Date functions
-	"CLOCK_NOW_MILLIS":    &ClockNowMillis{},
-	"CLOCK_NOW_STR":       &ClockNowStr{},
+	"CLOCK_MILLIS":        &ClockMillis{},
+	"CLOCK_STR":           &ClockStr{},
 	"DATE_ADD_MILLIS":     &DateAddMillis{},
 	"DATE_ADD_STR":        &DateAddStr{},
 	"DATE_DIFF_MILLIS":    &DateDiffMillis{},

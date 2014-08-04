@@ -1317,12 +1317,12 @@ not of the required type.
 
 ### Date functions
 
-__CLOCK\_NOW\_MILLIS()__ - system clock at function evaluation time,
-as UNIX milliseconds; varies during a query.
+__CLOCK\_MILLIS()__ - system clock at function evaluation time, as
+UNIX milliseconds; varies during a query.
 
-__CLOCK\_NOW\_STR([ fmt ])__ - system clock at function evaluation
-time, as a string in a supported format; varies during a
-query. Supported formats:
+__CLOCK\_STR([ fmt ])__ - system clock at function evaluation time, as
+a string in a supported format; varies during a query. Supported
+formats:
 
 * __"2006-01-02T15:04:05.999Z07:00"__ - Default format. (ISO8601 / RFC3339)
 * __"2006-01-02T15:04:05Z07:00"__ (ISO8601 / RFC3339)
