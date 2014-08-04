@@ -52,7 +52,7 @@ func (this *ArrayLiteral) VisitChildren(visitor Visitor) (Expression, error) {
 func (this *ArrayLiteral) eval(operands value.Values) (value.Value, error) {
 	a := make([]interface{}, len(operands))
 	for i, o := range operands {
-		a[i] = o
+		a[i] = o.Actual()
 	}
 
 	return value.NewValue(a), nil

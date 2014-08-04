@@ -22,6 +22,11 @@ func NewMissingValue() Value {
 	return MISSING_VALUE
 }
 
+// Ideally, we should never marshal a MISSING value.
+func (this missingValue) MarshalJSON() ([]byte, error) {
+	return _NULL_BYTES, nil
+}
+
 // Description of which property or index was undefined (if known).
 func (this missingValue) Error() string {
 	if string(this) != "" {

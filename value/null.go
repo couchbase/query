@@ -18,6 +18,10 @@ func NewNullValue() Value {
 	return NULL_VALUE
 }
 
+func (this *nullValue) MarshalJSON() ([]byte, error) {
+	return _NULL_BYTES, nil
+}
+
 func (this *nullValue) Type() int {
 	return NULL
 }

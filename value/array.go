@@ -113,7 +113,15 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 		return Unsettable(index)
 	}
 
-	this[index] = val
+	switch val := val.(type) {
+	case missingValue:
+		this[index] = nil
+	case Value:
+		this[index] = val.Actual()
+	default:
+		this[index] = val
+	}
+
 	return nil
 }
 
@@ -263,13 +271,21 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 		if index < cap(this.actual) {
 			this.actual = this.actual[0 : index+1]
 		} else {
-			act := make([]interface{}, index+1, (index+1)<<1)
-			copy(act, this.actual)
-			this.actual = act
+			actual := make([]interface{}, index+1, (index+1)<<1)
+			copy(actual, this.actual)
+			this.actual = actual
 		}
 	}
 
-	this.actual[index] = val
+	switch val := val.(type) {
+	case missingValue:
+		this.actual[index] = nil
+	case Value:
+		this.actual[index] = val.Actual()
+	default:
+		this.actual[index] = val
+	}
+
 	return nil
 }
 

@@ -33,11 +33,14 @@ func NewObjectLiteral(bindings Bindings) Expression {
 func (this *ObjectLiteral) Evaluate(item value.Value, context Context) (value.Value, error) {
 	m := make(map[string]interface{}, len(this.bindings))
 
-	var err error
 	for key, expr := range this.bindings {
-		m[key], err = expr.Evaluate(item, context)
+		val, err := expr.Evaluate(item, context)
 		if err != nil {
 			return nil, err
+		}
+
+		if val.Type() != value.MISSING {
+			m[key] = val.Actual()
 		}
 	}
 
