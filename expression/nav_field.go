@@ -34,6 +34,10 @@ func (this *Field) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
+func (this *Field) Alias() string {
+	return this.second.Alias()
+}
+
 func (this *Field) Fold() (Expression, error) {
 	return this.fold(this)
 }
@@ -95,4 +99,22 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 	default:
 		return false
 	}
+}
+
+type FieldName struct {
+	Constant
+	name string
+}
+
+func NewFieldName(name string) Expression {
+	return &FieldName{
+		Constant: Constant{
+			value: value.NewValue(name),
+		},
+		name: name,
+	}
+}
+
+func (this *FieldName) Alias() string {
+	return this.name
 }

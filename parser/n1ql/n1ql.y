@@ -1347,7 +1347,7 @@ IDENTIFIER
 |
 path DOT IDENTIFIER
 {
-  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+  $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
 path DOT LPAREN expr RPAREN
@@ -1374,7 +1374,7 @@ c_expr
 /* Nested */
 expr DOT IDENTIFIER
 {
-  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+  $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
 expr DOT LPAREN expr RPAREN
@@ -1582,7 +1582,7 @@ c_expr
 /* Nested */
 b_expr DOT IDENTIFIER
 {
-  $$ = expression.NewField($1, expression.NewConstant(value.NewValue($3)))
+  $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
 b_expr DOT LPAREN expr RPAREN

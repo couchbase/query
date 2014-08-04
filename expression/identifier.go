@@ -40,6 +40,10 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
+func (this *Identifier) Alias() string {
+	return this.identifier
+}
+
 func (this *Identifier) Fold() (Expression, error) {
 	return this, nil
 }

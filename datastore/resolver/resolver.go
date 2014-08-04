@@ -28,6 +28,10 @@ func NewDatastore(uri string) (datastore.Datastore, errors.Error) {
 		return file.NewDatastore(uri[4:])
 	}
 
+	if strings.HasPrefix(uri, "file:") {
+		return file.NewDatastore(uri[5:])
+	}
+
 	if strings.HasPrefix(uri, "mock:") {
 		return mock.NewDatastore(uri)
 	}

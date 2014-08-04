@@ -20,7 +20,6 @@ type Order struct {
 	base
 	plan    *plan.Order
 	values  []value.AnnotatedValue
-	length  int
 	context *Context
 }
 
@@ -30,7 +29,7 @@ func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{
 		base:   newBase(),
 		plan:   plan,
-		values: make([]value.AnnotatedValue, _ORDER_CAP),
+		values: make([]value.AnnotatedValue, 0, _ORDER_CAP),
 	}
 
 	rv.output = rv
@@ -45,7 +44,7 @@ func (this *Order) Copy() Operator {
 	return &Order{
 		base:   this.base.copy(),
 		plan:   this.plan,
-		values: make([]value.AnnotatedValue, _ORDER_CAP),
+		values: make([]value.AnnotatedValue, 0, _ORDER_CAP),
 	}
 }
 
@@ -54,21 +53,19 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
-	if len(this.values) >= this.length {
-		values := make([]value.AnnotatedValue, this.length<<1)
+	if len(this.values) == cap(this.values) {
+		values := make([]value.AnnotatedValue, len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}
 
-	this.values[this.length] = item
-	this.length++
+	this.values = append(this.values, item)
 	return true
 }
 
 func (this *Order) afterItems(context *Context) {
 	defer func() { this.values = nil }()
 
-	this.values = this.values[0:this.length]
 	this.context = context
 	sort.Sort(this)
 	this.context = nil
