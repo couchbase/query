@@ -139,9 +139,8 @@ var _FUNCTIONS = map[string]Function{
 	"POSINFIF":   &PosInfIf{},
 
 	// Meta and value functions
-	"BASE64_VALUE": &Base64Value{},
-	"META":         &Meta{},
-	"VALUE":        &Value{},
+	"META":   &Meta{},
+	"BASE64": &Base64{},
 
 	// Type checking functions
 	"IS_ARRAY":  &IsArray{},

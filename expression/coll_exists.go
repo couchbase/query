@@ -14,22 +14,42 @@ import (
 )
 
 type Exists struct {
-	ExpressionBase
-	operand Expression
+	unaryBase
 }
 
 func NewExists(operand Expression) *Exists {
 	return &Exists{
-		operand: operand,
+		unaryBase{
+			operand: operand,
+		},
 	}
 }
 
 func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, error) {
-	operand, e := this.operand.Evaluate(item, context)
-	if e != nil {
-		return nil, e
-	}
+	return this.evaluate(this, item, context)
+}
 
+func (this *Exists) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Exists) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Exists) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Exists) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Exists) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Exists) eval(operand value.Value) (value.Value, error) {
 	if operand.Type() == value.ARRAY {
 		a := operand.Actual().([]interface{})
 		return value.NewValue(len(a) > 0), nil
@@ -38,37 +58,6 @@ func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, er
 	} else {
 		return value.NULL_VALUE, nil
 	}
-}
-
-func (this *Exists) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.Evaluate(o.Value(), nil)
-		if e == nil {
-			return NewConstant(v), nil
-		}
-	}
-
-	return this, nil
-}
-
-func (this *Exists) Children() Expressions {
-	return Expressions{this.operand}
-}
-
-func (this *Exists) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
-	this.operand, e = visitor.Visit(this.operand)
-	if e != nil {
-		return nil, e
-	}
-
-	return this, nil
 }
 
 func (this *Exists) Operand() Expression {

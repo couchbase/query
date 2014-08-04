@@ -18,7 +18,7 @@ import (
 // n-ary operators.
 type nAry interface {
 	Expression
-	evaluate(operands value.Values) (value.Value, error)
+	eval(operands value.Values) (value.Value, error)
 }
 
 type nAryBase struct {
@@ -26,7 +26,7 @@ type nAryBase struct {
 	operands Expressions
 }
 
-func (this *nAryBase) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *nAryBase) evaluate(expr nAry, item value.Value, context Context) (value.Value, error) {
 	var e error
 	operands := make([]value.Value, len(this.operands))
 	for i, o := range this.operands {
@@ -36,11 +36,11 @@ func (this *nAryBase) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 	}
 
-	return nAry(this).evaluate(operands)
+	return expr.eval(operands)
 }
 
-func (this *nAryBase) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+func (this *nAryBase) fold(expr nAry) (Expression, error) {
+	t, e := expr.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
@@ -51,12 +51,11 @@ func (this *nAryBase) Fold() (Expression, error) {
 		case *Constant:
 			constants[i] = o.Value()
 		default:
-			return this, nil
+			return expr, nil
 		}
 	}
 
-	nary := nAry(this)
-	c, e := nary.evaluate(constants)
+	c, e := expr.eval(constants)
 	if e != nil {
 		return nil, e
 	}
@@ -68,22 +67,18 @@ func (this *nAryBase) Children() Expressions {
 	return this.operands
 }
 
-func (this *nAryBase) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
+func (this *nAryBase) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
+	var err error
 	for i, o := range this.operands {
-		this.operands[i], e = visitor.Visit(o)
-		if e != nil {
-			return nil, e
+		this.operands[i], err = visitor.Visit(o)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return this, nil
+	return expr, nil
 }
 
 func (this *nAryBase) MinArgs() int { return 1 }
 
 func (this *nAryBase) MaxArgs() int { return math.MaxInt16 }
-
-func (this *nAryBase) evaluate(operands value.Values) (value.Value, error) {
-	panic("Must override.")
-}

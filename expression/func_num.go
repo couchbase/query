@@ -29,7 +29,31 @@ func NewAbs(arg Expression) Function {
 	}
 }
 
-func (this *Abs) evaluate(arg value.Value) (value.Value, error) {
+func (this *Abs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Abs) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Abs) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Abs) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Abs) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Abs) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Abs) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -57,7 +81,31 @@ func NewAcos(arg Expression) Function {
 	}
 }
 
-func (this *Acos) evaluate(arg value.Value) (value.Value, error) {
+func (this *Acos) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Acos) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Acos) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Acos) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Acos) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Acos) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Acos) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -85,7 +133,31 @@ func NewAsin(arg Expression) Function {
 	}
 }
 
-func (this *Asin) evaluate(arg value.Value) (value.Value, error) {
+func (this *Asin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Asin) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Asin) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Asin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Asin) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Asin) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Asin) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -113,7 +185,31 @@ func NewAtan(arg Expression) Function {
 	}
 }
 
-func (this *Atan) evaluate(arg value.Value) (value.Value, error) {
+func (this *Atan) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Atan) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Atan) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Atan) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Atan) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Atan) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Atan) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -142,7 +238,31 @@ func NewAtan2(first, second Expression) Function {
 	}
 }
 
-func (this *Atan2) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Atan2) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Atan2) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Atan2) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Atan2) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Atan2) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Atan2) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Atan2) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {
@@ -172,7 +292,31 @@ func NewCeil(arg Expression) Function {
 	}
 }
 
-func (this *Ceil) evaluate(arg value.Value) (value.Value, error) {
+func (this *Ceil) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Ceil) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Ceil) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Ceil) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Ceil) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Ceil) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Ceil) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -200,7 +344,31 @@ func NewCos(arg Expression) Function {
 	}
 }
 
-func (this *Cos) evaluate(arg value.Value) (value.Value, error) {
+func (this *Cos) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Cos) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Cos) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Cos) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Cos) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Cos) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Cos) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -228,11 +396,31 @@ func NewDegrees(arg Expression) Function {
 	}
 }
 
+func (this *Degrees) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Degrees) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Degrees) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _RAD_TO_DEG).Fold()
 }
 
-func (this *Degrees) evaluate(arg value.Value) (value.Value, error) {
+func (this *Degrees) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Degrees) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Degrees) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Degrees) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -260,7 +448,31 @@ func NewExp(arg Expression) Function {
 	}
 }
 
-func (this *Exp) evaluate(arg value.Value) (value.Value, error) {
+func (this *Exp) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Exp) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Exp) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Exp) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Exp) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Exp) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Exp) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -288,7 +500,31 @@ func NewLn(arg Expression) Function {
 	}
 }
 
-func (this *Ln) evaluate(arg value.Value) (value.Value, error) {
+func (this *Ln) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Ln) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Ln) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Ln) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Ln) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Ln) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Ln) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -316,7 +552,31 @@ func NewLog(arg Expression) Function {
 	}
 }
 
-func (this *Log) evaluate(arg value.Value) (value.Value, error) {
+func (this *Log) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Log) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Log) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Log) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Log) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Log) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Log) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -344,7 +604,31 @@ func NewFloor(arg Expression) Function {
 	}
 }
 
-func (this *Floor) evaluate(arg value.Value) (value.Value, error) {
+func (this *Floor) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Floor) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Floor) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Floor) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Floor) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Floor) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Floor) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -368,12 +652,28 @@ func NewPI() Function {
 	return &PI{}
 }
 
+func (this *PI) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return value.NewValue(math.Pi), nil
+}
+
+func (this *PI) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *PI) Fold() (Expression, error) {
 	return _PI, nil
 }
 
-func (this *PI) evaluate() (value.Value, error) {
-	return value.NewValue(math.Pi), nil
+func (this *PI) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this, nil
+}
+
+func (this *PI) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *PI) VisitChildren(visitor Visitor) (Expression, error) {
+	return this, nil
 }
 
 func (this *PI) Constructor() FunctionConstructor {
@@ -397,7 +697,31 @@ func NewPower(first, second Expression) Function {
 	}
 }
 
-func (this *Power) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Power) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Power) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Power) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Power) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Power) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Power) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Power) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {
@@ -427,11 +751,31 @@ func NewRadians(arg Expression) Function {
 	}
 }
 
+func (this *Radians) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Radians) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Radians) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _DEG_TO_RAD).Fold()
 }
 
-func (this *Radians) evaluate(arg value.Value) (value.Value, error) {
+func (this *Radians) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Radians) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Radians) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Radians) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -460,8 +804,16 @@ func NewRandom(arguments Expressions) Function {
 	}
 }
 
+func (this *Random) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Random) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Random) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
@@ -488,7 +840,19 @@ func (this *Random) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Random) evaluate(args value.Values) (value.Value, error) {
+func (this *Random) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Random) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Random) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Random) eval(args value.Values) (value.Value, error) {
 	if this.gen != nil {
 		return value.NewValue(this.gen.Float64()), nil
 	}
@@ -534,8 +898,16 @@ func NewRound(arguments Expressions) Function {
 	}
 }
 
+func (this *Round) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Round) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Round) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
@@ -562,7 +934,19 @@ func (this *Round) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Round) evaluate(args value.Values) (value.Value, error) {
+func (this *Round) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Round) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Round) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Round) eval(args value.Values) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -611,7 +995,31 @@ func NewSign(arg Expression) Function {
 	}
 }
 
-func (this *Sign) evaluate(arg value.Value) (value.Value, error) {
+func (this *Sign) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Sign) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Sign) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Sign) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Sign) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Sign) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Sign) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -647,7 +1055,31 @@ func NewSin(arg Expression) Function {
 	}
 }
 
-func (this *Sin) evaluate(arg value.Value) (value.Value, error) {
+func (this *Sin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Sin) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Sin) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Sin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Sin) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Sin) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Sin) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -675,7 +1107,31 @@ func NewSqrt(arg Expression) Function {
 	}
 }
 
-func (this *Sqrt) evaluate(arg value.Value) (value.Value, error) {
+func (this *Sqrt) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Sqrt) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Sqrt) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Sqrt) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Sqrt) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Sqrt) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Sqrt) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -703,7 +1159,31 @@ func NewTan(arg Expression) Function {
 	}
 }
 
-func (this *Tan) evaluate(arg value.Value) (value.Value, error) {
+func (this *Tan) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Tan) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Tan) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Tan) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Tan) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Tan) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Tan) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -732,8 +1212,16 @@ func NewTrunc(arguments Expressions) Function {
 	}
 }
 
+func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Trunc) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Trunc) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
@@ -760,7 +1248,19 @@ func (this *Trunc) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Trunc) evaluate(args value.Values) (value.Value, error) {
+func (this *Trunc) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Trunc) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Trunc) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Trunc) eval(args value.Values) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

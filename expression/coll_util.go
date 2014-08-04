@@ -31,7 +31,7 @@ func (this *collMap) Children() Expressions {
 	return d
 }
 
-func (this *collMap) VisitChildren(visitor Visitor) (Expression, error) {
+func (this *collMap) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
 	var e error
 	this.mapping, e = visitor.Visit(this.mapping)
 	if e != nil {
@@ -52,7 +52,7 @@ func (this *collMap) VisitChildren(visitor Visitor) (Expression, error) {
 		}
 	}
 
-	return this, nil
+	return expr, nil
 }
 
 type collPred struct {
@@ -71,7 +71,7 @@ func (this *collPred) Children() Expressions {
 	return d
 }
 
-func (this *collPred) VisitChildren(visitor Visitor) (Expression, error) {
+func (this *collPred) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
 	var e error
 	for _, b := range this.bindings {
 		_, e = b.Accept(visitor)
@@ -85,5 +85,5 @@ func (this *collPred) VisitChildren(visitor Visitor) (Expression, error) {
 		return nil, e
 	}
 
-	return this, nil
+	return expr, nil
 }

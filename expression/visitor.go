@@ -27,9 +27,9 @@ func (this *Folder) Visit(expr Expression) (Expression, error) {
 type Formalizer struct {
 	Forbidden value.Value
 	Allowed   value.Value
-	Bucket    string
+	Keyspace  string
 }
 
 func (this *Formalizer) Visit(expr Expression) (Expression, error) {
-	return expr.Formalize(this.Forbidden, this.Allowed, this.Bucket)
+	return expr.Formalize(this.Forbidden, this.Allowed, this.Keyspace)
 }

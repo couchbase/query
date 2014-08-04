@@ -32,7 +32,31 @@ func NewRegexpContains(first, second Expression) Function {
 	}
 }
 
-func (this *RegexpContains) evaluate(first, second value.Value) (value.Value, error) {
+func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *RegexpContains) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *RegexpContains) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *RegexpContains) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *RegexpContains) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *RegexpContains) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *RegexpContains) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -75,7 +99,31 @@ func NewRegexpLike(first, second Expression) Function {
 	}
 }
 
-func (this *RegexpLike) evaluate(first, second value.Value) (value.Value, error) {
+func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *RegexpLike) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *RegexpLike) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *RegexpLike) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *RegexpLike) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *RegexpLike) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *RegexpLike) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -118,7 +166,31 @@ func NewRegexpPosition(first, second Expression) Function {
 	}
 }
 
-func (this *RegexpPosition) evaluate(first, second value.Value) (value.Value, error) {
+func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *RegexpPosition) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *RegexpPosition) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *RegexpPosition) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *RegexpPosition) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *RegexpPosition) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *RegexpPosition) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -164,6 +236,14 @@ func NewRegexpReplace(args Expressions) Function {
 	}
 }
 
+func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *RegexpReplace) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *RegexpReplace) Fold() (Expression, error) {
 	var e error
 	this.operands[1], e = this.operands[1].Fold()
@@ -189,10 +269,22 @@ func (this *RegexpReplace) Fold() (Expression, error) {
 		this.re = re
 	}
 
-	return this.nAryBase.Fold()
+	return this.fold(this)
 }
 
-func (this *RegexpReplace) evaluate(args value.Values) (value.Value, error) {
+func (this *RegexpReplace) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *RegexpReplace) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *RegexpReplace) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *RegexpReplace) eval(args value.Values) (value.Value, error) {
 	null := false
 	for i := 0; i < 3; i++ {
 		if args[i].Type() == value.MISSING {

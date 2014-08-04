@@ -30,7 +30,31 @@ func NewLike(first, second Expression) Expression {
 	}
 }
 
-func (this *Like) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Like) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Like) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Like) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Like) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Like) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Like) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Like) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {

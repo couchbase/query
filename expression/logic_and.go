@@ -27,7 +27,31 @@ func NewAnd(operands ...Expression) Expression {
 	}
 }
 
-func (this *And) evaluate(operands value.Values) (value.Value, error) {
+func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *And) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *And) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *And) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *And) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *And) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *And) eval(operands value.Values) (value.Value, error) {
 	missing := false
 	null := false
 	for _, v := range operands {

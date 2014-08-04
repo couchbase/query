@@ -25,7 +25,31 @@ func NewIsValued(operand Expression) Expression {
 	}
 }
 
-func (this *IsValued) evaluate(operand value.Value) (value.Value, error) {
+func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IsValued) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IsValued) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IsValued) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IsValued) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IsValued) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IsValued) eval(operand value.Value) (value.Value, error) {
 	if operand.Type() > value.NULL {
 		return value.NewValue(true), nil
 	} else {

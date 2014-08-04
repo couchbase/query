@@ -36,13 +36,33 @@ type aggregateBase struct {
 
 func (this *aggregateBase) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	defer func() {
-		e = fmt.Errorf("Error evaluating aggregate: %v.", recover())
+		r := recover()
+		if r != nil {
+			e = fmt.Errorf("Error evaluating aggregate: %v.", r)
+		}
 	}()
 
 	av := item.(value.AnnotatedValue)
 	aggregates := av.GetAttachment("aggregates").(map[Aggregate]value.Value)
 	result = aggregates[interface{}(this).(Aggregate)]
 	return result, e
+}
+
+func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
+	return false
+}
+func (this *aggregateBase) Fold() (expression.Expression, error) {
+	return this.VisitChildren(&expression.Folder{})
+}
+
+func (this *aggregateBase) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	f := &expression.Formalizer{
+		Forbidden: forbidden,
+		Allowed:   allowed,
+		Keyspace:  keyspace,
+	}
+
+	return this.VisitChildren(f)
 }
 
 func (this *aggregateBase) SubsetOf(other expression.Expression) bool {

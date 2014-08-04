@@ -27,7 +27,31 @@ func NewObjectKeys(arg Expression) Function {
 	}
 }
 
-func (this *ObjectKeys) evaluate(arg value.Value) (value.Value, error) {
+func (this *ObjectKeys) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ObjectKeys) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ObjectKeys) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ObjectKeys) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ObjectKeys) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ObjectKeys) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ObjectKeys) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
@@ -67,7 +91,31 @@ func NewObjectLength(arg Expression) Function {
 	}
 }
 
-func (this *ObjectLength) evaluate(arg value.Value) (value.Value, error) {
+func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ObjectLength) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ObjectLength) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ObjectLength) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ObjectLength) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ObjectLength) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ObjectLength) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
@@ -96,7 +144,31 @@ func NewObjectValues(arg Expression) Function {
 	}
 }
 
-func (this *ObjectValues) evaluate(arg value.Value) (value.Value, error) {
+func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ObjectValues) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ObjectValues) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ObjectValues) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ObjectValues) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ObjectValues) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ObjectValues) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {

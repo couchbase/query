@@ -27,7 +27,31 @@ func NewConcat(operands ...Expression) Expression {
 	}
 }
 
-func (this *Concat) evaluate(operands value.Values) (value.Value, error) {
+func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Concat) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Concat) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Concat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Concat) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Concat) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Concat) eval(operands value.Values) (value.Value, error) {
 	var buf bytes.Buffer
 	null := false
 

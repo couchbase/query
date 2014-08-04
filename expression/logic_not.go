@@ -25,15 +25,23 @@ func NewNot(operand Expression) Expression {
 	}
 }
 
+func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Not) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Not) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
 
 	switch o := this.operand.(type) {
 	case *Constant:
-		v, e := this.evaluate(o.Value())
+		v, e := this.eval(o.Value())
 		if e != nil {
 			return nil, e
 		}
@@ -45,7 +53,19 @@ func (this *Not) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Not) evaluate(operand value.Value) (value.Value, error) {
+func (this *Not) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Not) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Not) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Not) eval(operand value.Value) (value.Value, error) {
 	if operand.Type() > value.NULL {
 		return value.NewValue(!operand.Truth()), nil
 	} else {

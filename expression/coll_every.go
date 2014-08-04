@@ -85,3 +85,23 @@ func (this *Every) Evaluate(item value.Value, context Context) (value.Value, err
 
 	return value.NewValue(true), nil
 }
+
+func (this *Every) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Every) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Every) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Every) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Every) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}

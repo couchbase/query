@@ -35,7 +35,31 @@ func NewArrayAppend(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayAppend) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayAppend) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayAppend) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayAppend) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayAppend) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayAppend) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayAppend) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -73,7 +97,31 @@ func NewArrayAvg(arg Expression) Function {
 	}
 }
 
-func (this *ArrayAvg) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayAvg) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayAvg) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayAvg) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayAvg) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayAvg) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayAvg) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -123,7 +171,31 @@ func NewArrayConcat(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayConcat) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayConcat) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayConcat) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayConcat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayConcat) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayConcat) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayConcat) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() != value.ARRAY {
@@ -161,7 +233,31 @@ func NewArrayContains(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayContains) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayContains) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayContains) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayContains) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayContains) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayContains) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayContains) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -202,7 +298,31 @@ func NewArrayCount(arg Expression) Function {
 	}
 }
 
-func (this *ArrayCount) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayCount) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayCount) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayCount) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayCount) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayCount) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayCount) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -245,7 +365,31 @@ func NewArrayDistinct(arg Expression) Function {
 	}
 }
 
-func (this *ArrayDistinct) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayDistinct) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayDistinct) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayDistinct) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayDistinct) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayDistinct) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -285,7 +429,31 @@ func NewArrayIfNull(arg Expression) Function {
 	}
 }
 
-func (this *ArrayIfNull) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayIfNull) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayIfNull) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayIfNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayIfNull) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayIfNull) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayIfNull) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -327,7 +495,31 @@ func NewArrayLength(arg Expression) Function {
 	}
 }
 
-func (this *ArrayLength) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayLength) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayLength) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayLength) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayLength) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayLength) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayLength) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -362,7 +554,31 @@ func NewArrayMax(arg Expression) Function {
 	}
 }
 
-func (this *ArrayMax) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayMax) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayMax) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayMax) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayMax) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayMax) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayMax) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -405,7 +621,31 @@ func NewArrayMin(arg Expression) Function {
 	}
 }
 
-func (this *ArrayMin) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayMin) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayMin) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayMin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayMin) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayMin) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayMin) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -450,7 +690,31 @@ func NewArrayPosition(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayPosition) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayPosition) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayPosition) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayPosition) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayPosition) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayPosition) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayPosition) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -492,7 +756,31 @@ func NewArrayPrepend(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayPrepend) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayPrepend) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayPrepend) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayPrepend) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayPrepend) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayPrepend) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayPrepend) eval(first, second value.Value) (value.Value, error) {
 	if second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {
@@ -533,7 +821,31 @@ func NewArrayPut(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayPut) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayPut) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayPut) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayPut) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayPut) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayPut) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayPut) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -579,7 +891,31 @@ func NewArrayRemove(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayRemove) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayRemove) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayRemove) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayRemove) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayRemove) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayRemove) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayRemove) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -624,7 +960,31 @@ func NewArrayRepeat(first, second Expression) Function {
 	}
 }
 
-func (this *ArrayRepeat) evaluate(first, second value.Value) (value.Value, error) {
+func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayRepeat) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayRepeat) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayRepeat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayRepeat) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayRepeat) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayRepeat) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.NUMBER {
@@ -669,7 +1029,31 @@ func NewArrayReplace(args Expressions) Function {
 	}
 }
 
-func (this *ArrayReplace) evaluate(args value.Values) (value.Value, error) {
+func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayReplace) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayReplace) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayReplace) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayReplace) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayReplace) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayReplace) eval(args value.Values) (value.Value, error) {
 	av := args[0]
 	v1 := args[1]
 	v2 := args[2]
@@ -722,7 +1106,31 @@ func NewArrayReverse(arg Expression) Function {
 	}
 }
 
-func (this *ArrayReverse) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayReverse) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayReverse) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayReverse) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayReverse) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayReverse) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayReverse) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -764,7 +1172,31 @@ func NewArraySort(arg Expression) Function {
 	}
 }
 
-func (this *ArraySort) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArraySort) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArraySort) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArraySort) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArraySort) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArraySort) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArraySort) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -801,7 +1233,31 @@ func NewArraySum(arg Expression) Function {
 	}
 }
 
-func (this *ArraySum) evaluate(arg value.Value) (value.Value, error) {
+func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArraySum) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArraySum) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArraySum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArraySum) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArraySum) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArraySum) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {

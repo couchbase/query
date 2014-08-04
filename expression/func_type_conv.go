@@ -29,7 +29,31 @@ func NewToArray(arg Expression) Function {
 	}
 }
 
-func (this *ToArray) evaluate(arg value.Value) (value.Value, error) {
+func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ToArray) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ToArray) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ToArray) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ToArray) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ToArray) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ToArray) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() <= value.NULL {
 		return arg, nil
 	} else if arg.Type() == value.ARRAY {
@@ -57,7 +81,31 @@ func NewToAtom(arg Expression) Function {
 	}
 }
 
-func (this *ToAtom) evaluate(arg value.Value) (value.Value, error) {
+func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ToAtom) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ToAtom) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ToAtom) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ToAtom) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ToAtom) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ToAtom) eval(arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING, value.MISSING, value.NULL:
 		return arg, nil
@@ -97,7 +145,31 @@ func NewToBool(arg Expression) Function {
 	}
 }
 
-func (this *ToBool) evaluate(arg value.Value) (value.Value, error) {
+func (this *ToBool) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ToBool) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ToBool) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ToBool) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ToBool) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ToBool) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ToBool) eval(arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.BOOLEAN:
 		return arg, nil
@@ -143,7 +215,31 @@ func NewToNum(arg Expression) Function {
 	}
 }
 
-func (this *ToNum) evaluate(arg value.Value) (value.Value, error) {
+func (this *ToNum) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ToNum) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ToNum) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ToNum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ToNum) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ToNum) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ToNum) eval(arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
@@ -184,7 +280,31 @@ func NewToStr(arg Expression) Function {
 	}
 }
 
-func (this *ToStr) evaluate(arg value.Value) (value.Value, error) {
+func (this *ToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ToStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ToStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ToStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ToStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ToStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ToStr) eval(arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:
 		return arg, nil

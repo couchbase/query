@@ -25,15 +25,23 @@ func NewNegate(operand Expression) Expression {
 	}
 }
 
+func (this *Negate) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Negate) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Negate) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
 
 	switch o := this.operand.(type) {
 	case *Constant:
-		v, e := this.evaluate(o.Value())
+		v, e := this.eval(o.Value())
 		if e != nil {
 			return nil, e
 		}
@@ -52,7 +60,19 @@ func (this *Negate) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Negate) evaluate(operand value.Value) (value.Value, error) {
+func (this *Negate) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Negate) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Negate) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Negate) eval(operand value.Value) (value.Value, error) {
 	if operand.Type() == value.NUMBER {
 		return value.NewValue(-operand.Actual().(float64)), nil
 	} else if operand.Type() == value.MISSING {

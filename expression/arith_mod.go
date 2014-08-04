@@ -28,7 +28,31 @@ func NewModulo(first, second Expression) Expression {
 	}
 }
 
-func (this *Modulo) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Modulo) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Modulo) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Modulo) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Modulo) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Modulo) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Modulo) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Modulo) eval(first, second value.Value) (value.Value, error) {
 	if second.Type() == value.NUMBER {
 		s := second.Actual().(float64)
 		if s == 0.0 {

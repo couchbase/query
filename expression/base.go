@@ -18,16 +18,12 @@ import (
 type ExpressionBase struct {
 }
 
-func (this *ExpressionBase) Evaluate(item value.Value, context Context) (value.Value, error) {
-	panic("Must override.")
-}
-
-func (this *ExpressionBase) EquivalentTo(other Expression) bool {
-	if reflect.TypeOf(this) != reflect.TypeOf(other) {
+func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
+	if reflect.TypeOf(expr) != reflect.TypeOf(other) {
 		return false
 	}
 
-	ours := Expression(this).Children()
+	ours := expr.Children()
 	theirs := other.Children()
 	if len(ours) != len(theirs) {
 		return false
@@ -46,31 +42,31 @@ func (this *ExpressionBase) Alias() string {
 	return ""
 }
 
-func (this *ExpressionBase) Fold() (Expression, error) {
-	return Expression(this).VisitChildren(&Folder{})
+func (this *ExpressionBase) fold(expr Expression) (Expression, error) {
+	return expr.VisitChildren(&Folder{})
 }
 
-func (this *ExpressionBase) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
+func (this *ExpressionBase) formalize(expr Expression,
+	forbidden, allowed value.Value, keyspace string) (Expression, error) {
 	f := &Formalizer{
 		Forbidden: forbidden,
 		Allowed:   allowed,
-		Bucket:    bucket,
+		Keyspace:  keyspace,
 	}
 
-	return Expression(this).VisitChildren(f)
+	return expr.VisitChildren(f)
 }
 
-func (this *ExpressionBase) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
+func (this *ExpressionBase) subsetOf(expr, other Expression) bool {
+	return expr.EquivalentTo(other)
 }
 
 func (this *ExpressionBase) Children() Expressions {
 	return nil
 }
 
-func (this *ExpressionBase) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
+func (this *ExpressionBase) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
+	return expr, nil
 }
 
 func (this *ExpressionBase) MinArgs() int { return 0 }

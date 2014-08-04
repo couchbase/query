@@ -31,6 +31,26 @@ func (this *ClockNowMillis) Evaluate(item value.Value, context Context) (value.V
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *ClockNowMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ClockNowMillis) Fold() (Expression, error) {
+	return this, nil
+}
+
+func (this *ClockNowMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this, nil
+}
+
+func (this *ClockNowMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ClockNowMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this, nil
+}
+
 func (this *ClockNowMillis) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }
@@ -47,7 +67,31 @@ func NewClockNowStr(args Expressions) Function {
 	}
 }
 
-func (this *ClockNowStr) evaluate(args value.Values) (value.Value, error) {
+func (this *ClockNowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ClockNowStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ClockNowStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ClockNowStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ClockNowStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ClockNowStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ClockNowStr) eval(args value.Values) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
 	if len(args) > 0 {
 		fv := args[0]
@@ -81,7 +125,31 @@ func NewDateAddMillis(args Expressions) Function {
 	}
 }
 
-func (this *DateAddMillis) evaluate(args value.Values) (value.Value, error) {
+func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateAddMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateAddMillis) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateAddMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateAddMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateAddMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateAddMillis) eval(args value.Values) (value.Value, error) {
 	ev := args[0]
 	nv := args[1]
 	pv := args[2]
@@ -127,7 +195,31 @@ func NewDateAddStr(args Expressions) Function {
 	}
 }
 
-func (this *DateAddStr) evaluate(args value.Values) (value.Value, error) {
+func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateAddStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateAddStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateAddStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateAddStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateAddStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateAddStr) eval(args value.Values) (value.Value, error) {
 	ev := args[0]
 	nv := args[1]
 	pv := args[2]
@@ -178,7 +270,31 @@ func NewDateDiffMillis(args Expressions) Function {
 	}
 }
 
-func (this *DateDiffMillis) evaluate(args value.Values) (value.Value, error) {
+func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateDiffMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateDiffMillis) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateDiffMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateDiffMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateDiffMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateDiffMillis) eval(args value.Values) (value.Value, error) {
 	dv1 := args[0]
 	dv2 := args[1]
 	pv := args[2]
@@ -220,7 +336,31 @@ func NewDateDiffStr(args Expressions) Function {
 	}
 }
 
-func (this *DateDiffStr) evaluate(args value.Values) (value.Value, error) {
+func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateDiffStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateDiffStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateDiffStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateDiffStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateDiffStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateDiffStr) eval(args value.Values) (value.Value, error) {
 	dv1 := args[0]
 	dv2 := args[1]
 	pv := args[2]
@@ -273,7 +413,31 @@ func NewDatePartMillis(first, second Expression) Function {
 	}
 }
 
-func (this *DatePartMillis) evaluate(first, second value.Value) (value.Value, error) {
+func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DatePartMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DatePartMillis) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DatePartMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DatePartMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DatePartMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DatePartMillis) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -309,7 +473,31 @@ func NewDatePartStr(first, second Expression) Function {
 	}
 }
 
-func (this *DatePartStr) evaluate(first, second value.Value) (value.Value, error) {
+func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DatePartStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DatePartStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DatePartStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DatePartStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DatePartStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DatePartStr) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -350,7 +538,31 @@ func NewDateTruncMillis(first, second Expression) Function {
 	}
 }
 
-func (this *DateTruncMillis) evaluate(first, second value.Value) (value.Value, error) {
+func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateTruncMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateTruncMillis) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateTruncMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateTruncMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateTruncMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateTruncMillis) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -389,7 +601,31 @@ func NewDateTruncStr(first, second Expression) Function {
 	}
 }
 
-func (this *DateTruncStr) evaluate(first, second value.Value) (value.Value, error) {
+func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *DateTruncStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *DateTruncStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *DateTruncStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *DateTruncStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *DateTruncStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *DateTruncStr) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -429,7 +665,31 @@ func NewMillisToStr(args Expressions) Function {
 	}
 }
 
-func (this *MillisToStr) evaluate(args value.Values) (value.Value, error) {
+func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *MillisToStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *MillisToStr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *MillisToStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *MillisToStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *MillisToStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *MillisToStr) eval(args value.Values) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
 	if len(args) > 1 {
@@ -466,7 +726,31 @@ func NewMillisToUTC(args Expressions) Function {
 	}
 }
 
-func (this *MillisToUTC) evaluate(args value.Values) (value.Value, error) {
+func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *MillisToUTC) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *MillisToUTC) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *MillisToUTC) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *MillisToUTC) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *MillisToUTC) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *MillisToUTC) eval(args value.Values) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
 	if len(args) > 1 {
@@ -503,7 +787,31 @@ func NewMillisToZoneName(args Expressions) Function {
 	}
 }
 
-func (this *MillisToZoneName) evaluate(args value.Values) (value.Value, error) {
+func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *MillisToZoneName) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *MillisToZoneName) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *MillisToZoneName) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *MillisToZoneName) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *MillisToZoneName) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *MillisToZoneName) eval(args value.Values) (value.Value, error) {
 	ev := args[0]
 	zv := args[1]
 	fv := _DEFAULT_FMT_VALUE
@@ -548,6 +856,26 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *NowMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *NowMillis) Fold() (Expression, error) {
+	return this, nil
+}
+
+func (this *NowMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this, nil
+}
+
+func (this *NowMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *NowMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this, nil
+}
+
 func (this *NowMillis) Constructor() FunctionConstructor {
 	return func(Expressions) Function { return this }
 }
@@ -590,8 +918,28 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 	return value.NewValue(timeToStr(now, fmt)), nil
 }
 
+func (this *NowStr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *NowStr) Fold() (Expression, error) {
-	return Expression(this).VisitChildren(&Folder{})
+	return this, nil
+}
+
+func (this *NowStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *NowStr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *NowStr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *NowStr) eval(args value.Values) (value.Value, error) {
+	panic("Cannot eval without context.")
 }
 
 func (this *NowStr) MinArgs() int { return 0 }
@@ -612,7 +960,31 @@ func NewStrToMillis(arg Expression) Function {
 	}
 }
 
-func (this *StrToMillis) evaluate(arg value.Value) (value.Value, error) {
+func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *StrToMillis) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *StrToMillis) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *StrToMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *StrToMillis) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *StrToMillis) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *StrToMillis) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -646,7 +1018,31 @@ func NewStrToUTC(arg Expression) Function {
 	}
 }
 
-func (this *StrToUTC) evaluate(arg value.Value) (value.Value, error) {
+func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *StrToUTC) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *StrToUTC) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *StrToUTC) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *StrToUTC) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *StrToUTC) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *StrToUTC) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -682,7 +1078,31 @@ func NewStrToZoneName(first, second Expression) Function {
 	}
 }
 
-func (this *StrToZoneName) evaluate(first, second value.Value) (value.Value, error) {
+func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *StrToZoneName) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *StrToZoneName) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *StrToZoneName) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *StrToZoneName) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *StrToZoneName) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *StrToZoneName) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {

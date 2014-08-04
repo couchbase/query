@@ -29,6 +29,21 @@ func (this *Subquery) Evaluate(item value.Value, context expression.Context) (va
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
 
+func (this *Subquery) EquivalentTo(other expression.Expression) bool {
+	return false
+}
+func (this *Subquery) Fold() (expression.Expression, error) {
+	return this, nil
+}
+
+func (this *Subquery) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this, nil
+}
+
+func (this *Subquery) SubsetOf(other expression.Expression) bool {
+	return false
+}
+
 func (this *Subquery) Children() expression.Expressions {
 	return nil
 }

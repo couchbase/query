@@ -26,7 +26,31 @@ func NewIn(first, second Expression) Expression {
 	}
 }
 
-func (this *In) evaluate(first, second value.Value) (value.Value, error) {
+func (this *In) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *In) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *In) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *In) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *In) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *In) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *In) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {

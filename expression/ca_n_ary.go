@@ -26,12 +26,12 @@ type caNAryBase struct {
 }
 
 // Commutative.
-func (this *caNAryBase) EquivalentTo(other Expression) bool {
-	if reflect.TypeOf(this) != reflect.TypeOf(other) {
+func (this *caNAryBase) equivalentTo(expr, other Expression) bool {
+	if reflect.TypeOf(expr) != reflect.TypeOf(other) {
 		return false
 	}
 
-	that := other.(*caNAryBase)
+	that := interface{}(other).(*caNAryBase)
 	if len(this.operands) != len(that.operands) {
 		return false
 	}
@@ -57,17 +57,17 @@ func (this *caNAryBase) EquivalentTo(other Expression) bool {
 }
 
 // Associative.
-func (this *caNAryBase) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+func (this *caNAryBase) fold(expr caNAry) (Expression, error) {
+	t, e := expr.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
 
 	operands := make(Expressions, 0, len(this.operands))
 	for _, o := range this.operands {
-		if reflect.TypeOf(this) == reflect.TypeOf(o) {
+		if reflect.TypeOf(expr) == reflect.TypeOf(o) {
 			// Associative, so promote subexpressions.
-			for _, oo := range o.(*caNAryBase).operands {
+			for _, oo := range interface{}(o).(*caNAryBase).operands {
 				operands = append(operands, oo)
 			}
 		} else {
@@ -89,11 +89,10 @@ func (this *caNAryBase) Fold() (Expression, error) {
 	}
 
 	if len(constants) == 0 {
-		return this, nil
+		return expr, nil
 	}
 
-	ary := caNAry(this)
-	c, e := ary.evaluate(constants)
+	c, e := expr.eval(constants)
 	if e != nil {
 		return nil, e
 	}
@@ -102,9 +101,5 @@ func (this *caNAryBase) Fold() (Expression, error) {
 		return NewConstant(c), nil
 	}
 
-	return ary.construct(c, others), nil
-}
-
-func (this *caNAryBase) construct(constant value.Value, others Expressions) Expression {
-	panic("Must override.")
+	return expr.construct(c, others), nil
 }

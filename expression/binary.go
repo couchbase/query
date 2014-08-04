@@ -19,7 +19,7 @@ import (
 // Binary operators.
 type binary interface {
 	Expression
-	evaluate(first, second value.Value) (value.Value, error)
+	eval(first, second value.Value) (value.Value, error)
 }
 
 type binaryBase struct {
@@ -28,7 +28,7 @@ type binaryBase struct {
 	second Expression
 }
 
-func (this *binaryBase) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *binaryBase) evaluate(expr binary, item value.Value, context Context) (value.Value, error) {
 	first, e := this.first.Evaluate(item, context)
 	if e != nil {
 		return nil, e
@@ -39,11 +39,11 @@ func (this *binaryBase) Evaluate(item value.Value, context Context) (value.Value
 		return nil, e
 	}
 
-	return binary(this).evaluate(first, second)
+	return expr.eval(first, second)
 }
 
-func (this *binaryBase) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+func (this *binaryBase) fold(expr binary) (Expression, error) {
+	t, e := expr.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
@@ -52,50 +52,46 @@ func (this *binaryBase) Fold() (Expression, error) {
 	case *Constant:
 		switch s := this.second.(type) {
 		case *Constant:
-			v, e := binary(this).evaluate(f.Value(), s.Value())
+			v, e := expr.eval(f.Value(), s.Value())
 			if e == nil {
 				return NewConstant(v), nil
 			}
 		}
 	}
 
-	return this, nil
+	return expr, nil
 }
 
 func (this *binaryBase) Children() Expressions {
 	return Expressions{this.first, this.second}
 }
 
-func (this *binaryBase) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
+func (this *binaryBase) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
+	var err error
 
-	this.first, e = visitor.Visit(this.first)
-	if e != nil {
-		return nil, e
+	this.first, err = visitor.Visit(this.first)
+	if err != nil {
+		return nil, err
 	}
 
-	this.second, e = visitor.Visit(this.second)
-	if e != nil {
-		return nil, e
+	this.second, err = visitor.Visit(this.second)
+	if err != nil {
+		return nil, err
 	}
 
-	return this, nil
+	return expr, nil
 }
 
 func (this *binaryBase) MinArgs() int { return 2 }
 
 func (this *binaryBase) MaxArgs() int { return 2 }
 
-func (this *binaryBase) evaluate(first, second value.Value) (value.Value, error) {
-	panic("Must override.")
-}
-
 type reBinaryBase struct {
 	binaryBase
 	re *regexp.Regexp
 }
 
-func (this *reBinaryBase) Fold() (Expression, error) {
+func (this *reBinaryBase) fold(expr binary) (Expression, error) {
 	var e error
 	this.second, e = this.second.Fold()
 	if e != nil {
@@ -120,5 +116,5 @@ func (this *reBinaryBase) Fold() (Expression, error) {
 		this.re = re
 	}
 
-	return this.binaryBase.Fold()
+	return this.binaryBase.fold(expr)
 }

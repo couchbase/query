@@ -28,7 +28,31 @@ func NewElement(first, second Expression) Path {
 	}
 }
 
-func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Element) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Element) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Element) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Element) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Element) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Element) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Element) eval(first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.NUMBER:
 		s := second.Actual().(float64)
@@ -42,9 +66,9 @@ func (this *Element) evaluate(first, second value.Value) (value.Value, error) {
 
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
+	} else {
+		return value.NULL_VALUE, nil
 	}
-
-	return value.NULL_VALUE, nil
 }
 
 func (this *Element) Set(item, val value.Value, context Context) bool {

@@ -25,7 +25,31 @@ func NewArrayLiteral(exprs Expressions) Expression {
 	}
 }
 
-func (this *ArrayLiteral) evaluate(operands value.Values) (value.Value, error) {
+func (this *ArrayLiteral) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayLiteral) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayLiteral) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayLiteral) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayLiteral) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayLiteral) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayLiteral) eval(operands value.Values) (value.Value, error) {
 	a := make([]interface{}, len(operands))
 	for i, o := range operands {
 		a[i] = o

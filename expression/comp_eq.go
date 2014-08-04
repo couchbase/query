@@ -26,7 +26,31 @@ func NewEQ(first, second Expression) Expression {
 	}
 }
 
-func (this *EQ) evaluate(first, second value.Value) (value.Value, error) {
+func (this *EQ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *EQ) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *EQ) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *EQ) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *EQ) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *EQ) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *EQ) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() == value.NULL || second.Type() == value.NULL ||

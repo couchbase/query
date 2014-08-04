@@ -27,7 +27,31 @@ func NewIfInf(args Expressions) Function {
 	}
 }
 
-func (this *IfInf) evaluate(args value.Values) (value.Value, error) {
+func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfInf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfInf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfInf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfInf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfInf) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
 			continue
@@ -60,7 +84,31 @@ func NewIfNaN(args Expressions) Function {
 	}
 }
 
-func (this *IfNaN) evaluate(args value.Values) (value.Value, error) {
+func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfNaN) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfNaN) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfNaN) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfNaN) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfNaN) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfNaN) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
 			continue
@@ -93,7 +141,31 @@ func NewIfNaNOrInf(args Expressions) Function {
 	}
 }
 
-func (this *IfNaNOrInf) evaluate(args value.Values) (value.Value, error) {
+func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfNaNOrInf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfNaNOrInf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfNaNOrInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfNaNOrInf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfNaNOrInf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfNaNOrInf) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
 			continue
@@ -126,7 +198,31 @@ func NewIfNegInf(args Expressions) Function {
 	}
 }
 
-func (this *IfNegInf) evaluate(args value.Values) (value.Value, error) {
+func (this *IfNegInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfNegInf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfNegInf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfNegInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfNegInf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfNegInf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfNegInf) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
 			continue
@@ -159,7 +255,31 @@ func NewIfPosInf(args Expressions) Function {
 	}
 }
 
-func (this *IfPosInf) evaluate(args value.Values) (value.Value, error) {
+func (this *IfPosInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfPosInf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfPosInf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfPosInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfPosInf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfPosInf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfPosInf) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
 			continue
@@ -192,7 +312,31 @@ func NewFirstNum(args Expressions) Function {
 	}
 }
 
-func (this *FirstNum) evaluate(args value.Values) (value.Value, error) {
+func (this *FirstNum) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *FirstNum) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *FirstNum) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *FirstNum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *FirstNum) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *FirstNum) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *FirstNum) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() <= value.NULL {
 			continue
@@ -226,7 +370,31 @@ func NewNaNIf(first, second Expression) Function {
 	}
 }
 
-func (this *NaNIf) evaluate(first, second value.Value) (value.Value, error) {
+func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *NaNIf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *NaNIf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *NaNIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *NaNIf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *NaNIf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *NaNIf) eval(first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.NaN()), nil
 	} else {
@@ -253,7 +421,31 @@ func NewNegInfIf(first, second Expression) Function {
 	}
 }
 
-func (this *NegInfIf) evaluate(first, second value.Value) (value.Value, error) {
+func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *NegInfIf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *NegInfIf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *NegInfIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *NegInfIf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *NegInfIf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *NegInfIf) eval(first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(-1)), nil
 	} else {
@@ -280,7 +472,31 @@ func NewPosInfIf(first, second Expression) Function {
 	}
 }
 
-func (this *PosInfIf) evaluate(first, second value.Value) (value.Value, error) {
+func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *PosInfIf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *PosInfIf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *PosInfIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *PosInfIf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *PosInfIf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *PosInfIf) eval(first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(1)), nil
 	} else {

@@ -27,7 +27,31 @@ func NewAdd(operands ...Expression) Expression {
 	}
 }
 
-func (this *Add) evaluate(operands value.Values) (value.Value, error) {
+func (this *Add) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Add) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Add) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Add) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Add) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Add) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Add) eval(operands value.Values) (value.Value, error) {
 	null := false
 	sum := 0.0
 	for _, v := range operands {
@@ -50,7 +74,7 @@ func (this *Add) evaluate(operands value.Values) (value.Value, error) {
 func (this *Add) construct(constant value.Value, others Expressions) Expression {
 	if constant.Type() == value.MISSING {
 		return NewConstant(constant)
-	} else if constant.Type() != value.NUMBER && constant.Actual().(float64) == 0.0 {
+	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 0.0 {
 		return NewAdd(others...)
 	}
 

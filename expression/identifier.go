@@ -44,12 +44,12 @@ func (this *Identifier) Fold() (Expression, error) {
 	return this, nil
 }
 
-// Formal notation; qualify fields with bucket name.
+// Formal notation; qualify fields with keyspace name.
 // Identifiers in "forbidden" result in error.
 // Identifiers in "allowed" are left unmodified.
-// Any other identifier is qualified with bucket; if bucket is empty, then error.
+// Any other identifier is qualified with keyspace; if keyspace is empty, then error.
 func (this *Identifier) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
+	keyspace string) (Expression, error) {
 	_, ok := forbidden.Field(this.identifier)
 	if ok {
 		return nil, fmt.Errorf("Disallowed reference to alias %v.",
@@ -61,18 +61,18 @@ func (this *Identifier) Formalize(forbidden, allowed value.Value,
 		return this, nil
 	}
 
-	if bucket == "" {
+	if keyspace == "" {
 		return nil, fmt.Errorf("Ambiguous reference to field %v.",
 			this.identifier)
 	}
 
-	return NewField(NewIdentifier(bucket),
+	return NewField(NewIdentifier(keyspace),
 			NewConstant(value.NewValue(this.identifier))),
 		nil
 }
 
-func (this *Identifier) Children() Expressions {
-	return nil
+func (this *Identifier) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
 }
 
 func (this *Identifier) VisitChildren(visitor Visitor) (Expression, error) {

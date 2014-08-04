@@ -25,7 +25,31 @@ func NewIsMissing(operand Expression) Expression {
 	}
 }
 
-func (this *IsMissing) evaluate(operand value.Value) (value.Value, error) {
+func (this *IsMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IsMissing) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IsMissing) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IsMissing) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IsMissing) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IsMissing) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IsMissing) eval(operand value.Value) (value.Value, error) {
 	switch operand.Type() {
 	case value.MISSING:
 		return value.NewValue(true), nil

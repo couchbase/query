@@ -48,12 +48,12 @@ func (this *Constant) Fold() (Expression, error) {
 }
 
 func (this *Constant) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
+	keyspace string) (Expression, error) {
 	return this, nil
 }
 
-func (this *Constant) Children() Expressions {
-	return nil
+func (this *Constant) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
 }
 
 func (this *Constant) VisitChildren(visitor Visitor) (Expression, error) {

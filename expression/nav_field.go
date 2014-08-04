@@ -26,7 +26,31 @@ func NewField(first, second Expression) Path {
 	}
 }
 
-func (this *Field) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Field) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Field) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Field) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Field) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Field) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Field) eval(first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.STRING:
 		s := second.Actual().(string)
@@ -38,9 +62,9 @@ func (this *Field) evaluate(first, second value.Value) (value.Value, error) {
 
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
+	} else {
+		return value.NULL_VALUE, nil
 	}
-
-	return value.NULL_VALUE, nil
 }
 
 func (this *Field) Set(item, val value.Value, context Context) bool {

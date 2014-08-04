@@ -25,15 +25,23 @@ func NewReciprocate(operand Expression) Expression {
 	}
 }
 
+func (this *Reciprocate) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Reciprocate) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
 func (this *Reciprocate) Fold() (Expression, error) {
-	t, e := Expression(this).VisitChildren(&Folder{})
+	t, e := this.VisitChildren(&Folder{})
 	if e != nil {
 		return t, e
 	}
 
 	switch o := this.operand.(type) {
 	case *Constant:
-		v, e := this.evaluate(o.Value())
+		v, e := this.eval(o.Value())
 		if e != nil {
 			return nil, e
 		}
@@ -52,7 +60,19 @@ func (this *Reciprocate) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Reciprocate) evaluate(operand value.Value) (value.Value, error) {
+func (this *Reciprocate) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Reciprocate) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Reciprocate) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Reciprocate) eval(operand value.Value) (value.Value, error) {
 	if operand.Type() == value.NUMBER {
 		a := operand.Actual().(float64)
 		if a == 0.0 {

@@ -29,7 +29,31 @@ func NewContains(first, second Expression) Function {
 	}
 }
 
-func (this *Contains) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Contains) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Contains) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Contains) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Contains) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Contains) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Contains) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -58,7 +82,31 @@ func NewLength(arg Expression) Function {
 	}
 }
 
-func (this *Length) evaluate(arg value.Value) (value.Value, error) {
+func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Length) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Length) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Length) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Length) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Length) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Length) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -87,7 +135,31 @@ func NewLower(arg Expression) Function {
 	}
 }
 
-func (this *Lower) evaluate(arg value.Value) (value.Value, error) {
+func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Lower) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Lower) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Lower) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Lower) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Lower) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Lower) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -116,11 +188,35 @@ func NewLTrim(args Expressions) Function {
 	}
 }
 
+func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *LTrim) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *LTrim) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *LTrim) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *LTrim) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *LTrim) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *LTrim) MinArgs() int { return 1 }
 
 func (this *LTrim) MaxArgs() int { return 2 }
 
-func (this *LTrim) evaluate(args value.Values) (value.Value, error) {
+func (this *LTrim) eval(args value.Values) (value.Value, error) {
 	null := false
 	for _, o := range args {
 		if o.Type() == value.MISSING {
@@ -160,7 +256,31 @@ func NewPosition(first, second Expression) Function {
 	}
 }
 
-func (this *Position) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Position) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Position) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Position) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Position) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Position) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Position) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Position) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -190,7 +310,31 @@ func NewRepeat(first, second Expression) Function {
 	}
 }
 
-func (this *Repeat) evaluate(first, second value.Value) (value.Value, error) {
+func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Repeat) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Repeat) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Repeat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Repeat) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Repeat) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Repeat) eval(first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.NUMBER {
@@ -224,7 +368,31 @@ func NewReplace(args Expressions) Function {
 	}
 }
 
-func (this *Replace) evaluate(args value.Values) (value.Value, error) {
+func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Replace) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Replace) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Replace) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Replace) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Replace) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Replace) eval(args value.Values) (value.Value, error) {
 	null := false
 	for i := 0; i < 3; i++ {
 		if args[i].Type() == value.MISSING {
@@ -278,11 +446,35 @@ func NewRTrim(args Expressions) Function {
 	}
 }
 
+func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *RTrim) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *RTrim) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *RTrim) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *RTrim) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *RTrim) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *RTrim) MinArgs() int { return 1 }
 
 func (this *RTrim) MaxArgs() int { return 2 }
 
-func (this *RTrim) evaluate(args value.Values) (value.Value, error) {
+func (this *RTrim) eval(args value.Values) (value.Value, error) {
 	null := false
 	for _, o := range args {
 		if o.Type() == value.MISSING {
@@ -319,11 +511,35 @@ func NewSplit(args Expressions) Function {
 	}
 }
 
+func (this *Split) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Split) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Split) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Split) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Split) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Split) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *Split) MinArgs() int { return 1 }
 
 func (this *Split) MaxArgs() int { return 2 }
 
-func (this *Split) evaluate(args value.Values) (value.Value, error) {
+func (this *Split) eval(args value.Values) (value.Value, error) {
 	null := false
 	for _, o := range args {
 		if o.Type() == value.MISSING {
@@ -368,11 +584,35 @@ func NewSubstr(args Expressions) Function {
 	}
 }
 
+func (this *Substr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Substr) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Substr) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Substr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Substr) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Substr) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *Substr) MinArgs() int { return 2 }
 
 func (this *Substr) MaxArgs() int { return 3 }
 
-func (this *Substr) evaluate(args value.Values) (value.Value, error) {
+func (this *Substr) eval(args value.Values) (value.Value, error) {
 	null := false
 	if args[0].Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -434,7 +674,31 @@ func NewTitle(arg Expression) Function {
 	}
 }
 
-func (this *Title) evaluate(arg value.Value) (value.Value, error) {
+func (this *Title) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Title) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Title) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Title) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Title) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Title) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Title) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -463,11 +727,35 @@ func NewTrim(args Expressions) Function {
 	}
 }
 
+func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Trim) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Trim) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Trim) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Trim) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Trim) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *Trim) MinArgs() int { return 1 }
 
 func (this *Trim) MaxArgs() int { return 2 }
 
-func (this *Trim) evaluate(args value.Values) (value.Value, error) {
+func (this *Trim) eval(args value.Values) (value.Value, error) {
 	null := false
 	for _, o := range args {
 		if o.Type() == value.MISSING {
@@ -504,7 +792,31 @@ func NewUpper(arg Expression) Function {
 	}
 }
 
-func (this *Upper) evaluate(arg value.Value) (value.Value, error) {
+func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Upper) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Upper) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Upper) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Upper) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Upper) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Upper) eval(arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {

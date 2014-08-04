@@ -55,6 +55,22 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	return ev, nil
 }
 
+func (this *SearchedCase) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *SearchedCase) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *SearchedCase) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *SearchedCase) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
 func (this *SearchedCase) Children() Expressions {
 	rv := make(Expressions, 0, 1+(len(this.whenTerms)<<1))
 

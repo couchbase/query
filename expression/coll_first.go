@@ -95,3 +95,23 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 
 	return value.MISSING_VALUE, nil
 }
+
+func (this *First) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *First) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *First) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *First) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *First) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}

@@ -83,6 +83,14 @@ func (this *ObjectLiteral) Fold() (Expression, error) {
 	return NewConstant(value.NewValue(c)), nil
 }
 
+func (this *ObjectLiteral) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ObjectLiteral) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
 func (this *ObjectLiteral) Children() Expressions {
 	rv := make(Expressions, 0, len(this.bindings))
 	for _, expr := range this.bindings {

@@ -25,7 +25,31 @@ func NewIfMissing(args Expressions) Function {
 	}
 }
 
-func (this *IfMissing) evaluate(args value.Values) (value.Value, error) {
+func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfMissing) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfMissing) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfMissing) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfMissing) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfMissing) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfMissing) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() != value.MISSING {
 			return a, nil
@@ -51,7 +75,31 @@ func NewIfMissingOrNull(args Expressions) Function {
 	}
 }
 
-func (this *IfMissingOrNull) evaluate(args value.Values) (value.Value, error) {
+func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfMissingOrNull) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfMissingOrNull) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfMissingOrNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfMissingOrNull) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfMissingOrNull) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfMissingOrNull) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() > value.NULL {
 			return a, nil
@@ -77,7 +125,31 @@ func NewIfNull(args Expressions) Function {
 	}
 }
 
-func (this *IfNull) evaluate(args value.Values) (value.Value, error) {
+func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *IfNull) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *IfNull) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *IfNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *IfNull) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *IfNull) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *IfNull) eval(args value.Values) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() != value.NULL {
 			return a, nil
@@ -104,7 +176,31 @@ func NewMissingIf(first, second Expression) Function {
 	}
 }
 
-func (this *MissingIf) evaluate(first, second value.Value) (value.Value, error) {
+func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *MissingIf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *MissingIf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *MissingIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *MissingIf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *MissingIf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *MissingIf) eval(first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.MISSING_VALUE, nil
 	} else {
@@ -131,7 +227,31 @@ func NewNullIf(first, second Expression) Function {
 	}
 }
 
-func (this *NullIf) evaluate(first, second value.Value) (value.Value, error) {
+func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *NullIf) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *NullIf) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *NullIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *NullIf) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *NullIf) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *NullIf) eval(first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NULL_VALUE, nil
 	} else {

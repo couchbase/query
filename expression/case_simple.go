@@ -73,6 +73,22 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	return ev, nil
 }
 
+func (this *SimpleCase) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *SimpleCase) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *SimpleCase) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *SimpleCase) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
 func (this *SimpleCase) Children() Expressions {
 	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
 

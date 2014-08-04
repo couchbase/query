@@ -11,146 +11,112 @@ package expression
 
 import (
 	"encoding/base64"
-	"fmt"
 
 	"github.com/couchbaselabs/query/value"
 )
 
-type Base64Value struct {
-	nAryBase
+type Base64 struct {
+	unaryBase
 }
 
-func NewBase64Value(args Expressions) Function {
-	return &Base64Value{
-		nAryBase{
-			operands: args,
+func NewBase64(operand Expression) Function {
+	return &Base64{
+		unaryBase{
+			operand: operand,
 		},
 	}
 }
 
-func (this *Base64Value) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
-	if len(this.operands) > 0 {
-		var e error
-		this.operands[0], e = this.operands[0].Formalize(forbidden, allowed, bucket)
-		if e != nil {
-			return nil, e
-		}
-		return this, nil
-	}
-
-	if bucket == "" {
-		return nil, fmt.Errorf("No default bucket for BASE64_VALUE().")
-	}
-
-	this.operands = Expressions{NewIdentifier(bucket)}
-	return this, nil
+func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
 }
 
-func (this *Base64Value) evaluate(args value.Values) (value.Value, error) {
-	av := args[0]
-	if av.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+func (this *Base64) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Base64) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Base64) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Base64) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Base64) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Base64) eval(operand value.Value) (value.Value, error) {
+	if operand.Type() == value.MISSING {
+		return operand, nil
 	}
 
-	str := base64.StdEncoding.EncodeToString(av.Bytes())
+	str := base64.StdEncoding.EncodeToString(operand.Bytes())
 	return value.NewValue(str), nil
 }
 
-func (this *Base64Value) MinArgs() int { return 0 }
-
-func (this *Base64Value) MaxArgs() int { return 1 }
-
-func (this *Base64Value) Constructor() FunctionConstructor { return NewBase64Value }
-
-type Meta struct {
-	nAryBase
+func (this *Base64) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewBase64(args[0])
+	}
 }
 
-func NewMeta(args Expressions) Function {
+type Meta struct {
+	unaryBase
+}
+
+func NewMeta(operand Expression) Function {
 	return &Meta{
-		nAryBase{
-			operands: args,
+		unaryBase{
+			operand: operand,
 		},
 	}
 }
 
-func (this *Meta) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
-	if len(this.operands) > 0 {
-		var e error
-		this.operands[0], e = this.operands[0].Formalize(forbidden, allowed, bucket)
-		if e != nil {
-			return nil, e
-		}
-		return this, nil
-	}
-
-	if bucket == "" {
-		return nil, fmt.Errorf("No default bucket for META().")
-	}
-
-	this.operands = Expressions{NewIdentifier(bucket)}
-	return this, nil
+func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
 }
 
-func (this *Meta) evaluate(args value.Values) (value.Value, error) {
-	av := args[0]
-	if av.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+func (this *Meta) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *Meta) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Meta) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Meta) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *Meta) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *Meta) eval(operand value.Value) (value.Value, error) {
+	if operand.Type() == value.MISSING {
+		return operand, nil
 	}
 
-	switch av := av.(type) {
+	switch operand := operand.(type) {
 	case value.AnnotatedValue:
-		return value.NewValue(av.GetAttachment("meta")), nil
+		return value.NewValue(operand.GetAttachment("meta")), nil
 	default:
 		return value.NULL_VALUE, nil
 	}
 }
 
-func (this *Meta) MinArgs() int { return 0 }
-
-func (this *Meta) MaxArgs() int { return 1 }
-
-func (this *Meta) Constructor() FunctionConstructor { return NewMeta }
-
-type Value struct {
-	nAryBase
-}
-
-func NewValue(args Expressions) Function {
-	return &Value{
-		nAryBase{
-			operands: args,
-		},
+func (this *Meta) Constructor() FunctionConstructor {
+	return func(args Expressions) Function {
+		return NewMeta(args[0])
 	}
 }
-
-func (this *Value) Formalize(forbidden, allowed value.Value,
-	bucket string) (Expression, error) {
-	if len(this.operands) > 0 {
-		var e error
-		this.operands[0], e = this.operands[0].Formalize(forbidden, allowed, bucket)
-		if e != nil {
-			return nil, e
-		}
-		return this, nil
-	}
-
-	if bucket == "" {
-		return nil, fmt.Errorf("No default bucket for VALUE().")
-	}
-
-	this.operands = Expressions{NewIdentifier(bucket)}
-	return this, nil
-}
-
-func (this *Value) evaluate(args value.Values) (value.Value, error) {
-	return args[0], nil
-}
-
-func (this *Value) MinArgs() int { return 0 }
-
-func (this *Value) MaxArgs() int { return 1 }
-
-func (this *Value) Constructor() FunctionConstructor { return NewValue }

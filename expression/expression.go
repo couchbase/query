@@ -35,11 +35,11 @@ type Expression interface {
 	// Constant and other folding.
 	Fold() (Expression, error)
 
-	// Formal notation; qualify fields with bucket name.
+	// Formal notation; qualify fields with keyspace name.
 	// Identifiers in "forbidden" result in error.
 	// Identifiers in "allowed" are left unmodified.
-	// Any other identifier is qualified with bucket; if bucket is empty, then error.
-	Formalize(forbidden, allowed value.Value, bucket string) (Expression, error)
+	// Any other identifier is qualified with keyspace; if keyspace is empty, then error.
+	Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error)
 
 	// Is this expression a subset of the other.
 	// E.g. A < 5 is a subset of A < 10.
