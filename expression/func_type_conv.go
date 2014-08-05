@@ -113,12 +113,12 @@ func (this *ToAtom) eval(arg value.Value) (value.Value, error) {
 		switch a := arg.Actual().(type) {
 		case []interface{}:
 			if len(a) == 1 {
-				return value.NewValue(a[0]), nil
+				return this.eval(value.NewValue(a[0]))
 			}
 		case map[string]interface{}:
 			if len(a) == 1 {
 				for _, v := range a {
-					return value.NewValue(v), nil
+					return this.eval(value.NewValue(v))
 				}
 			}
 		}
