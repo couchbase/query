@@ -10,6 +10,8 @@
 package plan
 
 import (
+	"strconv"
+
 	"github.com/couchbaselabs/query/algebra"
 )
 
@@ -36,7 +38,7 @@ func NewInitialProject(projection *algebra.Projection) *InitialProject {
 			result: res,
 		}
 
-		pt.setAlias(&a)
+		a = pt.setAlias(a)
 		terms[i] = pt
 	}
 
@@ -78,16 +80,18 @@ func (this *ProjectTerm) Alias() string {
 	return this.alias
 }
 
-func (this *ProjectTerm) setAlias(a *int) {
+func (this *ProjectTerm) setAlias(a int) int {
 	if this.result.Star() {
-		return
+		return a
 	}
 
 	res := this.result.Alias()
 	if res != "" {
 		this.alias = res
 	} else {
-		this.alias = "$" + string(*a)
-		*a++
+		this.alias = "$" + strconv.Itoa(a)
+		a++
 	}
+
+	return a
 }

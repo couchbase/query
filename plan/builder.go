@@ -149,7 +149,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
 
 	if projection.Distinct() {
-		this.subChildren = append(this.subChildren, NewDistinct())
+		this.children = append(this.children, NewDistinct())
 	}
 
 	return NewSequence(this.children...), nil

@@ -28,19 +28,19 @@ type Set struct {
 
 func NewSet(objectCap int) *Set {
 	return &Set{
-		booleans: make(map[bool]Value),
+		booleans: make(map[bool]Value, 2),
 		numbers:  make(map[float64]Value),
 		strings:  make(map[string]Value),
 		arrays:   make(map[string]Value),
 		objects:  make(map[string]Value, objectCap),
-		blobs:    make([]Value, 16),
+		blobs:    make([]Value, 0, 16),
 	}
 }
 
-func (this *Set) Add(item Value) error {
+func (this *Set) Add(item Value) {
 	if item == nil {
 		this.nills = true
-		return nil
+		return
 	}
 
 	switch item.Type() {
@@ -50,6 +50,8 @@ func (this *Set) Add(item Value) error {
 		this.missings = item
 	case NULL:
 		this.nulls = item
+	case BOOLEAN:
+		this.booleans[item.Actual().(bool)] = item
 	case NUMBER:
 		this.numbers[item.Actual().(float64)] = item
 	case STRING:
@@ -59,10 +61,8 @@ func (this *Set) Add(item Value) error {
 	case NOT_JSON:
 		this.blobs = append(this.blobs, item) // FIXME: should compare bytes
 	default:
-		return fmt.Errorf("Unsupported value type %T.", item)
+		panic(fmt.Sprintf("Unsupported value type %T.", item))
 	}
-
-	return nil
 }
 
 func (this *Set) Len() int {

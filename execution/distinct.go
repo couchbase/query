@@ -10,9 +10,6 @@
 package execution
 
 import (
-	"fmt"
-
-	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -50,26 +47,7 @@ func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
-	project := item.GetAttachment("project")
-
-	switch project := project.(type) {
-	case value.AnnotatedValue:
-		item = project
-	case value.Value:
-		item = value.NewAnnotatedValue(project)
-	default:
-		context.Error(errors.NewError(nil,
-			fmt.Sprintf("Invalid or missing projection %v.", project)))
-		return false
-	}
-
-	item.SetAttachment("project", item)
-	e := this.set.Add(item)
-	if e != nil {
-		context.Error(errors.NewError(e, ""))
-		return false
-	}
-
+	this.set.Add(item)
 	return true
 }
 
