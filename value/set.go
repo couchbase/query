@@ -38,30 +38,34 @@ func NewSet(objectCap int) *Set {
 }
 
 func (this *Set) Add(item Value) {
-	if item == nil {
+	this.Put(item, item)
+}
+
+func (this *Set) Put(key, item Value) {
+	if key == nil {
 		this.nills = true
 		return
 	}
 
-	switch item.Type() {
+	switch key.Type() {
 	case OBJECT:
-		this.objects[string(item.Bytes())] = item
+		this.objects[string(key.Bytes())] = item
 	case MISSING:
 		this.missings = item
 	case NULL:
 		this.nulls = item
 	case BOOLEAN:
-		this.booleans[item.Actual().(bool)] = item
+		this.booleans[key.Actual().(bool)] = item
 	case NUMBER:
-		this.numbers[item.Actual().(float64)] = item
+		this.numbers[key.Actual().(float64)] = item
 	case STRING:
-		this.strings[item.Actual().(string)] = item
+		this.strings[key.Actual().(string)] = item
 	case ARRAY:
-		this.arrays[string(item.Bytes())] = item
+		this.arrays[string(key.Bytes())] = item
 	case NOT_JSON:
 		this.blobs = append(this.blobs, item) // FIXME: should compare bytes
 	default:
-		panic(fmt.Sprintf("Unsupported value type %T.", item))
+		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
 }
 

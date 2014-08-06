@@ -47,13 +47,18 @@ func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
-	this.set.Add(item)
+	project := item.GetAttachment("project")
+	if project == nil {
+		project = item
+	}
+
+	this.set.Add(project.(value.Value))
 	return true
 }
 
 func (this *Distinct) afterItems(context *Context) {
 	for _, av := range this.set.Values() {
-		if !this.sendItem(av.(value.AnnotatedValue)) {
+		if !this.sendItem(value.NewAnnotatedValue(av)) {
 			return
 		}
 	}
