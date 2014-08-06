@@ -266,7 +266,12 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	namespace, err := this.datastore.NamespaceByName(node.Right().Namespace())
+	ns := node.Right().Namespace()
+	if ns == "" {
+		ns = this.namespace
+	}
+
+	namespace, err := this.datastore.NamespaceByName(ns)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +293,12 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
-	namespace, err := this.datastore.NamespaceByName(node.Right().Namespace())
+	ns := node.Right().Namespace()
+	if ns == "" {
+		ns = this.namespace
+	}
+
+	namespace, err := this.datastore.NamespaceByName(ns)
 	if err != nil {
 		return nil, err
 	}
