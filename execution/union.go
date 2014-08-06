@@ -59,6 +59,8 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 		// Run children in parallel
 		for _, child := range this.children {
 			child.SetOutput(this.output)
+			child.SetStop(nil)
+			child.SetParent(this)
 			go child.RunOnce(context, parent)
 		}
 
