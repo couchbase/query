@@ -9,7 +9,9 @@
 
 package value
 
-import ()
+import (
+	"encoding/json"
+)
 
 type AnnotatedChannel chan AnnotatedValue
 
@@ -42,6 +44,10 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 type annotatedValue struct {
 	Value
 	attacher
+}
+
+func (this *annotatedValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.Actual())
 }
 
 func (this *annotatedValue) Copy() Value {

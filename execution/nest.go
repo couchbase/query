@@ -88,7 +88,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Attach meta
-	nvs := make([]value.AnnotatedValue, len(pairs))
+	nvs := make([]interface{}, len(pairs))
 	for i, pair := range pairs {
 		nestItem := pair.Value
 

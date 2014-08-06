@@ -116,8 +116,6 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 	switch val := val.(type) {
 	case missingValue:
 		this[index] = nil
-	case Value:
-		this[index] = val.Actual()
 	default:
 		this[index] = val
 	}
@@ -280,8 +278,6 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 	switch val := val.(type) {
 	case missingValue:
 		this.actual[index] = nil
-	case Value:
-		this.actual[index] = val.Actual()
 	default:
 		this.actual[index] = val
 	}

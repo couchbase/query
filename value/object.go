@@ -90,8 +90,6 @@ func (this objectValue) SetField(field string, val interface{}) error {
 	switch val := val.(type) {
 	case missingValue:
 		delete(this, field)
-	case Value:
-		this[field] = val.Actual()
 	default:
 		this[field] = val
 	}

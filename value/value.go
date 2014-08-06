@@ -112,6 +112,18 @@ func NewValue(val interface{}) Value {
 		return sliceValue(val)
 	case map[string]interface{}:
 		return objectValue(val)
+	case []Value:
+		rv := make([]interface{}, len(val))
+		for i, v := range val {
+			rv[i] = v
+		}
+		return sliceValue(rv)
+	case []AnnotatedValue:
+		rv := make([]interface{}, len(val))
+		for i, v := range val {
+			rv[i] = v
+		}
+		return sliceValue(rv)
 	default:
 		for _, c := range _CONVERSIONS {
 			if reflect.TypeOf(val).ConvertibleTo(c) {

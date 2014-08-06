@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"encoding/json"
+)
+
 // ScopeValue provides alias scoping for subqueries, FORs, LETs,
 // projections, etc.
 type scopeValue struct {
@@ -23,6 +27,10 @@ func NewScopeValue(value interface{}, parent Value) Value {
 		Value:  NewValue(value),
 		parent: parent,
 	}
+}
+
+func (this *scopeValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.Actual())
 }
 
 func (this *scopeValue) Copy() Value {
