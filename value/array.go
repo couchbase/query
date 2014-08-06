@@ -170,6 +170,10 @@ type listValue struct {
 	actual []interface{}
 }
 
+func (this *listValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.actual)
+}
+
 func (this *listValue) Type() int {
 	return ARRAY
 }
