@@ -102,7 +102,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 16)
 
-	if node.From() != nil {
+	count, err := this.fastCount(node)
+	if err != nil {
+		return nil, err
+	}
+
+	if count {
+		// do nothing
+	} else if node.From() != nil {
 		_, err := node.From().Accept(this)
 		if err != nil {
 			return nil, err
@@ -217,17 +224,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	ns := node.Namespace()
-	if ns == "" {
-		ns = this.namespace
-	}
-
-	namespace, err := this.datastore.NamespaceByName(ns)
-	if err != nil {
-		return nil, err
-	}
-
-	keyspace, err := namespace.KeyspaceByName(node.Keyspace())
+	keyspace, err := this.getKeyspace(node)
 	if err != nil {
 		return nil, err
 	}
@@ -394,4 +391,52 @@ func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) 
 	}
 
 	return aggs
+}
+
+func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
+	if node.From() == nil ||
+		node.Where() != nil ||
+		node.Group() != nil {
+		return false, nil
+	}
+
+	from, ok := node.From().(*algebra.KeyspaceTerm)
+	if !ok {
+		return false, nil
+	}
+
+	keyspace, err := this.getKeyspace(from)
+	if err != nil {
+		return false, err
+	}
+
+	for _, term := range node.Projection().Terms() {
+		count, ok := term.Expression().(*algebra.Count)
+		if !ok || count.Argument() != nil {
+			return false, nil
+		}
+	}
+
+	scan := NewCountScan(keyspace)
+	this.children = append(this.children, scan)
+	return true, nil
+}
+
+func (this *builder) getKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
+	ns := node.Namespace()
+	if ns == "" {
+		ns = this.namespace
+	}
+
+	namespace, err := this.datastore.NamespaceByName(ns)
+	if err != nil {
+		return nil, err
+	}
+
+	keyspace, err := namespace.KeyspaceByName(node.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return keyspace, nil
 }

@@ -1587,10 +1587,10 @@ __ARRAY\_PUT(expr, value)__ - new array with _value_ appended, if
 _value_ is not already present; else unmodified input array.
 
 __ARRAY\_RANGE(start, end [, step ])__ - new array of numbers, from
-_start_ to _end_ - 1, or the largest number less than
-_end_. Successive numbers are incremented by _step_. If _step_ is
-omitted, it defaults to 1.0. If _step_ is negative, decrements until
-the smallest number greater than _end_.
+_start_ until the largest number less than _end_. Successive numbers
+are incremented by _step_. If _step_ is omitted, it defaults to 1. If
+_step_ is negative, decrements until the smallest number greater than
+_end_.
 
 __ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
 _value_ removed.
