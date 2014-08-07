@@ -24,6 +24,10 @@ type parsedValue struct {
 	parsed     Value
 }
 
+func (this *parsedValue) MarshalJSON() ([]byte, error) {
+	return this.raw, nil
+}
+
 func (this *parsedValue) Type() int {
 	return this.parsedType
 }
@@ -103,14 +107,12 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		return missingField(field), false
 	}
 
-	if this.raw != nil {
-		res, err := jsonpointer.Find(this.raw, "/"+field)
-		if err != nil {
-			return missingField(field), false
-		}
-		if res != nil {
-			return NewValueFromBytes(res), true
-		}
+	res, err := jsonpointer.Find(this.raw, "/"+field)
+	if err != nil {
+		return missingField(field), false
+	}
+	if res != nil {
+		return NewValueFromBytes(res), true
 	}
 
 	return missingField(field), false

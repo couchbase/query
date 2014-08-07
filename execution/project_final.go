@@ -39,14 +39,15 @@ func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *FinalProject) processItem(item value.AnnotatedValue, context *Context) bool {
-	if item.Type() == value.MISSING {
-		return true
-	}
-
 	project := item.GetAttachment("project")
 	if project == nil {
 		project = item
 	}
 
-	return this.sendItem(value.NewAnnotatedValue(project))
+	av := project.(value.Value)
+	if av.Type() == value.MISSING {
+		return true
+	}
+
+	return this.sendItem(value.NewAnnotatedValue(av))
 }
