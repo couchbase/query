@@ -98,6 +98,7 @@ var _FUNCTIONS = map[string]Function{
 	"ARRAY_POSITION": &ArrayPosition{},
 	"ARRAY_PREPEND":  &ArrayPrepend{},
 	"ARRAY_PUT":      &ArrayPut{},
+	"ARRAY_RANGE":    &ArrayRange{},
 	"ARRAY_REMOVE":   &ArrayRemove{},
 	"ARRAY_REPEAT":   &ArrayRepeat{},
 	"ARRAY_REPLACE":  &ArrayReplace{},

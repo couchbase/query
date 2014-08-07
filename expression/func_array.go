@@ -874,6 +874,93 @@ func (this *ArrayPut) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayRange
+//
+///////////////////////////////////////////////////
+
+type ArrayRange struct {
+	nAryBase
+}
+
+func NewArrayRange(args Expressions) Function {
+	return &ArrayRange{
+		nAryBase{
+			operands: args,
+		},
+	}
+}
+
+func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayRange) EquivalentTo(other Expression) bool {
+	return this.equivalentTo(this, other)
+}
+
+func (this *ArrayRange) Fold() (Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayRange) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayRange) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *ArrayRange) VisitChildren(visitor Visitor) (Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
+func (this *ArrayRange) eval(args value.Values) (value.Value, error) {
+	startv := args[0]
+	endv := args[1]
+	stepv := value.ONE_VALUE
+	if len(args) > 2 {
+		stepv = args[2]
+	}
+
+	if startv.Type() == value.MISSING ||
+		endv.Type() == value.MISSING ||
+		stepv.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	if startv.Type() != value.NUMBER ||
+		endv.Type() != value.NUMBER ||
+		stepv.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	start := startv.Actual().(float64)
+	end := endv.Actual().(float64)
+	step := stepv.Actual().(float64)
+
+	if step == 0.0 ||
+		start == end ||
+		(step > 0.0 && start > end) ||
+		(step < 0.0 && start < end) {
+		return value.EMPTY_ARRAY_VALUE, nil
+	}
+
+	rv := make([]interface{}, 0, int(math.Abs(end-start)/math.Abs(step)))
+	for v := start; (step > 0.0 && v < end) || v > end; v += step {
+		rv = append(rv, v)
+	}
+
+	return value.NewValue(rv), nil
+}
+
+func (this *ArrayRange) MinArgs() int { return 2 }
+
+func (this *ArrayRange) MaxArgs() int { return 3 }
+
+func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange }
+
+///////////////////////////////////////////////////
+//
 // ArrayRemove
 //
 ///////////////////////////////////////////////////
