@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-08-03
+* Modified: 2014-08-07
 
 ## Introduction
 
@@ -1586,6 +1586,12 @@ __ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
 __ARRAY\_PUT(expr, value)__ - new array with _value_ appended, if
 _value_ is not already present; else unmodified input array.
 
+__ARRAY\_RANGE(start, end [, step ])__ - new array of numbers, from
+_start_ to _end_ - 1, or the largest number less than
+_end_. Successive numbers are incremented by _step_. If _step_ is
+omitted, it defaults to 1.0. If _step_ is negative, decrements until
+the smallest number greater than _end_.
+
 __ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
 _value_ removed.
 
@@ -2283,6 +2289,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Removed VALUE() function, which is superfluous
     * Renamed BASE64_VALUE() to BASE64()
     * Required argument to META() and BASE64()
+* 2014-08-07 - ARRAY_RANGE()
+    * Added ARRAY_RANGE() function
 
 ### Open issues
 
