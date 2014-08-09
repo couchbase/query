@@ -121,10 +121,12 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		var entry *datastore.IndexEntry
 
 		ok := true
+
+	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
-				break
+				break loop
 			default:
 			}
 
@@ -137,7 +139,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 					ok = this.sendItem(av)
 				}
 			case <-this.stopChannel:
-				break
+				break loop
 			}
 		}
 	})

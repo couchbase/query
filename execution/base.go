@@ -128,10 +128,11 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		var item value.AnnotatedValue
 		ok := cons.beforeItems(context, parent)
 
+	loop:
 		for ok {
 			select {
 			case <-this.stopChannel: // Never closed
-				break
+				break loop
 			default:
 			}
 
@@ -141,7 +142,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 					ok = cons.processItem(item, context)
 				}
 			case <-this.stopChannel: // Never closed
-				break
+				break loop
 			}
 		}
 

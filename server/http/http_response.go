@@ -49,7 +49,7 @@ func (this *httpRequest) Expire() {
 }
 
 func (this *httpRequest) writePrefix() bool {
-	return this.writeString("{\n  \"results\": [")
+	return this.writeString("{\n    \"results\": [")
 }
 
 func (this *httpRequest) writeResults() bool {
@@ -99,11 +99,85 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 }
 
 func (this *httpRequest) writeSuffix() bool {
-	// XXX TODO
-	return this.writeString("\n  ]\n}\n")
+	return this.writeString("\n    ]") &&
+		this.writeErrors() &&
+		this.writeWarnings() &&
+		this.writeMetrics() &&
+		this.writeString("\n}\n")
 }
 
 func (this *httpRequest) writeString(s string) bool {
 	_, err := io.WriteString(this.resp, s)
+	this.Flush()
 	return err == nil
+}
+
+func (this *httpRequest) writeErrors() bool {
+	var err errors.Error
+	ok := true
+loop:
+	for ok {
+		select {
+		case err, ok = <-this.Errors():
+			if ok {
+				if this.errorCount == 0 {
+					this.writeString(",\n    \"errors\": [")
+				}
+				ok = this.writeError(err, this.errorCount)
+				this.errorCount++
+			}
+		default:
+			break loop
+		}
+	}
+
+	return this.errorCount == 0 || this.writeString("\n    ]")
+}
+
+func (this *httpRequest) writeWarnings() bool {
+	var err errors.Error
+	ok := true
+loop:
+	for ok {
+		select {
+		case err, ok = <-this.Warnings():
+			if ok {
+				if this.warningCount == 0 {
+					this.writeString(",\n    \"warnings\": [")
+				}
+				ok = this.writeError(err, this.warningCount)
+				this.warningCount++
+			}
+		default:
+			break loop
+		}
+	}
+
+	return this.warningCount == 0 || this.writeString("\n    ]")
+}
+
+func (this *httpRequest) writeError(err errors.Error, count int) bool {
+	var rv bool
+	if count == 0 {
+		rv = this.writeString("\n")
+	} else {
+		rv = this.writeString(",\n")
+	}
+
+	bytes, er := json.MarshalIndent(err, "        ", "    ")
+	if er != nil {
+		return false
+	}
+
+	return rv &&
+		this.writeString("        ") &&
+		this.writeString(string(bytes))
+}
+
+func (this *httpRequest) writeMetrics() bool {
+	return true
+}
+
+func (this *httpRequest) Flush() {
+	this.resp.(http.Flusher).Flush()
 }

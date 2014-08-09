@@ -74,11 +74,12 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		n := len(this.scans)
 		ok := true
 
+	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
 				this.values = nil
-				break
+				break loop
 			default:
 			}
 
@@ -89,10 +90,10 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				}
 			case <-this.childChannel:
 				n--
-				break
+				break loop
 			case <-this.stopChannel:
 				this.values = nil
-				break
+				break loop
 			}
 		}
 

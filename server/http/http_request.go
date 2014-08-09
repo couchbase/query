@@ -26,9 +26,11 @@ const MAX_REQUEST_BYTES = 1 << 20
 
 type httpRequest struct {
 	server.BaseRequest
-	resp        http.ResponseWriter
-	req         *http.Request
-	resultCount int
+	resp         http.ResponseWriter
+	req          *http.Request
+	resultCount  int
+	errorCount   int
+	warningCount int
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
