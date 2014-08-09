@@ -46,7 +46,7 @@ type Request interface {
 	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute(notifyStop chan bool)
+	Execute(notifyStop chan bool, metrics bool)
 	Expire()
 	State() State
 }

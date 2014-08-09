@@ -11,8 +11,10 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
@@ -31,7 +33,7 @@ func (this *httpRequest) Fail(err errors.Error) {
 	this.writeString(err.Error())
 }
 
-func (this *httpRequest) Execute(stopNotify chan bool) {
+func (this *httpRequest) Execute(stopNotify chan bool, metrics bool) {
 	defer this.Stop(server.COMPLETED)
 
 	this.NotifyStop(stopNotify)
@@ -39,13 +41,13 @@ func (this *httpRequest) Execute(stopNotify chan bool) {
 	this.resp.WriteHeader(http.StatusOK)
 	_ = this.writePrefix() &&
 		this.writeResults() &&
-		this.writeSuffix()
+		this.writeSuffix(metrics, server.COMPLETED)
 }
 
 func (this *httpRequest) Expire() {
 	defer this.Stop(server.TIMEOUT)
 
-	this.writeSuffix()
+	this.writeSuffix(true, server.TIMEOUT)
 }
 
 func (this *httpRequest) writePrefix() bool {
@@ -98,11 +100,12 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 		this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeSuffix() bool {
+func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
 	return this.writeString("\n    ]") &&
+		this.writeState(state) &&
 		this.writeErrors() &&
 		this.writeWarnings() &&
-		this.writeMetrics() &&
+		this.writeMetrics(metrics) &&
 		this.writeString("\n}\n")
 }
 
@@ -110,6 +113,14 @@ func (this *httpRequest) writeString(s string) bool {
 	_, err := io.WriteString(this.resp, s)
 	this.Flush()
 	return err == nil
+}
+
+func (this *httpRequest) writeState(state server.State) bool {
+	if state == "" {
+		state = this.State()
+	}
+
+	return this.writeString(fmt.Sprintf(",\n    \"state\": \"%s\"", state))
 }
 
 func (this *httpRequest) writeErrors() bool {
@@ -174,8 +185,27 @@ func (this *httpRequest) writeError(err errors.Error, count int) bool {
 		this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeMetrics() bool {
-	return true
+func (this *httpRequest) writeMetrics(metrics bool) bool {
+	m := this.Metrics()
+	if m == value.FALSE ||
+		(m == value.NONE && !metrics) {
+		return true
+	}
+
+	rv := this.writeString(",\n    \"metrics\": {") &&
+		this.writeString(fmt.Sprintf("\n        elapsedTime: %v", time.Since(this.RequestTime()))) &&
+		this.writeString(fmt.Sprintf(",\n        executionTime: %v", time.Since(this.ServiceTime()))) &&
+		this.writeString(fmt.Sprintf(",\n        resultCount: %d", this.resultCount))
+
+	if this.errorCount > 0 {
+		rv = rv && this.writeString(fmt.Sprintf(",\n        errorCount: %d", this.errorCount))
+	}
+
+	if this.warningCount > 0 {
+		rv = rv && this.writeString(fmt.Sprintf(",\n        warningCount: %d", this.warningCount))
+	}
+
+	return rv && this.writeString("\n    }")
 }
 
 func (this *httpRequest) Flush() {

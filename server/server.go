@@ -29,11 +29,12 @@ type Server struct {
 	channel     RequestChannel
 	threadCount int
 	timeout     time.Duration
+	metrics     bool
 	once        sync.Once
 }
 
 func NewServer(store datastore.Datastore, namespace string, readonly bool,
-	channel RequestChannel, threadCount int, timeout time.Duration) (*Server, errors.Error) {
+	channel RequestChannel, threadCount int, timeout time.Duration, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		namespace:   namespace,
@@ -41,6 +42,7 @@ func NewServer(store datastore.Datastore, namespace string, readonly bool,
 		channel:     channel,
 		threadCount: threadCount,
 		timeout:     timeout,
+		metrics:     metrics,
 	}
 
 	sys, err := system.NewDatastore(store)
@@ -110,7 +112,7 @@ func (this *Server) serviceRequest(request Request) {
 		defer timer.Stop()
 	}
 
-	go request.Execute(operator.StopChannel())
+	go request.Execute(operator.StopChannel(), this.metrics)
 
 	context := execution.NewContext(this.datastore, this.systemstore,
 		namespace, this.readonly, request.Arguments(), request.Output())

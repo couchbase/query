@@ -45,7 +45,7 @@ func main() {
 	}
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
-	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel, *THREAD_COUNT, *TIMEOUT)
+	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel, *THREAD_COUNT, *TIMEOUT, *METRICS)
 	if err != nil {
 		clog.Log(fmt.Sprintf("Error starting cbq-engine: %v", err))
 		return
