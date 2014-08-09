@@ -24,6 +24,22 @@ func NewSum(argument expression.Expression) Aggregate {
 	return &Sum{aggregateBase{argument: argument}}
 }
 
+func (this *Sum) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Sum) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Sum) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Sum) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *Sum) Constructor() expression.FunctionConstructor {
 	return func(arguments expression.Expressions) expression.Function {
 		return NewSum(arguments[0])

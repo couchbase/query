@@ -26,26 +26,31 @@ func NewCount(argument expression.Expression) Aggregate {
 
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	if this.argument != nil {
-		return this.aggregateBase.Evaluate(item, context)
-	}
-
-	switch item := item.(type) {
-	case value.AnnotatedValue:
-	default:
-		return this.aggregateBase.Evaluate(item, context)
+		return this.evaluate(this, item, context)
 	}
 
 	// Full keyspace count is short-circuited
-	count := item.(value.AnnotatedValue).GetAttachment("count")
-
-	switch count := count.(type) {
-	case value.Value:
-		return count, nil
-	case nil:
-		return this.aggregateBase.Evaluate(item, context)
-	default:
-		return nil, fmt.Errorf("Invalid count %v of type %T.", count, count)
+	switch item := item.(type) {
+	case value.AnnotatedValue:
+		count := item.GetAttachment("count")
+		if count != nil {
+			return value.NewValue(count), nil
+		}
 	}
+
+	return this.evaluate(this, item, context)
+}
+
+func (this *Count) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Count) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Count) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
 }
 
 func (this *Count) MinArgs() int {

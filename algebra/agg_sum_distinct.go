@@ -24,6 +24,22 @@ func NewSumDistinct(argument expression.Expression) Aggregate {
 	return &SumDistinct{aggregateBase{argument: argument}}
 }
 
+func (this *SumDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *SumDistinct) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *SumDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *SumDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *SumDistinct) Constructor() expression.FunctionConstructor {
 	return func(arguments expression.Expressions) expression.Function {
 		return NewSumDistinct(arguments[0])

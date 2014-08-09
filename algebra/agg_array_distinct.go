@@ -24,6 +24,22 @@ func NewArrayAggDistinct(argument expression.Expression) Aggregate {
 	return &ArrayAggDistinct{aggregateBase{argument: argument}}
 }
 
+func (this *ArrayAggDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *ArrayAggDistinct) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *ArrayAggDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *ArrayAggDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *ArrayAggDistinct) Constructor() expression.FunctionConstructor {
 	return func(arguments expression.Expressions) expression.Function {
 		return NewArrayAggDistinct(arguments[0])

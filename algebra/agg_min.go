@@ -22,6 +22,22 @@ func NewMin(argument expression.Expression) Aggregate {
 	return &Min{aggregateBase{argument: argument}}
 }
 
+func (this *Min) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *Min) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *Min) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *Min) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *Min) Constructor() expression.FunctionConstructor {
 	return func(arguments expression.Expressions) expression.Function {
 		return NewMin(arguments[0])

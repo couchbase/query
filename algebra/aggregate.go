@@ -34,7 +34,8 @@ type aggregateBase struct {
 	argument expression.Expression
 }
 
-func (this *aggregateBase) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+func (this *aggregateBase) evaluate(agg Aggregate, item value.Value,
+	context expression.Context) (result value.Value, e error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -44,25 +45,26 @@ func (this *aggregateBase) Evaluate(item value.Value, context expression.Context
 
 	av := item.(value.AnnotatedValue)
 	aggregates := av.GetAttachment("aggregates").(map[Aggregate]value.Value)
-	result = aggregates[interface{}(this).(Aggregate)]
+	result = aggregates[agg]
 	return result, e
 }
 
 func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
 	return false
 }
-func (this *aggregateBase) Fold() (expression.Expression, error) {
-	return this.VisitChildren(&expression.Folder{})
+func (this *aggregateBase) fold(agg Aggregate) (expression.Expression, error) {
+	return agg.VisitChildren(&expression.Folder{})
 }
 
-func (this *aggregateBase) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+func (this *aggregateBase) formalize(agg Aggregate, forbidden, allowed value.Value,
+	keyspace string) (expression.Expression, error) {
 	f := &expression.Formalizer{
 		Forbidden: forbidden,
 		Allowed:   allowed,
 		Keyspace:  keyspace,
 	}
 
-	return this.VisitChildren(f)
+	return agg.VisitChildren(f)
 }
 
 func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
@@ -77,7 +79,8 @@ func (this *aggregateBase) Children() expression.Expressions {
 	}
 }
 
-func (this *aggregateBase) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+func (this *aggregateBase) visitChildren(agg Aggregate,
+	visitor expression.Visitor) (expression.Expression, error) {
 	if this.argument != nil {
 		var e error
 		this.argument, e = visitor.Visit(this.argument)
@@ -86,7 +89,7 @@ func (this *aggregateBase) VisitChildren(visitor expression.Visitor) (expression
 		}
 	}
 
-	return this, nil
+	return agg, nil
 }
 
 func (this *aggregateBase) MinArgs() int { return 1 }

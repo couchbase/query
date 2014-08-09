@@ -24,6 +24,22 @@ func NewAvgDistinct(argument expression.Expression) Aggregate {
 	return &AvgDistinct{aggregateBase{argument: argument}}
 }
 
+func (this *AvgDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
+	return this.evaluate(this, item, context)
+}
+
+func (this *AvgDistinct) Fold() (expression.Expression, error) {
+	return this.fold(this)
+}
+
+func (this *AvgDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, forbidden, allowed, keyspace)
+}
+
+func (this *AvgDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
+	return this.visitChildren(this, visitor)
+}
+
 func (this *AvgDistinct) Constructor() expression.FunctionConstructor {
 	return func(arguments expression.Expressions) expression.Function {
 		return NewAvgDistinct(arguments[0])

@@ -10,5 +10,5 @@
 package expression
 
 func NewGE(first, second Expression) Expression {
-	return NewLT(second, first)
+	return NewLE(second, first)
 }
