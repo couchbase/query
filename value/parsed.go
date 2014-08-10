@@ -182,7 +182,7 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 
 func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 	if this.parsedType == NOT_JSON {
-		return append(buffer, this)
+		return buffer
 	}
 
 	return this.parse().Descendants(buffer)

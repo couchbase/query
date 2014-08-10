@@ -121,14 +121,14 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 	keys := sortedKeys(this)
 
-	if cap(buffer) < len(buffer)+len(this)+1 {
+	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
 
-	buffer = append(buffer, this)
 	for _, key := range keys {
+		buffer = append(buffer, this[key])
 		buffer = NewValue(this[key]).Descendants(buffer)
 	}
 

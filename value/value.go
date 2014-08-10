@@ -80,7 +80,7 @@ type Value interface {
 	SetIndex(index int, val interface{}) error      // Array index setting
 	Slice(start, end int) (Value, bool)             // Array slicing; true if found
 	SliceTail(start int) (Value, bool)              // Array slicing; true if found
-	Descendants(buffer []interface{}) []interface{} // Depth-first listing of this value and all its descendants
+	Descendants(buffer []interface{}) []interface{} // Depth-first listing of this value's descendants
 }
 
 var _CONVERSIONS = []reflect.Type{

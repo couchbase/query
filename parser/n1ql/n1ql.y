@@ -191,6 +191,7 @@ indexType        datastore.IndexType
 %token WHERE
 %token WHILE
 %token WITH
+%token WITHIN
 %token WORK
 %token XOR
 
@@ -210,7 +211,7 @@ indexType        datastore.IndexType
 %nonassoc       LT GT LE GE
 %nonassoc       LIKE
 %nonassoc       BETWEEN
-%nonassoc       IN
+%nonassoc       IN WITHIN
 %nonassoc       EXISTS
 %nonassoc       IS                              /* IS NULL, IS MISSING, IS VALUED, IS NOT NULL, etc. */
 %left           CONCAT
@@ -1074,7 +1075,7 @@ variable IN path_expr
     $$ = expression.NewBinding($1, $3)
 }
 |
-variable UNDER path_expr
+variable WITHIN path_expr
 {
     $$ = expression.NewDescendantBinding($1, $3)
 }
@@ -1511,6 +1512,16 @@ expr NOT IN expr
     $$ = expression.NewNotIn($1, $4)
 }
 |
+expr WITHIN expr
+{
+    $$ = expression.NewWithin($1, $3)
+}
+|
+expr NOT WITHIN expr
+{
+    $$ = expression.NewNotWithin($1, $4)
+}
+|
 expr IS NULL
 {
     $$ = expression.NewIsNull($1)
@@ -1884,7 +1895,7 @@ variable IN expr
     $$ = expression.NewBinding($1, $3)
 }
 |
-variable UNDER expr
+variable WITHIN expr
 {
     $$ = expression.NewDescendantBinding($1, $3)
 }

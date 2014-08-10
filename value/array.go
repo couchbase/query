@@ -152,14 +152,14 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
-	if cap(buffer) < len(buffer)+len(this)+1 {
+	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
 
-	buffer = append(buffer, this)
 	for _, child := range this {
+		buffer = append(buffer, child)
 		buffer = NewValue(child).Descendants(buffer)
 	}
 
@@ -318,14 +318,14 @@ func (this *listValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this *listValue) Descendants(buffer []interface{}) []interface{} {
-	if cap(buffer) < len(buffer)+len(this.actual)+1 {
+	if cap(buffer) < len(buffer)+len(this.actual) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this.actual)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
 
-	buffer = append(buffer, NewValue(this.actual))
 	for _, child := range this.actual {
+		buffer = append(buffer, child)
 		buffer = NewValue(child).Descendants(buffer)
 	}
 

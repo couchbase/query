@@ -104,5 +104,5 @@ func (this floatValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this floatValue) Descendants(buffer []interface{}) []interface{} {
-	return append(buffer, this)
+	return buffer
 }

@@ -960,7 +960,17 @@ _in-expr:_
 ![](diagram/in-expr.png)
 
 IN evaluates to TRUE if the right-hand-side value is an array and
-contains the left-hand-side value.
+directly contains the left-hand-side value.
+
+#### WITHIN
+
+_within-expr:_
+
+![](diagram/within-expr.png)
+
+WITHIN evaluates to TRUE if the right-hand-side value contains the
+left-hand-side value as a child or descendant (i.e. directly or
+indirectly).
 
 #### ANY, SOME, and EVERY
 
@@ -1952,6 +1962,7 @@ for future use.
 * __WHERE__
 * __WHILE__
 * __WITH__
+* __WITHIN__
 * __WORK__
 * __XOR__
 

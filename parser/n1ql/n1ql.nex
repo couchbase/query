@@ -199,6 +199,7 @@
 /[wW][hH][eE][rR][eE]/				 { logToken("WHERE"); return WHERE }
 /[wW][hH][iI][lL][eE]/				 { logToken("WHILE"); return WHILE }
 /[wW][iI][tT][hH]/				 { logToken("WITH"); return WITH }
+/[wW][iI][tT][hH][iI][nN]/			 { logToken("WITHIN"); return WITHIN }
 /[wW][oO][rR][kK]/				 { logToken("WORK"); return WORK }
 /[xX][oO][rR]/					 { logToken("XOR"); return XOR }
 

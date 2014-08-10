@@ -88,13 +88,14 @@ function-name ::= identifier
 /*
  *  collections
  */
-collection-expr ::= exists-expr | in-expr | collection-cond | collection-xform
+collection-expr ::= exists-expr | in-expr | under-expr | collection-cond | collection-xform
 exists-expr ::= 'EXISTS' expr
 in-expr ::= expr 'NOT'? 'IN' expr
-collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable ('IN' | 'UNDER') expr (',' variable ('IN' | 'UNDER') expr)* ('SATISFIES' cond)? 'END'
+within-expr ::= expr 'NOT'? 'WITHIN' expr
+collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('SATISFIES' cond)? 'END'
 collection-xform ::= array-expr | first-expr
-array-expr ::= 'ARRAY' expr 'FOR' variable ('IN' | 'UNDER') expr (',' variable ('IN' | 'UNDER') expr)* ('WHEN' cond)? 'END'
-first-expr ::= 'FIRST' expr 'FOR' variable ('IN' | 'UNDER') expr (',' variable ('IN' | 'UNDER') expr)* ('WHEN' cond)? 'END'
+array-expr ::= 'ARRAY' expr 'FOR' variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('WHEN' cond)? 'END'
+first-expr ::= 'FIRST' expr 'FOR' variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('WHEN' cond)? 'END'
 variable ::= identifier
 
 /*
