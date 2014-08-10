@@ -11,6 +11,7 @@ package plan
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
@@ -18,9 +19,9 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func Build(node algebra.Node, datastore datastore.Datastore,
+func Build(node algebra.Node, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool) (Operator, error) {
-	builder := newBuilder(datastore, namespace, subquery)
+	builder := newBuilder(datastore, systemstore, namespace, subquery)
 	op, err := node.Accept(builder)
 
 	if err != nil {
@@ -41,6 +42,7 @@ func Build(node algebra.Node, datastore datastore.Datastore,
 
 type builder struct {
 	datastore      datastore.Datastore
+	systemstore    datastore.Datastore
 	namespace      string
 	subquery       bool
 	projectInitial bool
@@ -48,11 +50,12 @@ type builder struct {
 	subChildren    []Operator
 }
 
-func newBuilder(datastore datastore.Datastore, namespace string, subquery bool) *builder {
+func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
 	return &builder{
-		datastore: datastore,
-		namespace: namespace,
-		subquery:  subquery,
+		datastore:   datastore,
+		systemstore: systemstore,
+		namespace:   namespace,
+		subquery:    subquery,
 	}
 }
 
@@ -428,7 +431,12 @@ func (this *builder) getKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace
 		ns = this.namespace
 	}
 
-	namespace, err := this.datastore.NamespaceByName(ns)
+	datastore := this.datastore
+	if strings.ToLower(ns) == "system" {
+		datastore = this.systemstore
+	}
+
+	namespace, err := datastore.NamespaceByName(ns)
 	if err != nil {
 		return nil, err
 	}

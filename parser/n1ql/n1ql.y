@@ -64,6 +64,7 @@ indexType        datastore.IndexType
 
 %token ALL
 %token ALTER
+%token ANALYZE
 %token AND
 %token ANY
 %token ARRAY
@@ -90,6 +91,7 @@ indexType        datastore.IndexType
 %token DECLARE
 %token DELETE
 %token DESC
+%token DESCRIBE
 %token DISTINCT
 %token DO
 %token DROP
@@ -122,6 +124,7 @@ indexType        datastore.IndexType
 %token KEY
 %token KEYS
 %token KEYSPACE
+%token LAST
 %token LEFT
 %token LET
 %token LETTING
@@ -129,6 +132,7 @@ indexType        datastore.IndexType
 %token LIMIT
 %token MAP
 %token MATCHED
+%token MATERIALIZED
 %token MERGE
 %token MINUS
 %token MISSING
@@ -144,6 +148,7 @@ indexType        datastore.IndexType
 %token OUTER
 %token OVER
 %token PARTITION
+%token PASSWORD
 %token PATH
 %token POOL
 %token PREPARE
@@ -166,8 +171,11 @@ indexType        datastore.IndexType
 %token SCHEMA
 %token SELECT
 %token SET
+%token SHOW
 %token SOME
 %token START
+%token STATISTICS
+%token SYSTEM
 %token THEN
 %token TO
 %token TRANSACTION
@@ -565,14 +573,19 @@ from_term opt_join_type UNNEST expr opt_as_alias
 ;
 
 keyspace_term:
+keyspace_name opt_subpath opt_as_alias opt_keys
+{
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
+}
+|
 namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_keys
 {
     $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
 }
 |
-keyspace_name opt_subpath opt_as_alias opt_keys
+SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_keys
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
+    $$ = algebra.NewKeyspaceTerm("system", $3, $4, $5, $6)
 }
 ;
 

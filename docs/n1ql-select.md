@@ -1835,6 +1835,7 @@ for future use.
 
 * __ALL__
 * __ALTER__
+* __ANALYZE__
 * __AND__
 * __ANY__
 * __ARRAY__
@@ -1861,6 +1862,7 @@ for future use.
 * __DECLARE__
 * __DELETE__
 * __DESC__
+* __DESCRIBE__
 * __DISTINCT__
 * __DO__
 * __DROP__
@@ -1893,6 +1895,7 @@ for future use.
 * __KEY__
 * __KEYS__
 * __KEYSPACE__
+* __LAST__
 * __LEFT__
 * __LET__
 * __LETTING__
@@ -1900,6 +1903,7 @@ for future use.
 * __LIMIT__
 * __MAP__
 * __MATCHED__
+* __MATERIALIZED__
 * __MERGE__
 * __MINUS__
 * __MISSING__
@@ -1915,6 +1919,7 @@ for future use.
 * __OUTER__
 * __OVER__
 * __PARTITION__
+* __PASSWORD__
 * __PATH__
 * __POOL__
 * __PREPARE__
@@ -1937,8 +1942,11 @@ for future use.
 * __SCHEMA__
 * __SELECT__
 * __SET__
+* __SHOW__
 * __SOME__
 * __START__
+* __STATISTICS__
+* __SYSTEM__
 * __THEN__
 * __TO__
 * __TRANSACTION__
@@ -2304,6 +2312,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added ARRAY_RANGE() function
 * 2014-08-10 - WITHIN
     * Added WITHIN
+* 2014-08-10 - Keywords
+    * Added keywords
 
 ### Open issues
 

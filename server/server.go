@@ -127,7 +127,7 @@ func (this *Server) getPrepared(request Request, namespace string) (plan.Operato
 			return nil, err
 		}
 
-		prepared, err = plan.Build(node, this.datastore, namespace, false)
+		prepared, err = plan.Build(node, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, err
 		}

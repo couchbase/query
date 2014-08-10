@@ -72,6 +72,7 @@
 
 /[aA][lL][lL]/	    			  	 { logToken("ALL"); return ALL }
 /[aA][lL][tT][eE][rR]/				 { logToken("ALTER"); return ALTER }
+/[aA][nN][aA][lL][yY][zZ][eE]/			 { logToken("ANALYZE"); return ANALYZE }
 /[aA][nN][dD]/					 { logToken("AND"); return AND }
 /[aA][nN][yY]/					 { logToken("ANY"); return ANY }
 /[aA][rR][rR][aA][yY]/				 { logToken("ARRAY"); return ARRAY }
@@ -98,6 +99,7 @@
 /[dD][eE][cC][lL][aA][rR][eE]/			 { logToken("DECLARE"); return DECLARE }
 /[dD][eE][lL][eE][tT][eE]/			 { logToken("DELETE"); return DELETE }
 /[dD][eE][sS][cC]/				 { logToken("DESC"); return DESC }
+/[dD][eE][sS][cC][rR][iI][bB][eE]/		 { logToken("DESCRIBE"); return DESCRIBE }
 /[dD][iI][sS][tT][iI][nN][cC][tT]/		 { logToken("DISTINCT"); return DISTINCT }
 /[dD][oO]/					 { logToken("DO"); return DO }
 /[dD][rR][oO][pP]/				 { logToken("DROP"); return DROP }
@@ -130,6 +132,7 @@
 /[kK][eE][yY]/					 { logToken("KEY"); return KEY }
 /[kK][eE][yY][sS]/				 { logToken("KEYS"); return KEYS }
 /[kK][eE][yY][sS][pP][aA][cC][eE]/		 { logToken("KEYSPACE"); return KEYSPACE }
+/[lL][aA][sS][tT]/				 { logToken("LAST"); return LAST }
 /[lL][eE][fF][tT]/				 { logToken("LEFT"); return LEFT }
 /[lL][eE][tT]/					 { logToken("LET"); return LET }
 /[lL][eE][tT][tT][iI][nN][gG]/			 { logToken("LETTING"); return LETTING }
@@ -137,6 +140,7 @@
 /[lL][iI][mM][iI][tT]/				 { logToken("LIMIT"); return LIMIT }
 /[mM][aA][pP]/					 { logToken("MAP"); return MAP }
 /[mM][aA][tT][cC][hH][eE][dD]/			 { logToken("MATCHED"); return MATCHED }
+/[mM][aA][tT][eE][rR][iI][aA][lL][iI][zZ][eE][dD]/ { logToken("MATERIALIZED"); return MATERIALIZED }
 /[mM][eE][rR][gG][eE]/				 { logToken("MERGE"); return MERGE }
 /[mM][iI][nN][uU][sS]/				 { logToken("MINUS"); return MINUS }
 /[mM][iI][sS][sS][iI][nN][gG]/			 { logToken("MISSING"); return MISSING }
@@ -152,6 +156,7 @@
 /[oO][uU][tT][eE][rR]/				 { logToken("OUTER"); return OUTER }
 /[oO][vV][eE][rR]/				 { logToken("OVER"); return OVER }
 /[pP][aA][rR][tT][iI][tT][iI][oO][nN]/		 { logToken("PARTITION"); return PARTITION }
+/[pP][aA][sS][sS][wW][oO][rR][dD]/		 { logToken("PASSWORD"); return PASSWORD }
 /[pP][aA][tT][hH]/				 { logToken("PATH"); return PATH }
 /[pP][oO][oO][lL]/				 { logToken("POOL"); return POOL }
 /[pP][rR][eE][pP][aA][rR][eE]/			 { logToken("PREPARE"); return PREPARE }
@@ -174,8 +179,11 @@
 /[sS][cC][hH][eE][mM][aA]/			 { logToken("SCHEMA"); return SCHEMA }
 /[sS][eE][lL][eE][cC][tT]/			 { logToken("SELECT"); return SELECT }
 /[sS][eE][tT]/					 { logToken("SET"); return SET }
+/[sS][hH][oO][wW]/				 { logToken("SHOW"); return SHOW }
 /[sS][oO][mM][eE]/				 { logToken("SOME"); return SOME }
 /[sS][tT][aA][rR][tT]/				 { logToken("START"); return START }
+/[sS][tT][aA][tT][iI][sS][tT][iI][cC][sS]/	 { logToken("STATISTICS"); return STATISTICS }
+/[sS][yY][sS][tT][eE][mM]/			 { logToken("SYSTEM"); return SYSTEM }
 /[tT][hH][eE][nN]/				 { logToken("THEN"); return THEN }
 /[tT][oO]/					 { logToken("TO"); return TO }
 /[tT][rR][aA][nN][sS][aA][cC][tT][iI][oO][nN]/	 { logToken("TRANSACTION"); return TRANSACTION }
