@@ -88,7 +88,7 @@ function-name ::= identifier
 /*
  *  collections
  */
-collection-expr ::= exists-expr | in-expr | under-expr | collection-cond | collection-xform
+collection-expr ::= exists-expr | in-expr | within-expr | collection-cond | collection-xform
 exists-expr ::= 'EXISTS' expr
 in-expr ::= expr 'NOT'? 'IN' expr
 within-expr ::= expr 'NOT'? 'WITHIN' expr
