@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-08-07
+* Modified: 2014-08-10
 
 ## Introduction
 
@@ -2302,6 +2302,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Required argument to META() and BASE64()
 * 2014-08-07 - ARRAY_RANGE()
     * Added ARRAY_RANGE() function
+* 2014-08-10 - WITHIN
+    * Added WITHIN
 
 ### Open issues
 
