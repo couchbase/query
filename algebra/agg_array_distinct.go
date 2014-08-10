@@ -60,7 +60,7 @@ func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, cont
 		return cumulative, nil
 	}
 
-	return setAdd(cumulative, item)
+	return setAdd(item, cumulative)
 }
 
 func (this *ArrayAggDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {

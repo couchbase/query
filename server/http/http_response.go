@@ -120,6 +120,10 @@ func (this *httpRequest) writeState(state server.State) bool {
 		state = this.State()
 	}
 
+	if state == "completed" {
+		return true
+	}
+
 	return this.writeString(fmt.Sprintf(",\n    \"state\": \"%s\"", state))
 }
 

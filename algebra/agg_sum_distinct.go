@@ -60,7 +60,7 @@ func (this *SumDistinct) CumulateInitial(item, cumulative value.Value, context C
 		return cumulative, nil
 	}
 
-	return setAdd(cumulative, item)
+	return setAdd(item, cumulative)
 }
 
 func (this *SumDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
