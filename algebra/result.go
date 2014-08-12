@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Projection struct {
@@ -35,6 +36,32 @@ func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
 		raw:      true,
 		terms:    ResultTerms{NewResultTerm(expr, false, "")},
 	}
+}
+
+func (this *Projection) Formalize(forbidden, allowed value.Value, keyspace string) (
+	projection *Projection, err error) {
+	projection = &Projection{
+		distinct: this.distinct,
+		raw:      this.raw,
+		terms:    make(ResultTerms, len(this.terms)),
+	}
+
+	terms := projection.terms
+	for i, term := range this.terms {
+		terms[i] = &ResultTerm{
+			star: term.star,
+			as:   term.as,
+		}
+
+		if term.expr != nil {
+			terms[i].expr, err = term.expr.Formalize(forbidden, allowed, keyspace)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return
 }
 
 func (this *Projection) Distinct() bool {

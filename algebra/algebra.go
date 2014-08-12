@@ -17,7 +17,5 @@ processed by the query engine.
 package algebra
 
 type Node interface {
-	//fmt.Stringer
-
 	Accept(visitor Visitor) (interface{}, error)
 }

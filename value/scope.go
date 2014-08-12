@@ -60,3 +60,23 @@ func (this *scopeValue) Field(field string) (Value, bool) {
 
 	return missingField(field), false
 }
+
+func (this *scopeValue) Fields() map[string]interface{} {
+	if this.parent == nil {
+		return this.Value.Fields()
+	}
+
+	rv := make(map[string]interface{})
+
+	v := this.Value.Fields()
+	for vf, _ := range v {
+		rv[vf] = vf
+	}
+
+	p := this.parent.Fields()
+	for pf, _ := range p {
+		rv[pf] = pf
+	}
+
+	return rv
+}

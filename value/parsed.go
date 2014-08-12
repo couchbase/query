@@ -188,6 +188,14 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 	return this.parse().Descendants(buffer)
 }
 
+func (this *parsedValue) Fields() map[string]interface{} {
+	if this.parsedType == NOT_JSON {
+		return nil
+	}
+
+	return this.parse().Fields()
+}
+
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
 		if this.parsedType == NOT_JSON {

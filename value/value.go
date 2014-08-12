@@ -81,6 +81,7 @@ type Value interface {
 	Slice(start, end int) (Value, bool)             // Array slicing; true if found
 	SliceTail(start int) (Value, bool)              // Array slicing; true if found
 	Descendants(buffer []interface{}) []interface{} // Depth-first listing of this value's descendants
+	Fields() map[string]interface{}
 }
 
 var _CONVERSIONS = []reflect.Type{

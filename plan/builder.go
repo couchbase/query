@@ -62,6 +62,12 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 // SELECT
 
 func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
+	var err error
+	node, err = node.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
 	order := node.Order()
 	offset := node.Offset()
 	limit := node.Limit()
@@ -256,10 +262,6 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	return fetch, nil
 }
 
-func (this *builder) VisitParentTerm(node *algebra.ParentTerm) (interface{}, error) {
-	return nil, nil
-}
-
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -432,7 +434,7 @@ func (this *builder) getKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace
 	}
 
 	datastore := this.datastore
-	if strings.ToLower(ns) == "system" {
+	if strings.ToLower(ns) == "#system" {
 		datastore = this.systemstore
 	}
 

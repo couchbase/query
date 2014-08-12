@@ -101,6 +101,10 @@ func (this missingValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
+func (this missingValue) Fields() map[string]interface{} {
+	return nil
+}
+
 func missingField(field string) Value {
 	return missingValue(field)
 }

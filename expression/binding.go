@@ -9,6 +9,13 @@
 
 package expression
 
+import (
+	"fmt"
+
+	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/value"
+)
+
 type Bindings []*Binding
 
 type Binding struct {
@@ -45,4 +52,28 @@ func (this *Binding) Accept(visitor Visitor) (Expression, error) {
 	}
 
 	return this.expr, nil
+}
+func (this Bindings) Formalize(forbidden, allowed value.Value, keyspace string) (
+	bindings Bindings, f, a value.Value, err error) {
+	bindings = make(Bindings, len(this))
+	f = forbidden
+	a = value.NewScopeValue(make(map[string]interface{}, len(this)), allowed)
+
+	for i, b := range this {
+		_, ok := a.Field(b.variable)
+		if ok {
+			return nil, nil, nil, errors.NewError(nil,
+				fmt.Sprintf("Bind alias %s already in scope.", b.variable))
+		}
+
+		expr, err := b.expr.Formalize(f, a, keyspace)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		bindings[i] = NewBinding(b.variable, expr)
+		a.SetField(b.variable, b.variable)
+	}
+
+	return bindings, f, a, nil
 }

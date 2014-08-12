@@ -10,11 +10,16 @@
 package algebra
 
 import (
+	"fmt"
+
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type FromTerm interface {
 	Node
+	Formalize() (forbidden, allowed value.Value, keyspace string, err error)
 	PrimaryTerm() FromTerm
 	Alias() string
 }
@@ -33,6 +38,19 @@ func NewKeyspaceTerm(namespace, keyspace string, project expression.Path, as str
 
 func (this *KeyspaceTerm) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyspaceTerm(this)
+}
+
+func (this *KeyspaceTerm) Formalize() (forbidden, allowed value.Value, keyspace string, err error) {
+	keyspace = this.Alias()
+	if keyspace == "" {
+		err = errors.NewError(nil, "FROM term must have a name or alias.")
+		return
+	}
+
+	forbidden = value.EMPTY_OBJECT_VALUE
+	allowed = value.NewValue(make(map[string]interface{}))
+	allowed.SetField(keyspace, keyspace)
+	return
 }
 
 func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
@@ -69,36 +87,6 @@ func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
 }
 
-// For subqueries.
-type ParentTerm struct {
-	project expression.Path
-	as      string
-}
-
-func NewParentTerm(project expression.Path, as string) *ParentTerm {
-	return &ParentTerm{project, as}
-}
-
-func (this *ParentTerm) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitParentTerm(this)
-}
-
-func (this *ParentTerm) PrimaryTerm() FromTerm {
-	return this
-}
-
-func (this *ParentTerm) Alias() string {
-	return this.as
-}
-
-func (this *ParentTerm) Project() expression.Path {
-	return this.project
-}
-
-func (this *ParentTerm) As() string {
-	return this.as
-}
-
 type Join struct {
 	left  FromTerm
 	right *KeyspaceTerm
@@ -111,6 +99,28 @@ func NewJoin(left FromTerm, outer bool, right *KeyspaceTerm) *Join {
 
 func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
+}
+
+func (this *Join) Formalize() (forbidden, allowed value.Value, keyspace string, err error) {
+	forbidden, allowed, _, err = this.left.Formalize()
+	if err != nil {
+		return
+	}
+
+	alias := this.Alias()
+	if alias == "" {
+		err = errors.NewError(nil, "JOIN term must have a name or alias.")
+		return nil, nil, "", err
+	}
+
+	_, ok := allowed.Field(alias)
+	if ok {
+		err = errors.NewError(nil, fmt.Sprintf("Duplicate JOIN alias %s.", alias))
+		return nil, nil, "", err
+	}
+
+	allowed.SetField(alias, alias)
+	return
 }
 
 func (this *Join) PrimaryTerm() FromTerm {
@@ -147,6 +157,28 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
+func (this *Nest) Formalize() (forbidden, allowed value.Value, keyspace string, err error) {
+	forbidden, allowed, _, err = this.left.Formalize()
+	if err != nil {
+		return
+	}
+
+	alias := this.Alias()
+	if alias == "" {
+		err = errors.NewError(nil, "NEST term must have a name or alias.")
+		return nil, nil, "", err
+	}
+
+	_, ok := allowed.Field(alias)
+	if ok {
+		err = errors.NewError(nil, fmt.Sprintf("Duplicate NEST alias %s.", alias))
+		return nil, nil, "", err
+	}
+
+	allowed.SetField(alias, alias)
+	return
+}
+
 func (this *Nest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
@@ -180,6 +212,28 @@ func NewUnnest(left FromTerm, outer bool, expr expression.Expression, as string)
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
+}
+
+func (this *Unnest) Formalize() (forbidden, allowed value.Value, keyspace string, err error) {
+	forbidden, allowed, _, err = this.left.Formalize()
+	if err != nil {
+		return
+	}
+
+	alias := this.Alias()
+	if alias == "" {
+		err = errors.NewError(nil, "UNNEST term must have a name or alias.")
+		return nil, nil, "", err
+	}
+
+	_, ok := allowed.Field(alias)
+	if ok {
+		err = errors.NewError(nil, fmt.Sprintf("Duplicate UNNEST alias %s.", alias))
+		return nil, nil, "", err
+	}
+
+	allowed.SetField(alias, alias)
+	return
 }
 
 func (this *Unnest) PrimaryTerm() FromTerm {

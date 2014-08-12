@@ -14,8 +14,8 @@ import (
 	"github.com/couchbaselabs/query/errors"
 )
 
-const NAMESPACE_ID = "system"
-const NAMESPACE_NAME = "system"
+const NAMESPACE_ID = "#system"
+const NAMESPACE_NAME = "#system"
 const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_KEYSPACES = "keyspaces"

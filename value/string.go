@@ -108,3 +108,7 @@ func (this stringValue) SliceTail(start int) (Value, bool) {
 func (this stringValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
+
+func (this stringValue) Fields() map[string]interface{} {
+	return nil
+}

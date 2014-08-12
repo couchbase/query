@@ -16,7 +16,6 @@ type Visitor interface {
 	VisitUnion(node *Union) (interface{}, error)
 	VisitUnionAll(node *UnionAll) (interface{}, error)
 	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
-	VisitParentTerm(node *ParentTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)

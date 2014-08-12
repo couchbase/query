@@ -135,6 +135,10 @@ func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
+func (this objectValue) Fields() map[string]interface{} {
+	return this
+}
+
 func objectEquals(obj1, obj2 map[string]interface{}) bool {
 	if len(obj1) != len(obj2) {
 		return false

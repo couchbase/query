@@ -166,6 +166,10 @@ func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
+func (this sliceValue) Fields() map[string]interface{} {
+	return nil
+}
+
 type listValue struct {
 	actual []interface{}
 }
@@ -330,6 +334,10 @@ func (this *listValue) Descendants(buffer []interface{}) []interface{} {
 	}
 
 	return buffer
+}
+
+func (this *listValue) Fields() map[string]interface{} {
+	return nil
 }
 
 func arrayEquals(array1, array2 []interface{}) bool {
