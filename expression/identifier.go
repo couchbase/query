@@ -70,9 +70,7 @@ func (this *Identifier) Formalize(forbidden, allowed value.Value,
 			this.identifier)
 	}
 
-	return NewField(NewIdentifier(keyspace),
-			NewConstant(value.NewValue(this.identifier))),
-		nil
+	return NewField(NewIdentifier(keyspace), NewFieldName(this.identifier)), nil
 }
 
 func (this *Identifier) SubsetOf(other Expression) bool {

@@ -115,6 +115,11 @@ func NewFieldName(name string) Expression {
 	}
 }
 
+func (this *FieldName) Formalize(forbidden, allowed value.Value,
+	keyspace string) (Expression, error) {
+	return this, nil
+}
+
 func (this *FieldName) Alias() string {
 	return this.name
 }
