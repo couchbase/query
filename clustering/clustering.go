@@ -98,6 +98,15 @@ type ConfigurationManager interface {
 	//	- Cluster is not empty (contains one or more QueryNodes)
 	// Returns true if no error (Cluster is no longer in the ConfigurationStore)
 	RemoveCluster(c Cluster) (bool, errors.Error)
+
+	// Remove the named cluster from the configuration
+	// Possible reasons for error:
+	//	- Configuration does not have a cluster with the given id
+	//	- Cluster is not empty (contains one or more QueryNodes)
+	RemoveClusterById(id string) (bool, errors.Error)
+
+	// The clusters in the configuration
+	GetClusters() ([]Cluster, errors.Error)
 }
 
 // ClusterManager is the interface the actions that can be done to a Cluster;
@@ -128,4 +137,7 @@ type ClusterManager interface {
 	//	-- Cluster does not contain a QueryNode with the given id
 	// Returns the updated QueryNode if no error (standalone mode, no cluster id)
 	RemoveQueryNodeById(id string) (QueryNode, errors.Error)
+
+	// Return the QueryNodes in the Cluster
+	GetQueryNodes() ([]QueryNode, errors.Error)
 }
