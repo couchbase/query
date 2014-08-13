@@ -115,8 +115,29 @@ func NewFieldName(name string) Expression {
 	}
 }
 
+func (this *FieldName) EquivalentTo(other Expression) bool {
+	switch other := other.(type) {
+	case *FieldName:
+		return this.value.Equals(other.value)
+	default:
+		return false
+	}
+}
+
+func (this *FieldName) Fold() (Expression, error) {
+	return this, nil
+}
+
 func (this *FieldName) Formalize(forbidden, allowed value.Value,
 	keyspace string) (Expression, error) {
+	return this, nil
+}
+
+func (this *FieldName) SubsetOf(other Expression) bool {
+	return this.subsetOf(this, other)
+}
+
+func (this *FieldName) VisitChildren(visitor Visitor) (Expression, error) {
 	return this, nil
 }
 

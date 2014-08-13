@@ -10,6 +10,7 @@
 package server
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -81,6 +82,13 @@ func (this *Server) doServe() {
 }
 
 func (this *Server) serviceRequest(request Request) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			request.Fail(errors.NewError(nil, fmt.Sprintf("PANIC: %v.", r)))
+		}
+	}()
+
 	request.Servicing()
 
 	namespace := request.Namespace()
