@@ -52,7 +52,7 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 		project = item
 	}
 
-	this.set.Add(project.(value.Value))
+	this.set.Put(project.(value.Value), item)
 	return true
 }
 

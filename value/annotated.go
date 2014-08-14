@@ -14,6 +14,7 @@ import (
 )
 
 type AnnotatedChannel chan AnnotatedValue
+type AnnotatedValues []AnnotatedValue
 
 type AnnotatedValue interface {
 	Value

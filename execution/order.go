@@ -19,7 +19,7 @@ import (
 type Order struct {
 	base
 	plan    *plan.Order
-	values  []value.AnnotatedValue
+	values  value.AnnotatedValues
 	context *Context
 }
 
@@ -29,7 +29,7 @@ func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{
 		base:   newBase(),
 		plan:   plan,
-		values: make([]value.AnnotatedValue, 0, _ORDER_CAP),
+		values: make(value.AnnotatedValues, 0, _ORDER_CAP),
 	}
 
 	rv.output = rv
@@ -44,7 +44,7 @@ func (this *Order) Copy() Operator {
 	return &Order{
 		base:   this.base.copy(),
 		plan:   this.plan,
-		values: make([]value.AnnotatedValue, 0, _ORDER_CAP),
+		values: make(value.AnnotatedValues, 0, _ORDER_CAP),
 	}
 }
 
@@ -54,7 +54,7 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
 	if len(this.values) == cap(this.values) {
-		values := make([]value.AnnotatedValue, len(this.values)<<1)
+		values := make(value.AnnotatedValues, len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}

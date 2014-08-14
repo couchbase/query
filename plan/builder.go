@@ -41,21 +41,22 @@ func Build(node algebra.Node, datastore, systemstore datastore.Datastore,
 }
 
 type builder struct {
-	datastore      datastore.Datastore
-	systemstore    datastore.Datastore
-	namespace      string
-	subquery       bool
-	projectInitial bool
-	children       []Operator
-	subChildren    []Operator
+	datastore    datastore.Datastore
+	systemstore  datastore.Datastore
+	namespace    string
+	subquery     bool
+	projectFinal bool
+	children     []Operator
+	subChildren  []Operator
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
 	return &builder{
-		datastore:   datastore,
-		systemstore: systemstore,
-		namespace:   namespace,
-		subquery:    subquery,
+		datastore:    datastore,
+		systemstore:  systemstore,
+		namespace:    namespace,
+		subquery:     subquery,
+		projectFinal: true,
 	}
 }
 
@@ -73,7 +74,7 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 	limit := node.Limit()
 
 	if order != nil {
-		this.projectInitial = true
+		this.projectFinal = false
 	}
 
 	sub, err := node.Subresult().Accept(this)
@@ -100,7 +101,7 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 		children = append(children, NewLimit(limit))
 	}
 
-	if this.projectInitial {
+	if !this.projectFinal {
 		children = append(children, NewParallel(NewFinalProject()))
 	}
 
@@ -158,7 +159,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	this.subChildren = append(this.subChildren, NewInitialProject(projection))
 
-	if !this.projectInitial && !projection.Distinct() {
+	if this.projectFinal {
 		this.subChildren = append(this.subChildren, NewFinalProject())
 	}
 
@@ -199,7 +200,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 }
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
-	this.projectInitial = false
+	this.projectFinal = true
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -217,7 +218,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.projectInitial = false
+	this.projectFinal = true
 
 	first, err := node.First().Accept(this)
 	if err != nil {
