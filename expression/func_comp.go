@@ -37,8 +37,8 @@ func (this *Greatest) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Greatest) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Greatest) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Greatest) SubsetOf(other Expression) bool {
@@ -94,8 +94,8 @@ func (this *Least) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Least) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Least) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Least) SubsetOf(other Expression) bool {

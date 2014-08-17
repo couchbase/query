@@ -60,8 +60,8 @@ func (this *Reciprocate) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Reciprocate) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Reciprocate) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Reciprocate) SubsetOf(other Expression) bool {

@@ -17,7 +17,7 @@ type Upsert struct {
 	keyspace  *KeyspaceRef           `json:"keyspace"`
 	key       expression.Expression  `json:"key"`
 	values    expression.Expressions `json:"values"`
-	query     *Select                `json:"query"`
+	query     *Select                `json:"select"`
 	returning *Projection            `json:"returning"`
 }
 
@@ -45,4 +45,59 @@ func NewUpsertSelect(keyspace *KeyspaceRef, key expression.Expression,
 
 func (this *Upsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpsert(this)
+}
+
+func (this *Upsert) VisitExpressions(visitor expression.Visitor) (err error) {
+	if this.key != nil {
+		expr, err := visitor.Visit(this.key)
+		if err != nil {
+			return err
+		}
+
+		this.key = expr.(expression.Expression)
+	}
+
+	if this.values != nil {
+		err = this.values.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.query != nil {
+		err = this.query.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.returning != nil {
+		err = this.returning.VisitExpressions(visitor)
+	}
+
+	return
+}
+
+func (this *Upsert) Formalize() (err error) {
+	return
+}
+
+func (this *Upsert) KeyspaceRef() *KeyspaceRef {
+	return this.keyspace
+}
+
+func (this *Upsert) Key() expression.Expression {
+	return this.key
+}
+
+func (this *Upsert) Values() expression.Expressions {
+	return this.values
+}
+
+func (this *Upsert) Select() *Select {
+	return this.query
+}
+
+func (this *Upsert) Returning() *Projection {
+	return this.returning
 }

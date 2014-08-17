@@ -41,8 +41,8 @@ func (this *Abs) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Abs) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Abs) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Abs) SubsetOf(other Expression) bool {
@@ -93,8 +93,8 @@ func (this *Acos) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Acos) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Acos) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Acos) SubsetOf(other Expression) bool {
@@ -145,8 +145,8 @@ func (this *Asin) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Asin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Asin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Asin) SubsetOf(other Expression) bool {
@@ -197,8 +197,8 @@ func (this *Atan) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Atan) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Atan) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Atan) SubsetOf(other Expression) bool {
@@ -250,8 +250,8 @@ func (this *Atan2) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Atan2) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Atan2) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Atan2) SubsetOf(other Expression) bool {
@@ -304,8 +304,8 @@ func (this *Ceil) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Ceil) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Ceil) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Ceil) SubsetOf(other Expression) bool {
@@ -356,8 +356,8 @@ func (this *Cos) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Cos) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Cos) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Cos) SubsetOf(other Expression) bool {
@@ -408,8 +408,8 @@ func (this *Degrees) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _RAD_TO_DEG).Fold()
 }
 
-func (this *Degrees) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Degrees) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Degrees) SubsetOf(other Expression) bool {
@@ -460,8 +460,8 @@ func (this *Exp) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Exp) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Exp) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Exp) SubsetOf(other Expression) bool {
@@ -512,8 +512,8 @@ func (this *Ln) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Ln) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Ln) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Ln) SubsetOf(other Expression) bool {
@@ -564,8 +564,8 @@ func (this *Log) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Log) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Log) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Log) SubsetOf(other Expression) bool {
@@ -616,8 +616,8 @@ func (this *Floor) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Floor) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Floor) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Floor) SubsetOf(other Expression) bool {
@@ -664,7 +664,7 @@ func (this *PI) Fold() (Expression, error) {
 	return _PI, nil
 }
 
-func (this *PI) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+func (this *PI) Formalize(allowed value.Value, keyspace string) (Expression, error) {
 	return this, nil
 }
 
@@ -709,8 +709,8 @@ func (this *Power) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Power) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Power) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Power) SubsetOf(other Expression) bool {
@@ -763,8 +763,8 @@ func (this *Radians) Fold() (Expression, error) {
 	return NewMultiply(this.operand, _DEG_TO_RAD).Fold()
 }
 
-func (this *Radians) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Radians) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Radians) SubsetOf(other Expression) bool {
@@ -840,8 +840,8 @@ func (this *Random) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Random) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Random) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Random) SubsetOf(other Expression) bool {
@@ -909,8 +909,8 @@ func (this *Round) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Round) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Round) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Round) SubsetOf(other Expression) bool {
@@ -982,8 +982,8 @@ func (this *Sign) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Sign) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Sign) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Sign) SubsetOf(other Expression) bool {
@@ -1042,8 +1042,8 @@ func (this *Sin) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Sin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Sin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Sin) SubsetOf(other Expression) bool {
@@ -1094,8 +1094,8 @@ func (this *Sqrt) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Sqrt) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Sqrt) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Sqrt) SubsetOf(other Expression) bool {
@@ -1146,8 +1146,8 @@ func (this *Tan) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Tan) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Tan) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Tan) SubsetOf(other Expression) bool {
@@ -1198,8 +1198,8 @@ func (this *Trunc) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Trunc) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Trunc) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Trunc) SubsetOf(other Expression) bool {

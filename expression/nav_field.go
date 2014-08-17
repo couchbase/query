@@ -42,8 +42,8 @@ func (this *Field) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Field) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Field) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Field) SubsetOf(other Expression) bool {
@@ -128,7 +128,7 @@ func (this *FieldName) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *FieldName) Formalize(forbidden, allowed value.Value,
+func (this *FieldName) Formalize(allowed value.Value,
 	keyspace string) (Expression, error) {
 	return this, nil
 }

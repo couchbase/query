@@ -41,8 +41,8 @@ func (this *ToArray) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ToArray) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ToArray) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ToArray) SubsetOf(other Expression) bool {
@@ -93,8 +93,8 @@ func (this *ToAtom) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ToAtom) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ToAtom) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ToAtom) SubsetOf(other Expression) bool {
@@ -157,8 +157,8 @@ func (this *ToBool) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ToBool) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ToBool) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ToBool) SubsetOf(other Expression) bool {
@@ -227,8 +227,8 @@ func (this *ToNum) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ToNum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ToNum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ToNum) SubsetOf(other Expression) bool {
@@ -292,8 +292,8 @@ func (this *ToStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ToStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ToStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ToStr) SubsetOf(other Expression) bool {

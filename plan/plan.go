@@ -14,6 +14,8 @@ Package plan provides query plans.
 */
 package plan
 
+type Operators []Operator
+
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
 	Readonly() bool

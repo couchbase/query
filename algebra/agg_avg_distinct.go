@@ -32,8 +32,8 @@ func (this *AvgDistinct) Fold() (expression.Expression, error) {
 	return this.fold(this)
 }
 
-func (this *AvgDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *AvgDistinct) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *AvgDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {

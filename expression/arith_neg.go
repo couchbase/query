@@ -60,8 +60,8 @@ func (this *Negate) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Negate) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Negate) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Negate) SubsetOf(other Expression) bool {

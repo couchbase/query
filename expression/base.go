@@ -47,9 +47,8 @@ func (this *ExpressionBase) fold(expr Expression) (Expression, error) {
 }
 
 func (this *ExpressionBase) formalize(expr Expression,
-	forbidden, allowed value.Value, keyspace string) (Expression, error) {
+	allowed value.Value, keyspace string) (Expression, error) {
 	f := &Formalizer{
-		Forbidden: forbidden,
 		Allowed:   allowed,
 		Keyspace:  keyspace,
 	}

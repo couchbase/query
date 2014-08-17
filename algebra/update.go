@@ -32,6 +32,59 @@ func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
+func (this *Update) VisitExpressions(visitor expression.Visitor) (err error) {
+	if this.keys != nil {
+		expr, err := visitor.Visit(this.keys)
+		if err != nil {
+			return err
+		}
+
+		this.keys = expr.(expression.Expression)
+	}
+
+	if this.set != nil {
+		err = this.set.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.unset != nil {
+		err = this.unset.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.where != nil {
+		expr, err := visitor.Visit(this.where)
+		if err != nil {
+			return err
+		}
+
+		this.where = expr.(expression.Expression)
+	}
+
+	if this.limit != nil {
+		expr, err := visitor.Visit(this.limit)
+		if err != nil {
+			return err
+		}
+
+		this.limit = expr.(expression.Expression)
+	}
+
+	if this.returning != nil {
+		err = this.returning.VisitExpressions(visitor)
+	}
+
+	return
+}
+
+func (this *Update) Formalize() (err error) {
+	return
+}
+
 func (this *Update) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
@@ -68,6 +121,17 @@ func NewSet(terms SetTerms) *Set {
 	return &Set{terms}
 }
 
+func (this *Set) VisitExpressions(visitor expression.Visitor) (err error) {
+	for _, term := range this.terms {
+		err = term.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 func (this *Set) Terms() SetTerms {
 	return this.terms
 }
@@ -78,6 +142,17 @@ type Unset struct {
 
 func NewUnset(terms UnsetTerms) *Unset {
 	return &Unset{terms}
+}
+
+func (this *Unset) VisitExpressions(visitor expression.Visitor) (err error) {
+	for _, term := range this.terms {
+		err = term.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	return
 }
 
 func (this *Unset) Terms() UnsetTerms {
@@ -94,6 +169,28 @@ type SetTerm struct {
 
 func NewSetTerm(path expression.Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
 	return &SetTerm{path, value, updateFor}
+}
+
+func (this *SetTerm) VisitExpressions(visitor expression.Visitor) (err error) {
+	path, err := visitor.Visit(this.path)
+	if err != nil {
+		return
+	}
+
+	this.path = path.(expression.Path)
+
+	val, err := visitor.Visit(this.value)
+	if err != nil {
+		return
+	}
+
+	this.value = val.(expression.Expression)
+
+	if this.updateFor != nil {
+		err = this.updateFor.VisitExpressions(visitor)
+	}
+
+	return
 }
 
 func (this *SetTerm) Path() expression.Path {
@@ -119,6 +216,21 @@ func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
 	return &UnsetTerm{path, updateFor}
 }
 
+func (this *UnsetTerm) VisitExpressions(visitor expression.Visitor) (err error) {
+	path, err := visitor.Visit(this.path)
+	if err != nil {
+		return
+	}
+
+	this.path = path.(expression.Path)
+
+	if this.updateFor != nil {
+		err = this.updateFor.VisitExpressions(visitor)
+	}
+
+	return
+}
+
 func (this *UnsetTerm) Path() expression.Path {
 	return this.path
 }
@@ -134,6 +246,24 @@ type UpdateFor struct {
 
 func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *UpdateFor {
 	return &UpdateFor{bindings, when}
+}
+
+func (this *UpdateFor) VisitExpressions(visitor expression.Visitor) (err error) {
+	err = this.bindings.VisitExpressions(visitor)
+	if err != nil {
+		return
+	}
+
+	if this.when != nil {
+		expr, err := visitor.Visit(this.when)
+		if err != nil {
+			return err
+		}
+
+		this.when = expr.(expression.Expression)
+	}
+
+	return
 }
 
 func (this *UpdateFor) Bindings() expression.Bindings {

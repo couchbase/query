@@ -86,8 +86,8 @@ func (this *ObjectLiteral) Fold() (Expression, error) {
 	return NewConstant(value.NewValue(c)), nil
 }
 
-func (this *ObjectLiteral) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ObjectLiteral) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ObjectLiteral) SubsetOf(other Expression) bool {

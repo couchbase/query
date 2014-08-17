@@ -38,7 +38,18 @@ func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
 	}
 }
 
-func (this *Projection) Formalize(forbidden, allowed value.Value, keyspace string) (
+func (this *Projection) VisitExpressions(visitor expression.Visitor) (err error) {
+	for _, term := range this.terms {
+		err = term.VisitExpression(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (this *Projection) Formalize(allowed value.Value, keyspace string) (
 	projection *Projection, err error) {
 	projection = &Projection{
 		distinct: this.distinct,
@@ -54,7 +65,7 @@ func (this *Projection) Formalize(forbidden, allowed value.Value, keyspace strin
 		}
 
 		if term.expr != nil {
-			terms[i].expr, err = term.expr.Formalize(forbidden, allowed, keyspace)
+			terms[i].expr, err = term.expr.Formalize(allowed, keyspace)
 			if err != nil {
 				return nil, err
 			}
@@ -90,6 +101,19 @@ func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm
 		star: star,
 		as:   as,
 	}
+}
+
+func (this *ResultTerm) VisitExpression(visitor expression.Visitor) (err error) {
+	if this.expr != nil {
+		expr, err := visitor.Visit(this.expr)
+		if err != nil {
+			return err
+		}
+
+		this.expr = expr.(expression.Expression)
+	}
+
+	return
 }
 
 func (this *ResultTerm) Expression() expression.Expression {

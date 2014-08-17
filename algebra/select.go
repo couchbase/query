@@ -34,21 +34,33 @@ func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
-func (this *Select) Formalize() (*Select, error) {
-	subresult, forbidden, allowed, keyspace, err := this.subresult.Formalize()
+func (this *Select) VisitExpressions(visitor expression.Visitor) (err error) {
+	err = this.subresult.VisitExpressions(visitor)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	order := this.order
-	if order != nil {
-		order, err = order.Formalize(forbidden, allowed, keyspace)
+	if this.order != nil {
+		err = this.order.VisitExpressions(visitor)
+	}
+
+	return
+}
+
+func (this *Select) Formalize() (err error) {
+	formalizer, err := this.subresult.Formalize()
+	if err != nil {
+		return err
+	}
+
+	if this.order != nil {
+		err = this.order.VisitExpressions(formalizer)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
-	return NewSelect(subresult, order, this.offset, this.limit), nil
+	return
 }
 
 func (this *Select) Subresult() Subresult {
@@ -93,18 +105,14 @@ func (this *SortTerm) Descending() bool {
 	return this.descending
 }
 
-func (this SortTerms) Formalize(forbidden, allowed value.Value, keyspace string) (
-	sortTerms SortTerms, err error) {
-	sortTerms = make(SortTerms, len(this))
-	for i, term := range this {
-		sortTerms[i] = &SortTerm{
-			descending: term.descending,
+func (this SortTerms) VisitExpressions(visitor expression.Visitor) (err error) {
+	for _, term := range this {
+		expr, err := visitor.Visit(term.expr)
+		if err != nil {
+			return err
 		}
 
-		sortTerms[i].expr, err = term.expr.Formalize(forbidden, allowed, keyspace)
-		if err != nil {
-			return nil, err
-		}
+		term.expr = expr.(expression.Expression)
 	}
 
 	return
@@ -113,7 +121,8 @@ func (this SortTerms) Formalize(forbidden, allowed value.Value, keyspace string)
 type Subresult interface {
 	Node
 	IsCorrelated() bool
-	Formalize() (subresult Subresult, forbidden, allowed value.Value, keyspace string, err error)
+	VisitExpressions(visitor expression.Visitor) error
+	Formalize() (formalizer *expression.Formalizer, err error)
 }
 
 type Subselect struct {
@@ -133,48 +142,81 @@ func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSubselect(this)
 }
 
-func (this *Subselect) Formalize() (subresult Subresult, forbidden, allowed value.Value, keyspace string, err error) {
+func (this *Subselect) VisitExpressions(visitor expression.Visitor) (err error) {
+	if this.from != nil {
+		err = this.from.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.let != nil {
+		err = this.let.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.where != nil {
+		expr, err := visitor.Visit(this.where)
+		if err != nil {
+			return err
+		}
+		this.where = expr.(expression.Expression)
+	}
+
+	if this.group != nil {
+		err = this.group.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	return this.projection.VisitExpressions(visitor)
+}
+
+func (this *Subselect) Formalize() (f *expression.Formalizer, err error) {
+	f = &expression.Formalizer{}
+
 	if this.from == nil {
-		forbidden = value.EMPTY_OBJECT_VALUE
-		allowed = value.EMPTY_OBJECT_VALUE
-		return this, forbidden, allowed, "", nil
+		f.Allowed = value.EMPTY_OBJECT_VALUE
+		return f, nil
 	}
 
-	forbidden, allowed, keyspace, err = this.from.Formalize()
+	f.Allowed, f.Keyspace, err = this.from.Formalize()
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
-	let := this.let
-	if let != nil {
-		let, forbidden, allowed, err = this.let.Formalize(forbidden, allowed, keyspace)
+	if this.let != nil {
+		f.Allowed, err = this.let.Formalize(f.Allowed, f.Keyspace)
 		if err != nil {
-			return nil, nil, nil, "", err
+			return nil, err
 		}
 	}
 
-	where := this.where
-	if where != nil {
-		where, err = this.where.Formalize(forbidden, allowed, keyspace)
+	if this.where != nil {
+		expr, err := f.Visit(this.where)
 		if err != nil {
-			return nil, nil, nil, "", err
+			return nil, err
+		}
+
+		this.where = expr.(expression.Expression)
+	}
+
+	if this.group != nil {
+		f.Allowed, err = this.group.Formalize(f.Allowed, f.Keyspace)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	group := this.group
-	if group != nil {
-		group, forbidden, allowed, err = this.group.Formalize(forbidden, allowed, keyspace)
-		if err != nil {
-			return nil, nil, nil, "", err
-		}
-	}
-
-	projection, err := this.projection.Formalize(forbidden, allowed, keyspace)
+	err = this.projection.VisitExpressions(f)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
-	return NewSubselect(this.from, let, where, group, projection), forbidden, allowed, keyspace, nil
+	return f, nil
 }
 
 func (this *Subselect) From() FromTerm {
@@ -215,39 +257,60 @@ func NewGroup(by expression.Expressions, letting expression.Bindings, having exp
 	}
 }
 
-func (this *Group) Formalize(forbidden, allowed value.Value, keyspace string) (
-	group *Group, f, a value.Value, err error) {
-	by := this.by
-	if by != nil {
-		by = make(expression.Expressions, len(this.by))
+func (this *Group) VisitExpressions(visitor expression.Visitor) (err error) {
+	if this.by != nil {
+		err = this.by.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.letting != nil {
+		err = this.letting.VisitExpressions(visitor)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.having != nil {
+		expr, err := visitor.Visit(this.having)
+		if err != nil {
+			return err
+		}
+
+		this.having = expr.(expression.Expression)
+	}
+
+	return
+}
+
+func (this *Group) Formalize(allowed value.Value, keyspace string) (a value.Value, err error) {
+	if this.by != nil {
 		for i, b := range this.by {
-			by[i], err = b.Formalize(forbidden, allowed, keyspace)
+			this.by[i], err = b.Formalize(allowed, keyspace)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, err
 			}
 		}
 	}
 
-	letting := this.letting
-	if letting != nil {
-		letting, f, a, err = this.letting.Formalize(forbidden, allowed, keyspace)
+	if this.letting != nil {
+		allowed, err = this.letting.Formalize(allowed, keyspace)
 		if err != nil {
-			return nil, nil, nil, err
-		}
-	} else {
-		f = forbidden
-		a = allowed
-	}
-
-	having := this.having
-	if having != nil {
-		having, err = this.having.Formalize(f, a, keyspace)
-		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
-	return NewGroup(by, letting, having), f, a, nil
+	if this.having != nil {
+		expr, err := this.having.Formalize(allowed, keyspace)
+		if err != nil {
+			return nil, err
+		}
+
+		this.having = expr.(expression.Expression)
+	}
+
+	return allowed, nil
 }
 
 func (this *Group) By() expression.Expressions {
@@ -296,29 +359,39 @@ func (this *Union) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnion(this)
 }
 
-func (this *Union) Formalize() (subresult Subresult, forbidden, allowed value.Value, keyspace string, err error) {
-	first, _, fa, _, err := this.first.Formalize()
+func (this *Union) VisitExpressions(visitor expression.Visitor) (err error) {
+	err = this.first.VisitExpressions(visitor)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return
 	}
 
-	second, _, sa, _, err := this.second.Formalize()
+	return this.second.VisitExpressions(visitor)
+}
+
+func (this *Union) Formalize() (f *expression.Formalizer, err error) {
+	var ff, sf *expression.Formalizer
+	ff, err = this.first.Formalize()
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
+	}
+
+	sf, err = this.second.Formalize()
+	if err != nil {
+		return nil, err
 	}
 
 	// Intersection
-	ff := fa.Fields()
-	sf := sa.Fields()
-	for f, _ := range ff {
-		_, ok := sf[f]
+	fa := ff.Allowed.Fields()
+	sa := sf.Allowed.Fields()
+	for field, _ := range fa {
+		_, ok := sa[field]
 		if !ok {
-			delete(ff, f)
+			delete(fa, field)
 		}
 	}
 
-	allowed = value.NewValue(ff)
-	return NewUnion(first, second), nil, allowed, "", nil
+	ff.Allowed = value.NewValue(fa)
+	return ff, nil
 }
 
 type UnionAll struct {
@@ -338,27 +411,37 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnionAll(this)
 }
 
-func (this *UnionAll) Formalize() (subresult Subresult, forbidden, allowed value.Value, keyspace string, err error) {
-	first, _, fa, _, err := this.first.Formalize()
+func (this *UnionAll) VisitExpressions(visitor expression.Visitor) (err error) {
+	err = this.first.VisitExpressions(visitor)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return
 	}
 
-	second, _, sa, _, err := this.second.Formalize()
+	return this.second.VisitExpressions(visitor)
+}
+
+func (this *UnionAll) Formalize() (f *expression.Formalizer, err error) {
+	var ff, sf *expression.Formalizer
+	ff, err = this.first.Formalize()
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
+	}
+
+	sf, err = this.second.Formalize()
+	if err != nil {
+		return nil, err
 	}
 
 	// Intersection
-	ff := fa.Fields()
-	sf := sa.Fields()
-	for f, _ := range ff {
-		_, ok := sf[f]
+	fa := ff.Allowed.Fields()
+	sa := sf.Allowed.Fields()
+	for field, _ := range fa {
+		_, ok := sa[field]
 		if !ok {
-			delete(ff, f)
+			delete(fa, field)
 		}
 	}
 
-	allowed = value.NewValue(ff)
-	return NewUnionAll(first, second), nil, allowed, "", nil
+	ff.Allowed = value.NewValue(fa)
+	return ff, nil
 }

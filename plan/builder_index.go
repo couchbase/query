@@ -7,26 +7,20 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package algebra
+package plan
 
-type KeyspaceRef struct {
-	namespace string `json:"namespace"`
-	keyspace  string `json:"keyspace"`
-	as        string `json:"as"`
+import (
+	"github.com/couchbaselabs/query/algebra"
+)
+
+func (this *builder) VisitCreateIndex(node *algebra.CreateIndex) (interface{}, error) {
+	return NewCreateIndex(node), nil
 }
 
-func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
-	return &KeyspaceRef{namespace, keyspace, as}
+func (this *builder) VisitDropIndex(node *algebra.DropIndex) (interface{}, error) {
+	return NewDropIndex(node), nil
 }
 
-func (this *KeyspaceRef) Namespace() string {
-	return this.namespace
-}
-
-func (this *KeyspaceRef) Keyspace() string {
-	return this.keyspace
-}
-
-func (this *KeyspaceRef) As() string {
-	return this.as
+func (this *builder) VisitAlterIndex(node *algebra.AlterIndex) (interface{}, error) {
+	return NewAlterIndex(node), nil
 }

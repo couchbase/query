@@ -25,11 +25,10 @@ func (this *Folder) Visit(expr Expression) (Expression, error) {
 }
 
 type Formalizer struct {
-	Forbidden value.Value
 	Allowed   value.Value
 	Keyspace  string
 }
 
 func (this *Formalizer) Visit(expr Expression) (Expression, error) {
-	return expr.Formalize(this.Forbidden, this.Allowed, this.Keyspace)
+	return expr.Formalize(this.Allowed, this.Keyspace)
 }

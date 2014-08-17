@@ -94,8 +94,8 @@ func (this *Every) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Every) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Every) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Every) SubsetOf(other Expression) bool {

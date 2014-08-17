@@ -37,8 +37,8 @@ func (this *IfMissing) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfMissing) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfMissing) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfMissing) SubsetOf(other Expression) bool {
@@ -87,8 +87,8 @@ func (this *IfMissingOrNull) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfMissingOrNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfMissingOrNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfMissingOrNull) SubsetOf(other Expression) bool {
@@ -137,8 +137,8 @@ func (this *IfNull) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfNull) SubsetOf(other Expression) bool {
@@ -188,8 +188,8 @@ func (this *MissingIf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *MissingIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *MissingIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *MissingIf) SubsetOf(other Expression) bool {
@@ -239,8 +239,8 @@ func (this *NullIf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *NullIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *NullIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *NullIf) SubsetOf(other Expression) bool {

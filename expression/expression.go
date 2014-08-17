@@ -36,10 +36,9 @@ type Expression interface {
 	Fold() (Expression, error)
 
 	// Formal notation; qualify fields with keyspace name.
-	// Identifiers in "forbidden" result in error.
 	// Identifiers in "allowed" are left unmodified.
 	// Any other identifier is qualified with keyspace; if keyspace is empty, then error.
-	Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error)
+	Formalize(allowed value.Value, keyspace string) (Expression, error)
 
 	// Is this expression a subset of the other.
 	// E.g. A < 5 is a subset of A < 10.
@@ -48,4 +47,17 @@ type Expression interface {
 	// Utility
 	Children() Expressions
 	VisitChildren(visitor Visitor) (Expression, error)
+}
+
+func (this Expressions) VisitExpressions(visitor Visitor) (err error) {
+	for i, e := range this {
+		expr, err := visitor.Visit(e)
+		if err != nil {
+			return err
+		}
+
+		this[i] = expr.(Expression)
+	}
+
+	return
 }

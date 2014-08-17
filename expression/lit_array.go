@@ -37,8 +37,8 @@ func (this *ArrayLiteral) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayLiteral) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayLiteral) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayLiteral) SubsetOf(other Expression) bool {

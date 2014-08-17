@@ -49,25 +49,16 @@ func (this *Identifier) Fold() (Expression, error) {
 }
 
 // Formal notation; qualify fields with keyspace name.
-// Identifiers in "forbidden" result in error.
 // Identifiers in "allowed" are left unmodified.
 // Any other identifier is qualified with keyspace; if keyspace is empty, then error.
-func (this *Identifier) Formalize(forbidden, allowed value.Value,
-	keyspace string) (Expression, error) {
-	_, ok := forbidden.Field(this.identifier)
-	if ok {
-		return nil, fmt.Errorf("Disallowed reference to alias %v.",
-			this.identifier)
-	}
-
-	_, ok = allowed.Field(this.identifier)
+func (this *Identifier) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	_, ok := allowed.Field(this.identifier)
 	if ok {
 		return this, nil
 	}
 
 	if keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field %v.",
-			this.identifier)
+		return nil, fmt.Errorf("Ambiguous reference to field %v.", this.identifier)
 	}
 
 	return NewField(NewIdentifier(keyspace), NewFieldName(this.identifier)), nil

@@ -37,8 +37,8 @@ func (this *IsMissing) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IsMissing) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IsMissing) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IsMissing) SubsetOf(other Expression) bool {

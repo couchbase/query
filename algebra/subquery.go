@@ -36,7 +36,7 @@ func (this *Subquery) Fold() (expression.Expression, error) {
 	return this, nil
 }
 
-func (this *Subquery) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
+func (this *Subquery) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
 	return this, nil
 }
 

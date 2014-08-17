@@ -29,3 +29,62 @@ func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
 func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDelete(this)
 }
+
+func (this *Delete) VisitExpressions(visitor expression.Visitor) (err error) {
+	if this.keys != nil {
+		expr, err := visitor.Visit(this.keys)
+		if err != nil {
+			return err
+		}
+
+		this.keys = expr.(expression.Expression)
+	}
+
+	if this.where != nil {
+		expr, err := visitor.Visit(this.where)
+		if err != nil {
+			return err
+		}
+
+		this.where = expr.(expression.Expression)
+	}
+
+	if this.limit != nil {
+		expr, err := visitor.Visit(this.limit)
+		if err != nil {
+			return err
+		}
+
+		this.limit = expr.(expression.Expression)
+	}
+
+	if this.returning != nil {
+		err = this.returning.VisitExpressions(visitor)
+	}
+
+	return
+}
+
+func (this *Delete) Formalize() (err error) {
+	return
+}
+
+func (this *Delete) KeyspaceRef() *KeyspaceRef {
+	return this.keyspace
+}
+
+func (this *Delete) Keys() expression.Expression {
+	return this.keys
+}
+
+func (this *Delete) Where() expression.Expression {
+	return this.where
+}
+
+func (this *Delete) Limit() expression.Expression {
+	return this.limit
+}
+
+func (this *Delete) Returning() *Projection {
+	return this.returning
+}

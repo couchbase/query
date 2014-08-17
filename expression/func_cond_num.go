@@ -39,8 +39,8 @@ func (this *IfInf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfInf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfInf) SubsetOf(other Expression) bool {
@@ -96,8 +96,8 @@ func (this *IfNaN) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfNaN) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfNaN) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfNaN) SubsetOf(other Expression) bool {
@@ -153,8 +153,8 @@ func (this *IfNaNOrInf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfNaNOrInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfNaNOrInf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfNaNOrInf) SubsetOf(other Expression) bool {
@@ -210,8 +210,8 @@ func (this *IfNegInf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfNegInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfNegInf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfNegInf) SubsetOf(other Expression) bool {
@@ -267,8 +267,8 @@ func (this *IfPosInf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *IfPosInf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *IfPosInf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *IfPosInf) SubsetOf(other Expression) bool {
@@ -324,8 +324,8 @@ func (this *FirstNum) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *FirstNum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *FirstNum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *FirstNum) SubsetOf(other Expression) bool {
@@ -382,8 +382,8 @@ func (this *NaNIf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *NaNIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *NaNIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *NaNIf) SubsetOf(other Expression) bool {
@@ -433,8 +433,8 @@ func (this *NegInfIf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *NegInfIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *NegInfIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *NegInfIf) SubsetOf(other Expression) bool {
@@ -484,8 +484,8 @@ func (this *PosInfIf) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *PosInfIf) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *PosInfIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *PosInfIf) SubsetOf(other Expression) bool {

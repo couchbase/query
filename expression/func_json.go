@@ -38,8 +38,8 @@ func (this *DecodeJSON) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DecodeJSON) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DecodeJSON) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DecodeJSON) SubsetOf(other Expression) bool {
@@ -97,8 +97,8 @@ func (this *EncodeJSON) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *EncodeJSON) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *EncodeJSON) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *EncodeJSON) SubsetOf(other Expression) bool {
@@ -143,8 +143,8 @@ func (this *EncodedSize) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *EncodedSize) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *EncodedSize) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *EncodedSize) SubsetOf(other Expression) bool {
@@ -189,8 +189,8 @@ func (this *PolyLength) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *PolyLength) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *PolyLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *PolyLength) SubsetOf(other Expression) bool {

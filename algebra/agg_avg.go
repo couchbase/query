@@ -32,8 +32,8 @@ func (this *Avg) Fold() (expression.Expression, error) {
 	return this.fold(this)
 }
 
-func (this *Avg) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *Avg) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *Avg) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {

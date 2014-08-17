@@ -47,8 +47,8 @@ func (this *ArrayAppend) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayAppend) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayAppend) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayAppend) SubsetOf(other Expression) bool {
@@ -109,8 +109,8 @@ func (this *ArrayAvg) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayAvg) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayAvg) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayAvg) SubsetOf(other Expression) bool {
@@ -183,8 +183,8 @@ func (this *ArrayConcat) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayConcat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayConcat) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayConcat) SubsetOf(other Expression) bool {
@@ -245,8 +245,8 @@ func (this *ArrayContains) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayContains) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayContains) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayContains) SubsetOf(other Expression) bool {
@@ -310,8 +310,8 @@ func (this *ArrayCount) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayCount) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayCount) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayCount) SubsetOf(other Expression) bool {
@@ -377,8 +377,8 @@ func (this *ArrayDistinct) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayDistinct) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayDistinct) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayDistinct) SubsetOf(other Expression) bool {
@@ -441,8 +441,8 @@ func (this *ArrayIfNull) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayIfNull) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayIfNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayIfNull) SubsetOf(other Expression) bool {
@@ -507,8 +507,8 @@ func (this *ArrayLength) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayLength) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayLength) SubsetOf(other Expression) bool {
@@ -566,8 +566,8 @@ func (this *ArrayMax) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayMax) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayMax) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayMax) SubsetOf(other Expression) bool {
@@ -633,8 +633,8 @@ func (this *ArrayMin) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayMin) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayMin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayMin) SubsetOf(other Expression) bool {
@@ -702,8 +702,8 @@ func (this *ArrayPosition) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayPosition) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayPosition) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayPosition) SubsetOf(other Expression) bool {
@@ -768,8 +768,8 @@ func (this *ArrayPrepend) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayPrepend) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayPrepend) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayPrepend) SubsetOf(other Expression) bool {
@@ -833,8 +833,8 @@ func (this *ArrayPut) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayPut) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayPut) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayPut) SubsetOf(other Expression) bool {
@@ -902,8 +902,8 @@ func (this *ArrayRange) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayRange) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayRange) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayRange) SubsetOf(other Expression) bool {
@@ -990,8 +990,8 @@ func (this *ArrayRemove) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayRemove) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayRemove) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayRemove) SubsetOf(other Expression) bool {
@@ -1059,8 +1059,8 @@ func (this *ArrayRepeat) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayRepeat) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayRepeat) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayRepeat) SubsetOf(other Expression) bool {
@@ -1128,8 +1128,8 @@ func (this *ArrayReplace) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayReplace) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayReplace) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayReplace) SubsetOf(other Expression) bool {
@@ -1205,8 +1205,8 @@ func (this *ArrayReverse) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayReverse) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayReverse) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayReverse) SubsetOf(other Expression) bool {
@@ -1271,8 +1271,8 @@ func (this *ArraySort) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArraySort) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArraySort) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArraySort) SubsetOf(other Expression) bool {
@@ -1332,8 +1332,8 @@ func (this *ArraySum) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArraySum) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArraySum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArraySum) SubsetOf(other Expression) bool {

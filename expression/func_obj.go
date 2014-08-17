@@ -39,8 +39,8 @@ func (this *ObjectKeys) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ObjectKeys) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ObjectKeys) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ObjectKeys) SubsetOf(other Expression) bool {
@@ -103,8 +103,8 @@ func (this *ObjectLength) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ObjectLength) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ObjectLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ObjectLength) SubsetOf(other Expression) bool {
@@ -156,8 +156,8 @@ func (this *ObjectValues) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ObjectValues) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ObjectValues) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ObjectValues) SubsetOf(other Expression) bool {

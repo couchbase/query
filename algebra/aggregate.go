@@ -56,10 +56,9 @@ func (this *aggregateBase) fold(agg Aggregate) (expression.Expression, error) {
 	return agg.VisitChildren(&expression.Folder{})
 }
 
-func (this *aggregateBase) formalize(agg Aggregate, forbidden, allowed value.Value,
+func (this *aggregateBase) formalize(agg Aggregate, allowed value.Value,
 	keyspace string) (expression.Expression, error) {
 	f := &expression.Formalizer{
-		Forbidden: forbidden,
 		Allowed:   allowed,
 		Keyspace:  keyspace,
 	}

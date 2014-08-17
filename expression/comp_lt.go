@@ -38,8 +38,8 @@ func (this *LT) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *LT) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *LT) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *LT) SubsetOf(other Expression) bool {

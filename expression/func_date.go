@@ -39,7 +39,7 @@ func (this *ClockMillis) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *ClockMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+func (this *ClockMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
 	return this, nil
 }
 
@@ -79,8 +79,8 @@ func (this *ClockStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ClockStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ClockStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ClockStr) SubsetOf(other Expression) bool {
@@ -137,8 +137,8 @@ func (this *DateAddMillis) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateAddMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateAddMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateAddMillis) SubsetOf(other Expression) bool {
@@ -207,8 +207,8 @@ func (this *DateAddStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateAddStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateAddStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateAddStr) SubsetOf(other Expression) bool {
@@ -282,8 +282,8 @@ func (this *DateDiffMillis) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateDiffMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateDiffMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateDiffMillis) SubsetOf(other Expression) bool {
@@ -348,8 +348,8 @@ func (this *DateDiffStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateDiffStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateDiffStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateDiffStr) SubsetOf(other Expression) bool {
@@ -425,8 +425,8 @@ func (this *DatePartMillis) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DatePartMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DatePartMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DatePartMillis) SubsetOf(other Expression) bool {
@@ -485,8 +485,8 @@ func (this *DatePartStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DatePartStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DatePartStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DatePartStr) SubsetOf(other Expression) bool {
@@ -550,8 +550,8 @@ func (this *DateTruncMillis) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateTruncMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateTruncMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateTruncMillis) SubsetOf(other Expression) bool {
@@ -613,8 +613,8 @@ func (this *DateTruncStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *DateTruncStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *DateTruncStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *DateTruncStr) SubsetOf(other Expression) bool {
@@ -677,8 +677,8 @@ func (this *MillisToStr) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *MillisToStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *MillisToStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *MillisToStr) SubsetOf(other Expression) bool {
@@ -738,8 +738,8 @@ func (this *MillisToUTC) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *MillisToUTC) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *MillisToUTC) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *MillisToUTC) SubsetOf(other Expression) bool {
@@ -799,8 +799,8 @@ func (this *MillisToZoneName) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *MillisToZoneName) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *MillisToZoneName) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *MillisToZoneName) SubsetOf(other Expression) bool {
@@ -864,7 +864,7 @@ func (this *NowMillis) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *NowMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
+func (this *NowMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
 	return this, nil
 }
 
@@ -926,8 +926,8 @@ func (this *NowStr) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *NowStr) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *NowStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *NowStr) SubsetOf(other Expression) bool {
@@ -972,8 +972,8 @@ func (this *StrToMillis) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *StrToMillis) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *StrToMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *StrToMillis) SubsetOf(other Expression) bool {
@@ -1030,8 +1030,8 @@ func (this *StrToUTC) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *StrToUTC) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *StrToUTC) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *StrToUTC) SubsetOf(other Expression) bool {
@@ -1090,8 +1090,8 @@ func (this *StrToZoneName) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *StrToZoneName) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *StrToZoneName) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *StrToZoneName) SubsetOf(other Expression) bool {

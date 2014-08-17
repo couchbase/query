@@ -47,7 +47,7 @@ func (this *Constant) Fold() (Expression, error) {
 	return this, nil
 }
 
-func (this *Constant) Formalize(forbidden, allowed value.Value,
+func (this *Constant) Formalize(allowed value.Value,
 	keyspace string) (Expression, error) {
 	return this, nil
 }

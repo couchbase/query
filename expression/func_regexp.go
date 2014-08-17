@@ -44,8 +44,8 @@ func (this *RegexpContains) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *RegexpContains) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *RegexpContains) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *RegexpContains) SubsetOf(other Expression) bool {
@@ -111,8 +111,8 @@ func (this *RegexpLike) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *RegexpLike) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *RegexpLike) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *RegexpLike) SubsetOf(other Expression) bool {
@@ -178,8 +178,8 @@ func (this *RegexpPosition) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *RegexpPosition) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *RegexpPosition) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *RegexpPosition) SubsetOf(other Expression) bool {
@@ -272,8 +272,8 @@ func (this *RegexpReplace) Fold() (Expression, error) {
 	return this.fold(this)
 }
 
-func (this *RegexpReplace) Formalize(forbidden, allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *RegexpReplace) Formalize(allowed value.Value, keyspace string) (Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *RegexpReplace) SubsetOf(other Expression) bool {

@@ -33,8 +33,8 @@ func (this *ArrayAgg) Fold() (expression.Expression, error) {
 	return this.fold(this)
 }
 
-func (this *ArrayAgg) Formalize(forbidden, allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, forbidden, allowed, keyspace)
+func (this *ArrayAgg) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
+	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *ArrayAgg) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {

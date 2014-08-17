@@ -53,27 +53,38 @@ func (this *Binding) Accept(visitor Visitor) (Expression, error) {
 
 	return this.expr, nil
 }
-func (this Bindings) Formalize(forbidden, allowed value.Value, keyspace string) (
-	bindings Bindings, f, a value.Value, err error) {
-	bindings = make(Bindings, len(this))
-	f = forbidden
+
+func (this Bindings) VisitExpressions(visitor Visitor) (err error) {
+	for _, b := range this {
+		expr, err := visitor.Visit(b.expr)
+		if err != nil {
+			return err
+		}
+
+		b.expr = expr.(Expression)
+	}
+
+	return
+}
+
+func (this Bindings) Formalize(allowed value.Value, keyspace string) (a value.Value, err error) {
 	a = value.NewScopeValue(make(map[string]interface{}, len(this)), allowed)
 
-	for i, b := range this {
+	for _, b := range this {
 		_, ok := a.Field(b.variable)
 		if ok {
-			return nil, nil, nil, errors.NewError(nil,
+			return nil, errors.NewError(nil,
 				fmt.Sprintf("Bind alias %s already in scope.", b.variable))
 		}
 
-		expr, err := b.expr.Formalize(f, a, keyspace)
+		expr, err := b.expr.Formalize(a, keyspace)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 
-		bindings[i] = NewBinding(b.variable, expr)
+		b.expr = expr
 		a.SetField(b.variable, b.variable)
 	}
 
-	return bindings, f, a, nil
+	return a, nil
 }
