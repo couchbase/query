@@ -22,6 +22,7 @@ package clustering_stub
 
 import (
 	"github.com/couchbaselabs/query/accounting"
+	"github.com/couchbaselabs/query/accounting/stub"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
@@ -124,7 +125,7 @@ func (ClusterStub) Datastore() datastore.Datastore {
 }
 
 func (ClusterStub) AccountingStore() accounting.AccountingStore {
-	return nil
+	return accounting_stub.AccountingStoreStub{}
 }
 
 func (ClusterStub) ConfigurationStore() clustering.ConfigurationStore {
@@ -171,7 +172,7 @@ func (QueryNodeStub) Datastore() datastore.Datastore {
 }
 
 func (QueryNodeStub) AccountingStore() accounting.AccountingStore {
-	return nil
+	return accounting_stub.AccountingStoreStub{}
 }
 
 func (QueryNodeStub) ConfigurationStore() clustering.ConfigurationStore {

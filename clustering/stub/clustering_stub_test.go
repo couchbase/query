@@ -9,7 +9,11 @@
 
 package clustering_stub
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/couchbaselabs/query/accounting/stub"
+)
 
 func TestStub(t *testing.T) {
 	cs := NewConfigurationStore()
@@ -47,4 +51,24 @@ func TestStub(t *testing.T) {
 		t.Errorf("Unexpected cluster id in Query Node: %v", q.ClusterId())
 	}
 
+	as := q.AccountingStore()
+
+	if as.Id() != c.AccountingStore().Id() {
+		t.Errorf("Unexpected Accounting store id in Query Node: %v", as.Id())
+	}
+
+	mr := as.MetricRegistry()
+
+	mr.Register("metric1", accounting_stub.GaugeStub{})
+
+	g := mr.Get("metric1")
+	if g != nil {
+		t.Errorf("MetricsRegsitryStub should not have any state")
+	}
+
+	gauges := mr.Gauges()
+
+	for k, v := range gauges {
+		t.Errorf("Gauges map should be empty, found values: %v, %v", k, v)
+	}
 }
