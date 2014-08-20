@@ -34,13 +34,14 @@ type Mode string // A Query Node runs in a particular Mode
 const (
 	STANDALONE Mode = "standalone" // Query Node is running by itself, it is not part of a cluster
 	CLUSTER    Mode = "cluster"    // Query Node is part of a cluster (could be a single node cluster)
+	STUB       Mode = "stubbed"    // Query Node is a stub
 )
 
 // Version provides a abstraction of logical software version for Query Nodes;
 // it could represent server build version or API version
 type Version interface {
-	string() string            // Return a string representation of the version
-	Compatible(Version v) bool // Return true if the given Version is compatible with this Version
+	String() string            // Return a string representation of the version
+	Compatible(v Version) bool // Return true if the given Version is compatible with this Version
 }
 
 // ConfigurationStore represents a store for maintaining all cluster configuration data.

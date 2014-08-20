@@ -132,16 +132,16 @@ type HealthCheck interface {
 // The result of a health check; the possibilities are: healthy with optional message
 // or unhealthy with an error message or error object.
 type HealthCheckResult interface {
-	IsHealthy() bool // true if result is that the health check passed
-	Message() string // Return message for the result (or nil if no message)
-	Error() Error    // Return error for the result (or nil if no error)
+	IsHealthy() bool     // true if result is that the health check passed
+	Message() string     // Return message for the result (or nil if no message)
+	Error() errors.Error // Return error for the result (or nil if no error)
 }
 
 // HealthCheckRegistry is a centralized container for managing all health checks.
 type HealthCheckRegistry interface {
 	// Register a health check with the given name.
 	// Reason for error: given name already in use.
-	Register(name string, HealthCheck hc) errors.Error
+	Register(name string, hc HealthCheck) errors.Error
 
 	// Unregister the health check with the given name
 	// Reasons for error: no such name in use
