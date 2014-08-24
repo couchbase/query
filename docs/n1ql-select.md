@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-08-10
+* Modified: 2014-08-20
 
 ## Introduction
 
@@ -1710,20 +1710,20 @@ __META(expr)__ - meta data for the document _expr_.
 
 ### Type checking functions
 
-__IS\_ARRAY(expr)__ - true if expr is an array; else false.
+__ISARRAY(expr)__ - true if expr is an array; else false.
 
-__IS\_ATOM(expr)__ - true if expr is a boolean, number, or
+__ISATOM(expr)__ - true if expr is a boolean, number, or
 string; else false.
 
-__IS\_BOOL(expr)__ - true if expr is a boolean; else false.
+__ISBOOL(expr)__ - true if expr is a boolean; else false.
 
-__IS\_NUM(expr)__ - true if expr is a number; else false.
+__ISNUM(expr)__ - true if expr is a number; else false.
 
-__IS\_OBJ(expr)__ - true if expr is an object; else false.
+__ISOBJ(expr)__ - true if expr is an object; else false.
 
-__IS\_STR(expr)__ - true if expr is a string; else false.
+__ISSTR(expr)__ - true if expr is a string; else false.
 
-__TYPE\_NAME(expr)__ - one of the following strings, based on the value
+__TYPENAME(expr)__ - one of the following strings, based on the value
 of expr:
 
 * __"missing"__
@@ -1737,14 +1737,14 @@ of expr:
 
 ### Type conversion functions
 
-__TO\_ARRAY(expr)__ - array as follows:
+__TOARRAY(expr)__ - array as follows:
 
 * MISSING is MISSING
 * NULL is NULL
 * arrays are themselves
 * all other values are wrapped in an array
 
-__TO\_ATOM(expr)__ - atomic value as follows:
+__TOATOM(expr)__ - atomic value as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1753,7 +1753,7 @@ __TO\_ATOM(expr)__ - atomic value as follows:
 * booleans, numbers, and strings are themselves
 * all other values are NULL
 
-__TO\_BOOL(expr)__ - boolean as follows:
+__TOBOOL(expr)__ - boolean as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1762,7 +1762,7 @@ __TO\_BOOL(expr)__ - boolean as follows:
 * empty strings, arrays, and objects are false
 * all other values are true
 
-__TO\_NUM(expr)__ - number as follows:
+__TONUM(expr)__ - number as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1772,7 +1772,7 @@ __TO\_NUM(expr)__ - number as follows:
 * strings that parse as numbers are those numbers
 * all other values are NULL
 
-__TO\_STR(expr)__ - string as follows:
+__TOSTR(expr)__ - string as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -2314,6 +2314,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added WITHIN
 * 2014-08-10 - Keywords
     * Added keywords
+* 2014-08-10 - Functions
+    * Removed _ in type checking and conversion function names
 
 ### Open issues
 
