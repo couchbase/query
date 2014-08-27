@@ -16,6 +16,7 @@ import (
 )
 
 type IndexType string
+type IndexKey expression.Expressions
 
 const (
 	DEFAULT     IndexType = "default"     // default may vary per backend

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/datastore/couchbase"
 	"github.com/couchbaselabs/query/datastore/file"
 	"github.com/couchbaselabs/query/datastore/mock"
 	"github.com/couchbaselabs/query/errors"
@@ -22,6 +23,10 @@ import (
 func NewDatastore(uri string) (datastore.Datastore, errors.Error) {
 	if strings.HasPrefix(uri, ".") || strings.HasPrefix(uri, "/") {
 		return file.NewDatastore(uri)
+	}
+
+	if strings.HasPrefix(uri, "http:") {
+		return couchbase.NewDatastore(uri)
 	}
 
 	if strings.HasPrefix(uri, "dir:") {
