@@ -9,6 +9,10 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/expression"
+)
+
 type Visitor interface {
 	// SELECT
 	VisitSelect(node *Select) (interface{}, error)
@@ -37,5 +41,7 @@ type Visitor interface {
 }
 
 type ExpressionVisitor interface {
+	expression.Visitor
+
 	VisitSubquery(expr *Subquery) (interface{}, error)
 }
