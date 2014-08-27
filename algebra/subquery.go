@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,12 +28,14 @@ func NewSubquery(query *Select) expression.Expression {
 }
 
 func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
-	v, ok := visitor.(ExpressionVisitor)
-	if !ok {
-		return this, nil // XXX TODO MUSTFIX
+	switch v := visitor.(type) {
+	case ExpressionVisitor:
+		return v.VisitSubquery(this)
+	case expression.Mapper:
+		return this, nil
+	default:
+		panic(fmt.Sprintf("Subquery visited by %T", visitor))
 	}
-
-	return v.VisitSubquery(this)
 }
 
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
