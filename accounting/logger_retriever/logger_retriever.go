@@ -70,7 +70,16 @@ func (rl *RetrieverLogger) Log(level accounting.LogLevel, args ...interface{}) {
 
 // change log level
 func (rl *RetrieverLogger) SetLevel(level accounting.LogLevel) {
-	rl.logWriter.SetLogLevel(logger.LogLevel(level - 1))
+	switch level {
+	case accounting.Error:
+		rl.logWriter.SetLogLevel(logger.LevelError)
+	case accounting.Warn:
+		rl.logWriter.SetLogLevel(logger.LevelWarn)
+	case accounting.Info:
+		rl.logWriter.SetLogLevel(logger.LevelInfo)
+	case accounting.Debug:
+		rl.logWriter.SetLogLevel(logger.LevelDebug)
+	}
 }
 
 // Functions for mapping Logger API arguments to the Retriever API.
