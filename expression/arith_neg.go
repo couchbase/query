@@ -13,71 +13,36 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Negate struct {
-	unaryBase
+type Neg struct {
+	UnaryFunctionBase
 }
 
-func NewNegate(operand Expression) Expression {
-	return &Negate{
-		unaryBase{
-			operand: operand,
-		},
+func NewNeg(operand Expression) Function {
+	return &Neg{
+		*NewUnaryFunctionBase("neg", operand),
 	}
 }
 
-func (this *Negate) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+func (this *Neg) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNeg(this)
 }
 
-func (this *Negate) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *Neg) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Negate) Fold() (Expression, error) {
-	t, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.eval(o.Value())
-		if e != nil {
-			return nil, e
-		}
-		return NewConstant(v), nil
-	case *Negate:
-		return o.operand, nil
-	case *Add:
-		operands := make(Expressions, len(o.operands))
-		for i, oo := range o.operands {
-			operands[i] = NewNegate(oo)
-		}
-		add := NewAdd(operands...)
-		return add.Fold()
-	}
-
-	return this, nil
-}
-
-func (this *Negate) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Negate) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Negate) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Negate) eval(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.NUMBER {
-		return value.NewValue(-operand.Actual().(float64)), nil
-	} else if operand.Type() == value.MISSING {
+func (this *Neg) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.NUMBER {
+		return value.NewValue(-arg.Actual().(float64)), nil
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else {
 		return value.NULL_VALUE, nil
+	}
+}
+
+func (this *Neg) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNeg(operands[0])
 	}
 }

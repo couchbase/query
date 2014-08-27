@@ -14,49 +14,35 @@ import (
 )
 
 type LT struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
-func NewLT(first, second Expression) Expression {
+func NewLT(first, second Expression) Function {
 	return &LT{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("lt", first, second),
 	}
 }
 
+func (this *LT) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitLT(this)
+}
+
 func (this *LT) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *LT) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *LT) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *LT) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *LT) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *LT) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *LT) eval(first, second value.Value) (value.Value, error) {
+func (this *LT) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(first.Collate(second) < 0), nil
+}
+
+func (this *LT) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewLT(operands[0], operands[1])
+	}
 }

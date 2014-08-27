@@ -15,44 +15,25 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Modulo struct {
-	binaryBase
+type Mod struct {
+	BinaryFunctionBase
 }
 
-func NewModulo(first, second Expression) Expression {
-	return &Modulo{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+func NewMod(first, second Expression) Function {
+	return &Mod{
+		*NewBinaryFunctionBase("mod", first, second),
 	}
 }
 
-func (this *Modulo) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+func (this *Mod) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMod(this)
 }
 
-func (this *Modulo) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *Mod) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *Modulo) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Modulo) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Modulo) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Modulo) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Modulo) eval(first, second value.Value) (value.Value, error) {
+func (this *Mod) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if second.Type() == value.NUMBER {
 		s := second.Actual().(float64)
 		if s == 0.0 {
@@ -70,4 +51,10 @@ func (this *Modulo) eval(first, second value.Value) (value.Value, error) {
 	}
 
 	return value.NULL_VALUE, nil
+}
+
+func (this *Mod) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewMod(operands[0], operands[1])
+	}
 }

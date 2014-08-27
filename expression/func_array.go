@@ -23,49 +23,28 @@ import (
 ///////////////////////////////////////////////////
 
 type ArrayAppend struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayAppend(first, second Expression) Function {
 	return &ArrayAppend{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_append", first, second),
 	}
 }
 
+func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayAppend) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayAppend) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayAppend) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayAppend) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayAppend) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayAppend) eval(first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
+func (this *ArrayAppend) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
-	} else if second.Type() == value.MISSING {
-		return first, nil
 	}
 
 	f := first.Actual().([]interface{})
@@ -74,8 +53,8 @@ func (this *ArrayAppend) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayAppend) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayAppend(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayAppend(operands[0], operands[1])
 	}
 }
 
@@ -86,42 +65,24 @@ func (this *ArrayAppend) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayAvg struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayAvg(arg Expression) Function {
+func NewArrayAvg(operand Expression) Function {
 	return &ArrayAvg{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_avg", operand),
 	}
 }
 
+func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayAvg) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayAvg) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayAvg) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayAvg) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayAvg) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayAvg) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -147,8 +108,8 @@ func (this *ArrayAvg) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayAvg) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayAvg(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayAvg(operands[0])
 	}
 }
 
@@ -159,43 +120,24 @@ func (this *ArrayAvg) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayConcat struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayConcat(first, second Expression) Function {
 	return &ArrayConcat{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_concat", first, second),
 	}
 }
 
+func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayConcat) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayConcat) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayConcat) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayConcat) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayConcat) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayConcat) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayConcat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() != value.ARRAY {
@@ -209,8 +151,8 @@ func (this *ArrayConcat) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayConcat) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayConcat(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayConcat(operands[0], operands[1])
 	}
 }
 
@@ -221,43 +163,24 @@ func (this *ArrayConcat) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayContains struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayContains(first, second Expression) Function {
 	return &ArrayContains{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_contains", first, second),
 	}
 }
 
+func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayContains) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayContains) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayContains) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayContains) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayContains) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayContains) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayContains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -275,8 +198,8 @@ func (this *ArrayContains) eval(first, second value.Value) (value.Value, error) 
 }
 
 func (this *ArrayContains) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayContains(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayContains(operands[0], operands[1])
 	}
 }
 
@@ -287,42 +210,24 @@ func (this *ArrayContains) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayCount struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayCount(arg Expression) Function {
+func NewArrayCount(operand Expression) Function {
 	return &ArrayCount{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_count", operand),
 	}
 }
 
+func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayCount) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayCount) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayCount) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayCount) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayCount) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayCount) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayCount) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -342,8 +247,8 @@ func (this *ArrayCount) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayCount) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayCount(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayCount(operands[0])
 	}
 }
 
@@ -354,50 +259,32 @@ func (this *ArrayCount) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayDistinct struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayDistinct(arg Expression) Function {
+func NewArrayDistinct(operand Expression) Function {
 	return &ArrayDistinct{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_distinct", operand),
 	}
 }
 
+func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayDistinct) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayDistinct) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayDistinct) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayDistinct) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayDistinct) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayDistinct) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayDistinct) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	set := value.NewSet(16)
 	aa := arg.Actual().([]interface{})
+	set := value.NewSet(len(aa))
 	for _, a := range aa {
 		set.Add(value.NewValue(a))
 	}
@@ -406,8 +293,8 @@ func (this *ArrayDistinct) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayDistinct) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayDistinct(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayDistinct(operands[0])
 	}
 }
 
@@ -418,42 +305,24 @@ func (this *ArrayDistinct) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayIfNull struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayIfNull(arg Expression) Function {
+func NewArrayIfNull(operand Expression) Function {
 	return &ArrayIfNull{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_ifnull", operand),
 	}
 }
 
+func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayIfNull) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayIfNull) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayIfNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayIfNull) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayIfNull) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayIfNull) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayIfNull) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -472,8 +341,8 @@ func (this *ArrayIfNull) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayIfNull) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayIfNull(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayIfNull(operands[0])
 	}
 }
 
@@ -484,42 +353,24 @@ func (this *ArrayIfNull) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayLength struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayLength(arg Expression) Function {
+func NewArrayLength(operand Expression) Function {
 	return &ArrayLength{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_length", operand),
 	}
 }
 
+func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayLength) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayLength) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayLength) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayLength) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayLength) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayLength) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -531,8 +382,8 @@ func (this *ArrayLength) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayLength) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayLength(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayLength(operands[0])
 	}
 }
 
@@ -543,42 +394,24 @@ func (this *ArrayLength) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayMax struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayMax(arg Expression) Function {
+func NewArrayMax(operand Expression) Function {
 	return &ArrayMax{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_max", operand),
 	}
 }
 
+func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayMax) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayMax) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayMax) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayMax) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayMax) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayMax) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayMax) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -598,8 +431,8 @@ func (this *ArrayMax) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayMax) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayMax(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayMax(operands[0])
 	}
 }
 
@@ -610,42 +443,24 @@ func (this *ArrayMax) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayMin struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayMin(arg Expression) Function {
+func NewArrayMin(operand Expression) Function {
 	return &ArrayMin{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_min", operand),
 	}
 }
 
+func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayMin) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayMin) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayMin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayMin) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayMin) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayMin) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayMin) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -666,8 +481,8 @@ func (this *ArrayMin) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayMin) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayMin(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayMin(operands[0])
 	}
 }
 
@@ -678,43 +493,24 @@ func (this *ArrayMin) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayPosition struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayPosition(first, second Expression) Function {
 	return &ArrayPosition{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_position", first, second),
 	}
 }
 
+func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayPosition) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayPosition) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayPosition) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayPosition) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayPosition) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayPosition) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -732,8 +528,8 @@ func (this *ArrayPosition) eval(first, second value.Value) (value.Value, error) 
 }
 
 func (this *ArrayPosition) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayPosition(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayPosition(operands[0], operands[1])
 	}
 }
 
@@ -744,43 +540,24 @@ func (this *ArrayPosition) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayPrepend struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayPrepend(first, second Expression) Function {
 	return &ArrayPrepend{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_prepend", first, second),
 	}
 }
 
+func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayPrepend) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayPrepend) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayPrepend) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayPrepend) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayPrepend) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayPrepend) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {
@@ -797,8 +574,8 @@ func (this *ArrayPrepend) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayPrepend) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayPrepend(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayPrepend(operands[0], operands[1])
 	}
 }
 
@@ -809,43 +586,24 @@ func (this *ArrayPrepend) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayPut struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayPut(first, second Expression) Function {
 	return &ArrayPut{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_put", first, second),
 	}
 }
 
+func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayPut) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayPut) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayPut) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayPut) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayPut) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayPut) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -867,8 +625,8 @@ func (this *ArrayPut) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayPut) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayPut(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayPut(operands[0], operands[1])
 	}
 }
 
@@ -879,42 +637,24 @@ func (this *ArrayPut) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayRange struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewArrayRange(args Expressions) Function {
+func NewArrayRange(operands ...Expression) Function {
 	return &ArrayRange{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("array_range", operands...),
 	}
 }
 
+func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *ArrayRange) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayRange) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayRange) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayRange) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayRange) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayRange) eval(args value.Values) (value.Value, error) {
+func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value, error) {
 	startv := args[0]
 	endv := args[1]
 	stepv := value.ONE_VALUE
@@ -966,43 +706,24 @@ func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange
 ///////////////////////////////////////////////////
 
 type ArrayRemove struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayRemove(first, second Expression) Function {
 	return &ArrayRemove{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_remove", first, second),
 	}
 }
 
+func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayRemove) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayRemove) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayRemove) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayRemove) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayRemove) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayRemove) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY {
@@ -1023,8 +744,8 @@ func (this *ArrayRemove) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayRemove) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayRemove(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayRemove(operands[0], operands[1])
 	}
 }
 
@@ -1035,43 +756,24 @@ func (this *ArrayRemove) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayRepeat struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewArrayRepeat(first, second Expression) Function {
 	return &ArrayRepeat{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("array_repeat", first, second),
 	}
 }
 
+func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *ArrayRepeat) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayRepeat) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayRepeat) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayRepeat) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayRepeat) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayRepeat) eval(first, second value.Value) (value.Value, error) {
+func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.NUMBER {
@@ -1093,8 +795,8 @@ func (this *ArrayRepeat) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *ArrayRepeat) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayRepeat(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewArrayRepeat(operands[0], operands[1])
 	}
 }
 
@@ -1105,42 +807,24 @@ func (this *ArrayRepeat) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArrayReplace struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewArrayReplace(args Expressions) Function {
+func NewArrayReplace(operands ...Expression) Function {
 	return &ArrayReplace{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("array_replace", operands...),
 	}
 }
 
+func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *ArrayReplace) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayReplace) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayReplace) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayReplace) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayReplace) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayReplace) eval(args value.Values) (value.Value, error) {
+func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	av := args[0]
 	v1 := args[1]
 	v2 := args[2]
@@ -1182,42 +866,24 @@ func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayRep
 ///////////////////////////////////////////////////
 
 type ArrayReverse struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArrayReverse(arg Expression) Function {
+func NewArrayReverse(operand Expression) Function {
 	return &ArrayReverse{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_reverse", operand),
 	}
 }
 
+func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArrayReverse) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArrayReverse) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayReverse) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayReverse) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArrayReverse) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArrayReverse) eval(arg value.Value) (value.Value, error) {
+func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -1236,8 +902,8 @@ func (this *ArrayReverse) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArrayReverse) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArrayReverse(args[0])
+	return func(operands ...Expression) Function {
+		return NewArrayReverse(operands[0])
 	}
 }
 
@@ -1248,42 +914,24 @@ func (this *ArrayReverse) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArraySort struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArraySort(arg Expression) Function {
+func NewArraySort(operand Expression) Function {
 	return &ArraySort{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_sort", operand),
 	}
 }
 
+func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArraySort) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArraySort) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArraySort) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArraySort) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArraySort) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArraySort) eval(arg value.Value) (value.Value, error) {
+func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -1297,8 +945,8 @@ func (this *ArraySort) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArraySort) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArraySort(args[0])
+	return func(operands ...Expression) Function {
+		return NewArraySort(operands[0])
 	}
 }
 
@@ -1309,42 +957,24 @@ func (this *ArraySort) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type ArraySum struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewArraySum(arg Expression) Function {
+func NewArraySum(operand Expression) Function {
 	return &ArraySum{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("array_sum", operand),
 	}
 }
 
+func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ArraySum) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ArraySum) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArraySum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArraySum) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ArraySum) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ArraySum) eval(arg value.Value) (value.Value, error) {
+func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.ARRAY {
@@ -1364,7 +994,7 @@ func (this *ArraySum) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ArraySum) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewArraySum(args[0])
+	return func(operands ...Expression) Function {
+		return NewArraySum(operands[0])
 	}
 }

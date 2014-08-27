@@ -13,43 +13,31 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// IfMissing
+//
+///////////////////////////////////////////////////
+
 type IfMissing struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewIfMissing(args Expressions) Function {
+func NewIfMissing(operands ...Expression) Function {
 	return &IfMissing{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("ifmissing", operands...),
 	}
 }
 
+func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *IfMissing) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IfMissing) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IfMissing) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IfMissing) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IfMissing) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IfMissing) eval(args value.Values) (value.Value, error) {
+func (this *IfMissing) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() != value.MISSING {
 			return a, nil
@@ -59,47 +47,33 @@ func (this *IfMissing) eval(args value.Values) (value.Value, error) {
 	return value.NULL_VALUE, nil
 }
 
-func (this *IfMissing) MinArgs() int { return 2 }
-
 func (this *IfMissing) Constructor() FunctionConstructor { return NewIfMissing }
 
+///////////////////////////////////////////////////
+//
+// IfMissingOrNull
+//
+///////////////////////////////////////////////////
+
 type IfMissingOrNull struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewIfMissingOrNull(args Expressions) Function {
+func NewIfMissingOrNull(operands ...Expression) Function {
 	return &IfMissingOrNull{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("ifmissingornull", operands...),
 	}
 }
 
+func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *IfMissingOrNull) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IfMissingOrNull) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IfMissingOrNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IfMissingOrNull) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IfMissingOrNull) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IfMissingOrNull) eval(args value.Values) (value.Value, error) {
+func (this *IfMissingOrNull) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() > value.NULL {
 			return a, nil
@@ -109,47 +83,33 @@ func (this *IfMissingOrNull) eval(args value.Values) (value.Value, error) {
 	return value.NULL_VALUE, nil
 }
 
-func (this *IfMissingOrNull) MinArgs() int { return 2 }
-
 func (this *IfMissingOrNull) Constructor() FunctionConstructor { return NewIfMissingOrNull }
 
+///////////////////////////////////////////////////
+//
+// IfNull
+//
+///////////////////////////////////////////////////
+
 type IfNull struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewIfNull(args Expressions) Function {
+func NewIfNull(operands ...Expression) Function {
 	return &IfNull{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("ifnull", operands...),
 	}
 }
 
+func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *IfNull) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IfNull) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IfNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IfNull) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IfNull) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IfNull) eval(args value.Values) (value.Value, error) {
+func (this *IfNull) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() != value.NULL {
 			return a, nil
@@ -159,48 +119,69 @@ func (this *IfNull) eval(args value.Values) (value.Value, error) {
 	return value.NULL_VALUE, nil
 }
 
-func (this *IfNull) MinArgs() int { return 2 }
-
 func (this *IfNull) Constructor() FunctionConstructor { return NewIfNull }
 
+///////////////////////////////////////////////////
+//
+// FirstVal
+//
+///////////////////////////////////////////////////
+
+type FirstVal struct {
+	FunctionBase
+}
+
+func NewFirstVal(operands ...Expression) Function {
+	return &FirstVal{
+		*NewFunctionBase("firstval", operands...),
+	}
+}
+
+func (this *FirstVal) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *FirstVal) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *FirstVal) Apply(context Context, args ...value.Value) (value.Value, error) {
+	for _, a := range args {
+		if a.Type() > value.NULL {
+			return a, nil
+		}
+	}
+
+	return value.NULL_VALUE, nil
+}
+
+func (this *FirstVal) Constructor() FunctionConstructor { return NewFirstVal }
+
+///////////////////////////////////////////////////
+//
+// MissingIf
+//
+///////////////////////////////////////////////////
+
 type MissingIf struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewMissingIf(first, second Expression) Function {
 	return &MissingIf{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("missingif", first, second),
 	}
 }
 
+func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *MissingIf) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *MissingIf) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *MissingIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *MissingIf) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *MissingIf) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *MissingIf) eval(first, second value.Value) (value.Value, error) {
+func (this *MissingIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.MISSING_VALUE, nil
 	} else {
@@ -209,49 +190,36 @@ func (this *MissingIf) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *MissingIf) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewMissingIf(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewMissingIf(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// NullIf
+//
+///////////////////////////////////////////////////
+
 type NullIf struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewNullIf(first, second Expression) Function {
 	return &NullIf{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("nullif", first, second),
 	}
 }
 
+func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *NullIf) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *NullIf) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *NullIf) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *NullIf) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *NullIf) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *NullIf) eval(first, second value.Value) (value.Value, error) {
+func (this *NullIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NULL_VALUE, nil
 	} else {
@@ -260,7 +228,7 @@ func (this *NullIf) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *NullIf) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewNullIf(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewNullIf(operands[0], operands[1])
 	}
 }

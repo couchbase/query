@@ -16,50 +16,32 @@ import (
 )
 
 type Concat struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewConcat(operands ...Expression) Expression {
+func NewConcat(operands ...Expression) Function {
 	return &Concat{
-		nAryBase{
-			operands: operands,
-		},
+		*NewFunctionBase("concat", operands...),
 	}
 }
 
+func (this *Concat) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitConcat(this)
+}
+
 func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Concat) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Concat) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Concat) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Concat) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Concat) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Concat) eval(operands value.Values) (value.Value, error) {
+func (this *Concat) Apply(context Context, args ...value.Value) (value.Value, error) {
 	var buf bytes.Buffer
 	null := false
 
-	for _, o := range operands {
-		switch o.Type() {
+	for _, arg := range args {
+		switch arg.Type() {
 		case value.STRING:
 			if !null {
-				buf.WriteString(o.Actual().(string))
+				buf.WriteString(arg.Actual().(string))
 			}
 		case value.MISSING:
 			return value.MISSING_VALUE, nil
@@ -74,3 +56,5 @@ func (this *Concat) eval(operands value.Values) (value.Value, error) {
 
 	return value.NewValue(buf.String()), nil
 }
+
+func (this *Concat) Constructor() FunctionConstructor { return NewConcat }

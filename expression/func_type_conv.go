@@ -17,95 +17,71 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// ToArray
+//
+///////////////////////////////////////////////////
+
 type ToArray struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewToArray(arg Expression) Function {
+func NewToArray(operand Expression) Function {
 	return &ToArray{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("toarray", operand),
 	}
 }
 
+func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ToArray) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ToArray) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ToArray) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ToArray) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ToArray) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ToArray) eval(arg value.Value) (value.Value, error) {
+func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() <= value.NULL {
 		return arg, nil
 	} else if arg.Type() == value.ARRAY {
 		return arg, nil
 	}
 
-	return value.NewValue([]interface{}{arg}), nil
+	return value.NewValue([]interface{}{arg.Actual()}), nil
 }
 
 func (this *ToArray) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewToArray(args[0])
+	return func(operands ...Expression) Function {
+		return NewToArray(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ToAtom
+//
+///////////////////////////////////////////////////
 
 type ToAtom struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewToAtom(arg Expression) Function {
+func NewToAtom(operand Expression) Function {
 	return &ToAtom{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("toatom", operand),
 	}
+}
+
+func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ToAtom) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ToAtom) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ToAtom) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ToAtom) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ToAtom) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ToAtom) eval(arg value.Value) (value.Value, error) {
+func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING, value.MISSING, value.NULL:
 		return arg, nil
@@ -113,12 +89,12 @@ func (this *ToAtom) eval(arg value.Value) (value.Value, error) {
 		switch a := arg.Actual().(type) {
 		case []interface{}:
 			if len(a) == 1 {
-				return this.eval(value.NewValue(a[0]))
+				return this.Apply(context, value.NewValue(a[0]))
 			}
 		case map[string]interface{}:
 			if len(a) == 1 {
 				for _, v := range a {
-					return this.eval(value.NewValue(v))
+					return this.Apply(context, value.NewValue(v))
 				}
 			}
 		}
@@ -128,118 +104,86 @@ func (this *ToAtom) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ToAtom) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewToAtom(args[0])
+	return func(operands ...Expression) Function {
+		return NewToAtom(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ToBool
+//
+///////////////////////////////////////////////////
 
 type ToBool struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewToBool(arg Expression) Function {
+func NewToBool(operand Expression) Function {
 	return &ToBool{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("tobool", operand),
 	}
+}
+
+func (this *ToBool) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ToBool) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ToBool) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ToBool) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ToBool) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ToBool) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ToBool) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ToBool) eval(arg value.Value) (value.Value, error) {
+func (this *ToBool) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.BOOLEAN:
 		return arg, nil
 	default:
 		switch a := arg.Actual().(type) {
 		case float64:
-			if a == 0 || math.IsNaN(a) {
-				return value.NewValue(false), nil
-			}
+			return value.NewValue(!math.IsNaN(a) && a != 0), nil
 		case string:
-			if len(a) == 0 {
-				return value.NewValue(false), nil
-			}
+			return value.NewValue(len(a) > 0), nil
 		case []interface{}:
-			if len(a) == 0 {
-				return value.NewValue(false), nil
-			}
+			return value.NewValue(len(a) > 0), nil
 		case map[string]interface{}:
-			if len(a) == 0 {
-				return value.NewValue(false), nil
-			}
+			return value.NewValue(len(a) > 0), nil
+		default:
+			return value.NULL_VALUE, nil
 		}
 	}
-
-	return value.NULL_VALUE, nil
 }
 
 func (this *ToBool) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewToBool(args[0])
+	return func(operands ...Expression) Function {
+		return NewToBool(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ToNum
+//
+///////////////////////////////////////////////////
 
 type ToNum struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewToNum(arg Expression) Function {
+func NewToNum(operand Expression) Function {
 	return &ToNum{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("tonum", operand),
 	}
+}
+
+func (this *ToNum) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ToNum) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ToNum) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ToNum) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ToNum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ToNum) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ToNum) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ToNum) eval(arg value.Value) (value.Value, error) {
+func (this *ToNum) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
@@ -252,8 +196,8 @@ func (this *ToNum) eval(arg value.Value) (value.Value, error) {
 				return value.NewValue(0.0), nil
 			}
 		case string:
-			f, e := strconv.ParseFloat(a, 64)
-			if e == nil {
+			f, err := strconv.ParseFloat(a, 64)
+			if err == nil {
 				return value.NewValue(f), nil
 			}
 		}
@@ -263,48 +207,36 @@ func (this *ToNum) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ToNum) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewToNum(args[0])
+	return func(operands ...Expression) Function {
+		return NewToNum(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ToStr
+//
+///////////////////////////////////////////////////
 
 type ToStr struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewToStr(arg Expression) Function {
+func NewToStr(operand Expression) Function {
 	return &ToStr{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("tostr", operand),
 	}
+}
+
+func (this *ToStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ToStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ToStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ToStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ToStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ToStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ToStr) eval(arg value.Value) (value.Value, error) {
+func (this *ToStr) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:
 		return arg, nil
@@ -316,7 +248,7 @@ func (this *ToStr) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ToStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewToStr(args[0])
+	return func(operands ...Expression) Function {
+		return NewToStr(operands[0])
 	}
 }

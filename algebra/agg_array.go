@@ -18,41 +18,33 @@ import (
 )
 
 type ArrayAgg struct {
-	aggregateBase
+	AggregateBase
 }
 
-func NewArrayAgg(argument expression.Expression) Aggregate {
-	return &ArrayAgg{aggregateBase{argument: argument}}
+func NewArrayAgg(operand expression.Expression) Aggregate {
+	return &ArrayAgg{
+		*NewAggregateBase("array_agg", operand),
+	}
+}
+
+func (this *ArrayAgg) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ArrayAgg) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *ArrayAgg) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayAgg) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayAgg) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *ArrayAgg) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewArrayAgg(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewArrayAgg(operands[0])
 	}
 }
 
-func (this *ArrayAgg) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *ArrayAgg) Default() value.Value { return value.NULL_VALUE }
 
 func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

@@ -14,43 +14,24 @@ import (
 )
 
 type In struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
-func NewIn(first, second Expression) Expression {
+func NewIn(first, second Expression) Function {
 	return &In{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("in", first, second),
 	}
 }
 
+func (this *In) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIn(this)
+}
+
 func (this *In) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *In) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *In) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *In) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *In) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *In) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *In) eval(first, second value.Value) (value.Value, error) {
+func (this *In) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {
@@ -65,6 +46,12 @@ func (this *In) eval(first, second value.Value) (value.Value, error) {
 	}
 
 	return value.FALSE_VALUE, nil
+}
+
+func (this *In) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIn(operands[0], operands[1])
+	}
 }
 
 func NewNotIn(first, second Expression) Expression {

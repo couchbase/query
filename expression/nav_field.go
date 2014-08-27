@@ -14,47 +14,28 @@ import (
 )
 
 type Field struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
-func NewField(first, second Expression) Path {
+func NewField(first, second Expression) *Field {
 	return &Field{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("field", first, second),
 	}
 }
 
-func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+func (this *Field) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitField(this)
 }
 
-func (this *Field) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
 }
 
 func (this *Field) Alias() string {
-	return this.second.Alias()
+	return this.Second().Alias()
 }
 
-func (this *Field) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Field) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Field) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Field) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Field) eval(first, second value.Value) (value.Value, error) {
+func (this *Field) Apply(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.STRING:
 		s := second.Actual().(string)
@@ -62,17 +43,23 @@ func (this *Field) eval(first, second value.Value) (value.Value, error) {
 		return v, nil
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
+	default:
+		if first.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else {
+			return value.NULL_VALUE, nil
+		}
 	}
+}
 
-	if first.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else {
-		return value.NULL_VALUE, nil
+func (this *Field) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewField(operands[0], operands[1])
 	}
 }
 
 func (this *Field) Set(item, val value.Value, context Context) bool {
-	second, er := this.second.Evaluate(item, context)
+	second, er := this.Second().Evaluate(item, context)
 	if er != nil {
 		return false
 	}
@@ -87,7 +74,7 @@ func (this *Field) Set(item, val value.Value, context Context) bool {
 }
 
 func (this *Field) Unset(item value.Value, context Context) bool {
-	second, er := this.second.Evaluate(item, context)
+	second, er := this.Second().Evaluate(item, context)
 	if er != nil {
 		return false
 	}
@@ -115,6 +102,14 @@ func NewFieldName(name string) Expression {
 	}
 }
 
+func (this *FieldName) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFieldName(this)
+}
+
+func (this *FieldName) Alias() string {
+	return this.name
+}
+
 func (this *FieldName) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *FieldName:
@@ -124,23 +119,6 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *FieldName) Fold() (Expression, error) {
-	return this, nil
-}
-
-func (this *FieldName) Formalize(allowed value.Value,
-	keyspace string) (Expression, error) {
-	return this, nil
-}
-
 func (this *FieldName) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *FieldName) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
-}
-
-func (this *FieldName) Alias() string {
-	return this.name
+	return this.EquivalentTo(other)
 }

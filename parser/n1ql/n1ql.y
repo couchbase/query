@@ -263,7 +263,7 @@ indexType        datastore.IndexType
 
 %type <expr>             paren_or_subquery_expr paren_or_subquery
 
-%type <node>             input command
+%type <node>             command
 %type <explain>          explain
 %type <fullselect>       fullselect
 %type <subresult>        subselects
@@ -329,6 +329,11 @@ input:
 command
 {
     yylex.(*lexer).setNode($1)
+}
+|
+expr
+{
+    yylex.(*lexer).setExpression($1)
 }
 ;
 
@@ -1403,7 +1408,7 @@ expr LBRACKET expr RBRACKET
 |
 expr LBRACKET expr COLON RBRACKET
 {
-    $$ = expression.NewSlice($1, $3, nil)
+    $$ = expression.NewSlice($1, $3)
 }
 |
 expr LBRACKET expr COLON expr RBRACKET
@@ -1419,22 +1424,22 @@ expr PLUS expr
 |
 expr MINUS expr
 {
-    $$ = expression.NewSubtract($1, $3)
+    $$ = expression.NewSub($1, $3)
 }
 |
 expr STAR expr
 {
-    $$ = expression.NewMultiply($1, $3)
+    $$ = expression.NewMult($1, $3)
 }
 |
 expr DIV expr
 {
-    $$ = expression.NewDivide($1, $3)
+    $$ = expression.NewDiv($1, $3)
 }
 |
 expr MOD expr
 {
-    $$ = expression.NewModulo($1, $3)
+    $$ = expression.NewMod($1, $3)
 }
 |
 /* Concat */
@@ -1462,12 +1467,12 @@ NOT expr
 /* Comparison */
 expr EQ expr
 {
-    $$ = expression.NewEQ($1, $3)
+    $$ = expression.NewEq($1, $3)
 }
 |
 expr DEQ expr
 {
-    $$ = expression.NewEQ($1, $3)
+    $$ = expression.NewEq($1, $3)
 }
 |
 expr NE expr
@@ -1587,7 +1592,7 @@ function_expr
 /* Prefix */
 MINUS expr %prec UMINUS
 {
-    $$ = expression.NewNegate($2)
+    $$ = expression.NewNeg($2)
 }
 |
 /* Case */
@@ -1621,7 +1626,7 @@ b_expr LBRACKET expr RBRACKET
 |
 b_expr LBRACKET expr COLON RBRACKET
 {
-    $$ = expression.NewSlice($1, $3, nil)
+    $$ = expression.NewSlice($1, $3)
 }
 |
 b_expr LBRACKET expr COLON expr RBRACKET
@@ -1637,22 +1642,22 @@ b_expr PLUS b_expr
 |
 b_expr MINUS b_expr
 {
-    $$ = expression.NewSubtract($1, $3)
+    $$ = expression.NewSub($1, $3)
 }
 |
 b_expr STAR b_expr
 {
-    $$ = expression.NewMultiply($1, $3)
+    $$ = expression.NewMult($1, $3)
 }
 |
 b_expr DIV b_expr
 {
-    $$ = expression.NewDivide($1, $3)
+    $$ = expression.NewDiv($1, $3)
 }
 |
 b_expr MOD b_expr
 {
-    $$ = expression.NewModulo($1, $3)
+    $$ = expression.NewMod($1, $3)
 }
 |
 /* Concat */
@@ -1708,7 +1713,7 @@ array
 object:
 LBRACE opt_members RBRACE
 {
-    $$ = expression.NewObjectLiteral($2)
+    $$ = expression.NewObjectConstruct($2)
 }
 ;
 
@@ -1743,7 +1748,7 @@ STRING COLON expr
 array:
 LBRACKET opt_exprs RBRACKET
 {
-    $$ = expression.NewArrayLiteral($2)
+    $$ = expression.NewArrayConstruct($2...)
 }
 ;
 
@@ -1828,16 +1833,16 @@ function_name LPAREN opt_exprs RPAREN
     $$ = nil;
     agg, ok := algebra.GetAggregate($1, false);
     if ok {
-        $$ = agg.Constructor()($3);
+        $$ = agg.Constructor()($3...);
     } else {
         f, ok := expression.GetFunction($1);
         if ok {
-            $$ = f.Constructor()($3)
+            $$ = f.Constructor()($3...)
         }
     }
 }
 |
-function_name LPAREN DISTINCT exprs RPAREN
+function_name LPAREN DISTINCT expr RPAREN
 {
     $$ = nil;
     agg, ok := algebra.GetAggregate($1, true);

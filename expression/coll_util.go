@@ -31,28 +31,27 @@ func (this *collMap) Children() Expressions {
 	return d
 }
 
-func (this *collMap) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
-	var e error
-	this.mapping, e = visitor.Visit(this.mapping)
-	if e != nil {
-		return nil, e
+func (this *collMap) MapChildren(mapper Mapper) (err error) {
+	this.mapping, err = mapper.Map(this.mapping)
+	if err != nil {
+		return
 	}
 
-	for _, b := range this.bindings {
-		_, e = b.Accept(visitor)
-		if e != nil {
-			return nil, e
+	if mapper.MapBindings() {
+		err = this.bindings.MapExpressions(mapper)
+		if err != nil {
+			return
 		}
 	}
 
 	if this.when != nil {
-		this.when, e = visitor.Visit(this.when)
-		if e != nil {
-			return nil, e
+		this.when, err = mapper.Map(this.when)
+		if err != nil {
+			return
 		}
 	}
 
-	return expr, nil
+	return
 }
 
 type collPred struct {
@@ -63,6 +62,7 @@ type collPred struct {
 
 func (this *collPred) Children() Expressions {
 	d := make(Expressions, 0, 1+len(this.bindings))
+
 	for _, b := range this.bindings {
 		d = append(d, b.Expression())
 	}
@@ -71,19 +71,18 @@ func (this *collPred) Children() Expressions {
 	return d
 }
 
-func (this *collPred) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
-	var e error
-	for _, b := range this.bindings {
-		_, e = b.Accept(visitor)
-		if e != nil {
-			return nil, e
+func (this *collPred) MapChildren(mapper Mapper) (err error) {
+	if mapper.MapBindings() {
+		err = this.bindings.MapExpressions(mapper)
+		if err != nil {
+			return
 		}
 	}
 
-	this.satisfies, e = visitor.Visit(this.satisfies)
-	if e != nil {
-		return nil, e
+	this.satisfies, err = mapper.Map(this.satisfies)
+	if err != nil {
+		return
 	}
 
-	return expr, nil
+	return
 }

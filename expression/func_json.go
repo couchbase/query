@@ -10,47 +10,36 @@
 package expression
 
 import (
+	"encoding/json"
+
 	"github.com/couchbaselabs/query/value"
-	json "github.com/dustin/gojson"
 )
 
+///////////////////////////////////////////////////
+//
+// DecodeJSON
+//
+///////////////////////////////////////////////////
+
 type DecodeJSON struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewDecodeJSON(arg Expression) Function {
+func NewDecodeJSON(operand Expression) Function {
 	return &DecodeJSON{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("decode_json", operand),
 	}
 }
 
+func (this *DecodeJSON) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *DecodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *DecodeJSON) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DecodeJSON) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DecodeJSON) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DecodeJSON) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DecodeJSON) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DecodeJSON) eval(arg value.Value) (value.Value, error) {
+func (this *DecodeJSON) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -68,140 +57,104 @@ func (this *DecodeJSON) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *DecodeJSON) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDecodeJSON(args[0])
+	return func(operands ...Expression) Function {
+		return NewDecodeJSON(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// EncodeJSON
+//
+///////////////////////////////////////////////////
 
 type EncodeJSON struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewEncodeJSON(arg Expression) Function {
+func NewEncodeJSON(operand Expression) Function {
 	return &EncodeJSON{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("encode_json", operand),
 	}
+}
+
+func (this *EncodeJSON) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *EncodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *EncodeJSON) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *EncodeJSON) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *EncodeJSON) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *EncodeJSON) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *EncodeJSON) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *EncodeJSON) eval(arg value.Value) (value.Value, error) {
+func (this *EncodeJSON) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(string(arg.Bytes())), nil
 }
 
 func (this *EncodeJSON) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewEncodeJSON(args[0])
+	return func(operands ...Expression) Function {
+		return NewEncodeJSON(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// EncodedSize
+//
+///////////////////////////////////////////////////
 
 type EncodedSize struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewEncodedSize(arg Expression) Function {
+func NewEncodedSize(operand Expression) Function {
 	return &EncodedSize{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("encoded_size", operand),
 	}
+}
+
+func (this *EncodedSize) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *EncodedSize) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *EncodedSize) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *EncodedSize) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *EncodedSize) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *EncodedSize) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *EncodedSize) eval(arg value.Value) (value.Value, error) {
+func (this *EncodedSize) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(float64(len(arg.Bytes()))), nil
 }
 
 func (this *EncodedSize) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewEncodedSize(args[0])
+	return func(operands ...Expression) Function {
+		return NewEncodedSize(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// PolyLength
+//
+///////////////////////////////////////////////////
 
 type PolyLength struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewPolyLength(arg Expression) Function {
+func NewPolyLength(operand Expression) Function {
 	return &PolyLength{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("poly_length", operand),
 	}
+}
+
+func (this *PolyLength) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *PolyLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *PolyLength) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *PolyLength) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *PolyLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *PolyLength) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *PolyLength) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *PolyLength) eval(arg value.Value) (value.Value, error) {
+func (this *PolyLength) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
@@ -219,7 +172,7 @@ func (this *PolyLength) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *PolyLength) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewPolyLength(args[0])
+	return func(operands ...Expression) Function {
+		return NewPolyLength(operands[0])
 	}
 }

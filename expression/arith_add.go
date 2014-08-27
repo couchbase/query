@@ -14,50 +14,31 @@ import (
 )
 
 type Add struct {
-	caNAryBase
+	CommutativeFunctionBase
 }
 
-func NewAdd(operands ...Expression) Expression {
+func NewAdd(operands ...Expression) Function {
 	return &Add{
-		caNAryBase{
-			nAryBase{
-				operands: operands,
-			},
-		},
+		*NewCommutativeFunctionBase("add", operands...),
 	}
 }
 
+func (this *Add) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAdd(this)
+}
+
 func (this *Add) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Add) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Add) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Add) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Add) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Add) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Add) eval(operands value.Values) (value.Value, error) {
+func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 	sum := 0.0
-	for _, v := range operands {
-		if !null && v.Type() == value.NUMBER {
-			sum += v.Actual().(float64)
-		} else if v.Type() == value.MISSING {
+
+	for _, arg := range args {
+		if !null && arg.Type() == value.NUMBER {
+			sum += arg.Actual().(float64)
+		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {
 			null = true
@@ -71,12 +52,4 @@ func (this *Add) eval(operands value.Values) (value.Value, error) {
 	return value.NewValue(sum), nil
 }
 
-func (this *Add) construct(constant value.Value, others Expressions) Expression {
-	if constant.Type() == value.MISSING {
-		return NewConstant(constant)
-	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 0.0 {
-		return NewAdd(others...)
-	}
-
-	return NewAdd(append(others, NewConstant(constant))...)
-}
+func (this *Add) Constructor() FunctionConstructor { return NewAdd }

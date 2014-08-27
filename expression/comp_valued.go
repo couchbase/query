@@ -14,46 +14,30 @@ import (
 )
 
 type IsValued struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsValued(operand Expression) Expression {
+func NewIsValued(operand Expression) Function {
 	return &IsValued{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("isvalued", operand),
 	}
 }
 
+func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsValued(this)
+}
+
 func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsValued) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, error) {
+	return value.NewValue(arg.Type() > value.NULL), nil
 }
 
-func (this *IsValued) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsValued) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsValued) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsValued) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsValued) eval(operand value.Value) (value.Value, error) {
-	if operand.Type() > value.NULL {
-		return value.NewValue(true), nil
-	} else {
-		return value.NewValue(false), nil
+func (this *IsValued) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsValued(operands[0])
 	}
 }
 

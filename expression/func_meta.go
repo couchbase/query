@@ -15,43 +15,31 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// Base64
+//
+///////////////////////////////////////////////////
+
 type Base64 struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
 func NewBase64(operand Expression) Function {
 	return &Base64{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("base64", operand),
 	}
 }
 
+func (this *Base64) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Base64) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Base64) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Base64) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Base64) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Base64) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Base64) eval(operand value.Value) (value.Value, error) {
+func (this *Base64) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
 	}
@@ -61,48 +49,36 @@ func (this *Base64) eval(operand value.Value) (value.Value, error) {
 }
 
 func (this *Base64) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewBase64(args[0])
+	return func(operands ...Expression) Function {
+		return NewBase64(operands[0])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// Meta
+//
+///////////////////////////////////////////////////
+
 type Meta struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
 func NewMeta(operand Expression) Function {
 	return &Meta{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("meta", operand),
 	}
 }
 
+func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Meta) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Meta) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Meta) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Meta) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Meta) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Meta) eval(operand value.Value) (value.Value, error) {
+func (this *Meta) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
 	}
@@ -116,7 +92,7 @@ func (this *Meta) eval(operand value.Value) (value.Value, error) {
 }
 
 func (this *Meta) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewMeta(args[0])
+	return func(operands ...Expression) Function {
+		return NewMeta(operands[0])
 	}
 }

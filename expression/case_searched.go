@@ -26,17 +26,21 @@ func NewSearchedCase(whenTerms WhenTerms, elseTerm Expression) Expression {
 	}
 }
 
+func (this *SearchedCase) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSearchedCase(this)
+}
+
 func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	for _, w := range this.whenTerms {
-		wv, e := w.When.Evaluate(item, context)
-		if e != nil {
-			return nil, e
+		wv, err := w.When.Evaluate(item, context)
+		if err != nil {
+			return nil, err
 		}
 
 		if wv.Truth() {
-			tv, e := w.Then.Evaluate(item, context)
-			if e != nil {
-				return nil, e
+			tv, err := w.Then.Evaluate(item, context)
+			if err != nil {
+				return nil, err
 			}
 
 			return tv, nil
@@ -47,9 +51,9 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	ev, e := this.elseTerm.Evaluate(item, context)
-	if e != nil {
-		return nil, e
+	ev, err := this.elseTerm.Evaluate(item, context)
+	if err != nil {
+		return nil, err
 	}
 
 	return ev, nil
@@ -57,14 +61,6 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 
 func (this *SearchedCase) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
-}
-
-func (this *SearchedCase) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *SearchedCase) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *SearchedCase) SubsetOf(other Expression) bool {
@@ -86,26 +82,25 @@ func (this *SearchedCase) Children() Expressions {
 	return rv
 }
 
-func (this *SearchedCase) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
+func (this *SearchedCase) MapChildren(mapper Mapper) (err error) {
 	for _, w := range this.whenTerms {
-		w.When, e = visitor.Visit(w.When)
-		if e != nil {
-			return nil, e
+		w.When, err = mapper.Map(w.When)
+		if err != nil {
+			return
 		}
 
-		w.Then, e = visitor.Visit(w.Then)
-		if e != nil {
-			return nil, e
+		w.Then, err = mapper.Map(w.Then)
+		if err != nil {
+			return
 		}
 	}
 
 	if this.elseTerm != nil {
-		this.elseTerm, e = visitor.Visit(this.elseTerm)
-		if e != nil {
-			return nil, e
+		this.elseTerm, err = mapper.Map(this.elseTerm)
+		if err != nil {
+			return
 		}
 	}
 
-	return this, nil
+	return
 }

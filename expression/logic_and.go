@@ -14,55 +14,37 @@ import (
 )
 
 type And struct {
-	caNAryBase
+	CommutativeFunctionBase
 }
 
-func NewAnd(operands ...Expression) Expression {
+func NewAnd(operands ...Expression) Function {
 	return &And{
-		caNAryBase{
-			nAryBase{
-				operands: operands,
-			},
-		},
+		*NewCommutativeFunctionBase("and", operands...),
 	}
 }
 
+func (this *And) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAnd(this)
+}
+
 func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *And) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *And) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *And) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *And) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *And) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *And) eval(operands value.Values) (value.Value, error) {
+func (this *And) Apply(context Context, args ...value.Value) (value.Value, error) {
 	missing := false
 	null := false
-	for _, v := range operands {
-		if v.Type() > value.NULL {
-			if !v.Truth() {
-				return value.NewValue(false), nil
-			}
-		} else if v.Type() == value.NULL {
+
+	for _, arg := range args {
+		switch arg.Type() {
+		case value.NULL:
 			null = true
-		} else if v.Type() == value.MISSING {
+		case value.MISSING:
 			missing = true
+		default:
+			if !arg.Truth() {
+				return value.FALSE_VALUE, nil
+			}
 		}
 	}
 
@@ -71,16 +53,10 @@ func (this *And) eval(operands value.Values) (value.Value, error) {
 	} else if null {
 		return value.NULL_VALUE, nil
 	} else {
-		return value.NewValue(true), nil
+		return value.TRUE_VALUE, nil
 	}
 }
 
-func (this *And) construct(constant value.Value, others Expressions) Expression {
-	if constant.Type() == value.MISSING {
-		return NewConstant(constant)
-	} else if constant.Type() > value.NULL && !constant.Truth() {
-		return NewConstant(value.NewValue(false))
-	}
-
-	return NewAnd(append(others, NewConstant(constant))...)
+func (this *And) Constructor() FunctionConstructor {
+	return NewAnd
 }

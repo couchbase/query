@@ -14,49 +14,35 @@ import (
 )
 
 type LE struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
-func NewLE(first, second Expression) Expression {
+func NewLE(first, second Expression) Function {
 	return &LE{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("le", first, second),
 	}
 }
 
+func (this *LE) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitLE(this)
+}
+
 func (this *LE) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *LE) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *LE) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *LE) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *LE) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *LE) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *LE) eval(first, second value.Value) (value.Value, error) {
+func (this *LE) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(first.Collate(second) <= 0), nil
+}
+
+func (this *LE) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewLE(operands[0], operands[1])
+	}
 }

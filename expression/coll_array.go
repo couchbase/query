@@ -27,6 +27,10 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 	}
 }
 
+func (this *Array) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitArray(this)
+}
+
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
@@ -103,18 +107,6 @@ func (this *Array) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *Array) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Array) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
 func (this *Array) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
-}
-
-func (this *Array) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
 }

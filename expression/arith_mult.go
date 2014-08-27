@@ -13,51 +13,31 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Multiply struct {
-	caNAryBase
+type Mult struct {
+	CommutativeFunctionBase
 }
 
-func NewMultiply(operands ...Expression) Expression {
-	return &Multiply{
-		caNAryBase{
-			nAryBase{
-				operands: operands,
-			},
-		},
+func NewMult(operands ...Expression) Function {
+	return &Mult{
+		*NewCommutativeFunctionBase("mult", operands...),
 	}
 }
 
-func (this *Multiply) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitMult(this)
 }
 
-func (this *Multiply) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
 }
 
-func (this *Multiply) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Multiply) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Multiply) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Multiply) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Multiply) eval(operands value.Values) (value.Value, error) {
+func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 	prod := 1.0
-	for _, v := range operands {
-		if !null && v.Type() == value.NUMBER {
-			prod *= v.Actual().(float64)
-		} else if v.Type() == value.MISSING {
+	for _, arg := range args {
+		if !null && arg.Type() == value.NUMBER {
+			prod *= arg.Actual().(float64)
+		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {
 			null = true
@@ -71,12 +51,4 @@ func (this *Multiply) eval(operands value.Values) (value.Value, error) {
 	return value.NewValue(prod), nil
 }
 
-func (this *Multiply) construct(constant value.Value, others Expressions) Expression {
-	if constant.Type() == value.MISSING {
-		return NewConstant(constant)
-	} else if constant.Type() == value.NUMBER && constant.Actual().(float64) == 1.0 {
-		return NewMultiply(others...)
-	}
-
-	return NewMultiply(append(others, NewConstant(constant))...)
-}
+func (this *Mult) Constructor() FunctionConstructor { return NewMult }

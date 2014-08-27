@@ -47,32 +47,30 @@ func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInsert(this)
 }
 
-func (this *Insert) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.key != nil {
-		expr, err := visitor.Visit(this.key)
+		this.key, err = mapper.Map(this.key)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.key = expr.(expression.Expression)
 	}
 
 	if this.values != nil {
-		err = this.values.VisitExpressions(visitor)
+		err = this.values.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.query != nil {
-		err = this.query.VisitExpressions(visitor)
+		err = this.query.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.returning != nil {
-		err = this.returning.VisitExpressions(visitor)
+		err = this.returning.MapExpressions(mapper)
 	}
 
 	return

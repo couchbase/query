@@ -16,43 +16,24 @@ import (
 )
 
 type Element struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
-func NewElement(first, second Expression) Path {
+func NewElement(first, second Expression) *Element {
 	return &Element{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("element", first, second),
 	}
 }
 
+func (this *Element) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitElement(this)
+}
+
 func (this *Element) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *Element) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Element) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Element) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Element) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Element) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Element) eval(first, second value.Value) (value.Value, error) {
+func (this *Element) Apply(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.NUMBER:
 		s := second.Actual().(float64)
@@ -71,8 +52,14 @@ func (this *Element) eval(first, second value.Value) (value.Value, error) {
 	}
 }
 
+func (this *Element) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewElement(operands[0], operands[1])
+	}
+}
+
 func (this *Element) Set(item, val value.Value, context Context) bool {
-	second, er := this.second.Evaluate(item, context)
+	second, er := this.Second().Evaluate(item, context)
 	if er != nil {
 		return false
 	}

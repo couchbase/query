@@ -17,41 +17,33 @@ import (
 )
 
 type ArrayAggDistinct struct {
-	aggregateBase
+	DistinctAggregateBase
 }
 
-func NewArrayAggDistinct(argument expression.Expression) Aggregate {
-	return &ArrayAggDistinct{aggregateBase{argument: argument}}
+func NewArrayAggDistinct(operand expression.Expression) Aggregate {
+	return &ArrayAggDistinct{
+		*NewDistinctAggregateBase("array_agg", operand),
+	}
+}
+
+func (this *ArrayAggDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ArrayAggDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *ArrayAggDistinct) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ArrayAggDistinct) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ArrayAggDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *ArrayAggDistinct) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewArrayAggDistinct(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewArrayAggDistinct(operands[0])
 	}
 }
 
-func (this *ArrayAggDistinct) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *ArrayAggDistinct) Default() value.Value { return value.NULL_VALUE }
 
 func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

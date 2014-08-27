@@ -13,54 +13,40 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type EQ struct {
-	binaryBase
+type Eq struct {
+	BinaryFunctionBase
 }
 
-func NewEQ(first, second Expression) Expression {
-	return &EQ{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+func NewEq(first, second Expression) Function {
+	return &Eq{
+		*NewBinaryFunctionBase("eq", first, second),
 	}
 }
 
-func (this *EQ) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+func (this *Eq) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitEq(this)
 }
 
-func (this *EQ) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *Eq) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *EQ) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *EQ) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *EQ) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *EQ) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *EQ) eval(first, second value.Value) (value.Value, error) {
+func (this *Eq) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL ||
-		first.Type() != second.Type() {
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(first.Collate(second) == 0), nil
+	return value.NewValue(first.Equals(second)), nil
+}
+
+func (this *Eq) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewEq(operands[0], operands[1])
+	}
 }
 
 func NewNE(first, second Expression) Expression {
-	return NewNot(NewEQ(first, second))
+	return NewNot(NewEq(first, second))
 }

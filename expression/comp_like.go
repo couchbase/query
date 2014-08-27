@@ -16,45 +16,29 @@ import (
 )
 
 type Like struct {
-	reBinaryBase
+	BinaryFunctionBase
+	re *regexp.Regexp
 }
 
-func NewLike(first, second Expression) Expression {
-	return &Like{
-		reBinaryBase{
-			binaryBase: binaryBase{
-				first:  first,
-				second: second,
-			},
-		},
+func NewLike(first, second Expression) Function {
+	rv := &Like{
+		*NewBinaryFunctionBase("like", first, second),
+		nil,
 	}
+
+	rv.Precompile()
+	return rv
+}
+
+func (this *Like) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitLike(this)
 }
 
 func (this *Like) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *Like) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Like) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Like) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Like) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Like) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Like) eval(first, second value.Value) (value.Value, error) {
+func (this *Like) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -66,17 +50,42 @@ func (this *Like) eval(first, second value.Value) (value.Value, error) {
 
 	re := this.re
 	if re == nil {
-		var e error
-		re, e = this.compile(s)
-		if e != nil {
-			return nil, e
+		var err error
+		re, err = this.Compile(s)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return value.NewValue(re.MatchString(f)), nil
 }
 
-func (this *Like) compile(s string) (*regexp.Regexp, error) {
+func (this *Like) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewLike(operands[0], operands[1])
+	}
+}
+
+func (this *Like) Regexp() *regexp.Regexp { return this.re }
+
+func (this *Like) Precompile() {
+	switch s := this.Second().(type) {
+	case *Constant:
+		sv := s.Value()
+		if sv.Type() != value.STRING {
+			return
+		}
+
+		re, err := this.Compile(sv.Actual().(string))
+		if err != nil {
+			return
+		}
+
+		this.re = re
+	}
+}
+
+func (this *Like) Compile(s string) (*regexp.Regexp, error) {
 	repl := regexp.MustCompile("\\\\|\\_|\\%|_|%")
 	s = repl.ReplaceAllStringFunc(s, replacer)
 

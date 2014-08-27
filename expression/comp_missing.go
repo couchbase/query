@@ -14,47 +14,30 @@ import (
 )
 
 type IsMissing struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsMissing(operand Expression) Expression {
+func NewIsMissing(operand Expression) Function {
 	return &IsMissing{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("ismissing", operand),
 	}
 }
 
+func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsMissing(this)
+}
+
 func (this *IsMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsMissing) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
+func (this *IsMissing) Apply(context Context, arg value.Value) (value.Value, error) {
+	return value.NewValue(arg.Type() == value.MISSING), nil
 }
 
-func (this *IsMissing) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsMissing) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsMissing) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsMissing) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsMissing) eval(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
-	case value.MISSING:
-		return value.NewValue(true), nil
-	default:
-		return value.NewValue(false), nil
+func (this *IsMissing) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsMissing(operands[0])
 	}
 }
 

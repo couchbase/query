@@ -15,7 +15,7 @@ import (
 
 // ScopeValue provides alias scoping for subqueries, FORs, LETs,
 // projections, etc.
-type scopeValue struct {
+type ScopeValue struct {
 	Value
 	parent Value
 }
@@ -23,32 +23,32 @@ type scopeValue struct {
 // ScopeValue provides alias scoping for subqueries, FORs, LETs,
 // projections, etc.
 func NewScopeValue(value interface{}, parent Value) Value {
-	return &scopeValue{
+	return &ScopeValue{
 		Value:  NewValue(value),
 		parent: parent,
 	}
 }
 
-func (this *scopeValue) MarshalJSON() ([]byte, error) {
+func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.Actual())
 }
 
-func (this *scopeValue) Copy() Value {
-	return &scopeValue{
+func (this *ScopeValue) Copy() Value {
+	return &ScopeValue{
 		Value:  this.Value.Copy(),
 		parent: this.parent,
 	}
 }
 
-func (this *scopeValue) CopyForUpdate() Value {
-	return &scopeValue{
+func (this *ScopeValue) CopyForUpdate() Value {
+	return &ScopeValue{
 		Value:  this.Value.CopyForUpdate(),
 		parent: this.parent,
 	}
 }
 
 // Search self, the parent. Implements scoping.
-func (this *scopeValue) Field(field string) (Value, bool) {
+func (this *ScopeValue) Field(field string) (Value, bool) {
 	result, ok := this.Value.Field(field)
 	if ok {
 		return result, true
@@ -61,7 +61,7 @@ func (this *scopeValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
-func (this *scopeValue) Fields() map[string]interface{} {
+func (this *ScopeValue) Fields() map[string]interface{} {
 	if this.parent == nil {
 		return this.Value.Fields()
 	}

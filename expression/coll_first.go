@@ -27,6 +27,10 @@ func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression
 	}
 }
 
+func (this *First) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFirst(this)
+}
+
 func (this *First) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
@@ -100,18 +104,6 @@ func (this *First) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *First) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *First) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
 func (this *First) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
-}
-
-func (this *First) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
 }

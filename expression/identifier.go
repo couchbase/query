@@ -10,8 +10,6 @@
 package expression
 
 import (
-	"fmt"
-
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -26,9 +24,17 @@ func NewIdentifier(identifier string) Path {
 	}
 }
 
+func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIdentifier(this)
+}
+
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, _ := item.Field(this.identifier)
 	return rv, nil
+}
+
+func (this *Identifier) Alias() string {
+	return this.identifier
 }
 
 func (this *Identifier) EquivalentTo(other Expression) bool {
@@ -40,36 +46,16 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Identifier) Alias() string {
-	return this.identifier
-}
-
-func (this *Identifier) Fold() (Expression, error) {
-	return this, nil
-}
-
-// Formal notation; qualify fields with keyspace name.
-// Identifiers in "allowed" are left unmodified.
-// Any other identifier is qualified with keyspace; if keyspace is empty, then error.
-func (this *Identifier) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	_, ok := allowed.Field(this.identifier)
-	if ok {
-		return this, nil
-	}
-
-	if keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field %v.", this.identifier)
-	}
-
-	return NewField(NewIdentifier(keyspace), NewFieldName(this.identifier)), nil
-}
-
 func (this *Identifier) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
+	return this.EquivalentTo(other)
 }
 
-func (this *Identifier) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
+func (this *Identifier) Children() Expressions {
+	return nil
+}
+
+func (this *Identifier) MapChildren(mapper Mapper) error {
+	return nil
 }
 
 func (this *Identifier) Set(item, val value.Value, context Context) bool {

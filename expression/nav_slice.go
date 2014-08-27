@@ -16,46 +16,38 @@ import (
 )
 
 type Slice struct {
-	ExpressionBase
-	source Expression
-	start  Expression
-	end    Expression
+	FunctionBase
 }
 
-func NewSlice(source, start, end Expression) Expression {
+func NewSlice(operands ...Expression) Function {
 	return &Slice{
-		source: source,
-		start:  start,
-		end:    end,
+		*NewFunctionBase("slice", operands...),
 	}
+}
+
+func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSlice(this)
 }
 
 func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
-	source, e := this.source.Evaluate(item, context)
-	if e != nil {
-		return nil, e
-	}
+	return this.Eval(this, item, context)
+}
 
+func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, re error) {
+	source := args[0]
 	if source.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
-	start, e := this.start.Evaluate(item, context)
-	if e != nil {
-		return nil, e
-	}
-
+	start := args[1]
 	if start.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
 
 	ev := -1
-	if this.end != nil {
-		end, e := this.end.Evaluate(item, context)
-		if e != nil {
-			return nil, e
-		}
-
+	var end value.Value
+	if len(args) >= 3 {
+		end = args[2]
 		if end.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		}
@@ -77,7 +69,7 @@ func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	if this.end != nil {
+	if end != nil {
 		rv, _ = source.Slice(int(sa), ev)
 	} else {
 		rv, _ = source.SliceTail(int(sa))
@@ -86,52 +78,10 @@ func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, 
 	return
 }
 
-func (this *Slice) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
+func (this *Slice) MinArgs() int { return 2 }
 
-func (this *Slice) Fold() (Expression, error) {
-	return this.fold(this)
-}
+func (this *Slice) MaxArgs() int { return 3 }
 
-func (this *Slice) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Slice) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Slice) Children() Expressions {
-	rv := make(Expressions, 0, 3)
-	rv = append(rv, this.source)
-	rv = append(rv, this.start)
-
-	if this.end != nil {
-		rv = append(rv, this.end)
-	}
-
-	return rv
-}
-
-func (this *Slice) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
-	this.source, e = visitor.Visit(this.source)
-	if e != nil {
-		return nil, e
-	}
-
-	this.start, e = visitor.Visit(this.start)
-	if e != nil {
-		return nil, e
-	}
-
-	if this.end != nil {
-		this.end, e = visitor.Visit(this.end)
-		if e != nil {
-			return nil, e
-		}
-	}
-
-	return this, nil
+func (this *Slice) Constructor() FunctionConstructor {
+	return NewSlice
 }

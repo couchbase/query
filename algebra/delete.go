@@ -30,42 +30,66 @@ func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDelete(this)
 }
 
-func (this *Delete) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.keys != nil {
-		expr, err := visitor.Visit(this.keys)
+		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
 			return err
 		}
-
-		this.keys = expr.(expression.Expression)
 	}
 
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
+		this.where, err = mapper.Map(this.where)
 		if err != nil {
 			return err
 		}
-
-		this.where = expr.(expression.Expression)
 	}
 
 	if this.limit != nil {
-		expr, err := visitor.Visit(this.limit)
+		this.limit, err = mapper.Map(this.limit)
 		if err != nil {
 			return err
 		}
-
-		this.limit = expr.(expression.Expression)
 	}
 
 	if this.returning != nil {
-		err = this.returning.VisitExpressions(visitor)
+		err = this.returning.MapExpressions(mapper)
 	}
 
 	return
 }
 
 func (this *Delete) Formalize() (err error) {
+	f, err := this.keyspace.Formalize()
+	if err != nil {
+		return err
+	}
+
+	if this.keys != nil {
+		_, err = this.keys.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.where != nil {
+		this.where, err = f.Map(this.where)
+		if err != nil {
+			return err
+		}
+	}
+
+	if this.limit != nil {
+		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.returning != nil {
+		err = this.returning.MapExpressions(f)
+	}
+
 	return
 }
 

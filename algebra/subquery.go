@@ -25,19 +25,21 @@ func NewSubquery(query *Select) expression.Expression {
 	}
 }
 
+func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
+	v, ok := visitor.(ExpressionVisitor)
+	if !ok {
+		return this, nil // XXX TODO MUSTFIX
+	}
+
+	return v.VisitSubquery(this)
+}
+
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
 
 func (this *Subquery) EquivalentTo(other expression.Expression) bool {
 	return false
-}
-func (this *Subquery) Fold() (expression.Expression, error) {
-	return this, nil
-}
-
-func (this *Subquery) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this, nil
 }
 
 func (this *Subquery) SubsetOf(other expression.Expression) bool {
@@ -48,6 +50,6 @@ func (this *Subquery) Children() expression.Expressions {
 	return nil
 }
 
-func (this *Subquery) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this, nil
+func (this *Subquery) MapChildren(mapper expression.Mapper) error {
+	return nil
 }

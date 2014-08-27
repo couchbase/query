@@ -17,41 +17,33 @@ import (
 )
 
 type Avg struct {
-	aggregateBase
+	AggregateBase
 }
 
-func NewAvg(argument expression.Expression) Aggregate {
-	return &Avg{aggregateBase{argument: argument}}
+func NewAvg(operand expression.Expression) Aggregate {
+	return &Avg{
+		*NewAggregateBase("avg", operand),
+	}
+}
+
+func (this *Avg) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Avg) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *Avg) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Avg) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Avg) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *Avg) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewAvg(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewAvg(operands[0])
 	}
 }
 
-func (this *Avg) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *Avg) Default() value.Value { return value.NULL_VALUE }
 
 func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

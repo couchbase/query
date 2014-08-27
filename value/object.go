@@ -31,7 +31,7 @@ func (this objectValue) Equals(other Value) bool {
 	switch other := other.(type) {
 	case objectValue:
 		return objectEquals(this, other)
-	case *scopeValue:
+	case *ScopeValue:
 		return this.Equals(other.Value)
 	case *annotatedValue:
 		return this.Equals(other.Value)
@@ -46,7 +46,7 @@ func (this objectValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case objectValue:
 		return objectCollate(this, other)
-	case *scopeValue:
+	case *ScopeValue:
 		return this.Collate(other.Value)
 	case *annotatedValue:
 		return this.Collate(other.Value)

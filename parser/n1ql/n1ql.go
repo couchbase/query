@@ -14,16 +14,32 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
-func Parse(input string) (algebra.Node, error) {
+func ParseCommand(input string) (algebra.Node, error) {
 	lex := newLexer(NewLexer(strings.NewReader(input)))
 	yyParse(lex)
 
 	if len(lex.errs) > 0 {
 		return nil, fmt.Errorf(strings.Join(lex.errs, "\n"))
+	} else if lex.node == nil {
+		return nil, fmt.Errorf("Input was not a command.")
 	} else {
 		return lex.node, nil
+	}
+}
+
+func ParseExpression(input string) (expression.Expression, error) {
+	lex := newLexer(NewLexer(strings.NewReader(input)))
+	yyParse(lex)
+
+	if len(lex.errs) > 0 {
+		return nil, fmt.Errorf(strings.Join(lex.errs, "\n"))
+	} else if lex.expr == nil {
+		return nil, fmt.Errorf("Input was not an expression.")
+	} else {
+		return lex.expr, nil
 	}
 }
 
@@ -31,6 +47,7 @@ type lexer struct {
 	nex  yyLexer
 	errs []string
 	node algebra.Node
+	expr expression.Expression
 }
 
 func newLexer(nex yyLexer) *lexer {
@@ -50,4 +67,8 @@ func (this *lexer) Error(s string) {
 
 func (this *lexer) setNode(node algebra.Node) {
 	this.node = node
+}
+
+func (this *lexer) setExpression(expr expression.Expression) {
+	this.expr = expr
 }

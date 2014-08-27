@@ -14,55 +14,37 @@ import (
 )
 
 type Or struct {
-	caNAryBase
+	CommutativeFunctionBase
 }
 
-func NewOr(operands ...Expression) Expression {
+func NewOr(operands ...Expression) Function {
 	return &Or{
-		caNAryBase{
-			nAryBase{
-				operands: operands,
-			},
-		},
+		*NewCommutativeFunctionBase("or", operands...),
 	}
 }
 
+func (this *Or) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitOr(this)
+}
+
 func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Or) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Or) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Or) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Or) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Or) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Or) eval(operands value.Values) (value.Value, error) {
+func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error) {
 	missing := false
 	null := false
-	for _, v := range operands {
-		if v.Type() > value.NULL {
-			if v.Truth() {
-				return value.NewValue(true), nil
-			}
-		} else if v.Type() == value.NULL {
+
+	for _, arg := range args {
+		switch arg.Type() {
+		case value.NULL:
 			null = true
-		} else if v.Type() == value.MISSING {
+		case value.MISSING:
 			missing = true
+		default:
+			if arg.Truth() {
+				return value.TRUE_VALUE, nil
+			}
 		}
 	}
 
@@ -71,14 +53,10 @@ func (this *Or) eval(operands value.Values) (value.Value, error) {
 	} else if missing {
 		return value.MISSING_VALUE, nil
 	} else {
-		return value.NewValue(false), nil
+		return value.FALSE_VALUE, nil
 	}
 }
 
-func (this *Or) construct(constant value.Value, others Expressions) Expression {
-	if constant.Truth() {
-		return NewConstant(value.NewValue(true))
-	}
-
-	return NewOr(append(others, NewConstant(constant))...)
+func (this *Or) Constructor() FunctionConstructor {
+	return NewOr
 }

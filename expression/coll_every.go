@@ -26,6 +26,10 @@ func NewEvery(bindings Bindings, satisfies Expression) Expression {
 	}
 }
 
+func (this *Every) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitEvery(this)
+}
+
 func (this *Every) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
@@ -90,18 +94,6 @@ func (this *Every) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *Every) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Every) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
 func (this *Every) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
-}
-
-func (this *Every) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
 }

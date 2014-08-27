@@ -14,3 +14,9 @@ echo cd shell
 cd shell
 ./build.sh $1
 cd ..
+
+echo cd tutorial
+cd tutorial
+echo go build
+go build
+cd ..

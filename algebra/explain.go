@@ -10,7 +10,7 @@
 package algebra
 
 type Explain struct {
-	stmt Statement `json:"Statement"`
+	stmt Statement `json:"stmt"`
 }
 
 func NewExplain(stmt Statement) *Explain {

@@ -14,49 +14,37 @@ import (
 )
 
 type IsNull struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsNull(operand Expression) Expression {
+func NewIsNull(operand Expression) Function {
 	return &IsNull{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("isnull", operand),
 	}
 }
 
+func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsNull(this)
+}
+
 func (this *IsNull) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsNull) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsNull) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsNull) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsNull) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsNull) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsNull) eval(operand value.Value) (value.Value, error) {
-	switch operand.Type() {
+func (this *IsNull) Apply(context Context, arg value.Value) (value.Value, error) {
+	switch arg.Type() {
 	case value.NULL:
-		return value.NewValue(true), nil
+		return value.TRUE_VALUE, nil
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
 	default:
-		return value.NewValue(false), nil
+		return value.FALSE_VALUE, nil
+	}
+}
+
+func (this *IsNull) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsNull(operands[0])
 	}
 }
 

@@ -85,69 +85,65 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
 }
 
-func (this *Merge) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.from != nil {
-		err = this.from.VisitExpressions(visitor)
+		err = this.from.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.query != nil {
-		err = this.query.VisitExpressions(visitor)
+		err = this.query.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.values != nil {
-		err = this.values.VisitExpressions(visitor)
+		err = this.values.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.key != nil {
-		expr, err := visitor.Visit(this.key)
+		this.key, err = mapper.Map(this.key)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.key = expr.(expression.Expression)
 	}
 
 	if this.update != nil {
-		err = this.update.VisitExpressions(visitor)
+		err = this.update.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.delete != nil {
-		err = this.delete.VisitExpressions(visitor)
+		err = this.delete.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.insert != nil {
-		err = this.insert.VisitExpressions(visitor)
+		err = this.insert.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.limit != nil {
-		expr, err := visitor.Visit(this.limit)
+		this.limit, err = mapper.Map(this.limit)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.limit = expr.(expression.Expression)
 	}
 
 	if this.returning != nil {
-		err = this.returning.VisitExpressions(visitor)
+		err = this.returning.MapExpressions(mapper)
 	}
 
 	return
@@ -225,28 +221,23 @@ func NewMergeUpdate(set *Set, unset *Unset, where expression.Expression) *MergeU
 	return &MergeUpdate{set, unset, where}
 }
 
-func (this *MergeUpdate) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *MergeUpdate) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.set != nil {
-		err = this.set.VisitExpressions(visitor)
+		err = this.set.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.unset != nil {
-		err = this.unset.VisitExpressions(visitor)
+		err = this.unset.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
-		if err != nil {
-			return err
-		}
-
-		this.where = expr.(expression.Expression)
+		this.where, err = mapper.Map(this.where)
 	}
 
 	return
@@ -272,14 +263,9 @@ func NewMergeDelete(where expression.Expression) *MergeDelete {
 	return &MergeDelete{where}
 }
 
-func (this *MergeDelete) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *MergeDelete) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
-		if err != nil {
-			return err
-		}
-
-		this.where = expr.(expression.Expression)
+		this.where, err = mapper.Map(this.where)
 	}
 
 	return
@@ -298,23 +284,16 @@ func NewMergeInsert(value, where expression.Expression) *MergeInsert {
 	return &MergeInsert{value, where}
 }
 
-func (this *MergeInsert) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.value != nil {
-		expr, err := visitor.Visit(this.value)
+		this.value, err = mapper.Map(this.value)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.value = expr.(expression.Expression)
 	}
 
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
-		if err != nil {
-			return err
-		}
-
-		this.where = expr.(expression.Expression)
+		this.where, err = mapper.Map(this.where)
 	}
 
 	return

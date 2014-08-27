@@ -19,8 +19,8 @@ import (
 
 type FromTerm interface {
 	Node
-	VisitExpressions(visitor expression.Visitor) error
-	Formalize() (allowed value.Value, keyspace string, err error)
+	MapExpressions(mapper expression.Mapper) error
+	Formalize() (f *Formalizer, err error)
 	PrimaryTerm() FromTerm
 	Alias() string
 }
@@ -41,36 +41,40 @@ func (this *KeyspaceTerm) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyspaceTerm(this)
 }
 
-func (this *KeyspaceTerm) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.project != nil {
-		expr, err := visitor.Visit(this.project)
+		expr, err := mapper.Map(this.project)
 		if err != nil {
 			return err
 		}
+
 		this.project = expr.(expression.Path)
 	}
 
 	if this.keys != nil {
-		expr, err := visitor.Visit(this.keys)
+		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
 			return err
 		}
-		this.keys = expr.(expression.Expression)
 	}
 
 	return
 }
 
-func (this *KeyspaceTerm) Formalize() (allowed value.Value, keyspace string, err error) {
-	keyspace = this.Alias()
+func (this *KeyspaceTerm) Formalize() (f *Formalizer, err error) {
+	keyspace := this.Alias()
 	if keyspace == "" {
 		err = errors.NewError(nil, "FROM term must have a name or alias.")
 		return
 	}
 
-	allowed = value.NewValue(make(map[string]interface{}))
+	allowed := value.NewValue(make(map[string]interface{}))
 	allowed.SetField(keyspace, keyspace)
-	return allowed, keyspace, err
+
+	f = NewFormalizer()
+	f.Keyspace = keyspace
+	f.Allowed = allowed
+	return
 }
 
 func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
@@ -121,17 +125,17 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
-func (this *Join) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.left.VisitExpressions(visitor)
+func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.left.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
-	return this.right.VisitExpressions(visitor)
+	return this.right.MapExpressions(mapper)
 }
 
-func (this *Join) Formalize() (allowed value.Value, keyspace string, err error) {
-	allowed, _, err = this.left.Formalize()
+func (this *Join) Formalize() (f *Formalizer, err error) {
+	f, err = this.left.Formalize()
 	if err != nil {
 		return
 	}
@@ -139,16 +143,16 @@ func (this *Join) Formalize() (allowed value.Value, keyspace string, err error) 
 	alias := this.Alias()
 	if alias == "" {
 		err = errors.NewError(nil, "JOIN term must have a name or alias.")
-		return nil, "", err
+		return nil, err
 	}
 
-	_, ok := allowed.Field(alias)
+	_, ok := f.Allowed.Field(alias)
 	if ok {
 		err = errors.NewError(nil, fmt.Sprintf("Duplicate JOIN alias %s.", alias))
-		return nil, "", err
+		return nil, err
 	}
 
-	allowed.SetField(alias, alias)
+	f.Allowed.SetField(alias, alias)
 	return
 }
 
@@ -186,17 +190,17 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
-func (this *Nest) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.left.VisitExpressions(visitor)
+func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.left.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
-	return this.right.VisitExpressions(visitor)
+	return this.right.MapExpressions(mapper)
 }
 
-func (this *Nest) Formalize() (allowed value.Value, keyspace string, err error) {
-	allowed, _, err = this.left.Formalize()
+func (this *Nest) Formalize() (f *Formalizer, err error) {
+	f, err = this.left.Formalize()
 	if err != nil {
 		return
 	}
@@ -204,16 +208,16 @@ func (this *Nest) Formalize() (allowed value.Value, keyspace string, err error) 
 	alias := this.Alias()
 	if alias == "" {
 		err = errors.NewError(nil, "NEST term must have a name or alias.")
-		return nil, "", err
+		return nil, err
 	}
 
-	_, ok := allowed.Field(alias)
+	_, ok := f.Allowed.Field(alias)
 	if ok {
 		err = errors.NewError(nil, fmt.Sprintf("Duplicate NEST alias %s.", alias))
-		return nil, "", err
+		return nil, err
 	}
 
-	allowed.SetField(alias, alias)
+	f.Allowed.SetField(alias, alias)
 	return
 }
 
@@ -252,23 +256,18 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
 }
 
-func (this *Unnest) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.left.VisitExpressions(visitor)
+func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.left.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
-	expr, err := visitor.Visit(this.expr)
-	if err != nil {
-		return
-	}
-
-	this.expr = expr.(expression.Expression)
+	this.expr, err = mapper.Map(this.expr)
 	return
 }
 
-func (this *Unnest) Formalize() (allowed value.Value, keyspace string, err error) {
-	allowed, _, err = this.left.Formalize()
+func (this *Unnest) Formalize() (f *Formalizer, err error) {
+	f, err = this.left.Formalize()
 	if err != nil {
 		return
 	}
@@ -276,16 +275,16 @@ func (this *Unnest) Formalize() (allowed value.Value, keyspace string, err error
 	alias := this.Alias()
 	if alias == "" {
 		err = errors.NewError(nil, "UNNEST term must have a name or alias.")
-		return nil, "", err
+		return nil, err
 	}
 
-	_, ok := allowed.Field(alias)
+	_, ok := f.Allowed.Field(alias)
 	if ok {
 		err = errors.NewError(nil, fmt.Sprintf("Duplicate UNNEST alias %s.", alias))
-		return nil, "", err
+		return nil, err
 	}
 
-	allowed.SetField(alias, alias)
+	f.Allowed.SetField(alias, alias)
 	return
 }
 

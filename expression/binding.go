@@ -9,12 +9,15 @@
 
 package expression
 
+/*
 import (
 	"fmt"
+	"io"
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
+*/
 
 type Bindings []*Binding
 
@@ -44,47 +47,15 @@ func (this *Binding) Descend() bool {
 	return this.descend
 }
 
-func (this *Binding) Accept(visitor Visitor) (Expression, error) {
-	var e error
-	this.expr, e = visitor.Visit(this.expr)
-	if e != nil {
-		return nil, e
-	}
-
-	return this.expr, nil
-}
-
-func (this Bindings) VisitExpressions(visitor Visitor) (err error) {
+func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	for _, b := range this {
-		expr, err := visitor.Visit(b.expr)
+		expr, err := mapper.Map(b.expr)
 		if err != nil {
 			return err
 		}
 
-		b.expr = expr.(Expression)
+		b.expr = expr
 	}
 
 	return
-}
-
-func (this Bindings) Formalize(allowed value.Value, keyspace string) (a value.Value, err error) {
-	a = value.NewScopeValue(make(map[string]interface{}, len(this)), allowed)
-
-	for _, b := range this {
-		_, ok := a.Field(b.variable)
-		if ok {
-			return nil, errors.NewError(nil,
-				fmt.Sprintf("Bind alias %s already in scope.", b.variable))
-		}
-
-		expr, err := b.expr.Formalize(a, keyspace)
-		if err != nil {
-			return nil, err
-		}
-
-		b.expr = expr
-		a.SetField(b.variable, b.variable)
-	}
-
-	return a, nil
 }

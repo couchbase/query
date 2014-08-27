@@ -9,6 +9,6 @@
 
 package expression
 
-func NewGT(first, second Expression) Expression {
+func NewGT(first, second Expression) Function {
 	return NewLT(second, first)
 }

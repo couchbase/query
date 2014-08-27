@@ -9,6 +9,41 @@
 
 package expression
 
-func NewSubtract(first, second Expression) Expression {
-	return NewAdd(first, NewNegate(second))
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
+type Sub struct {
+	BinaryFunctionBase
+}
+
+func NewSub(first, second Expression) Function {
+	return &Sub{
+		*NewBinaryFunctionBase("sub", first, second),
+	}
+}
+
+func (this *Sub) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSub(this)
+}
+
+func (this *Sub) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *Sub) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
+		diff := first.Actual().(float64) - second.Actual().(float64)
+		return value.NewValue(diff), nil
+	} else if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else {
+		return value.NULL_VALUE, nil
+	}
+}
+
+func (this *Sub) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewSub(operands[0], operands[1])
+	}
 }

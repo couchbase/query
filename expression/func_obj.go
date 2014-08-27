@@ -15,43 +15,31 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// ObjectKeys
+//
+///////////////////////////////////////////////////
+
 type ObjectKeys struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewObjectKeys(arg Expression) Function {
+func NewObjectKeys(operand Expression) Function {
 	return &ObjectKeys{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("object_keys", operand),
 	}
 }
 
+func (this *ObjectKeys) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ObjectKeys) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ObjectKeys) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ObjectKeys) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ObjectKeys) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ObjectKeys) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ObjectKeys) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ObjectKeys) eval(arg value.Value) (value.Value, error) {
+func (this *ObjectKeys) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
@@ -74,48 +62,36 @@ func (this *ObjectKeys) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ObjectKeys) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewObjectKeys(args[0])
+	return func(operands ...Expression) Function {
+		return NewObjectKeys(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectLength
+//
+///////////////////////////////////////////////////
 
 type ObjectLength struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewObjectLength(arg Expression) Function {
+func NewObjectLength(operand Expression) Function {
 	return &ObjectLength{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("object_length", operand),
 	}
+}
+
+func (this *ObjectLength) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ObjectLength) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ObjectLength) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ObjectLength) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ObjectLength) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ObjectLength) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ObjectLength) eval(arg value.Value) (value.Value, error) {
+func (this *ObjectLength) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
@@ -127,48 +103,36 @@ func (this *ObjectLength) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ObjectLength) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewObjectLength(args[0])
+	return func(operands ...Expression) Function {
+		return NewObjectLength(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectValues
+//
+///////////////////////////////////////////////////
 
 type ObjectValues struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewObjectValues(arg Expression) Function {
+func NewObjectValues(operand Expression) Function {
 	return &ObjectValues{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("object_values", operand),
 	}
+}
+
+func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *ObjectValues) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ObjectValues) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ObjectValues) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ObjectValues) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ObjectValues) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ObjectValues) eval(arg value.Value) (value.Value, error) {
+func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
@@ -191,7 +155,7 @@ func (this *ObjectValues) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *ObjectValues) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewObjectValues(args[0])
+	return func(operands ...Expression) Function {
+		return NewObjectValues(operands[0])
 	}
 }

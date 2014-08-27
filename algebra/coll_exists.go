@@ -20,30 +20,16 @@ type Exists struct {
 }
 
 func NewExists(operand expression.Expression) *Exists {
-	return &Exists{
-		*(expression.NewExists(operand)),
-	}
-}
-
-// Fold() overrides expression.Exists.Fold() to set LIMIT 1 on
-// subqueries.
-func (this *Exists) Fold() (expression.Expression, error) {
-	t, e := expression.Expression(this).VisitChildren(&expression.Folder{})
-	if e != nil {
-		return t, e
+	rv := &Exists{
+		*expression.NewExists(operand),
 	}
 
-	switch o := this.Operand().(type) {
-	case *expression.Constant:
-		v, e := this.Evaluate(o.Value(), nil)
-		if e == nil {
-			return expression.NewConstant(v), nil
-		}
+	switch o := operand.(type) {
 	case *Subquery:
-		o.query.SetLimit(_ONE_EXPR)
+		if o.query.Limit() == nil {
+			o.query.SetLimit(expression.ONE_EXPR)
+		}
 	}
 
-	return this, nil
+	return rv
 }
-
-var _ONE_EXPR = expression.NewConstant(_ONE)

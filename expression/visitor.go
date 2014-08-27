@@ -9,26 +9,62 @@
 
 package expression
 
-import (
-	"github.com/couchbaselabs/query/value"
-)
-
 type Visitor interface {
-	Visit(expr Expression) (Expression, error)
-}
+	// Arithmetic
+	VisitAdd(expr *Add) (interface{}, error)
+	VisitDiv(expr *Div) (interface{}, error)
+	VisitMod(expr *Mod) (interface{}, error)
+	VisitMult(expr *Mult) (interface{}, error)
+	VisitNeg(expr *Neg) (interface{}, error)
+	VisitSub(expr *Sub) (interface{}, error)
 
-type Folder struct {
-}
+	// Case
+	VisitSearchedCase(expr *SearchedCase) (interface{}, error)
+	VisitSimpleCase(expr *SimpleCase) (interface{}, error)
 
-func (this *Folder) Visit(expr Expression) (Expression, error) {
-	return expr.Fold()
-}
+	// Collection
+	VisitAny(expr *Any) (interface{}, error)
+	VisitArray(expr *Array) (interface{}, error)
+	VisitEvery(expr *Every) (interface{}, error)
+	VisitExists(expr *Exists) (interface{}, error)
+	VisitFirst(expr *First) (interface{}, error)
+	VisitIn(expr *In) (interface{}, error)
+	VisitWithin(expr *Within) (interface{}, error)
 
-type Formalizer struct {
-	Allowed   value.Value
-	Keyspace  string
-}
+	// Comparison
+	VisitBetween(expr *Between) (interface{}, error)
+	VisitEq(expr *Eq) (interface{}, error)
+	VisitLE(expr *LE) (interface{}, error)
+	VisitLike(expr *Like) (interface{}, error)
+	VisitLT(expr *LT) (interface{}, error)
+	VisitIsMissing(expr *IsMissing) (interface{}, error)
+	VisitIsNull(expr *IsNull) (interface{}, error)
+	VisitIsValued(expr *IsValued) (interface{}, error)
 
-func (this *Formalizer) Visit(expr Expression) (Expression, error) {
-	return expr.Formalize(this.Allowed, this.Keyspace)
+	// Concat
+	VisitConcat(expr *Concat) (interface{}, error)
+
+	// Constant
+	VisitConstant(expr *Constant) (interface{}, error)
+
+	// Identifier
+	VisitIdentifier(expr *Identifier) (interface{}, error)
+
+	// Construction
+	VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error)
+	VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error)
+
+	// Logic
+	VisitAnd(expr *And) (interface{}, error)
+	VisitNot(expr *Not) (interface{}, error)
+	VisitOr(expr *Or) (interface{}, error)
+
+	// Navigation
+	VisitElement(expr *Element) (interface{}, error)
+	VisitField(expr *Field) (interface{}, error)
+	VisitFieldName(expr *FieldName) (interface{}, error)
+	VisitSlice(expr *Slice) (interface{}, error)
+
+	// Function
+	VisitFunction(expr Function) (interface{}, error)
 }

@@ -11,7 +11,6 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
 type Projection struct {
@@ -38,9 +37,9 @@ func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
 	}
 }
 
-func (this *Projection) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
-		err = term.VisitExpression(visitor)
+		err = term.MapExpression(mapper)
 		if err != nil {
 			return
 		}
@@ -49,25 +48,12 @@ func (this *Projection) VisitExpressions(visitor expression.Visitor) (err error)
 	return
 }
 
-func (this *Projection) Formalize(allowed value.Value, keyspace string) (
-	projection *Projection, err error) {
-	projection = &Projection{
-		distinct: this.distinct,
-		raw:      this.raw,
-		terms:    make(ResultTerms, len(this.terms)),
-	}
-
-	terms := projection.terms
-	for i, term := range this.terms {
-		terms[i] = &ResultTerm{
-			star: term.star,
-			as:   term.as,
-		}
-
+func (this *Projection) Formalize(f *Formalizer) (err error) {
+	for _, term := range this.terms {
 		if term.expr != nil {
-			terms[i].expr, err = term.expr.Formalize(allowed, keyspace)
+			term.expr, err = f.Map(term.expr)
 			if err != nil {
-				return nil, err
+				return
 			}
 		}
 	}
@@ -103,14 +89,9 @@ func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm
 	}
 }
 
-func (this *ResultTerm) VisitExpression(visitor expression.Visitor) (err error) {
+func (this *ResultTerm) MapExpression(mapper expression.Mapper) (err error) {
 	if this.expr != nil {
-		expr, err := visitor.Visit(this.expr)
-		if err != nil {
-			return err
-		}
-
-		this.expr = expr.(expression.Expression)
+		this.expr, err = mapper.Map(this.expr)
 	}
 
 	return

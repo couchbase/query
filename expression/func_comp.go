@@ -13,51 +13,37 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// Greatest
+//
+///////////////////////////////////////////////////
+
 type Greatest struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewGreatest(args Expressions) Function {
+func NewGreatest(operands ...Expression) Function {
 	return &Greatest{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("greatest", operands...),
 	}
 }
 
+func (this *Greatest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Greatest) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Greatest) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Greatest) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Greatest) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Greatest) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Greatest) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Greatest) eval(args value.Values) (value.Value, error) {
+func (this *Greatest) Apply(context Context, args ...value.Value) (value.Value, error) {
 	rv := value.NULL_VALUE
 	for _, a := range args {
 		if a.Type() <= value.NULL {
 			continue
 		} else if rv == value.NULL_VALUE {
 			rv = a
-		} else if rv.Type() != a.Type() {
-			return value.NULL_VALUE, nil
 		} else if a.Collate(rv) > 0 {
 			rv = a
 		}
@@ -66,55 +52,40 @@ func (this *Greatest) eval(args value.Values) (value.Value, error) {
 	return rv, nil
 }
 
-func (this *Greatest) MinArgs() int { return 1 }
-
 func (this *Greatest) Constructor() FunctionConstructor { return NewGreatest }
 
+///////////////////////////////////////////////////
+//
+// Least
+//
+///////////////////////////////////////////////////
+
 type Least struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewLeast(args Expressions) Function {
+func NewLeast(operands ...Expression) Function {
 	return &Least{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("least", operands...),
 	}
 }
 
+func (this *Least) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Least) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Least) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Least) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Least) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Least) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Least) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Least) eval(args value.Values) (value.Value, error) {
+func (this *Least) Apply(context Context, args ...value.Value) (value.Value, error) {
 	rv := value.NULL_VALUE
+
 	for _, a := range args {
 		if a.Type() <= value.NULL {
 			continue
 		} else if rv == value.NULL_VALUE {
 			rv = a
-		} else if rv.Type() != a.Type() {
-			return value.NULL_VALUE, nil
 		} else if a.Collate(rv) < 0 {
 			rv = a
 		}
@@ -122,7 +93,5 @@ func (this *Least) eval(args value.Values) (value.Value, error) {
 
 	return rv, nil
 }
-
-func (this *Least) MinArgs() int { return 1 }
 
 func (this *Least) Constructor() FunctionConstructor { return NewLeast }

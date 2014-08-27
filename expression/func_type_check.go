@@ -13,97 +13,65 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// IsArray
+//
+///////////////////////////////////////////////////
+
 type IsArray struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsArray(arg Expression) Function {
+func NewIsArray(operand Expression) Function {
 	return &IsArray{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isarray", operand),
 	}
+}
+
+func (this *IsArray) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsArray) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsArray) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsArray) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsArray) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsArray) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsArray) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsArray) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsArray) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() == value.ARRAY), nil
 }
 
 func (this *IsArray) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsArray(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsArray(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// IsAtom
+//
+///////////////////////////////////////////////////
 
 type IsAtom struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsAtom(arg Expression) Function {
+func NewIsAtom(operand Expression) Function {
 	return &IsAtom{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isatom", operand),
 	}
+}
+
+func (this *IsAtom) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsAtom) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsAtom) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsAtom) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsAtom) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsAtom) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsAtom) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsAtom) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING:
 		return value.NewValue(true), nil
@@ -113,254 +81,178 @@ func (this *IsAtom) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *IsAtom) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsAtom(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsAtom(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// IsBool
+//
+///////////////////////////////////////////////////
 
 type IsBool struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsBool(arg Expression) Function {
+func NewIsBool(operand Expression) Function {
 	return &IsBool{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isbool", operand),
 	}
+}
+
+func (this *IsBool) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsBool) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsBool) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsBool) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsBool) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsBool) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsBool) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsBool) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsBool) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() == value.BOOLEAN), nil
 }
 
 func (this *IsBool) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsBool(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsBool(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// IsNum
+//
+///////////////////////////////////////////////////
 
 type IsNum struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsNum(arg Expression) Function {
+func NewIsNum(operand Expression) Function {
 	return &IsNum{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isnum", operand),
 	}
+}
+
+func (this *IsNum) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsNum) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsNum) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsNum) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsNum) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsNum) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsNum) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsNum) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsNum) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() == value.NUMBER), nil
 }
 
 func (this *IsNum) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsNum(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsNum(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// IsObj
+//
+///////////////////////////////////////////////////
 
 type IsObj struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsObj(arg Expression) Function {
+func NewIsObj(operand Expression) Function {
 	return &IsObj{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isobj", operand),
 	}
+}
+
+func (this *IsObj) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsObj) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsObj) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsObj) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsObj) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsObj) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsObj) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsObj) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsObj) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() == value.OBJECT), nil
 }
 
 func (this *IsObj) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsObj(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsObj(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// IsStr
+//
+///////////////////////////////////////////////////
 
 type IsStr struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewIsStr(arg Expression) Function {
+func NewIsStr(operand Expression) Function {
 	return &IsStr{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("isstr", operand),
 	}
+}
+
+func (this *IsStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *IsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *IsStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *IsStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *IsStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *IsStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *IsStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *IsStr) eval(arg value.Value) (value.Value, error) {
-	if arg.Type() <= value.NULL {
-		return arg, nil
-	}
-
+func (this *IsStr) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() == value.STRING), nil
 }
 
 func (this *IsStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewIsStr(args[0])
+	return func(operands ...Expression) Function {
+		return NewIsStr(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// TypeName
+//
+///////////////////////////////////////////////////
 
 type TypeName struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewTypeName(arg Expression) Function {
+func NewTypeName(operand Expression) Function {
 	return &TypeName{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("typename", operand),
 	}
+}
+
+func (this *TypeName) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *TypeName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *TypeName) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *TypeName) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *TypeName) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *TypeName) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *TypeName) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *TypeName) eval(arg value.Value) (value.Value, error) {
+func (this *TypeName) Apply(context Context, arg value.Value) (value.Value, error) {
 	tn, _ := value.TypeName(arg.Type())
 	return value.NewValue(tn), nil
 }
 
 func (this *TypeName) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewTypeName(args[0])
+	return func(operands ...Expression) Function {
+		return NewTypeName(operands[0])
 	}
 }

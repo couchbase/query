@@ -18,12 +18,24 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// ClockMillis
+//
+///////////////////////////////////////////////////
+
 type ClockMillis struct {
-	ExpressionBase
+	NullaryFunctionBase
 }
 
 func NewClockMillis() Function {
-	return &ClockMillis{}
+	return &ClockMillis{
+		*NewNullaryFunctionBase("clock_millis"),
+	}
+}
+
+func (this *ClockMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -31,68 +43,37 @@ func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
-func (this *ClockMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ClockMillis) Fold() (Expression, error) {
-	return this, nil
-}
-
-func (this *ClockMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this, nil
-}
-
-func (this *ClockMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ClockMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
-}
-
 func (this *ClockMillis) Constructor() FunctionConstructor {
-	return func(Expressions) Function { return this }
+	return func(operands ...Expression) Function { return this }
 }
+
+///////////////////////////////////////////////////
+//
+// ClockStr
+//
+///////////////////////////////////////////////////
 
 type ClockStr struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewClockStr(args Expressions) Function {
+func NewClockStr(operands ...Expression) Function {
 	return &ClockStr{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("clock_str", operands...),
 	}
 }
 
+func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *ClockStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *ClockStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *ClockStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *ClockStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *ClockStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *ClockStr) eval(args value.Values) (value.Value, error) {
+func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
+
 	if len(args) > 0 {
 		fv := args[0]
 		if fv.Type() == value.MISSING {
@@ -113,331 +94,246 @@ func (this *ClockStr) MaxArgs() int { return 1 }
 
 func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
 
+///////////////////////////////////////////////////
+//
+// DateAddMillis
+//
+///////////////////////////////////////////////////
+
 type DateAddMillis struct {
-	nAryBase
+	TernaryFunctionBase
 }
 
-func NewDateAddMillis(args Expressions) Function {
+func NewDateAddMillis(first, second, third Expression) Function {
 	return &DateAddMillis{
-		nAryBase{
-			operands: args,
-		},
+		*NewTernaryFunctionBase("date_add_millis", first, second, third),
 	}
+}
+
+func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.TernaryEval(this, item, context)
 }
 
-func (this *DateAddMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateAddMillis) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateAddMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateAddMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateAddMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateAddMillis) eval(args value.Values) (value.Value, error) {
-	ev := args[0]
-	nv := args[1]
-	pv := args[2]
-
-	if ev.Type() == value.MISSING || nv.Type() == value.MISSING ||
-		pv.Type() == value.MISSING {
+func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (value.Value, error) {
+	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if ev.Type() != value.NUMBER || nv.Type() != value.NUMBER ||
-		pv.Type() != value.STRING {
+	} else if date.Type() != value.NUMBER || n.Type() != value.NUMBER || part.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	ea := ev.Actual().(float64)
-	na := nv.Actual().(float64)
+	da := date.Actual().(float64)
+	na := n.Actual().(float64)
 	if na != math.Trunc(na) {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := pv.Actual().(string)
-	t, e := dateAdd(millisToTime(ea), int(na), pa)
-	if e != nil {
+	pa := part.Actual().(string)
+	t, err := dateAdd(millisToTime(da), int(na), pa)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
 }
 
-func (this *DateAddMillis) MinArgs() int { return 3 }
-
-func (this *DateAddMillis) MaxArgs() int { return 3 }
-
-func (this *DateAddMillis) Constructor() FunctionConstructor { return NewDateAddMillis }
-
-type DateAddStr struct {
-	nAryBase
+func (this *DateAddMillis) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateAddMillis(operands[0], operands[1], operands[2])
+	}
 }
 
-func NewDateAddStr(args Expressions) Function {
+///////////////////////////////////////////////////
+//
+// DateAddStr
+//
+///////////////////////////////////////////////////
+
+type DateAddStr struct {
+	TernaryFunctionBase
+}
+
+func NewDateAddStr(first, second, third Expression) Function {
 	return &DateAddStr{
-		nAryBase{
-			operands: args,
-		},
+		*NewTernaryFunctionBase("date_add_str", first, second, third),
 	}
+}
+
+func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.TernaryEval(this, item, context)
 }
 
-func (this *DateAddStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateAddStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateAddStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateAddStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateAddStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateAddStr) eval(args value.Values) (value.Value, error) {
-	ev := args[0]
-	nv := args[1]
-	pv := args[2]
-
-	if ev.Type() == value.MISSING || nv.Type() == value.MISSING ||
-		pv.Type() == value.MISSING {
+func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value.Value, error) {
+	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if ev.Type() != value.STRING || nv.Type() != value.NUMBER ||
-		pv.Type() != value.STRING {
+	} else if date.Type() != value.STRING || n.Type() != value.NUMBER || part.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	ea := ev.Actual().(string)
-	t, e := strToTime(ea)
-	if e != nil {
+	da := date.Actual().(string)
+	t, err := strToTime(da)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	na := nv.Actual().(float64)
+	na := n.Actual().(float64)
 	if na != math.Trunc(na) {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := pv.Actual().(string)
-	t, e = dateAdd(t, int(na), pa)
-	if e != nil {
+	pa := part.Actual().(string)
+	t, err = dateAdd(t, int(na), pa)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(timeToStr(t, ea)), nil
+	return value.NewValue(timeToStr(t, da)), nil
 }
 
-func (this *DateAddStr) MinArgs() int { return 3 }
+func (this *DateAddStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateAddStr(operands[0], operands[1], operands[2])
+	}
+}
 
-func (this *DateAddStr) MaxArgs() int { return 3 }
-
-func (this *DateAddStr) Constructor() FunctionConstructor { return NewDateAddStr }
+///////////////////////////////////////////////////
+//
+// DateDiffMillis
+//
+///////////////////////////////////////////////////
 
 type DateDiffMillis struct {
-	nAryBase
+	TernaryFunctionBase
 }
 
-func NewDateDiffMillis(args Expressions) Function {
+func NewDateDiffMillis(first, second, third Expression) Function {
 	return &DateDiffMillis{
-		nAryBase{
-			operands: args,
-		},
+		*NewTernaryFunctionBase("date_diff_millis", first, second, third),
 	}
+}
+
+func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.TernaryEval(this, item, context)
 }
 
-func (this *DateDiffMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateDiffMillis) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateDiffMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateDiffMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateDiffMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateDiffMillis) eval(args value.Values) (value.Value, error) {
-	dv1 := args[0]
-	dv2 := args[1]
-	pv := args[2]
-
-	if dv2.Type() == value.MISSING || dv2.Type() == value.MISSING ||
-		pv.Type() == value.MISSING {
+func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if dv1.Type() != value.NUMBER || dv2.Type() != value.NUMBER ||
-		pv.Type() != value.STRING {
+	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	da1 := dv1.Actual().(float64)
-	da2 := dv2.Actual().(float64)
-	pa := pv.Actual().(string)
-	diff, e := dateDiff(millisToTime(da1), millisToTime(da2), pa)
-	if e != nil {
+	da1 := date1.Actual().(float64)
+	da2 := date2.Actual().(float64)
+	pa := part.Actual().(string)
+	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(float64(diff)), nil
 }
 
-func (this *DateDiffMillis) MinArgs() int { return 3 }
-
-func (this *DateDiffMillis) MaxArgs() int { return 3 }
-
-func (this *DateDiffMillis) Constructor() FunctionConstructor { return NewDateDiffMillis }
-
-type DateDiffStr struct {
-	nAryBase
+func (this *DateDiffMillis) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateDiffMillis(operands[0], operands[1], operands[2])
+	}
 }
 
-func NewDateDiffStr(args Expressions) Function {
+///////////////////////////////////////////////////
+//
+// DateDiffStr
+//
+///////////////////////////////////////////////////
+
+type DateDiffStr struct {
+	TernaryFunctionBase
+}
+
+func NewDateDiffStr(first, second, third Expression) Function {
 	return &DateDiffStr{
-		nAryBase{
-			operands: args,
-		},
+		*NewTernaryFunctionBase("date_diff_str", first, second, third),
 	}
+}
+
+func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.TernaryEval(this, item, context)
 }
 
-func (this *DateDiffStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateDiffStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateDiffStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateDiffStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateDiffStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateDiffStr) eval(args value.Values) (value.Value, error) {
-	dv1 := args[0]
-	dv2 := args[1]
-	pv := args[2]
-
-	if dv2.Type() == value.MISSING || dv2.Type() == value.MISSING ||
-		pv.Type() == value.MISSING {
+func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
+	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if dv1.Type() != value.STRING || dv2.Type() != value.STRING ||
-		pv.Type() != value.STRING {
+	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	da1 := dv1.Actual().(string)
-	t1, e := strToTime(da1)
-	if e != nil {
+	da1 := date1.Actual().(string)
+	t1, err := strToTime(da1)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	da2 := dv2.Actual().(string)
-	t2, e := strToTime(da2)
-	if e != nil {
+	da2 := date2.Actual().(string)
+	t2, err := strToTime(da2)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	pa := pv.Actual().(string)
-	diff, e := dateDiff(t1, t2, pa)
-	if e != nil {
+	pa := part.Actual().(string)
+	diff, err := dateDiff(t1, t2, pa)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue(float64(diff)), nil
 }
 
-func (this *DateDiffStr) MinArgs() int { return 3 }
+func (this *DateDiffStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateDiffStr(operands[0], operands[1], operands[2])
+	}
+}
 
-func (this *DateDiffStr) MaxArgs() int { return 3 }
-
-func (this *DateDiffStr) Constructor() FunctionConstructor { return NewDateDiffStr }
+///////////////////////////////////////////////////
+//
+// DatePartMillis
+//
+///////////////////////////////////////////////////
 
 type DatePartMillis struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewDatePartMillis(first, second Expression) Function {
 	return &DatePartMillis{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("date_part_millis", first, second),
 	}
 }
 
+func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *DatePartMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DatePartMillis) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DatePartMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DatePartMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DatePartMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DatePartMillis) eval(first, second value.Value) (value.Value, error) {
+func (this *DatePartMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -446,8 +342,8 @@ func (this *DatePartMillis) eval(first, second value.Value) (value.Value, error)
 
 	millis := first.Actual().(float64)
 	part := second.Actual().(string)
-	rv, e := datePart(millisToTime(millis), part)
-	if e != nil {
+	rv, err := datePart(millisToTime(millis), part)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -455,49 +351,36 @@ func (this *DatePartMillis) eval(first, second value.Value) (value.Value, error)
 }
 
 func (this *DatePartMillis) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDatePartMillis(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewDatePartMillis(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// DatePartStr
+//
+///////////////////////////////////////////////////
+
 type DatePartStr struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewDatePartStr(first, second Expression) Function {
 	return &DatePartStr{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("date_part_str", first, second),
 	}
 }
 
+func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *DatePartStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DatePartStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DatePartStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DatePartStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DatePartStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DatePartStr) eval(first, second value.Value) (value.Value, error) {
+func (this *DatePartStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -506,13 +389,13 @@ func (this *DatePartStr) eval(first, second value.Value) (value.Value, error) {
 
 	str := first.Actual().(string)
 	part := second.Actual().(string)
-	t, e := strToTime(str)
-	if e != nil {
+	t, err := strToTime(str)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	rv, e := datePart(t, part)
-	if e != nil {
+	rv, err := datePart(t, part)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -520,49 +403,36 @@ func (this *DatePartStr) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *DatePartStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDatePartStr(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewDatePartStr(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// DateTruncMillis
+//
+///////////////////////////////////////////////////
+
 type DateTruncMillis struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewDateTruncMillis(first, second Expression) Function {
 	return &DateTruncMillis{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("date_trunc_millis", first, second),
 	}
 }
 
+func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *DateTruncMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateTruncMillis) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateTruncMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateTruncMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateTruncMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateTruncMillis) eval(first, second value.Value) (value.Value, error) {
+func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -573,9 +443,9 @@ func (this *DateTruncMillis) eval(first, second value.Value) (value.Value, error
 	part := second.Actual().(string)
 	t := millisToTime(millis)
 
-	var e error
-	t, e = dateTrunc(t, part)
-	if e != nil {
+	var err error
+	t, err = dateTrunc(t, part)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -583,49 +453,36 @@ func (this *DateTruncMillis) eval(first, second value.Value) (value.Value, error
 }
 
 func (this *DateTruncMillis) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDateTruncMillis(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewDateTruncMillis(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// DateTruncStr
+//
+///////////////////////////////////////////////////
+
 type DateTruncStr struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewDateTruncStr(first, second Expression) Function {
 	return &DateTruncStr{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("date_trunc_str", first, second),
 	}
 }
 
+func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *DateTruncStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *DateTruncStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *DateTruncStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *DateTruncStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *DateTruncStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *DateTruncStr) eval(first, second value.Value) (value.Value, error) {
+func (this *DateTruncStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -634,13 +491,13 @@ func (this *DateTruncStr) eval(first, second value.Value) (value.Value, error) {
 
 	str := first.Actual().(string)
 	part := second.Actual().(string)
-	t, e := strToTime(str)
-	if e != nil {
+	t, err := strToTime(str)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	t, e = dateTrunc(t, part)
-	if e != nil {
+	t, err = dateTrunc(t, part)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -648,50 +505,39 @@ func (this *DateTruncStr) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *DateTruncStr) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDateTruncStr(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewDateTruncStr(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// MillisToStr
+//
+///////////////////////////////////////////////////
 
 type MillisToStr struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewMillisToStr(args Expressions) Function {
+func NewMillisToStr(operands ...Expression) Function {
 	return &MillisToStr{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("millis_to_str", operands...),
 	}
+}
+
+func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *MillisToStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *MillisToStr) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *MillisToStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *MillisToStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *MillisToStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *MillisToStr) eval(args value.Values) (value.Value, error) {
+func (this *MillisToStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
+
 	if len(args) > 1 {
 		fv = args[1]
 	}
@@ -714,45 +560,34 @@ func (this *MillisToStr) MaxArgs() int { return 2 }
 
 func (this *MillisToStr) Constructor() FunctionConstructor { return NewMillisToStr }
 
+///////////////////////////////////////////////////
+//
+// MillisToUTC
+//
+///////////////////////////////////////////////////
+
 type MillisToUTC struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewMillisToUTC(args Expressions) Function {
+func NewMillisToUTC(operands ...Expression) Function {
 	return &MillisToUTC{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("millis_to_utc", operands...),
 	}
 }
 
+func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *MillisToUTC) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *MillisToUTC) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *MillisToUTC) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *MillisToUTC) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *MillisToUTC) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *MillisToUTC) eval(args value.Values) (value.Value, error) {
+func (this *MillisToUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
+
 	if len(args) > 1 {
 		fv = args[1]
 	}
@@ -775,46 +610,35 @@ func (this *MillisToUTC) MaxArgs() int { return 2 }
 
 func (this *MillisToUTC) Constructor() FunctionConstructor { return NewMillisToUTC }
 
+///////////////////////////////////////////////////
+//
+// MillisToZoneName
+//
+///////////////////////////////////////////////////
+
 type MillisToZoneName struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewMillisToZoneName(args Expressions) Function {
+func NewMillisToZoneName(operands ...Expression) Function {
 	return &MillisToZoneName{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("millis_to_zone_name", operands...),
 	}
 }
 
+func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *MillisToZoneName) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *MillisToZoneName) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *MillisToZoneName) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *MillisToZoneName) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *MillisToZoneName) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *MillisToZoneName) eval(args value.Values) (value.Value, error) {
+func (this *MillisToZoneName) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	zv := args[1]
 	fv := _DEFAULT_FMT_VALUE
+
 	if len(args) > 2 {
 		fv = args[2]
 	}
@@ -827,8 +651,8 @@ func (this *MillisToZoneName) eval(args value.Values) (value.Value, error) {
 
 	millis := ev.Actual().(float64)
 	tz := zv.Actual().(string)
-	loc, e := time.LoadLocation(tz)
-	if e != nil {
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -843,66 +667,62 @@ func (this *MillisToZoneName) MaxArgs() int { return 3 }
 
 func (this *MillisToZoneName) Constructor() FunctionConstructor { return NewMillisToZoneName }
 
+///////////////////////////////////////////////////
+//
+// MowMillis
+//
+///////////////////////////////////////////////////
+
 type NowMillis struct {
-	ExpressionBase
+	NullaryFunctionBase
 }
 
 func NewNowMillis() Function {
-	return &NowMillis{}
+	return &NowMillis{
+		*NewNullaryFunctionBase("now_millis"),
+	}
+}
+
+func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	nanos := context.(Context).Now().UnixNano()
+	nanos := context.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
-func (this *NowMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *NowMillis) Fold() (Expression, error) {
-	return this, nil
-}
-
-func (this *NowMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this, nil
-}
-
-func (this *NowMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *NowMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
-}
-
 func (this *NowMillis) Constructor() FunctionConstructor {
-	return func(Expressions) Function { return this }
+	return func(operands ...Expression) Function { return this }
 }
+
+///////////////////////////////////////////////////
+//
+// NowStr
+//
+///////////////////////////////////////////////////
 
 type NowStr struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewNowStr(args Expressions) Function {
+func NewNowStr(operands ...Expression) Function {
 	return &NowStr{
-		nAryBase{
-			operands: args,
-		},
+		*NewFunctionBase("now_str", operands...),
 	}
+}
+
+func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var e error
-	args := make([]value.Value, len(this.operands))
-	for i, o := range this.operands {
-		args[i], e = o.Evaluate(item, context)
-		if e != nil {
-			return nil, e
-		}
-	}
+	return this.Eval(this, item, context)
+}
 
+func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
+
 	if len(args) > 0 {
 		fv := args[0]
 		if fv.Type() == value.MISSING {
@@ -914,32 +734,8 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 		fmt = fv.Actual().(string)
 	}
 
-	now := context.(Context).Now()
+	now := context.Now()
 	return value.NewValue(timeToStr(now, fmt)), nil
-}
-
-func (this *NowStr) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *NowStr) Fold() (Expression, error) {
-	return this, nil
-}
-
-func (this *NowStr) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *NowStr) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *NowStr) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *NowStr) eval(args value.Values) (value.Value, error) {
-	panic("Cannot eval without context.")
 }
 
 func (this *NowStr) MinArgs() int { return 0 }
@@ -948,43 +744,31 @@ func (this *NowStr) MaxArgs() int { return 1 }
 
 func (this *NowStr) Constructor() FunctionConstructor { return NewNowStr }
 
+///////////////////////////////////////////////////
+//
+// StrToMillis
+//
+///////////////////////////////////////////////////
+
 type StrToMillis struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewStrToMillis(arg Expression) Function {
+func NewStrToMillis(operand Expression) Function {
 	return &StrToMillis{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("str_to_millis", operand),
 	}
 }
 
+func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *StrToMillis) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *StrToMillis) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *StrToMillis) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *StrToMillis) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *StrToMillis) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *StrToMillis) eval(arg value.Value) (value.Value, error) {
+func (this *StrToMillis) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -992,8 +776,8 @@ func (this *StrToMillis) eval(arg value.Value) (value.Value, error) {
 	}
 
 	str := arg.Actual().(string)
-	t, e := strToTime(str)
-	if e != nil {
+	t, err := strToTime(str)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1001,48 +785,36 @@ func (this *StrToMillis) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *StrToMillis) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewStrToMillis(args[0])
+	return func(operands ...Expression) Function {
+		return NewStrToMillis(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// StrToUTC
+//
+///////////////////////////////////////////////////
 
 type StrToUTC struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewStrToUTC(arg Expression) Function {
+func NewStrToUTC(operand Expression) Function {
 	return &StrToUTC{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("str_to_utc", operand),
 	}
+}
+
+func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *StrToUTC) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *StrToUTC) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *StrToUTC) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *StrToUTC) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *StrToUTC) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *StrToUTC) eval(arg value.Value) (value.Value, error) {
+func (this *StrToUTC) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -1050,8 +822,8 @@ func (this *StrToUTC) eval(arg value.Value) (value.Value, error) {
 	}
 
 	str := arg.Actual().(string)
-	t, e := strToTime(str)
-	if e != nil {
+	t, err := strToTime(str)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1060,49 +832,36 @@ func (this *StrToUTC) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *StrToUTC) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewStrToUTC(args[0])
+	return func(operands ...Expression) Function {
+		return NewStrToUTC(operands[0])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// StrToZoneName
+//
+///////////////////////////////////////////////////
+
 type StrToZoneName struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewStrToZoneName(first, second Expression) Function {
 	return &StrToZoneName{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("str_to_zone_name", first, second),
 	}
 }
 
+func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *StrToZoneName) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *StrToZoneName) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *StrToZoneName) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *StrToZoneName) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *StrToZoneName) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *StrToZoneName) eval(first, second value.Value) (value.Value, error) {
+func (this *StrToZoneName) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -1110,14 +869,14 @@ func (this *StrToZoneName) eval(first, second value.Value) (value.Value, error) 
 	}
 
 	str := first.Actual().(string)
-	t, e := strToTime(str)
-	if e != nil {
+	t, err := strToTime(str)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	tz := second.Actual().(string)
-	loc, e := time.LoadLocation(tz)
-	if e != nil {
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1125,8 +884,8 @@ func (this *StrToZoneName) eval(first, second value.Value) (value.Value, error) 
 }
 
 func (this *StrToZoneName) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewStrToZoneName(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewStrToZoneName(operands[0], operands[1])
 	}
 }
 

@@ -104,7 +104,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	if (this.readonly || request.Readonly()) && !prepared.Readonly() {
 		request.Fail(errors.NewError(nil, "The server or request is read-only"+
-			" and cannot accept this write statement."))
+			" and cannot accept this write command."))
 		return
 	}
 
@@ -130,7 +130,7 @@ func (this *Server) serviceRequest(request Request) {
 func (this *Server) getPrepared(request Request, namespace string) (plan.Operator, error) {
 	prepared := request.Prepared()
 	if prepared == nil {
-		node, err := n1ql.Parse(request.Statement())
+		node, err := n1ql.ParseCommand(request.Command())
 		if err != nil {
 			return nil, err
 		}

@@ -15,41 +15,33 @@ import (
 )
 
 type CountDistinct struct {
-	aggregateBase
+	DistinctAggregateBase
 }
 
-func NewCountDistinct(argument expression.Expression) Aggregate {
-	return &CountDistinct{aggregateBase{argument: argument}}
+func NewCountDistinct(operand expression.Expression) Aggregate {
+	return &CountDistinct{
+		*NewDistinctAggregateBase("count", operand),
+	}
+}
+
+func (this *CountDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *CountDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *CountDistinct) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *CountDistinct) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *CountDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *CountDistinct) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewCountDistinct(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewCountDistinct(operands[0])
 	}
 }
 
-func (this *CountDistinct) Default() value.Value {
-	return _ZERO
-}
+func (this *CountDistinct) Default() value.Value { return value.ZERO_VALUE }
 
 func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}
@@ -62,9 +54,9 @@ func (this *CountDistinct) CumulateInitial(item, cumulative value.Value, context
 }
 
 func (this *CountDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
-	if part == _ZERO {
+	if part == value.ZERO_VALUE {
 		return cumulative, nil
-	} else if cumulative == _ZERO {
+	} else if cumulative == value.ZERO_VALUE {
 		return part, nil
 	}
 
@@ -72,7 +64,7 @@ func (this *CountDistinct) CumulateIntermediate(part, cumulative value.Value, co
 }
 
 func (this *CountDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
-	if cumulative == _ZERO {
+	if cumulative == value.ZERO_VALUE {
 		return cumulative, nil
 	}
 

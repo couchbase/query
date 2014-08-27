@@ -17,41 +17,33 @@ import (
 )
 
 type SumDistinct struct {
-	aggregateBase
+	DistinctAggregateBase
 }
 
-func NewSumDistinct(argument expression.Expression) Aggregate {
-	return &SumDistinct{aggregateBase{argument: argument}}
+func NewSumDistinct(operand expression.Expression) Aggregate {
+	return &SumDistinct{
+		*NewDistinctAggregateBase("sum", operand),
+	}
+}
+
+func (this *SumDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *SumDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *SumDistinct) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *SumDistinct) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *SumDistinct) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *SumDistinct) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewSumDistinct(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewSumDistinct(operands[0])
 	}
 }
 
-func (this *SumDistinct) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *SumDistinct) Default() value.Value { return value.NULL_VALUE }
 
 func (this *SumDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

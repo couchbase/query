@@ -14,52 +14,36 @@ import (
 )
 
 type Exists struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
 func NewExists(operand Expression) *Exists {
 	return &Exists{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("exists", operand),
 	}
 }
 
+func (this *Exists) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitExists(this)
+}
+
 func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Exists) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Exists) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Exists) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Exists) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Exists) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Exists) eval(operand value.Value) (value.Value, error) {
-	if operand.Type() == value.ARRAY {
-		a := operand.Actual().([]interface{})
+func (this *Exists) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.ARRAY {
+		a := arg.Actual().([]interface{})
 		return value.NewValue(len(a) > 0), nil
-	} else if operand.Type() == value.MISSING {
+	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else {
 		return value.NULL_VALUE, nil
 	}
 }
 
-func (this *Exists) Operand() Expression {
-	return this.operand
+func (this *Exists) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewExists(operands[0])
+	}
 }

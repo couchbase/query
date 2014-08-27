@@ -17,15 +17,21 @@ import (
 )
 
 type Count struct {
-	aggregateBase
+	AggregateBase
 }
 
-func NewCount(argument expression.Expression) Aggregate {
-	return &Count{aggregateBase{argument: argument}}
+func NewCount(operand expression.Expression) Aggregate {
+	return &Count{
+		*NewAggregateBase("count", operand),
+	}
+}
+
+func (this *Count) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
-	if this.argument != nil {
+	if this.Operand() != nil {
 		return this.evaluate(this, item, context)
 	}
 
@@ -41,39 +47,23 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 	return this.evaluate(this, item, context)
 }
 
-func (this *Count) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Count) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Count) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Count) MinArgs() int {
-	return 0
-}
+func (this *Count) MinArgs() int { return 0 }
 
 func (this *Count) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		if len(arguments) > 0 {
-			return NewCount(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		if len(operands) > 0 {
+			return NewCount(operands[0])
 		} else {
 			return NewCount(nil)
 		}
 	}
 }
 
-func (this *Count) Default() value.Value {
-	return _ZERO
-}
+func (this *Count) Default() value.Value { return value.ZERO_VALUE }
 
 func (this *Count) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	if this.argument != nil {
-		item, e := this.argument.Evaluate(item, context)
+	if this.Operand() != nil {
+		item, e := this.Operand().Evaluate(item, context)
 		if e != nil {
 			return nil, e
 		}
@@ -83,7 +73,7 @@ func (this *Count) CumulateInitial(item, cumulative value.Value, context Context
 		}
 	}
 
-	return this.cumulatePart(_ONE, cumulative, context)
+	return this.cumulatePart(value.ONE_VALUE, cumulative, context)
 
 }
 
@@ -110,6 +100,3 @@ func (this *Count) cumulatePart(part, cumulative value.Value, context Context) (
 		return nil, fmt.Errorf("Invalid partial COUNT %v of type %T.", actual, actual)
 	}
 }
-
-var _ZERO = value.NewValue(0)
-var _ONE = value.NewValue(1)

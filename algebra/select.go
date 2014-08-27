@@ -34,14 +34,14 @@ func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
-func (this *Select) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.subresult.VisitExpressions(visitor)
+func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.subresult.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
 	if this.order != nil {
-		err = this.order.VisitExpressions(visitor)
+		err = this.order.MapExpressions(mapper)
 	}
 
 	return
@@ -54,7 +54,7 @@ func (this *Select) Formalize() (err error) {
 	}
 
 	if this.order != nil {
-		err = this.order.VisitExpressions(formalizer)
+		err = this.order.MapExpressions(formalizer)
 		if err != nil {
 			return
 		}
@@ -105,14 +105,12 @@ func (this *SortTerm) Descending() bool {
 	return this.descending
 }
 
-func (this SortTerms) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this {
-		expr, err := visitor.Visit(term.expr)
+		term.expr, err = mapper.Map(term.expr)
 		if err != nil {
-			return err
+			return
 		}
-
-		term.expr = expr.(expression.Expression)
 	}
 
 	return
@@ -121,8 +119,8 @@ func (this SortTerms) VisitExpressions(visitor expression.Visitor) (err error) {
 type Subresult interface {
 	Node
 	IsCorrelated() bool
-	VisitExpressions(visitor expression.Visitor) error
-	Formalize() (formalizer *expression.Formalizer, err error)
+	MapExpressions(mapper expression.Mapper) error
+	Formalize() (formalizer *Formalizer, err error)
 }
 
 type Subselect struct {
@@ -142,76 +140,73 @@ func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSubselect(this)
 }
 
-func (this *Subselect) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.from != nil {
-		err = this.from.VisitExpressions(visitor)
+		err = this.from.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.let != nil {
-		err = this.let.VisitExpressions(visitor)
+		err = this.let.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
-		if err != nil {
-			return err
-		}
-		this.where = expr.(expression.Expression)
-	}
-
-	if this.group != nil {
-		err = this.group.VisitExpressions(visitor)
+		this.where, err = mapper.Map(this.where)
 		if err != nil {
 			return
 		}
 	}
 
-	return this.projection.VisitExpressions(visitor)
+	if this.group != nil {
+		err = this.group.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	return this.projection.MapExpressions(mapper)
 }
 
-func (this *Subselect) Formalize() (f *expression.Formalizer, err error) {
-	f = &expression.Formalizer{}
-
+func (this *Subselect) Formalize() (f *Formalizer, err error) {
 	if this.from == nil {
-		f.Allowed = value.EMPTY_OBJECT_VALUE
-		return f, nil
+		f = NewFormalizer()
+		return
 	}
 
-	f.Allowed, f.Keyspace, err = this.from.Formalize()
+	f, err = this.from.Formalize()
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	if this.let != nil {
-		f.Allowed, err = this.let.Formalize(f.Allowed, f.Keyspace)
+		err = f.PushBindings(this.let)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if this.where != nil {
-		expr, err := f.Visit(this.where)
+		expr, err := f.Map(this.where)
 		if err != nil {
 			return nil, err
 		}
 
-		this.where = expr.(expression.Expression)
+		this.where = expr
 	}
 
 	if this.group != nil {
-		f.Allowed, err = this.group.Formalize(f.Allowed, f.Keyspace)
+		f, err = this.group.Formalize(f)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = this.projection.VisitExpressions(f)
+	err = this.projection.MapExpressions(f)
 	if err != nil {
 		return nil, err
 	}
@@ -257,37 +252,34 @@ func NewGroup(by expression.Expressions, letting expression.Bindings, having exp
 	}
 }
 
-func (this *Group) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.by != nil {
-		err = this.by.VisitExpressions(visitor)
+		err = this.by.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.letting != nil {
-		err = this.letting.VisitExpressions(visitor)
+		err = this.letting.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.having != nil {
-		expr, err := visitor.Visit(this.having)
-		if err != nil {
-			return err
-		}
-
-		this.having = expr.(expression.Expression)
+		this.having, err = mapper.Map(this.having)
 	}
 
 	return
 }
 
-func (this *Group) Formalize(allowed value.Value, keyspace string) (a value.Value, err error) {
+func (this *Group) Formalize(f *Formalizer) (*Formalizer, error) {
+	var err error
+
 	if this.by != nil {
 		for i, b := range this.by {
-			this.by[i], err = b.Formalize(allowed, keyspace)
+			this.by[i], err = f.Map(b)
 			if err != nil {
 				return nil, err
 			}
@@ -295,22 +287,20 @@ func (this *Group) Formalize(allowed value.Value, keyspace string) (a value.Valu
 	}
 
 	if this.letting != nil {
-		allowed, err = this.letting.Formalize(allowed, keyspace)
+		err = f.PushBindings(this.letting)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if this.having != nil {
-		expr, err := this.having.Formalize(allowed, keyspace)
+		this.having, err = f.Map(this.having)
 		if err != nil {
 			return nil, err
 		}
-
-		this.having = expr.(expression.Expression)
 	}
 
-	return allowed, nil
+	return f, nil
 }
 
 func (this *Group) By() expression.Expressions {
@@ -359,17 +349,17 @@ func (this *Union) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnion(this)
 }
 
-func (this *Union) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.first.VisitExpressions(visitor)
+func (this *Union) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
-	return this.second.VisitExpressions(visitor)
+	return this.second.MapExpressions(mapper)
 }
 
-func (this *Union) Formalize() (f *expression.Formalizer, err error) {
-	var ff, sf *expression.Formalizer
+func (this *Union) Formalize() (f *Formalizer, err error) {
+	var ff, sf *Formalizer
 	ff, err = this.first.Formalize()
 	if err != nil {
 		return nil, err
@@ -391,6 +381,10 @@ func (this *Union) Formalize() (f *expression.Formalizer, err error) {
 	}
 
 	ff.Allowed = value.NewValue(fa)
+	if ff.Keyspace != sf.Keyspace {
+		ff.Keyspace = ""
+	}
+
 	return ff, nil
 }
 
@@ -411,17 +405,17 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnionAll(this)
 }
 
-func (this *UnionAll) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.first.VisitExpressions(visitor)
+func (this *UnionAll) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
-	return this.second.VisitExpressions(visitor)
+	return this.second.MapExpressions(mapper)
 }
 
-func (this *UnionAll) Formalize() (f *expression.Formalizer, err error) {
-	var ff, sf *expression.Formalizer
+func (this *UnionAll) Formalize() (f *Formalizer, err error) {
+	var ff, sf *Formalizer
 	ff, err = this.first.Formalize()
 	if err != nil {
 		return nil, err
@@ -443,5 +437,9 @@ func (this *UnionAll) Formalize() (f *expression.Formalizer, err error) {
 	}
 
 	ff.Allowed = value.NewValue(fa)
+	if ff.Keyspace != sf.Keyspace {
+		ff.Keyspace = ""
+	}
+
 	return ff, nil
 }

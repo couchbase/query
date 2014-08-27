@@ -22,77 +22,77 @@ type Aggregate interface {
 	expression.Function
 
 	Default() value.Value
-	Argument() expression.Expression
+	Operand() expression.Expression
 
 	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
 	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
 	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)
 }
 
-type aggregateBase struct {
-	expression.ExpressionBase
-	argument expression.Expression
+type AggregateBase struct {
+	expression.UnaryFunctionBase
 }
 
-func (this *aggregateBase) evaluate(agg Aggregate, item value.Value,
-	context expression.Context) (result value.Value, e error) {
+func NewAggregateBase(name string, operand expression.Expression) *AggregateBase {
+	return &AggregateBase{
+		*expression.NewUnaryFunctionBase(name, operand),
+	}
+}
+
+func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
+	context expression.Context) (result value.Value, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			e = fmt.Errorf("Error evaluating aggregate: %v.", r)
+			err = fmt.Errorf("Error evaluating aggregate: %v.", r)
 		}
 	}()
 
 	av := item.(value.AnnotatedValue)
 	aggregates := av.GetAttachment("aggregates").(map[Aggregate]value.Value)
 	result = aggregates[agg]
-	return result, e
+	return
 }
 
-func (this *aggregateBase) EquivalentTo(other expression.Expression) bool {
-	return false
-}
-func (this *aggregateBase) fold(agg Aggregate) (expression.Expression, error) {
-	return agg.VisitChildren(&expression.Folder{})
-}
-
-func (this *aggregateBase) formalize(agg Aggregate, allowed value.Value,
-	keyspace string) (expression.Expression, error) {
-	f := &expression.Formalizer{
-		Allowed:   allowed,
-		Keyspace:  keyspace,
-	}
-
-	return agg.VisitChildren(f)
-}
-
-func (this *aggregateBase) SubsetOf(other expression.Expression) bool {
+func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
 	return false
 }
 
-func (this *aggregateBase) Children() expression.Expressions {
-	if this.argument != nil {
-		return expression.Expressions{this.argument}
-	} else {
+func (this *AggregateBase) SubsetOf(other expression.Expression) bool {
+	return false
+}
+
+func (this *AggregateBase) Children() expression.Expressions {
+	if this.Operands()[0] == nil {
 		return nil
+	} else {
+		return this.Operands()
 	}
 }
 
-func (this *aggregateBase) visitChildren(agg Aggregate,
-	visitor expression.Visitor) (expression.Expression, error) {
-	if this.argument != nil {
-		var e error
-		this.argument, e = visitor.Visit(this.argument)
-		if e != nil {
-			return nil, e
+func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
+	children := this.Children()
+
+	for i, c := range children {
+		expr, err := mapper.Map(c)
+		if err != nil {
+			return err
 		}
+
+		children[i] = expr
 	}
 
-	return agg, nil
+	return nil
 }
 
-func (this *aggregateBase) MinArgs() int { return 1 }
+type DistinctAggregateBase struct {
+	AggregateBase
+}
 
-func (this *aggregateBase) MaxArgs() int { return 1 }
+func NewDistinctAggregateBase(name string, operand expression.Expression) *DistinctAggregateBase {
+	return &DistinctAggregateBase{
+		*NewAggregateBase(name, operand),
+	}
+}
 
-func (this *aggregateBase) Argument() expression.Expression { return this.argument }
+func (this *DistinctAggregateBase) Distinct() bool { return true }

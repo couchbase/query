@@ -155,40 +155,6 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 	}
 }
 
-func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
-	this.projectFinal = true
-
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	unionAll := NewUnionAll(first.(Operator), second.(Operator))
-	distinct := NewDistinct()
-	return NewSequence(unionAll, distinct), nil
-}
-
-func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.projectFinal = true
-
-	first, err := node.First().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	second, err := node.Second().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewUnionAll(first.(Operator), second.(Operator)), nil
-}
-
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
 	keyspace, err := this.getKeyspace(node)
 	if err != nil {
@@ -285,6 +251,40 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	return unnest, nil
 }
 
+func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	unionAll := NewUnionAll(first.(Operator), second.(Operator))
+	distinct := NewDistinct()
+	return NewSequence(unionAll, distinct), nil
+}
+
+func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewUnionAll(first.(Operator), second.(Operator)), nil
+}
+
 func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) algebra.Aggregates {
 	for _, expr := range exprs {
 		agg, ok := expr.(algebra.Aggregate)
@@ -327,7 +327,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 
 	for _, term := range node.Projection().Terms() {
 		count, ok := term.Expression().(*algebra.Count)
-		if !ok || count.Argument() != nil {
+		if !ok || count.Operand() != nil {
 			return false, nil
 		}
 	}

@@ -10,50 +10,37 @@
 package expression
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// Abs
+//
+///////////////////////////////////////////////////
+
 type Abs struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewAbs(arg Expression) Function {
+func NewAbs(operand Expression) Function {
 	return &Abs{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("abs", operand),
 	}
 }
 
+func (this *Abs) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Abs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Abs) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Abs) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Abs) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Abs) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Abs) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Abs) eval(arg value.Value) (value.Value, error) {
+func (this *Abs) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -64,48 +51,36 @@ func (this *Abs) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Abs) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewAbs(args[0])
+	return func(operands ...Expression) Function {
+		return NewAbs(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Acos
+//
+///////////////////////////////////////////////////
 
 type Acos struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewAcos(arg Expression) Function {
+func NewAcos(operand Expression) Function {
 	return &Acos{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("acos", operand),
 	}
+}
+
+func (this *Acos) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Acos) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Acos) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Acos) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Acos) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Acos) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Acos) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Acos) eval(arg value.Value) (value.Value, error) {
+func (this *Acos) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -116,48 +91,36 @@ func (this *Acos) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Acos) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewAcos(args[0])
+	return func(operands ...Expression) Function {
+		return NewAcos(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Asin
+//
+///////////////////////////////////////////////////
 
 type Asin struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewAsin(arg Expression) Function {
+func NewAsin(operand Expression) Function {
 	return &Asin{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("asin", operand),
 	}
+}
+
+func (this *Asin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Asin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Asin) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Asin) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Asin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Asin) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Asin) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Asin) eval(arg value.Value) (value.Value, error) {
+func (this *Asin) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -168,48 +131,36 @@ func (this *Asin) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Asin) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewAsin(args[0])
+	return func(operands ...Expression) Function {
+		return NewAsin(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Atan
+//
+///////////////////////////////////////////////////
 
 type Atan struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewAtan(arg Expression) Function {
+func NewAtan(operand Expression) Function {
 	return &Atan{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("atan", operand),
 	}
+}
+
+func (this *Atan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Atan) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Atan) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Atan) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Atan) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Atan) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Atan) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Atan) eval(arg value.Value) (value.Value, error) {
+func (this *Atan) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -220,49 +171,36 @@ func (this *Atan) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Atan) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewAtan(args[0])
+	return func(operands ...Expression) Function {
+		return NewAtan(operands[0])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// Atan2
+//
+///////////////////////////////////////////////////
+
 type Atan2 struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewAtan2(first, second Expression) Function {
 	return &Atan2{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("atan2", first, second),
 	}
 }
 
+func (this *Atan2) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Atan2) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *Atan2) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Atan2) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Atan2) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Atan2) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Atan2) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Atan2) eval(first, second value.Value) (value.Value, error) {
+func (this *Atan2) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {
@@ -275,48 +213,36 @@ func (this *Atan2) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *Atan2) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewAtan2(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewAtan2(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Ceil
+//
+///////////////////////////////////////////////////
 
 type Ceil struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewCeil(arg Expression) Function {
+func NewCeil(operand Expression) Function {
 	return &Ceil{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("ceil", operand),
 	}
+}
+
+func (this *Ceil) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Ceil) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Ceil) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Ceil) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Ceil) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Ceil) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Ceil) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Ceil) eval(arg value.Value) (value.Value, error) {
+func (this *Ceil) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -327,48 +253,36 @@ func (this *Ceil) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Ceil) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewCeil(args[0])
+	return func(operands ...Expression) Function {
+		return NewCeil(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Cos
+//
+///////////////////////////////////////////////////
 
 type Cos struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewCos(arg Expression) Function {
+func NewCos(operand Expression) Function {
 	return &Cos{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("cos", operand),
 	}
+}
+
+func (this *Cos) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Cos) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Cos) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Cos) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Cos) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Cos) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Cos) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Cos) eval(arg value.Value) (value.Value, error) {
+func (this *Cos) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -379,48 +293,36 @@ func (this *Cos) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Cos) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewCos(args[0])
+	return func(operands ...Expression) Function {
+		return NewCos(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Degrees
+//
+///////////////////////////////////////////////////
 
 type Degrees struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewDegrees(arg Expression) Function {
+func NewDegrees(operand Expression) Function {
 	return &Degrees{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("degrees", operand),
 	}
+}
+
+func (this *Degrees) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Degrees) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Degrees) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Degrees) Fold() (Expression, error) {
-	return NewMultiply(this.operand, _RAD_TO_DEG).Fold()
-}
-
-func (this *Degrees) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Degrees) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Degrees) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Degrees) eval(arg value.Value) (value.Value, error) {
+func (this *Degrees) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -431,48 +333,36 @@ func (this *Degrees) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Degrees) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewDegrees(args[0])
+	return func(operands ...Expression) Function {
+		return NewDegrees(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Exp
+//
+///////////////////////////////////////////////////
 
 type Exp struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewExp(arg Expression) Function {
+func NewExp(operand Expression) Function {
 	return &Exp{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("exp", operand),
 	}
+}
+
+func (this *Exp) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Exp) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Exp) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Exp) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Exp) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Exp) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Exp) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Exp) eval(arg value.Value) (value.Value, error) {
+func (this *Exp) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -483,48 +373,36 @@ func (this *Exp) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Exp) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewExp(args[0])
+	return func(operands ...Expression) Function {
+		return NewExp(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Ln
+//
+///////////////////////////////////////////////////
 
 type Ln struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewLn(arg Expression) Function {
+func NewLn(operand Expression) Function {
 	return &Ln{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("ln", operand),
 	}
+}
+
+func (this *Ln) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Ln) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Ln) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Ln) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Ln) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Ln) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Ln) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Ln) eval(arg value.Value) (value.Value, error) {
+func (this *Ln) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -535,48 +413,36 @@ func (this *Ln) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Ln) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewLn(args[0])
+	return func(operands ...Expression) Function {
+		return NewLn(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Log
+//
+///////////////////////////////////////////////////
 
 type Log struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewLog(arg Expression) Function {
+func NewLog(operand Expression) Function {
 	return &Log{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("log", operand),
 	}
+}
+
+func (this *Log) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Log) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Log) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Log) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Log) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Log) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Log) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Log) eval(arg value.Value) (value.Value, error) {
+func (this *Log) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -587,48 +453,36 @@ func (this *Log) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Log) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewLog(args[0])
+	return func(operands ...Expression) Function {
+		return NewLog(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Floor
+//
+///////////////////////////////////////////////////
 
 type Floor struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewFloor(arg Expression) Function {
+func NewFloor(operand Expression) Function {
 	return &Floor{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("floor", operand),
 	}
+}
+
+func (this *Floor) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Floor) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Floor) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Floor) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Floor) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Floor) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Floor) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Floor) eval(arg value.Value) (value.Value, error) {
+func (this *Floor) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -639,89 +493,66 @@ func (this *Floor) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Floor) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewFloor(args[0])
+	return func(operands ...Expression) Function {
+		return NewFloor(operands[0])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// PI
+//
+///////////////////////////////////////////////////
+
 type PI struct {
-	ExpressionBase
+	NullaryFunctionBase
 }
 
 func NewPI() Function {
-	return &PI{}
-}
-
-func (this *PI) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return value.NewValue(math.Pi), nil
-}
-
-func (this *PI) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *PI) Fold() (Expression, error) {
-	return _PI, nil
-}
-
-func (this *PI) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this, nil
-}
-
-func (this *PI) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *PI) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
-}
-
-func (this *PI) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewPI()
+	return &PI{
+		*NewNullaryFunctionBase("pi"),
 	}
 }
 
-var _PI = NewConstant(value.NewValue(math.Pi))
+func (this *PI) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *PI) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return _PI_VALUE, nil
+}
+
+func (this *PI) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
+}
+
+var _PI_VALUE = value.NewValue(math.Pi)
+
+///////////////////////////////////////////////////
+//
+// Power
+//
+///////////////////////////////////////////////////
 
 type Power struct {
-	binaryBase
+	BinaryFunctionBase
 }
 
 func NewPower(first, second Expression) Function {
 	return &Power{
-		binaryBase{
-			first:  first,
-			second: second,
-		},
+		*NewBinaryFunctionBase("power", first, second),
 	}
 }
 
+func (this *Power) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Power) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *Power) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Power) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Power) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Power) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Power) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Power) eval(first, second value.Value) (value.Value, error) {
+func (this *Power) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.NUMBER {
@@ -734,48 +565,36 @@ func (this *Power) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *Power) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewPower(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewPower(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Radians
+//
+///////////////////////////////////////////////////
 
 type Radians struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewRadians(arg Expression) Function {
+func NewRadians(operand Expression) Function {
 	return &Radians{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("radians", operand),
 	}
+}
+
+func (this *Radians) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Radians) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Radians) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Radians) Fold() (Expression, error) {
-	return NewMultiply(this.operand, _DEG_TO_RAD).Fold()
-}
-
-func (this *Radians) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Radians) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Radians) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Radians) eval(arg value.Value) (value.Value, error) {
+func (this *Radians) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -786,73 +605,38 @@ func (this *Radians) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Radians) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRadians(args[0])
+	return func(operands ...Expression) Function {
+		return NewRadians(operands[0])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// Random
+//
+///////////////////////////////////////////////////
+
 type Random struct {
-	nAryBase
+	FunctionBase
 	gen *rand.Rand
 }
 
-func NewRandom(arguments Expressions) Function {
+func NewRandom(operands ...Expression) Function {
 	return &Random{
-		nAryBase: nAryBase{
-			operands: arguments,
-		},
+		*NewFunctionBase("random", operands...),
+		nil,
 	}
+}
+
+func (this *Random) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Random) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Random) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Random) Fold() (Expression, error) {
-	t, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	if len(this.operands) == 0 {
-		return this, nil
-	}
-
-	switch o := this.operands[0].(type) {
-	case *Constant:
-		v := o.Value().Actual()
-		switch v := v.(type) {
-		case float64:
-			if v != math.Trunc(v) {
-				return nil, fmt.Errorf("Non-integer RANDOM seed %v.", v)
-			}
-			this.gen = &rand.Rand{}
-			this.gen.Seed(int64(v))
-		default:
-			return nil, fmt.Errorf("Invalid RANDOM seed %v of type %T.", v, v)
-		}
-	}
-
-	return this, nil
-}
-
-func (this *Random) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Random) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Random) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Random) eval(args value.Values) (value.Value, error) {
+func (this *Random) Apply(context Context, args ...value.Value) (value.Value, error) {
 	if this.gen != nil {
 		return value.NewValue(this.gen.Float64()), nil
 	}
@@ -885,43 +669,31 @@ func (this *Random) MaxArgs() int { return 1 }
 
 func (this *Random) Constructor() FunctionConstructor { return NewRandom }
 
+///////////////////////////////////////////////////
+//
+// Round
+//
+///////////////////////////////////////////////////
+
 type Round struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewRound(arguments Expressions) Function {
+func NewRound(operands ...Expression) Function {
 	return &Round{
-		nAryBase: nAryBase{
-			operands: arguments,
-		},
+		*NewFunctionBase("round", operands...),
 	}
 }
 
+func (this *Round) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Round) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Round) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Round) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Round) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Round) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Round) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Round) eval(args value.Values) (value.Value, error) {
+func (this *Round) Apply(context Context, args ...value.Value) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -958,43 +730,31 @@ func (this *Round) MaxArgs() int { return 2 }
 
 func (this *Round) Constructor() FunctionConstructor { return NewRound }
 
+///////////////////////////////////////////////////
+//
+// Sign
+//
+///////////////////////////////////////////////////
+
 type Sign struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewSign(arg Expression) Function {
+func NewSign(operand Expression) Function {
 	return &Sign{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("sign", operand),
 	}
 }
 
+func (this *Sign) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
 func (this *Sign) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Sign) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Sign) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Sign) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Sign) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Sign) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Sign) eval(arg value.Value) (value.Value, error) {
+func (this *Sign) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -1013,48 +773,36 @@ func (this *Sign) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Sign) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewSign(args[0])
+	return func(operands ...Expression) Function {
+		return NewSign(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Sin
+//
+///////////////////////////////////////////////////
 
 type Sin struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewSin(arg Expression) Function {
+func NewSin(operand Expression) Function {
 	return &Sin{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("sin", operand),
 	}
+}
+
+func (this *Sin) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Sin) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Sin) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Sin) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Sin) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Sin) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Sin) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Sin) eval(arg value.Value) (value.Value, error) {
+func (this *Sin) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -1065,48 +813,36 @@ func (this *Sin) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Sin) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewSin(args[0])
+	return func(operands ...Expression) Function {
+		return NewSin(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Sqrt
+//
+///////////////////////////////////////////////////
 
 type Sqrt struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewSqrt(arg Expression) Function {
+func NewSqrt(operand Expression) Function {
 	return &Sqrt{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("sqrt", operand),
 	}
+}
+
+func (this *Sqrt) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Sqrt) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Sqrt) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Sqrt) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Sqrt) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Sqrt) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Sqrt) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Sqrt) eval(arg value.Value) (value.Value, error) {
+func (this *Sqrt) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -1117,48 +853,36 @@ func (this *Sqrt) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Sqrt) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewSqrt(args[0])
+	return func(operands ...Expression) Function {
+		return NewSqrt(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Tan
+//
+///////////////////////////////////////////////////
 
 type Tan struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewTan(arg Expression) Function {
+func NewTan(operand Expression) Function {
 	return &Tan{
-		unaryBase{
-			operand: arg,
-		},
+		*NewUnaryFunctionBase("tan", operand),
 	}
+}
+
+func (this *Tan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Tan) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Tan) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Tan) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Tan) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Tan) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Tan) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Tan) eval(arg value.Value) (value.Value, error) {
+func (this *Tan) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.NUMBER {
@@ -1169,48 +893,36 @@ func (this *Tan) eval(arg value.Value) (value.Value, error) {
 }
 
 func (this *Tan) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewTan(args[0])
+	return func(operands ...Expression) Function {
+		return NewTan(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Trunc
+//
+///////////////////////////////////////////////////
 
 type Trunc struct {
-	nAryBase
+	FunctionBase
 }
 
-func NewTrunc(arguments Expressions) Function {
+func NewTrunc(operands ...Expression) Function {
 	return &Trunc{
-		nAryBase: nAryBase{
-			operands: arguments,
-		},
+		*NewFunctionBase("trunc", operands...),
 	}
+}
+
+func (this *Trunc) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *Trunc) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Trunc) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Trunc) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Trunc) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Trunc) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Trunc) eval(args value.Values) (value.Value, error) {
+func (this *Trunc) Apply(context Context, args ...value.Value) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1276,6 +988,3 @@ func roundFloat(x float64, prec int) float64 {
 
 	return sign * rounder / pow
 }
-
-var _DEG_TO_RAD = NewConstant(value.NewValue(math.Pi / 180.0))
-var _RAD_TO_DEG = NewConstant(value.NewValue(180.0 / math.Pi))

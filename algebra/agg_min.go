@@ -15,41 +15,33 @@ import (
 )
 
 type Min struct {
-	aggregateBase
+	AggregateBase
 }
 
-func NewMin(argument expression.Expression) Aggregate {
-	return &Min{aggregateBase{argument: argument}}
+func NewMin(operand expression.Expression) Aggregate {
+	return &Min{
+		*NewAggregateBase("min", operand),
+	}
+}
+
+func (this *Min) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Min) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *Min) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Min) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Min) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *Min) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewMin(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewMin(operands[0])
 	}
 }
 
-func (this *Min) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *Min) Default() value.Value { return value.NULL_VALUE }
 
 func (this *Min) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

@@ -13,12 +13,12 @@ type Visitor interface {
 	// SELECT
 	VisitSelect(node *Select) (interface{}, error)
 	VisitSubselect(node *Subselect) (interface{}, error)
-	VisitUnion(node *Union) (interface{}, error)
-	VisitUnionAll(node *UnionAll) (interface{}, error)
 	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
 	VisitNest(node *Nest) (interface{}, error)
 	VisitUnnest(node *Unnest) (interface{}, error)
+	VisitUnion(node *Union) (interface{}, error)
+	VisitUnionAll(node *UnionAll) (interface{}, error)
 
 	// DML
 	VisitInsert(node *Insert) (interface{}, error)
@@ -34,4 +34,8 @@ type Visitor interface {
 
 	// EXPLAIN
 	VisitExplain(node *Explain) (interface{}, error)
+}
+
+type ExpressionVisitor interface {
+	VisitSubquery(expr *Subquery) (interface{}, error)
 }

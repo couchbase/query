@@ -26,6 +26,10 @@ func NewAny(bindings Bindings, satisfies Expression) Expression {
 	}
 }
 
+func (this *Any) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAny(this)
+}
+
 func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
@@ -90,18 +94,6 @@ func (this *Any) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *Any) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Any) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
 func (this *Any) SubsetOf(other Expression) bool {
 	return this.subsetOf(this, other)
-}
-
-func (this *Any) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
 }

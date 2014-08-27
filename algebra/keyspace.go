@@ -9,6 +9,11 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/value"
+)
+
 type KeyspaceRef struct {
 	namespace string `json:"namespace"`
 	keyspace  string `json:"keyspace"`
@@ -17,6 +22,22 @@ type KeyspaceRef struct {
 
 func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
 	return &KeyspaceRef{namespace, keyspace, as}
+}
+
+func (this *KeyspaceRef) Formalize() (f *Formalizer, err error) {
+	keyspace := this.Alias()
+	if keyspace == "" {
+		err = errors.NewError(nil, "Keyspace term must have a name or alias.")
+		return
+	}
+
+	allowed := value.NewValue(make(map[string]interface{}))
+	allowed.SetField(keyspace, keyspace)
+
+	f = NewFormalizer()
+	f.Keyspace = keyspace
+	f.Allowed = allowed
+	return
 }
 
 func (this *KeyspaceRef) Namespace() string {
@@ -29,4 +50,12 @@ func (this *KeyspaceRef) Keyspace() string {
 
 func (this *KeyspaceRef) As() string {
 	return this.as
+}
+
+func (this *KeyspaceRef) Alias() string {
+	if this.as != "" {
+		return this.as
+	} else {
+		return this.keyspace
+	}
 }

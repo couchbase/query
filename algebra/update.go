@@ -32,50 +32,44 @@ func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
-func (this *Update) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.keys != nil {
-		expr, err := visitor.Visit(this.keys)
+		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.keys = expr.(expression.Expression)
 	}
 
 	if this.set != nil {
-		err = this.set.VisitExpressions(visitor)
+		err = this.set.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.unset != nil {
-		err = this.unset.VisitExpressions(visitor)
+		err = this.unset.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.where != nil {
-		expr, err := visitor.Visit(this.where)
+		this.where, err = mapper.Map(this.where)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.where = expr.(expression.Expression)
 	}
 
 	if this.limit != nil {
-		expr, err := visitor.Visit(this.limit)
+		this.limit, err = mapper.Map(this.limit)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.limit = expr.(expression.Expression)
 	}
 
 	if this.returning != nil {
-		err = this.returning.VisitExpressions(visitor)
+		err = this.returning.MapExpressions(mapper)
 	}
 
 	return
@@ -121,9 +115,9 @@ func NewSet(terms SetTerms) *Set {
 	return &Set{terms}
 }
 
-func (this *Set) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
-		err = term.VisitExpressions(visitor)
+		err = term.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
@@ -144,9 +138,9 @@ func NewUnset(terms UnsetTerms) *Unset {
 	return &Unset{terms}
 }
 
-func (this *Unset) VisitExpressions(visitor expression.Visitor) (err error) {
+func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
-		err = term.VisitExpressions(visitor)
+		err = term.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
@@ -171,23 +165,21 @@ func NewSetTerm(path expression.Path, value expression.Expression, updateFor *Up
 	return &SetTerm{path, value, updateFor}
 }
 
-func (this *SetTerm) VisitExpressions(visitor expression.Visitor) (err error) {
-	path, err := visitor.Visit(this.path)
+func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
+	path, err := mapper.Map(this.path)
 	if err != nil {
 		return
 	}
 
 	this.path = path.(expression.Path)
 
-	val, err := visitor.Visit(this.value)
+	this.value, err = mapper.Map(this.value)
 	if err != nil {
 		return
 	}
 
-	this.value = val.(expression.Expression)
-
 	if this.updateFor != nil {
-		err = this.updateFor.VisitExpressions(visitor)
+		err = this.updateFor.MapExpressions(mapper)
 	}
 
 	return
@@ -216,8 +208,8 @@ func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
 	return &UnsetTerm{path, updateFor}
 }
 
-func (this *UnsetTerm) VisitExpressions(visitor expression.Visitor) (err error) {
-	path, err := visitor.Visit(this.path)
+func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
+	path, err := mapper.Map(this.path)
 	if err != nil {
 		return
 	}
@@ -225,7 +217,7 @@ func (this *UnsetTerm) VisitExpressions(visitor expression.Visitor) (err error) 
 	this.path = path.(expression.Path)
 
 	if this.updateFor != nil {
-		err = this.updateFor.VisitExpressions(visitor)
+		err = this.updateFor.MapExpressions(mapper)
 	}
 
 	return
@@ -248,19 +240,17 @@ func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *Upd
 	return &UpdateFor{bindings, when}
 }
 
-func (this *UpdateFor) VisitExpressions(visitor expression.Visitor) (err error) {
-	err = this.bindings.VisitExpressions(visitor)
+func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.bindings.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
 	if this.when != nil {
-		expr, err := visitor.Visit(this.when)
+		this.when, err = mapper.Map(this.when)
 		if err != nil {
-			return err
+			return
 		}
-
-		this.when = expr.(expression.Expression)
 	}
 
 	return

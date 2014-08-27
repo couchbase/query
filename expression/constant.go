@@ -30,6 +30,10 @@ func NewConstant(value value.Value) Expression {
 	}
 }
 
+func (this *Constant) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitConstant(this)
+}
+
 func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.value, nil
 }
@@ -43,21 +47,16 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Constant) Fold() (Expression, error) {
-	return this, nil
-}
-
-func (this *Constant) Formalize(allowed value.Value,
-	keyspace string) (Expression, error) {
-	return this, nil
-}
-
 func (this *Constant) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
+	return this.EquivalentTo(other)
 }
 
-func (this *Constant) VisitChildren(visitor Visitor) (Expression, error) {
-	return this, nil
+func (this *Constant) Children() Expressions {
+	return nil
+}
+
+func (this *Constant) MapChildren(mapper Mapper) error {
+	return nil
 }
 
 func (this *Constant) Value() value.Value {

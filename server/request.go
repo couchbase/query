@@ -33,7 +33,7 @@ const (
 )
 
 type Request interface {
-	Statement() string
+	Command() string
 	Prepared() plan.Operator
 	Arguments() map[string]value.Value
 	Namespace() string
@@ -52,7 +52,7 @@ type Request interface {
 }
 
 type BaseRequest struct {
-	statement   string
+	command   string
 	prepared    plan.Operator
 	arguments   map[string]value.Value
 	namespace   string
@@ -71,10 +71,10 @@ type BaseRequest struct {
 	stopExecute chan bool
 }
 
-func NewBaseRequest(statement string, prepared plan.Operator, arguments map[string]value.Value,
+func NewBaseRequest(command string, prepared plan.Operator, arguments map[string]value.Value,
 	namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
 	rv := &BaseRequest{
-		statement:   statement,
+		command:   command,
 		prepared:    prepared,
 		arguments:   arguments,
 		namespace:   namespace,
@@ -103,8 +103,8 @@ func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
 	}
 }
 
-func (this *BaseRequest) Statement() string {
-	return this.statement
+func (this *BaseRequest) Command() string {
+	return this.command
 }
 
 func (this *BaseRequest) Prepared() plan.Operator {

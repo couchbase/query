@@ -15,41 +15,33 @@ import (
 )
 
 type Max struct {
-	aggregateBase
+	AggregateBase
 }
 
-func NewMax(argument expression.Expression) Aggregate {
-	return &Max{aggregateBase{argument: argument}}
+func NewMax(operand expression.Expression) Aggregate {
+	return &Max{
+		*NewAggregateBase("max", operand),
+	}
+}
+
+func (this *Max) Accept(visitor expression.Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *Max) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
-func (this *Max) Fold() (expression.Expression, error) {
-	return this.fold(this)
-}
-
-func (this *Max) Formalize(allowed value.Value, keyspace string) (expression.Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Max) VisitChildren(visitor expression.Visitor) (expression.Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
 func (this *Max) Constructor() expression.FunctionConstructor {
-	return func(arguments expression.Expressions) expression.Function {
-		return NewMax(arguments[0])
+	return func(operands ...expression.Expression) expression.Function {
+		return NewMax(operands[0])
 	}
 }
 
-func (this *Max) Default() value.Value {
-	return value.NULL_VALUE
-}
+func (this *Max) Default() value.Value { return value.NULL_VALUE }
 
 func (this *Max) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
-	item, e := this.argument.Evaluate(item, context)
+	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
 		return nil, e
 	}

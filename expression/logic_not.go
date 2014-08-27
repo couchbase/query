@@ -14,61 +14,33 @@ import (
 )
 
 type Not struct {
-	unaryBase
+	UnaryFunctionBase
 }
 
-func NewNot(operand Expression) Expression {
+func NewNot(operand Expression) Function {
 	return &Not{
-		unaryBase{
-			operand: operand,
-		},
+		*NewUnaryFunctionBase("not", operand),
 	}
+}
+
+func (this *Not) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNot(this)
 }
 
 func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.UnaryEval(this, item, context)
 }
 
-func (this *Not) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *Not) Fold() (Expression, error) {
-	t, e := this.VisitChildren(&Folder{})
-	if e != nil {
-		return t, e
-	}
-
-	switch o := this.operand.(type) {
-	case *Constant:
-		v, e := this.eval(o.Value())
-		if e != nil {
-			return nil, e
-		}
-		return NewConstant(v), nil
-	case *Not:
-		return o.operand, nil
-	}
-
-	return this, nil
-}
-
-func (this *Not) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *Not) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *Not) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *Not) eval(operand value.Value) (value.Value, error) {
-	if operand.Type() > value.NULL {
-		return value.NewValue(!operand.Truth()), nil
+func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() > value.NULL {
+		return value.NewValue(!arg.Truth()), nil
 	} else {
-		return operand, nil
+		return arg, nil
+	}
+}
+
+func (this *Not) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNot(operands[0])
 	}
 }

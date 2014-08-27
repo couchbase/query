@@ -9,6 +9,6 @@
 
 package expression
 
-func NewGE(first, second Expression) Expression {
+func NewGE(first, second Expression) Function {
 	return NewLE(second, first)
 }

@@ -9,6 +9,50 @@
 
 package expression
 
-func NewDivide(first, second Expression) Expression {
-	return NewMultiply(first, NewReciprocate(second))
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
+type Div struct {
+	BinaryFunctionBase
+}
+
+func NewDiv(first, second Expression) Function {
+	return &Div{
+		*NewBinaryFunctionBase("div", first, second),
+	}
+}
+
+func (this *Div) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDiv(this)
+}
+
+func (this *Div) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *Div) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if second.Type() == value.NUMBER {
+		s := second.Actual().(float64)
+		if s == 0.0 {
+			return value.NULL_VALUE, nil
+		}
+
+		if first.Type() == value.NUMBER {
+			d := first.Actual().(float64) / s
+			return value.NewValue(d), nil
+		}
+	}
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	return value.NULL_VALUE, nil
+}
+
+func (this *Div) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDiv(operands[0], operands[1])
+	}
 }

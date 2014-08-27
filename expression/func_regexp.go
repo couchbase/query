@@ -10,53 +10,42 @@
 package expression
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 
 	"github.com/couchbaselabs/query/value"
 )
 
+///////////////////////////////////////////////////
+//
+// RegexpContains
+//
+///////////////////////////////////////////////////
+
 type RegexpContains struct {
-	reBinaryBase
+	BinaryFunctionBase
+	re *regexp.Regexp
 }
 
 func NewRegexpContains(first, second Expression) Function {
-	return &RegexpContains{
-		reBinaryBase{
-			binaryBase: binaryBase{
-				first:  first,
-				second: second,
-			},
-		},
+	rv := &RegexpContains{
+		*NewBinaryFunctionBase("regexp_contains", first, second),
+		nil,
 	}
+
+	rv.re, _ = precompileRegexp(second)
+	return rv
+}
+
+func (this *RegexpContains) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *RegexpContains) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *RegexpContains) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *RegexpContains) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *RegexpContains) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *RegexpContains) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *RegexpContains) eval(first, second value.Value) (value.Value, error) {
+func (this *RegexpContains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -68,10 +57,10 @@ func (this *RegexpContains) eval(first, second value.Value) (value.Value, error)
 
 	re := this.re
 	if re == nil {
-		var e error
-		re, e = regexp.Compile(s)
-		if e != nil {
-			return nil, e
+		var err error
+		re, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -79,51 +68,41 @@ func (this *RegexpContains) eval(first, second value.Value) (value.Value, error)
 }
 
 func (this *RegexpContains) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRegexpContains(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewRegexpContains(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// RegexpLike
+//
+///////////////////////////////////////////////////
+
 type RegexpLike struct {
-	reBinaryBase
+	BinaryFunctionBase
+	re *regexp.Regexp
 }
 
 func NewRegexpLike(first, second Expression) Function {
-	return &RegexpLike{
-		reBinaryBase{
-			binaryBase: binaryBase{
-				first:  first,
-				second: second,
-			},
-		},
+	rv := &RegexpLike{
+		*NewBinaryFunctionBase("regexp_like", first, second),
+		nil,
 	}
+
+	rv.re, _ = precompileRegexp(second)
+	return rv
+}
+
+func (this *RegexpLike) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *RegexpLike) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *RegexpLike) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *RegexpLike) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *RegexpLike) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *RegexpLike) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *RegexpLike) eval(first, second value.Value) (value.Value, error) {
+func (this *RegexpLike) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -135,10 +114,10 @@ func (this *RegexpLike) eval(first, second value.Value) (value.Value, error) {
 
 	re := this.re
 	if re == nil {
-		var e error
-		re, e = regexp.Compile(s)
-		if e != nil {
-			return nil, e
+		var err error
+		re, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -146,51 +125,41 @@ func (this *RegexpLike) eval(first, second value.Value) (value.Value, error) {
 }
 
 func (this *RegexpLike) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRegexpLike(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewRegexpLike(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// RegexpPosition
+//
+///////////////////////////////////////////////////
+
 type RegexpPosition struct {
-	reBinaryBase
+	BinaryFunctionBase
+	re *regexp.Regexp
 }
 
 func NewRegexpPosition(first, second Expression) Function {
-	return &RegexpPosition{
-		reBinaryBase{
-			binaryBase: binaryBase{
-				first:  first,
-				second: second,
-			},
-		},
+	rv := &RegexpPosition{
+		*NewBinaryFunctionBase("regexp_position", first, second),
+		nil,
 	}
+
+	rv.re, _ = precompileRegexp(second)
+	return rv
+}
+
+func (this *RegexpPosition) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.BinaryEval(this, item, context)
 }
 
-func (this *RegexpPosition) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *RegexpPosition) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *RegexpPosition) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *RegexpPosition) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *RegexpPosition) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *RegexpPosition) eval(first, second value.Value) (value.Value, error) {
+func (this *RegexpPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.STRING || second.Type() != value.STRING {
@@ -202,10 +171,10 @@ func (this *RegexpPosition) eval(first, second value.Value) (value.Value, error)
 
 	re := this.re
 	if re == nil {
-		var e error
-		re, e = regexp.Compile(s)
-		if e != nil {
-			return nil, e
+		var err error
+		re, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -218,74 +187,43 @@ func (this *RegexpPosition) eval(first, second value.Value) (value.Value, error)
 }
 
 func (this *RegexpPosition) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRegexpPosition(args[0], args[1])
+	return func(operands ...Expression) Function {
+		return NewRegexpPosition(operands[0], operands[1])
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// RegexpReplace
+//
+///////////////////////////////////////////////////
+
 type RegexpReplace struct {
-	nAryBase
+	FunctionBase
 	re *regexp.Regexp
 }
 
-func NewRegexpReplace(args Expressions) Function {
-	return &RegexpReplace{
-		nAryBase: nAryBase{
-			operands: args,
-		},
+func NewRegexpReplace(operands ...Expression) Function {
+	rv := &RegexpReplace{
+		*NewFunctionBase("regexp_replace", operands...),
+		nil,
 	}
+
+	rv.re, _ = precompileRegexp(operands[1])
+	return rv
+}
+
+func (this *RegexpReplace) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
 }
 
 func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.evaluate(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *RegexpReplace) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
-}
-
-func (this *RegexpReplace) Fold() (Expression, error) {
-	var e error
-	this.operands[1], e = this.operands[1].Fold()
-	if e != nil {
-		return nil, e
-	}
-
-	switch s := this.operands[1].(type) {
-	case *Constant:
-		sv := s.Value()
-		if sv.Type() == value.MISSING {
-			return NewConstant(value.MISSING_VALUE), nil
-		} else if sv.Type() != value.STRING {
-			sa := sv.Actual()
-			return nil, fmt.Errorf("Invalid REGEXP pattern %v of type %T.", sa, sa)
-		}
-
-		re, e := regexp.Compile(sv.Actual().(string))
-		if e != nil {
-			return nil, e
-		}
-
-		this.re = re
-	}
-
-	return this.fold(this)
-}
-
-func (this *RegexpReplace) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
-}
-
-func (this *RegexpReplace) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
-func (this *RegexpReplace) VisitChildren(visitor Visitor) (Expression, error) {
-	return this.visitChildren(this, visitor)
-}
-
-func (this *RegexpReplace) eval(args value.Values) (value.Value, error) {
+func (this *RegexpReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
+
 	for i := 0; i < 3; i++ {
 		if args[i].Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
@@ -308,10 +246,10 @@ func (this *RegexpReplace) eval(args value.Values) (value.Value, error) {
 
 	re := this.re
 	if re == nil {
-		var e error
-		re, e = regexp.Compile(s)
-		if e != nil {
-			return nil, e
+		var err error
+		re, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -342,8 +280,16 @@ func (this *RegexpReplace) MinArgs() int { return 3 }
 
 func (this *RegexpReplace) MaxArgs() int { return 4 }
 
-func (this *RegexpReplace) Constructor() FunctionConstructor {
-	return func(args Expressions) Function {
-		return NewRegexpReplace(args)
+func (this *RegexpReplace) Constructor() FunctionConstructor { return NewRegexpReplace }
+
+func precompileRegexp(rexpr Expression) (re *regexp.Regexp, err error) {
+	switch s := rexpr.(type) {
+	case *Constant:
+		sv := s.Value()
+		if sv.Type() == value.STRING {
+			re, err = regexp.Compile(sv.Actual().(string))
+		}
 	}
+
+	return
 }

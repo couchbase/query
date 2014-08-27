@@ -23,22 +23,17 @@ type Expressions []Expression
 type CompositeExpressions []Expressions
 
 type Expression interface {
+	// Visitor pattern
+	Accept(visitor Visitor) (interface{}, error)
+
 	// Evaluate this expression for the given value and context.
 	Evaluate(item value.Value, context Context) (value.Value, error)
-
-	// Is this expression equivalent to the other.
-	EquivalentTo(other Expression) bool
 
 	// Terminal identifier if this is a path; else nil.
 	Alias() string
 
-	// Constant and other folding.
-	Fold() (Expression, error)
-
-	// Formal notation; qualify fields with keyspace name.
-	// Identifiers in "allowed" are left unmodified.
-	// Any other identifier is qualified with keyspace; if keyspace is empty, then error.
-	Formalize(allowed value.Value, keyspace string) (Expression, error)
+	// Is this expression equivalent to the other.
+	EquivalentTo(other Expression) bool
 
 	// Is this expression a subset of the other.
 	// E.g. A < 5 is a subset of A < 10.
@@ -46,17 +41,17 @@ type Expression interface {
 
 	// Utility
 	Children() Expressions
-	VisitChildren(visitor Visitor) (Expression, error)
+	MapChildren(mapper Mapper) error
 }
 
-func (this Expressions) VisitExpressions(visitor Visitor) (err error) {
+func (this Expressions) MapExpressions(mapper Mapper) (err error) {
 	for i, e := range this {
-		expr, err := visitor.Visit(e)
+		expr, err := mapper.Map(e)
 		if err != nil {
 			return err
 		}
 
-		this[i] = expr.(Expression)
+		this[i] = expr
 	}
 
 	return

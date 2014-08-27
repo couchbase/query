@@ -11,11 +11,13 @@ package expression
 
 import (
 	"reflect"
-
-	"github.com/couchbaselabs/query/value"
 )
 
 type ExpressionBase struct {
+}
+
+func (this *ExpressionBase) Alias() string {
+	return ""
 }
 
 func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
@@ -25,12 +27,13 @@ func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 
 	ours := expr.Children()
 	theirs := other.Children()
+
 	if len(ours) != len(theirs) {
 		return false
 	}
 
-	for i, o := range ours {
-		if !o.EquivalentTo(theirs[i]) {
+	for i, child := range ours {
+		if !child.EquivalentTo(theirs[i]) {
 			return false
 		}
 	}
@@ -38,36 +41,6 @@ func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 	return true
 }
 
-func (this *ExpressionBase) Alias() string {
-	return ""
-}
-
-func (this *ExpressionBase) fold(expr Expression) (Expression, error) {
-	return expr.VisitChildren(&Folder{})
-}
-
-func (this *ExpressionBase) formalize(expr Expression,
-	allowed value.Value, keyspace string) (Expression, error) {
-	f := &Formalizer{
-		Allowed:   allowed,
-		Keyspace:  keyspace,
-	}
-
-	return expr.VisitChildren(f)
-}
-
 func (this *ExpressionBase) subsetOf(expr, other Expression) bool {
 	return expr.EquivalentTo(other)
 }
-
-func (this *ExpressionBase) Children() Expressions {
-	return nil
-}
-
-func (this *ExpressionBase) visitChildren(expr Expression, visitor Visitor) (Expression, error) {
-	return expr, nil
-}
-
-func (this *ExpressionBase) MinArgs() int { return 0 }
-
-func (this *ExpressionBase) MaxArgs() int { return 0 }

@@ -35,10 +35,14 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 	}
 }
 
+func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSimpleCase(this)
+}
+
 func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
-	s, e := this.searchTerm.Evaluate(item, context)
-	if e != nil {
-		return nil, e
+	s, err := this.searchTerm.Evaluate(item, context)
+	if err != nil {
+		return nil, err
 	}
 
 	if s.Type() <= value.NULL {
@@ -46,15 +50,15 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	for _, w := range this.whenTerms {
-		wv, e := w.When.Evaluate(item, context)
-		if e != nil {
-			return nil, e
+		wv, err := w.When.Evaluate(item, context)
+		if err != nil {
+			return nil, err
 		}
 
 		if s.Equals(wv) {
-			tv, e := w.Then.Evaluate(item, context)
-			if e != nil {
-				return nil, e
+			tv, err := w.Then.Evaluate(item, context)
+			if err != nil {
+				return nil, err
 			}
 
 			return tv, nil
@@ -65,9 +69,9 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	ev, e := this.elseTerm.Evaluate(item, context)
-	if e != nil {
-		return nil, e
+	ev, err := this.elseTerm.Evaluate(item, context)
+	if err != nil {
+		return nil, err
 	}
 
 	return ev, nil
@@ -75,14 +79,6 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 
 func (this *SimpleCase) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
-}
-
-func (this *SimpleCase) Fold() (Expression, error) {
-	return this.fold(this)
-}
-
-func (this *SimpleCase) Formalize(allowed value.Value, keyspace string) (Expression, error) {
-	return this.formalize(this, allowed, keyspace)
 }
 
 func (this *SimpleCase) SubsetOf(other Expression) bool {
@@ -105,31 +101,30 @@ func (this *SimpleCase) Children() Expressions {
 	return rv
 }
 
-func (this *SimpleCase) VisitChildren(visitor Visitor) (Expression, error) {
-	var e error
-	this.searchTerm, e = visitor.Visit(this.searchTerm)
-	if e != nil {
-		return nil, e
+func (this *SimpleCase) MapChildren(mapper Mapper) (err error) {
+	this.searchTerm, err = mapper.Map(this.searchTerm)
+	if err != nil {
+		return
 	}
 
 	for _, w := range this.whenTerms {
-		w.When, e = visitor.Visit(w.When)
-		if e != nil {
-			return nil, e
+		w.When, err = mapper.Map(w.When)
+		if err != nil {
+			return
 		}
 
-		w.Then, e = visitor.Visit(w.Then)
-		if e != nil {
-			return nil, e
+		w.Then, err = mapper.Map(w.Then)
+		if err != nil {
+			return
 		}
 	}
 
 	if this.elseTerm != nil {
-		this.elseTerm, e = visitor.Visit(this.elseTerm)
-		if e != nil {
-			return nil, e
+		this.elseTerm, err = mapper.Map(this.elseTerm)
+		if err != nil {
+			return
 		}
 	}
 
-	return this, nil
+	return
 }
