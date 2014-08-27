@@ -68,6 +68,11 @@ func (rl *RetrieverLogger) Log(level accounting.LogLevel, args ...interface{}) {
 	}
 }
 
+// change log level
+func (rl *RetrieverLogger) SetLevel(level accounting.LogLevel) {
+	rl.logWriter.SetLogLevel(logger.LogLevel(level - 1))
+}
+
 // Functions for mapping Logger API arguments to the Retriever API.
 // Format of Retriever API arguments: <TraceID> <Key> <Message> <Message Arg> *
 // Format of Logging API arguments; 0 or more arbitrary arguments: <arg> *

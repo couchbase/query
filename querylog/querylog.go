@@ -18,6 +18,10 @@ import (
 var QueryLogger *logger.LogWriter
 
 const (
+	HTTP      = "HTTP"
+	SCAN      = "SCAN"
+	OPTIMIZER = "OPTIMIZER"
+	PLANNER   = "PLANNER"
 	PARSER    = "PARSER"
 	COMPILER  = "COMPILER"
 	PIPELINE  = "PIPELINE"
@@ -31,10 +35,15 @@ var loggerInitialized bool
 func Init(keylist []string) *logger.LogWriter {
 
 	if loggerInitialized == true {
+		if keylist != nil {
+			QueryLogger.EnableKeys(keylist)
+		}
+
 		return QueryLogger
 	}
 
-	QueryLogger, err := logger.NewLogger("cbq-server", logger.LevelInfo)
+	var err error
+	QueryLogger, err = logger.NewLogger("cbq-server", logger.LevelInfo)
 	if err != nil {
 		fmt.Printf("Cannot create logger instance")
 		return nil

@@ -106,12 +106,12 @@ func (b *keyspace) loadIndexes() errors.Error {
 	}
 
 	if len(indexes) == 0 {
-		lw.LogError("", querylog.DATASTORE, "No indexes found for bucket %s", b.Name())
+		lw.Error("", querylog.DATASTORE, "No indexes found for bucket %s", b.Name())
 		return errors.NewError(nil, "No primary index found for bucket "+b.Name()+". Create a primary index ")
 	}
 
 	for _, index := range indexes {
-		lw.LogInfo("", querylog.DATASTORE, "Found index on keyspace %s", (*index).Name())
+		lw.Info("", querylog.DATASTORE, "Found index on keyspace %s", (*index).Name())
 		name := (*index).Name()
 		b.indexes[name] = *index
 	}
@@ -173,7 +173,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 					if err == nil {
 						entry.EntryKey = value.Values{lookupValue}
 					} else {
-						lw.LogError("", querylog.DATASTORE, "unable to convert index key to lookup value:%v", err)
+						lw.Error("", querylog.DATASTORE, "unable to convert index key to lookup value:%v", err)
 					}
 				}
 
@@ -183,13 +183,13 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 			}
 		case err, ok = <-viewErrChannel:
 			if err != nil {
-				lw.LogError("", querylog.DATASTORE, "%v", err)
+				lw.Error("", querylog.DATASTORE, "%v", err)
 				// check to possibly detect a bucket that was already deleted
 				if !sentRows {
-					lw.LogInfo("", querylog.DATASTORE, "Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
+					lw.Info("", querylog.DATASTORE, "Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
 					_, err := http.Get(vi.keyspace.cbbucket.URI)
 					if err != nil {
-						lw.LogError("", querylog.DATASTORE, "%v", err)
+						lw.Error("", querylog.DATASTORE, "%v", err)
 
 						// remove this specific bucket from the pool cache
 						delete(vi.keyspace.namespace.keyspaceCache, vi.keyspace.Name())
@@ -210,7 +210,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 		}
 	}
 
-	lw.LogInfo("", querylog.DATASTORE, "Number of entries fetched from the index %d", numRows)
+	lw.Info("", querylog.DATASTORE, "Number of entries fetched from the index %d", numRows)
 
 }
 
