@@ -22,39 +22,37 @@ type RetrieverLogger struct {
 }
 
 func NewRetrieverLogger(keylist []string) *RetrieverLogger {
-	rl := querylog.Init(keylist)
-	logger := &RetrieverLogger{
-		logWriter: rl,
+	return &RetrieverLogger{
+		logWriter: querylog.Init(keylist),
 	}
-	return logger
 }
 
 func (rl *RetrieverLogger) Error(args ...interface{}) {
 	if rl.logWriter == nil {
 		return
 	}
-	rl.logWriter.LogError(getTraceID(args), getKey(args), getFormat(args), args[3:]...)
+	rl.logWriter.LogError(getTraceID(args), getKey(args), getMessage(args), getMessageArgs(args)...)
 }
 
 func (rl *RetrieverLogger) Info(args ...interface{}) {
 	if rl.logWriter == nil {
 		return
 	}
-	rl.logWriter.LogInfo(getTraceID(args), getKey(args), getFormat(args), args[3:]...)
+	rl.logWriter.LogInfo(getTraceID(args), getKey(args), getMessage(args), getMessageArgs(args)...)
 }
 
 func (rl *RetrieverLogger) Warn(args ...interface{}) {
 	if rl.logWriter == nil {
 		return
 	}
-	rl.logWriter.LogWarn(getTraceID(args), getKey(args), getFormat(args), args[3:]...)
+	rl.logWriter.LogWarn(getTraceID(args), getKey(args), getMessage(args), getMessageArgs(args)...)
 }
 
 func (rl *RetrieverLogger) Debug(args ...interface{}) {
 	if rl.logWriter == nil {
 		return
 	}
-	rl.logWriter.LogDebug(getTraceID(args), getKey(args), getFormat(args), args[3:]...)
+	rl.logWriter.LogDebug(getTraceID(args), getKey(args), getMessage(args), getMessageArgs(args)...)
 }
 
 func (rl *RetrieverLogger) Log(level accounting.LogLevel, args ...interface{}) {
@@ -70,6 +68,46 @@ func (rl *RetrieverLogger) Log(level accounting.LogLevel, args ...interface{}) {
 	}
 }
 
+// Functions for mapping Logger API arguments to the Retriever API.
+// Format of Retriever API arguments: <TraceID> <Key> <Message> <Message Arg> *
+// Format of Logging API arguments; 0 or more arbitrary arguments: <arg> *
+// Need to map Logging API arguments to Retriever API arguments in Logger API implementation:
+
+func getTraceID(a []interface{}) string {
+	if len(a) < 3 {
+		return "" // No Trace ID
+	}
+	return getStringAt(0, a)
+}
+
+func getKey(a []interface{}) string {
+	if len(a) < 3 {
+		return "" // Default Key
+	}
+	return getStringAt(1, a)
+}
+
+func getMessage(a []interface{}) string {
+	index := 2
+	if len(a) < 3 { // Message is first if no trace id or key
+		index = 0
+	}
+	return getStringAt(index, a)
+}
+
+func getMessageArgs(a []interface{}) []interface{} {
+	index := 3 // Default message args index
+	nargs := len(a)
+	if nargs < 2 {
+		return nil // No Message args if less than two arguments
+	}
+	if nargs == 2 {
+		index = 1
+	}
+	return a[index:]
+}
+
+// Helper function to get a string at index i from a slice of interface{}
 func getStringAt(i int, a []interface{}) string {
 	if i < 0 || (len(a)-1) < i {
 		return ""
@@ -79,16 +117,4 @@ func getStringAt(i int, a []interface{}) string {
 		return arg.(string)
 	}
 	return ""
-}
-
-func getTraceID(a []interface{}) string {
-	return getStringAt(0, a)
-}
-
-func getKey(a []interface{}) string {
-	return getStringAt(1, a)
-}
-
-func getFormat(a []interface{}) string {
-	return getStringAt(2, a)
 }

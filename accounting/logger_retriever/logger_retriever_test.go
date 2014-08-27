@@ -10,6 +10,7 @@
 package logger_retriever
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -29,7 +30,13 @@ func TestRetrieverLogger(t *testing.T) {
 	traceId := "0x007"
 
 	// This will be logged:
-	logApi.Info(traceId, querylog.PARSER, "Info message")
+	logApi.Info(traceId, querylog.PARSER, "Info message. Hello from %s", runtime.GOOS)
+
+	// This will be logged with no trace id and default key:
+	logApi.Info("Info message")
+
+	// This will be logged with no trace id and default key:
+	logApi.Info("Info message. Hello from %s", runtime.GOOS)
 
 	// This will not:
 	logApi.Info(traceId, "testKey", "this will not be logged")
