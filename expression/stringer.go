@@ -1,4 +1,3 @@
-
 //  Copyright (c) 2014 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
@@ -19,6 +18,8 @@ import (
 
 type Stringer struct {
 }
+
+func NewStringer() *Stringer { return &Stringer{} }
 
 func (this *Stringer) Visit(expr Expression) string {
 	s, err := expr.Accept(this)
