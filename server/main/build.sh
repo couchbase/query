@@ -1,2 +1,2 @@
 echo go build -o cbq-engine...
-go build  -gcflags "-N -l" -o cbq-engine
+go build -gcflags "-N -l" -o cbq-engine

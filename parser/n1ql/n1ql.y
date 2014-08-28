@@ -1,6 +1,7 @@
 %{
 package n1ql
 
+import "fmt"
 import "github.com/couchbaselabs/clog"
 import "github.com/couchbaselabs/query/algebra"
 import "github.com/couchbaselabs/query/datastore"
@@ -1831,32 +1832,49 @@ function_expr:
 function_name LPAREN opt_exprs RPAREN
 {
     $$ = nil;
-    agg, ok := algebra.GetAggregate($1, false);
+    f, ok := expression.GetFunction($1);
+    if !ok && yylex.(*lexer).parsingCommand() {
+        f, ok = algebra.GetAggregate($1, false);
+    }
+
     if ok {
-        $$ = agg.Constructor()($3...);
-    } else {
-        f, ok := expression.GetFunction($1);
-        if ok {
-            $$ = f.Constructor()($3...)
+        if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
+            yylex.Error(fmt.Sprintf("Invalid number of arguments to function %s.", $1));
+        } else {
+            $$ = f.Constructor()($3...);
         }
+    } else {
+        yylex.Error(fmt.Sprintf("Invalid function %s.", $1));
     }
 }
 |
 function_name LPAREN DISTINCT expr RPAREN
 {
     $$ = nil;
-    agg, ok := algebra.GetAggregate($1, true);
-    if ok {
-        $$ = agg.Constructor()($4)
+    if !yylex.(*lexer).parsingCommand() {
+        yylex.Error("Cannot use aggregate as an inline expression.");
+    } else {
+        agg, ok := algebra.GetAggregate($1, true);
+        if ok {
+            $$ = agg.Constructor()($4);
+        } else {
+	    yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+	}
     }
 }
 |
 function_name LPAREN STAR RPAREN
 {
     $$ = nil;
-    agg, ok := algebra.GetAggregate($1, false);
-    if ok {
-        $$ = agg.Constructor()(nil)
+    if !yylex.(*lexer).parsingCommand() {
+        yylex.Error("Cannot use aggregate as an inline expression.");
+    } else {
+        agg, ok := algebra.GetAggregate($1, false);
+        if ok {
+            $$ = agg.Constructor()(nil);
+        } else {
+	    yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+        }
     }
 }
 ;
@@ -1957,6 +1975,11 @@ expr
 |
 fullselect
 {
-    $$ = algebra.NewSubquery($1)
+    $$ = nil;
+    if yylex.(*lexer).parsingCommand() {
+        $$ = algebra.NewSubquery($1);
+    } else {
+        yylex.Error("Cannot use subquery as an inline expression.");
+    }
 }
 ;
