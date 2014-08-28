@@ -285,6 +285,74 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	return NewUnionAll(first.(Operator), second.(Operator)), nil
 }
 
+func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	intersectAll := NewIntersectAll(first.(Operator), second.(Operator))
+	distinct := NewDistinct()
+	return NewSequence(intersectAll, distinct), nil
+}
+
+func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	exceptAll := NewExceptAll(first.(Operator), second.(Operator))
+	distinct := NewDistinct()
+	return NewSequence(exceptAll, distinct), nil
+}
+
+func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+	this.projectFinal = true
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewExceptAll(first.(Operator), second.(Operator)), nil
+}
+
 func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) algebra.Aggregates {
 	for _, expr := range exprs {
 		agg, ok := expr.(algebra.Aggregate)

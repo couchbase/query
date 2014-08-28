@@ -5,7 +5,7 @@
 /*
  *  select statement
  */
-select ::= subselect ('UNION' 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
+select ::= subselect (('UNION' | 'INTERSECT' | 'EXCEPT') 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
 subselect ::= select-from | from-select
 select-from ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
 from-select ::= from-clause let-clause? where-clause? group-by-clause? select-clause

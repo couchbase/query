@@ -46,8 +46,10 @@ type Visitor interface {
 	// Distinct
 	VisitDistinct(op *Distinct) (interface{}, error)
 
-	// Union [ All ]
+	// Set operators
 	VisitUnionAll(op *UnionAll) (interface{}, error)
+	VisitIntersectAll(op *IntersectAll) (interface{}, error)
+	VisitExceptAll(op *ExceptAll) (interface{}, error)
 
 	// Order
 	VisitOrder(op *Order) (interface{}, error)

@@ -320,6 +320,36 @@ type binarySubresult struct {
 	second Subresult `json:"second"`
 }
 
+func (this *binarySubresult) Formalize() (f *Formalizer, err error) {
+	var ff, sf *Formalizer
+	ff, err = this.first.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
+	sf, err = this.second.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
+	// Intersection
+	fa := ff.Allowed.Fields()
+	sa := sf.Allowed.Fields()
+	for field, _ := range fa {
+		_, ok := sa[field]
+		if !ok {
+			delete(fa, field)
+		}
+	}
+
+	ff.Allowed = value.NewValue(fa)
+	if ff.Keyspace != sf.Keyspace {
+		ff.Keyspace = ""
+	}
+
+	return ff, nil
+}
+
 func (this *binarySubresult) IsCorrelated() bool {
 	return this.first.IsCorrelated() || this.second.IsCorrelated()
 }
@@ -358,36 +388,6 @@ func (this *Union) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.second.MapExpressions(mapper)
 }
 
-func (this *Union) Formalize() (f *Formalizer, err error) {
-	var ff, sf *Formalizer
-	ff, err = this.first.Formalize()
-	if err != nil {
-		return nil, err
-	}
-
-	sf, err = this.second.Formalize()
-	if err != nil {
-		return nil, err
-	}
-
-	// Intersection
-	fa := ff.Allowed.Fields()
-	sa := sf.Allowed.Fields()
-	for field, _ := range fa {
-		_, ok := sa[field]
-		if !ok {
-			delete(fa, field)
-		}
-	}
-
-	ff.Allowed = value.NewValue(fa)
-	if ff.Keyspace != sf.Keyspace {
-		ff.Keyspace = ""
-	}
-
-	return ff, nil
-}
-
 type UnionAll struct {
 	binarySubresult
 }
@@ -414,32 +414,106 @@ func (this *UnionAll) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.second.MapExpressions(mapper)
 }
 
-func (this *UnionAll) Formalize() (f *Formalizer, err error) {
-	var ff, sf *Formalizer
-	ff, err = this.first.Formalize()
+type Intersect struct {
+	binarySubresult
+}
+
+func NewIntersect(first, second Subresult) Subresult {
+	return &Intersect{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *Intersect) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIntersect(this)
+}
+
+func (this *Intersect) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	sf, err = this.second.Formalize()
+	return this.second.MapExpressions(mapper)
+}
+
+type IntersectAll struct {
+	binarySubresult
+}
+
+func NewIntersectAll(first, second Subresult) Subresult {
+	return &IntersectAll{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIntersectAll(this)
+}
+
+func (this *IntersectAll) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	// Intersection
-	fa := ff.Allowed.Fields()
-	sa := sf.Allowed.Fields()
-	for field, _ := range fa {
-		_, ok := sa[field]
-		if !ok {
-			delete(fa, field)
-		}
+	return this.second.MapExpressions(mapper)
+}
+
+type Except struct {
+	binarySubresult
+}
+
+func NewExcept(first, second Subresult) Subresult {
+	return &Except{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *Except) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitExcept(this)
+}
+
+func (this *Except) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
-	ff.Allowed = value.NewValue(fa)
-	if ff.Keyspace != sf.Keyspace {
-		ff.Keyspace = ""
+	return this.second.MapExpressions(mapper)
+}
+
+type ExceptAll struct {
+	binarySubresult
+}
+
+func NewExceptAll(first, second Subresult) Subresult {
+	return &ExceptAll{
+		binarySubresult{
+			first:  first,
+			second: second,
+		},
+	}
+}
+
+func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitExceptAll(this)
+}
+
+func (this *ExceptAll) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
-	return ff, nil
+	return this.second.MapExpressions(mapper)
 }

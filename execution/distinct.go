@@ -16,15 +16,17 @@ import (
 // Distincting of input data.
 type Distinct struct {
 	base
-	set *value.Set
+	set     *value.Set
+	collect bool
 }
 
 const _DISTINCT_CAP = 1024
 
-func NewDistinct() *Distinct {
+func NewDistinct(collect bool) *Distinct {
 	rv := &Distinct{
-		base: newBase(),
-		set:  value.NewSet(_DISTINCT_CAP),
+		base:    newBase(),
+		set:     value.NewSet(_DISTINCT_CAP),
+		collect: collect,
 	}
 
 	rv.output = rv
@@ -57,9 +59,19 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 }
 
 func (this *Distinct) afterItems(context *Context) {
+	if this.collect {
+		return
+	}
+
 	for _, av := range this.set.Values() {
 		if !this.sendItem(value.NewAnnotatedValue(av)) {
 			return
 		}
 	}
+
+	this.set = nil
+}
+
+func (this *Distinct) Set() *value.Set {
+	return this.set
 }

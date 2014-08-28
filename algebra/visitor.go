@@ -23,6 +23,10 @@ type Visitor interface {
 	VisitUnnest(node *Unnest) (interface{}, error)
 	VisitUnion(node *Union) (interface{}, error)
 	VisitUnionAll(node *UnionAll) (interface{}, error)
+	VisitIntersect(node *Intersect) (interface{}, error)
+	VisitIntersectAll(node *IntersectAll) (interface{}, error)
+	VisitExcept(node *Except) (interface{}, error)
+	VisitExceptAll(node *ExceptAll) (interface{}, error)
 
 	// DML
 	VisitInsert(node *Insert) (interface{}, error)

@@ -123,11 +123,13 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		defer this.notify()           // Notify that I have stopped
 		defer func() { this.batch = nil }()
 
-		go this.input.RunOnce(context, parent)
-
-		var item value.AnnotatedValue
 		ok := cons.beforeItems(context, parent)
 
+		if ok {
+			go this.input.RunOnce(context, parent)
+		}
+
+		var item value.AnnotatedValue
 	loop:
 		for ok {
 			select {

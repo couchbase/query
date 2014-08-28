@@ -69,6 +69,65 @@ func (this *Set) Put(key, item Value) {
 	}
 }
 
+func (this *Set) Remove(key Value) {
+	if key == nil {
+		this.nills = false
+		return
+	}
+
+	switch key.Type() {
+	case OBJECT:
+		delete(this.objects, string(key.Bytes()))
+	case MISSING:
+		this.missings = nil
+	case NULL:
+		this.nulls = nil
+	case BOOLEAN:
+		delete(this.booleans, key.Actual().(bool))
+	case NUMBER:
+		delete(this.numbers, key.Actual().(float64))
+	case STRING:
+		delete(this.strings, key.Actual().(string))
+	case ARRAY:
+		delete(this.arrays, string(key.Bytes()))
+	case NOT_JSON:
+		// FIXME: should compare bytes
+	default:
+		panic(fmt.Sprintf("Unsupported value type %T.", key))
+	}
+}
+
+func (this *Set) Has(key Value) bool {
+	if key == nil {
+		return this.nills
+	}
+
+	ok := false
+	switch key.Type() {
+	case OBJECT:
+		_, ok = this.objects[string(key.Bytes())]
+	case MISSING:
+		return this.missings != nil
+	case NULL:
+		return this.nulls != nil
+	case BOOLEAN:
+		_, ok = this.booleans[key.Actual().(bool)]
+	case NUMBER:
+		_, ok = this.numbers[key.Actual().(float64)]
+	case STRING:
+		_, ok = this.strings[key.Actual().(string)]
+	case ARRAY:
+		_, ok = this.arrays[string(key.Bytes())]
+	case NOT_JSON:
+		// FIXME: should compare bytes
+		ok = false
+	default:
+		panic(fmt.Sprintf("Unsupported value type %T.", key))
+	}
+
+	return ok
+}
+
 func (this *Set) Len() int {
 	rv := len(this.booleans) + len(this.numbers) + len(this.strings) +
 		len(this.arrays) + len(this.objects) + len(this.blobs)

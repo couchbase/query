@@ -131,10 +131,10 @@ func (this *Builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, er
 
 // Distinct
 func (this *Builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
-	return NewDistinct(), nil
+	return NewDistinct(false), nil
 }
 
-// Union [ All ]
+// Set operators
 func (this *Builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 	children := make([]Operator, len(plan.Children()))
 	for i, child := range plan.Children() {
@@ -147,6 +147,34 @@ func (this *Builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 	}
 
 	return NewUnionAll(children...), nil
+}
+
+func (this *Builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, error) {
+	first, e := plan.First().Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	second, e := plan.Second().Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *Builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
+	first, e := plan.First().Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	second, e := plan.Second().Accept(this)
+	if e != nil {
+		return nil, e
+	}
+
+	return NewExceptAll(first.(Operator), second.(Operator)), nil
 }
 
 // Order

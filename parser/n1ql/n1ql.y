@@ -418,6 +418,26 @@ subselects UNION ALL subselect
 {
     $$ = algebra.NewUnionAll($1, $4)
 }
+|
+subselects INTERSECT subselect
+{
+    $$ = algebra.NewIntersect($1, $3)
+}
+|
+subselects INTERSECT ALL subselect
+{
+    $$ = algebra.NewIntersectAll($1, $4)
+}
+|
+subselects EXCEPT subselect
+{
+    $$ = algebra.NewExcept($1, $3)
+}
+|
+subselects EXCEPT ALL subselect
+{
+    $$ = algebra.NewExceptAll($1, $4)
+}
 ;
 
 subselect:
