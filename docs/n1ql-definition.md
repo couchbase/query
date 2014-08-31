@@ -180,15 +180,15 @@ Within
 
 \>= Greater than or equals
 
-Between, not between
+Between
 
-Like, not like
+Like
 
-Is Missing, is not missing
+Is Missing
 
-Is Null, is not null
+Is Null
 
-Is Valued, is not valued
+Is Valued
 
 ### 8.4 Conditional operators
 
