@@ -28,6 +28,8 @@ func (this *Min) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Min) Type() value.Type { return value.JSON }
+
 func (this *Min) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

@@ -28,6 +28,8 @@ func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIdentifier(this)
 }
 
+func (this *Identifier) Type() value.Type { return value.JSON }
+
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, _ := item.Field(this.identifier)
 	return rv, nil

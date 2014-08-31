@@ -33,6 +33,8 @@ func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IfMissing) Type() value.Type { return value.JSON }
+
 func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -68,6 +70,8 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *IfMissingOrNull) Type() value.Type { return value.JSON }
 
 func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -105,6 +109,8 @@ func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IfNull) Type() value.Type { return value.JSON }
+
 func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -141,6 +147,8 @@ func (this *FirstVal) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *FirstVal) Type() value.Type { return value.JSON }
+
 func (this *FirstVal) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -176,6 +184,8 @@ func NewMissingIf(first, second Expression) Function {
 func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *MissingIf) Type() value.Type { return value.JSON }
 
 func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -214,6 +224,8 @@ func NewNullIf(first, second Expression) Function {
 func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *NullIf) Type() value.Type { return value.JSON }
 
 func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)

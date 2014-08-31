@@ -29,6 +29,8 @@ func (this *Concat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitConcat(this)
 }
 
+func (this *Concat) Type() value.Type { return value.STRING }
+
 func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }

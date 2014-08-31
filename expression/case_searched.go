@@ -30,6 +30,25 @@ func (this *SearchedCase) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSearchedCase(this)
 }
 
+func (this *SearchedCase) Type() value.Type {
+	t := value.NULL
+
+	if this.elseTerm != nil {
+		t = this.elseTerm.Type()
+	}
+
+	for _, w := range this.whenTerms {
+		tt := w.Then.Type()
+		if t > value.NULL && tt > value.NULL && tt != t {
+			return value.JSON
+		} else {
+			t = tt
+		}
+	}
+
+	return t
+}
+
 func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	for _, w := range this.whenTerms {
 		wv, err := w.When.Evaluate(item, context)

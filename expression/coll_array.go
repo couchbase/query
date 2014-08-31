@@ -31,6 +31,8 @@ func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitArray(this)
 }
 
+func (this *Array) Type() value.Type { return value.ARRAY }
+
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false

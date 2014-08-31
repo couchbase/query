@@ -26,6 +26,10 @@ type Expression interface {
 	// Visitor pattern
 	Accept(visitor Visitor) (interface{}, error)
 
+	// Data type. In addition to this data type, an expression may
+	// also evaluate to NULL or MISSING.
+	Type() value.Type
+
 	// Evaluate this expression for the given value and context.
 	Evaluate(item value.Value, context Context) (value.Value, error)
 

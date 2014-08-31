@@ -36,6 +36,8 @@ func (this *Abs) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Abs) Type() value.Type { return value.NUMBER }
+
 func (this *Abs) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -75,6 +77,8 @@ func NewAcos(operand Expression) Function {
 func (this *Acos) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Acos) Type() value.Type { return value.NUMBER }
 
 func (this *Acos) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -116,6 +120,8 @@ func (this *Asin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Asin) Type() value.Type { return value.NUMBER }
+
 func (this *Asin) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -156,6 +162,8 @@ func (this *Atan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Atan) Type() value.Type { return value.NUMBER }
+
 func (this *Atan) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -195,6 +203,8 @@ func NewAtan2(first, second Expression) Function {
 func (this *Atan2) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Atan2) Type() value.Type { return value.NUMBER }
 
 func (this *Atan2) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -238,6 +248,8 @@ func (this *Ceil) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Ceil) Type() value.Type { return value.NUMBER }
+
 func (this *Ceil) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -277,6 +289,8 @@ func NewCos(operand Expression) Function {
 func (this *Cos) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Cos) Type() value.Type { return value.NUMBER }
 
 func (this *Cos) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -318,6 +332,8 @@ func (this *Degrees) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Degrees) Type() value.Type { return value.NUMBER }
+
 func (this *Degrees) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -357,6 +373,8 @@ func NewExp(operand Expression) Function {
 func (this *Exp) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Exp) Type() value.Type { return value.NUMBER }
 
 func (this *Exp) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -398,6 +416,8 @@ func (this *Ln) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Ln) Type() value.Type { return value.NUMBER }
+
 func (this *Ln) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -437,6 +457,8 @@ func NewLog(operand Expression) Function {
 func (this *Log) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Log) Type() value.Type { return value.NUMBER }
 
 func (this *Log) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -478,6 +500,8 @@ func (this *Floor) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Floor) Type() value.Type { return value.NUMBER }
+
 func (this *Floor) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -518,6 +542,8 @@ func (this *PI) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *PI) Type() value.Type { return value.NUMBER }
+
 func (this *PI) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return _PI_VALUE, nil
 }
@@ -547,6 +573,8 @@ func NewPower(first, second Expression) Function {
 func (this *Power) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Power) Type() value.Type { return value.NUMBER }
 
 func (this *Power) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -590,6 +618,8 @@ func (this *Radians) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Radians) Type() value.Type { return value.NUMBER }
+
 func (this *Radians) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -631,6 +661,8 @@ func NewRandom(operands ...Expression) Function {
 func (this *Random) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Random) Type() value.Type { return value.NUMBER }
 
 func (this *Random) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -688,6 +720,8 @@ func NewRound(operands ...Expression) Function {
 func (this *Round) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Round) Type() value.Type { return value.NUMBER }
 
 func (this *Round) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -750,6 +784,8 @@ func (this *Sign) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Sign) Type() value.Type { return value.NUMBER }
+
 func (this *Sign) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -798,6 +834,8 @@ func (this *Sin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Sin) Type() value.Type { return value.NUMBER }
+
 func (this *Sin) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -837,6 +875,8 @@ func NewSqrt(operand Expression) Function {
 func (this *Sqrt) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Sqrt) Type() value.Type { return value.NUMBER }
 
 func (this *Sqrt) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -878,6 +918,8 @@ func (this *Tan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Tan) Type() value.Type { return value.NUMBER }
+
 func (this *Tan) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -917,6 +959,8 @@ func NewTrunc(operands ...Expression) Function {
 func (this *Trunc) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Trunc) Type() value.Type { return value.NUMBER }
 
 func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)

@@ -29,6 +29,8 @@ func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSlice(this)
 }
 
+func (this *Slice) Type() value.Type { return value.ARRAY }
+
 func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
 	return this.Eval(this, item, context)
 }

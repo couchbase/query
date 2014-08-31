@@ -27,6 +27,8 @@ func (this *LE) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLE(this)
 }
 
+func (this *LE) Type() value.Type { return value.BOOLEAN }
+
 func (this *LE) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

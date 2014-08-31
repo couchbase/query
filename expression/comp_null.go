@@ -27,6 +27,8 @@ func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsNull(this)
 }
 
+func (this *IsNull) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }

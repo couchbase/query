@@ -29,6 +29,8 @@ func (this *Element) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitElement(this)
 }
 
+func (this *Element) Type() value.Type { return value.JSON }
+
 func (this *Element) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

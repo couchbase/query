@@ -27,6 +27,8 @@ func (this *Div) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDiv(this)
 }
 
+func (this *Div) Type() value.Type { return value.NUMBER }
+
 func (this *Div) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

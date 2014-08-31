@@ -33,6 +33,8 @@ func (this *IsArray) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IsArray) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsArray) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -66,6 +68,8 @@ func NewIsAtom(operand Expression) Function {
 func (this *IsAtom) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *IsAtom) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -106,6 +110,8 @@ func (this *IsBool) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IsBool) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsBool) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -139,6 +145,8 @@ func NewIsNum(operand Expression) Function {
 func (this *IsNum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *IsNum) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -174,6 +182,8 @@ func (this *IsObj) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IsObj) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsObj) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -208,6 +218,8 @@ func (this *IsStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IsStr) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -241,6 +253,8 @@ func NewTypeName(operand Expression) Function {
 func (this *TypeName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *TypeName) Type() value.Type { return value.STRING }
 
 func (this *TypeName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

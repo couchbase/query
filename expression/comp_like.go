@@ -34,6 +34,8 @@ func (this *Like) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLike(this)
 }
 
+func (this *Like) Type() value.Type { return value.BOOLEAN }
+
 func (this *Like) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

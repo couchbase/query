@@ -35,6 +35,8 @@ func (this *IfInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IfInf) Type() value.Type { return value.NUMBER }
+
 func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -77,6 +79,8 @@ func NewIfNaN(operands ...Expression) Function {
 func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *IfNaN) Type() value.Type { return value.NUMBER }
 
 func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -121,6 +125,8 @@ func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IfNaNOrInf) Type() value.Type { return value.NUMBER }
+
 func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -163,6 +169,8 @@ func NewIfNegInf(operands ...Expression) Function {
 func (this *IfNegInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *IfNegInf) Type() value.Type { return value.NUMBER }
 
 func (this *IfNegInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -207,6 +215,8 @@ func (this *IfPosInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *IfPosInf) Type() value.Type { return value.NUMBER }
+
 func (this *IfPosInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -249,6 +259,8 @@ func NewFirstNum(operands ...Expression) Function {
 func (this *FirstNum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *FirstNum) Type() value.Type { return value.NUMBER }
 
 func (this *FirstNum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -293,6 +305,8 @@ func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *NaNIf) Type() value.Type { return value.JSON }
+
 func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -331,6 +345,8 @@ func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *NegInfIf) Type() value.Type { return value.JSON }
+
 func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -368,6 +384,8 @@ func NewPosInfIf(first, second Expression) Function {
 func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *PosInfIf) Type() value.Type { return value.JSON }
 
 func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)

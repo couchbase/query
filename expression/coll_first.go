@@ -31,6 +31,8 @@ func (this *First) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFirst(this)
 }
 
+func (this *First) Type() value.Type { return this.mapping.Type() }
+
 func (this *First) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false

@@ -30,6 +30,8 @@ func (this *Sum) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Sum) Type() value.Type { return value.NUMBER }
+
 func (this *Sum) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

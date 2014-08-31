@@ -30,6 +30,8 @@ func (this *ArrayAggDistinct) Accept(visitor expression.Visitor) (interface{}, e
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayAggDistinct) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayAggDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

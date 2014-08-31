@@ -27,6 +27,8 @@ func (this *Within) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitWithin(this)
 }
 
+func (this *Within) Type() value.Type { return value.BOOLEAN }
+
 func (this *Within) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

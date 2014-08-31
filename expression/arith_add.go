@@ -27,6 +27,8 @@ func (this *Add) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAdd(this)
 }
 
+func (this *Add) Type() value.Type { return value.NUMBER }
+
 func (this *Add) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }

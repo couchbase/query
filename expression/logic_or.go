@@ -27,6 +27,8 @@ func (this *Or) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOr(this)
 }
 
+func (this *Or) Type() value.Type { return value.BOOLEAN }
+
 func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }

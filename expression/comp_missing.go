@@ -27,6 +27,8 @@ func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsMissing(this)
 }
 
+func (this *IsMissing) Type() value.Type { return value.BOOLEAN }
+
 func (this *IsMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }

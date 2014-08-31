@@ -36,6 +36,8 @@ func (this *Contains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Contains) Type() value.Type { return value.BOOLEAN }
+
 func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -76,6 +78,8 @@ func NewLength(operand Expression) Function {
 func (this *Length) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Length) Type() value.Type { return value.NUMBER }
 
 func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -118,6 +122,8 @@ func (this *Lower) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Lower) Type() value.Type { return value.STRING }
+
 func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -158,6 +164,8 @@ func NewLTrim(operands ...Expression) Function {
 func (this *LTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *LTrim) Type() value.Type { return value.STRING }
 
 func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -215,6 +223,8 @@ func (this *Position) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Position) Type() value.Type { return value.NUMBER }
+
 func (this *Position) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -255,6 +265,8 @@ func NewRepeat(first, second Expression) Function {
 func (this *Repeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Repeat) Type() value.Type { return value.STRING }
 
 func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -301,6 +313,8 @@ func NewReplace(operands ...Expression) Function {
 func (this *Replace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Replace) Type() value.Type { return value.STRING }
 
 func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -369,6 +383,8 @@ func (this *RTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *RTrim) Type() value.Type { return value.STRING }
+
 func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -422,6 +438,8 @@ func NewSplit(operands ...Expression) Function {
 func (this *Split) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Split) Type() value.Type { return value.STRING }
 
 func (this *Split) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -484,6 +502,8 @@ func NewSubstr(operands ...Expression) Function {
 func (this *Substr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Substr) Type() value.Type { return value.STRING }
 
 func (this *Substr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -565,6 +585,8 @@ func (this *Title) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Title) Type() value.Type { return value.STRING }
+
 func (this *Title) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -605,6 +627,8 @@ func NewTrim(operands ...Expression) Function {
 func (this *Trim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Trim) Type() value.Type { return value.STRING }
 
 func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -659,6 +683,8 @@ func NewUpper(operand Expression) Function {
 func (this *Upper) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Upper) Type() value.Type { return value.STRING }
 
 func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

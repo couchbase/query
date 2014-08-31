@@ -35,6 +35,8 @@ func (this *ObjectKeys) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ObjectKeys) Type() value.Type { return value.ARRAY }
+
 func (this *ObjectKeys) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -87,6 +89,8 @@ func (this *ObjectLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ObjectLength) Type() value.Type { return value.NUMBER }
+
 func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -127,6 +131,8 @@ func NewObjectValues(operand Expression) Function {
 func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ObjectValues) Type() value.Type { return value.ARRAY }
 
 func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

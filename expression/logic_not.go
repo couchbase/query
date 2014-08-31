@@ -27,6 +27,8 @@ func (this *Not) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNot(this)
 }
 
+func (this *Not) Type() value.Type { return value.BOOLEAN }
+
 func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }

@@ -30,6 +30,8 @@ func (this *Every) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitEvery(this)
 }
 
+func (this *Every) Type() value.Type { return value.BOOLEAN }
+
 func (this *Every) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false

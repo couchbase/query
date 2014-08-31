@@ -37,6 +37,8 @@ func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ToArray) Type() value.Type { return value.ARRAY }
+
 func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -77,15 +79,23 @@ func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ToAtom) Type() value.Type {
+	t := this.Operand().Type()
+	if t < value.ARRAY {
+		return t
+	} else {
+		return value.JSON
+	}
+}
+
 func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
-	switch arg.Type() {
-	case value.BOOLEAN, value.NUMBER, value.STRING, value.MISSING, value.NULL:
+	if arg.Type() < value.ARRAY {
 		return arg, nil
-	default:
+	} else {
 		switch a := arg.Actual().(type) {
 		case []interface{}:
 			if len(a) == 1 {
@@ -128,6 +138,8 @@ func NewToBool(operand Expression) Function {
 func (this *ToBool) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ToBool) Type() value.Type { return value.BOOLEAN }
 
 func (this *ToBool) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -178,6 +190,8 @@ func NewToNum(operand Expression) Function {
 func (this *ToNum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ToNum) Type() value.Type { return value.NUMBER }
 
 func (this *ToNum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -231,6 +245,8 @@ func NewToStr(operand Expression) Function {
 func (this *ToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ToStr) Type() value.Type { return value.STRING }
 
 func (this *ToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

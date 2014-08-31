@@ -31,6 +31,8 @@ func (this *ArrayAgg) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayAgg) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayAgg) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

@@ -27,6 +27,8 @@ func (this *Neg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNeg(this)
 }
 
+func (this *Neg) Type() value.Type { return value.NUMBER }
+
 func (this *Neg) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }

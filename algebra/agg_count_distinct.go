@@ -28,6 +28,8 @@ func (this *CountDistinct) Accept(visitor expression.Visitor) (interface{}, erro
 	return visitor.VisitFunction(this)
 }
 
+func (this *CountDistinct) Type() value.Type { return value.NUMBER }
+
 func (this *CountDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

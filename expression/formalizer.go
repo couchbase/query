@@ -286,4 +286,3 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 func (this *Formalizer) PopBindings() {
 	this.Allowed = this.Allowed.(*value.ScopeValue).Value
 }
-

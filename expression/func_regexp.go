@@ -41,6 +41,8 @@ func (this *RegexpContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *RegexpContains) Type() value.Type { return value.BOOLEAN }
+
 func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -98,6 +100,8 @@ func (this *RegexpLike) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *RegexpLike) Type() value.Type { return value.BOOLEAN }
+
 func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -154,6 +158,8 @@ func NewRegexpPosition(first, second Expression) Function {
 func (this *RegexpPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *RegexpPosition) Type() value.Type { return value.NUMBER }
 
 func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -216,6 +222,8 @@ func NewRegexpReplace(operands ...Expression) Function {
 func (this *RegexpReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *RegexpReplace) Type() value.Type { return value.STRING }
 
 func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)

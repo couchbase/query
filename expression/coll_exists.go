@@ -27,6 +27,8 @@ func (this *Exists) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExists(this)
 }
 
+func (this *Exists) Type() value.Type { return value.BOOLEAN }
+
 func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }

@@ -39,6 +39,25 @@ func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSimpleCase(this)
 }
 
+func (this *SimpleCase) Type() value.Type {
+	t := value.NULL
+
+	if this.elseTerm != nil {
+		t = this.elseTerm.Type()
+	}
+
+	for _, w := range this.whenTerms {
+		tt := w.Then.Type()
+		if t > value.NULL && tt > value.NULL && tt != t {
+			return value.JSON
+		} else {
+			t = tt
+		}
+	}
+
+	return t
+}
+
 func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	s, err := this.searchTerm.Evaluate(item, context)
 	if err != nil {

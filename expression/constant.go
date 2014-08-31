@@ -34,6 +34,8 @@ func (this *Constant) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitConstant(this)
 }
 
+func (this *Constant) Type() value.Type { return this.value.Type() }
+
 func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.value, nil
 }

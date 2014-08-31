@@ -34,6 +34,8 @@ func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitObjectConstruct(this)
 }
 
+func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
+
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	m := make(map[string]interface{}, len(this.bindings))
 

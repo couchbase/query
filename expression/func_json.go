@@ -35,6 +35,8 @@ func (this *DecodeJSON) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *DecodeJSON) Type() value.Type { return value.JSON }
+
 func (this *DecodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -82,6 +84,8 @@ func (this *EncodeJSON) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *EncodeJSON) Type() value.Type { return value.STRING }
+
 func (this *EncodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -116,6 +120,8 @@ func (this *EncodedSize) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *EncodedSize) Type() value.Type { return value.NUMBER }
+
 func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -149,6 +155,8 @@ func NewPolyLength(operand Expression) Function {
 func (this *PolyLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *PolyLength) Type() value.Type { return value.NUMBER }
 
 func (this *PolyLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

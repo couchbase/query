@@ -27,6 +27,8 @@ func (this *Between) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitBetween(this)
 }
 
+func (this *Between) Type() value.Type { return value.BOOLEAN }
+
 func (this *Between) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }

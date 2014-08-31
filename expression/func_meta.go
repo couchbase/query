@@ -35,6 +35,8 @@ func (this *Base64) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Base64) Type() value.Type { return value.STRING }
+
 func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -73,6 +75,8 @@ func NewMeta(operand Expression) Function {
 func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Meta) Type() value.Type { return value.OBJECT }
 
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

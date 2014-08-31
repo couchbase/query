@@ -38,6 +38,8 @@ func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
 	}
 }
 
+func (this *Subquery) Type() value.Type { return value.ARRAY }
+
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return context.(Context).EvaluateSubquery(this.query, item)
 }

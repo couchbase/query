@@ -33,6 +33,8 @@ func (this *Greatest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Greatest) Type() value.Type { return value.JSON }
+
 func (this *Greatest) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -73,6 +75,8 @@ func NewLeast(operands ...Expression) Function {
 func (this *Least) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *Least) Type() value.Type { return value.JSON }
 
 func (this *Least) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)

@@ -27,6 +27,8 @@ func (this *And) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAnd(this)
 }
 
+func (this *And) Type() value.Type { return value.BOOLEAN }
+
 func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }

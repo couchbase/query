@@ -27,6 +27,8 @@ func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMult(this)
 }
 
+func (this *Mult) Type() value.Type { return value.NUMBER }
+
 func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }

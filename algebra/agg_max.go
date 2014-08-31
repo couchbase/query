@@ -28,6 +28,8 @@ func (this *Max) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Max) Type() value.Type { return value.JSON }
+
 func (this *Max) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }

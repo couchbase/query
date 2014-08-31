@@ -29,6 +29,8 @@ func (this *Mod) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMod(this)
 }
 
+func (this *Mod) Type() value.Type { return value.NUMBER }
+
 func (this *Mod) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }

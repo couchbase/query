@@ -38,6 +38,8 @@ func (this *ClockMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ClockMillis) Type() value.Type { return value.NUMBER }
+
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := time.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
@@ -66,6 +68,8 @@ func NewClockStr(operands ...Expression) Function {
 func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ClockStr) Type() value.Type { return value.STRING }
 
 func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -113,6 +117,8 @@ func NewDateAddMillis(first, second, third Expression) Function {
 func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *DateAddMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
@@ -165,6 +171,8 @@ func NewDateAddStr(first, second, third Expression) Function {
 func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *DateAddStr) Type() value.Type { return value.STRING }
 
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
@@ -223,6 +231,8 @@ func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *DateDiffMillis) Type() value.Type { return value.NUMBER }
+
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
@@ -270,6 +280,8 @@ func NewDateDiffStr(first, second, third Expression) Function {
 func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *DateDiffStr) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
@@ -329,6 +341,8 @@ func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
+
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -375,6 +389,8 @@ func NewDatePartStr(first, second Expression) Function {
 func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *DatePartStr) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -428,6 +444,8 @@ func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *DateTruncMillis) Type() value.Type { return value.NUMBER }
+
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -477,6 +495,8 @@ func NewDateTruncStr(first, second Expression) Function {
 func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *DateTruncStr) Type() value.Type { return value.STRING }
 
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -530,6 +550,8 @@ func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *MillisToStr) Type() value.Type { return value.STRING }
+
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -580,6 +602,8 @@ func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *MillisToUTC) Type() value.Type { return value.STRING }
+
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -629,6 +653,8 @@ func NewMillisToZoneName(operands ...Expression) Function {
 func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *MillisToZoneName) Type() value.Type { return value.STRING }
 
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -687,6 +713,8 @@ func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *NowMillis) Type() value.Type { return value.NUMBER }
+
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := context.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
@@ -715,6 +743,8 @@ func NewNowStr(operands ...Expression) Function {
 func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *NowStr) Type() value.Type { return value.STRING }
 
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -764,6 +794,8 @@ func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *StrToMillis) Type() value.Type { return value.NUMBER }
+
 func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -809,6 +841,8 @@ func NewStrToUTC(operand Expression) Function {
 func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *StrToUTC) Type() value.Type { return value.STRING }
 
 func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -856,6 +890,8 @@ func NewStrToZoneName(first, second Expression) Function {
 func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *StrToZoneName) Type() value.Type { return value.STRING }
 
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)

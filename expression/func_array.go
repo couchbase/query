@@ -36,6 +36,8 @@ func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -77,6 +79,8 @@ func NewArrayAvg(operand Expression) Function {
 func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayAvg) Type() value.Type { return value.NUMBER }
 
 func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -133,6 +137,8 @@ func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -175,6 +181,8 @@ func NewArrayContains(first, second Expression) Function {
 func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayContains) Type() value.Type { return value.BOOLEAN }
 
 func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -222,6 +230,8 @@ func NewArrayCount(operand Expression) Function {
 func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayCount) Type() value.Type { return value.NUMBER }
 
 func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -272,6 +282,8 @@ func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayDistinct) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -317,6 +329,8 @@ func NewArrayIfNull(operand Expression) Function {
 func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayIfNull) Type() value.Type { return value.JSON }
 
 func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -366,6 +380,8 @@ func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayLength) Type() value.Type { return value.NUMBER }
+
 func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -406,6 +422,8 @@ func NewArrayMax(operand Expression) Function {
 func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayMax) Type() value.Type { return value.JSON }
 
 func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -455,6 +473,8 @@ func NewArrayMin(operand Expression) Function {
 func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayMin) Type() value.Type { return value.JSON }
 
 func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -506,6 +526,8 @@ func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayPosition) Type() value.Type { return value.NUMBER }
+
 func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -553,6 +575,8 @@ func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayPrepend) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -598,6 +622,8 @@ func NewArrayPut(first, second Expression) Function {
 func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayPut) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -649,6 +675,8 @@ func NewArrayRange(operands ...Expression) Function {
 func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayRange) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -719,6 +747,8 @@ func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayRemove) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -768,6 +798,8 @@ func NewArrayRepeat(first, second Expression) Function {
 func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayRepeat) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
@@ -819,6 +851,8 @@ func NewArrayReplace(operands ...Expression) Function {
 func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArrayReplace) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -879,6 +913,8 @@ func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArrayReverse) Type() value.Type { return value.ARRAY }
+
 func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -927,6 +963,8 @@ func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *ArraySort) Type() value.Type { return value.ARRAY }
+
 func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -969,6 +1007,8 @@ func NewArraySum(operand Expression) Function {
 func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
+
+func (this *ArraySum) Type() value.Type { return value.NUMBER }
 
 func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)

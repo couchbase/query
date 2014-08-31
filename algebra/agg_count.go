@@ -30,6 +30,8 @@ func (this *Count) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+func (this *Count) Type() value.Type { return value.NUMBER }
+
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	if this.Operand() != nil {
 		return this.evaluate(this, item, context)
