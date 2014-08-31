@@ -18,9 +18,9 @@ type Order struct {
 	terms algebra.SortTerms
 }
 
-func NewOrder(terms algebra.SortTerms) *Order {
+func NewOrder(order *algebra.Order) *Order {
 	return &Order{
-		terms: terms,
+		terms: order.Terms(),
 	}
 }
 

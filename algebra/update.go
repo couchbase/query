@@ -76,6 +76,52 @@ func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *Update) Formalize() (err error) {
+	f, err := this.keyspace.Formalize()
+	if err != nil {
+		return err
+	}
+
+	if this.keys != nil {
+		_, err = this.keys.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+/*
+	if this.set != nil {
+		err = this.set.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.unset != nil {
+		err = this.unset.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+*/
+
+	if this.where != nil {
+		this.where, err = f.Map(this.where)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.limit != nil {
+		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.returning != nil {
+		err = this.returning.MapExpressions(f)
+	}
+
 	return
 }
 

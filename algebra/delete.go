@@ -75,7 +75,7 @@ func (this *Delete) Formalize() (err error) {
 	if this.where != nil {
 		this.where, err = f.Map(this.where)
 		if err != nil {
-			return err
+			return
 		}
 	}
 

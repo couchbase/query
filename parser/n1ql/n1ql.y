@@ -40,6 +40,7 @@ group            *algebra.Group
 resultTerm       *algebra.ResultTerm
 resultTerms      algebra.ResultTerms
 projection       *algebra.Projection
+order            *algebra.Order
 sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
 
@@ -285,8 +286,9 @@ indexType        datastore.IndexType
 %type <resultTerm>       project
 %type <resultTerms>      projects
 %type <projection>       projection select_clause
+%type <order>            order_by opt_order_by
 %type <sortTerm>         sort_term
-%type <sortTerms>        sort_terms order_by opt_order_by
+%type <sortTerms>        sort_terms
 %type <expr>             limit opt_limit
 %type <expr>             offset opt_offset
 %type <b>                dir opt_dir
@@ -825,7 +827,7 @@ order_by
 order_by:
 ORDER BY sort_terms
 {
-    $$ = $3
+    $$ = algebra.NewOrder($3)
 }
 ;
 
@@ -1878,8 +1880,8 @@ function_name LPAREN DISTINCT expr RPAREN
         if ok {
             $$ = agg.Constructor()($4);
         } else {
-	    yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
-	}
+            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+        }
     }
 }
 |
@@ -1893,7 +1895,7 @@ function_name LPAREN STAR RPAREN
         if ok {
             $$ = agg.Constructor()(nil);
         } else {
-	    yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
         }
     }
 }

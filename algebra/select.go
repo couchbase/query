@@ -16,12 +16,12 @@ import (
 
 type Select struct {
 	subresult Subresult             `json:"subresult"`
-	order     SortTerms             `json:"order"`
+	order     *Order                `json:"order"`
 	offset    expression.Expression `json:"offset"`
 	limit     expression.Expression `json:"limit"`
 }
 
-func NewSelect(subresult Subresult, order SortTerms, offset, limit expression.Expression) *Select {
+func NewSelect(subresult Subresult, order *Order, offset, limit expression.Expression) *Select {
 	return &Select{
 		subresult: subresult,
 		order:     order,
@@ -44,6 +44,17 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 		err = this.order.MapExpressions(mapper)
 	}
 
+	if this.limit != nil {
+		this.limit, err = mapper.Map(this.limit)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.offset != nil {
+		this.offset, err = mapper.Map(this.offset)
+	}
+
 	return
 }
 
@@ -60,6 +71,20 @@ func (this *Select) Formalize() (err error) {
 		}
 	}
 
+	if this.limit != nil {
+		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.offset != nil {
+		_, err = this.offset.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 
@@ -67,7 +92,7 @@ func (this *Select) Subresult() Subresult {
 	return this.subresult
 }
 
-func (this *Select) Order() SortTerms {
+func (this *Select) Order() *Order {
 	return this.order
 }
 
@@ -81,6 +106,24 @@ func (this *Select) Limit() expression.Expression {
 
 func (this *Select) SetLimit(limit expression.Expression) {
 	this.limit = limit
+}
+
+type Order struct {
+	terms SortTerms
+}
+
+func NewOrder(terms SortTerms) *Order {
+	return &Order{
+		terms: terms,
+	}
+}
+
+func (this *Order) MapExpressions(mapper expression.Mapper) error {
+	return this.terms.MapExpressions(mapper)
+}
+
+func (this *Order) Terms() SortTerms {
+	return this.terms
 }
 
 type SortTerms []*SortTerm
