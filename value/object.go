@@ -19,9 +19,7 @@ type objectValue map[string]interface{}
 
 var EMPTY_OBJECT_VALUE = NewValue(map[string]interface{}{})
 
-func (this objectValue) Type() int {
-	return OBJECT
-}
+func (this objectValue) Type() Type { return OBJECT }
 
 func (this objectValue) Actual() interface{} {
 	return (map[string]interface{})(this)

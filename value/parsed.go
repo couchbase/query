@@ -20,7 +20,7 @@ import (
 // A structure for storing and manipulating a (possibly JSON) value.
 type parsedValue struct {
 	raw        []byte
-	parsedType int
+	parsedType Type
 	parsed     Value
 }
 
@@ -28,12 +28,10 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.raw, nil
 }
 
-func (this *parsedValue) Type() int {
-	return this.parsedType
-}
+func (this *parsedValue) Type() Type { return this.parsedType }
 
 func (this *parsedValue) Actual() interface{} {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return nil
 	}
 
@@ -41,7 +39,7 @@ func (this *parsedValue) Actual() interface{} {
 }
 
 func (this *parsedValue) Equals(other Value) bool {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return bytes.Equal(this.raw, other.Bytes())
 	}
 
@@ -49,8 +47,8 @@ func (this *parsedValue) Equals(other Value) bool {
 }
 
 func (this *parsedValue) Collate(other Value) int {
-	if this.parsedType == NOT_JSON {
-		if other.Type() != NOT_JSON {
+	if this.parsedType == BINARY {
+		if other.Type() != BINARY {
 			return -other.Collate(this)
 		}
 
@@ -61,7 +59,7 @@ func (this *parsedValue) Collate(other Value) int {
 }
 
 func (this *parsedValue) Truth() bool {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return true
 	}
 
@@ -82,7 +80,7 @@ func (this *parsedValue) Copy() Value {
 }
 
 func (this *parsedValue) CopyForUpdate() Value {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return this.Copy()
 	}
 
@@ -181,7 +179,7 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return buffer
 	}
 
@@ -189,7 +187,7 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 }
 
 func (this *parsedValue) Fields() map[string]interface{} {
-	if this.parsedType == NOT_JSON {
+	if this.parsedType == BINARY {
 		return nil
 	}
 
@@ -198,7 +196,7 @@ func (this *parsedValue) Fields() map[string]interface{} {
 
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {
-		if this.parsedType == NOT_JSON {
+		if this.parsedType == BINARY {
 			panic("Attempt to parse non-JSON value.")
 		}
 

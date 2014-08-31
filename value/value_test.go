@@ -47,7 +47,7 @@ func TestTypeRecognition(t *testing.T) {
 		input        []byte
 		expectedType int
 	}{
-		{[]byte(`asdf`), NOT_JSON},
+		{[]byte(`asdf`), BINARY},
 		{[]byte(`null`), NULL},
 		{[]byte(`3.65`), NUMBER},
 		{[]byte(`-3.65`), NUMBER},
@@ -56,7 +56,7 @@ func TestTypeRecognition(t *testing.T) {
 		{[]byte(`{"hello":7}`), OBJECT},
 
 		// with misc whitespace
-		{[]byte(` asdf`), NOT_JSON},
+		{[]byte(` asdf`), BINARY},
 		{[]byte(` null`), NULL},
 		{[]byte(` 3.65`), NUMBER},
 		{[]byte(` "hello"`), STRING},

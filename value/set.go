@@ -62,7 +62,7 @@ func (this *Set) Put(key, item Value) {
 		this.strings[key.Actual().(string)] = item
 	case ARRAY:
 		this.arrays[string(key.Bytes())] = item
-	case NOT_JSON:
+	case BINARY:
 		this.blobs = append(this.blobs, item) // FIXME: should compare bytes
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
@@ -90,7 +90,7 @@ func (this *Set) Remove(key Value) {
 		delete(this.strings, key.Actual().(string))
 	case ARRAY:
 		delete(this.arrays, string(key.Bytes()))
-	case NOT_JSON:
+	case BINARY:
 		// FIXME: should compare bytes
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
@@ -118,7 +118,7 @@ func (this *Set) Has(key Value) bool {
 		_, ok = this.strings[key.Actual().(string)]
 	case ARRAY:
 		_, ok = this.arrays[string(key.Bytes())]
-	case NOT_JSON:
+	case BINARY:
 		// FIXME: should compare bytes
 		ok = false
 	default:

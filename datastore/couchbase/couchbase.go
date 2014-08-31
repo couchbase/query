@@ -407,7 +407,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 
 		meta_flags := (v.Extras[0]&0xff)<<24 | (v.Extras[1]&0xff)<<16 | (v.Extras[2]&0xff)<<8 | (v.Extras[3] & 0xff)
 		meta_type := "json"
-		if Value.Type() == value.NOT_JSON {
+		if Value.Type() == value.BINARY {
 			meta_type = "base64"
 		}
 		Value.SetAttachment("meta", map[string]interface{}{

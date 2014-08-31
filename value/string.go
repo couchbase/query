@@ -17,9 +17,7 @@ type stringValue string
 
 var EMPTY_STRING_VALUE = NewValue("")
 
-func (this stringValue) Type() int {
-	return STRING
-}
+func (this stringValue) Type() Type { return STRING }
 
 func (this stringValue) Actual() interface{} {
 	return string(this)
@@ -53,7 +51,7 @@ func (this stringValue) Collate(other Value) int {
 	case *annotatedValue:
 		return this.Collate(other.Value)
 	default:
-		return STRING - other.Type()
+		return int(STRING - other.Type())
 	}
 }
 

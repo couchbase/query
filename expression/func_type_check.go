@@ -247,8 +247,7 @@ func (this *TypeName) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 func (this *TypeName) Apply(context Context, arg value.Value) (value.Value, error) {
-	tn, _ := value.TypeName(arg.Type())
-	return value.NewValue(tn), nil
+	return value.NewValue(arg.Type().String()), nil
 }
 
 func (this *TypeName) Constructor() FunctionConstructor {

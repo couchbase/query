@@ -22,9 +22,7 @@ func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }
 
-func (this *nullValue) Type() int {
-	return NULL
-}
+func (this *nullValue) Type() Type { return NULL }
 
 func (this *nullValue) Actual() interface{} {
 	return nil
@@ -35,7 +33,7 @@ func (this *nullValue) Equals(other Value) bool {
 }
 
 func (this *nullValue) Collate(other Value) int {
-	return NULL - other.Type()
+	return int(NULL - other.Type())
 }
 
 func (this *nullValue) Truth() bool {

@@ -35,9 +35,7 @@ func (this missingValue) Error() string {
 	return "Not defined."
 }
 
-func (this missingValue) Type() int {
-	return MISSING
-}
+func (this missingValue) Type() Type { return MISSING }
 
 func (this missingValue) Actual() interface{} {
 	return nil
@@ -48,7 +46,7 @@ func (this missingValue) Equals(other Value) bool {
 }
 
 func (this missingValue) Collate(other Value) int {
-	return MISSING - other.Type()
+	return int(MISSING - other.Type())
 }
 
 func (this missingValue) Truth() bool {

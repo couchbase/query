@@ -16,9 +16,7 @@ type boolValue bool
 var FALSE_VALUE = NewValue(false)
 var TRUE_VALUE = NewValue(true)
 
-func (this boolValue) Type() int {
-	return BOOLEAN
-}
+func (this boolValue) Type() Type { return BOOLEAN }
 
 func (this boolValue) Actual() interface{} {
 	return bool(this)
@@ -52,7 +50,7 @@ func (this boolValue) Collate(other Value) int {
 	case *annotatedValue:
 		return this.Collate(other.Value)
 	default:
-		return BOOLEAN - other.Type()
+		return int(BOOLEAN - other.Type())
 	}
 
 }

@@ -42,6 +42,38 @@ func ToBool(t Tristate) bool {
 	return t == TRUE
 }
 
+// The data types supported by Value
+type Type int
+
+const (
+	MISSING = Type(iota) // Missing field
+	NULL                 // Explicit null
+	BINARY               // non-JSON
+	BOOLEAN              // JSON boolean
+	NUMBER               // JSON number
+	STRING               // JSON string
+	ARRAY                // JSON array
+	OBJECT               // JSON object
+	JSON                 // Non-specific JSON; used in result sets
+)
+
+// Stringer interface
+func (this Type) String() string {
+	return _TYPE_NAMES[this]
+}
+
+var _TYPE_NAMES = []string{
+	MISSING: "missing",
+	NULL:    "null",
+	BINARY:  "binary",
+	BOOLEAN: "boolean",
+	NUMBER:  "number",
+	STRING:  "string",
+	ARRAY:   "array",
+	OBJECT:  "object",
+	JSON:    "json",
+}
+
 // When you try to set a nested property or index that does not exist,
 // the return error will be Unsettable.
 type Unsettable string
@@ -65,7 +97,7 @@ type CompositeValues []Values
 
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {
-	Type() int                                      // Data type constant
+	Type() Type                                     // Data type constant
 	Actual() interface{}                            // Native Go representation
 	Equals(other Value) bool                        // Faster than Collate()
 	Collate(other Value) int                        // -int if this precedes other
@@ -138,7 +170,7 @@ func NewValue(val interface{}) Value {
 
 // Create a new Value from a slice of bytes. (this need not be valid JSON)
 func NewValueFromBytes(bytes []byte) Value {
-	var parsedType int
+	var parsedType Type
 	err := json.Validate(bytes)
 
 	if err == nil {
@@ -161,43 +193,12 @@ func NewValueFromBytes(bytes []byte) Value {
 	}
 
 	if err != nil {
-		rv.parsedType = NOT_JSON
+		rv.parsedType = BINARY
 	} else {
 		rv.parsedType = parsedType
 	}
 
 	return rv
-}
-
-// The data types supported by Value
-const (
-	MISSING = iota
-	NULL
-	NOT_JSON
-	BOOLEAN
-	NUMBER
-	STRING
-	ARRAY
-	OBJECT
-)
-
-func TypeName(t int) (string, bool) {
-	if t >= 0 && t < len(_TYPE_NAMES) {
-		return _TYPE_NAMES[t], true
-	} else {
-		return "", false
-	}
-}
-
-var _TYPE_NAMES = []string{
-	MISSING:  "missing",
-	NULL:     "null",
-	NOT_JSON: "not_json",
-	BOOLEAN:  "boolean",
-	NUMBER:   "number",
-	STRING:   "string",
-	ARRAY:    "array",
-	OBJECT:   "object",
 }
 
 type copyFunc func(interface{}) interface{}
@@ -210,7 +211,7 @@ func copyForUpdate(val interface{}) interface{} {
 	return NewValue(val).CopyForUpdate()
 }
 
-func identifyType(bytes []byte) int {
+func identifyType(bytes []byte) Type {
 	for _, b := range bytes {
 		switch b {
 		case '{':

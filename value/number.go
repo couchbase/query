@@ -20,9 +20,7 @@ type floatValue float64
 var ZERO_VALUE = NewValue(0.0)
 var ONE_VALUE = NewValue(1.0)
 
-func (this floatValue) Type() int {
-	return NUMBER
-}
+func (this floatValue) Type() Type { return NUMBER }
 
 func (this floatValue) Actual() interface{} {
 	return float64(this)
@@ -50,7 +48,7 @@ func (this floatValue) Collate(other Value) int {
 	case *annotatedValue:
 		return this.Collate(other.Value)
 	default:
-		return NUMBER - other.Type()
+		return int(NUMBER - other.Type())
 	}
 
 }

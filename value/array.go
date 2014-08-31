@@ -17,9 +17,7 @@ type sliceValue []interface{}
 
 var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
 
-func (this sliceValue) Type() int {
-	return ARRAY
-}
+func (this sliceValue) Type() Type { return ARRAY }
 
 func (this sliceValue) Actual() interface{} {
 	return ([]interface{})(this)
@@ -55,7 +53,7 @@ func (this sliceValue) Collate(other Value) int {
 	case *parsedValue:
 		return this.Collate(other.parse())
 	default:
-		return ARRAY - other.Type()
+		return int(ARRAY - other.Type())
 	}
 }
 
@@ -178,9 +176,7 @@ func (this *listValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.actual)
 }
 
-func (this *listValue) Type() int {
-	return ARRAY
-}
+func (this *listValue) Type() Type { return ARRAY }
 
 func (this *listValue) Actual() interface{} {
 	return this.actual
@@ -216,7 +212,7 @@ func (this *listValue) Collate(other Value) int {
 	case *parsedValue:
 		return this.Collate(other.parse())
 	default:
-		return ARRAY - other.Type()
+		return int(ARRAY - other.Type())
 	}
 }
 
