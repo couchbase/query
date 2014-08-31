@@ -102,27 +102,21 @@ Indexes
 
 ## 5 Data types
 
-### 5.1 Primitives
+### 5.1 Boolean
 
-Booleans
+### 5.2 Number
 
-Numbers
+### 5.3 String
 
-Strings
+### 5.4 Array
 
-### 5.2 Arrays and objects
+### 5.5 Object
 
-Arrays
+### 5.6 Null
 
-Objects
+### 5.7 Missing
 
-### 5.3 Null and missing
-
-Null
-
-Missing
-
-### 5.4 Collation
+### 5.8 Collation
 
 ## 6 Literals
 
@@ -154,7 +148,7 @@ Missing
 
 % Modulo
 
-\- Negagte
+\- Negate
 
 ### 8.2 Collection operators
 
@@ -186,15 +180,15 @@ Within
 
 \>= Greater than or equals
 
-Between
+Between, not between
 
-Like
+Like, not like
 
-Is Missing
+Is Missing, is not missing
 
-Is Null
+Is Null, is not null
 
-Is Valued
+Is Valued, is not valued
 
 ### 8.4 Conditional operators
 
