@@ -714,7 +714,7 @@ func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value
 	}
 
 	rv := make([]interface{}, 0, int(math.Abs(end-start)/math.Abs(step)))
-	for v := start; (step > 0.0 && v < end) || v > end; v += step {
+	for v := start; (step > 0.0 && v < end) || (step < 0.0 && v > end); v += step {
 		rv = append(rv, v)
 	}
 
@@ -813,7 +813,7 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 	}
 
 	sf := second.Actual().(float64)
-	if sf != math.Trunc(sf) {
+	if sf < 0 || sf != math.Trunc(sf) {
 		return value.NULL_VALUE, nil
 	}
 

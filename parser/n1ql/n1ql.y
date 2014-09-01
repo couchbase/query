@@ -1848,7 +1848,7 @@ function_name LPAREN opt_exprs RPAREN
 
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            yylex.Error(fmt.Sprintf("Invalid number of arguments to function %s.", $1));
+            yylex.Error(fmt.Sprintf("Wrong number of arguments to function %s.", $1));
         } else {
             $$ = f.Constructor()($3...);
         }
