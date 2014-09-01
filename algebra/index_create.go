@@ -12,6 +12,7 @@ package algebra
 import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type CreateIndex struct {
@@ -35,4 +36,8 @@ func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Express
 
 func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCreateIndex(this)
+}
+
+func (this *CreateIndex) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }

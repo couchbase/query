@@ -9,6 +9,11 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
 type Statement interface {
 	Node
+	Signature() value.Value
 }

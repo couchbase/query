@@ -17,7 +17,7 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func ParseCommand(input string) (node algebra.Node, err error) {
+func ParseStatement(input string) (statement algebra.Statement, err error) {
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -26,15 +26,15 @@ func ParseCommand(input string) (node algebra.Node, err error) {
 	}()
 
 	lex := newLexer(NewLexer(strings.NewReader(input)))
-	lex.parsingCmd = true
+	lex.parsingStmt = true
 	yyParse(lex)
 
 	if len(lex.errs) > 0 {
 		return nil, fmt.Errorf(strings.Join(lex.errs, "\n"))
-	} else if lex.node == nil {
-		return nil, fmt.Errorf("Input was not a command.")
+	} else if lex.stmt == nil {
+		return nil, fmt.Errorf("Input was not a statement.")
 	} else {
-		return lex.node, nil
+		return lex.stmt, nil
 	}
 }
 
@@ -59,11 +59,11 @@ func ParseExpression(input string) (expr expression.Expression, err error) {
 }
 
 type lexer struct {
-	nex        yyLexer
-	errs       []string
-	node       algebra.Node
-	expr       expression.Expression
-	parsingCmd bool
+	nex         yyLexer
+	errs        []string
+	stmt        algebra.Statement
+	expr        expression.Expression
+	parsingStmt bool
 }
 
 func newLexer(nex yyLexer) *lexer {
@@ -81,12 +81,12 @@ func (this *lexer) Error(s string) {
 	this.errs = append(this.errs, s)
 }
 
-func (this *lexer) setNode(node algebra.Node) {
-	this.node = node
+func (this *lexer) setStatement(stmt algebra.Statement) {
+	this.stmt = stmt
 }
 
 func (this *lexer) setExpression(expr expression.Expression) {
 	this.expr = expr
 }
 
-func (this *lexer) parsingCommand() bool { return this.parsingCmd }
+func (this *lexer) parsingStatement() bool { return this.parsingStmt }

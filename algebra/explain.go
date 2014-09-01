@@ -9,6 +9,10 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
 type Explain struct {
 	stmt Statement `json:"stmt"`
 }
@@ -19,6 +23,10 @@ func NewExplain(stmt Statement) *Explain {
 
 func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExplain(this)
+}
+
+func (this *Explain) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *Explain) Statement() Statement {

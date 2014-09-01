@@ -16,6 +16,15 @@ processed by the query engine.
 */
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
 type Node interface {
 	Accept(visitor Visitor) (interface{}, error)
+}
+
+type Command interface {
+	Node
+	Signature() value.Value
 }

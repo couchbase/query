@@ -30,6 +30,7 @@ var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or d
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
+var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
 var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
@@ -76,7 +77,8 @@ func main() {
 	}
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
-	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel, *THREAD_COUNT, *TIMEOUT, *METRICS)
+	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel,
+		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
 	if err != nil {
 		lw.Error("Error starting cbq-engine: %v", err)
 		return

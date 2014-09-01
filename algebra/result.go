@@ -10,8 +10,16 @@
 package algebra
 
 import (
+	"strconv"
+
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
+
+type Projector interface {
+	Node
+	Signature() value.Value
+}
 
 type Projection struct {
 	distinct bool        `json:"distinct"`
@@ -26,15 +34,37 @@ func NewProjection(distinct bool, terms ResultTerms) *Projection {
 		terms:    terms,
 	}
 
+	rv.setAliases()
 	return rv
 }
 
 func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
-	return &Projection{
+	rv := &Projection{
 		distinct: distinct,
 		raw:      true,
 		terms:    ResultTerms{NewResultTerm(expr, false, "")},
 	}
+
+	rv.setAliases()
+	return rv
+}
+
+func (this *Projection) Signature() value.Value {
+	if this.raw {
+		return value.NewValue(this.terms[0].Expression().Type().String())
+	}
+
+	rv := value.NewValue(make(map[string]interface{}, len(this.terms)))
+	for _, term := range this.terms {
+		alias := term.Alias()
+		if alias == "" {
+			rv.SetField("*", "*")
+		} else {
+			rv.SetField(alias, term.Expression().Type().String())
+		}
+	}
+
+	return rv
 }
 
 func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
@@ -73,12 +103,20 @@ func (this *Projection) Terms() ResultTerms {
 	return this.terms
 }
 
+func (this *Projection) setAliases() {
+	a := 1
+	for _, term := range this.terms {
+		a = term.setAlias(a)
+	}
+}
+
 type ResultTerms []*ResultTerm
 
 type ResultTerm struct {
-	expr expression.Expression `json:"expr"`
-	star bool                  `json:"star"`
-	as   string                `json:"as"`
+	expr  expression.Expression `json:"expr"`
+	star  bool                  `json:"star"`
+	as    string                `json:"as"`
+	alias string                `json:"_"`
 }
 
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
@@ -110,11 +148,24 @@ func (this *ResultTerm) As() string {
 }
 
 func (this *ResultTerm) Alias() string {
+	return this.alias
+}
+
+func (this *ResultTerm) setAlias(a int) int {
 	if this.star {
-		return ""
-	} else if this.as != "" {
-		return this.as
-	} else {
-		return this.expr.Alias()
+		return a
 	}
+
+	if this.as != "" {
+		this.alias = this.as
+	} else {
+		this.alias = this.expr.Alias()
+	}
+
+	if this.alias == "" {
+		this.alias = "$" + strconv.Itoa(a)
+		a++
+	}
+
+	return a
 }

@@ -36,18 +36,18 @@ type httpRequest struct {
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 	err := req.ParseForm()
 
-	var command string
+	var statement string
 	if err == nil {
-		command, err = getCommand(req)
+		statement, err = getStatement(req)
 	}
 
-	var prepared plan.Operator
+	var prepared *plan.Prepared
 	if err == nil {
 		prepared, err = getPrepared(req)
 	}
 
-	if err == nil && command == "" && prepared == nil {
-		err = fmt.Errorf("Either command or prepared must be provided.")
+	if err == nil && statement == "" && prepared == nil {
+		err = fmt.Errorf("Either statement or prepared must be provided.")
 	}
 
 	var arguments map[string]value.Value
@@ -75,7 +75,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		metrics, err = getMetrics(req)
 	}
 
-	base := server.NewBaseRequest(command, prepared, arguments, namespace, readonly, metrics)
+	base := server.NewBaseRequest(statement, prepared, arguments, namespace, readonly, metrics)
 	rv := &httpRequest{
 		BaseRequest: *base,
 		resp:        resp,
@@ -114,26 +114,26 @@ func formValue(req *http.Request, field string) (string, error) {
 	}
 }
 
-func getCommand(req *http.Request) (string, error) {
-	command, err := formValue(req, "command")
+func getStatement(req *http.Request) (string, error) {
+	statement, err := formValue(req, "statement")
 	if err != nil {
 		return "", err
 	}
 
-	if command == "" && req.Method == "POST" {
+	if statement == "" && req.Method == "POST" {
 		bytes, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			return "", err
 		}
 
-		command = string(bytes)
+		statement = string(bytes)
 	}
 
-	return command, nil
+	return statement, nil
 }
 
-func getPrepared(req *http.Request) (plan.Operator, error) {
-	var prepared plan.Operator
+func getPrepared(req *http.Request) (*plan.Prepared, error) {
+	var prepared *plan.Prepared
 
 	prepared_field, err := formValue(req, "prepared")
 	if err == nil && prepared_field != "" {

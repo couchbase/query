@@ -27,7 +27,6 @@ binding          *expression.Binding
 bindings         expression.Bindings
 
 node             algebra.Node
-explain          *algebra.Explain
 statement        algebra.Statement
 
 fullselect       *algebra.Select
@@ -265,8 +264,6 @@ indexType        datastore.IndexType
 
 %type <expr>             paren_or_subquery_expr paren_or_subquery
 
-%type <node>             command
-%type <explain>          explain
 %type <fullselect>       fullselect
 %type <subresult>        subselects
 %type <subselect>        subselect
@@ -293,7 +290,7 @@ indexType        datastore.IndexType
 %type <expr>             offset opt_offset
 %type <b>                dir opt_dir
 
-%type <statement>        stmt select_stmt dml_stmt ddl_stmt
+%type <statement>        stmt explain select_stmt dml_stmt ddl_stmt
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index
 
@@ -329,9 +326,9 @@ indexType        datastore.IndexType
 %%
 
 input:
-command
+stmt
 {
-    yylex.(*lexer).setNode($1)
+    yylex.(*lexer).setStatement($1)
 }
 |
 expr
@@ -340,16 +337,14 @@ expr
 }
 ;
 
-command:
+stmt:
 explain
-{
-    $$ = $1
-}
 |
-stmt
-{
-    $$ = $1
-}
+select_stmt
+|
+dml_stmt
+|
+ddl_stmt
 ;
 
 explain:
@@ -357,14 +352,6 @@ EXPLAIN stmt
 {
     $$ = algebra.NewExplain($2)
 }
-;
-
-stmt:
-select_stmt
-|
-dml_stmt
-|
-ddl_stmt
 ;
 
 select_stmt:
@@ -1855,7 +1842,7 @@ function_name LPAREN opt_exprs RPAREN
 {
     $$ = nil;
     f, ok := expression.GetFunction($1);
-    if !ok && yylex.(*lexer).parsingCommand() {
+    if !ok && yylex.(*lexer).parsingStatement() {
         f, ok = algebra.GetAggregate($1, false);
     }
 
@@ -1873,7 +1860,7 @@ function_name LPAREN opt_exprs RPAREN
 function_name LPAREN DISTINCT expr RPAREN
 {
     $$ = nil;
-    if !yylex.(*lexer).parsingCommand() {
+    if !yylex.(*lexer).parsingStatement() {
         yylex.Error("Cannot use aggregate as an inline expression.");
     } else {
         agg, ok := algebra.GetAggregate($1, true);
@@ -1888,7 +1875,7 @@ function_name LPAREN DISTINCT expr RPAREN
 function_name LPAREN STAR RPAREN
 {
     $$ = nil;
-    if !yylex.(*lexer).parsingCommand() {
+    if !yylex.(*lexer).parsingStatement() {
         yylex.Error("Cannot use aggregate as an inline expression.");
     } else {
         agg, ok := algebra.GetAggregate($1, false);
@@ -1998,7 +1985,7 @@ expr
 fullselect
 {
     $$ = nil;
-    if yylex.(*lexer).parsingCommand() {
+    if yylex.(*lexer).parsingStatement() {
         $$ = algebra.NewSubquery($1);
     } else {
         yylex.Error("Cannot use subquery as an inline expression.");

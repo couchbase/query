@@ -9,6 +9,10 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
 type AlterIndex struct {
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
@@ -21,6 +25,10 @@ func NewAlterIndex(keyspace *KeyspaceRef, name, rename string) *AlterIndex {
 		name:     name,
 		rename:   rename,
 	}
+}
+
+func (this *AlterIndex) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {

@@ -9,6 +9,10 @@
 
 package algebra
 
+import (
+	"github.com/couchbaselabs/query/value"
+)
+
 type DropIndex struct {
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
@@ -23,4 +27,8 @@ func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
 
 func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDropIndex(this)
+}
+
+func (this *DropIndex) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }

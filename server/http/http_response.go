@@ -33,15 +33,15 @@ func (this *httpRequest) Fail(err errors.Error) {
 	this.writeString(err.Error())
 }
 
-func (this *httpRequest) Execute(stopNotify chan bool, metrics bool) {
+func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
 	defer this.Stop(server.COMPLETED)
 
 	this.NotifyStop(stopNotify)
 
 	this.resp.WriteHeader(http.StatusOK)
-	_ = this.writePrefix() &&
+	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&
-		this.writeSuffix(metrics, server.COMPLETED)
+		this.writeSuffix(srvr.Metrics(), server.COMPLETED)
 }
 
 func (this *httpRequest) Expire() {
@@ -50,8 +50,16 @@ func (this *httpRequest) Expire() {
 	this.writeSuffix(true, server.TIMEOUT)
 }
 
-func (this *httpRequest) writePrefix() bool {
-	return this.writeString("{\n    \"results\": [")
+func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
+	return this.writeString("{\n") &&
+		(!srvr.Signature() || signature == nil || this.writeSignature(signature)) &&
+		this.writeString("    \"results\": [")
+}
+
+func (this *httpRequest) writeSignature(signature value.Value) bool {
+	return this.writeString("    \"signature\": ") &&
+		this.writeItem(signature) &&
+		this.writeString(",\n")
 }
 
 func (this *httpRequest) writeResults() bool {
@@ -98,6 +106,15 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 	return rv &&
 		this.writeString("        ") &&
 		this.writeString(string(bytes))
+}
+
+func (this *httpRequest) writeItem(item value.Value) bool {
+	bytes, err := json.MarshalIndent(item.Actual(), "    ", "    ")
+	if err != nil {
+		return false
+	}
+
+	return this.writeString(string(bytes))
 }
 
 func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {

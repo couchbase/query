@@ -30,12 +30,13 @@ type Server struct {
 	channel     RequestChannel
 	threadCount int
 	timeout     time.Duration
+	signature   bool
 	metrics     bool
 	once        sync.Once
 }
 
-func NewServer(store datastore.Datastore, namespace string, readonly bool,
-	channel RequestChannel, threadCount int, timeout time.Duration, metrics bool) (*Server, errors.Error) {
+func NewServer(store datastore.Datastore, namespace string, readonly bool, channel RequestChannel,
+	threadCount int, timeout time.Duration, signature, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		namespace:   namespace,
@@ -43,6 +44,7 @@ func NewServer(store datastore.Datastore, namespace string, readonly bool,
 		channel:     channel,
 		threadCount: threadCount,
 		timeout:     timeout,
+		signature:   signature,
 		metrics:     metrics,
 	}
 
@@ -61,6 +63,14 @@ func (this *Server) Datastore() datastore.Datastore {
 
 func (this *Server) Channel() RequestChannel {
 	return this.channel
+}
+
+func (this *Server) Signature() bool {
+	return this.signature
+}
+
+func (this *Server) Metrics() bool {
+	return this.metrics
 }
 
 func (this *Server) Serve() {
@@ -104,7 +114,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	if (this.readonly || request.Readonly()) && !prepared.Readonly() {
 		request.Fail(errors.NewError(nil, "The server or request is read-only"+
-			" and cannot accept this write command."))
+			" and cannot accept this write statement."))
 		return
 	}
 
@@ -120,22 +130,22 @@ func (this *Server) serviceRequest(request Request) {
 		defer timer.Stop()
 	}
 
-	go request.Execute(operator.StopChannel(), this.metrics)
+	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
 	context := execution.NewContext(this.datastore, this.systemstore,
 		namespace, this.readonly, request.Arguments(), request.Output())
 	operator.RunOnce(context, nil)
 }
 
-func (this *Server) getPrepared(request Request, namespace string) (plan.Operator, error) {
+func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, error) {
 	prepared := request.Prepared()
 	if prepared == nil {
-		node, err := n1ql.ParseCommand(request.Command())
+		stmt, err := n1ql.ParseStatement(request.Statement())
 		if err != nil {
 			return nil, err
 		}
 
-		prepared, err = plan.Build(node, this.datastore, this.systemstore, namespace, false)
+		prepared, err = plan.Prepare(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, err
 		}

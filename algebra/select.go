@@ -34,6 +34,10 @@ func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
+func (this *Select) Signature() value.Value {
+	return this.subresult.Signature()
+}
+
 func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.subresult.MapExpressions(mapper)
 	if err != nil {
@@ -160,7 +164,7 @@ func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 type Subresult interface {
-	Node
+	Projector
 	IsCorrelated() bool
 	MapExpressions(mapper expression.Mapper) error
 	Formalize() (formalizer *Formalizer, err error)
@@ -181,6 +185,14 @@ func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expre
 
 func (this *Subselect) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSubselect(this)
+}
+
+func (this *Subselect) Signature() value.Value {
+	return this.projection.Signature()
+}
+
+func (this *Subselect) IsCorrelated() bool {
+	return true // FIXME
 }
 
 func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
@@ -277,10 +289,6 @@ func (this *Subselect) Projection() *Projection {
 	return this.projection
 }
 
-func (this *Subselect) IsCorrelated() bool {
-	return true // FIXME
-}
-
 type Group struct {
 	by      expression.Expressions `json:by`
 	letting expression.Bindings    `json:"letting"`
@@ -363,6 +371,23 @@ type binarySubresult struct {
 	second Subresult `json:"second"`
 }
 
+func (this *binarySubresult) Signature() value.Value {
+	return this.first.Signature()
+}
+
+func (this *binarySubresult) IsCorrelated() bool {
+	return this.first.IsCorrelated() || this.second.IsCorrelated()
+}
+
+func (this *binarySubresult) MapExpressions(mapper expression.Mapper) (err error) {
+	err = this.first.MapExpressions(mapper)
+	if err != nil {
+		return
+	}
+
+	return this.second.MapExpressions(mapper)
+}
+
 func (this *binarySubresult) Formalize() (f *Formalizer, err error) {
 	var ff, sf *Formalizer
 	ff, err = this.first.Formalize()
@@ -393,10 +418,6 @@ func (this *binarySubresult) Formalize() (f *Formalizer, err error) {
 	return ff, nil
 }
 
-func (this *binarySubresult) IsCorrelated() bool {
-	return this.first.IsCorrelated() || this.second.IsCorrelated()
-}
-
 func (this *binarySubresult) First() Subresult {
 	return this.first
 }
@@ -405,15 +426,52 @@ func (this *binarySubresult) Second() Subresult {
 	return this.second
 }
 
-type Union struct {
+type unionSubresult struct {
 	binarySubresult
+}
+
+func (this *unionSubresult) Signature() value.Value {
+	first := this.first.Signature()
+	second := this.second.Signature()
+
+	if first.Equals(second) {
+		return first
+	}
+
+	if first.Type() != value.OBJECT ||
+		second.Type() != value.OBJECT {
+		return _JSON_SIGNATURE
+	}
+
+	rv := first.Copy()
+	sa := second.Actual().(map[string]interface{})
+	for k, v := range sa {
+		cv, ok := rv.Field(k)
+		if ok {
+			if !value.NewValue(cv).Equals(value.NewValue(v)) {
+				rv.SetField(k, _JSON_SIGNATURE)
+			}
+		} else {
+			rv.SetField(k, v)
+		}
+	}
+
+	return rv
+}
+
+var _JSON_SIGNATURE = value.NewValue(value.JSON.String())
+
+type Union struct {
+	unionSubresult
 }
 
 func NewUnion(first, second Subresult) Subresult {
 	return &Union{
-		binarySubresult{
-			first:  first,
-			second: second,
+		unionSubresult{
+			binarySubresult{
+				first:  first,
+				second: second,
+			},
 		},
 	}
 }
@@ -422,39 +480,23 @@ func (this *Union) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnion(this)
 }
 
-func (this *Union) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
-}
-
 type UnionAll struct {
-	binarySubresult
+	unionSubresult
 }
 
 func NewUnionAll(first, second Subresult) Subresult {
 	return &UnionAll{
-		binarySubresult{
-			first:  first,
-			second: second,
+		unionSubresult{
+			binarySubresult{
+				first:  first,
+				second: second,
+			},
 		},
 	}
 }
 
 func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnionAll(this)
-}
-
-func (this *UnionAll) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
 }
 
 type Intersect struct {
@@ -474,15 +516,6 @@ func (this *Intersect) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntersect(this)
 }
 
-func (this *Intersect) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
-}
-
 type IntersectAll struct {
 	binarySubresult
 }
@@ -498,15 +531,6 @@ func NewIntersectAll(first, second Subresult) Subresult {
 
 func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntersectAll(this)
-}
-
-func (this *IntersectAll) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
 }
 
 type Except struct {
@@ -526,15 +550,6 @@ func (this *Except) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExcept(this)
 }
 
-func (this *Except) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
-}
-
 type ExceptAll struct {
 	binarySubresult
 }
@@ -550,13 +565,4 @@ func NewExceptAll(first, second Subresult) Subresult {
 
 func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExceptAll(this)
-}
-
-func (this *ExceptAll) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.first.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	return this.second.MapExpressions(mapper)
 }

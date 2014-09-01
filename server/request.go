@@ -33,8 +33,8 @@ const (
 )
 
 type Request interface {
-	Command() string
-	Prepared() plan.Operator
+	Statement() string
+	Prepared() *plan.Prepared
 	Arguments() map[string]value.Value
 	Namespace() string
 	Timeout() time.Duration
@@ -46,14 +46,14 @@ type Request interface {
 	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute(notifyStop chan bool, metrics bool)
+	Execute(server *Server, signature value.Value, notifyStop chan bool)
 	Expire()
 	State() State
 }
 
 type BaseRequest struct {
-	command   string
-	prepared    plan.Operator
+	statement   string
+	prepared    *plan.Prepared
 	arguments   map[string]value.Value
 	namespace   string
 	timeout     time.Duration
@@ -71,10 +71,10 @@ type BaseRequest struct {
 	stopExecute chan bool
 }
 
-func NewBaseRequest(command string, prepared plan.Operator, arguments map[string]value.Value,
+func NewBaseRequest(statement string, prepared *plan.Prepared, arguments map[string]value.Value,
 	namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
 	rv := &BaseRequest{
-		command:   command,
+		statement:   statement,
 		prepared:    prepared,
 		arguments:   arguments,
 		namespace:   namespace,
@@ -103,11 +103,11 @@ func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
 	}
 }
 
-func (this *BaseRequest) Command() string {
-	return this.command
+func (this *BaseRequest) Statement() string {
+	return this.statement
 }
 
-func (this *BaseRequest) Prepared() plan.Operator {
+func (this *BaseRequest) Prepared() *plan.Prepared {
 	return this.prepared
 }
 

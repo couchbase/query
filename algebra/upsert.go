@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Upsert struct {
@@ -45,6 +46,10 @@ func NewUpsertSelect(keyspace *KeyspaceRef, key expression.Expression,
 
 func (this *Upsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpsert(this)
+}
+
+func (this *Upsert) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {

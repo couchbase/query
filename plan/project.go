@@ -10,17 +10,8 @@
 package plan
 
 import (
-	"strconv"
-
 	"github.com/couchbaselabs/query/algebra"
 )
-
-type ProjectTerms []*ProjectTerm
-
-type ProjectTerm struct {
-	result *algebra.ResultTerm
-	alias  string
-}
 
 type InitialProject struct {
 	readonly
@@ -31,15 +22,11 @@ type InitialProject struct {
 func NewInitialProject(projection *algebra.Projection) *InitialProject {
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
-	a := 1
 
 	for i, res := range results {
-		pt := &ProjectTerm{
+		terms[i] = &ProjectTerm{
 			result: res,
 		}
-
-		a = pt.setAlias(a)
-		terms[i] = pt
 	}
 
 	return &InitialProject{
@@ -72,26 +59,12 @@ func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalProject(this)
 }
 
+type ProjectTerms []*ProjectTerm
+
+type ProjectTerm struct {
+	result *algebra.ResultTerm
+}
+
 func (this *ProjectTerm) Result() *algebra.ResultTerm {
 	return this.result
-}
-
-func (this *ProjectTerm) Alias() string {
-	return this.alias
-}
-
-func (this *ProjectTerm) setAlias(a int) int {
-	if this.result.Star() {
-		return a
-	}
-
-	res := this.result.Alias()
-	if res != "" {
-		this.alias = res
-	} else {
-		this.alias = "$" + strconv.Itoa(a)
-		a++
-	}
-
-	return a
 }

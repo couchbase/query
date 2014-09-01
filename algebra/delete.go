@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Delete struct {
@@ -28,6 +29,10 @@ func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
 
 func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDelete(this)
+}
+
+func (this *Delete) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {

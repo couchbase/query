@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Merge struct {
@@ -83,6 +84,10 @@ func NewMergeValues(keyspace *KeyspaceRef, values expression.Expressions, as str
 
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
+}
+
+func (this *Merge) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {

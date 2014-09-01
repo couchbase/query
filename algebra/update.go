@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Update struct {
@@ -30,6 +31,10 @@ func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, set *Set, unse
 
 func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
+}
+
+func (this *Update) Signature() value.Value {
+	return value.NewValue(value.JSON.String())
 }
 
 func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {

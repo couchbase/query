@@ -96,18 +96,18 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	pv.SetAttachment("project", project)
 
 	for _, term := range this.plan.Terms() {
-		if term.Alias() != "" {
+		if term.Result().Alias() != "" {
 			val, err := term.Result().Expression().Evaluate(item, context)
 			if err != nil {
 				context.Error(errors.NewError(err, "Error evaluating projection."))
 				return false
 			}
 
-			project.SetField(term.Alias(), val)
+			project.SetField(term.Result().Alias(), val)
 
 			// Explicit aliases overshadow data
 			if term.Result().As() != "" {
-				pv.SetField(term.Alias(), val)
+				pv.SetField(term.Result().Alias(), val)
 			}
 		} else {
 			// Star
