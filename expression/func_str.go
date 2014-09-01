@@ -280,7 +280,7 @@ func (this *Repeat) Apply(context Context, first, second value.Value) (value.Val
 	}
 
 	nf := second.Actual().(float64)
-	if nf != math.Trunc(nf) {
+	if nf < 0.0 || nf != math.Trunc(nf) {
 		return value.NULL_VALUE, nil
 	}
 

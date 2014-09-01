@@ -652,10 +652,24 @@ type Random struct {
 }
 
 func NewRandom(operands ...Expression) Function {
-	return &Random{
+	rv := &Random{
 		*NewFunctionBase("random", operands...),
 		nil,
 	}
+
+	if len(operands) < 1 {
+		return rv
+	}
+
+	switch op := operands[0].(type) {
+	case *Constant:
+		switch val := op.Value().Actual().(type) {
+		case float64:
+			rv.gen = rand.New(rand.NewSource(int64(val)))
+		}
+	}
+
+	return rv
 }
 
 func (this *Random) Accept(visitor Visitor) (interface{}, error) {
@@ -690,8 +704,7 @@ func (this *Random) Apply(context Context, args ...value.Value) (value.Value, er
 		return value.NULL_VALUE, nil
 	}
 
-	var gen rand.Rand
-	gen.Seed(int64(v))
+	gen := rand.New(rand.NewSource(int64(v)))
 	return value.NewValue(gen.Float64()), nil
 }
 
