@@ -71,7 +71,8 @@ type Keyspace interface {
 	Indexes() ([]Index, errors.Error)                 // Returns all the indexes defined on this keyspace
 	CreatePrimaryIndex() (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
 
-	CreateIndex(name string, equalKey, rangeKey expression.Expressions, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
+	CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+		where expression.Expression, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string) ([]Pair, errors.Error)      // Bulk key-value fetch from this keyspace

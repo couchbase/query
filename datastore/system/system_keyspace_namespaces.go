@@ -139,7 +139,8 @@ func (b *namespaceKeyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions, using datastore.IndexType) (datastore.Index, errors.Error) {
+func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
 	return nil, errors.NewError(nil, "Not supported.")
 }
 

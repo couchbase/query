@@ -101,6 +101,7 @@ indexType        datastore.IndexType
 %token END
 %token EVERY
 %token EXCEPT
+%token EXCLUDE
 %token EXECUTE
 %token EXISTS
 %token EXPLAIN
@@ -114,6 +115,7 @@ indexType        datastore.IndexType
 %token HAVING
 %token IF
 %token IN
+%token INCLUDE
 %token INDEX
 %token INLINE
 %token INNER
@@ -1277,9 +1279,9 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE INDEX index_name ON named_keyspace_ref LPAREN exprs RPAREN index_partition index_using
+CREATE INDEX index_name ON named_keyspace_ref LPAREN exprs RPAREN index_partition opt_where index_using
 {
-    $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10)
+  $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11)
 }
 ;
 

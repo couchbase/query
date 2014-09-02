@@ -108,6 +108,7 @@
 /[eE][nN][dD]/					 { logToken("END"); return END }
 /[eE][vV][eE][rR][yY]/				 { logToken("EVERY"); return EVERY }
 /[eE][xX][cC][eE][pP][tT]/			 { logToken("EXCEPT"); return EXCEPT }
+/[eE][xX][cC][lL][uU][dD][eE]/			 { logToken("EXCLUDE"); return EXCLUDE }
 /[eE][xX][eE][cC][uU][tT][eE]/			 { logToken("EXECUTE"); return EXECUTE }
 /[eE][xX][iI][sS][tT][sS]/			 { logToken("EXISTS"); return EXISTS }
 /[eE][xX][pP][lL][aA][iI][nN]/			 { logToken("EXPLAIN"); return EXPLAIN }
@@ -121,6 +122,7 @@
 /[hH][aA][vV][iI][nN][gG]/			 { logToken("HAVING"); return HAVING }
 /[iI][fF]/					 { logToken("IF"); return IF }
 /[iI][nN]/					 { logToken("IN"); return IN }
+/[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
 /[iI][nN][dD][eE][xX]/				 { logToken("INDEX"); return INDEX }
 /[iI][nN][lL][iI][nN][eE]/			 { logToken("INLINE"); return INLINE }
 /[iI][nN][nN][eE][rR]/				 { logToken("INNER"); return INNER }

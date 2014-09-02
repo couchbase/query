@@ -20,16 +20,18 @@ type CreateIndex struct {
 	keyspace  *KeyspaceRef           `json:"keyspace"`
 	exprs     expression.Expressions `json:"expressions"`
 	partition expression.Expression  `json:"partition"`
+	where     expression.Expression  `json:"where"`
 	using     datastore.IndexType    `json:"using"`
 }
 
 func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
-	partition expression.Expression, using datastore.IndexType) *CreateIndex {
+	partition, where expression.Expression, using datastore.IndexType) *CreateIndex {
 	return &CreateIndex{
 		name:      name,
 		keyspace:  keyspace,
 		exprs:     exprs,
 		partition: partition,
+		where:     where,
 		using:     using,
 	}
 }
