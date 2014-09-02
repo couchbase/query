@@ -52,13 +52,13 @@ func (this *httpRequest) Expire() {
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
 	return this.writeString("{\n") &&
-		(!srvr.Signature() || signature == nil || this.writeSignature(signature)) &&
+		(!srvr.Signature() || this.writeSignature(signature)) &&
 		this.writeString("    \"results\": [")
 }
 
 func (this *httpRequest) writeSignature(signature value.Value) bool {
 	return this.writeString("    \"signature\": ") &&
-		this.writeItem(signature) &&
+		this.writeValue(signature) &&
 		this.writeString(",\n")
 }
 
@@ -108,7 +108,7 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 		this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeItem(item value.Value) bool {
+func (this *httpRequest) writeValue(item value.Value) bool {
 	bytes, err := json.MarshalIndent(item.Actual(), "    ", "    ")
 	if err != nil {
 		return false
@@ -214,16 +214,16 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 	}
 
 	rv := this.writeString(",\n    \"metrics\": {") &&
-		this.writeString(fmt.Sprintf("\n        elapsedTime: %v", time.Since(this.RequestTime()))) &&
-		this.writeString(fmt.Sprintf(",\n        executionTime: %v", time.Since(this.ServiceTime()))) &&
-		this.writeString(fmt.Sprintf(",\n        resultCount: %d", this.resultCount))
+		this.writeString(fmt.Sprintf("\n        \"elapsedTime\": \"%v\"", time.Since(this.RequestTime()))) &&
+		this.writeString(fmt.Sprintf(",\n        \"executionTime\": \"%v\"", time.Since(this.ServiceTime()))) &&
+		this.writeString(fmt.Sprintf(",\n        \"resultCount\": %d", this.resultCount))
 
 	if this.errorCount > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        errorCount: %d", this.errorCount))
+		rv = rv && this.writeString(fmt.Sprintf(",\n        \"errorCount\": %d", this.errorCount))
 	}
 
 	if this.warningCount > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        warningCount: %d", this.warningCount))
+		rv = rv && this.writeString(fmt.Sprintf(",\n        \"warningCount\": %d", this.warningCount))
 	}
 
 	return rv && this.writeString("\n    }")
