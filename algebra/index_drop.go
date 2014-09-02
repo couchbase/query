@@ -30,5 +30,5 @@ func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DropIndex) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	return nil
 }

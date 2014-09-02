@@ -34,7 +34,11 @@ func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Update) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	if this.returning != nil {
+		return this.returning.Signature()
+	} else {
+		return nil
+	}
 }
 
 func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
@@ -93,7 +97,6 @@ func (this *Update) Formalize() (err error) {
 		}
 	}
 
-/*
 	if this.set != nil {
 		err = this.set.Formalize(f)
 		if err != nil {
@@ -107,7 +110,6 @@ func (this *Update) Formalize() (err error) {
 			return
 		}
 	}
-*/
 
 	if this.where != nil {
 		this.where, err = f.Map(this.where)
@@ -177,6 +179,17 @@ func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+func (this *Set) Formalize(f *Formalizer) (err error) {
+	for _, term := range this.terms {
+		err = term.Formalize(f)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 func (this *Set) Terms() SetTerms {
 	return this.terms
 }
@@ -192,6 +205,17 @@ func NewUnset(terms UnsetTerms) *Unset {
 func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
 		err = term.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (this *Unset) Formalize(f *Formalizer) (err error) {
+	for _, term := range this.terms {
+		err = term.Formalize(f)
 		if err != nil {
 			return
 		}
@@ -219,7 +243,7 @@ func NewSetTerm(path expression.Path, value expression.Expression, updateFor *Up
 func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	path, err := mapper.Map(this.path)
 	if err != nil {
-		return
+		return err
 	}
 
 	this.path = path.(expression.Path)
@@ -233,6 +257,25 @@ func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 		err = this.updateFor.MapExpressions(mapper)
 	}
 
+	return
+}
+
+func (this *SetTerm) Formalize(f *Formalizer) (err error) {
+	if this.updateFor != nil {
+		defer f.PopBindings()
+		err = f.PushBindings(this.updateFor.bindings)
+		if err != nil {
+			return
+		}
+	}
+
+	path, err := f.Map(this.path)
+	if err != nil {
+		return err
+	}
+
+	this.path = path.(expression.Path)
+	this.value, err = f.Map(this.value)
 	return
 }
 
@@ -262,7 +305,7 @@ func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
 func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	path, err := mapper.Map(this.path)
 	if err != nil {
-		return
+		return err
 	}
 
 	this.path = path.(expression.Path)
@@ -271,6 +314,24 @@ func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 		err = this.updateFor.MapExpressions(mapper)
 	}
 
+	return
+}
+
+func (this *UnsetTerm) Formalize(f *Formalizer) (err error) {
+	if this.updateFor != nil {
+		defer f.PopBindings()
+		err = f.PushBindings(this.updateFor.bindings)
+		if err != nil {
+			return
+		}
+	}
+
+	path, err := f.Map(this.path)
+	if err != nil {
+		return err
+	}
+
+	this.path = path.(expression.Path)
 	return
 }
 

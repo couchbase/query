@@ -49,7 +49,11 @@ func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Insert) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	if this.returning != nil {
+		return this.returning.Signature()
+	} else {
+		return nil
+	}
 }
 
 func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
@@ -82,6 +86,29 @@ func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *Insert) Formalize() (err error) {
+	if this.values != nil {
+		err = this.values.MapExpressions(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.query != nil {
+		err = this.query.Formalize()
+		if err != nil {
+			return
+		}
+	}
+
+	f, err := this.keyspace.Formalize()
+	if err != nil {
+		return err
+	}
+
+	if this.returning != nil {
+		err = this.returning.MapExpressions(f)
+	}
+
 	return
 }
 

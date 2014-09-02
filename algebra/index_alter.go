@@ -27,10 +27,10 @@ func NewAlterIndex(keyspace *KeyspaceRef, name, rename string) *AlterIndex {
 	}
 }
 
-func (this *AlterIndex) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
-}
-
 func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAlterIndex(this)
+}
+
+func (this *AlterIndex) Signature() value.Value {
+	return nil
 }

@@ -32,7 +32,11 @@ func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Delete) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	if this.returning != nil {
+		return this.returning.Signature()
+	} else {
+		return nil
+	}
 }
 
 func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {

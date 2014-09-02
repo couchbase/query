@@ -1170,22 +1170,26 @@ path opt_update_for
 merge:
 MERGE INTO keyspace_ref USING keyspace_term ON key merge_actions opt_limit opt_returning
 {
-    $$ = algebra.NewMergeFrom($3, $5, "", $7, $8.Update, $8.Delete, $8.Insert, $9, $10)
+    source := algebra.NewMergeSourceFrom($5, "")
+    $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
 }
 |
 MERGE INTO keyspace_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-    $$ = algebra.NewMergeFrom($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+    source := algebra.NewMergeSourceFrom($6, $8)
+    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
 }
 |
 MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-    $$ = algebra.NewMergeSelect($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+    source := algebra.NewMergeSourceSelect($6, $8)
+    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
 }
 |
 MERGE INTO keyspace_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
-    $$ = algebra.NewMergeValues($3, $6, $8, $10, $11.Update, $11.Delete, $11.Insert, $12, $13)
+    source := algebra.NewMergeSourceValues($6, $8)
+    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
 }
 ;
 
@@ -1197,7 +1201,7 @@ merge_actions:
 |
 WHEN MATCHED THEN UPDATE merge_update opt_merge_delete_insert
 {
-    $$ = algebra.NewMergeActions($5, $6.Delete, $6.Insert)
+    $$ = algebra.NewMergeActions($5, $6.Delete(), $6.Insert())
 }
 |
 WHEN MATCHED THEN DELETE merge_delete opt_merge_insert

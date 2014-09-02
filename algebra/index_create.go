@@ -41,5 +41,5 @@ func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *CreateIndex) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	return nil
 }

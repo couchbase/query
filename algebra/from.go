@@ -68,6 +68,13 @@ func (this *KeyspaceTerm) Formalize() (f *Formalizer, err error) {
 		return
 	}
 
+	if this.keys != nil {
+		_, err = this.keys.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
 	allowed := value.NewValue(make(map[string]interface{}))
 	allowed.SetField(keyspace, keyspace)
 
@@ -140,6 +147,11 @@ func (this *Join) Formalize() (f *Formalizer, err error) {
 		return
 	}
 
+	this.right.keys, err = f.Map(this.right.keys)
+	if err != nil {
+		return
+	}
+
 	alias := this.Alias()
 	if alias == "" {
 		err = errors.NewError(nil, "JOIN term must have a name or alias.")
@@ -201,6 +213,11 @@ func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *Nest) Formalize() (f *Formalizer, err error) {
 	f, err = this.left.Formalize()
+	if err != nil {
+		return
+	}
+
+	this.right.keys, err = f.Map(this.right.keys)
 	if err != nil {
 		return
 	}
@@ -268,6 +285,11 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *Unnest) Formalize() (f *Formalizer, err error) {
 	f, err = this.left.Formalize()
+	if err != nil {
+		return
+	}
+
+	this.expr, err = f.Map(this.expr)
 	if err != nil {
 		return
 	}

@@ -15,68 +15,21 @@ import (
 )
 
 type Merge struct {
-	keyspace  *KeyspaceRef           `json:"keyspace"`
-	from      FromTerm               `json:"from"`
-	query     *Select                `json:"select"`
-	values    expression.Expressions `json:"values"`
-	as        string                 `json:"as"`
-	key       expression.Expression  `json:"key"`
-	update    *MergeUpdate           `json:"update"`
-	delete    *MergeDelete           `json:"delete"`
-	insert    *MergeInsert           `json:"insert"`
-	limit     expression.Expression  `json:"limit"`
-	returning *Projection            `json:"returning"`
+	keyspace  *KeyspaceRef          `json:"keyspace"`
+	source    *MergeSource          `json:"source"`
+	key       expression.Expression `json:"key"`
+	actions   *MergeActions         `json:"actions"`
+	limit     expression.Expression `json:"limit"`
+	returning *Projection           `json:"returning"`
 }
 
-func NewMergeFrom(keyspace *KeyspaceRef, from FromTerm, as string, key expression.Expression,
-	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
-	limit expression.Expression, returning *Projection) *Merge {
+func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Expression,
+	actions *MergeActions, limit expression.Expression, returning *Projection) *Merge {
 	return &Merge{
 		keyspace:  keyspace,
-		from:      from,
-		query:     nil,
-		values:    nil,
-		as:        as,
+		source:    source,
 		key:       key,
-		update:    update,
-		delete:    delete,
-		insert:    insert,
-		limit:     limit,
-		returning: returning,
-	}
-}
-
-func NewMergeSelect(keyspace *KeyspaceRef, query *Select, as string, key expression.Expression,
-	update *MergeUpdate, delete *MergeDelete, insert *MergeInsert,
-	limit expression.Expression, returning *Projection) *Merge {
-	return &Merge{
-		keyspace:  keyspace,
-		from:      nil,
-		query:     query,
-		values:    nil,
-		as:        as,
-		key:       key,
-		update:    update,
-		delete:    delete,
-		insert:    insert,
-		limit:     limit,
-		returning: returning,
-	}
-}
-
-func NewMergeValues(keyspace *KeyspaceRef, values expression.Expressions, as string,
-	key expression.Expression, update *MergeUpdate, delete *MergeDelete,
-	insert *MergeInsert, limit expression.Expression, returning *Projection) *Merge {
-	return &Merge{
-		keyspace:  keyspace,
-		from:      nil,
-		query:     nil,
-		values:    values,
-		as:        as,
-		key:       key,
-		update:    update,
-		delete:    delete,
-		insert:    insert,
+		actions:   actions,
 		limit:     limit,
 		returning: returning,
 	}
@@ -87,57 +40,27 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Merge) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	if this.returning != nil {
+		return this.returning.Signature()
+	} else {
+		return nil
+	}
 }
 
 func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
-	if this.from != nil {
-		err = this.from.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
+	err = this.source.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
-	if this.query != nil {
-		err = this.query.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
+	this.key, err = mapper.Map(this.key)
+	if err != nil {
+		return
 	}
 
-	if this.values != nil {
-		err = this.values.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.key != nil {
-		this.key, err = mapper.Map(this.key)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.update != nil {
-		err = this.update.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.delete != nil {
-		err = this.delete.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
-	}
-
-	if this.insert != nil {
-		err = this.insert.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
+	err = this.actions.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
 	if this.limit != nil {
@@ -155,6 +78,32 @@ func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *Merge) Formalize() (err error) {
+	kf, err := this.keyspace.Formalize()
+	if err != nil {
+		return err
+	}
+
+	sf, err := this.source.Formalize()
+	if err != nil {
+		return err
+	}
+
+	this.key, err = sf.Map(this.key)
+	if err != nil {
+		return err
+	}
+
+	if this.limit != nil {
+		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.returning != nil {
+		err = this.returning.MapExpressions(kf)
+	}
+
 	return
 }
 
@@ -162,36 +111,16 @@ func (this *Merge) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
-func (this *Merge) From() FromTerm {
-	return this.from
-}
-
-func (this *Merge) Select() *Select {
-	return this.query
-}
-
-func (this *Merge) Values() expression.Expressions {
-	return this.values
-}
-
-func (this *Merge) As() string {
-	return this.as
+func (this *Merge) Source() *MergeSource {
+	return this.source
 }
 
 func (this *Merge) Key() expression.Expression {
 	return this.key
 }
 
-func (this *Merge) Update() *MergeUpdate {
-	return this.update
-}
-
-func (this *Merge) Delete() *MergeDelete {
-	return this.delete
-}
-
-func (this *Merge) Insert() *MergeInsert {
-	return this.insert
+func (this *Merge) Actions() *MergeActions {
+	return this.actions
 }
 
 func (this *Merge) Limit() expression.Expression {
@@ -202,18 +131,115 @@ func (this *Merge) Returning() *Projection {
 	return this.returning
 }
 
+type MergeSource struct {
+	from   FromTerm               `json:"from"`
+	query  *Select                `json:"select"`
+	values expression.Expressions `json:"values"`
+	as     string                 `json:"as"`
+}
+
+func NewMergeSourceFrom(from FromTerm, as string) *MergeSource {
+	return &MergeSource{
+		from: from,
+		as:   as,
+	}
+}
+
+func NewMergeSourceSelect(query *Select, as string) *MergeSource {
+	return &MergeSource{
+		query: query,
+		as:    as,
+	}
+}
+
+func NewMergeSourceValues(values expression.Expressions, as string) *MergeSource {
+	return &MergeSource{
+		values: values,
+		as:     as,
+	}
+}
+
+func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
+	if this.query != nil {
+		err = this.query.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.values != nil {
+		err = this.values.MapExpressions(mapper)
+	}
+
+	return
+}
+
+func (this *MergeSource) Formalize() (f *Formalizer, err error) {
+	return
+}
+
+func (this *MergeSource) From() FromTerm {
+	return this.from
+}
+
+func (this *MergeSource) Select() *Select {
+	return this.query
+}
+
+func (this *MergeSource) Values() expression.Expressions {
+	return this.values
+}
+
+func (this *MergeSource) As() string {
+	return this.as
+}
+
 type MergeActions struct {
-	Update *MergeUpdate
-	Delete *MergeDelete
-	Insert *MergeInsert
+	update *MergeUpdate `json:"update"`
+	delete *MergeDelete `json:"delete"`
+	insert *MergeInsert `json:"insert"`
 }
 
 func NewMergeActions(update *MergeUpdate, delete *MergeDelete, insert *MergeInsert) *MergeActions {
 	return &MergeActions{
-		Update: update,
-		Delete: delete,
-		Insert: insert,
+		update: update,
+		delete: delete,
+		insert: insert,
 	}
+}
+
+func (this *MergeActions) MapExpressions(mapper expression.Mapper) (err error) {
+	if this.update != nil {
+		err = this.update.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.delete != nil {
+		err = this.delete.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.insert != nil {
+		err = this.insert.MapExpressions(mapper)
+	}
+
+	return
+}
+
+func (this *MergeActions) Update() *MergeUpdate {
+	return this.update
+}
+
+func (this *MergeActions) Delete() *MergeDelete {
+	return this.delete
+}
+
+func (this *MergeActions) Insert() *MergeInsert {
+	return this.insert
 }
 
 type MergeUpdate struct {

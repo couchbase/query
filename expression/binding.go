@@ -9,16 +9,6 @@
 
 package expression
 
-/*
-import (
-	"fmt"
-	"io"
-
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/value"
-)
-*/
-
 type Bindings []*Binding
 
 type Binding struct {
