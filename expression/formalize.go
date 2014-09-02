@@ -79,6 +79,7 @@ func (this *Formalizer) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
 // Collection
 
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
+	defer this.PopBindings()
 	err := this.PushBindings(expr.bindings)
 	if err != nil {
 		return nil, err
@@ -89,11 +90,11 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 		return nil, err
 	}
 
-	this.PopBindings()
 	return expr, nil
 }
 
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
+	defer this.PopBindings()
 	err := this.PushBindings(expr.bindings)
 	if err != nil {
 		return nil, err
@@ -104,11 +105,11 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 		return nil, err
 	}
 
-	this.PopBindings()
 	return expr, nil
 }
 
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
+	defer this.PopBindings()
 	err := this.PushBindings(expr.bindings)
 	if err != nil {
 		return nil, err
@@ -119,7 +120,6 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 		return nil, err
 	}
 
-	this.PopBindings()
 	return expr, nil
 }
 
@@ -128,6 +128,7 @@ func (this *Formalizer) VisitExists(expr *Exists) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
+	defer this.PopBindings()
 	err := this.PushBindings(expr.bindings)
 	if err != nil {
 		return nil, err
@@ -138,7 +139,6 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 		return nil, err
 	}
 
-	this.PopBindings()
 	return expr, nil
 }
 
