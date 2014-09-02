@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-08-10
+* Modified: 2014-09-02
 
 ## Introduction
 
@@ -105,6 +105,10 @@ N1QL provides several data modification statements.
 *merge-source:*
 
 ![](diagram/merge-source.png)
+
+*merge-actions:*
+
+![](diagram/merge-actions.png)
 
 *merge-update:*
 
@@ -255,6 +259,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Allow JOIN sources to be aliased
 * 2014-08-10 - WITHIN
     * Added WITHIN
+* 2014-09-02 - MERGE actions
+    * Factored out merge actions
 
 ### Open Issues
 
