@@ -16,13 +16,12 @@ The goals of this DP4 implementation are:
 * Language completeness for GA (as opposed to system and operational
   completeness)
 
-* GA-caliber implementation, quality, and performance
+* GA code base
 
 * Source code aesthetics
     + Design, object orientation
     + Data structures, algorithms
     + Modularity, readability
-    + Documentation, comments
 
 ## Features
 
