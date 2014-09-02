@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-08-20
+* Modified: 2014-09-01
 
 ## Introduction
 
@@ -1871,6 +1871,7 @@ for future use.
 * __END__
 * __EVERY__
 * __EXCEPT__
+* __EXCLUDE__
 * __EXECUTE__
 * __EXISTS__
 * __EXPLAIN__
@@ -1884,6 +1885,7 @@ for future use.
 * __HAVING__
 * __IF__
 * __IN__
+* __INCLUDE__
 * __INDEX__
 * __INLINE__
 * __INNER__
@@ -2316,6 +2318,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added keywords
 * 2014-08-10 - Functions
     * Removed _ in type checking and conversion function names
+* 2014-09-01 - Reserved words
+    * Added INCLUDE and EXCLUDE as reserved words
 
 ### Open issues
 

@@ -15,7 +15,7 @@ index-stmt ::= create-index | drop-index | alter-index
  *  index
  */
 
-create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-bucket-ref '(' expr (',' expr)* ')' partition? using?
+create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-bucket-ref '(' expr (',' expr)* ')' partition? where-clause? using?
 
 index-name ::= identifier
 

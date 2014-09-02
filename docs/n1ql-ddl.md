@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2014-07-03
+* Modified: 2014-09-01
 
 ## Summary
 
@@ -54,6 +54,10 @@ _partition:_
 
 ![](diagram/partition.png)
 
+_where-clause:_
+
+![](diagram/where-clause.png)
+
 _using:_
 
 ![](diagram/using.png)
@@ -88,6 +92,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2014-06-24 - named-bucket-ref
     * Renamed bucket-spec to named-bucket-ref
     * Factored out index-name
+* 2014-06-24 - CREATE INDEX
+    * Added WHERE clause to CREATE INDEX
 
 ### Open Issues
 
