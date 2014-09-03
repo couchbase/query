@@ -598,7 +598,7 @@ func (this *Title) Apply(context Context, arg value.Value) (value.Value, error) 
 		return value.NULL_VALUE, nil
 	}
 
-	rv := strings.ToTitle(arg.Actual().(string))
+	rv := strings.Title(arg.Actual().(string))
 	return value.NewValue(rv), nil
 }
 
