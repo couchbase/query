@@ -176,7 +176,7 @@ var _FUNCTIONS = map[string]Function{
 	"ifposinf":   &IfPosInf{},
 	"firstnum":   &FirstNum{},
 	"nanif":      &NaNIf{},
-	"negninfif":  &NegInfIf{},
+	"neginfif":   &NegInfIf{},
 	"posinfif":   &PosInfIf{},
 
 	// Meta
