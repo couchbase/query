@@ -98,7 +98,7 @@ type Statistics interface {
 	Count() (int64, errors.Error)
 	Min() (value.Values, errors.Error)
 	Max() (value.Values, errors.Error)
-	DistinctCount(int64, errors.Error)
+	DistinctCount() (int64, errors.Error)
 	Bins() ([]Statistics, errors.Error)
 }
 
