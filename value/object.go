@@ -42,7 +42,6 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		buf.WriteString(k)
 		buf.WriteString("\":")
 
-		v = NewValue(v.Actual()) // Mask mysterious marshaling behavior
 		b, err := json.Marshal(v)
 		if err != nil {
 			return nil, err

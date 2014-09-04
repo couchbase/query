@@ -12,6 +12,7 @@ package value
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
@@ -25,7 +26,11 @@ type parsedValue struct {
 }
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
-	return this.raw, nil
+	if this.parsedType == BINARY {
+		return nil, fmt.Errorf("Cannot marshal binary value.")
+	}
+
+	return json.Marshal(this.parse())
 }
 
 func (this *parsedValue) Type() Type { return this.parsedType }

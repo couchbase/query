@@ -398,7 +398,6 @@ func marshalArray(slice []interface{}) (b []byte, err error) {
 		}
 
 		v := NewValue(e)
-		v = NewValue(v.Actual()) // Mask mysterious marshaling behavior
 		b, err = json.Marshal(v)
 		if err != nil {
 			return
