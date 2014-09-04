@@ -10,15 +10,28 @@
 package value
 
 import (
+	"encoding/json"
 	"math"
-
-	json "github.com/dustin/gojson"
 )
 
 type floatValue float64
 
 var ZERO_VALUE = NewValue(0.0)
 var ONE_VALUE = NewValue(1.0)
+
+func (this floatValue) MarshalJSON() ([]byte, error) {
+	f := float64(this)
+
+	if math.IsNaN(f) {
+		return []byte("\"NaN\""), nil
+	} else if math.IsInf(f, 1) {
+		return []byte("\"+Infinity\""), nil
+	} else if math.IsInf(f, -1) {
+		return []byte("\"-Infinity\""), nil
+	} else {
+		return json.Marshal(f)
+	}
+}
 
 func (this floatValue) Type() Type { return NUMBER }
 

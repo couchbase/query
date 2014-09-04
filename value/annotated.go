@@ -48,7 +48,7 @@ type annotatedValue struct {
 }
 
 func (this *annotatedValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.Actual())
+	return json.Marshal(this.Value)
 }
 
 func (this *annotatedValue) Copy() Value {

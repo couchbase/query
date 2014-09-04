@@ -10,12 +10,17 @@
 package value
 
 import (
-	json "github.com/dustin/gojson"
+	"bytes"
+	"encoding/json"
 )
 
 type sliceValue []interface{}
 
 var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
+
+func (this sliceValue) MarshalJSON() ([]byte, error) {
+	return marshalArray(this)
+}
 
 func (this sliceValue) Type() Type { return ARRAY }
 
@@ -173,7 +178,7 @@ type listValue struct {
 }
 
 func (this *listValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.actual)
+	return marshalArray(this.actual)
 }
 
 func (this *listValue) Type() Type { return ARRAY }
@@ -377,4 +382,31 @@ func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	}
 
 	return result
+}
+
+func marshalArray(slice []interface{}) (b []byte, err error) {
+	if slice == nil {
+		return _NULL_BYTES, nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 1<<8))
+	buf.WriteString("[")
+
+	for i, e := range slice {
+		if i > 0 {
+			buf.WriteString(",")
+		}
+
+		v := NewValue(e)
+		v = NewValue(v.Actual()) // Mask mysterious marshaling behavior
+		b, err = json.Marshal(v)
+		if err != nil {
+			return
+		}
+
+		buf.Write(b)
+	}
+
+	buf.WriteString("]")
+	return buf.Bytes(), nil
 }

@@ -10,14 +10,50 @@
 package value
 
 import (
+	"bytes"
+	"encoding/json"
 	"sort"
-
-	json "github.com/dustin/gojson"
 )
 
 type objectValue map[string]interface{}
 
 var EMPTY_OBJECT_VALUE = NewValue(map[string]interface{}{})
+
+func (this objectValue) MarshalJSON() ([]byte, error) {
+	if this == nil {
+		return _NULL_BYTES, nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 1<<8))
+	buf.WriteString("{")
+
+	keys := sortedKeys(this)
+	for i, k := range keys {
+		v := NewValue(this[k])
+		if v.Type() == MISSING {
+			continue
+		}
+
+		if i > 0 {
+			buf.WriteString(",")
+		}
+
+		buf.WriteString("\"")
+		buf.WriteString(k)
+		buf.WriteString("\":")
+
+		v = NewValue(v.Actual()) // Mask mysterious marshaling behavior
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+
+		buf.Write(b)
+	}
+
+	buf.WriteString("}")
+	return buf.Bytes(), nil
+}
 
 func (this objectValue) Type() Type { return OBJECT }
 
@@ -68,7 +104,7 @@ func (this objectValue) CopyForUpdate() Value {
 }
 
 func (this objectValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
+	bytes, err := json.Marshal(this)
 	if err != nil {
 		panic(_MARSHAL_ERROR)
 	}
@@ -180,7 +216,7 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 	}
 
 	// sort the keys
-	allkeys.Sort()
+	sort.Sort(allkeys)
 
 	// now compare the values associated with each key
 	for _, key := range allkeys {
@@ -217,11 +253,11 @@ func copyMap(source map[string]interface{}, copier copyFunc) map[string]interfac
 }
 
 func sortedKeys(obj map[string]interface{}) []string {
-	keys := make([]string, 0, len(obj))
+	keys := make(sort.StringSlice, 0, len(obj))
 	for key, _ := range obj {
 		keys = append(keys, key)
 	}
 
-	sort.StringSlice(keys).Sort()
+	sort.Sort(keys)
 	return keys
 }

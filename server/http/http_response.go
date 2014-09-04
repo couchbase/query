@@ -96,9 +96,9 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 		rv = this.writeString(",\n")
 	}
 
-	bytes, err := json.MarshalIndent(item.Actual(), "        ", "    ")
+	bytes, err := json.MarshalIndent(item, "        ", "    ")
 	if err != nil {
-		return false
+		panic(err.Error())
 	}
 
 	this.resultCount++
@@ -109,9 +109,9 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 }
 
 func (this *httpRequest) writeValue(item value.Value) bool {
-	bytes, err := json.MarshalIndent(item.Actual(), "    ", "    ")
+	bytes, err := json.MarshalIndent(item, "    ", "    ")
 	if err != nil {
-		return false
+		panic(err.Error())
 	}
 
 	return this.writeString(string(bytes))

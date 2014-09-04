@@ -10,7 +10,7 @@
 package value
 
 import (
-	json "github.com/dustin/gojson"
+	"encoding/json"
 )
 
 type stringValue string

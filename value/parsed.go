@@ -11,10 +11,10 @@ package value
 
 import (
 	"bytes"
+	"encoding/json"
 	"strconv"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
-	json "github.com/dustin/gojson"
 )
 
 // A structure for storing and manipulating a (possibly JSON) value.

@@ -30,7 +30,7 @@ func NewScopeValue(value interface{}, parent Value) Value {
 }
 
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.Actual())
+	return json.Marshal(this.Value)
 }
 
 func (this *ScopeValue) Copy() Value {
@@ -68,14 +68,14 @@ func (this *ScopeValue) Fields() map[string]interface{} {
 
 	rv := make(map[string]interface{})
 
-	v := this.Value.Fields()
-	for vf, _ := range v {
-		rv[vf] = vf
+	p := this.parent.Fields()
+	for pf, pv := range p {
+		rv[pf] = pv
 	}
 
-	p := this.parent.Fields()
-	for pf, _ := range p {
-		rv[pf] = pf
+	v := this.Value.Fields()
+	for vf, vv := range v {
+		rv[vf] = vv
 	}
 
 	return rv
