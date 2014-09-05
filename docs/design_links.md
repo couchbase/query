@@ -10,11 +10,11 @@ This document provides links to design documents; links are provided under relev
 
 ## Clustering Management
 
-* Overview of Clustering Management Survey - identifies the high level concerns in clustered systems: [cluster_overview](http://goo.gl/gid7LX)
-* Cluster Management Survey - a survey of best practices and common policies in clustered distributed systems: [cluster_survey](http://goo.gl/gid7LX)
-* Cluster Management Topics - a design document for Clustering Management in N1QL: [cluster_topics](http://goo.gl/RFa2Yb)
+* [Overview of Clustering Management Survey](http://goo.gl/gid7LX) - identifies the high level concerns in clustered systems
+* [Cluster Management Survey](http://goo.gl/gid7LX) - a survey of best practices and common policies in clustered distributed systems
+* [Cluster Management Topics](http://goo.gl/RFa2Yb) - a design document for Clustering Management in N1QL
 
 ## Shell
 
-* Command Line Shell Survey - a survey of open source command line shells; identifies features and functionality: [shell_survey](http://goo.gl/ZStXN7)
-* Command Line Shell Architecture Summary - describes workings of open source command line shells; identifies best practices in design and functionality: [shell_arch](http://goo.gl/SFwRWq)
+* [Command Line Shell Survey](http://goo.gl/ZStXN7) - a survey of open source command line shells; identifies features and functionality
+* [Command Line Shell Architecture Summary](http://goo.gl/SFwRWq) - describes workings of open source command line shells; identifies best practices in design and functionality
