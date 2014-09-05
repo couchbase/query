@@ -52,6 +52,7 @@ type ConfigurationStore interface {
 	ClusterNames() ([]string, errors.Error)            // Names of the Clusters in this ConfigurationStore
 	ClusterById(id string) (Cluster, errors.Error)     // Find a Cluster in this ConfigurationStore using the Cluster's id
 	ClusterByName(name string) (Cluster, errors.Error) // Find a Cluster in this ConfigurationStore using the Cluster's name
+	ConfigurationManager() ConfigurationManager        // Get a ConfigurationManager for this ConfigurationStore
 }
 
 // Cluster is a named collection of Query Nodes. It is basically a single-level namespace for one or more Query Nodes.
@@ -65,6 +66,7 @@ type Cluster interface {
 	Datastore() datastore.Datastore                    // The Datastore used by all Query Nodes in the cluster
 	AccountingStore() accounting.AccountingStore       // The AccountingStore used by all Query Nodes in the cluster
 	ConfigurationStore() ConfigurationStore            // The ConfigurationStore used by all Query Nodes in the cluster
+	ClusterManager() ClusterManager                    // Get a ClusterManager for this Cluster
 }
 
 // QueryNode is the configuration for a single instance of a Query Engine.

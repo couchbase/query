@@ -88,8 +88,12 @@ func (ConfigurationStoreStub) ClusterByName(name string) (clustering.Cluster, er
 	return cluster, nil
 }
 
-func NewConfigurationStore() clustering.ConfigurationStore {
-	return ConfigurationStoreStub{}
+func (ConfigurationStoreStub) ConfigurationManager() clustering.ConfigurationManager {
+	return ConfigurationManagerStub{}
+}
+
+func NewConfigurationStore() (clustering.ConfigurationStore, errors.Error) {
+	return ConfigurationStoreStub{}, nil
 }
 
 // ClusterStub is a stub implementation of clustering.Cluster
@@ -130,6 +134,10 @@ func (ClusterStub) AccountingStore() accounting.AccountingStore {
 
 func (ClusterStub) ConfigurationStore() clustering.ConfigurationStore {
 	return ConfigurationStoreStub{}
+}
+
+func (ClusterStub) ClusterManager() clustering.ClusterManager {
+	return ClusterManagerStub{}
 }
 
 // QueryNodeStub is a stub implementation of clustering.QueryNode

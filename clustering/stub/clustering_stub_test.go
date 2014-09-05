@@ -16,7 +16,7 @@ import (
 )
 
 func TestStub(t *testing.T) {
-	cs := NewConfigurationStore()
+	cs, _ := NewConfigurationStore()
 
 	c, _ := cs.ClusterById("cluster_id")
 	if c != nil {

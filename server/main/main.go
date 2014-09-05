@@ -18,6 +18,8 @@ import (
 
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/accounting/logger_retriever"
+	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
+	cfg_resolver "github.com/couchbaselabs/query/clustering/resolver"
 	"github.com/couchbaselabs/query/datastore/resolver"
 	"github.com/couchbaselabs/query/querylog"
 	"github.com/couchbaselabs/query/server"
@@ -27,6 +29,11 @@ import (
 var VERSION = "0.7.0" // Build-time overriddable.
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
+var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (zookeeper:hosts or stub:)")
+var ACCTSTORE = flag.String("acctstore", "stub:", "Accounting store address (stub:)")
+var CLUSTER = flag.String("cluster", "default", "Default cluster")
+var CREATE_CLUSTER = flag.Bool("create-cluster", false, "Whether to create the cluster")
+var JOIN_CLUSTER = flag.Bool("join-cluster", true, "Whether to join the cluster")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
@@ -42,6 +49,7 @@ var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEV_MODE = flag.Bool("dev", false, "Developer Mode")
+var ADMIN_ADDR = flag.String("admin", ":9093", "HTTP admin service address")
 
 var devModeDefaultLogKeys = []string{querylog.HTTP, querylog.SCAN, querylog.OPTIMIZER,
 	querylog.PLANNER, querylog.PARSER, querylog.COMPILER, querylog.PIPELINE,
@@ -76,6 +84,43 @@ func main() {
 		return
 	}
 
+	configstore, err := cfg_resolver.NewConfigstore(*CONFIGSTORE)
+	if err != nil {
+		lw.Error("Could not connect to config store: %v", err)
+	}
+
+	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
+	if err != nil {
+		lw.Error("Could not connect to accounting store: %v", err)
+	}
+
+	clusterConfig, err := cfg_resolver.NewClusterConfig(*CONFIGSTORE, *CLUSTER, configstore, datastore, acctstore)
+	lw.Info("cluster config: %s", clusterConfig)
+	queryNodeConfig, err := cfg_resolver.NewQueryNodeConfig(*CONFIGSTORE, *CLUSTER, VERSION, *HTTP_ADDR, *ADMIN_ADDR, configstore, datastore, acctstore)
+	lw.Info("query node config: %s", queryNodeConfig)
+
+	if *CREATE_CLUSTER && configstore != nil { // TODO: "configstore != nil" is code for "connected to configstore". Encapsulate this.
+		// Create the cluster
+		cfm := configstore.ConfigurationManager()
+		clusterConfig, err = cfm.AddCluster(clusterConfig)
+		if err != nil {
+			lw.Error("Could not add cluster: %v", err)
+		} else {
+			lw.Info("Created cluster %s", clusterConfig)
+		}
+	}
+
+	if *JOIN_CLUSTER && configstore != nil && clusterConfig != nil { // TODO: "configstore != nil && clusterConfig != nil" is code for "connected to configstore". Encapsulate this.
+		// Attempt to join the cluster
+		cm := clusterConfig.ClusterManager()
+		queryNodeConfig, err = cm.AddQueryNode(queryNodeConfig)
+		if err != nil {
+			lw.Error("Could not add query node: %v", err)
+		} else {
+			lw.Info("Created query node %s", queryNodeConfig)
+		}
+	}
+
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel,
 		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
@@ -89,6 +134,7 @@ func main() {
 	lw.Info("cbq-engine started...")
 	lw.Info("version: %s", VERSION)
 	lw.Info("datastore: %s", *DATASTORE)
+	lw.Info("http address: %s", *HTTP_ADDR)
 
 	endpoint := http.NewHttpEndpoint(server, *METRICS, *HTTP_ADDR)
 	er := endpoint.ListenAndServe()
