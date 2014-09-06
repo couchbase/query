@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -91,6 +93,18 @@ func (this *Merge) Formalize() (err error) {
 	this.key, err = sf.Map(this.key)
 	if err != nil {
 		return err
+	}
+
+	if kf.Keyspace == sf.Keyspace {
+		return fmt.Errorf("Duplicate alias %s.", kf.Keyspace)
+	}
+
+	f := NewFormalizer()
+	f.Allowed.SetField(kf.Keyspace, kf.Keyspace)
+	f.Allowed.SetField(sf.Keyspace, sf.Keyspace)
+	err = this.actions.MapExpressions(f)
+	if err != nil {
+		return
 	}
 
 	if this.limit != nil {
@@ -175,6 +189,35 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *MergeSource) Formalize() (f *Formalizer, err error) {
+	if this.from != nil {
+		_, err = this.from.Formalize()
+		if err != nil {
+			return
+		}
+	}
+
+	if this.query != nil {
+		err = this.query.Formalize()
+		if err != nil {
+			return
+		}
+	}
+
+	if this.values != nil {
+		err = this.values.MapExpressions(expression.EMPTY_FORMALIZER)
+		if err != nil {
+			return
+		}
+	}
+
+	keyspace := this.Alias()
+	if keyspace == "" {
+		return nil, fmt.Errorf("MergeSource missing alias.")
+	}
+
+	f = NewFormalizer()
+	f.Keyspace = keyspace
+	f.Allowed.SetField(keyspace, keyspace)
 	return
 }
 
@@ -192,6 +235,16 @@ func (this *MergeSource) Values() expression.Expressions {
 
 func (this *MergeSource) As() string {
 	return this.as
+}
+
+func (this *MergeSource) Alias() string {
+	if this.as != "" {
+		return this.as
+	} else if this.from != nil {
+		return this.from.Alias()
+	} else {
+		return ""
+	}
 }
 
 type MergeActions struct {
