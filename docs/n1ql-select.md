@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-09-01
+* Modified: 2014-09-06
 
 ## Introduction
 
@@ -1965,6 +1965,7 @@ for future use.
 * __UPSERT__
 * __USER__
 * __USING__
+* __VALUE__
 * __VALUED__
 * __VALUES__
 * __VIEW__
@@ -2320,6 +2321,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Removed _ in type checking and conversion function names
 * 2014-09-01 - Reserved words
     * Added INCLUDE and EXCLUDE as reserved words
+* 2014-09-06 - Reserved words
+    * Added VALUE as a reserved word
 
 ### Open issues
 

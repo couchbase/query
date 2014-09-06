@@ -202,6 +202,7 @@
 /[uU][pP][sS][eE][rR][tT]/			 { logToken("UPSERT"); return UPSERT }
 /[uU][sS][eE][rR]/				 { logToken("USER"); return USER }
 /[uU][sS][iI][nN][gG]/				 { logToken("USING"); return USING }
+/[vV][aA][lL][uU][eE]/				 { logToken("VALUE"); return VALUE }
 /[vV][aA][lL][uU][eE][dD]/			 { logToken("VALUED"); return VALUED }
 /[vV][aA][lL][uU][eE][sS]/			 { logToken("VALUES"); return VALUES }
 /[vV][iI][eE][wW]/				 { logToken("VIEW"); return VIEW }

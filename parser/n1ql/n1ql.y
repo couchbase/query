@@ -195,6 +195,7 @@ indexType        datastore.IndexType
 %token UPSERT
 %token USER
 %token USING
+%token VALUE
 %token VALUED
 %token VALUES
 %token VIEW
