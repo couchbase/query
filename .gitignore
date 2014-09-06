@@ -8,3 +8,4 @@ cbq-engine
 tutorial/tutorial
 server/main/main
 shell/shell
+*.swp
