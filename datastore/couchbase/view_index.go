@@ -96,8 +96,10 @@ func (vi *viewIndex) Drop() errors.Error {
 
 func (b *keyspace) loadIndexes() errors.Error {
 	// #alldocs implicitly exists
-	pi := newAllDocsIndex(b)
-	b.indexes[pi.name] = pi
+	/*
+		pi := newAllDocsIndex(b)
+		b.indexes[pi.name] = pi
+	*/
 
 	// and recreate remaining from ddocs
 	indexes, err := loadViewIndexes(b)

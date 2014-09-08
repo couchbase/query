@@ -257,11 +257,9 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		indexes:   make(map[string]datastore.Index),
 	}
 
-	//discover existing indexes TODO
-	ierr := rv.loadIndexes()
-	if ierr != nil {
-		lw.Info("", querylog.DATASTORE, "Error loading index %s", ierr.Error())
-		return nil, ierr
+	//discover existing indexes
+	if ierr := rv.loadIndexes(); ierr != nil {
+		lw.Warn("", querylog.DATASTORE, "Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
 
 	return rv, nil
@@ -327,6 +325,16 @@ func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 
 	if b.primary == nil {
+
+		lw.Info("", querylog.DATASTORE, "Number of indexes %d", len(b.indexes))
+
+		if len(b.indexes) == 0 {
+			if err := b.loadIndexes(); err != nil {
+				return nil, errors.NewError(err, "No indexes found. Please create a primary index")
+
+			}
+
+		}
 		idx, ok := b.indexes[PRIMARY_INDEX]
 		if ok {
 			primary := idx.(datastore.PrimaryIndex)

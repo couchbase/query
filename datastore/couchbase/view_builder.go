@@ -14,6 +14,7 @@ import (
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type ddocJSON struct {
@@ -111,20 +112,18 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 
 		exprlist := make([]expression.Expression, 0, len(jdoc.IndexOn))
 
-		for _, _ = range jdoc.IndexOn {
+		for _, ser := range jdoc.IndexOn {
 			if iname == PRIMARY_INDEX {
 				doc := expression.NewIdentifier(b.Name())
 				meta := expression.NewMeta(doc)
 				mdid := expression.NewField(meta, expression.NewFieldName("id"))
 				exprlist = append(exprlist, mdid)
 			} else {
-				/* TODO
-				expr, err := expression.UnmarshalExpression([]byte(ser))
+				expr, err := parser.Parse(ser)
 				if err != nil {
 					return nil, errors.New("Cannot unmarshal expression for index " + iname)
 				}
 				exprlist = append(exprlist, expr)
-				*/
 			}
 		}
 		if len(exprlist) != len(jdoc.IndexOn) {
@@ -385,6 +384,10 @@ func (this *JsStatement) JS() string {
 
 // inorder traversal of the AST to get JS expression out of it
 func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, error) {
+
+	stringer := expression.NewStringer().Visit(e)
+	// TODO
+	fmt.Printf("this is the expression. %s", stringer)
 
 	/*
 		switch expr := e.(type) {
