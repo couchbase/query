@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-09-02
+* Modified: 2014-09-06
 
 ## Introduction
 
@@ -259,8 +259,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Allow JOIN sources to be aliased
 * 2014-08-10 - WITHIN
     * Added WITHIN
-* 2014-09-02 - MERGE actions
+* 2014-09-02 - MERGE
     * Factored out merge actions
+* 2014-09-06 - MERGE
+    * Simiplify MERGE syntax: remove from-term.
 
 ### Open Issues
 

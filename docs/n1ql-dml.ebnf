@@ -48,7 +48,7 @@ unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
  */
 merge ::= 'MERGE' 'INTO' bucket-ref 'USING' merge-source 'ON' key-clause merge-actions limit-clause? returning-clause?
 
-merge-source ::= from-path ('AS'? alias)? keys-clause? | '(' ( from-term | select | values-clause ) ')' 'AS'? alias
+merge-source ::= from-path ('AS'? alias)? keys-clause? | '(' ( select | values-clause ) ')' 'AS'? alias
 
 merge-actions ::= merge-update? merge-delete? merge-insert?
 
