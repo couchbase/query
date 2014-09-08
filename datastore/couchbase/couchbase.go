@@ -21,15 +21,12 @@ import (
 	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
-	"github.com/couchbaselabs/query/accounting/logger_retriever"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/querylog"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/value"
 )
-
-var lw *logger_retriever.RetrieverLogger
 
 const (
 	PRIMARY_INDEX = "#primary"
@@ -79,12 +76,6 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 // NewSite creates a new Couchbase site for the given url.
 func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 
-	lw = logger_retriever.NewRetrieverLogger(nil)
-	if lw == nil {
-		fmt.Printf("Unable to initialize logger")
-		return nil, errors.NewError(nil, "Unable to initialize logger")
-	}
-
 	client, err := cb.Connect(url)
 	if err != nil {
 		return nil, errors.NewError(err, "Cannot connect to url "+url)
@@ -100,12 +91,12 @@ func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 
 	defaultPool, Err := loadNamespace(site, "default")
 	if Err != nil {
-		lw.Error("", querylog.DATASTORE, "Cannot connect to default pool")
+		logging.Errorf("Cannot connect to default pool")
 		return nil, Err
 	}
 
 	site.namespaceCache["default"] = defaultPool
-	lw.Info("", querylog.DATASTORE, "New site created with url %s", url)
+	logging.Infof("New site created with url %s", url)
 
 	return site, nil
 
@@ -193,21 +184,21 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 
 func (p *namespace) refresh() {
 	// trigger refresh of this pool
-	lw.Info("", querylog.DATASTORE, "Refreshing pool %s", p.name)
+	logging.Infof("Refreshing pool %s", p.name)
 
 	newpool, err := p.site.client.GetPool(p.name)
 	if err != nil {
-		lw.Error("", querylog.DATASTORE, "Error updating pool name %s: Error %v", p.name, err)
+		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
 		url := p.site.URL()
 		client, err := cb.Connect(url)
 		if err != nil {
-			lw.Error("", querylog.DATASTORE, "Error connecting to URL %s", url)
+			logging.Errorf("Error connecting to URL %s", url)
 			return
 		}
 		// check if the default pool exists
 		newpool, err = client.GetPool(p.name)
 		if err != nil {
-			lw.Error("", querylog.DATASTORE, "Retry Failed Error updating pool name %s: Error %v", p.name, err)
+			logging.Errorf("Retry Failed Error updating pool name %s: Error %v", p.name, err)
 			return
 		}
 		p.site.client = client
@@ -235,7 +226,7 @@ type keyspace struct {
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
-	lw.Info("", querylog.DATASTORE, "Created New Bucket %s", name)
+	logging.Infof("Created New Bucket %s", name)
 	cbbucket, err := p.cbNamespace.GetBucket(name)
 	if err != nil {
 		// go-couchbase caches the buckets
@@ -260,7 +251,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	//discover existing indexes TODO
 	ierr := rv.loadIndexes()
 	if ierr != nil {
-		lw.Info("", querylog.DATASTORE, "Error loading index %s", ierr.Error())
+		logging.Infof("Error loading index %s", ierr.Error())
 		return nil, ierr
 	}
 
@@ -423,7 +414,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 
 	}
 
-	lw.Debug("", querylog.DATASTORE, "Fetched %d keys ", i)
+	logging.Debugf("Fetched %d keys ", i)
 
 	return rv, nil
 }
@@ -491,14 +482,14 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			if err == nil {
 				err = b.cbbucket.Set(key, 0, value)
 			} else {
-				lw.Error("", querylog.DATASTORE, "Failed to insert. Key exists %s", key)
+				logging.Errorf("Failed to insert. Key exists %s", key)
 			}
 		case UPSERT:
 			err = b.cbbucket.Set(key, 0, value)
 		}
 
 		if err != nil {
-			lw.Error("", querylog.DATASTORE, "Failed to perform %s on key %s Error %v", opToString(op), key, err)
+			logging.Errorf("Failed to perform %s on key %s Error %v", opToString(op), key, err)
 		} else {
 			insertedKeys = append(insertedKeys, kv)
 		}
@@ -531,7 +522,7 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 	var err error
 	for _, key := range deletes {
 		if err = b.cbbucket.Delete(key); err != nil {
-			lw.Info("", querylog.DATASTORE, "Failed to delete key %s", key)
+			logging.Infof("Failed to delete key %s", key)
 			failedDeletes = append(failedDeletes, key)
 		}
 	}

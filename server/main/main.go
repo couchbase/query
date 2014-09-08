@@ -13,12 +13,11 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/accounting/logger_retriever"
 	"github.com/couchbaselabs/query/datastore/resolver"
+	"github.com/couchbaselabs/query/logging"
+	log_resolver "github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/querylog"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/server/http"
@@ -40,6 +39,7 @@ var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":8094", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
+var LOG_TYPE = flag.String("log-type", "golog", "Type of logger")
 var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEV_MODE = flag.Bool("dev", false, "Developer Mode")
 
@@ -47,32 +47,33 @@ var devModeDefaultLogKeys = []string{querylog.HTTP, querylog.SCAN, querylog.OPTI
 	querylog.PLANNER, querylog.PARSER, querylog.COMPILER, querylog.PIPELINE,
 	querylog.ALGEBRA, querylog.DATASTORE}
 
-var lw *logger_retriever.RetrieverLogger
+var lw logging.Logger
 
 func main() {
 	flag.Parse()
 
-	lw = logger_retriever.NewRetrieverLogger(devModeDefaultLogKeys)
+	lw, _ = log_resolver.NewLogger(*LOG_TYPE)
 	if lw == nil {
 		fmt.Sprintf("Unable initialize default logger")
 	}
 
 	if *DEV_MODE {
-		lw.SetLevel(accounting.Debug)
-		lw.Debug("Developer mode enabled ")
+		lw.SetLevel(logging.Debug)
+		lw.Debugf("Developer mode enabled ")
 	} else {
 		// set log level to info : TODO change to warning
 		// sometime before release
-		lw.SetLevel(accounting.Info)
+		lw.SetLevel(logging.Info)
 	}
 
-	if *LOG_KEYS != "" {
-		lw = logger_retriever.NewRetrieverLogger(strings.Split(*LOG_KEYS, ","))
-	}
+	//if *LOG_KEYS != "" {
+	//		lw = logger_retriever.NewRetrieverLogger(strings.Split(*LOG_KEYS, ","))
+	//	}
+	// TODO: use log_keys
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
-		lw.Error("Error starting cbq-engine: %v", err)
+		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
 	}
 
@@ -80,19 +81,19 @@ func main() {
 	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel,
 		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
 	if err != nil {
-		lw.Error("Error starting cbq-engine: %v", err)
+		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
 	}
 
 	go server.Serve()
 
-	lw.Info("cbq-engine started...")
-	lw.Info("version: %s", VERSION)
-	lw.Info("datastore: %s", *DATASTORE)
+	lw.Infof("cbq-engine started...")
+	lw.Infof("version: %s", VERSION)
+	lw.Infof("datastore: %s", *DATASTORE)
 
 	endpoint := http.NewHttpEndpoint(server, *METRICS, *HTTP_ADDR)
 	er := endpoint.ListenAndServe()
 	if er != nil {
-		lw.Error("cbq-engine exiting with error: %v", er)
+		lw.Errorf("cbq-engine exiting with error: %v", er)
 	}
 }
