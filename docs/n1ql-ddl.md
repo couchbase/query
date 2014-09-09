@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2014-09-01
+* Modified: 2014-09-08
 
 ## Summary
 
@@ -33,6 +33,10 @@ Index names are unique per bucket.
 __index-stmt:__
 
 ![](diagram/index-stmt.png)
+
+__create-primary-index:__
+
+![](diagram/create-primary-index.png)
 
 __create-index:__
 
@@ -94,6 +98,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Factored out index-name
 * 2014-06-24 - CREATE INDEX
     * Added WHERE clause to CREATE INDEX
+* 2014-09-08 - CREATE PRIMARY INDEX
+    * Added CREATE PRIMARY INDEX
 
 ### Open Issues
 

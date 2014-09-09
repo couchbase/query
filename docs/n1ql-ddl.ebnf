@@ -8,12 +8,14 @@
 
 ddl-stmt ::= index-stmt
 
-index-stmt ::= create-index | drop-index | alter-index
+index-stmt ::= create-primary-index | create-index | drop-index | alter-index
 
 
 /*
  *  index
  */
+
+create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-bucket-ref
 
 create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-bucket-ref '(' expr (',' expr)* ')' partition? where-clause? using?
 
