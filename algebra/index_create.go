@@ -43,3 +43,27 @@ func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 func (this *CreateIndex) Signature() value.Value {
 	return nil
 }
+
+func (this *CreateIndex) Name() string {
+	return this.name
+}
+
+func (this *CreateIndex) Keyspace() *KeyspaceRef {
+	return this.keyspace
+}
+
+func (this *CreateIndex) Expressions() expression.Expressions {
+	return this.exprs
+}
+
+func (this *CreateIndex) Partition() expression.Expression {
+	return this.partition
+}
+
+func (this *CreateIndex) Where() expression.Expression {
+	return this.where
+}
+
+func (this *CreateIndex) Using() datastore.IndexType {
+	return this.using
+}
