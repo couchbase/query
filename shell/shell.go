@@ -28,7 +28,7 @@ func main() {
 	HandleInteractiveMode(*tiServer, filepath.Base(os.Args[0]))
 }
 
-func execute_internal(tiServer, line string, w io.Writer) error {
+func execute_internal(tiServer, line string, w *os.File) error {
 
 	url := tiServer + "query"
 	resp, err := http.Post(url, "text/plain", strings.NewReader(line))
@@ -37,6 +37,8 @@ func execute_internal(tiServer, line string, w io.Writer) error {
 	}
 	defer resp.Body.Close()
 	io.Copy(w, resp.Body)
+	w.WriteString("\n")
+	w.Sync()
 
 	return nil
 }

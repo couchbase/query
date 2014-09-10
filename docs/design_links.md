@@ -1,4 +1,4 @@
-# ACID Requirements for N1QL
+# External Design Links for Query
 
 * Status: DRAFT
 * Latest: [design_links](https://github.com/couchbaselabs/query/blob/master/docs/design_links.md)
@@ -6,7 +6,7 @@
 
 ## Introduction
 
-This document provides links to design documents; links are provided under relevant heading.
+This document provides links to external design documents; links are provided under relevant heading.
 
 ## Clustering Management
 
