@@ -36,6 +36,7 @@ type Visitor interface {
 	VisitMerge(node *Merge) (interface{}, error)
 
 	// DDL
+	VisitCreatePrimaryIndex(node *CreatePrimaryIndex) (interface{}, error)
 	VisitCreateIndex(node *CreateIndex) (interface{}, error)
 	VisitDropIndex(node *DropIndex) (interface{}, error)
 	VisitAlterIndex(node *AlterIndex) (interface{}, error)

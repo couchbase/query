@@ -305,6 +305,11 @@ func (this *Builder) VisitChannel(plan *plan.Channel) (interface{}, error) {
 }
 
 // CreateIndex
+func (this *Builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (interface{}, error) {
+	return NewCreatePrimaryIndex(plan), nil
+}
+
+// CreateIndex
 func (this *Builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
 	return NewCreateIndex(plan), nil
 }

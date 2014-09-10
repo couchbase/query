@@ -47,5 +47,9 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		// Actually drop index
+		err := this.plan.Index().Drop()
+		if err != nil {
+			context.Error(err)
+		}
 	})
 }

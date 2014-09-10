@@ -13,36 +13,24 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type AlterIndex struct {
+type CreatePrimaryIndex struct {
 	keyspace *KeyspaceRef `json:"keyspace"`
-	name     string       `json:"name"`
-	rename   string       `json:"rename"`
 }
 
-func NewAlterIndex(keyspace *KeyspaceRef, name, rename string) *AlterIndex {
-	return &AlterIndex{
+func NewCreatePrimaryIndex(keyspace *KeyspaceRef) *CreatePrimaryIndex {
+	return &CreatePrimaryIndex{
 		keyspace: keyspace,
-		name:     name,
-		rename:   rename,
 	}
 }
 
-func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitAlterIndex(this)
+func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitCreatePrimaryIndex(this)
 }
 
-func (this *AlterIndex) Signature() value.Value {
+func (this *CreatePrimaryIndex) Signature() value.Value {
 	return nil
 }
 
-func (this *AlterIndex) Keyspace() *KeyspaceRef {
+func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
-}
-
-func (this *AlterIndex) Name() string {
-	return this.name
-}
-
-func (this *AlterIndex) Rename() string {
-	return this.rename
 }

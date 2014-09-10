@@ -58,7 +58,7 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 	}
 }
 
-func (this *builder) getKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
+func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {
 	ns := node.Namespace()
 	if ns == "" {
 		ns = this.namespace

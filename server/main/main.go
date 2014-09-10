@@ -13,14 +13,13 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/accounting/logger_retriever"
 	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
 	cfg_resolver "github.com/couchbaselabs/query/clustering/resolver"
 	"github.com/couchbaselabs/query/datastore/resolver"
+	"github.com/couchbaselabs/query/logging"
+	log_resolver "github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/querylog"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/server/http"
@@ -47,6 +46,7 @@ var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":8094", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
+var LOG_TYPE = flag.String("log-type", "golog", "Type of logger")
 var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEV_MODE = flag.Bool("dev", false, "Developer Mode")
 var ADMIN_ADDR = flag.String("admin", ":9093", "HTTP admin service address")
@@ -55,90 +55,101 @@ var devModeDefaultLogKeys = []string{querylog.HTTP, querylog.SCAN, querylog.OPTI
 	querylog.PLANNER, querylog.PARSER, querylog.COMPILER, querylog.PIPELINE,
 	querylog.ALGEBRA, querylog.DATASTORE}
 
-var lw *logger_retriever.RetrieverLogger
+var lw logging.Logger
 
 func main() {
 	flag.Parse()
 
-	lw = logger_retriever.NewRetrieverLogger(devModeDefaultLogKeys)
+	lw, _ = log_resolver.NewLogger(*LOG_TYPE)
 	if lw == nil {
 		fmt.Sprintf("Unable initialize default logger")
 	}
 
 	if *DEV_MODE {
-		lw.SetLevel(accounting.Debug)
-		lw.Debug("Developer mode enabled ")
+		lw.SetLevel(logging.Debug)
+		lw.Debugf("Developer mode enabled ")
 	} else {
 		// set log level to info : TODO change to warning
 		// sometime before release
-		lw.SetLevel(accounting.Info)
+		lw.SetLevel(logging.Info)
 	}
 
-	if *LOG_KEYS != "" {
-		lw = logger_retriever.NewRetrieverLogger(strings.Split(*LOG_KEYS, ","))
-	}
+	//if *LOG_KEYS != "" {
+	//		lw = logger_retriever.NewRetrieverLogger(strings.Split(*LOG_KEYS, ","))
+	//	}
+	// TODO: use log_keys
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
-		lw.Error("Error starting cbq-engine: %v", err)
+		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
 	}
 
 	configstore, err := cfg_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
-		lw.Error("Could not connect to config store: %v", err)
+		lw.Errorf("Could not connect to config store: %v", err)
 	}
 
 	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
 	if err != nil {
-		lw.Error("Could not connect to accounting store: %v", err)
-	}
-
-	clusterConfig, err := cfg_resolver.NewClusterConfig(*CONFIGSTORE, *CLUSTER, configstore, datastore, acctstore)
-	lw.Info("cluster config: %s", clusterConfig)
-	queryNodeConfig, err := cfg_resolver.NewQueryNodeConfig(*CONFIGSTORE, *CLUSTER, VERSION, *HTTP_ADDR, *ADMIN_ADDR, configstore, datastore, acctstore)
-	lw.Info("query node config: %s", queryNodeConfig)
-
-	if *CREATE_CLUSTER && configstore != nil { // TODO: "configstore != nil" is code for "connected to configstore". Encapsulate this.
-		// Create the cluster
-		cfm := configstore.ConfigurationManager()
-		clusterConfig, err = cfm.AddCluster(clusterConfig)
-		if err != nil {
-			lw.Error("Could not add cluster: %v", err)
-		} else {
-			lw.Info("Created cluster %s", clusterConfig)
-		}
-	}
-
-	if *JOIN_CLUSTER && configstore != nil && clusterConfig != nil { // TODO: "configstore != nil && clusterConfig != nil" is code for "connected to configstore". Encapsulate this.
-		// Attempt to join the cluster
-		cm := clusterConfig.ClusterManager()
-		queryNodeConfig, err = cm.AddQueryNode(queryNodeConfig)
-		if err != nil {
-			lw.Error("Could not add query node: %v", err)
-		} else {
-			lw.Info("Created query node %s", queryNodeConfig)
-		}
+		lw.Errorf("Could not connect to accounting store: %v", err)
 	}
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel,
 		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
 	if err != nil {
-		lw.Error("Error starting cbq-engine: %v", err)
+		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
+	}
+	clusterConfig, err := configstore.ConfigurationManager().CreateCluster(*CLUSTER, datastore, acctstore)
+	lw.Infof("cluster config: %s", clusterConfig)
+	queryNodeConfig, err := clusterConfig.ClusterManager().CreateQueryNode(VERSION, *HTTP_ADDR, datastore, acctstore)
+	lw.Infof("query node config: %s", queryNodeConfig)
+
+	if *CREATE_CLUSTER && configstore != nil { // TODO: "configstore != nil" is code for "connected to configstore". Encapsulate this.
+		// Create the cluster
+		clusterConfig, err = configstore.ConfigurationManager().AddCluster(clusterConfig)
+		if err != nil {
+			lw.Errorf("Could not add cluster: %v", err)
+		} else {
+			lw.Infof("Created cluster %s", clusterConfig)
+		}
+	}
+
+	if *JOIN_CLUSTER && configstore != nil && clusterConfig != nil { // TODO: "configstore != nil && clusterConfig != nil" is code for "connected to configstore". Encapsulate this.
+		// Attempt to join the cluster
+		queryNodeConfig, err = clusterConfig.ClusterManager().AddQueryNode(queryNodeConfig)
+		if err != nil {
+			lw.Errorf("Could not add query node: %v", err)
+		} else {
+			lw.Infof("Created query node %s", queryNodeConfig)
+		}
 	}
 
 	go server.Serve()
 
-	lw.Info("cbq-engine started...")
-	lw.Info("version: %s", VERSION)
-	lw.Info("datastore: %s", *DATASTORE)
-	lw.Info("http address: %s", *HTTP_ADDR)
+	lw.Infof("cbq-engine started...")
+	lw.Infof("version: %s", VERSION)
+	lw.Infof("datastore: %s", *DATASTORE)
+	lw.Infof("http address: %s", *HTTP_ADDR)
 
 	endpoint := http.NewHttpEndpoint(server, *METRICS, *HTTP_ADDR)
 	er := endpoint.ListenAndServe()
 	if er != nil {
-		lw.Error("cbq-engine exiting with error: %v", er)
+		if queryNodeConfig != nil && clusterConfig != nil {
+			queryNodeConfig, err = clusterConfig.ClusterManager().RemoveQueryNode(queryNodeConfig)
+			if err != nil {
+				lw.Errorf("Could not remove query node configuration: %v", err)
+			}
+		}
+		if *CREATE_CLUSTER && clusterConfig != nil {
+			_, err = configstore.ConfigurationManager().RemoveCluster(clusterConfig)
+			if err != nil {
+				lw.Errorf("Could not remove cluster configuration: %v", err)
+			}
+		}
+		lw.Errorf("cbq-engine exiting with error: %v", er)
 	}
+
 }

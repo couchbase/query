@@ -73,8 +73,6 @@ type Cluster interface {
 type QueryNode interface {
 	ClusterId() string                           // Id of the Cluster that this QueryNode belongs to
 	Id() string                                  // Id of this QueryNode (unique within the cluster)
-	Hostname() string                            // Name of the host that this QueryNode is running on
-	IPAddress() string                           // IP address of the host this QueryNode is running on
 	QueryEndpoint() string                       // Endpoint for serving N1QL queries
 	ClusterEndpoint() string                     // Endpoint for serving cluster management commands
 	Version() Version                            // Logical version of the software that the QueryNode is running
@@ -95,6 +93,9 @@ type ConfigurationManager interface {
 	//	- Configuration contains a Cluster with the same identity
 	// Returns updated Cluster if no error (Cluster is now part of the ConfigurationStore)
 	AddCluster(c Cluster) (Cluster, errors.Error)
+
+	// Create a cluster from the given parameters and add to the configuration store
+	CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (Cluster, errors.Error)
 
 	// Remove a cluster from the configuration
 	// Possible reasons for error:
@@ -127,6 +128,9 @@ type ClusterManager interface {
 	//	- Given QueryNode is not in standalone mode
 	// Returns the updated QueryNode if no error (cluster mode, connected to Cluster)
 	AddQueryNode(n QueryNode) (QueryNode, errors.Error)
+
+	// Create a QueryNode from the given parameters and add to the Cluster
+	CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (QueryNode, errors.Error)
 
 	// Remove the given QueryNode from the Cluster
 	// Possible reasons for error:

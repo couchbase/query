@@ -7,32 +7,25 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package accounting
+package resolver
 
-type LogLevel int8
+import (
+	"fmt"
+	"os"
+	"strings"
 
-const (
-	None = LogLevel(iota)
-	Error
-	Warn
-	Info
-	Debug
+	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/logging/logger_golog"
 )
 
-// Logger provides a common interface for logging libraries
-type Logger interface {
-	// Error logs with an error level
-	Error(args ...interface{})
+func NewLogger(uri string) (logging.Logger, errors.Error) {
+	var logger logging.Logger
+	if strings.HasPrefix(uri, "golog") {
+		logger = logger_golog.NewLogger(os.Stderr, logging.Info, false)
+		logging.SetLogger(logger)
+		return logger, nil
+	}
 
-	// Warn logs with a warning level
-	Warn(args ...interface{})
-
-	// Info logs wiht an info level
-	Info(args ...interface{})
-
-	// Debug logs with a debug level
-	Debug(args ...interface{})
-
-	// Log logs at the given given level
-	Log(level LogLevel, args ...interface{})
+	return nil, errors.NewError(nil, fmt.Sprintf("Invalid logger uri: %s", uri))
 }

@@ -156,7 +156,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 }
 
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	keyspace, err := this.getKeyspace(node)
+	keyspace, err := this.getTermKeyspace(node)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		return false, nil
 	}
 
-	keyspace, err := this.getKeyspace(from)
+	keyspace, err := this.getTermKeyspace(from)
 	if err != nil {
 		return false, err
 	}

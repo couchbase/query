@@ -15,7 +15,7 @@ The Stubbed Configuration Store has one cluster, a Stubbed Cluster. This in turn
 Query Node, a stubbed Query Node.
 
 Hard coded names are used for Configuration Store Id and URL, Cluster Id and Name and
-Query Node Id, Name, Hostname, IP, Query Endpoint and Cluster Endpoint.
+Query Node Id, Name, Query Endpoint and Cluster Endpoint.
 
 */
 package clustering_stub
@@ -35,8 +35,6 @@ const (
 	CLUSTER_STUB_ID                  string = "ClusterStubID"
 	CLUSTER_STUB_NAME                string = "ClusterStubName"
 	QUERY_NODE_STUB_ID               string = "QueryNodeStubID"
-	QUERY_NODE_STUB_HOSTNAME         string = "QueryNodeStubHostname"
-	QUERY_NODE_STUB_IP               string = "QueryNodeStubIP"
 	QUERY_NODE_STUB_QUERY_ENDPOINT   string = "QueryNodeStubQueryEndPoint"
 	QUERY_NODE_STUB_CLUSTER_ENDPOINT string = "QueryNodeStubClusterEndPoint"
 )
@@ -151,14 +149,6 @@ func (QueryNodeStub) Id() string {
 	return QUERY_NODE_STUB_ID
 }
 
-func (QueryNodeStub) Hostname() string {
-	return QUERY_NODE_STUB_HOSTNAME
-}
-
-func (QueryNodeStub) IPAddress() string {
-	return QUERY_NODE_STUB_IP
-}
-
 func (QueryNodeStub) QueryEndpoint() string {
 	return QUERY_NODE_STUB_QUERY_ENDPOINT
 }
@@ -198,6 +188,10 @@ func (ConfigurationManagerStub) AddCluster(c clustering.Cluster) (clustering.Clu
 	return ClusterStub{}, nil
 }
 
+func (ConfigurationManagerStub) CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.Cluster, errors.Error) {
+	return ClusterStub{}, nil
+}
+
 func (ConfigurationManagerStub) RemoveCluster(c clustering.Cluster) (bool, errors.Error) {
 	return false, nil
 }
@@ -218,6 +212,10 @@ func (ClusterManagerStub) Cluster() clustering.Cluster {
 }
 
 func (ClusterManagerStub) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
+	return QueryNodeStub{}, nil
+}
+
+func (ClusterManagerStub) CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.QueryNode, errors.Error) {
 	return QueryNodeStub{}, nil
 }
 

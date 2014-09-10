@@ -10,17 +10,82 @@
 package plan
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/datastore"
 )
 
+func (this *builder) VisitCreatePrimaryIndex(node *algebra.CreatePrimaryIndex) (interface{}, error) {
+	ksref := node.Keyspace()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCreatePrimaryIndex(keyspace), nil
+}
+
 func (this *builder) VisitCreateIndex(node *algebra.CreateIndex) (interface{}, error) {
-	return NewCreateIndex(node), nil
+	ksref := node.Keyspace()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCreateIndex(keyspace, node), nil
 }
 
 func (this *builder) VisitDropIndex(node *algebra.DropIndex) (interface{}, error) {
-	return NewDropIndex(node), nil
+	ksref := node.Keyspace()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	index, er := keyspace.IndexByName(node.Name())
+	if er != nil {
+		return nil, er
+	}
+
+	return NewDropIndex(index, node), nil
 }
 
 func (this *builder) VisitAlterIndex(node *algebra.AlterIndex) (interface{}, error) {
-	return NewAlterIndex(node), nil
+	ksref := node.Keyspace()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	index, er := keyspace.IndexByName(node.Name())
+	if er != nil {
+		return nil, er
+	}
+
+	return NewAlterIndex(index, node), nil
+}
+
+func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {
+	if ns == "" {
+		ns = this.namespace
+	}
+
+	if strings.ToLower(ns) == "#system" {
+		return nil, fmt.Errorf("Index operations not allowed on system namespace.")
+	}
+
+	datastore := this.datastore
+	namespace, err := datastore.NamespaceByName(ns)
+	if err != nil {
+		return nil, err
+	}
+
+	keyspace, err := namespace.KeyspaceByName(ks)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyspace, nil
 }

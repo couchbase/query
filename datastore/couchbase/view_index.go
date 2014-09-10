@@ -17,7 +17,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/querylog"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -108,12 +108,12 @@ func (b *keyspace) loadIndexes() errors.Error {
 	}
 
 	if len(indexes) == 0 {
-		lw.Error("", querylog.DATASTORE, "No indexes found for bucket %s", b.Name())
+		logging.Errorf("No indexes found for bucket %s", b.Name())
 		return errors.NewError(nil, "No primary index found for bucket "+b.Name()+". Create a primary index ")
 	}
 
 	for _, index := range indexes {
-		lw.Info("", querylog.DATASTORE, "Found index on keyspace %s", (*index).Name())
+		logging.Infof("Found index on keyspace %s", (*index).Name())
 		name := (*index).Name()
 		b.indexes[name] = *index
 	}
@@ -175,7 +175,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 					if err == nil {
 						entry.EntryKey = value.Values{lookupValue}
 					} else {
-						lw.Error("", querylog.DATASTORE, "unable to convert index key to lookup value:%v", err)
+						logging.Errorf("unable to convert index key to lookup value:%v", err)
 					}
 				}
 
@@ -185,13 +185,13 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 			}
 		case err, ok = <-viewErrChannel:
 			if err != nil {
-				lw.Error("", querylog.DATASTORE, "%v", err)
+				logging.Errorf("%v", err)
 				// check to possibly detect a bucket that was already deleted
 				if !sentRows {
-					lw.Info("", querylog.DATASTORE, "Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
+					logging.Infof("Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
 					_, err := http.Get(vi.keyspace.cbbucket.URI)
 					if err != nil {
-						lw.Error("", querylog.DATASTORE, "%v", err)
+						logging.Errorf("%v", err)
 
 						// remove this specific bucket from the pool cache
 						delete(vi.keyspace.namespace.keyspaceCache, vi.keyspace.Name())
@@ -212,7 +212,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 		}
 	}
 
-	lw.Info("", querylog.DATASTORE, "Number of entries fetched from the index %d", numRows)
+	logging.Infof("Number of entries fetched from the index %d", numRows)
 
 }
 

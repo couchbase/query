@@ -23,19 +23,17 @@ func TestZKClustering(t *testing.T) {
 	as, err := accounting_stub.NewAccountingStore("stub:")
 	version := "0.7.0"
 	version2 := "0.7.9"
-	queryEndpoint := ":8093"
-	adminEndpoint := ":9093"
 
 	if err != nil {
 		t.Errorf("Error creating configstore: ", err)
 	}
 	fmt.Printf("Created config store %v\n\n", cs)
 
-	cluster1 := NewCluster("cluster1", cs, ds, as)
+	cfm := cs.ConfigurationManager()
+
+	cluster1, _ := cfm.CreateCluster("cluster1", ds, as)
 
 	fmt.Printf("Creating cluster %v\n\n", cluster1)
-
-	cfm := cs.ConfigurationManager()
 
 	cluster1, err = cfm.AddCluster(cluster1)
 
@@ -58,28 +56,31 @@ func TestZKClustering(t *testing.T) {
 		t.Errorf("Unexpected query node! ", qn)
 	}
 
-	queryNode := NewQueryNode(cluster1check.Id(), "queryNode1", version, queryEndpoint, adminEndpoint, cs, ds, as)
 	clusterMgr := cluster1check.ClusterManager()
 
+	queryNode, _ := clusterMgr.CreateQueryNode(version, ":8093", ds, as)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, err_qn = clusterMgr.AddQueryNode(NewQueryNode(clusterMgr.Cluster().Id(), "queryNode2", version, queryEndpoint, adminEndpoint, cs, ds, as))
+	queryNode, _ = clusterMgr.CreateQueryNode(version, ":8094", ds, as)
+	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, err_qn = clusterMgr.AddQueryNode(NewQueryNode(clusterMgr.Cluster().Id(), "queryNode3", version, queryEndpoint, adminEndpoint, cs, ds, as))
+	queryNode, _ = clusterMgr.CreateQueryNode(version, ":8095", ds, as)
+	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, err_qn = clusterMgr.AddQueryNode(NewQueryNode(clusterMgr.Cluster().Id(), "queryNode4", version2, queryEndpoint, adminEndpoint, cs, ds, as))
+	queryNode, _ = clusterMgr.CreateQueryNode(version2, ":8095", ds, as)
+	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn == nil {
 		t.Errorf("Expected error adding query node: version incompatibility")
 	}

@@ -1,8 +1,10 @@
 package clustering_zk
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -122,6 +124,11 @@ func (z *zkConfigStore) AddCluster(c clustering.Cluster) (clustering.Cluster, er
 	return c, nil
 }
 
+func (z *zkConfigStore) CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.Cluster, errors.Error) {
+	c := newCluster(id, z, datastore, acctstore)
+	return c, nil
+}
+
 func (z *zkConfigStore) RemoveCluster(c clustering.Cluster) (bool, errors.Error) {
 	return z.RemoveClusterById(c.Id())
 }
@@ -170,7 +177,7 @@ type zkCluster struct {
 	AccountingURI  string                        `json:"accountstore_uri"`
 }
 
-func NewCluster(Name string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.Cluster {
+func newCluster(Name string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.Cluster {
 	cluster := zkCluster{
 		configStore:    cs,
 		dataStore:      ds,
@@ -184,7 +191,7 @@ func NewCluster(Name string, cs clustering.ConfigurationStore, ds datastore.Data
 }
 
 func (z *zkCluster) String() string {
-	return fmt.Sprintf("name=%v, configstoreURI=%v, datastoreURI=%v, accountingURI=%v", z.ClusterName, z.ConfigstoreURI, z.DatastoreURI, z.AccountingURI)
+	return getJsonString(z)
 }
 
 func (z *zkCluster) ConfigurationStoreId() string {
@@ -253,6 +260,18 @@ func (z *zkCluster) ClusterManager() clustering.ClusterManager {
 
 func (z *zkCluster) Cluster() clustering.Cluster {
 	return z
+}
+
+func (z *zkCluster) CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.QueryNode, errors.Error) {
+	ip_addr, err := externalIP()
+	if err != nil {
+		ip_addr = "127.0.0.1"
+	}
+	queryName := ip_addr + query_addr                 // Construct query node name from ip addr and http_addr. Assumption that this will be unique
+	queryEndpoint := "http://" + queryName + "/query" // TODO : protocol specification: how do we know it will be http?
+	adminEndpoint := "http://" + queryName + "/admin" // TODO: protocol specification: how to specify http cleanly? specify endpoints?
+
+	return newQueryNode(z.Name(), queryName, version, queryEndpoint, adminEndpoint, z.ConfigurationStore(), datastore, acctstore), nil
 }
 
 func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
@@ -350,7 +369,7 @@ type zkQueryNodeConfig struct {
 	Vers             *zkVersion                    `json:"version"`
 }
 
-func NewQueryNode(ClusterName string, Name string, VersionString string, queryEndpoint string, adminEndpoint string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.QueryNode {
+func newQueryNode(ClusterName string, Name string, VersionString string, queryEndpoint string, adminEndpoint string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.QueryNode {
 	node := zkQueryNodeConfig{
 		configStore:      cs,
 		dataStore:        ds,
@@ -368,7 +387,7 @@ func NewQueryNode(ClusterName string, Name string, VersionString string, queryEn
 }
 
 func (z *zkQueryNodeConfig) String() string {
-	return fmt.Sprintf("name=%s, queryEndpoint=%s, adminEndpoint=%s, datastoreURI=%s, configstoreURI=%s, accountingURI=%s, version=%s", z.QueryNodeName, z.QueryEndpointURL, z.AdminEndpointURL, z.DatastoreURI, z.ConfigstoreURI, z.AccountingURI, z.Vers)
+	return getJsonString(z)
 }
 
 func (z *zkQueryNodeConfig) ClusterId() string {
@@ -377,14 +396,6 @@ func (z *zkQueryNodeConfig) ClusterId() string {
 
 func (z *zkQueryNodeConfig) Id() string {
 	return z.QueryNodeName
-}
-
-func (z *zkQueryNodeConfig) Hostname() string {
-	return ""
-}
-
-func (z *zkQueryNodeConfig) IPAddress() string {
-	return ""
 }
 
 func (z *zkQueryNodeConfig) QueryEndpoint() string {
@@ -417,4 +428,47 @@ func (z *zkQueryNodeConfig) AccountingStore() accounting.AccountingStore {
 
 func (z *zkQueryNodeConfig) ConfigurationStore() clustering.ConfigurationStore {
 	return z.configStore
+}
+
+func externalIP() (string, errors.Error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", errors.NewError(err, "")
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", errors.NewError(err, "")
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue // not an ipv4 address
+			}
+			return ip.String(), nil
+		}
+	}
+	return "", errors.NewError(nil, "Not connected to the network")
+}
+
+func getJsonString(i interface{}) string {
+	serialized, _ := json.Marshal(i)
+	s := bytes.NewBuffer(append(serialized, '\n'))
+	return s.String()
 }

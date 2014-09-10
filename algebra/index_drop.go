@@ -32,3 +32,11 @@ func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 func (this *DropIndex) Signature() value.Value {
 	return nil
 }
+
+func (this *DropIndex) Keyspace() *KeyspaceRef {
+	return this.keyspace
+}
+
+func (this *DropIndex) Name() string {
+	return this.name
+}

@@ -10,18 +10,17 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-type CreateIndex struct {
+type CreatePrimaryIndex struct {
 	base
-	plan *plan.CreateIndex
+	plan *plan.CreatePrimaryIndex
 }
 
-func NewCreateIndex(plan *plan.CreateIndex) *CreateIndex {
-	rv := &CreateIndex{
+func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) *CreatePrimaryIndex {
+	rv := &CreatePrimaryIndex{
 		base: newBase(),
 		plan: plan,
 	}
@@ -30,15 +29,15 @@ func NewCreateIndex(plan *plan.CreateIndex) *CreateIndex {
 	return rv
 }
 
-func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitCreateIndex(this)
+func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitCreatePrimaryIndex(this)
 }
 
-func (this *CreateIndex) Copy() Operator {
-	return &CreateIndex{this.base.copy(), this.plan}
+func (this *CreatePrimaryIndex) Copy() Operator {
+	return &CreatePrimaryIndex{this.base.copy(), this.plan}
 }
 
-func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
+func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 	if context.Readonly() {
 		return
 	}
@@ -47,15 +46,8 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		// Actually create index
-		node := this.plan.Node()
-		var equalKey expression.Expressions
-		if node.Partition() != nil {
-			equalKey = expression.Expressions{node.Partition()}
-		}
-
-		_, err := this.plan.Keyspace().CreateIndex(
-			node.Name(), equalKey, node.Expressions(), node.Where(), node.Using())
+		// Actually create primary index
+		_, err := this.plan.Keyspace().CreatePrimaryIndex()
 		if err != nil {
 			context.Error(err)
 		}
