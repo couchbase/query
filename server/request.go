@@ -26,8 +26,11 @@ const ERROR_CAP = 1 << 10
 type State string
 
 const (
-	PENDING   State = "pending"
+	RUNNING   State = "running"
+	SUCCESS   State = "success"
+	ERRORS    State = "errors"
 	COMPLETED State = "completed"
+	STOPPED   State = "stopped"
 	TIMEOUT   State = "timeout"
 	FATAL     State = "fatal"
 )
@@ -82,7 +85,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, arguments map[str
 		metrics:     metrics,
 		requestTime: time.Now(),
 		serviceTime: time.Now(),
-		state:       PENDING,
+		state:       RUNNING,
 		results:     make(value.ValueChannel, RESULT_CAP),
 		errors:      make(errors.ErrorChannel, ERROR_CAP),
 		warnings:    make(errors.ErrorChannel, ERROR_CAP),
@@ -137,6 +140,10 @@ func (this *BaseRequest) RequestTime() time.Time {
 
 func (this *BaseRequest) ServiceTime() time.Time {
 	return this.serviceTime
+}
+
+func (this *BaseRequest) SetState(state State) {
+	this.state = state
 }
 
 func (this *BaseRequest) State() State {

@@ -69,6 +69,7 @@ func (this *httpRequest) writeResults() bool {
 	for ok {
 		select {
 		case <-this.StopExecute():
+			this.SetState(server.STOPPED)
 			return true
 		default:
 		}
@@ -77,14 +78,17 @@ func (this *httpRequest) writeResults() bool {
 		case item, ok = <-this.Results():
 			if ok {
 				if !this.writeResult(item) {
+					this.SetState(server.FATAL)
 					return false
 				}
 			}
 		case <-this.StopExecute():
+			this.SetState(server.STOPPED)
 			return true
 		}
 	}
 
+	this.SetState(server.COMPLETED)
 	return true
 }
 
@@ -119,9 +123,9 @@ func (this *httpRequest) writeValue(item value.Value) bool {
 
 func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
 	return this.writeString("\n    ]") &&
-		this.writeState(state) &&
 		this.writeErrors() &&
 		this.writeWarnings() &&
+		this.writeState(state) &&
 		this.writeMetrics(metrics) &&
 		this.writeString("\n}\n")
 }
@@ -137,8 +141,12 @@ func (this *httpRequest) writeState(state server.State) bool {
 		state = this.State()
 	}
 
-	if state == "completed" {
-		return true
+	if state == server.COMPLETED {
+		if this.errorCount == 0 {
+			state = server.SUCCESS
+		} else {
+			state = server.ERRORS
+		}
 	}
 
 	return this.writeString(fmt.Sprintf(",\n    \"state\": \"%s\"", state))
