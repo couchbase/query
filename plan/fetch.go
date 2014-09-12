@@ -10,22 +10,22 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Fetch struct {
 	readonly
 	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
+	project  expression.Expression
 	alias    string
 }
 
-func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, project expression.Expression, alias string) *Fetch {
 	return &Fetch{
 		keyspace: keyspace,
-		term:     term,
-		alias:    term.Alias(),
+		project:  project,
+		alias:    alias,
 	}
 }
 
@@ -37,8 +37,8 @@ func (this *Fetch) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Fetch) Term() *algebra.KeyspaceTerm {
-	return this.term
+func (this *Fetch) Project() expression.Expression {
+	return this.project
 }
 
 func (this *Fetch) Alias() string {

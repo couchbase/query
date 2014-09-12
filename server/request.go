@@ -65,10 +65,10 @@ type BaseRequest struct {
 	results     value.ValueChannel
 	errors      errors.ErrorChannel
 	warnings    errors.ErrorChannel
-	closeNotify chan bool
-	stopNotify  chan bool
-	stopResult  chan bool
-	stopExecute chan bool
+	closeNotify chan bool // implement http.CloseNotifier
+	stopNotify  chan bool // notified when request execution stops
+	stopResult  chan bool // stop consuming results
+	stopExecute chan bool // stop executing request
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, arguments map[string]value.Value,

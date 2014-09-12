@@ -41,7 +41,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	this.resp.WriteHeader(http.StatusOK)
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&
-		this.writeSuffix(srvr.Metrics(), server.COMPLETED)
+		this.writeSuffix(srvr.Metrics(), "")
 }
 
 func (this *httpRequest) Expire() {

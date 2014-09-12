@@ -14,5 +14,10 @@ import (
 )
 
 func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
+	err := node.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }

@@ -266,16 +266,12 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
-	if b.primary != nil {
-		return b.primary, nil
-	}
-
-	return nil, errors.NewError(nil, "Not supported.")
+	return b.primary, nil
 }
 
 func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Create index is not supported for file-based datastore.")
 }
 
 func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
@@ -305,22 +301,22 @@ func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 
 func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Insert not yet implemented.")
 }
 
 func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Update not yet implemented.")
 }
 
 func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Upsert not yet implemented.")
 }
 
 func (b *keyspace) Delete(deletes []string) errors.Error {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return errors.NewError(nil, "Delete not yet implemented.")
 }
 
 func (b *keyspace) Release() {
