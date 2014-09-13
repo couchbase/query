@@ -146,10 +146,10 @@ func (this *Merge) Returning() *Projection {
 }
 
 type MergeSource struct {
-	from   FromTerm               `json:"from"`
-	query  *Select                `json:"select"`
-	values expression.Expressions `json:"values"`
-	as     string                 `json:"as"`
+	from   FromTerm              `json:"from"`
+	query  *Select               `json:"select"`
+	values expression.Expression `json:"values"`
+	as     string                `json:"as"`
 }
 
 func NewMergeSourceFrom(from FromTerm, as string) *MergeSource {
@@ -166,7 +166,7 @@ func NewMergeSourceSelect(query *Select, as string) *MergeSource {
 	}
 }
 
-func NewMergeSourceValues(values expression.Expressions, as string) *MergeSource {
+func NewMergeSourceValues(values expression.Expression, as string) *MergeSource {
 	return &MergeSource{
 		values: values,
 		as:     as,
@@ -182,7 +182,7 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	if this.values != nil {
-		err = this.values.MapExpressions(mapper)
+		this.values, err = mapper.Map(this.values)
 	}
 
 	return
@@ -204,7 +204,7 @@ func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 	}
 
 	if this.values != nil {
-		err = this.values.MapExpressions(expression.EMPTY_FORMALIZER)
+		this.values, err = expression.EMPTY_FORMALIZER.Map(this.values)
 		if err != nil {
 			return
 		}
@@ -229,7 +229,7 @@ func (this *MergeSource) Select() *Select {
 	return this.query
 }
 
-func (this *MergeSource) Values() expression.Expressions {
+func (this *MergeSource) Values() expression.Expression {
 	return this.values
 }
 

@@ -36,8 +36,7 @@ func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
 	subChildren = append(subChildren, NewSendDelete(keyspace))
 
 	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()))
-		subChildren = append(subChildren, NewFinalProject())
+		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))

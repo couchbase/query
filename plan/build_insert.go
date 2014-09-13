@@ -10,6 +10,8 @@
 package plan
 
 import (
+	"fmt"
+
 	"github.com/couchbaselabs/query/algebra"
 )
 
@@ -19,5 +21,34 @@ func (this *builder) VisitInsert(node *algebra.Insert) (interface{}, error) {
 		return nil, err
 	}
 
-	return nil, nil
+	ksref := node.KeyspaceRef()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	children := make([]Operator, 0, 2)
+
+	if node.Values() != nil {
+		children = append(children, NewValueScan(node.Values()))
+	} else if node.Select() != nil {
+		sel, err := node.Select().Accept(this)
+		if err != nil {
+			return nil, err
+		}
+
+		children = append(children, sel.(Operator))
+	} else {
+		return nil, fmt.Errorf("INSERT missing both VALUES and SELECT.")
+	}
+
+	subChildren := make([]Operator, 0, 3)
+	subChildren = append(subChildren, NewSendInsert(keyspace, node.Key()))
+	if node.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	}
+
+	parallel := NewParallel(NewSequence(subChildren...))
+	children = append(children, parallel)
+	return NewSequence(children...), nil
 }

@@ -44,8 +44,7 @@ func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
 	subChildren = append(subChildren, NewSendUpdate(keyspace))
 
 	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()))
-		subChildren = append(subChildren, NewFinalProject())
+		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))
