@@ -39,7 +39,7 @@ var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
 var HTTPS_ADDR = flag.String("https", ":8094", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
-var LOG_TYPE = flag.String("log-type", "golog", "Type of logger")
+var LOGGER = flag.String("logger", "golog", "Logger implementation")
 var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEV_MODE = flag.Bool("dev", false, "Developer Mode")
 
@@ -52,7 +52,7 @@ var lw logging.Logger
 func main() {
 	flag.Parse()
 
-	lw, _ = log_resolver.NewLogger(*LOG_TYPE)
+	lw, _ = log_resolver.NewLogger(*LOGGER)
 	if lw == nil {
 		fmt.Sprintf("Unable initialize default logger")
 	}
