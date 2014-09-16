@@ -270,16 +270,25 @@ func (b *keyspace) Name() string {
 
 func (b *keyspace) Count() (int64, errors.Error) {
 	// need equivalent of all_docs. TODO with view engine supporty
+	var err error
 	pi, err := b.IndexByPrimary()
 	if err != nil || pi == nil {
 		return 0, errors.NewError(nil, "No primary index found. Please create a primary index on bucket "+b.Name())
 	}
 
-	var vi *viewIndex
-	vi = pi.(*viewIndex)
-	totalCount, err := ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+	var totalCount int64
+
+	switch pi := pi.(type) {
+	case *primaryIndex:
+		vi := pi
+		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+	case *viewIndex:
+		vi := pi
+		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+	}
+
 	if err != nil {
-		return 0, err
+		return 0, errors.NewError(err, "")
 	}
 
 	return totalCount, nil
@@ -373,7 +382,7 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		if _, exists := b.indexes[name]; exists {
 			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
 		}
-		idx, err := newViewIndex(name, datastore.IndexKey(equalKey), b)
+		idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), b)
 		if err != nil {
 			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
 		}

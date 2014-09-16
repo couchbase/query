@@ -385,58 +385,13 @@ func (this *JsStatement) JS() string {
 // inorder traversal of the AST to get JS expression out of it
 func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, error) {
 
+	this.js.WriteString("doc.")
 	stringer := expression.NewStringer().Visit(e)
-	// TODO
-	fmt.Printf("this is the expression. %s", stringer)
+	if stringer != "" {
+		this.js.WriteString(strings.Trim(stringer, "`"))
+	} else {
+		return e, errors.New("This Expression is not supported by indexing")
+	}
 
-	/*
-		switch expr := e.(type) {
-
-		case *ast.DotMemberOperator:
-			if this.js.Len() == 0 {
-				this.js.WriteString("doc.")
-			}
-			_, err := expr.Left.Accept(this)
-			if err != nil {
-				return nil, err
-			}
-			this.js.WriteString(".")
-			_, err = expr.Right.Accept(this)
-			if err != nil {
-				return nil, err
-			}
-
-		case *ast.BracketMemberOperator:
-			if this.js.Len() == 0 {
-				this.js.WriteString("doc.")
-			}
-			_, err := expr.Left.Accept(this)
-			if err != nil {
-				return nil, err
-			}
-			this.js.WriteString("[")
-			_, err = expr.Right.Accept(this)
-			if err != nil {
-				return nil, err
-			}
-			this.js.WriteString("]")
-
-		case *ast.Property:
-			if this.js.Len() == 0 {
-				this.js.WriteString("doc.")
-			}
-			this.js.WriteString(expr.Path)
-
-		case *ast.LiteralNumber:
-			this.js.WriteString(fmt.Sprintf("%v", expr.Val))
-
-		case *ast.LiteralString:
-			this.js.WriteString(expr.Val)
-
-		default:
-			return e, errors.New("Expression is not supported by indexing currently: " + e.String())
-
-		}
-	*/
 	return e, nil
 }
