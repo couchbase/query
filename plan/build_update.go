@@ -25,7 +25,7 @@ func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where(), node.Limit())
+	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
 	if err != nil {
 		return nil, err
 	}
@@ -49,5 +49,10 @@ func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
 
 	parallel := NewParallel(NewSequence(subChildren...))
 	this.children = append(this.children, parallel)
+
+	if node.Limit() != nil {
+		this.children = append(this.children, NewLimit(node.Limit()))
+	}
+
 	return NewSequence(this.children...), nil
 }

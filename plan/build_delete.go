@@ -27,7 +27,7 @@ func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where(), node.Limit())
+	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +41,16 @@ func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
 
 	parallel := NewParallel(NewSequence(subChildren...))
 	this.children = append(this.children, parallel)
+
+	if node.Limit() != nil {
+		this.children = append(this.children, NewLimit(node.Limit()))
+	}
+
 	return NewSequence(this.children...), nil
 }
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace,
-	alias string, keys, where, limit expression.Expression) error {
+	alias string, keys, where expression.Expression) error {
 	this.children = make([]Operator, 0, 4)
 	this.subChildren = make([]Operator, 0, 8)
 
@@ -68,13 +73,6 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace,
 	if where != nil {
 		this.subChildren = append(this.subChildren, NewFilter(where))
 	}
-
-	if limit != nil {
-		parallel := NewParallel(NewSequence(this.subChildren...))
-		this.children = append(this.children, parallel, NewLimit(limit))
-		this.subChildren = make([]Operator, 0, 3)
-	}
-
 
 	return nil
 }
