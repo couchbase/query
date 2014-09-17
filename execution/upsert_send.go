@@ -80,7 +80,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			case string:
 				pair.Key = k
 			default:
-				context.Warning(errors.NewError(nil,
+				context.Error(errors.NewError(nil,
 					fmt.Sprintf("Unable to UPSERT non-string key %v of type %T.", k, k)))
 				continue
 			}
