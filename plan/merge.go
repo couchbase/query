@@ -23,7 +23,6 @@ type Merge struct {
 	update   Operator
 	delete   Operator
 	insert   Operator
-	alias    string
 }
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
@@ -35,7 +34,6 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 		update: update,
 		delete: delete,
 		insert: insert,
-		alias: "",
 	}
 }
 
@@ -45,6 +43,10 @@ func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Merge) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *Merge) KeyspaceRef() *algebra.KeyspaceRef {
+	return this.ref
 }
 
 func (this *Merge) Key() expression.Expression {
@@ -61,8 +63,4 @@ func (this *Merge) Delete() Operator {
 
 func (this *Merge) Insert() Operator {
 	return this.insert
-}
-
-func (this *Merge) Alias() string {
-	return this.alias
 }
