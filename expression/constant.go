@@ -24,9 +24,9 @@ var TRUE_EXPR = NewConstant(value.TRUE_VALUE)
 var ZERO_EXPR = NewConstant(value.ZERO_VALUE)
 var ONE_EXPR = NewConstant(value.ONE_VALUE)
 
-func NewConstant(value value.Value) Expression {
+func NewConstant(val interface{}) Expression {
 	return &Constant{
-		value: value,
+		value: value.NewValue(val),
 	}
 }
 
