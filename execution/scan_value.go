@@ -55,10 +55,8 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		actuals := vals.Actual()
 		switch actuals.(type) {
 		case []interface{}:
-		case nil:
-			return
 		default:
-			actuals = []interface{}{actuals}
+			actuals = []interface{}{vals}
 		}
 
 		acts := actuals.([]interface{})

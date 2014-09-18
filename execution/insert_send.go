@@ -80,7 +80,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			case string:
 				pair.Key = k
 			default:
-				context.Warning(errors.NewError(nil,
+				context.Error(errors.NewError(nil,
 					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k)))
 				continue
 			}

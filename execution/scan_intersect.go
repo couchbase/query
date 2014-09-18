@@ -73,7 +73,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		var item value.AnnotatedValue
 		n := len(this.scans)
 		ok := true
-
 	loop:
 		for ok {
 			select {
@@ -104,7 +103,11 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			<-this.childChannel
 		}
 
-		close(channel.ItemChannel())
+		select {
+		case channel.StopChannel() <- false:
+		default:
+		}
+
 		this.sendItems()
 	})
 }

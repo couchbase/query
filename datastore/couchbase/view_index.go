@@ -25,6 +25,7 @@ type viewIndex struct {
 	name     string
 	using    datastore.IndexType
 	on       datastore.IndexKey
+	where    expression.Expression
 	ddoc     *designdoc
 	keyspace *keyspace
 }

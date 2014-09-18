@@ -15,15 +15,15 @@ import (
 )
 
 type Upsert struct {
-	keyspace  *KeyspaceRef           `json:"keyspace"`
-	key       expression.Expression  `json:"key"`
-	values    expression.Expressions `json:"values"`
-	query     *Select                `json:"select"`
-	returning *Projection            `json:"returning"`
+	keyspace  *KeyspaceRef          `json:"keyspace"`
+	key       expression.Expression `json:"key"`
+	values    expression.Expression `json:"values"`
+	query     *Select               `json:"select"`
+	returning *Projection           `json:"returning"`
 }
 
 func NewUpsertValues(keyspace *KeyspaceRef, key expression.Expression,
-	values expression.Expressions, returning *Projection) *Upsert {
+	values expression.Expression, returning *Projection) *Upsert {
 	return &Upsert{
 		keyspace:  keyspace,
 		key:       key,
@@ -65,7 +65,7 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	if this.values != nil {
-		err = this.values.MapExpressions(mapper)
+		this.values, err = mapper.Map(this.values)
 		if err != nil {
 			return
 		}
@@ -87,7 +87,7 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *Upsert) Formalize() (err error) {
 	if this.values != nil {
-		err = this.values.MapExpressions(expression.EMPTY_FORMALIZER)
+		this.values, err = expression.EMPTY_FORMALIZER.Map(this.values)
 		if err != nil {
 			return
 		}
@@ -120,7 +120,7 @@ func (this *Upsert) Key() expression.Expression {
 	return this.key
 }
 
-func (this *Upsert) Values() expression.Expressions {
+func (this *Upsert) Values() expression.Expression {
 	return this.values
 }
 

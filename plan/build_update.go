@@ -14,5 +14,45 @@ import (
 )
 
 func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
-	return nil, nil
+	err := node.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
+	ksref := node.KeyspaceRef()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
+	if err != nil {
+		return nil, err
+	}
+
+	subChildren := this.subChildren
+	subChildren = append(subChildren, NewClone())
+
+	if node.Set() != nil {
+		subChildren = append(subChildren, NewSet(node.Set()))
+	}
+
+	if node.Unset() != nil {
+		subChildren = append(subChildren, NewUnset(node.Unset()))
+	}
+
+	subChildren = append(subChildren, NewSendUpdate(keyspace))
+
+	if node.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	}
+
+	parallel := NewParallel(NewSequence(subChildren...))
+	this.children = append(this.children, parallel)
+
+	if node.Limit() != nil {
+		this.children = append(this.children, NewLimit(node.Limit()))
+	}
+
+	return NewSequence(this.children...), nil
 }

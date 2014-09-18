@@ -94,7 +94,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		item := pair.Value
 
 		// Apply projection, if any
-		project := this.plan.Term().Project()
+		project := this.plan.Project()
 		if project != nil {
 			var e error
 			item, e = project.Evaluate(item, context)

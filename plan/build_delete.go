@@ -11,8 +11,68 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 )
 
 func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
-	return nil, nil
+	err := node.Formalize()
+	if err != nil {
+		return nil, err
+	}
+
+	ksref := node.KeyspaceRef()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
+	if err != nil {
+		return nil, err
+	}
+
+	subChildren := this.subChildren
+	subChildren = append(subChildren, NewSendDelete(keyspace))
+
+	if node.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	}
+
+	parallel := NewParallel(NewSequence(subChildren...))
+	this.children = append(this.children, parallel)
+
+	if node.Limit() != nil {
+		this.children = append(this.children, NewLimit(node.Limit()))
+	}
+
+	return NewSequence(this.children...), nil
+}
+
+func (this *builder) beginMutate(keyspace datastore.Keyspace,
+	alias string, keys, where expression.Expression) error {
+	this.children = make([]Operator, 0, 4)
+	this.subChildren = make([]Operator, 0, 8)
+
+	if keys != nil {
+		scan := NewKeyScan(keys)
+		this.children = append(this.children, scan)
+	} else {
+		index, err := keyspace.IndexByPrimary()
+		if err != nil {
+			return err
+		}
+
+		scan := NewPrimaryScan(index)
+		this.children = append(this.children, scan)
+	}
+
+	fetch := NewFetch(keyspace, nil, alias)
+	this.subChildren = append(this.subChildren, fetch)
+
+	if where != nil {
+		this.subChildren = append(this.subChildren, NewFilter(where))
+	}
+
+	return nil
 }

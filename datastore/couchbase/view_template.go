@@ -59,6 +59,12 @@ const templKey = `
 const templEmit = `
   emit(key, null);`
 
+const tmplWhere = `
+  if $wherecondition {
+     emit(key, null);
+  }
+`
+
 const templEnd = `
 }
 // salt: $rnd

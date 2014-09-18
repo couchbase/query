@@ -298,7 +298,7 @@ indexType        datastore.IndexType
 %type <statement>        index_stmt create_index drop_index alter_index
 
 %type <keyspaceRef>      keyspace_ref
-%type <exprs>            values
+%type <expr>             values
 %type <expr>             key opt_key
 %type <projection>       returns returning opt_returning
 %type <binding>          update_binding
@@ -955,7 +955,7 @@ KEY expr
 ;
 
 values:
-VALUES exprs
+VALUES expr
 {
     $$ = $2
 }

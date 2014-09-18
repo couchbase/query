@@ -65,20 +65,26 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
+		go this.input.RunOnce(context, parent)
+
 		update := this.wrapChild(this.update)
 		delete := this.wrapChild(this.delete)
 		insert := this.wrapChild(this.insert)
-
-		go this.input.RunOnce(context, parent)
+		children := []Operator{update, delete, insert}
+		for _, child := range children {
+			if child != nil {
+				go child.RunOnce(context, parent)
+			}
+		}
 
 		var item value.AnnotatedValue
 		n := this.childCount
 		ok := true
-
-		for {
+	loop:
+		for ok {
 			select {
 			case <-this.stopChannel: // Never closed
-				this.notifyChildren(update, delete, insert)
+				break loop
 			default:
 			}
 
@@ -87,18 +93,17 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
 				}
-
-				if !ok {
-					this.notifyChildren(update, delete, insert)
-				}
-			case <-this.childChannel: // Never closed
-				// Wait for all children
-				if n--; n <= 0 {
-					return
-				}
 			case <-this.stopChannel: // Never closed
-				this.notifyChildren(update, delete, insert)
+				break loop
 			}
+		}
+
+		this.notifyStop()
+		notifyChildren(children...)
+
+		// Await children
+		for ; n > 0; n-- {
+			<-this.childChannel // Never closed
 		}
 	})
 }
@@ -132,11 +137,11 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	if bv != nil {
 		// Matched; join source and target
 		if update != nil {
-			item.SetAttachment("target", item.Copy())
+			item.SetAttachment("target", bv)
 		}
 
 		abv := value.NewAnnotatedValue(bv)
-		item.SetField(this.plan.Alias(), abv)
+		item.SetField(this.plan.KeyspaceRef().Alias(), abv)
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
@@ -156,14 +161,6 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	return true
 }
 
-func copyOperator(op Operator) Operator {
-	if op == nil {
-		return nil
-	} else {
-		return op.Copy()
-	}
-}
-
 func (this *Merge) wrapChild(op Operator) Operator {
 	if op == nil {
 		return nil
@@ -176,22 +173,4 @@ func (this *Merge) wrapChild(op Operator) Operator {
 	seq.SetOutput(this.output)
 	this.childCount++
 	return seq
-}
-
-func (this *Merge) notifyChildren(children ...Operator) {
-	for _, child := range children {
-		if child == nil {
-			continue
-		}
-
-		select {
-		case child.Input().StopChannel() <- false:
-		default:
-		}
-
-		select {
-		case child.StopChannel() <- false:
-		default:
-		}
-	}
 }

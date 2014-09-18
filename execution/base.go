@@ -148,6 +148,7 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			}
 		}
 
+		this.notifyStop()
 		cons.afterItems(context)
 	})
 }
@@ -171,7 +172,7 @@ func (this *base) notify() {
 func (this *base) notifyParent() {
 	parent := this.parent
 	if parent != nil {
-		// Blocks on parent
+		// Block on parent
 		parent.ChildChannel() <- false
 		this.parent = nil
 	}
@@ -183,10 +184,11 @@ func (this *base) notifyStop() {
 	if stop != nil {
 		select {
 		case stop.StopChannel() <- false:
-			this.stop = nil
 		default:
 			// Already notified.
 		}
+
+		this.stop = nil
 	}
 }
 

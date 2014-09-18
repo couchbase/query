@@ -1,9 +1,9 @@
-## Generate railroad diagrams
+## Generating Railroad diagrams
 
-1.  Visit:  [http://railroad.my28msec.com/rr/ui](http://railroad.my28msec.com/rr/ui)
-2.  Go to Edit Grammar tab
-3.  Paste contents of unql-2013.ebnf
-4.  Go to View Diagram tab
-5.  Select PNG radio button
-6.  Click download
-7.  Extract zip file into docs directory
+1. Go to [Railroad Diagram Generator](http://bottlecaps.de/rr/ui)
+1. Go to Edit Grammar
+1. Upload your grammar file
+1. Go to View Diagram
+1. Select PNG
+1. Select Download
+1. The generated diagrams will be in the downloaded zip file

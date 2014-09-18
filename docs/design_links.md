@@ -13,6 +13,7 @@ This document provides links to external design documents; links are provided un
 * [Overview of Clustering Management Survey](http://goo.gl/gid7LX) - identifies the high level concerns in clustered systems
 * [Cluster Management Survey](http://goo.gl/gid7LX) - a survey of best practices and common policies in clustered distributed systems
 * [Cluster Management Topics](http://goo.gl/RFa2Yb) - a design document for Clustering Management in N1QL
+* [N1QL Cluster Management API](http://goo.gl/yKZ6v5) - design document for the Clustering API in N1QL
 
 ## Shell
 

@@ -11,9 +11,19 @@ package execution
 
 func notifyChildren(children ...Operator) {
 	for _, child := range children {
-		select {
-		case child.StopChannel() <- false:
-		default:
+		if child != nil {
+			select {
+			case child.StopChannel() <- false:
+			default:
+			}
 		}
+	}
+}
+
+func copyOperator(op Operator) Operator {
+	if op == nil {
+		return nil
+	} else {
+		return op.Copy()
 	}
 }
