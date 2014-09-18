@@ -27,6 +27,12 @@ func (this *Stringer) Visit(expr Expression) string {
 		panic(fmt.Sprintf("Unexpected error in Stringer: %v", err))
 	}
 
+	switch s := s.(type) {
+	case []byte:
+		return string(s)
+	default:
+		return s.(string)
+	}
 	return s.(string)
 }
 

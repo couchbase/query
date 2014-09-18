@@ -382,7 +382,7 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		if _, exists := b.indexes[name]; exists {
 			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
 		}
-		idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), b)
+		idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, b)
 		if err != nil {
 			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
 		}

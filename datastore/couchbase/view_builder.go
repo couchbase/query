@@ -23,9 +23,9 @@ type ddocJSON struct {
 	IndexChecksum int      `json:"indexChecksum"`
 }
 
-func newViewIndex(name string, on datastore.IndexKey, bkt *keyspace) (*viewIndex, error) {
+func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, bkt *keyspace) (*viewIndex, error) {
 
-	doc, err := newDesignDoc(name, on)
+	doc, err := newDesignDoc(name, bkt.name, on, where)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +34,7 @@ func newViewIndex(name string, on datastore.IndexKey, bkt *keyspace) (*viewIndex
 		name:     name,
 		using:    datastore.VIEW,
 		on:       on,
+		where:    where,
 		ddoc:     doc,
 		keyspace: bkt,
 	}
@@ -55,19 +56,20 @@ func (vi *viewIndex) String() string {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("name: %v ", vi.name))
 	buf.WriteString(fmt.Sprintf("on: %v ", vi.on))
+	buf.WriteString(fmt.Sprintf("where: %v", vi.where))
 	buf.WriteString(fmt.Sprintf("using: %v ", vi.using))
 	buf.WriteString(fmt.Sprintf("ddoc: %v ", *vi.ddoc))
 	buf.WriteString(fmt.Sprintf("bucket: %v ", *vi.keyspace))
 	return buf.String()
 }
 
-func newDesignDoc(idxname string, on datastore.IndexKey) (*designdoc, error) {
+func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, where expression.Expression) (*designdoc, error) {
 	var doc designdoc
 
 	doc.name = "ddl_" + idxname
 	doc.viewname = idxname
 
-	err := generateMap(on, &doc)
+	err := generateMap(bucketName, on, where, &doc)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func newPrimaryDDoc() *designdoc {
 	return &doc
 }
 
-func generateMap(on datastore.IndexKey, doc *designdoc) error {
+func generateMap(bucketName string, on datastore.IndexKey, where expression.Expression, doc *designdoc) error {
 
 	buf := new(bytes.Buffer)
 
@@ -239,6 +241,7 @@ func generateMap(on datastore.IndexKey, doc *designdoc) error {
 	fmt.Fprintln(buf, line)
 
 	keylist := new(bytes.Buffer)
+
 	for idx, expr := range on {
 
 		walker := NewWalker()
@@ -261,7 +264,26 @@ func generateMap(on datastore.IndexKey, doc *designdoc) error {
 	line = strings.Replace(templKey, "$keylist", keylist.String(), -1)
 
 	fmt.Fprint(buf, line)
-	fmt.Fprint(buf, templEmit)
+
+	var whereCondition string
+	if where != nil {
+
+		walker := NewWalker()
+		_, err := walker.VisitWhere(bucketName, where)
+		if err != nil {
+			return err
+		}
+
+		whereCondition = walker.JS()
+
+	}
+	if whereCondition != "" {
+		line := strings.Replace(tmplWhere, "$wherecondition", whereCondition, 1)
+		fmt.Fprintf(buf, line)
+
+	} else {
+		fmt.Fprint(buf, templEmit)
+	}
 
 	line = strings.Replace(templEnd, "$rnd", strconv.Itoa(int(rand.Int31())), -1)
 	fmt.Fprint(buf, line)
@@ -389,6 +411,22 @@ func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, 
 	stringer := expression.NewStringer().Visit(e)
 	if stringer != "" {
 		this.js.WriteString(strings.Trim(stringer, "`"))
+	} else {
+		return e, errors.New("This Expression is not supported by indexing")
+	}
+
+	return e, nil
+}
+
+// inorder traversal of the where expression AST to get JS expression out of it
+func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) (expression.Expression, error) {
+
+	stringer := expression.NewStringer().Visit(e)
+	if stringer != "" {
+		stringer = strings.Replace(stringer, "`", "", -1)
+		// replace all instances of bucket-name with doc.bucket-name
+		stringer = strings.Replace(stringer, bucketName, "doc", -1)
+		this.js.WriteString(stringer)
 	} else {
 		return e, errors.New("This Expression is not supported by indexing")
 	}
