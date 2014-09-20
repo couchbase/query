@@ -29,3 +29,8 @@ func NewLogger(uri string) (logging.Logger, errors.Error) {
 
 	return nil, errors.NewError(nil, fmt.Sprintf("Invalid logger uri: %s", uri))
 }
+
+func init() {
+	logger := logger_golog.NewLogger(os.Stderr, logging.Info, false)
+	logging.SetLogger(logger)
+}
