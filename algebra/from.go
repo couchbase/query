@@ -20,7 +20,7 @@ import (
 type FromTerm interface {
 	Node
 	MapExpressions(mapper expression.Mapper) error
-	Formalize() (f *Formalizer, err error)
+	Formalize(parent *Formalizer) (f *Formalizer, err error)
 	PrimaryTerm() FromTerm
 	Alias() string
 }
@@ -61,7 +61,7 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *KeyspaceTerm) Formalize() (f *Formalizer, err error) {
+func (this *KeyspaceTerm) Formalize(parent *Formalizer) (f *Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
 		err = errors.NewError(nil, "FROM term must have a name or alias.")
@@ -69,13 +69,19 @@ func (this *KeyspaceTerm) Formalize() (f *Formalizer, err error) {
 	}
 
 	if this.keys != nil {
-		_, err = this.keys.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.keys.Accept(parent)
 		if err != nil {
 			return
 		}
 	}
 
-	allowed := value.NewValue(make(map[string]interface{}))
+	_, ok := parent.Allowed.Field(keyspace)
+	if ok {
+		err = errors.NewError(nil, fmt.Sprintf("Duplicate subquery alias %s.", keyspace))
+		return nil, err
+	}
+
+	allowed := value.NewScopeValue(make(map[string]interface{}), parent.Allowed)
 	allowed.SetField(keyspace, keyspace)
 
 	f = NewFormalizer()
@@ -141,8 +147,8 @@ func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.right.MapExpressions(mapper)
 }
 
-func (this *Join) Formalize() (f *Formalizer, err error) {
-	f, err = this.left.Formalize()
+func (this *Join) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return
 	}
@@ -164,6 +170,7 @@ func (this *Join) Formalize() (f *Formalizer, err error) {
 		return nil, err
 	}
 
+	f.Keyspace = ""
 	f.Allowed.SetField(alias, alias)
 	return
 }
@@ -211,8 +218,8 @@ func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.right.MapExpressions(mapper)
 }
 
-func (this *Nest) Formalize() (f *Formalizer, err error) {
-	f, err = this.left.Formalize()
+func (this *Nest) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return
 	}
@@ -234,6 +241,7 @@ func (this *Nest) Formalize() (f *Formalizer, err error) {
 		return nil, err
 	}
 
+	f.Keyspace = ""
 	f.Allowed.SetField(alias, alias)
 	return
 }
@@ -283,8 +291,8 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Unnest) Formalize() (f *Formalizer, err error) {
-	f, err = this.left.Formalize()
+func (this *Unnest) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return
 	}
@@ -306,6 +314,7 @@ func (this *Unnest) Formalize() (f *Formalizer, err error) {
 		return nil, err
 	}
 
+	f.Keyspace = ""
 	f.Allowed.SetField(alias, alias)
 	return
 }

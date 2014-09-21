@@ -31,6 +31,10 @@ func (this *CreatePrimaryIndex) Signature() value.Value {
 	return nil
 }
 
+func (this *CreatePrimaryIndex) Formalize() error {
+	return nil
+}
+
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }

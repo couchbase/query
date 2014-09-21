@@ -16,11 +16,6 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type Projector interface {
-	Node
-	Signature() value.Value
-}
-
 type Projection struct {
 	distinct bool        `json:"distinct"`
 	raw      bool        `json:"raw"`

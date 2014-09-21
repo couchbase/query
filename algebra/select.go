@@ -63,7 +63,11 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *Select) Formalize() (err error) {
-	formalizer, err := this.subresult.Formalize()
+	return this.FormalizeSubquery(NewFormalizer())
+}
+
+func (this *Select) FormalizeSubquery(parent *Formalizer) (err error) {
+	formalizer, err := this.subresult.Formalize(parent)
 	if err != nil {
 		return err
 	}
@@ -76,14 +80,14 @@ func (this *Select) Formalize() (err error) {
 	}
 
 	if this.limit != nil {
-		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.limit.Accept(parent)
 		if err != nil {
 			return
 		}
 	}
 
 	if this.offset != nil {
-		_, err = this.offset.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.offset.Accept(parent)
 		if err != nil {
 			return
 		}
@@ -164,10 +168,11 @@ func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 type Subresult interface {
-	Projector
+	Node
+	Signature() value.Value
 	IsCorrelated() bool
 	MapExpressions(mapper expression.Mapper) error
-	Formalize() (formalizer *Formalizer, err error)
+	Formalize(parent *Formalizer) (formalizer *Formalizer, err error)
 }
 
 type Subselect struct {
@@ -227,15 +232,14 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.projection.MapExpressions(mapper)
 }
 
-func (this *Subselect) Formalize() (f *Formalizer, err error) {
-	if this.from == nil {
-		f = NewFormalizer()
-		return
-	}
-
-	f, err = this.from.Formalize()
-	if err != nil {
-		return
+func (this *Subselect) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+	if this.from != nil {
+		f, err = this.from.Formalize(parent)
+		if err != nil {
+			return
+		}
+	} else {
+		f = parent
 	}
 
 	if this.let != nil {
@@ -388,14 +392,14 @@ func (this *binarySubresult) MapExpressions(mapper expression.Mapper) (err error
 	return this.second.MapExpressions(mapper)
 }
 
-func (this *binarySubresult) Formalize() (f *Formalizer, err error) {
+func (this *binarySubresult) Formalize(parent *Formalizer) (f *Formalizer, err error) {
 	var ff, sf *Formalizer
-	ff, err = this.first.Formalize()
+	ff, err = this.first.Formalize(parent)
 	if err != nil {
 		return nil, err
 	}
 
-	sf, err = this.second.Formalize()
+	sf, err = this.second.Formalize(parent)
 	if err != nil {
 		return nil, err
 	}

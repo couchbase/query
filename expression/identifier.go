@@ -69,3 +69,7 @@ func (this *Identifier) Unset(item value.Value, context Context) bool {
 	er := item.UnsetField(this.identifier)
 	return er == nil
 }
+
+func (this *Identifier) Identifier() string {
+	return this.identifier
+}

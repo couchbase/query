@@ -15,15 +15,15 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func Prepare(projector algebra.Projector, datastore, systemstore datastore.Datastore,
+func Prepare(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool) (*Prepared, error) {
-	operator, err := Build(projector, datastore, systemstore, namespace, subquery)
+	operator, err := Build(stmt, datastore, systemstore, namespace, subquery)
 	if err != nil {
 		return nil, err
 	}
 
-	signature := projector.Signature()
-	return NewPrepared(operator, signature), nil
+	signature := stmt.Signature()
+	return newPrepared(operator, signature), nil
 }
 
 type Prepared struct {
@@ -31,7 +31,7 @@ type Prepared struct {
 	signature value.Value
 }
 
-func NewPrepared(operator Operator, signature value.Value) *Prepared {
+func newPrepared(operator Operator, signature value.Value) *Prepared {
 	return &Prepared{
 		Operator:  operator,
 		signature: signature,

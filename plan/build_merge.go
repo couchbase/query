@@ -16,11 +16,6 @@ import (
 )
 
 func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
-	err := node.Formalize()
-	if err != nil {
-		return nil, err
-	}
-
 	children := make([]Operator, 0, 8)
 	subChildren := make([]Operator, 0, 8)
 	source := node.Source()
@@ -37,7 +32,7 @@ func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
 		this.subChildren = subChildren
 
 		if source.From() != nil {
-			_, err = source.From().Accept(this)
+			_, err := source.From().Accept(this)
 			if err != nil {
 				return nil, err
 			}

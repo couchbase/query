@@ -59,3 +59,7 @@ func (this *Subquery) Children() expression.Expressions {
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
+
+func (this *Subquery) Select() *Select {
+	return this.query
+}

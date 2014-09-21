@@ -20,11 +20,6 @@ import (
 // SELECT
 
 func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
-	err := node.Formalize()
-	if err != nil {
-		return nil, err
-	}
-
 	order := node.Order()
 	offset := node.Offset()
 	limit := node.Limit()

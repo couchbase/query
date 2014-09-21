@@ -33,6 +33,10 @@ func (this *DropIndex) Signature() value.Value {
 	return nil
 }
 
+func (this *DropIndex) Formalize() error {
+	return nil
+}
+
 func (this *DropIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }

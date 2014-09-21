@@ -54,6 +54,10 @@ func (this *collMap) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
+func (this *collMap) Bindings() Bindings {
+	return this.bindings
+}
+
 type collPred struct {
 	ExpressionBase
 	bindings  Bindings
@@ -85,4 +89,8 @@ func (this *collPred) MapChildren(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+func (this *collPred) Bindings() Bindings {
+	return this.bindings
 }

@@ -29,6 +29,10 @@ func (this *Explain) Signature() value.Value {
 	return value.NewValue(value.JSON.String())
 }
 
+func (this *Explain) Formalize() error {
+	return this.stmt.Formalize()
+}
+
 func (this *Explain) Statement() Statement {
 	return this.stmt
 }

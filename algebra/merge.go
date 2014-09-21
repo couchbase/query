@@ -108,7 +108,7 @@ func (this *Merge) Formalize() (err error) {
 	}
 
 	if this.limit != nil {
-		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.limit.Accept(NewFormalizer())
 		if err != nil {
 			return
 		}
@@ -190,7 +190,7 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 	if this.from != nil {
-		_, err = this.from.Formalize()
+		_, err = this.from.Formalize(NewFormalizer())
 		if err != nil {
 			return
 		}
@@ -204,7 +204,7 @@ func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 	}
 
 	if this.values != nil {
-		this.values, err = expression.EMPTY_FORMALIZER.Map(this.values)
+		this.values, err = NewFormalizer().Map(this.values)
 		if err != nil {
 			return
 		}

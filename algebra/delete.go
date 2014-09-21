@@ -74,8 +74,9 @@ func (this *Delete) Formalize() (err error) {
 		return err
 	}
 
+	empty := NewFormalizer()
 	if this.keys != nil {
-		_, err = this.keys.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.keys.Accept(empty)
 		if err != nil {
 			return
 		}
@@ -89,7 +90,7 @@ func (this *Delete) Formalize() (err error) {
 	}
 
 	if this.limit != nil {
-		_, err = this.limit.Accept(expression.EMPTY_FORMALIZER)
+		_, err = this.limit.Accept(empty)
 		if err != nil {
 			return
 		}

@@ -35,6 +35,10 @@ func (this *AlterIndex) Signature() value.Value {
 	return nil
 }
 
+func (this *AlterIndex) Formalize() error {
+	return nil
+}
+
 func (this *AlterIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }

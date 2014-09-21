@@ -44,6 +44,10 @@ func (this *CreateIndex) Signature() value.Value {
 	return nil
 }
 
+func (this *CreateIndex) Formalize() error {
+	return nil
+}
+
 func (this *CreateIndex) Name() string {
 	return this.name
 }

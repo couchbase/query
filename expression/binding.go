@@ -33,6 +33,10 @@ func (this *Binding) Expression() Expression {
 	return this.expr
 }
 
+func (this *Binding) SetExpression(expr Expression) {
+	this.expr = expr
+}
+
 func (this *Binding) Descend() bool {
 	return this.descend
 }

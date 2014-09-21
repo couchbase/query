@@ -16,11 +16,6 @@ import (
 )
 
 func (this *builder) VisitInsert(node *algebra.Insert) (interface{}, error) {
-	err := node.Formalize()
-	if err != nil {
-		return nil, err
-	}
-
 	ksref := node.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {

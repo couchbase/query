@@ -40,7 +40,6 @@ var HTTPS_ADDR = flag.String("https", ":8094", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
-var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 
 func main() {

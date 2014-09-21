@@ -16,4 +16,5 @@ import (
 type Statement interface {
 	Node
 	Signature() value.Value
+	Formalize() error
 }

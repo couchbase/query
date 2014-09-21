@@ -17,37 +17,28 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func ParseStatement(input string) (statement algebra.Statement, err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			err = fmt.Errorf("Panic in parser: %v.", r)
-		}
-	}()
-
+func ParseStatement(input string) (algebra.Statement, error) {
 	lex := newLexer(NewLexer(strings.NewReader(input)))
 	lex.parsingStmt = true
-	yyParse(lex)
+	doParse(lex)
 
 	if len(lex.errs) > 0 {
 		return nil, fmt.Errorf(strings.Join(lex.errs, "\n"))
 	} else if lex.stmt == nil {
 		return nil, fmt.Errorf("Input was not a statement.")
 	} else {
-		return lex.stmt, nil
+		err := lex.stmt.Formalize()
+		if err != nil {
+			return nil, err
+		} else {
+			return lex.stmt, nil
+		}
 	}
 }
 
-func ParseExpression(input string) (expr expression.Expression, err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			err = fmt.Errorf("Panic in parser: %v.", r)
-		}
-	}()
-
+func ParseExpression(input string) (expression.Expression, error) {
 	lex := newLexer(NewLexer(strings.NewReader(input)))
-	yyParse(lex)
+	doParse(lex)
 
 	if len(lex.errs) > 0 {
 		return nil, fmt.Errorf(strings.Join(lex.errs, "\n"))
@@ -56,6 +47,17 @@ func ParseExpression(input string) (expr expression.Expression, err error) {
 	} else {
 		return lex.expr, nil
 	}
+}
+
+func doParse(lex *lexer) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			lex.Error("Errors while parsing.")
+		}
+	}()
+
+	yyParse(lex)
 }
 
 type lexer struct {
