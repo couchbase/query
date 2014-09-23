@@ -18,29 +18,13 @@ import (
 const _PREFIX = "zookeeper:"
 const _RESERVED_NAME = "zookeeper"
 
-type zkVersion struct {
-	VersionString string
-}
-
-func NewVersion(version string) *zkVersion {
-	return &zkVersion{
-		VersionString: version,
-	}
-}
-
-func (z *zkVersion) String() string {
-	return z.VersionString
-}
-
-func (z *zkVersion) Compatible(v clustering.Version) bool {
-	return v.String() == z.String()
-}
-
+// zkConfigStore implements clustering.ConfigurationStore
 type zkConfigStore struct {
 	conn *zk.Conn
 	url  string
 }
 
+// create a zkConfigStore given the path to a zookeeper instance
 func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(path, _PREFIX) {
 		path = path[len(_PREFIX):]
@@ -56,10 +40,12 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	}, nil
 }
 
+// Implement Stringer interface
 func (z *zkConfigStore) String() string {
 	return fmt.Sprintf("url=%v", z.url)
 }
 
+// Implement clustering.ConfigurationStore interface
 func (z *zkConfigStore) Id() string {
 	return z.URL()
 }
@@ -68,7 +54,7 @@ func (z *zkConfigStore) URL() string {
 	return "zookeeper:" + z.url
 }
 
-func (z *zkConfigStore) ClusterIds() ([]string, errors.Error) {
+func (z *zkConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
 	nodes, _, err := z.conn.Children("/")
 	if err != nil {
@@ -80,12 +66,8 @@ func (z *zkConfigStore) ClusterIds() ([]string, errors.Error) {
 	return clusterIds, nil
 }
 
-func (z *zkConfigStore) ClusterNames() ([]string, errors.Error) {
-	return z.ClusterIds()
-}
-
-func (z *zkConfigStore) ClusterById(id string) (clustering.Cluster, errors.Error) {
-	data, _, err := z.conn.Get("/" + id)
+func (z *zkConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
+	data, _, err := z.conn.Get("/" + name)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
@@ -98,43 +80,35 @@ func (z *zkConfigStore) ClusterById(id string) (clustering.Cluster, errors.Error
 	return &clusterConfig, nil
 }
 
-func (z *zkConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
-	return z.ClusterById(name)
-}
-
 func (z *zkConfigStore) ConfigurationManager() clustering.ConfigurationManager {
 	return z
 }
 
+// zkConfigStore also implements clustering.ConfigurationManager interface
 func (z *zkConfigStore) ConfigurationStore() clustering.ConfigurationStore {
 	return z
 }
 
 func (z *zkConfigStore) AddCluster(c clustering.Cluster) (clustering.Cluster, errors.Error) {
 	flags := int32(0)
-	acl := zk.WorldACL(zk.PermAll)
+	acl := zk.WorldACL(zk.PermAll) // TODO: expose authentication in the API
 	clusterBytes, err := json.Marshal(c)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
-	_, err = z.conn.Create("/"+c.Id(), clusterBytes, flags, acl)
+	_, err = z.conn.Create("/"+c.Name(), clusterBytes, flags, acl)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
 	return c, nil
 }
 
-func (z *zkConfigStore) CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.Cluster, errors.Error) {
-	c := newCluster(id, z, datastore, acctstore)
-	return c, nil
-}
-
 func (z *zkConfigStore) RemoveCluster(c clustering.Cluster) (bool, errors.Error) {
-	return z.RemoveClusterById(c.Id())
+	return z.RemoveClusterByName(c.Name())
 }
 
-func (z *zkConfigStore) RemoveClusterById(id string) (bool, errors.Error) {
-	err := z.conn.Delete("/"+id, 0)
+func (z *zkConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
+	err := z.conn.Delete("/"+name, 0)
 	if err != nil {
 		return false, errors.NewError(err, "")
 	} else {
@@ -167,6 +141,7 @@ func (z *zkConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	return clusters, nil
 }
 
+// zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`
 	dataStore      datastore.Datastore           `json:"-"`
@@ -175,45 +150,58 @@ type zkCluster struct {
 	DatastoreURI   string                        `json:"datastore_uri"`
 	ConfigstoreURI string                        `json:"configstore_uri"`
 	AccountingURI  string                        `json:"accountstore_uri"`
+	version        clustering.Version            `json:"-"`
+	VersionString  string                        `json:"version"`
 }
 
-func newCluster(Name string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.Cluster {
+// Create a new zkCluster instance
+func NewCluster(name string,
+	version clustering.Version,
+	configstore clustering.ConfigurationStore,
+	datastore datastore.Datastore,
+	acctstore accounting.AccountingStore) (clustering.Cluster, errors.Error) {
+	c := makeZkCluster(name, version, configstore, datastore, acctstore)
+	return c, nil
+}
+
+func makeZkCluster(name string,
+	version clustering.Version,
+	cs clustering.ConfigurationStore,
+	ds datastore.Datastore,
+	as accounting.AccountingStore) clustering.Cluster {
 	cluster := zkCluster{
 		configStore:    cs,
 		dataStore:      ds,
 		acctStore:      as,
-		ClusterName:    Name,
+		ClusterName:    name,
 		DatastoreURI:   ds.URL(),
 		ConfigstoreURI: cs.URL(),
 		AccountingURI:  as.URL(),
+		version:        version,
+		VersionString:  version.String(),
 	}
 	return &cluster
 }
 
+// zkCluster implements Stringer interface
 func (z *zkCluster) String() string {
 	return getJsonString(z)
 }
 
+// zkCluster implements clustering.Cluster interface
 func (z *zkCluster) ConfigurationStoreId() string {
 	return z.configStore.Id()
 }
-func (z *zkCluster) Id() string {
+
+func (z *zkCluster) Name() string {
 	return z.ClusterName
 }
-func (z *zkCluster) Name() string {
-	return z.Id()
-}
 
-func getConfigStoreImplementation(z *zkCluster) (impl *zkConfigStore, ok bool) {
-	impl, ok = z.configStore.(*zkConfigStore)
-	return
-}
-
-func (z *zkCluster) QueryNodeIds() ([]string, errors.Error) {
+func (z *zkCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to get connection to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
 	}
 	nodes, _, err := impl.conn.Children("/" + z.ClusterName)
 	if err != nil {
@@ -225,12 +213,12 @@ func (z *zkCluster) QueryNodeIds() ([]string, errors.Error) {
 	return queryNodeNames, nil
 }
 
-func (z *zkCluster) QueryNodeById(id string) (clustering.QueryNode, errors.Error) {
+func (z *zkCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to get connection to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
 	}
-	data, _, err := impl.conn.Get("/" + z.ClusterName + "/" + id)
+	data, _, err := impl.conn.Get("/" + z.ClusterName + "/" + name)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
@@ -254,59 +242,60 @@ func (z *zkCluster) ConfigurationStore() clustering.ConfigurationStore {
 	return z.configStore
 }
 
+func (z *zkCluster) Version() clustering.Version {
+	if z.version == nil {
+		z.version = clustering.NewVersion(z.VersionString)
+	}
+	return z.version
+}
+
+// internal function to get a handle on the zookeeper connection
+func getConfigStoreImplementation(z *zkCluster) (impl *zkConfigStore, ok bool) {
+	impl, ok = z.configStore.(*zkConfigStore)
+	return
+}
+
 func (z *zkCluster) ClusterManager() clustering.ClusterManager {
 	return z
 }
 
+// zkCluster implements clustering.ClusterManager interface
 func (z *zkCluster) Cluster() clustering.Cluster {
 	return z
 }
 
-func (z *zkCluster) CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.QueryNode, errors.Error) {
-	ip_addr, err := externalIP()
-	if err != nil {
-		ip_addr = "127.0.0.1"
-	}
-	queryName := ip_addr + query_addr                 // Construct query node name from ip addr and http_addr. Assumption that this will be unique
-	queryEndpoint := "http://" + queryName + "/query" // TODO : protocol specification: how do we know it will be http?
-	adminEndpoint := "http://" + queryName + "/admin" // TODO: protocol specification: how to specify http cleanly? specify endpoints?
-
-	return newQueryNode(z.Name(), queryName, version, queryEndpoint, adminEndpoint, z.ConfigurationStore(), datastore, acctstore), nil
-}
-
 func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
-	// Get connection to actual config store backend
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to get connection to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
 	}
+	// Check that query node has compatible backend connections:
+	if n.Standalone().Datastore().URL() != z.DatastoreURI {
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible datastore with cluster %s", n, z.DatastoreURI))
+	}
+	if n.Standalone().ConfigurationStore().URL() != z.ConfigstoreURI {
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible configstore with cluster %s", n, z.ConfigstoreURI))
+	}
+	// Check that query node is version compatible with the cluster:
+	if !z.Version().Compatible(n.Standalone().Version()) {
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: not version compatible with cluster (%v)", n, z.Version()))
+	}
+	qryNodeImpl, ok := n.(*zkQueryNodeConfig)
+	if !ok {
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: cannot set cluster reference", n))
+	}
+	// The query node can be accepted into the cluster - set its cluster reference and name and unset its Standalone:
+	qryNodeImpl.ClusterRef = z
+	qryNodeImpl.ClusterName = z.Name()
+	qryNodeImpl.StandaloneRef = nil
 	// Add entry for query node: ephemeral node
 	flags := int32(zk.FlagEphemeral)
 	acl := zk.WorldACL(zk.PermAll) // TODO: credentials - expose in the API
-	key := "/" + z.Id() + "/" + n.Id()
+	key := "/" + z.Name() + "/" + n.Name()
 	value, err := json.Marshal(n)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
-	// Check that query node has compatible backend connections:
-	if n.Datastore().URL() != z.DatastoreURI {
-		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible datastore with cluster %s", n, z.DatastoreURI))
-	}
-	if n.ConfigurationStore().URL() != z.ConfigstoreURI {
-		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible configstore with cluster %s", n, z.ConfigstoreURI))
-	}
-	// Check that query node is version compatible with the cluster:
-	qryNodes, err := z.GetQueryNodes()
-	if err != nil {
-		return nil, errors.NewError(err, "")
-	}
-	if len(qryNodes) > 0 {
-		v := qryNodes[0].Version()
-		if !n.Version().Compatible(v) {
-			return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: not version compatible with cluster (%v)", n, v))
-		}
-	}
-	// query node has passed checks (backend connections and version compatibility)
 	_, err = impl.conn.Create(key, value, flags, acl)
 	if err != nil {
 		return nil, errors.NewError(err, "")
@@ -315,15 +304,15 @@ func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, 
 }
 
 func (z *zkCluster) RemoveQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
-	return z.RemoveQueryNodeById(n.Id())
+	return z.RemoveQueryNodeByName(n.Name())
 }
 
-func (z *zkCluster) RemoveQueryNodeById(id string) (clustering.QueryNode, errors.Error) {
+func (z *zkCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to get connection to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
 	}
-	err := impl.conn.Delete("/"+z.Id()+"/"+id, 0)
+	err := impl.conn.Delete("/"+z.Name()+"/"+name, 0)
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
@@ -333,15 +322,15 @@ func (z *zkCluster) RemoveQueryNodeById(id string) (clustering.QueryNode, errors
 func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to get connection to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
 	}
 	qryNodes := []clustering.QueryNode{}
-	nodes, _, err := impl.conn.Children("/" + z.Id())
+	nodes, _, err := impl.conn.Children("/" + z.Name())
 	if err != nil {
 		return nil, errors.NewError(err, "")
 	}
 	for _, name := range nodes {
-		data, _, err := impl.conn.Get("/" + z.Id() + "/" + name)
+		data, _, err := impl.conn.Get("/" + z.Name() + "/" + name)
 		if err != nil {
 			return nil, errors.NewError(err, "")
 		}
@@ -355,46 +344,62 @@ func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	return qryNodes, nil
 }
 
+// zkQueryNodeConfig implements clustering.QueryNode
 type zkQueryNodeConfig struct {
-	configStore      clustering.ConfigurationStore `json:"-"`
-	dataStore        datastore.Datastore           `json:"-"`
-	acctStore        accounting.AccountingStore    `json:"-"`
-	ClusterName      string                        `json:"cluster_name"`
-	QueryNodeName    string                        `json:"name"`
-	QueryEndpointURL string                        `json:"query_endpoint"`
-	AdminEndpointURL string                        `json:"admin_endpoint"`
-	DatastoreURI     string                        `json:"datastore_uri"`
-	ConfigstoreURI   string                        `json:"configstore_uri"`
-	AccountingURI    string                        `json:"accountstore_uri"`
-	Vers             *zkVersion                    `json:"version"`
+	ClusterName      string                    `json:"cluster_name"`
+	QueryNodeName    string                    `json:"name"`
+	QueryEndpointURL string                    `json:"query_endpoint"`
+	AdminEndpointURL string                    `json:"admin_endpoint"`
+	ClusterRef       *zkCluster                `json:"-"`
+	StandaloneRef    *clustering.StdStandalone `json:"-"`
+	OptionsCL        *clustering.ClOptions     `json:"options"`
 }
 
-func newQueryNode(ClusterName string, Name string, VersionString string, queryEndpoint string, adminEndpoint string, cs clustering.ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) clustering.QueryNode {
+// Create a query node configuration
+func NewQueryNode(query_addr string,
+	stndln *clustering.StdStandalone,
+	opts *clustering.ClOptions) (clustering.QueryNode, errors.Error) {
+	ip_addr, err := externalIP()
+	if err != nil {
+		ip_addr = "127.0.0.1"
+	}
+	// Construct query node name from ip addr and http_addr. Assumption that this will be unique
+	queryName := ip_addr + query_addr
+	queryEndpoint := "http://" + queryName + "/query"
+	// TODO : protocol specification: how do we know it will be http?
+	adminEndpoint := "http://" + queryName + "/admin"
+	return makeZkQueryNodeConfig("", queryName, queryEndpoint, adminEndpoint, stndln, opts), nil
+}
+
+func makeZkQueryNodeConfig(ClusterName string,
+	Name string,
+	queryEndpoint string,
+	adminEndpoint string,
+	standalone *clustering.StdStandalone,
+	opts *clustering.ClOptions) clustering.QueryNode {
 	node := zkQueryNodeConfig{
-		configStore:      cs,
-		dataStore:        ds,
-		acctStore:        as,
 		ClusterName:      ClusterName,
 		QueryNodeName:    Name,
 		QueryEndpointURL: queryEndpoint,
 		AdminEndpointURL: adminEndpoint,
-		DatastoreURI:     ds.URL(),
-		ConfigstoreURI:   cs.URL(),
-		AccountingURI:    as.URL(),
-		Vers:             NewVersion(VersionString),
+		ClusterRef:       nil,
+		StandaloneRef:    standalone,
+		OptionsCL:        opts,
 	}
 	return &node
 }
 
+// zkQueryNodeConfig implements Stringer interface
 func (z *zkQueryNodeConfig) String() string {
 	return getJsonString(z)
 }
 
-func (z *zkQueryNodeConfig) ClusterId() string {
-	return z.ClusterName
+// zkQueryNodeConfig implements clustering.QueryNode interface
+func (z *zkQueryNodeConfig) Cluster() clustering.Cluster {
+	return z.ClusterRef
 }
 
-func (z *zkQueryNodeConfig) Id() string {
+func (z *zkQueryNodeConfig) Name() string {
 	return z.QueryNodeName
 }
 
@@ -406,30 +411,16 @@ func (z *zkQueryNodeConfig) ClusterEndpoint() string {
 	return z.AdminEndpointURL
 }
 
-func (z *zkQueryNodeConfig) Version() clustering.Version {
-	return z.Vers
+func (z *zkQueryNodeConfig) Standalone() clustering.Standalone {
+	return z.StandaloneRef
 }
 
-func (z *zkQueryNodeConfig) Mode() clustering.Mode {
-	if z.configStore == nil {
-		return clustering.STANDALONE
-	} else {
-		return clustering.CLUSTER
-	}
+func (z *zkQueryNodeConfig) Options() clustering.QueryNodeOptions {
+	return z.OptionsCL
 }
 
-func (z *zkQueryNodeConfig) Datastore() datastore.Datastore {
-	return z.dataStore
-}
-
-func (z *zkQueryNodeConfig) AccountingStore() accounting.AccountingStore {
-	return z.acctStore
-}
-
-func (z *zkQueryNodeConfig) ConfigurationStore() clustering.ConfigurationStore {
-	return z.configStore
-}
-
+// helper function to determine the external IP address of a query node -
+// used to create a name for the query node in NewQueryNode function.
 func externalIP() (string, errors.Error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {

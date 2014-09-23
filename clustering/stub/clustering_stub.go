@@ -14,8 +14,8 @@ Package clustering_stub provides a stubbed implementation of the clustering pack
 The Stubbed Configuration Store has one cluster, a Stubbed Cluster. This in turn has one
 Query Node, a stubbed Query Node.
 
-Hard coded names are used for Configuration Store Id and URL, Cluster Id and Name and
-Query Node Id, Name, Query Endpoint and Cluster Endpoint.
+Hard coded names are used for Configuration Store Id and URL, Cluster Name and
+Query Node Name, Query Endpoint and Cluster Endpoint.
 
 */
 package clustering_stub
@@ -62,20 +62,8 @@ func (ConfigurationStoreStub) URL() string {
 	return CONFIGURATION_STORE_STUB_URL
 }
 
-func (ConfigurationStoreStub) ClusterIds() ([]string, errors.Error) {
-	return []string{ClusterStub{}.Id()}, nil
-}
-
 func (ConfigurationStoreStub) ClusterNames() ([]string, errors.Error) {
 	return []string{ClusterStub{}.Name()}, nil
-}
-
-func (ConfigurationStoreStub) ClusterById(id string) (clustering.Cluster, errors.Error) {
-	cluster := ClusterStub{}
-	if id != cluster.Id() {
-		return nil, nil
-	}
-	return cluster, nil
 }
 
 func (ConfigurationStoreStub) ClusterByName(name string) (clustering.Cluster, errors.Error) {
@@ -102,21 +90,17 @@ func (ClusterStub) ConfigurationStoreId() string {
 	return ConfigurationStoreStub{}.Id()
 }
 
-func (ClusterStub) Id() string {
-	return CLUSTER_STUB_ID
-}
-
 func (ClusterStub) Name() string {
 	return CLUSTER_STUB_NAME
 }
 
-func (ClusterStub) QueryNodeIds() ([]string, errors.Error) {
-	return []string{QueryNodeStub{}.Id()}, nil
+func (ClusterStub) QueryNodeNames() ([]string, errors.Error) {
+	return []string{QueryNodeStub{}.Name()}, nil
 }
 
-func (ClusterStub) QueryNodeById(id string) (clustering.QueryNode, errors.Error) {
+func (ClusterStub) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	queryNode := QueryNodeStub{}
-	if id != queryNode.Id() {
+	if name != queryNode.Name() {
 		return nil, nil
 	}
 	return queryNode, nil
@@ -134,18 +118,41 @@ func (ClusterStub) ConfigurationStore() clustering.ConfigurationStore {
 	return ConfigurationStoreStub{}
 }
 
+func (ClusterStub) Version() clustering.Version {
+	return VersionStub{}
+}
+
 func (ClusterStub) ClusterManager() clustering.ClusterManager {
 	return ClusterManagerStub{}
+}
+
+// StandaloneStub is a stub implementation of clustering.Standalone
+type StandaloneStub struct{}
+
+func (StandaloneStub) Datastore() datastore.Datastore {
+	return nil
+}
+
+func (StandaloneStub) AccountingStore() accounting.AccountingStore {
+	return accounting_stub.AccountingStoreStub{}
+}
+
+func (StandaloneStub) ConfigurationStore() clustering.ConfigurationStore {
+	return ConfigurationStoreStub{}
+}
+
+func (StandaloneStub) Version() clustering.Version {
+	return VersionStub{}
 }
 
 // QueryNodeStub is a stub implementation of clustering.QueryNode
 type QueryNodeStub struct{}
 
-func (QueryNodeStub) ClusterId() string {
-	return CLUSTER_STUB_ID
+func (QueryNodeStub) Cluster() clustering.Cluster {
+	return ClusterStub{}
 }
 
-func (QueryNodeStub) Id() string {
+func (QueryNodeStub) Name() string {
 	return QUERY_NODE_STUB_ID
 }
 
@@ -157,24 +164,31 @@ func (QueryNodeStub) ClusterEndpoint() string {
 	return QUERY_NODE_STUB_CLUSTER_ENDPOINT
 }
 
-func (QueryNodeStub) Version() clustering.Version {
-	return VersionStub{}
-}
-
-func (QueryNodeStub) Mode() clustering.Mode {
-	return clustering.STUB
-}
-
-func (QueryNodeStub) Datastore() datastore.Datastore {
+func (QueryNodeStub) Standalone() clustering.Standalone {
 	return nil
 }
 
-func (QueryNodeStub) AccountingStore() accounting.AccountingStore {
-	return accounting_stub.AccountingStoreStub{}
+func (QueryNodeStub) Options() clustering.QueryNodeOptions {
+	return OptionsStub{}
 }
 
-func (QueryNodeStub) ConfigurationStore() clustering.ConfigurationStore {
-	return ConfigurationStoreStub{}
+// OptionsStub is a stub implementation of clustering.QueryNodeOptions
+type OptionsStub struct{}
+
+func (OptionsStub) Datastore() string {
+	return ""
+}
+
+func (OptionsStub) Logger() string {
+	return ""
+}
+
+func (OptionsStub) Debug() bool {
+	return false
+}
+
+func (OptionsStub) Cluster() string {
+	return ClusterStub{}.Name()
 }
 
 // ConfigurationManagerStub is a stub implementation of clustering.ConfigurationManager
@@ -188,15 +202,11 @@ func (ConfigurationManagerStub) AddCluster(c clustering.Cluster) (clustering.Clu
 	return ClusterStub{}, nil
 }
 
-func (ConfigurationManagerStub) CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.Cluster, errors.Error) {
-	return ClusterStub{}, nil
-}
-
 func (ConfigurationManagerStub) RemoveCluster(c clustering.Cluster) (bool, errors.Error) {
 	return false, nil
 }
 
-func (ConfigurationManagerStub) RemoveClusterById(id string) (bool, errors.Error) {
+func (ConfigurationManagerStub) RemoveClusterByName(name string) (bool, errors.Error) {
 	return false, nil
 }
 
@@ -215,15 +225,11 @@ func (ClusterManagerStub) AddQueryNode(n clustering.QueryNode) (clustering.Query
 	return QueryNodeStub{}, nil
 }
 
-func (ClusterManagerStub) CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (clustering.QueryNode, errors.Error) {
-	return QueryNodeStub{}, nil
-}
-
 func (ClusterManagerStub) RemoveQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
 	return QueryNodeStub{}, nil
 }
 
-func (ClusterManagerStub) RemoveQueryNodeById(id string) (clustering.QueryNode, errors.Error) {
+func (ClusterManagerStub) RemoveQueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	return QueryNodeStub{}, nil
 }
 

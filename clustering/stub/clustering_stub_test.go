@@ -18,7 +18,7 @@ import (
 func TestStub(t *testing.T) {
 	cs, _ := NewConfigurationStore()
 
-	c, _ := cs.ClusterById("cluster_id")
+	c, _ := cs.ClusterByName("cluster_id")
 	if c != nil {
 		t.Errorf("Expected nil cluster")
 	}
@@ -37,21 +37,21 @@ func TestStub(t *testing.T) {
 		t.Errorf("Cluster does not have expected configuration store ID")
 	}
 
-	qnames, _ := c.QueryNodeIds()
+	qnames, _ := c.QueryNodeNames()
 	if len(qnames) != 1 {
 		t.Errorf("Expected length of Query Node names to be one")
 	}
 
-	q, _ := c.QueryNodeById(qnames[0])
+	q, _ := c.QueryNodeByName(qnames[0])
 	if q == nil {
-		t.Errorf("Expected to retrieve Query Node using Id from QueryNodeIds()")
+		t.Errorf("Expected to retrieve Query Node using name from QueryNodeNames()")
 	}
 
-	if q.ClusterId() != c.Id() {
-		t.Errorf("Unexpected cluster id in Query Node: %v", q.ClusterId())
+	if q.Cluster().Name() != c.Name() {
+		t.Errorf("Unexpected cluster name in Query Node: %v", q.Cluster().Name())
 	}
 
-	as := q.AccountingStore()
+	as := q.Cluster().AccountingStore()
 
 	if as.Id() != c.AccountingStore().Id() {
 		t.Errorf("Unexpected Accounting store id in Query Node: %v", as.Id())

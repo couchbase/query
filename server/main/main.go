@@ -49,7 +49,6 @@ var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "golog", "Logger implementation")
 var LOG_KEYS = flag.String("log", "", "Log keywords, comma separated")
 var DEV_MODE = flag.Bool("dev", false, "Developer Mode")
-var ADMIN_ADDR = flag.String("admin", ":9093", "HTTP admin service address")
 
 var devModeDefaultLogKeys = []string{querylog.HTTP, querylog.SCAN, querylog.OPTIMIZER,
 	querylog.PLANNER, querylog.PARSER, querylog.COMPILER, querylog.PIPELINE,
@@ -62,7 +61,7 @@ func main() {
 
 	lw, _ = log_resolver.NewLogger(*LOGGER)
 	if lw == nil {
-		fmt.Sprintf("Unable initialize default logger")
+		fmt.Sprintf("Unable to initialize default logger")
 	}
 
 	if *DEV_MODE {
@@ -84,7 +83,7 @@ func main() {
 		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
 	}
-
+	// TODO: rename cfg_resolver
 	configstore, err := cfg_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
 		lw.Errorf("Could not connect to config store: %v", err)
@@ -102,9 +101,10 @@ func main() {
 		lw.Errorf("Error starting cbq-engine: %v", err)
 		return
 	}
-	clusterConfig, err := configstore.ConfigurationManager().CreateCluster(*CLUSTER, datastore, acctstore)
+	clusterConfig, err := cfg_resolver.NewClusterConfig(*CONFIGSTORE, VERSION, datastore, acctstore, configstore)
 	lw.Infof("cluster config: %s", clusterConfig)
-	queryNodeConfig, err := clusterConfig.ClusterManager().CreateQueryNode(VERSION, *HTTP_ADDR, datastore, acctstore)
+	// TODO: create and populate opts
+	queryNodeConfig, err := cfg_resolver.NewQueryNodeConfig(*CONFIGSTORE, VERSION, *HTTP_ADDR, opts, datastore, acctstore, configstore)
 	lw.Infof("query node config: %s", queryNodeConfig)
 
 	if *CREATE_CLUSTER && configstore != nil { // TODO: "configstore != nil" is code for "connected to configstore". Encapsulate this.

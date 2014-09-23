@@ -32,9 +32,12 @@ import (
 type Mode string // A Query Node runs in a particular Mode
 
 const (
-	STANDALONE Mode = "standalone" // Query Node is running by itself, it is not part of a cluster
-	CLUSTER    Mode = "cluster"    // Query Node is part of a cluster (could be a single node cluster)
-	STUB       Mode = "stubbed"    // Query Node is a stub
+	STARTING     Mode = "starting"     // Query Node is starting up
+	STANDALONE   Mode = "standalone"   // Query Node is running by itself, it is not part of a cluster
+	CLUSTERED    Mode = "clustered"    // Query Node is part of a cluster (could be a single node cluster)
+	UNCLUSTERED  Mode = "unclustered"  // Query Node is not part of a cluster. Can serve queries
+	DISCONNECTED Mode = "disconnected" // Query Node is disconnected from datastore. It cannot serve queries
+	STOPPING     Mode = "stopping"     // Query Node is in the process of shutting down
 )
 
 // Version provides a abstraction of logical software version for Query Nodes;
@@ -48,9 +51,7 @@ type Version interface {
 type ConfigurationStore interface {
 	Id() string                                        // Id of this ConfigurationStore
 	URL() string                                       // URL to this ConfigurationStore
-	ClusterIds() ([]string, errors.Error)              // Ids of the Clusters in this ConfigurationStore
 	ClusterNames() ([]string, errors.Error)            // Names of the Clusters in this ConfigurationStore
-	ClusterById(id string) (Cluster, errors.Error)     // Find a Cluster in this ConfigurationStore using the Cluster's id
 	ClusterByName(name string) (Cluster, errors.Error) // Find a Cluster in this ConfigurationStore using the Cluster's name
 	ConfigurationManager() ConfigurationManager        // Get a ConfigurationManager for this ConfigurationStore
 }
@@ -58,28 +59,53 @@ type ConfigurationStore interface {
 // Cluster is a named collection of Query Nodes. It is basically a single-level namespace for one or more Query Nodes.
 // It also provides configuration common to all the Query Nodes in a cluster: Datastore, AccountingStore and ConfigurationStore.
 type Cluster interface {
-	ConfigurationStoreId() string                      // Id of the ConfigurationStore that contains this Cluster
-	Id() string                                        // Id of this Cluster (unique within the ConfigurationStore)
-	Name() string                                      // Name of this Cluster (unique within the ConfigurationStore)
-	QueryNodeIds() ([]string, errors.Error)            // Ids of all the Query Nodes in this Cluster
-	QueryNodeById(id string) (QueryNode, errors.Error) // Find a Query Node in this Cluster using the Query Node's id
-	Datastore() datastore.Datastore                    // The Datastore used by all Query Nodes in the cluster
-	AccountingStore() accounting.AccountingStore       // The AccountingStore used by all Query Nodes in the cluster
-	ConfigurationStore() ConfigurationStore            // The ConfigurationStore used by all Query Nodes in the cluster
-	ClusterManager() ClusterManager                    // Get a ClusterManager for this Cluster
+	ConfigurationStoreId() string                          // Id of the ConfigurationStore that contains this Cluster
+	Name() string                                          // Name of this Cluster (unique within the ConfigurationStore)
+	QueryNodeNames() ([]string, errors.Error)              // Names of all the Query Nodes in this Cluster
+	QueryNodeByName(name string) (QueryNode, errors.Error) // Find a Query Node in this Cluster using the Query Node's id
+	Datastore() datastore.Datastore                        // The Datastore used by all Query Nodes in the cluster
+	AccountingStore() accounting.AccountingStore           // The AccountingStore used by all Query Nodes in the cluster
+	ConfigurationStore() ConfigurationStore                // The ConfigurationStore used by all Query Nodes in the cluster
+	Version() Version                                      // Logical version of the software that the QueryNodes in the cluster are running
+	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
+}
+
+type Standalone interface {
+	Datastore() datastore.Datastore              // The Datastore used by all Query Nodes in the cluster
+	AccountingStore() accounting.AccountingStore // The AccountingStore used by all Query Nodes in the cluster
+	ConfigurationStore() ConfigurationStore      // The ConfigurationStore used by all Query Nodes in the cluster
+	Version() Version                            // Logical version of the software that the QueryNodes in the cluster are running
 }
 
 // QueryNode is the configuration for a single instance of a Query Engine.
 type QueryNode interface {
-	ClusterId() string                           // Id of the Cluster that this QueryNode belongs to
-	Id() string                                  // Id of this QueryNode (unique within the cluster)
-	QueryEndpoint() string                       // Endpoint for serving N1QL queries
-	ClusterEndpoint() string                     // Endpoint for serving cluster management commands
-	Version() Version                            // Logical version of the software that the QueryNode is running
-	Mode() Mode                                  // Running mode; this will be one of: standalone, cluster
-	Datastore() datastore.Datastore              // The Datastore used by this Query Node
-	AccountingStore() accounting.AccountingStore // The AccountingStore used by this Query Node
-	ConfigurationStore() ConfigurationStore      // The ConfigurationStore used by this Query Node
+	Cluster() Cluster          // The Cluster that this QueryNode belongs to
+	Name() string              // Name of this QueryNode (unique within the cluster)
+	QueryEndpoint() string     // Endpoint for serving N1QL queries
+	ClusterEndpoint() string   // Endpoint for serving cluster management commands
+	Standalone() Standalone    // The QueryNode's configuration when unclustered
+	Options() QueryNodeOptions // The command line options the query node was started with
+}
+
+type QueryNodeOptions interface {
+	Datastore() string       // Datastore address
+	Configstore() string     // Configstore address
+	Accountingstore() string // Accountingstore address
+	Namespace() string       //default namespace
+	Readonly() bool          // Read-only mode
+	Signature() bool         // Whether to provide Signature
+	Metrics() bool           // Whether to provide Metrics
+	RequestCap() int         // Max number of queued requests
+	Threads() int            // Thread count
+	OrderLimit() int         // Max LIMIT for ORDER BY clauses
+	UpdateLimit() int        // Max LIMIT for data modification statements
+	Http() string            // HTTP service address
+	Https() string           // HTTPS service address
+	Certfile() string        // HTTPS certificate file
+	Keyfile() string         // HTTPS private key file
+	Logger() string          // Name of Logger implementation
+	Debug() bool             // Debug mode
+	Cluster() string         // Name of the cluster to join
 }
 
 // ConfigurationManager is the interface for managing cluster lifecycles -
@@ -94,9 +120,6 @@ type ConfigurationManager interface {
 	// Returns updated Cluster if no error (Cluster is now part of the ConfigurationStore)
 	AddCluster(c Cluster) (Cluster, errors.Error)
 
-	// Create a cluster from the given parameters and add to the configuration store
-	CreateCluster(id string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (Cluster, errors.Error)
-
 	// Remove a cluster from the configuration
 	// Possible reasons for error:
 	//	- Cluster is not empty (contains one or more QueryNodes)
@@ -107,7 +130,7 @@ type ConfigurationManager interface {
 	// Possible reasons for error:
 	//	- Configuration does not have a cluster with the given id
 	//	- Cluster is not empty (contains one or more QueryNodes)
-	RemoveClusterById(id string) (bool, errors.Error)
+	RemoveClusterByName(name string) (bool, errors.Error)
 
 	// The clusters in the configuration
 	GetClusters() ([]Cluster, errors.Error)
@@ -129,9 +152,6 @@ type ClusterManager interface {
 	// Returns the updated QueryNode if no error (cluster mode, connected to Cluster)
 	AddQueryNode(n QueryNode) (QueryNode, errors.Error)
 
-	// Create a QueryNode from the given parameters and add to the Cluster
-	CreateQueryNode(version string, query_addr string, datastore datastore.Datastore, acctstore accounting.AccountingStore) (QueryNode, errors.Error)
-
 	// Remove the given QueryNode from the Cluster
 	// Possible reasons for error:
 	//	- Cluster does not contain the given QueryNode
@@ -143,8 +163,180 @@ type ClusterManager interface {
 	// Possible reasons for error:
 	//	-- Cluster does not contain a QueryNode with the given id
 	// Returns the updated QueryNode if no error (standalone mode, no cluster id)
-	RemoveQueryNodeById(id string) (QueryNode, errors.Error)
+	RemoveQueryNodeByName(name string) (QueryNode, errors.Error)
 
 	// Return the QueryNodes in the Cluster
 	GetQueryNodes() ([]QueryNode, errors.Error)
+}
+
+// Standard Version implementation - this can be used by all configstore implementations
+type StdVersion struct {
+	VersionString string
+}
+
+func NewVersion(version string) *StdVersion {
+	return &StdVersion{
+		VersionString: version,
+	}
+}
+
+func (st *StdVersion) String() string {
+	return st.VersionString
+}
+
+func (st *StdVersion) Compatible(v Version) bool {
+	return v.String() == st.String()
+}
+
+// Standard QueryNodeOptions implementation - this can be used by all configstore implementations
+type ClOptions struct {
+	DatastoreURL string `json:"datastore"`
+	CfgstoreURL  string `json:"configstore"`
+	AcctstoreURL string `json:"acctstore"`
+	NamespaceDef string `json:"namespace"`
+	ReadMode     bool   `json:"readonly"`
+	SignReqd     bool   `json:"readonly"`
+	MetricsReqd  bool   `json:"metrics"`
+	ReqCap       int    `json:"requestcap"`
+	NumThreads   int    `json:"threads"`
+	OrdLimit     int    `json:"orderlimit"`
+	UpdLimit     int    `json:"updatelimit"`
+	HttpAddr     string `json:"http"`
+	HttpsAddr    string `json:"https"`
+	LoggerImpl   string `json:"logger"`
+	DebugFlag    bool   `json:"debug"`
+	ClusterName  string `json:"cluster"`
+	CertFile     string `json:"certfile"`
+	KeyFile      string `json:"keyfile"`
+}
+
+func (c *ClOptions) Datastore() string {
+	return c.DatastoreURL
+}
+
+func (c *ClOptions) Logger() string {
+	return c.LoggerImpl
+}
+
+func (c *ClOptions) Debug() bool {
+	return c.DebugFlag
+}
+
+func (c *ClOptions) Cluster() string {
+	return c.ClusterName
+}
+
+func (c *ClOptions) Configstore() string {
+	return c.CfgstoreURL
+}
+
+func (c *ClOptions) Accountingstore() string {
+	return c.AcctstoreURL
+}
+
+func (c *ClOptions) Namespace() string {
+	return c.NamespaceDef
+}
+
+func (c *ClOptions) Readonly() bool {
+	return c.ReadMode
+}
+
+func (c *ClOptions) Signature() bool {
+	return c.SignReqd
+}
+
+func (c *ClOptions) Metrics() bool {
+	return c.MetricsReqd
+}
+
+func (c *ClOptions) RequestCap() int {
+	return c.ReqCap
+}
+
+func (c *ClOptions) Threads() int {
+	return c.NumThreads
+}
+
+func (c *ClOptions) OrderLimit() int {
+	return c.OrdLimit
+}
+
+func (c *ClOptions) UpdateLimit() int {
+	return c.UpdLimit
+}
+
+func (c *ClOptions) Http() string {
+	return c.HttpAddr
+}
+
+func (c *ClOptions) Https() string {
+	return c.HttpsAddr
+}
+
+func (c *ClOptions) Certfile() string {
+	return c.CertFile
+}
+
+func (c *ClOptions) Keyfile() string {
+	return c.KeyFile
+}
+
+func NewOptions(datastoreURL string, cfgstoreURL string, acctstoreURL string, namespace string,
+	readOnly bool, signature bool, metrics bool, reqCap int, threads int, ordLim int, updLim int,
+	http string, https string, loggerImpl string, debugFlag bool, clustName string, certFile string,
+	keyFile string) *ClOptions {
+	return &ClOptions{
+		DatastoreURL: datastoreURL,
+		CfgstoreURL:  cfgstoreURL,
+		AcctstoreURL: acctstoreURL,
+		NamespaceDef: namespace,
+		ReadMode:     readOnly,
+		SignReqd:     signature,
+		MetricsReqd:  metrics,
+		ReqCap:       reqCap,
+		NumThreads:   threads,
+		OrdLimit:     ordLim,
+		UpdLimit:     updLim,
+		HttpAddr:     http,
+		HttpsAddr:    https,
+		LoggerImpl:   loggerImpl,
+		DebugFlag:    debugFlag,
+		ClusterName:  clustName,
+		CertFile:     certFile,
+		KeyFile:      keyFile,
+	}
+}
+
+// Standard Standalone implementation - this can be used by all configstore implementations
+type StdStandalone struct {
+	configStore ConfigurationStore         `json:"-"`
+	dataStore   datastore.Datastore        `json:"-"`
+	acctStore   accounting.AccountingStore `json:"-"`
+	Vers        Version                    `json:"version"`
+}
+
+func NewStandalone(version Version, cs ConfigurationStore, ds datastore.Datastore, as accounting.AccountingStore) *StdStandalone {
+	return &StdStandalone{
+		configStore: cs,
+		dataStore:   ds,
+		acctStore:   as,
+		Vers:        version,
+	}
+}
+
+func (st *StdStandalone) Datastore() datastore.Datastore {
+	return st.dataStore
+}
+
+func (st *StdStandalone) AccountingStore() accounting.AccountingStore {
+	return st.acctStore
+}
+
+func (st *StdStandalone) ConfigurationStore() ConfigurationStore {
+	return st.configStore
+}
+
+func (st *StdStandalone) Version() Version {
+	return st.Vers
 }

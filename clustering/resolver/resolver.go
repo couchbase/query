@@ -13,9 +13,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/clustering/stub"
 	"github.com/couchbaselabs/query/clustering/zookeeper"
+	"github.com/couchbaselabs/query/datastore"
 
 	"github.com/couchbaselabs/query/errors"
 )
@@ -27,6 +29,38 @@ func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {
 
 	if strings.HasPrefix(uri, "stub:") {
 		return clustering_stub.NewConfigurationStore()
+	}
+
+	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
+}
+
+func NewClusterConfig(uri string,
+	clusterName string,
+	version string,
+	datastore datastore.Datastore,
+	acctstore accounting.AccountingStore,
+	cfgstore clustering.ConfigurationStore) (clustering.Cluster, errors.Error) {
+
+	if strings.HasPrefix(uri, "zookeeper:") {
+		v := clustering.NewVersion(version)
+		return clustering_zk.NewCluster(clusterName, v, cfgstore, datastore, acctstore)
+	}
+
+	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
+}
+
+func NewQueryNodeConfig(uri string,
+	version string,
+	httpAddr string,
+	opts clustering.ClOptions,
+	datastore datastore.Datastore,
+	acctstore accounting.AccountingStore,
+	cfgstore clustering.ConfigurationStore) (clustering.QueryNode, errors.Error) {
+
+	if strings.HasPrefix(uri, "zookeeper:") {
+		v := clustering.NewVersion(version)
+		s := clustering.NewStandalone(v, cfgstore, datastore, acctstore)
+		return clustering_zk.NewQueryNode(httpAddr, s, opts)
 	}
 
 	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))

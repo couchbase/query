@@ -11,9 +11,11 @@ package clustering_zk
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/couchbaselabs/query/accounting/stub"
+	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore/mock"
 )
 
@@ -21,8 +23,12 @@ func TestZKClustering(t *testing.T) {
 	cs, err := NewConfigstore("localhost:2181")
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
-	version := "0.7.0"
-	version2 := "0.7.9"
+	version := clustering.NewVersion("0.7.0")
+	version2 := clustering.NewVersion("0.7.9")
+	stdCfg := clustering.NewStandalone(version, cs, ds, as)
+	stdCfg2 := clustering.NewStandalone(version2, cs, ds, as)
+	stdOpts := clustering.NewOptions(ds.URL(), cs.URL(), as.URL(), "default", false, false, true,
+		runtime.NumCPU()<<16, runtime.NumCPU()<<6, 0, 0, ":8093", ":8094", "", false, "cluster1", "", "")
 
 	if err != nil {
 		t.Errorf("Error creating configstore: ", err)
@@ -31,7 +37,7 @@ func TestZKClustering(t *testing.T) {
 
 	cfm := cs.ConfigurationManager()
 
-	cluster1, _ := cfm.CreateCluster("cluster1", ds, as)
+	cluster1, _ := NewCluster("cluster1", version, cs, ds, as)
 
 	fmt.Printf("Creating cluster %v\n\n", cluster1)
 
@@ -48,7 +54,7 @@ func TestZKClustering(t *testing.T) {
 
 	fmt.Printf("Retrieved cluster: %v\n\n", cluster1check)
 
-	qn, err_qn := cluster1check.QueryNodeById("qryNode")
+	qn, err_qn := cluster1check.QueryNodeByName("qryNode")
 	if err_qn == nil {
 		t.Errorf("Expected error getting query node: ", qn)
 	}
@@ -58,28 +64,28 @@ func TestZKClustering(t *testing.T) {
 
 	clusterMgr := cluster1check.ClusterManager()
 
-	queryNode, _ := clusterMgr.CreateQueryNode(version, ":8093", ds, as)
+	queryNode, _ := NewQueryNode(":8093", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, _ = clusterMgr.CreateQueryNode(version, ":8094", ds, as)
+	queryNode, _ = NewQueryNode(":8094", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, _ = clusterMgr.CreateQueryNode(version, ":8095", ds, as)
+	queryNode, _ = NewQueryNode(":8095", stdCfg, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn != nil {
 		t.Errorf("Unexpected error adding query node: ", err_qn)
 	}
 	fmt.Printf("Added query node %v to cluster %v\n\n", queryNode, cluster1)
 
-	queryNode, _ = clusterMgr.CreateQueryNode(version2, ":8095", ds, as)
+	queryNode, _ = NewQueryNode(":8095", stdCfg2, stdOpts)
 	queryNode, err_qn = clusterMgr.AddQueryNode(queryNode)
 	if err_qn == nil {
 		t.Errorf("Expected error adding query node: version incompatibility")
@@ -103,12 +109,12 @@ func TestZKClustering(t *testing.T) {
 	}
 
 	for _, qNode := range qryNodes {
-		qNode, errT = clusterMgr.RemoveQueryNodeById(qNode.Id())
+		qNode, errT = clusterMgr.RemoveQueryNodeByName(qNode.Name())
 		if errT != nil {
 			t.Errorf("Unexpected error removing query node: ", errT)
 		}
 	}
-	r, err := cfm.RemoveClusterById(cluster1check.Id())
+	r, err := cfm.RemoveClusterByName(cluster1check.Name())
 	if err != nil {
 		t.Errorf("Unexpected error removing cluster: ", err)
 	}
