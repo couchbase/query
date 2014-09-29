@@ -19,3 +19,4 @@ This document provides links to external design documents; links are provided un
 
 * [Command Line Shell Survey](http://goo.gl/ZStXN7) - a survey of open source command line shells; identifies features and functionality
 * [Command Line Shell Architecture Summary](http://goo.gl/SFwRWq) - describes workings of open source command line shells; identifies best practices in design and functionality
+* [Command Line Shell Design](http://goo.gl/zvlTKY) - design guide for N1QL command line shell

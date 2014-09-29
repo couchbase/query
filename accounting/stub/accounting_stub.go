@@ -28,6 +28,10 @@ const (
 // AccountingStoreStub is a stub implementation of AccountingStore
 type AccountingStoreStub struct{}
 
+func NewAccountingStore(path string) (accounting.AccountingStore, errors.Error) {
+	return &AccountingStoreStub{}, nil
+}
+
 func (AccountingStoreStub) Id() string {
 	return ACCOUNTING_STORE_STUB_ID
 }
