@@ -23,12 +23,22 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/value"
 )
 
 const TEST_URL = "http://localhost:9000/"
 
 func TestServer(t *testing.T) {
+
+	logger, _ := resolver.NewLogger("golog")
+	if logger == nil {
+		fmt.Printf("Invalid logger: %s\n", "logger")
+		return
+	}
+
+	logging.SetLogger(logger)
 
 	site, err := NewDatastore(TEST_URL)
 

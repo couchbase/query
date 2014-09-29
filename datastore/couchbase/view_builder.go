@@ -289,6 +289,8 @@ func generateMap(bucketName string, on datastore.IndexKey, where expression.Expr
 	fmt.Fprint(buf, line)
 
 	doc.mapfn = buf.String()
+	// debug
+	//fmt.Printf(doc.mapfn)
 	return nil
 }
 
@@ -421,7 +423,7 @@ func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, 
 // inorder traversal of the where expression AST to get JS expression out of it
 func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) (expression.Expression, error) {
 
-	stringer := expression.NewStringer().Visit(e)
+	stringer := NewJSConvertor().Visit(e)
 	if stringer != "" {
 		stringer = strings.Replace(stringer, "`", "", -1)
 		// replace all instances of bucket-name with doc.bucket-name

@@ -204,6 +204,18 @@ func (p *namespace) refresh() {
 		p.site.client = client
 
 	}
+
+	// keyspaces in the pool
+	for name, _ := range p.keyspaceCache {
+		logging.Infof(" Checking keyspace %s", name)
+		_, err := p.cbNamespace.GetBucket(name)
+		if err != nil {
+			logging.Errorf(" Error retrieving bucket %d", name)
+			delete(p.keyspaceCache, name)
+
+		}
+	}
+
 	p.cbNamespace = newpool
 }
 
