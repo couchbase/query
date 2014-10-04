@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/clustering"
+	"github.com/couchbaselabs/query/clustering/couchbase"
 	"github.com/couchbaselabs/query/clustering/stub"
 	"github.com/couchbaselabs/query/clustering/zookeeper"
 	"github.com/couchbaselabs/query/datastore"
@@ -23,6 +24,10 @@ import (
 )
 
 func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {
+	if strings.HasPrefix(uri, "http:") {
+		return clustering_cb.NewConfigstore(uri)
+	}
+
 	if strings.HasPrefix(uri, "zookeeper:") {
 		return clustering_zk.NewConfigstore(uri)
 	}

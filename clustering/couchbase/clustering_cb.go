@@ -1,15 +1,19 @@
 package clustering_cb
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/logging"
 )
 
 const _PREFIX = "couchbase:"
@@ -25,9 +29,33 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(path, _PREFIX) {
 		path = path[len(_PREFIX):]
 	}
+	enable_ns_server_shutdown()
 	return &cbConfigStore{
 		adminUrl: path,
 	}, nil
+}
+
+// ns_server shutdown protocol: poll stdin and exit upon reciept of EOF
+func enable_ns_server_shutdown() {
+	go pollStdinForEOF()
+}
+
+func pollStdinForEOF() {
+	reader := bufio.NewReader(os.Stdin)
+	buf := make([]byte, 4)
+	logging.Infop("pollEOF: About to start stdin polling")
+	for {
+		_, err := reader.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				logging.Infop("Received EOF; Exiting...")
+				os.Exit(0)
+			}
+			logging.Errorp("Unexpected error polling stdin",
+				logging.Pair{"error", err},
+			)
+		}
+	}
 }
 
 // Implement Stringer interface
