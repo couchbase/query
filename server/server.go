@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/datastore/system"
 	"github.com/couchbaselabs/query/errors"
@@ -24,6 +25,7 @@ import (
 type Server struct {
 	datastore   datastore.Datastore
 	systemstore datastore.Datastore
+	configstore clustering.ConfigurationStore
 	namespace   string
 	readonly    bool
 	channel     RequestChannel
@@ -34,10 +36,12 @@ type Server struct {
 	once        sync.Once
 }
 
-func NewServer(store datastore.Datastore, namespace string, readonly bool, channel RequestChannel,
-	threadCount int, timeout time.Duration, signature, metrics bool) (*Server, errors.Error) {
+func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
+	namespace string, readonly bool, channel RequestChannel, threadCount int,
+	timeout time.Duration, signature, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
+		configstore: config,
 		namespace:   namespace,
 		readonly:    readonly,
 		channel:     channel,

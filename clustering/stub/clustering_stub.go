@@ -169,26 +169,7 @@ func (QueryNodeStub) Standalone() clustering.Standalone {
 }
 
 func (QueryNodeStub) Options() clustering.QueryNodeOptions {
-	return OptionsStub{}
-}
-
-// OptionsStub is a stub implementation of clustering.QueryNodeOptions
-type OptionsStub struct{}
-
-func (OptionsStub) Datastore() string {
-	return ""
-}
-
-func (OptionsStub) Logger() string {
-	return ""
-}
-
-func (OptionsStub) Debug() bool {
-	return false
-}
-
-func (OptionsStub) Cluster() string {
-	return ClusterStub{}.Name()
+	return &clustering.ClOptions{}
 }
 
 // ConfigurationManagerStub is a stub implementation of clustering.ConfigurationManager

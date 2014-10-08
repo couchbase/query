@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"time"
 
+	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
 	"github.com/couchbaselabs/query/datastore/resolver"
 	"github.com/couchbaselabs/query/logging"
 	log_resolver "github.com/couchbaselabs/query/logging/resolver"
@@ -26,6 +27,7 @@ import (
 var VERSION = "0.7.0" // Build-time overriddable.
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
+var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
@@ -68,8 +70,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
+	if err != nil {
+		logging.Errorp("Could not connect to configstore",
+			logging.Pair{"error", err},
+		)
+	}
+
 	channel := make(server.RequestChannel, *REQUEST_CAP)
-	server, err := server.NewServer(datastore, *NAMESPACE, *READONLY, channel,
+	server, err := server.NewServer(datastore, configstore, *NAMESPACE, *READONLY, channel,
 		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
 	if err != nil {
 		logging.Errorp(err.Error())

@@ -65,7 +65,7 @@ func NewQueryNodeConfig(uri string,
 	if strings.HasPrefix(uri, "zookeeper:") {
 		v := clustering.NewVersion(version)
 		s := clustering.NewStandalone(v, cfgstore, datastore, acctstore)
-		return clustering_zk.NewQueryNode(httpAddr, s, opts)
+		return clustering_zk.NewQueryNode(httpAddr, s, &opts)
 	}
 
 	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
