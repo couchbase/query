@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/stack"
+	stack "github.com/couchbaselabs/query/util"
 	"io"
 )
 
