@@ -12,9 +12,10 @@
 package couchbase
 
 import (
-	"fmt"
+	"encoding/json"
 	"sync"
 
+	"github.com/couchbase/indexing/secondary/collatejson"
 	"github.com/couchbase/indexing/secondary/protobuf"
 	"github.com/couchbase/indexing/secondary/queryport"
 	"github.com/couchbaselabs/query/datastore"
@@ -125,16 +126,9 @@ func (si *secondaryIndex) Statistics(
 		return nil, ErrorEmptyHost
 	}
 
-	var low, high []byte
-	if len(span.Range.Low) > 0 {
-		low = span.Range.Low[0].Bytes()
-	}
-	if len(span.Range.High) > 0 {
-		high = span.Range.High[0].Bytes()
-	}
-
-	inclusion := uint32(span.Range.Inclusion)
-	pstats, err := si.hostClient.Statistics(low, high, inclusion)
+	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
+	incl := uint32(span.Range.Inclusion)
+	pstats, err := si.hostClient.Statistics(low, high, incl)
 	if err != nil {
 		return nil, errors.NewError(nil, err.Error())
 	}
@@ -159,17 +153,11 @@ func (si *secondaryIndex) Scan(
 
 	defer close(entryChannel)
 
-	var low, high []byte
-	if len(span.Range.Low) > 0 {
-		low = span.Range.Low[0].Bytes()
-	}
-	if len(span.Range.High) > 0 {
-		high = span.Range.High[0].Bytes()
-	}
+	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
+	incl := uint32(span.Range.Inclusion)
 
-	inclusion := uint32(span.Range.Inclusion)
 	si.hostClient.Scan(
-		low, high, inclusion, QueryPortPageSize, distinct, limit,
+		low, high, incl, QueryPortPageSize, distinct, limit,
 		func(data interface{}) bool {
 			switch val := data.(type) {
 			case *protobuf.ResponseStream:
@@ -178,12 +166,15 @@ func (si *secondaryIndex) Scan(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					e := &datastore.IndexEntry{
-					// TODO: []bytes to implement value.Value{} interface.
-					// EntryKey: entry.GetEntryKey(),
-					// PrimaryKey: entry.GetPrimaryKey(),
+					key, id, err := json2Entry(entry.GetEntryKey())
+					if err != nil {
+						conn.Error(errors.NewError(nil, err.Error()))
+						return false
 					}
-					fmt.Println(entry)
+					e := &datastore.IndexEntry{
+						EntryKey:   value.Values(key),
+						PrimaryKey: id,
+					}
 					select {
 					case entryChannel <- e:
 					case <-stopChannel:
@@ -225,12 +216,15 @@ func (si *secondaryIndex) ScanEntries(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					e := &datastore.IndexEntry{
-					// TODO: []bytes to implement value.Value{} interface.
-					// EntryKey: entry.GetEntryKey(),
-					// PrimaryKey: entry.GetPrimaryKey(),
+					key, id, err := json2Entry(entry.GetEntryKey())
+					if err != nil {
+						conn.Error(errors.NewError(nil, err.Error()))
+						return false
 					}
-					fmt.Println(entry)
+					e := &datastore.IndexEntry{
+						EntryKey:   value.Values(key),
+						PrimaryKey: id,
+					}
 					select {
 					case entryChannel <- e:
 					case <-stopChannel:
@@ -335,4 +329,50 @@ func (stats *statistics) updateStats(pstats *protobuf.IndexStatistics) *statisti
 	stats.min = pstats.GetMin()
 	stats.max = pstats.GetMax()
 	return stats
+}
+
+// shape of key passed to scan-coordinator (indexer node) is,
+//      [key1, key2, ... keyN]
+// where N expressions supplied in CREATE INDEX
+// to evaluate secondary-key.
+func keys2JSON(arg value.Values) []byte {
+	if arg == nil {
+		return nil
+	}
+	values := []value.Value(arg)
+	arr := value.NewValue(make([]interface{}, len(values)))
+	for i, val := range values {
+		arr.SetIndex(i, val)
+	}
+	return arr.Bytes()
+}
+
+// shape of return key from scan-coordinatory is,
+//      [key1, key2, ... keyN]
+// where N keys where evaluated using N expressions supplied in
+// CREATE INDEX.
+//
+// * Each key will be unmarshalled using json and composed into
+//   value.Value{}.
+// * Missing key will be composed using NewMissingValue(), btw,
+//   `key1` will never be missing.
+func json2Entry(data []byte) ([]value.Value, string, error) {
+	arr := []interface{}{}
+	err := json.Unmarshal(data, &arr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// skip docid from [key1, key2, ... keyN, docid]
+	key := make([]value.Value, len(arr)-1)
+	for i := 0; i < len(arr)-1; i++ {
+		if s, ok := arr[i].(string); ok && collatejson.MissingLiteral.Equal(s) {
+			key[i] = value.NewMissingValue()
+		} else {
+			key[i] = value.NewValue(arr[i])
+		}
+	}
+	// Extract the docid from [key1, key2, ... keyN, docid]
+	id := string(arr[len(arr)-1].(string))
+	return key, id, nil
 }
