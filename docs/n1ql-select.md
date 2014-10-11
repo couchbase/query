@@ -2367,6 +2367,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Replace pool-name with namespace
 * 2014-10-11 - Construction
     * Move object and array construction from literals to expressions
+* 2014-10-11 - Set operators
+    * Document INTERSECT and EXCEPT
 
 ### Open issues
 
