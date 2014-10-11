@@ -737,9 +737,9 @@ _expr:_
 
 ![](diagram/expr.png)
 
-### Literal value
+### Literals
 
-The specification for literal values can be found in Appendix.
+The specification for literals can be found in an Appendix.
 
 ### Identifier
 
@@ -1013,6 +1013,39 @@ _first-expr:_
 
 ![](diagram/first-expr.png)
 
+### Construction
+
+Objects and arrays can be constructed with arbitrary structure,
+nesting, and embedded expressions.
+
+_construction-expr:_
+
+![](diagram/construction-expr.png)
+
+#### Objects
+
+_object:_
+
+![](diagram/object.png)
+
+_members:_
+
+![](diagram/members.png)
+
+_pair:_
+
+![](diagram/pair.png)
+
+#### Arrays
+
+_array:_
+
+![](diagram/array.png)
+
+_elements:_
+
+![](diagram/elements.png)
+
 ## Boolean interpretation
 
 Some contexts require values to be interpreted as booleans. For
@@ -1228,40 +1261,18 @@ operators:
     </tr>
 </table>
 
-## Appendix - Literal JSON values
+## Appendix - Literals
 
 The following rules are the same as defined by
-[json.org](http://json.org/) with two changes:
+[json.org](http://json.org/) with one change:
 
-1. In standard JSON arrays and objects only contain nested values.  In
-   N1QL, literal arrays and objects can contain nested expressions.
 1. In standard JSON "true", "false" and "null" are case-sensitive.  In
    N1QL, to be consistent with other keywords, they are defined to be
    case-insensitive.
 
-_literal-value:_
+_literal:_
 
-![](diagram/literal-value.png)
-
-_object:_
-
-![](diagram/object.png)
-
-_members:_
-
-![](diagram/members.png)
-
-_pair:_
-
-![](diagram/pair.png)
-
-_array:_
-
-![](diagram/array.png)
-
-_elements:_
-
-![](diagram/elements.png)
+![](diagram/literal.png)
 
 _string:_
 
@@ -2338,6 +2349,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * SELECT ELEMENT
     * FLATTEN
     * Replace pool-name with namespace
+* 2014-10-11 - Construction
+    * Move object and array construction from literals to expressions
 
 ### Open issues
 

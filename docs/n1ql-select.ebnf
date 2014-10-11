@@ -70,7 +70,7 @@ offset-clause ::= 'OFFSET' expr
 /*
  *  expressions
  */
-expr ::= literal-value | identifier | nested-expr | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | function-call | subquery-expr | collection-expr | '(' expr ')'
+expr ::= literal | identifier | nested-expr | case-expr | logical-term | comparison-term | arithmetic-term | concatenation-term | function-call | subquery-expr | collection-expr | construction-expr | '(' expr ')'
 logical-term ::= cond 'AND' cond | cond 'OR' cond | 'NOT' cond
 case-expr ::= simple-case-expr | searched-case-expr
 simple-case-expr ::= 'CASE' expr ('WHEN' expr 'THEN' expr)+ ('ELSE' expr)? 'END'
@@ -101,6 +101,16 @@ first-expr ::= 'FIRST' expr 'FOR' variable ('IN' | 'WITHIN') expr (',' variable 
 variable ::= identifier
 
 /*
+ *  construction
+ */
+construction-expr ::= object | array
+object ::= '{' members? '}'
+members ::= pair (',' members)?
+pair ::= string ':' expr
+array ::= '[' elements? ']'
+elements ::= expr (',' elements)?
+
+/*
  *  identifiers
  */
 identifier ::= unescaped-identifier | escaped-identifier
@@ -108,18 +118,9 @@ unescaped-identifier ::= [a-zA-Z_]  ( [0-9a-zA-Z_$] )*
 escaped-identifier ::= '`' chars '`'
 
 /*
- *  literal JSON (with nested expressions instead of values)
+ *  literals
  */
-literal-value ::= string | number | object | array | 'TRUE' | 'FALSE' | 'NULL'
-object ::= '{' members? '}'
-members ::= pair (',' members)?
-pair ::= string ':' expr
-array ::= '[' elements? ']'
-elements ::= expr (',' elements)?
-
-/**
- *  low level
- **/
+literal ::= string | number | 'TRUE' | 'FALSE' | 'NULL'
 string ::= '"' chars? '"'
 chars ::= char chars?
 char ::= unicode-character | '\' ('\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' hex-digit hex-digit hex-digit hex-digit )
