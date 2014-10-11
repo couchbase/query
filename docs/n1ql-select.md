@@ -26,6 +26,10 @@ _select:_
 
 ![](diagram/select.png)
 
+_set-op:_
+
+![](diagram/set-op.png)
+
 In N1QL, SELECT statements can begin with either SELECT or FROM. The
 behavior is the same in either case.
 
@@ -73,13 +77,13 @@ _from-path:_
 
 ![](diagram/from-path.png)
 
-_pool-name:_
+_namespace:_
 
-![](diagram/pool-name.png)
+![](diagram/namespace.png)
 
-_keys-clause:_
+_use-keys-clause:_
 
-![](diagram/keys-clause.png)
+![](diagram/use-keys-clause.png)
 
 _join-clause:_
 
@@ -88,6 +92,10 @@ _join-clause:_
 _join-type:_
 
 ![](diagram/join-type.png)
+
+_on-keys-clause:_
+
+![](diagram/on-keys-clause.png)
 
 _nest-clause:_
 

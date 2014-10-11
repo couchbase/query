@@ -5,7 +5,8 @@
 /*
  *  select statement
  */
-select ::= subselect (('UNION' | 'INTERSECT' | 'EXCEPT') 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
+select ::= subselect (set-op 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
+set-op ::= 'UNION' | 'INTERSECT' | 'EXCEPT'
 subselect ::= select-from | from-select
 select-from ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
 from-select ::= from-clause let-clause? where-clause? group-by-clause? select-clause
@@ -13,23 +14,24 @@ from-select ::= from-clause let-clause? where-clause? group-by-clause? select-cl
 /*
  *  select clause
  */
-select-clause ::= 'SELECT' ((('ALL' | 'DISTINCT')? result-expr (',' result-expr)*) | 'RAW' expr)
+select-clause ::= 'SELECT' ((('ALL' | 'DISTINCT')? result-expr (',' result-expr)*) | ('RAW' | 'ELEMENT') expr)
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
-path ::= identifier ('[' int ']')? ('.' path)?
+path ::= identifier ('[' expr ']')? ('.' path)?
 alias ::= identifier
 
 /*
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-path ('AS'? alias)? keys-clause? | from-term join-clause | from-term nest-clause | from-term unnest-clause
-from-path ::= (pool-name ':')? path
-pool-name ::= identifier
-keys-clause ::= 'KEYS' expr
-join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? keys-clause
+from-term ::= from-path ('AS'? alias)? use-keys-clause? | from-term join-clause | from-term nest-clause | from-term unnest-clause
+from-path ::= (namespace ':')? path
+namespace ::= identifier
+use-keys-clause ::= 'USE' 'PRIMARY'? 'KEYS' expr
+join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? on-keys-clause
 join-type ::= 'INNER' | 'LEFT' 'OUTER'?
-nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? keys-clause
-unnest-clause ::= join-type? 'UNNEST' expr ('AS'? alias)?
+on-keys-clause ::= 'ON' 'PRIMARY'? 'KEYS' expr
+nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? on-keys-clause
+unnest-clause ::= join-type? ('UNNEST' | 'FLATTEN') expr ('AS'? alias)?
 
 /*
  *  let clause
