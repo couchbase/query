@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-09-06
+* Modified: 2014-10-11
 
 ## Introduction
 
@@ -2331,6 +2331,13 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Added INCLUDE and EXCLUDE as reserved words
 * 2014-09-06 - Reserved words
     * Added VALUE as a reserved word
+* 2014-10-11 - Syntax and SQL++
+    * Incorporate SQL++ discussions with Prof. Yannis
+    * USE [ PRIMARY ] KEYS
+    * ON [ PRIMARY ] KEYS
+    * SELECT ELEMENT
+    * FLATTEN
+    * Replace pool-name with namespace
 
 ### Open issues
 
