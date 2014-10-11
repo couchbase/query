@@ -135,14 +135,30 @@ _having-clause:_
 
 ![](diagram/having-clause.png)
 
-### UNION [ ALL ]
+### UNION, INTERSECT, and EXCEPT
 
-UNION and UNION ALL are used to combine results from multiple
+_set-op:_
+
+![](diagram/set-op.png)
+
+UNION, INTERSECT, and EXCEPT are used to combine results from multiple
 sub-selects.
 
-UNION returns distinct results, such that there are no duplicates.
+UNION returns values from the first sub-select and from the second
+sub-select.
 
-UNION ALL combines all the results, including any duplicates.
+INTERSECT returns values from the first sub-select that are
+__present__ in the second sub-select.
+
+EXCEPT returns values from the first sub-select that are __absent__
+from the second sub-select.
+
+UNION, INTERSECT, and EXCEPT return distinct results, such that there
+are no duplicates.
+
+UNION ALL, INTERSECT ALL, and EXCEPT ALL return all applicable values,
+including duplicates. These forms are faster, because they do not
+compute distinct results.
 
 ### ORDER BY clause
 
