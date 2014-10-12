@@ -30,13 +30,13 @@ N1QL provides several data modification statements.
 
 ![](diagram/insert.png)
 
-*bucket-ref:*
+*keyspace-ref:*
 
-![](diagram/bucket-ref.png)
+![](diagram/keyspace-ref.png)
 
-*bucket-name:*
+*keyspace:*
 
-![](diagram/bucket-name.png)
+![](diagram/keyspace.png)
 
 *key-clause:*
 
@@ -126,7 +126,7 @@ N1QL provides several data modification statements.
 
 ## TRUNCATE
 
-TRUNCATE deletes all the documents in a bucket. It cannot be rolled
+TRUNCATE deletes all the documents in a keyspace. It cannot be rolled
 back, and it cannot be called within or participate in transactions.
 
 *truncate:*
@@ -135,11 +135,11 @@ back, and it cannot be called within or participate in transactions.
 
 **NOTE:** Because we are distributed and support XDCR, TRUNCATE would
 need to work correctly and efficiently across partitions and across
-data centers, even as data flows into the bucket.
+data centers, even as data flows into the keyspace.
 
-One possibility is to first broadcast a BUCKET CLEAR message that
-causes the bucket to stop accepting new mutations and to be empty for
-new queries. Once the BUCKET CLEAR is coordinated, the final TRUNCATE
+One possibility is to first broadcast a KEYSPACE CLEAR message that
+causes the keyspace to stop accepting new mutations and to be empty for
+new queries. Once the KEYSPACE CLEAR is coordinated, the final TRUNCATE
 can be completed (while completing already-started queries).
 
 We may postpone TRUNCATE if the implementation makes it expedient to
@@ -268,6 +268,7 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2014-10-11 - Syntax
     * Simplify MERGE
     * Change KEYS to USE [ PRIMARY ] KEYS
+    * Rename BUCKET to KEYSPACE
 
 ### Open Issues
 

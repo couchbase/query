@@ -10,32 +10,32 @@ dml-stmt ::= insert | upsert | delete | update | merge
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' bucket-ref key-clause? (values-clause | select) returning-clause?
+insert ::= 'INSERT' 'INTO' keyspace-ref key-clause? (values-clause | select) returning-clause?
 
-bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
+keyspace-ref ::= (namespace ':')? keyspace ('AS'? alias)?
 
-bucket-name ::= identifier
+keyspace ::= identifier
 
 key-clause ::= 'PRIMARY'? 'KEY' expr
 
 values-clause ::= 'VALUES' expr
 
-returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | 'RAW' expr)
+returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
 
 /*
  *  upsert
  */
-upsert ::= 'UPSERT' 'INTO' bucket-ref key-clause (values-clause | select) returning-clause?
+upsert ::= 'UPSERT' 'INTO' keyspace-ref key-clause (values-clause | select) returning-clause?
 
 /*
  *  delete
  */
-delete ::= 'DELETE' 'FROM' bucket-ref use-keys-clause? where-clause? limit-clause? returning-clause?
+delete ::= 'DELETE' 'FROM' keyspace-ref use-keys-clause? where-clause? limit-clause? returning-clause?
 
 /*
  *  update
  */
-update ::= 'UPDATE' bucket-ref use-keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
+update ::= 'UPDATE' keyspace-ref use-keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
 
 set-clause ::= 'SET' path '=' expr update-for? (',' path '=' expr update-for?)*
 
@@ -46,7 +46,7 @@ unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
 /*
  *  merge
  */
-merge ::= 'MERGE' 'INTO' bucket-ref 'USING' merge-source 'ON' key-clause merge-actions limit-clause? returning-clause?
+merge ::= 'MERGE' 'INTO' keyspace-ref 'USING' merge-source 'ON' key-clause merge-actions limit-clause? returning-clause?
 
 merge-source ::= from-path ('AS'? alias)? | '(' select ')' 'AS'? alias
 
@@ -61,12 +61,12 @@ merge-insert ::= 'WHEN' 'NOT' 'MATCHED' 'THEN' 'INSERT' expr where-clause?
 /*
  *  truncate
  */
-truncate ::= 'TRUNCATE' 'BUCKET'? bucket-ref
+truncate ::= 'TRUNCATE' keyspace-ref
 
 /*
  *  select-for
  */
-select-for ::= select 'FOR' ('UPDATE' | 'SHARE') ('OF' bucket-ref (',' bucket-ref)*)?
+select-for ::= select 'FOR' ('UPDATE' | 'SHARE') ('OF' keyspace-ref (',' keyspace-ref)*)?
 
 /*
  *  transaction-stmt
