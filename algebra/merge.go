@@ -146,13 +146,12 @@ func (this *Merge) Returning() *Projection {
 }
 
 type MergeSource struct {
-	from   FromTerm              `json:"from"`
-	query  *Select               `json:"select"`
-	values expression.Expression `json:"values"`
-	as     string                `json:"as"`
+	from  *KeyspaceTerm `json:"from"`
+	query *Select       `json:"select"`
+	as    string        `json:"as"`
 }
 
-func NewMergeSourceFrom(from FromTerm, as string) *MergeSource {
+func NewMergeSourceFrom(from *KeyspaceTerm, as string) *MergeSource {
 	return &MergeSource{
 		from: from,
 		as:   as,
@@ -166,23 +165,12 @@ func NewMergeSourceSelect(query *Select, as string) *MergeSource {
 	}
 }
 
-func NewMergeSourceValues(values expression.Expression, as string) *MergeSource {
-	return &MergeSource{
-		values: values,
-		as:     as,
-	}
-}
-
 func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.query != nil {
 		err = this.query.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
-	}
-
-	if this.values != nil {
-		this.values, err = mapper.Map(this.values)
 	}
 
 	return
@@ -203,13 +191,6 @@ func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 		}
 	}
 
-	if this.values != nil {
-		this.values, err = NewFormalizer().Map(this.values)
-		if err != nil {
-			return
-		}
-	}
-
 	keyspace := this.Alias()
 	if keyspace == "" {
 		return nil, fmt.Errorf("MergeSource missing alias.")
@@ -221,16 +202,12 @@ func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 	return
 }
 
-func (this *MergeSource) From() FromTerm {
+func (this *MergeSource) From() *KeyspaceTerm {
 	return this.from
 }
 
 func (this *MergeSource) Select() *Select {
 	return this.query
-}
-
-func (this *MergeSource) Values() expression.Expression {
-	return this.values
 }
 
 func (this *MergeSource) As() string {

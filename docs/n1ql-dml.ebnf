@@ -16,7 +16,7 @@ bucket-ref ::= (pool-name ':')? bucket-name ('AS'? alias)?
 
 bucket-name ::= identifier
 
-key-clause ::= 'KEY' expr
+key-clause ::= 'PRIMARY'? 'KEY' expr
 
 values-clause ::= 'VALUES' expr
 
@@ -30,12 +30,12 @@ upsert ::= 'UPSERT' 'INTO' bucket-ref key-clause (values-clause | select) return
 /*
  *  delete
  */
-delete ::= 'DELETE' 'FROM' bucket-ref keys-clause? where-clause? limit-clause? returning-clause?
+delete ::= 'DELETE' 'FROM' bucket-ref use-keys-clause? where-clause? limit-clause? returning-clause?
 
 /*
  *  update
  */
-update ::= 'UPDATE' bucket-ref keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
+update ::= 'UPDATE' bucket-ref use-keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
 
 set-clause ::= 'SET' path '=' expr update-for? (',' path '=' expr update-for?)*
 
@@ -48,7 +48,7 @@ unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
  */
 merge ::= 'MERGE' 'INTO' bucket-ref 'USING' merge-source 'ON' key-clause merge-actions limit-clause? returning-clause?
 
-merge-source ::= from-path ('AS'? alias)? keys-clause? | '(' ( select | values-clause ) ')' 'AS'? alias
+merge-source ::= from-path ('AS'? alias)? | '(' select ')' 'AS'? alias
 
 merge-actions ::= merge-update? merge-delete? merge-insert?
 

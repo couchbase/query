@@ -91,12 +91,14 @@ indexType        datastore.IndexType
 %token DATASTORE
 %token DECLARE
 %token DELETE
+%token DERIVED
 %token DESC
 %token DESCRIBE
 %token DISTINCT
 %token DO
 %token DROP
 %token EACH
+%token ELEMENT
 %token ELSE
 %token END
 %token EVERY
@@ -107,6 +109,7 @@ indexType        datastore.IndexType
 %token EXPLAIN
 %token FALSE
 %token FIRST
+%token FLATTEN
 %token FOR
 %token FROM
 %token FUNCTION
@@ -134,6 +137,7 @@ indexType        datastore.IndexType
 %token LIKE
 %token LIMIT
 %token MAP
+%token MAPPING
 %token MATCHED
 %token MATERIALIZED
 %token MERGE
@@ -193,6 +197,7 @@ indexType        datastore.IndexType
 %token UNSET
 %token UPDATE
 %token UPSERT
+%token USE
 %token USER
 %token USING
 %token VALUE
@@ -215,7 +220,7 @@ indexType        datastore.IndexType
 /* Precedence: lowest to highest */
 %left           UNION EXCEPT
 %left           INTERSECT
-%left           JOIN NEST UNNEST INNER LEFT
+%left           JOIN NEST UNNEST FLATTEN INNER LEFT
 %left           OR
 %left           AND
 %right          NOT
@@ -273,11 +278,11 @@ indexType        datastore.IndexType
 %type <subselect>        select_from
 %type <subselect>        from_select
 %type <fromTerm>         from_term from opt_from
-%type <keyspaceTerm>     keyspace_term
+%type <keyspaceTerm>     keyspace_term join_term
 %type <b>                opt_join_type
 %type <path>             path opt_subpath
 %type <s>                namespace_name keyspace_name
-%type <expr>             keys opt_keys
+%type <expr>             use_keys opt_use_keys on_keys
 %type <bindings>         opt_let let
 %type <expr>             opt_where where
 %type <group>            opt_group group
@@ -483,15 +488,21 @@ ALL projects
     $$ = algebra.NewProjection(false, $2)
 }
 |
-RAW expr
+raw expr
 {
     $$ = algebra.NewRawProjection(false, $2)
 }
 |
-DISTINCT RAW expr
+DISTINCT raw expr
 {
     $$ = algebra.NewRawProjection(true, $3)
 }
+;
+
+raw:
+RAW
+|
+ELEMENT
 ;
 
 projects:
@@ -574,34 +585,57 @@ keyspace_term
     $$ = $1
 }
 |
-from_term opt_join_type JOIN keyspace_term
+from_term opt_join_type JOIN join_term
 {
     $$ = algebra.NewJoin($1, $2, $4)
 }
 |
-from_term opt_join_type NEST keyspace_term
+from_term opt_join_type NEST join_term
 {
     $$ = algebra.NewNest($1, $2, $4)
 }
 |
-from_term opt_join_type UNNEST expr opt_as_alias
+from_term opt_join_type unnest expr opt_as_alias
 {
     $$ = algebra.NewUnnest($1, $2, $4, $5)
 }
 ;
 
+unnest:
+UNNEST
+|
+FLATTEN
+;
+
 keyspace_term:
-keyspace_name opt_subpath opt_as_alias opt_keys
+keyspace_name opt_subpath opt_as_alias opt_use_keys
 {
     $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
 }
 |
-namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_keys
+namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
 {
     $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
 }
 |
-SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_keys
+SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
+{
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6)
+}
+;
+
+join_term:
+keyspace_name opt_subpath opt_as_alias on_keys
+{
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
+}
+|
+namespace_name COLON keyspace_name opt_subpath opt_as_alias on_keys
+{
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
+}
+|
+SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_keys
 {
     $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6)
 }
@@ -627,20 +661,28 @@ DOT path
 }
 ;
 
-opt_keys:
+opt_use_keys:
 /* empty */
 {
     $$ = nil
 }
 |
-keys
+use_keys
 ;
 
-keys:
-KEYS expr
+use_keys:
+USE opt_primary KEYS expr
 {
-    $$ = $2
+    $$ = $4
 }
+;
+
+opt_primary:
+/* empty */
+{
+}
+|
+PRIMARY
 ;
 
 opt_join_type:
@@ -664,6 +706,13 @@ opt_outer:
 /* empty */
 |
 OUTER
+;
+
+on_keys:
+ON opt_primary KEYS expr
+{
+    $$ = $4
+}
 ;
 
 
@@ -1016,7 +1065,7 @@ UPSERT INTO keyspace_ref key fullselect opt_returning
  *************************************************/
 
 delete:
-DELETE FROM keyspace_ref opt_keys opt_where opt_limit opt_returning
+DELETE FROM keyspace_ref opt_use_keys opt_where opt_limit opt_returning
 {
     $$ = algebra.NewDelete($3, $4, $5, $6, $7)
 }
@@ -1030,17 +1079,17 @@ DELETE FROM keyspace_ref opt_keys opt_where opt_limit opt_returning
  *************************************************/
 
 update:
-UPDATE keyspace_ref opt_keys set unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_keys set unset opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3, $4, $5, $6, $7, $8)
 }
 |
-UPDATE keyspace_ref opt_keys set opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_keys set opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3, $4, nil, $5, $6, $7)
 }
 |
-UPDATE keyspace_ref opt_keys unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use_keys unset opt_where opt_limit opt_returning
 {
     $$ = algebra.NewUpdate($2, $3, nil, $4, $5, $6, $7)
 }
@@ -1175,21 +1224,9 @@ MERGE INTO keyspace_ref USING keyspace_term ON key merge_actions opt_limit opt_r
     $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
 }
 |
-MERGE INTO keyspace_ref USING LPAREN from_term RPAREN as_alias ON key merge_actions opt_limit opt_returning
-{
-    source := algebra.NewMergeSourceFrom($6, $8)
-    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
-}
-|
 MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
 {
     source := algebra.NewMergeSourceSelect($6, $8)
-    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
-}
-|
-MERGE INTO keyspace_ref USING LPAREN values RPAREN as_alias ON key merge_actions opt_limit opt_returning
-{
-    source := algebra.NewMergeSourceValues($6, $8)
     $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
 }
 ;

@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-09-10
+* Modified: 2014-10-11
 
 ## Introduction
 
@@ -66,9 +66,9 @@ N1QL provides several data modification statements.
 
 ![](diagram/delete.png)
 
-*keys-clause:*
+*use-keys-clause:*
 
-![](diagram/keys-clause.png)
+![](diagram/use-keys-clause.png)
 
 *where-clause:*
 
@@ -265,6 +265,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Simiplify MERGE syntax: remove from-term.
 * 2014-09-10 - VALUES expr
     * Changed VALUES back to single expr
+* 2014-10-11 - Syntax
+    * Simplify MERGE
+    * Change KEYS to USE [ PRIMARY ] KEYS
 
 ### Open Issues
 

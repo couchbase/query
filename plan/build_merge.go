@@ -28,18 +28,16 @@ func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
 
 		children = append(children, sel.(Operator))
 	} else {
+		if source.From() == nil {
+			return nil, fmt.Errorf("MERGE missing source.")
+		}
+
 		this.children = children
 		this.subChildren = subChildren
 
-		if source.From() != nil {
-			_, err := source.From().Accept(this)
-			if err != nil {
-				return nil, err
-			}
-		} else if source.Values() != nil {
-			children = append(children, NewValueScan(source.Values()))
-		} else {
-			return nil, fmt.Errorf("MERGE missing source.")
+		_, err := source.From().Accept(this)
+		if err != nil {
+			return nil, err
 		}
 	}
 

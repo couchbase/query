@@ -98,12 +98,14 @@
 /[dD][aA][tT][aA][sS][tT][oO][rR][eE]/		 { logToken("DATASTORE"); return DATASTORE }
 /[dD][eE][cC][lL][aA][rR][eE]/			 { logToken("DECLARE"); return DECLARE }
 /[dD][eE][lL][eE][tT][eE]/			 { logToken("DELETE"); return DELETE }
+/[dD][eE][rR][iI][vV][eE][dD]/			 { logToken("DERIVED"); return DERIVED }
 /[dD][eE][sS][cC]/				 { logToken("DESC"); return DESC }
 /[dD][eE][sS][cC][rR][iI][bB][eE]/		 { logToken("DESCRIBE"); return DESCRIBE }
 /[dD][iI][sS][tT][iI][nN][cC][tT]/		 { logToken("DISTINCT"); return DISTINCT }
 /[dD][oO]/					 { logToken("DO"); return DO }
 /[dD][rR][oO][pP]/				 { logToken("DROP"); return DROP }
 /[eE][aA][cC][hH]/				 { logToken("EACH"); return EACH }
+/[eE][lL][eE][mM][eE][nN][tT]/			 { logToken("ELEMENT"); return ELEMENT }
 /[eE][lL][sS][eE]/				 { logToken("ELSE"); return ELSE }
 /[eE][nN][dD]/					 { logToken("END"); return END }
 /[eE][vV][eE][rR][yY]/				 { logToken("EVERY"); return EVERY }
@@ -114,6 +116,7 @@
 /[eE][xX][pP][lL][aA][iI][nN]/			 { logToken("EXPLAIN"); return EXPLAIN }
 /[fF][aA][lL][sS][eE]/				 { logToken("FALSE"); return FALSE }
 /[fF][iI][rR][sS][tT]/				 { logToken("FIRST"); return FIRST }
+/[fF][lL][aA][tT][tT][eE][nN]/			 { logToken("FLATTEN"); return FLATTEN }
 /[fF][oO][rR]/					 { logToken("FOR"); return FOR }
 /[fF][rR][oO][mM]/				 { logToken("FROM"); return FROM }
 /[fF][uU][nN][cC][tT][iI][oO][nN]/		 { logToken("FUNCTION"); return FUNCTION }
@@ -141,6 +144,7 @@
 /[lL][iI][kK][eE]/				 { logToken("LIKE"); return LIKE }
 /[lL][iI][mM][iI][tT]/				 { logToken("LIMIT"); return LIMIT }
 /[mM][aA][pP]/					 { logToken("MAP"); return MAP }
+/[mM][aA][pP][pP][iI][nN][gG]/			 { logToken("MAPPING"); return MAPPING }
 /[mM][aA][tT][cC][hH][eE][dD]/			 { logToken("MATCHED"); return MATCHED }
 /[mM][aA][tT][eE][rR][iI][aA][lL][iI][zZ][eE][dD]/ { logToken("MATERIALIZED"); return MATERIALIZED }
 /[mM][eE][rR][gG][eE]/				 { logToken("MERGE"); return MERGE }
@@ -200,6 +204,7 @@
 /[uU][nN][sS][eE][tT]/				 { logToken("UNSET"); return UNSET }
 /[uU][pP][dD][aA][tT][eE]/			 { logToken("UPDATE"); return UPDATE }
 /[uU][pP][sS][eE][rR][tT]/			 { logToken("UPSERT"); return UPSERT }
+/[uU][sS][eE]/					 { logToken("USE"); return USE }
 /[uU][sS][eE][rR]/				 { logToken("USER"); return USER }
 /[uU][sS][iI][nN][gG]/				 { logToken("USING"); return USING }
 /[vV][aA][lL][uU][eE]/				 { logToken("VALUE"); return VALUE }
