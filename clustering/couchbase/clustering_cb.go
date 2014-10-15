@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
@@ -19,9 +21,17 @@ import (
 const _PREFIX = "couchbase:"
 const _RESERVED_NAME = "couchbase"
 
+///////// Notes about Couchbase implementation of Clustering API
+//
+// clustering_cb (this package) -> go-couchbase -> couchbase cluster
+//
+// pool is a synonym for cluster
+//
+
 // cbConfigStore implements clustering.ConfigurationStore
 type cbConfigStore struct {
 	adminUrl string
+	cbConn   *couchbase.Client
 }
 
 // create a cbConfigStore given the path to a couchbase instance
@@ -29,33 +39,14 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(path, _PREFIX) {
 		path = path[len(_PREFIX):]
 	}
-	enable_ns_server_shutdown()
+	c, err := couchbase.Connect(path)
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
 	return &cbConfigStore{
 		adminUrl: path,
+		cbConn:   &c,
 	}, nil
-}
-
-// ns_server shutdown protocol: poll stdin and exit upon reciept of EOF
-func enable_ns_server_shutdown() {
-	go pollStdinForEOF()
-}
-
-func pollStdinForEOF() {
-	reader := bufio.NewReader(os.Stdin)
-	buf := make([]byte, 4)
-	logging.Infop("pollEOF: About to start stdin polling")
-	for {
-		_, err := reader.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				logging.Infop("Received EOF; Exiting...")
-				os.Exit(0)
-			}
-			logging.Errorp("Unexpected error polling stdin",
-				logging.Pair{"error", err},
-			)
-		}
-	}
 }
 
 // Implement Stringer interface
@@ -69,32 +60,42 @@ func (c *cbConfigStore) Id() string {
 }
 
 func (c *cbConfigStore) URL() string {
-	return "couchbase:" + c.adminUrl
+	return c.adminUrl
 }
 
 func (c *cbConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
-	// TODO: implement Recipe:
-	// Invoke curl http://localhost:8091/pools/
-	// (More specifically, c.URL + "/pools"
-	// Get the pools array; for each element, get the attribute called name and add its value to the clusterIds slice
+	// TODO: refresh pools (is it likely to go stale over lifetime of n1ql process?):
+	for _, pool := range c.cbConn.Info.Pools {
+		clusterIds = append(clusterIds, pool.Name)
+	}
 	return clusterIds, nil
 }
 
 func (c *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
-	// TODO: implement Recipe:
-	// Invoke curl http://localhost:8091/pools/<cluster name>
-	// (More specifically: c.URL + "/pools/" + name
-	// Need to deal with: Not found.
-	// If there is no such cluster <cluster name>
+	_, err := c.cbConn.GetPool(name)
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
 	var clusterConfig cbCluster
 	clusterConfig.configStore = c
-	// populate clusterConfig with stuff from REST request
+	clusterConfig.ClusterName = name
+	clusterConfig.ConfigstoreURI = c.URL()
+	clusterConfig.DatastoreURI = c.URL() // datastore and configstore are same in Couchbase implementation
 	return &clusterConfig, nil
 }
 
 func (c *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
 	return c
+}
+
+// helper method to get all the services in a pool
+func (c *cbConfigStore) getPoolServices(name string) (poolServices couchbase.PoolServices, err errors.Error) {
+	poolServices, errCheck := c.cbConn.GetPoolServices(name)
+	if errCheck != nil {
+		err = errors.NewError(errCheck, "")
+	}
+	return
 }
 
 // cbConfigStore also implements clustering.ConfigurationManager interface
@@ -119,8 +120,18 @@ func (c *cbConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
 
 func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	clusters := []clustering.Cluster{}
-	// TODO: implement Recipe:
 	// foreach name n in  c.ClusterNames(), add c.ClusterByName(n) to clusters
+	clusterNames, err := c.ClusterNames()
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
+	for _, name := range clusterNames {
+		cluster, err := c.ClusterByName(name)
+		if err != nil {
+			return nil, errors.NewError(err, "")
+		}
+		clusters = append(clusters, cluster)
+	}
 	return clusters, nil
 }
 
@@ -135,6 +146,8 @@ type cbCluster struct {
 	AccountingURI  string                        `json:"accountstore_uri"`
 	version        clustering.Version            `json:"-"`
 	VersionString  string                        `json:"version"`
+	queryNodeNames []string                      `json:"-"`
+	poolSrvRev     int                           `json:"-"`
 }
 
 // Create a new cbCluster instance
@@ -162,6 +175,8 @@ func makeCbCluster(name string,
 		AccountingURI:  as.URL(),
 		version:        version,
 		VersionString:  version.String(),
+		queryNodeNames: []string{},
+		poolSrvRev:     -999,
 	}
 	return &cluster
 }
@@ -182,19 +197,52 @@ func (c *cbCluster) Name() string {
 
 func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
-	// TODO: implement Recipe:
-	// Invoke "http://localhost:8091/pools/" + c.Name() + "/nodeServices"
-	// add hostname + nodesExt.n1ql to queryNodeNames
-	return queryNodeNames, nil
+	// Get a handle of the go-couchbase connection:
+	cbConn, ok := c.configStore.(*cbConfigStore)
+	if !ok {
+		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to couchbase at %s", c.ConfigurationStoreId()))
+	}
+	poolServices, err := cbConn.getPoolServices(c.ClusterName)
+	if err != nil {
+		return queryNodeNames, err
+	}
+	// If the go-couchbase pool services rev matches the cluster's rev, return cluster's query node names:
+	if poolServices.Rev == c.poolSrvRev {
+		return c.queryNodeNames, nil
+	}
+	// If the rev numbers do not match, update the cluster's rev and query node names:
+	c.queryNodeNames = []string{}
+	c.poolSrvRev = poolServices.Rev
+	for _, ns := range poolServices.NodesExt {
+		n1qlPort := ns.Services["n1ql"]
+		if n1qlPort != 0 {
+			c.queryNodeNames = append(c.queryNodeNames, ns.Hostname+":"+strconv.Itoa(n1qlPort))
+		}
+	}
+	return c.queryNodeNames, nil
 }
 
 func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
-	// TODO: implement Recipe:
-	// Invoke "http://localhost:8091/pools/" + c.Name() + "/nodeServices"
-	// check that name matches one of hostname + nodesExt.n1ql
-	// if no match, return nil
+	qryNodeNames, err := c.QueryNodeNames()
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
+	qryNodeName := ""
+	for _, q := range qryNodeNames {
+		if name == q {
+			qryNodeName = q
+			break
+		}
+	}
+	if qryNodeName == "" {
+		return nil, errors.NewError(nil, "No query node named "+name)
+	}
 	var queryNode cbQueryNodeConfig
-	// if match,
+	queryNode.ClusterName = c.Name()
+	queryNode.QueryNodeName = qryNodeName
+	queryNode.QueryEndpointURL = "http://" + qryNodeName + "/query"
+	queryNode.AdminEndpointURL = "http://" + qryNodeName + "/admin"
+	queryNode.ClusterRef = c
 	return &queryNode, nil
 }
 
@@ -240,10 +288,20 @@ func (c *cbCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, er
 	return nil, nil
 }
 
-func (z *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
+func (c *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	qryNodes := []clustering.QueryNode{}
-	// TODO: implement recipe:
 	// for each name n in c.QueryNodeNames(), add c.QueryNodeByName(n) to qryNodes
+	names, err := c.QueryNodeNames()
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
+	for _, name := range names {
+		qryNode, err := c.QueryNodeByName(name)
+		if err != nil {
+			return nil, errors.NewError(err, "")
+		}
+		qryNodes = append(qryNodes, qryNode)
+	}
 	return qryNodes, nil
 }
 
@@ -292,4 +350,27 @@ func getJsonString(i interface{}) string {
 	serialized, _ := json.Marshal(i)
 	s := bytes.NewBuffer(append(serialized, '\n'))
 	return s.String()
+}
+
+// ns_server shutdown protocol: poll stdin and exit upon reciept of EOF
+func Enable_ns_server_shutdown() {
+	go pollStdinForEOF()
+}
+
+func pollStdinForEOF() {
+	reader := bufio.NewReader(os.Stdin)
+	buf := make([]byte, 4)
+	logging.Infop("pollEOF: About to start stdin polling")
+	for {
+		_, err := reader.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				logging.Infop("Received EOF; Exiting...")
+				os.Exit(0)
+			}
+			logging.Errorp("Unexpected error polling stdin",
+				logging.Pair{"error", err},
+			)
+		}
+	}
 }

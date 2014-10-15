@@ -11,30 +11,23 @@ package clustering_cb
 
 import (
 	"fmt"
-	"runtime"
 	"testing"
 
 	"github.com/couchbaselabs/query/accounting/stub"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore/mock"
+	_ "github.com/couchbaselabs/query/logging/resolver"
 )
 
-func TestZKClustering(t *testing.T) {
+func TestCBClustering(t *testing.T) {
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
-	cs, err := NewConfigstore("localhost:8091")
-	version := clustering.NewVersion("0.7.0")
-	version2 := clustering.NewVersion("0.7.9")
-	stdCfg := clustering.NewStandalone(version, cs, ds, as)
-	stdCfg2 := clustering.NewStandalone(version2, cs, ds, as)
-	stdOpts := clustering.NewOptions(ds.URL(), cs.URL(), as.URL(), "default", false, false, true,
-		runtime.NumCPU()<<16, runtime.NumCPU()<<6, 0, 0, ":8093", ":8094", "", false, "cluster1", "", "")
-
-	fmt.Printf("%v %v %v\n", stdCfg, stdCfg2, stdOpts)
-
+	cs, err := NewConfigstore("http://127.0.0.1:8091")
 	if err != nil {
 		t.Errorf("Error creating configstore: ", err)
 	}
+	version := clustering.NewVersion("0.7.0")
+
 	fmt.Printf("Created config store %v\n\n", cs)
 
 	cfm := cs.ConfigurationManager()
@@ -49,11 +42,46 @@ func TestZKClustering(t *testing.T) {
 		t.Errorf("Error adding cluster: ", err)
 	}
 
-	cluster1check, errCheck := cs.ClusterByName("cluster1")
+	// There should be a cluster called "default" in the Couchbase installation:
+	cluster1check, errCheck := cs.ClusterByName("default")
 	if errCheck != nil {
 		t.Errorf("Unexpected Error retrieving cluster by name: ", errCheck)
 	}
 
 	fmt.Printf("Retrieved cluster: %v\n\n", cluster1check)
 
+	cm := cs.ConfigurationManager()
+
+	// Get all clusters. There should be at least one ("default")
+	clusters, errCheck := cm.GetClusters()
+	if errCheck != nil {
+		t.Errorf("Unexpected Error retrieving all cluster configs: ", errCheck)
+	}
+	iterateClusters(clusters, t)
+}
+
+func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
+	for _, c := range clusters {
+		fmt.Printf("Retrieved cluster: %v\n\n", c)
+		queryNodeNames, errCheck := c.QueryNodeNames()
+		if errCheck != nil {
+			t.Errorf("Unexpected Error retrieving query node names: ", errCheck)
+		}
+		for _, qn := range queryNodeNames {
+			fmt.Printf("QueryNodeName=%s\n", qn)
+			qryNode, errCheck := c.QueryNodeByName(qn)
+			if errCheck != nil {
+				t.Errorf("Unexpected Error retrieving query node by name: ", errCheck)
+			}
+			fmt.Printf("QueryNode=%v\n", qryNode)
+		}
+		clm := c.ClusterManager()
+		queryNodes, errCheck := clm.GetQueryNodes()
+		if errCheck != nil {
+			t.Errorf("Unexpected Error retrieving query nodes: ", errCheck)
+		}
+		for _, qryNode := range queryNodes {
+			fmt.Printf("QueryNode=%v\n", qryNode)
+		}
+	}
 }
