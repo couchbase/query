@@ -1032,7 +1032,7 @@ projects
     $$ = algebra.NewProjection(false, $1)
 }
 |
-RAW expr
+raw expr
 {
     $$ = algebra.NewRawProjection(false, $2)
 }
