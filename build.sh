@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo go get
+go get -d -v ./...
+
 echo cd parser/n1ql
 cd parser/n1ql
 ./build.sh $1
