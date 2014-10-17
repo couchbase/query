@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-10-11
+* Modified: 2014-10-17
 
 ## Introduction
 
@@ -2369,6 +2369,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Move object and array construction from literals to expressions
 * 2014-10-11 - Set operators
     * Document INTERSECT and EXCEPT
+* 2014-10-17 - SELECT clause
+    * Fix syntax of SELECT clause
 
 ### Open issues
 
