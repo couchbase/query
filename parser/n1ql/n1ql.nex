@@ -154,6 +154,7 @@
 /[nN][eE][sS][tT]/				 { logToken("NEST"); return NEST }
 /[nN][oO][tT]/					 { logToken("NOT"); return NOT }
 /[nN][uU][lL][lL]/				 { logToken("NULL"); return NULL }
+/[oO][bB][jJ][eE][cC][tT]/			 { logToken("OBJECT"); return OBJECT }
 /[oO][fF][fF][sS][eE][tT]/			 { logToken("OFFSET"); return OFFSET }
 /[oO][nN]/					 { logToken("ON"); return ON }
 /[oO][pP][tT][iI][oO][nN]/			 { logToken("OPTION"); return OPTION }

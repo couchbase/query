@@ -90,15 +90,15 @@ function-name ::= identifier
 /*
  *  collections
  */
-collection-expr ::= exists-expr | in-expr | within-expr | collection-cond | collection-xform
+collection-expr ::= exists-expr | in-expr | within-expr | range-cond | range-xform
 exists-expr ::= 'EXISTS' expr
 in-expr ::= expr 'NOT'? 'IN' expr
 within-expr ::= expr 'NOT'? 'WITHIN' expr
-collection-cond ::= ('ANY' | 'SOME' | 'EVERY') variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('SATISFIES' cond)? 'END'
-collection-xform ::= array-expr | first-expr
-array-expr ::= 'ARRAY' expr 'FOR' variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('WHEN' cond)? 'END'
-first-expr ::= 'FIRST' expr 'FOR' variable ('IN' | 'WITHIN') expr (',' variable ('IN' | 'WITHIN') expr)* ('WHEN' cond)? 'END'
-variable ::= identifier
+range-cond ::= ('ANY' | 'SOME' | 'EVERY') (var 'IN' expr (',' var 'IN' expr)* | name-var ':' var 'IN' expr | var 'WITHIN' expr | name-var ':' var 'WITHIN' expr) 'SATISFIES' cond 'END'
+var ::= identifier
+name-var ::= identifier
+range-xform ::= (('ARRAY' | 'FIRST') expr | 'OBJECT' name-expr ':' expr) 'FOR' (var 'IN' expr (',' var 'IN' expr)* | name-var ':' var 'IN' expr | var 'WITHIN' expr | name-var ':' var 'WITHIN' expr) ('WHEN' cond)? 'END'
+name-expr ::= expr
 
 /*
  *  construction
@@ -106,7 +106,7 @@ variable ::= identifier
 construction-expr ::= object | array
 object ::= '{' members? '}'
 members ::= pair (',' members)?
-pair ::= string ':' expr
+pair ::= name-expr ':' expr
 array ::= '[' elements? ']'
 elements ::= expr (',' elements)?
 

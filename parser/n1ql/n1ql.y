@@ -147,6 +147,7 @@ indexType        datastore.IndexType
 %token NEST
 %token NOT
 %token NULL
+%token OBJECT
 %token OFFSET
 %token ON
 %token OPTION

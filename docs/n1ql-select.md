@@ -998,36 +998,33 @@ indirectly).
 
 #### ANY, SOME, and EVERY
 
-Collection predicates (ANY, SOME, EVERY) allow you to test a boolean
-condition over the elements of a collection. ANY, SOME, and EVERY
-expressions evaluate to a boolean value.
+Range predicates (ANY, SOME, EVERY) allow you to test a boolean
+condition over the elements or attributes of a collection or
+object(s). ANY, SOME, and EVERY evaluate to a boolean value.
 
-_collection-cond:_
+_range-cond:_
 
-![](diagram/collection-cond.png)
+![](diagram/range-cond.png)
 
-_variable:_
+_var:_
 
-![](diagram/variable.png)
+![](diagram/var.png)
 
-#### ARRAY and FIRST
+#### ARRAY, FIRST, and OBJECT
 
-Collection transforms (ARRAY and FIRST) allow you to map and filter
-the elements of a collection. ARRAY evaluates to an array of the
-operand expression, while FIRST evaluates to a single element based on
-the operand expression.
+Range transforms (ARRAY, FIRST, and OBJECT) allow you to map and
+filter the elements or attributes of a collection or object(s). ARRAY
+evaluates to an array of the operand expression, while FIRST evaluates
+to a single element based on the operand expression. OBJECT evaluates
+to an object whose name : value attributes are _name-expr_ : _expr_.
 
-_collection-xform:_
+_range-xform:_
 
-![](diagram/collection-xform.png)
+![](diagram/range-xform.png)
 
-_array-expr:_
+_name-expr:_
 
-![](diagram/array-expr.png)
-
-_first-expr:_
-
-![](diagram/first-expr.png)
+![](diagram/name-expr.png)
 
 ### Construction
 
@@ -1658,7 +1655,7 @@ array, or zero if there are no such values.
 
 ### Object functions
 
-__OBJECT\_LENGTH(expr)__ - number of key-value pairs in the object.
+__OBJECT\_LENGTH(expr)__ - number of name-value pairs in the object.
 
 __OBJECT\_NAMES(expr)__ - array containing the attribute names of the
 object, in N1QL collation order.
@@ -1669,7 +1666,7 @@ the object, in N1QL collation order of the corresponding names.
 ### JSON functions
 
 __DECODE\_JSON(expr)__ - unmarshals the JSON-encoded string into a
-N1QL value; the empty string is NULL.
+N1QL value; the empty string is MISSING.
 
 __ENCODE\_JSON(expr)__ - marshals the N1QL value into a JSON-encoded
 string; MISSING becomes the empty string.
@@ -1952,6 +1949,7 @@ for future use.
 * __NEST__
 * __NOT__
 * __NULL__
+* __OBJECT__
 * __OFFSET__
 * __ON__
 * __OPTION__
@@ -2378,6 +2376,10 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Rename OBJECT_KEYS to OBJECT_NAMES
 * 2014-10-17 - SELECT clause
     * Fix syntax of SELECT clause
+* 2014-10-17 - Ranging and objects
+    * Range over both collections and objects.
+    * Create both ARRAYs and OBJECTs.
+    * Construct objects with dynamic attribute names (aka _maps_ in SQL++).
 
 ### Open issues
 
