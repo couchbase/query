@@ -1026,6 +1026,9 @@ _range-xform:_
 
 ![](diagram/range-xform.png)
 
+_Name-expr_ must evaluate to a string. If not, that value is omitted
+from the result object.
+
 _name-expr:_
 
 ![](diagram/name-expr.png)
