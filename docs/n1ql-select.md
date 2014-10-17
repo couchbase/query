@@ -1658,13 +1658,13 @@ array, or zero if there are no such values.
 
 ### Object functions
 
-__OBJECT\_KEYS(expr)__ - array containing the keys of the object, in
-N1QL collation order.
-
 __OBJECT\_LENGTH(expr)__ - number of key-value pairs in the object.
 
-__OBJECT\_VALUES(expr)__ - array containing the values of the object,
-in N1QL collation order of the corresponding keys.
+__OBJECT\_NAMES(expr)__ - array containing the attribute names of the
+object, in N1QL collation order.
+
+__OBJECT\_VALUES(expr)__ - array containing the attribute values of
+the object, in N1QL collation order of the corresponding names.
 
 ### JSON functions
 

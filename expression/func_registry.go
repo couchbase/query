@@ -146,8 +146,8 @@ var _FUNCTIONS = map[string]Function{
 	"array_sum":      &ArraySum{},
 
 	// Object
-	"object_keys":   &ObjectKeys{},
 	"object_length": &ObjectLength{},
+	"object_names":  &ObjectNames{},
 	"object_values": &ObjectValues{},
 
 	// JSON

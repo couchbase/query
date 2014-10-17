@@ -17,60 +17,6 @@ import (
 
 ///////////////////////////////////////////////////
 //
-// ObjectKeys
-//
-///////////////////////////////////////////////////
-
-type ObjectKeys struct {
-	UnaryFunctionBase
-}
-
-func NewObjectKeys(operand Expression) Function {
-	return &ObjectKeys{
-		*NewUnaryFunctionBase("object_keys", operand),
-	}
-}
-
-func (this *ObjectKeys) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-func (this *ObjectKeys) Type() value.Type { return value.ARRAY }
-
-func (this *ObjectKeys) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-func (this *ObjectKeys) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.OBJECT {
-		return value.NULL_VALUE, nil
-	}
-
-	oa := arg.Actual().(map[string]interface{})
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
-	}
-
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = k
-	}
-
-	return value.NewValue(ra), nil
-}
-
-func (this *ObjectKeys) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectKeys(operands[0])
-	}
-}
-
-///////////////////////////////////////////////////
-//
 // ObjectLength
 //
 ///////////////////////////////////////////////////
@@ -109,6 +55,60 @@ func (this *ObjectLength) Apply(context Context, arg value.Value) (value.Value, 
 func (this *ObjectLength) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewObjectLength(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectNames
+//
+///////////////////////////////////////////////////
+
+type ObjectNames struct {
+	UnaryFunctionBase
+}
+
+func NewObjectNames(operand Expression) Function {
+	return &ObjectNames{
+		*NewUnaryFunctionBase("object_names", operand),
+	}
+}
+
+func (this *ObjectNames) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectNames) Type() value.Type { return value.ARRAY }
+
+func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *ObjectNames) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := arg.Actual().(map[string]interface{})
+	keys := make(sort.StringSlice, 0, len(oa))
+	for key, _ := range oa {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	ra := make([]interface{}, len(keys))
+	for i, k := range keys {
+		ra[i] = k
+	}
+
+	return value.NewValue(ra), nil
+}
+
+func (this *ObjectNames) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectNames(operands[0])
 	}
 }
 
