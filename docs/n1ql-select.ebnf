@@ -14,7 +14,7 @@ from-select ::= from-clause let-clause? where-clause? group-by-clause? select-cl
 /*
  *  select clause
  */
-select-clause ::= 'SELECT' ((('ALL' | 'DISTINCT')? result-expr (',' result-expr)*) | ('RAW' | 'ELEMENT') expr)
+select-clause ::= 'SELECT' ('ALL' | 'DISTINCT')? (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
 path ::= identifier ('[' expr ']')? ('.' path)?
 alias ::= identifier
