@@ -215,8 +215,8 @@ result objects.
 The FROM clause defines the data sources and input objects for the
 query.
 
-Every FROM clause specifies one or more buckets. The first bucket is
-called the primary bucket.
+Every FROM clause specifies one or more keyspaces (buckets). The first
+keyspace is called the primary keyspace.
 
 _from-clause:_
 
@@ -291,27 +291,28 @@ Getting the input contents:
 
         [ { } ]
 
-### Buckets
+### Keyspaces (buckets)
 
-The simplest type of FROM clause specifies a bucket:
+The simplest type of FROM clause specifies a keyspace (bucket):
 
         SELECT * FROM customer
 
-This returns every value in the _customer_ bucket.
+This returns every value in the _customer_ keyspace.
 
-The bucket name can be prefixed with an optional pool name:
+The keyspace can be prefixed with an optional namespace (pool):
 
         SELECT * FROM main:customer
 
-This queries the _customer_ bucket in the _main_ pool.
+This queries the _customer_ keyspace in the _main_ namespace.
 
-If the pool name is omitted, the default pool in the current session
-is used.
+If the namespace is omitted, the default namespace in the current
+session is used.
 
 ### Keys
 
-Specific primary keys within a bucket can be specified. Only values
-having those primary keys will be included as inputs to the query.
+Specific primary keys within a keyspace (bucket) can be
+specified. Only values having those primary keys will be included as
+inputs to the query.
 
 To specify a single key:
 
@@ -322,15 +323,14 @@ To specify multiple keys:
         SELECT * FROM customer USE KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
 
 In the FROM clause of a subquery, USE KEYS is mandatory for the
-primary bucket.
+primary keyspace.
 
 ### Nested paths
 
-Nested paths within buckets can be specified. For each document in the
-bucket, the path is evaluated and its value becomes an input the
-query. For a given document, if any element of the path is NULL or
-MISSING, that document is skipped and does not contribute any inputs
-to the query.
+Nested paths can be specified. For each document in the keyspace, the
+path is evaluated and its value becomes an input the query. For a
+given document, if any element of the path is NULL or MISSING, that
+document is skipped and does not contribute any inputs to the query.
 
 If some customer documents contain a _primary\_contact_ object, the
 following query can retrieve them:
@@ -445,7 +445,7 @@ Then our joined objects would be:
         ...
 
 ON KEYS is required after each JOIN. It specifies the primary keys for
-the second bucket in the join.
+the second keyspace (bucket) in the join.
 
 Joins can be chained.
 
@@ -498,11 +498,11 @@ value is MISSING (omitted).
 ### Nests
 
 Nesting is conceptually the inverse of unnesting. Nesting performs a
-join across two buckets. But instead of producing a cross-product of
-the left and right hand inputs, a single result is produced for each
-left hand input, while the corresponding right hand inputs are
-collected into an array and nested as a single array-valued field in
-the result object.
+join across two keyspaces (or a keyspace with itself). But instead of
+producing a cross-product of the left and right hand inputs, a single
+result is produced for each left hand input, while the corresponding
+right hand inputs are collected into an array and nested as a single
+array-valued field in the result object.
 
 Recall our _invoice_ objects:
 
@@ -728,8 +728,8 @@ describes the order by type (from lowest to highest):
   the shorter array; if all the elements so far are equal, then the
   longer array sorts after)
 * object (larger objects sort after; for objects of equal length,
-  key/value by key/value comparison is performed; keys are examined in
-  sorted order using the normal ordering for strings)
+  name/value by name/value comparison is performed; names are examined
+  in sorted order using the normal ordering for strings)
 
 ## OFFSET clause
 
@@ -964,7 +964,7 @@ Subquery expressions return an array that is the result of evaluating
 the subquery.
 
 In the FROM clause of a subquery, USE KEYS is mandatory for the
-primary bucket.
+primary keyspace (bucket).
 
 ### Collection
 
@@ -1084,8 +1084,8 @@ The following rules apply:
 
 ## Appendix - Identifier scoping / ambiguity
 
-Identifiers include bucket names, fields within documents, and
-aliases. The following rules apply.
+Identifiers include keyspace (bucket) names, fields within documents,
+and aliases. The following rules apply.
 
 * FROM - Aliases in the FROM clause create new names that may
   be referred to anywhere in the query
@@ -1098,10 +1098,10 @@ aliases. The following rules apply.
 * FOR - Aliases in a collection expression create names that
   are local to that collection expression
 
-When an alias collides with a bucket or field name in the same scope,
-the identifier always refers to the alias. This allows for consistent
-behavior in scenarios where an identifier only collides in some
-documents.
+When an alias collides with a keyspace or field name in the same
+scope, the identifier always refers to the alias. This allows for
+consistent behavior in scenarios where an identifier only collides in
+some documents.
 
 The left-most portion of a dotted identifier may refer to the name of
 the datasource.  For example:
@@ -1691,7 +1691,7 @@ value:
 * NULL - NULL
 * string - the length of the string
 * array - the number of elements in the array
-* object - the number of key/value pairs in the object
+* object - the number of name/value pairs in the object
 * any other value - NULL
 
 ### Comparison functions
@@ -2024,8 +2024,8 @@ for future use.
 
 ## Appendix - Sample projections
 
-For the following examples consider a bucket containing the following
-document with ID "n1ql-2013"
+For the following examples consider a keyspace (bucket) containing the
+following document with ID "n1ql-2013"
 
     {
       "name": "N1QL",
@@ -2387,6 +2387,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Range over both collections and objects.
     * Create both ARRAYs and OBJECTs.
     * Construct objects with dynamic attribute names (aka _maps_ in SQL++).
+* 2014-10-17 - Keyspace and namespace
+    * Use the terms "keyspace" and "namespace".
 
 ### Open issues
 
