@@ -234,9 +234,9 @@ _pool-name:_
 
 ![](diagram/pool-name.png)
 
-_keys-clause:_
+_use-keys-clause:_
 
-![](diagram/keys-clause.png)
+![](diagram/use-keys-clause.png)
 
 _join-clause:_
 
@@ -245,6 +245,10 @@ _join-clause:_
 _join-type:_
 
 ![](diagram/join-type.png)
+
+_on-keys-clause:_
+
+![](diagram/on-keys-clause.png)
 
 _nest-clause:_
 
@@ -311,14 +315,14 @@ having those primary keys will be included as inputs to the query.
 
 To specify a single key:
 
-        SELECT * FROM customer KEYS "acme-uuid-1234-5678"
+        SELECT * FROM customer USE KEYS "acme-uuid-1234-5678"
 
 To specify multiple keys:
 
-        SELECT * FROM customer KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
+        SELECT * FROM customer USE KEYS [ "acme-uuid-1234-5678", "roadster-uuid-4321-8765" ]
 
-In the FROM clause of a subquery, KEYS is mandatory for the primary
-bucket.
+In the FROM clause of a subquery, USE KEYS is mandatory for the
+primary bucket.
 
 ### Nested paths
 
@@ -374,7 +378,7 @@ And our _invoice_ objects were:
 
 And the FROM clause was:
 
-        FROM invoice inv JOIN customer cust KEYS inv.customer_key
+        FROM invoice inv JOIN customer cust ON KEYS inv.customer_key
 
 Then each joined object would be:
 
@@ -404,7 +408,7 @@ If our _invoice_item_ objects were:
 
 And the FROM clause was:
 
-        FROM invoice JOIN invoice_item item KEYS invoice.invoice_item_keys
+        FROM invoice JOIN invoice_item item ON KEYS invoice.invoice_item_keys
 
 Then our joined objects would be:
 
@@ -440,7 +444,7 @@ Then our joined objects would be:
         },
         ...
 
-KEYS is required after each JOIN. It specifies the primary keys for
+ON KEYS is required after each JOIN. It specifies the primary keys for
 the second bucket in the join.
 
 Joins can be chained.
@@ -521,7 +525,7 @@ And our _invoice_item_ objects:
 
 If the FROM clause was:
 
-        FROM invoice inv NEST invoice_item items KEYS inv.invoice_item_keys
+        FROM invoice inv NEST invoice_item items ON KEYS inv.invoice_item_keys
 
 The results would be:
 
@@ -584,13 +588,13 @@ must be non-missing and non-null.
 If there is no matching right hand source object, then the right hand
 source object is as follows:
 
-* If the KEYS expression evaluates to MISSING, the right hand value
+* If the ON KEYS expression evaluates to MISSING, the right hand value
   is also MISSING
-* If the KEYS expression evaluates to NULL, the right hand value is
+* If the ON KEYS expression evaluates to NULL, the right hand value is
   MISSING
-* If the KEYS expression evaluates to an array, the right hand value
-  is an empty array
-* If the KEYS expression evaluates to a non-array value, the right
+* If the ON KEYS expression evaluates to an array, the right hand
+  value is an empty array
+* If the ON KEYS expression evaluates to a non-array value, the right
   hand value is an empty array
 
 If LEFT or LEFT OUTER is specified, then a left outer nest is
@@ -959,8 +963,8 @@ _subquery-expr:_
 Subquery expressions return an array that is the result of evaluating
 the subquery.
 
-In the FROM clause of a subquery, KEYS is mandatory for the primary
-bucket.
+In the FROM clause of a subquery, USE KEYS is mandatory for the
+primary bucket.
 
 ### Collection
 
@@ -1012,8 +1016,8 @@ _var:_
 
 #### ARRAY, FIRST, and OBJECT
 
-Range transforms (ARRAY, FIRST, and OBJECT) allow you to map and
-filter the elements or attributes of a collection or object(s). ARRAY
+Range transforms (ARRAY, FIRST, OBJECT) allow you to map and filter
+the elements or attributes of a collection or object(s). ARRAY
 evaluates to an array of the operand expression, while FIRST evaluates
 to a single element based on the operand expression. OBJECT evaluates
 to an object whose name : value attributes are _name-expr_ : _expr_.
