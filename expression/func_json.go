@@ -49,6 +49,10 @@ func (this *DecodeJSON) Apply(context Context, arg value.Value) (value.Value, er
 	}
 
 	s := arg.Actual().(string)
+	if s == "" {
+		return value.MISSING_VALUE, nil
+	}
+
 	var p interface{}
 	err := json.Unmarshal([]byte(s), &p)
 	if err != nil {
