@@ -1896,12 +1896,14 @@ for future use.
 * __DATASTORE__
 * __DECLARE__
 * __DELETE__
+* __DERIVED__
 * __DESC__
 * __DESCRIBE__
 * __DISTINCT__
 * __DO__
 * __DROP__
 * __EACH__
+* __ELEMENT__
 * __ELSE__
 * __END__
 * __EVERY__
@@ -1912,6 +1914,7 @@ for future use.
 * __EXPLAIN__
 * __FALSE__
 * __FIRST__
+* __FLATTEN__
 * __FOR__
 * __FROM__
 * __FUNCTION__
@@ -1939,6 +1942,7 @@ for future use.
 * __LIKE__
 * __LIMIT__
 * __MAP__
+* __MAPPING__
 * __MATCHED__
 * __MATERIALIZED__
 * __MERGE__
@@ -1998,6 +2002,7 @@ for future use.
 * __UNSET__
 * __UPDATE__
 * __UPSERT__
+* __USE__
 * __USER__
 * __USING__
 * __VALUE__
@@ -2369,6 +2374,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Move object and array construction from literals to expressions
 * 2014-10-11 - Set operators
     * Document INTERSECT and EXCEPT
+* 2014-10-17 - OBJECT_NAMES
+    * Rename OBJECT_KEYS to OBJECT_NAMES
 * 2014-10-17 - SELECT clause
     * Fix syntax of SELECT clause
 
