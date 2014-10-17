@@ -24,6 +24,7 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 	offset := node.Offset()
 	limit := node.Limit()
 
+	// If there is an ORDER BY, delay the final projection
 	if order != nil {
 		this.projectFinal = false
 	}
@@ -52,6 +53,7 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 		children = append(children, NewLimit(limit))
 	}
 
+	// Perform the delayed final projection now, after the ORDER BY
 	if !this.projectFinal {
 		children = append(children, NewParallel(NewFinalProject()))
 	}
@@ -60,8 +62,8 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 }
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
-	this.children = make([]Operator, 0, 8)
-	this.subChildren = make([]Operator, 0, 16)
+	this.children = make([]Operator, 0, 8)     // top-level children, executed sequentially
+	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	count, err := this.fastCount(node)
 	if err != nil {
@@ -76,6 +78,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			return nil, err
 		}
 	} else {
+		// No FROM clause
 		scan := NewDummyScan()
 		this.children = append(this.children, scan)
 	}
@@ -110,16 +113,25 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	this.subChildren = append(this.subChildren, NewInitialProject(projection))
 
+	// Initial DISTINCT (parallel)
+	if projection.Distinct() || this.distinct {
+		this.subChildren = append(this.subChildren, NewDistinct())
+	}
+
+	// Perform the final projection if there is no subsequent ORDER BY
 	if this.projectFinal {
 		this.subChildren = append(this.subChildren, NewFinalProject())
 	}
 
+	// Parallelize the subChildren
 	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
 
-	if projection.Distinct() {
+	// Final DISTINCT (serial)
+	if projection.Distinct() || this.distinct {
 		this.children = append(this.children, NewDistinct())
 	}
 
+	// Serialize the top-level children
 	return NewSequence(this.children...), nil
 }
 
@@ -247,6 +259,10 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 }
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
 	this.projectFinal = true
 
 	first, err := node.First().Accept(this)
@@ -260,8 +276,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	}
 
 	unionAll := NewUnionAll(first.(Operator), second.(Operator))
-	distinct := NewDistinct()
-	return NewSequence(unionAll, distinct), nil
+	return NewSequence(unionAll, NewDistinct()), nil
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
@@ -281,6 +296,10 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
 	this.projectFinal = true
 
 	first, err := node.First().Accept(this)
@@ -294,8 +313,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	}
 
 	intersectAll := NewIntersectAll(first.(Operator), second.(Operator))
-	distinct := NewDistinct()
-	return NewSequence(intersectAll, distinct), nil
+	return NewSequence(intersectAll, NewDistinct()), nil
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
@@ -315,6 +333,10 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 }
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
 	this.projectFinal = true
 
 	first, err := node.First().Accept(this)
@@ -328,8 +350,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	}
 
 	exceptAll := NewExceptAll(first.(Operator), second.(Operator))
-	distinct := NewDistinct()
-	return NewSequence(exceptAll, distinct), nil
+	return NewSequence(exceptAll, NewDistinct()), nil
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {

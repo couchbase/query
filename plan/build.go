@@ -44,6 +44,7 @@ type builder struct {
 	namespace    string
 	subquery     bool
 	projectFinal bool
+	distinct     bool
 	children     []Operator
 	subChildren  []Operator
 }
