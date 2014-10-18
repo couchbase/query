@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-10-17
+* Modified: 2014-10-18
 
 ## Introduction
 
@@ -2400,6 +2400,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Construct objects with dynamic attribute names (aka _maps_ in SQL++).
 * 2014-10-17 - Keyspace and namespace
     * Use the terms "keyspace" and "namespace".
+* 2014-10-18 - WITHIN and nested expressions
+    * Enhance syntax for WITHIN and for nested expressions.
 
 ### Open issues
 
