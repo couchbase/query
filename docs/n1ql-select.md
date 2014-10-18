@@ -811,7 +811,7 @@ Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
 notation (`[position]` or `[start:end?]`) to access elements inside an
 array. The form `.[expr]` is used to access an object field named by
-evaluating `expr`.
+evaluating the `expr` contained in the brackets.
 
 Consider the following object:
 
