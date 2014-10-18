@@ -896,9 +896,9 @@ If either operand in a comparison is MISSING, the result is MISSING.
 Next, if either operand in a comparison is NULL, the result is NULL.
 Otherwise the remaining rules for comparing values are followed.
 
-In N1QL a comparison operator implicitly requires that both operands
-are of the same type.  If the operands are of different types, the
-result is always MISSING (if either operand is MISSING) or NULL.
+N1QL specifies a total ordering for all values, across all types. This
+ordering is used by the comparison operators, and is described under
+__ORDER BY__.
 
 String comparison is done using a raw byte collation of UTF8 encoded
 strings (sometimes referred to as binary, C, or memcmp).  This
