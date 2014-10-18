@@ -148,6 +148,7 @@ var _FUNCTIONS = map[string]Function{
 	// Object
 	"object_length": &ObjectLength{},
 	"object_names":  &ObjectNames{},
+	"object_pairs":  &ObjectPairs{},
 	"object_values": &ObjectValues{},
 
 	// JSON

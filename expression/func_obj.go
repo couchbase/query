@@ -114,6 +114,60 @@ func (this *ObjectNames) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ObjectPairs
+//
+///////////////////////////////////////////////////
+
+type ObjectPairs struct {
+	UnaryFunctionBase
+}
+
+func NewObjectPairs(operand Expression) Function {
+	return &ObjectPairs{
+		*NewUnaryFunctionBase("object_pairs", operand),
+	}
+}
+
+func (this *ObjectPairs) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectPairs) Type() value.Type { return value.ARRAY }
+
+func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *ObjectPairs) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := arg.Actual().(map[string]interface{})
+	keys := make(sort.StringSlice, 0, len(oa))
+	for key, _ := range oa {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	ra := make([]interface{}, len(keys))
+	for i, k := range keys {
+		ra[i] = map[string]interface{}{"name": k, "value": oa[k]}
+	}
+
+	return value.NewValue(ra), nil
+}
+
+func (this *ObjectPairs) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectPairs(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ObjectValues
 //
 ///////////////////////////////////////////////////

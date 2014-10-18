@@ -1667,6 +1667,9 @@ __OBJECT\_LENGTH(expr)__ - number of name-value pairs in the object.
 __OBJECT\_NAMES(expr)__ - array containing the attribute names of the
 object, in N1QL collation order.
 
+__OBJECT\_PAIRS(expr)__ - array containing the attribute name and
+value pairs of the object, in N1QL collation order of the names.
+
 __OBJECT\_VALUES(expr)__ - array containing the attribute values of
 the object, in N1QL collation order of the corresponding names.
 
