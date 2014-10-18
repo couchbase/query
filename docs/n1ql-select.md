@@ -717,7 +717,7 @@ As ORDER BY expressions can evaluate to any JSON value, we define an
 ordering when comparing values of different types.  The following list
 describes the order by type (from lowest to highest):
 
-* missing value
+* missing
 * null
 * false
 * true
@@ -810,7 +810,8 @@ nested-expr:
 Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
 notation (`[position]` or `[start:end?]`) to access elements inside an
-array.
+array. The form `.[expr]` is used to access an object field named by
+`expr`.
 
 Consider the following object:
 
@@ -1001,8 +1002,8 @@ _name-expr:_
 ![](diagram/name-expr.png)
 
 WITHIN evaluates to TRUE if the right-hand-side value contains the
-left-hand-side value as a child or descendant (i.e. directly or
-indirectly).
+left-hand-side value (or name and value) as a child or descendant
+(i.e. directly or indirectly).
 
 If _name-expr_ is given, it must evaluate to a string. Otherwise, the
 result is MISSING if _name-expr_ or _expr_ evaluates to MISSING, and
@@ -1139,7 +1140,8 @@ from highest to lowest precedence.
 * NOT
 * AND
 * OR
-* UNION
+* UNION, INTERSECT, EXCEPT
+* ORDER BY
 
 Parentheses allow for grouping expressions to override the order of
 operations. They have the highest precedence.

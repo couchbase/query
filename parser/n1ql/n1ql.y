@@ -219,8 +219,8 @@ indexType        datastore.IndexType
 %token COMMA COLON
 
 /* Precedence: lowest to highest */
-%left           UNION EXCEPT
-%left           INTERSECT
+%left           ORDER
+%left           UNION INTERESECT EXCEPT
 %left           JOIN NEST UNNEST FLATTEN INNER LEFT
 %left           OR
 %left           AND
