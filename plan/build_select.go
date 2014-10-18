@@ -324,6 +324,11 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 		return nil, err
 	}
 
+	// Inject DISTINCT into second term
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
 	second, err := node.Second().Accept(this)
 	if err != nil {
 		return nil, err
@@ -360,6 +365,11 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
+
+	// Inject DISTINCT into second term
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
 
 	second, err := node.Second().Accept(this)
 	if err != nil {
