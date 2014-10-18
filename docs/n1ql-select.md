@@ -996,9 +996,17 @@ _within-expr:_
 
 ![](diagram/within-expr.png)
 
+_name-expr:_
+
+![](diagram/name-expr.png)
+
 WITHIN evaluates to TRUE if the right-hand-side value contains the
 left-hand-side value as a child or descendant (i.e. directly or
 indirectly).
+
+If _name-expr_ is given, it must evaluate to a string. Otherwise, the
+result is MISSING if _name-expr_ or _expr_ evaluates to MISSING, and
+NULL if _name-expr_ evaluates to another non-string value.
 
 #### ANY, SOME, and EVERY
 
@@ -1014,6 +1022,10 @@ _var:_
 
 ![](diagram/var.png)
 
+_name-var:_
+
+![](diagram/name-var.png)
+
 #### ARRAY, FIRST, and OBJECT
 
 Range transforms (ARRAY, FIRST, OBJECT) allow you to map and filter
@@ -1022,16 +1034,12 @@ evaluates to an array of the operand expression, while FIRST evaluates
 to a single element based on the operand expression. OBJECT evaluates
 to an object whose name : value attributes are _name-expr_ : _expr_.
 
-_range-xform:_
-
-![](diagram/range-xform.png)
-
 _Name-expr_ must evaluate to a string. If not, that value is omitted
 from the result object.
 
-_name-expr:_
+_range-xform:_
 
-![](diagram/name-expr.png)
+![](diagram/range-xform.png)
 
 ### Construction
 

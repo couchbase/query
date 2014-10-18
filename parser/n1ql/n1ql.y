@@ -1456,7 +1456,7 @@ expr DOT IDENTIFIER
     $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
-expr DOT LPAREN expr RPAREN
+expr DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
 }
@@ -1674,7 +1674,7 @@ b_expr DOT IDENTIFIER
     $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
-b_expr DOT LPAREN expr RPAREN
+b_expr DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
 }

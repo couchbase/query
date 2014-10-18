@@ -440,7 +440,18 @@ func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
 	buf.WriteString(".")
+
+	_, ok := expr.Second().(*FieldName)
+	if !ok {
+		buf.WriteString("[")
+	}
+
 	buf.WriteString(this.Visit(expr.Second()))
+
+	if !ok {
+		buf.WriteString("]")
+	}
+
 	buf.WriteString(")")
 	return buf.String(), nil
 }
