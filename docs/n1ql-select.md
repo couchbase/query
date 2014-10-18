@@ -811,7 +811,7 @@ Nested expressions support using the dot (`.`) operator to access
 fields nested inside of other objects as well as using the bracket
 notation (`[position]` or `[start:end?]`) to access elements inside an
 array. The form `.[expr]` is used to access an object field named by
-`expr`.
+evaluating `expr`.
 
 Consider the following object:
 
@@ -1035,8 +1035,8 @@ evaluates to an array of the operand expression, while FIRST evaluates
 to a single element based on the operand expression. OBJECT evaluates
 to an object whose name : value attributes are _name-expr_ : _expr_.
 
-_Name-expr_ must evaluate to a string. If not, that value is omitted
-from the result object.
+_Name-expr_ must evaluate to a string. If not, that attribute is
+omitted from the result object.
 
 _range-xform:_
 
