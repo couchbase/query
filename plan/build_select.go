@@ -259,6 +259,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 }
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
+	// Inject DISTINCT into both terms
 	distinct := this.distinct
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
@@ -296,6 +297,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 }
 
 func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+	// Inject DISTINCT into both terms
 	distinct := this.distinct
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
@@ -312,8 +314,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 		return nil, err
 	}
 
-	intersectAll := NewIntersectAll(first.(Operator), second.(Operator))
-	return NewSequence(intersectAll, NewDistinct()), nil
+	return NewIntersectAll(first.(Operator), second.(Operator)), nil
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
@@ -338,6 +339,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 }
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
+	// Inject DISTINCT into both terms
 	distinct := this.distinct
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
@@ -354,8 +356,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 		return nil, err
 	}
 
-	exceptAll := NewExceptAll(first.(Operator), second.(Operator))
-	return NewSequence(exceptAll, NewDistinct()), nil
+	return NewExceptAll(first.(Operator), second.(Operator)), nil
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
