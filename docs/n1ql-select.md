@@ -840,13 +840,15 @@ to `"Mountain View"`.
 #### Elements
 
 Nested expressions also support using the bracket notation
-(`[position]`) to access elements inside an array.
+(`[position]`) to access elements inside an array. Negative positions
+are counted backwards from the end of the array.
 
 _element-expr:_
 
 ![](diagram/element-expr.png)
 
-In our example, the expression `revisions[0]` evaluates to `2013`.
+In our example, the expression `revisions[0]` evaluates to `2013`. The
+expression `revision[-1]` evaluates to `2010`.
 
 #### Array slicing
 
@@ -855,14 +857,15 @@ returns a new array containing a subset of the source, containing the
 elements from position `start` to `end-1`. The element at `start` is
 included, while the element at `end` is not. If `end` is omitted, all
 elements from `start` to the end of the source array are included.
+Negative positions are counted backwards from the end of the array.
 
 _slice-expr:_
 
 ![](diagram/slice-expr.png)
 
-In our example, the expression `revisions[1:3]` evaluates to the array
-`[2012, 2011]`. The expression `revisions[1:]` evaluates to the array
-`[2012, 2011, 2010]`.
+In our example, `revisions[1:3]` evaluates to `[2012,2011]`.
+`revisions[1:]` evaluates to `[2012, 2011, 2010]`.  `revisions[-2:]`
+evaluates to `[2011, 2010]`.
 
 ### Case
 
