@@ -10,8 +10,17 @@
 		    return STRING
 		  }
 
+/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`i/ {
+		    // Case-insensitive identifier
+		    text := yylex.Text()
+		    text = text[0 : len(text)-1]
+		    lval.s, _ = UnmarshalBackQuoted(text)
+		    logToken("IDENTIFIER_ICASE - %s", lval.s)
+		    return IDENTIFIER_ICASE
+		  }
+
 /`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/ {
-		    // Escaped identifiers
+		    // Escaped identifier
 		    lval.s, _ = UnmarshalBackQuoted(yylex.Text())
 		    logToken("IDENTIFIER - %s", lval.s)
 		    return IDENTIFIER
@@ -69,6 +78,7 @@
 /\:/		  { logToken("COLON"); return COLON }
 /\[/		  { logToken("LBRACKET"); return LBRACKET }
 /\]/		  { logToken("RBRACKET"); return RBRACKET }
+/\]i/		  { logToken("RBRACKET_ICASE"); return RBRACKET_ICASE }
 
 /[aA][lL][lL]/	    			  	 { logToken("ALL"); return ALL }
 /[aA][lL][tT][eE][rR]/				 { logToken("ALTER"); return ALTER }

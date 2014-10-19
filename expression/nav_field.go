@@ -10,16 +10,19 @@
 package expression
 
 import (
+	"strings"
+
 	"github.com/couchbaselabs/query/value"
 )
 
 type Field struct {
 	BinaryFunctionBase
+	caseInsensitive bool
 }
 
 func NewField(first, second Expression) *Field {
 	return &Field{
-		*NewBinaryFunctionBase("field", first, second),
+		BinaryFunctionBase: *NewBinaryFunctionBase("field", first, second),
 	}
 }
 
@@ -41,7 +44,18 @@ func (this *Field) Apply(context Context, first, second value.Value) (value.Valu
 	switch second.Type() {
 	case value.STRING:
 		s := second.Actual().(string)
-		v, _ := first.Field(s)
+		v, ok := first.Field(s)
+
+		if !ok && this.caseInsensitive {
+			s = strings.ToLower(s)
+			fields := first.Fields()
+			for f, val := range fields {
+				if s == strings.ToLower(f) {
+					return value.NewValue(val), nil
+				}
+			}
+		}
+
 		return v, nil
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
@@ -88,6 +102,10 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 	default:
 		return false
 	}
+}
+
+func (this *Field) SetCaseInsensitive(insensitive bool) {
+	this.caseInsensitive = insensitive
 }
 
 type FieldName struct {

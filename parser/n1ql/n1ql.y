@@ -213,9 +213,9 @@ indexType        datastore.IndexType
 %token WORK
 %token XOR
 
-%token INT NUMBER IDENTIFIER STRING
+%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE
 %token LPAREN RPAREN
-%token LBRACE RBRACE LBRACKET RBRACKET
+%token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
 
 /* Precedence: lowest to highest */
@@ -245,7 +245,7 @@ indexType        datastore.IndexType
 
 /* Types */
 %type <s>                STRING
-%type <s>                IDENTIFIER
+%type <s>                IDENTIFIER IDENTIFIER_ICASE
 %type <f>                NUMBER
 %type <n>                INT
 %type <expr>             literal object array
@@ -1429,9 +1429,23 @@ path DOT IDENTIFIER
     $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
-path DOT LPAREN expr RPAREN
+path DOT IDENTIFIER_ICASE
+{
+    field := expression.NewField($1, expression.NewFieldName($3))
+    field.SetCaseInsensitive(true)
+    $$ = field
+}
+|
+path DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
+}
+|
+path DOT LBRACKET expr RBRACKET_ICASE
+{
+    field := expression.NewField($1, $4)
+    field.SetCaseInsensitive(true)
+    $$ = field
 }
 |
 path LBRACKET expr RBRACKET
@@ -1456,9 +1470,23 @@ expr DOT IDENTIFIER
     $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
+expr DOT IDENTIFIER_ICASE
+{
+    field := expression.NewField($1, expression.NewFieldName($3))
+    field.SetCaseInsensitive(true)
+    $$ = field
+}
+|
 expr DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
+}
+|
+expr DOT LBRACKET expr RBRACKET_ICASE
+{
+    field := expression.NewField($1, $4)
+    field.SetCaseInsensitive(true)
+    $$ = field
 }
 |
 expr LBRACKET expr RBRACKET
@@ -1674,9 +1702,23 @@ b_expr DOT IDENTIFIER
     $$ = expression.NewField($1, expression.NewFieldName($3))
 }
 |
+b_expr DOT IDENTIFIER_ICASE
+{
+    field := expression.NewField($1, expression.NewFieldName($3))
+    field.SetCaseInsensitive(true)
+    $$ = field
+}
+|
 b_expr DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
+}
+|
+b_expr DOT LBRACKET expr RBRACKET_ICASE
+{
+    field := expression.NewField($1, $4)
+    field.SetCaseInsensitive(true)
+    $$ = field
 }
 |
 b_expr LBRACKET expr RBRACKET

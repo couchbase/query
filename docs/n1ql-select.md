@@ -799,21 +799,18 @@ Then the identifier _name_ would evaluate to the value n1ql.
 
 #### Case-sensitivity of identifiers
 
-Identifiers in N1QL are __case-sensitive.__
+Identifiers in N1QL are __case-sensitive__ by default.
 
 ### Nested
+
+Nested expressions are used to access fields inside of objects and
+elements and slices inside of arrays.
 
 nested-expr:
 
 ![](diagram/nested-expr.png)
 
-Nested expressions support using the dot (`.`) operator to access
-fields nested inside of other objects as well as using the bracket
-notation (`[position]` or `[start:end?]`) to access elements inside an
-array. The form `.[expr]` is used to access an object field named by
-evaluating the `expr` contained in the brackets.
-
-Consider the following object:
+Consider the following example:
 
     {
       "address": {
@@ -822,24 +819,50 @@ Consider the following object:
       "revisions": [2013, 2012, 2011, 2010]
     }
 
- The expression `address.city` evalutes to the value `"Mountain View"`.
+#### Fields
 
- The expression `revisions[0]` evaluates to the value `2013`.
+Nested expressions support using the dot (`.`) operator to access
+fields nested inside of other objects. The form `.[expr]` is used to
+access an object field named by evaluating the `expr` contained in the
+brackets.
+
+_field-expr:_
+
+![](diagram/field-expr.png)
+
+By default, field names are __case sensitive__. To access a field
+case-insensitively, include the trailing __i__.
+
+In our example, the expressions `address.city`, ``address.`CITY`i``,
+`address.["ci" || "ty"]`, and `address.["CI" || "TY"]i` all evaluate
+to `"Mountain View"`.
+
+#### Elements
+
+Nested expressions also support using the bracket notation
+(`[position]`) to access elements inside an array.
+
+_element-expr:_
+
+![](diagram/element-expr.png)
+
+In our example, the expression `revisions[0]` evaluates to `2013`.
 
 #### Array slicing
 
-The form `source-array [ start : end ]` is called array slicing. It
-returns a new array containing a subset of the source array,
-containing the elements from position `start` to `end-1`. The element
-at `start` is included, while the element at `end` is not. If `end` is
-omitted, all elements from `start` to the end of the source array are
-included.
+The form `source-expr [ start : end ]` is called array slicing. It
+returns a new array containing a subset of the source, containing the
+elements from position `start` to `end-1`. The element at `start` is
+included, while the element at `end` is not. If `end` is omitted, all
+elements from `start` to the end of the source array are included.
 
-The expression `revisions[1:3]` evaluates to the array value `[2012,
-2011]`.
+_slice-expr:_
 
-The expression `revisions[1:]` evaluates to the array value `[2012,
-2011, 2010]`.
+![](diagram/slice-expr.png)
+
+In our example, the expression `revisions[1:3]` evaluates to the array
+`[2012, 2011]`. The expression `revisions[1:]` evaluates to the array
+`[2012, 2011, 2010]`.
 
 ### Case
 
