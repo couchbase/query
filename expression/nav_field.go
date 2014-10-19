@@ -104,6 +104,10 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 	}
 }
 
+func (this *Field) CaseInsensitive() bool {
+	return this.caseInsensitive
+}
+
 func (this *Field) SetCaseInsensitive(insensitive bool) {
 	this.caseInsensitive = insensitive
 }

@@ -452,6 +452,10 @@ func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 		buf.WriteString("]")
 	}
 
+	if expr.CaseInsensitive() {
+		buf.WriteString("i")
+	}
+
 	buf.WriteString(")")
 	return buf.String(), nil
 }
