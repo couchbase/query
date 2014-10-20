@@ -10,22 +10,24 @@ dml-stmt ::= insert | upsert | delete | update | merge
 /*
  *  insert
  */
-insert ::= 'INSERT' 'INTO' keyspace-ref key-clause? (values-clause | select) returning-clause?
+insert ::= 'INSERT' 'INTO' keyspace-ref (insert-values | insert-select) returning-clause?
 
 keyspace-ref ::= (namespace ':')? keyspace ('AS'? alias)?
 
 keyspace ::= identifier
 
-key-clause ::= 'PRIMARY'? 'KEY' expr
+insert-values ::= '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' values-clause (',' values-clause)*
 
-values-clause ::= 'VALUES' expr
+values-clause ::= 'VALUES' '(' expr ',' expr ')'
+
+insert-select ::= '(' 'PRIMARY'? 'KEY' expr ',' 'VALUE' expr ')' select
 
 returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
 
 /*
  *  upsert
  */
-upsert ::= 'UPSERT' 'INTO' keyspace-ref key-clause (values-clause | select) returning-clause?
+upsert ::= 'UPSERT' 'INTO' keyspace-ref (insert-values | insert-select) returning-clause?
 
 /*
  *  delete

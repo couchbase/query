@@ -1,8 +1,8 @@
 # N1QL Query Language&mdash;DML
 
-* Status: DRAFT/PROPOSAL
-* Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-* Modified: 2014-10-11
++ Status: DRAFT/PROPOSAL
++ Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
++ Modified: 2014-10-19
 
 ## Introduction
 
@@ -11,7 +11,7 @@ meet the query needs of distributed document-oriented databases. This
 document specifies the syntax and semantics of the data modification
 statements in N1QL.
 
-*N1QL* stands for Non-1st Query Language. The name reflects the fact
+_N1QL_ stands for Non-1st Query Language. The name reflects the fact
 that the Couchbase document-oriented data model is based on [Non-1st
 Normal Form
 (N1NF)](http://en.wikipedia.org/wiki/Database_normalization#Non-first_normal_form_.28NF.C2.B2_or_N1NF.29).
@@ -20,105 +20,117 @@ Normal Form
 
 N1QL provides several data modification statements.
 
-*dml-stmt:*
+_dml-stmt:_
 
 ![](diagram/dml-stmt.png)
 
 ## INSERT
 
-*insert:*
+_insert:_
 
 ![](diagram/insert.png)
 
-*keyspace-ref:*
+_keyspace-ref:_
 
 ![](diagram/keyspace-ref.png)
 
-*keyspace:*
+_keyspace:_
 
 ![](diagram/keyspace.png)
 
-*key-clause:*
+_insert-values:_
 
-![](diagram/key-clause.png)
+![](diagram/insert-values.png)
 
-*values-clause:*
+_values-clause:_
 
 ![](diagram/values-clause.png)
 
-*returning-clause:*
+_insert-select:_
+
+![](diagram/insert-select.png)
+
+_returning-clause:_
 
 ![](diagram/returning-clause.png)
 
-*result-expr:*
+_result-expr:_
 
 ![](diagram/result-expr.png)
 
+_path:_
+
+![](diagram/path.png)
+
+_alias:_
+
+![](diagram/alias.png)
+
 ## UPSERT
 
-*upsert:*
+_upsert:_
 
 ![](diagram/upsert.png)
 
 ## DELETE
 
-*delete:*
+_delete:_
 
 ![](diagram/delete.png)
 
-*use-keys-clause:*
+_use-keys-clause:_
 
 ![](diagram/use-keys-clause.png)
 
-*where-clause:*
+_where-clause:_
 
 ![](diagram/where-clause.png)
 
-*limit-clause:*
+_limit-clause:_
 
 ![](diagram/limit-clause.png)
 
 ## UPDATE
 
-*update:*
+_update:_
 
 ![](diagram/update.png)
 
-*set-clause:*
+_set-clause:_
 
 ![](diagram/set-clause.png)
 
-*update-for:*
+_update-for:_
 
 ![](diagram/update-for.png)
 
-*unset-clause:*
+_unset-clause:_
 
 ![](diagram/unset-clause.png)
 
 ## MERGE
 
-*merge:*
+_merge:_
 
 ![](diagram/merge.png)
 
-*merge-source:*
+_merge-source:_
 
 ![](diagram/merge-source.png)
 
-*merge-actions:*
+_merge-actions:_
 
 ![](diagram/merge-actions.png)
 
-*merge-update:*
+_merge-update:_
 
 ![](diagram/merge-update.png)
 
-*merge-delete:*
+_merge-delete:_
 
 ![](diagram/merge-delete.png)
 
-*merge-insert:*
+_merge-insert:_
 
 ![](diagram/merge-insert.png)
 
@@ -129,11 +141,11 @@ N1QL provides several data modification statements.
 TRUNCATE deletes all the documents in a keyspace. It cannot be rolled
 back, and it cannot be called within or participate in transactions.
 
-*truncate:*
+_truncate:_
 
 ![](diagram/truncate.png)
 
-**NOTE:** Because we are distributed and support XDCR, TRUNCATE would
+__NOTE:__ Because we are distributed and support XDCR, TRUNCATE would
 need to work correctly and efficiently across partitions and across
 data centers, even as data flows into the keyspace.
 
@@ -150,7 +162,7 @@ book-keeping for distributed correctness.
 
 ## SELECT-FOR
 
-*select-for:*
+_select-for:_
 
 ![](diagram/select-for.png)
 
@@ -158,19 +170,19 @@ book-keeping for distributed correctness.
 
 ### Start transaction
 
-*start:*
+_start:_
 
 ![](diagram/start.png)
 
 ### Commit
 
-*commit:*
+_commit:_
 
 ![](diagram/commit.png)
 
 ### Rollback
 
-*rollback:*
+_rollback:_
 
 ![](diagram/rollback.png)
 
@@ -269,6 +281,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Simplify MERGE
     * Change KEYS to USE [ PRIMARY ] KEYS
     * Rename BUCKET to KEYSPACE
+* 2014-10-19 - INSERT / UPSERT syntax
+    * Allow keys to exist outside of values
 
 ### Open Issues
 
