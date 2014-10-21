@@ -29,11 +29,11 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 	key expression.Expression, update, delete, insert Operator) *Merge {
 	return &Merge{
 		keyspace: keyspace,
-		ref: ref,
-		key: key,
-		update: update,
-		delete: delete,
-		insert: insert,
+		ref:      ref,
+		key:      key,
+		update:   update,
+		delete:   delete,
+		insert:   insert,
 	}
 }
 

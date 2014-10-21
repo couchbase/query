@@ -23,7 +23,7 @@ type SendUpsert struct {
 func NewSendUpsert(keyspace datastore.Keyspace, key expression.Expression) *SendUpsert {
 	return &SendUpsert{
 		keyspace: keyspace,
-		key: key,
+		key:      key,
 	}
 }
 

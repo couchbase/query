@@ -24,8 +24,8 @@ type Join struct {
 func NewJoin(keyspace datastore.Keyspace, term *algebra.Join) *Join {
 	return &Join{
 		keyspace: keyspace,
-		term: term,
-		alias: term.Alias(),
+		term:     term,
+		alias:    term.Alias(),
 	}
 }
 
@@ -55,8 +55,8 @@ type Nest struct {
 func NewNest(keyspace datastore.Keyspace, term *algebra.Nest) *Nest {
 	return &Nest{
 		keyspace: keyspace,
-		term: term,
-		alias: term.Alias(),
+		term:     term,
+		alias:    term.Alias(),
 	}
 }
 
@@ -84,7 +84,7 @@ type Unnest struct {
 
 func NewUnnest(term *algebra.Unnest) *Unnest {
 	return &Unnest{
-		term: term,
+		term:  term,
 		alias: term.Alias(),
 	}
 }

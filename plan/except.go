@@ -17,7 +17,7 @@ type ExceptAll struct {
 
 func NewExceptAll(first, second Operator) *ExceptAll {
 	return &ExceptAll{
-		first: first,
+		first:  first,
 		second: second,
 	}
 }

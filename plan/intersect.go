@@ -17,7 +17,7 @@ type IntersectAll struct {
 
 func NewIntersectAll(first, second Operator) *IntersectAll {
 	return &IntersectAll{
-		first: first,
+		first:  first,
 		second: second,
 	}
 }

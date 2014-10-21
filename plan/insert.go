@@ -23,7 +23,7 @@ type SendInsert struct {
 func NewSendInsert(keyspace datastore.Keyspace, key expression.Expression) *SendInsert {
 	return &SendInsert{
 		keyspace: keyspace,
-		key: key,
+		key:      key,
 	}
 }
 
