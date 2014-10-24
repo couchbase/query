@@ -98,12 +98,12 @@ type CompositeValues []Values
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {
 	Type() Type                                     // Data type constant
-	Actual() interface{}                            // Native Go representation
+	Actual() interface{}                            // Native golang representation (non-N1QL) of _this_
 	Equals(other Value) bool                        // Faster than Collate()
-	Collate(other Value) int                        // -int if this precedes other
+	Collate(other Value) int                        // -int, 0, or +int if _this_ sorts as less than, equals, or greater than _other_
 	Truth() bool                                    // Truth value
 	Copy() Value                                    // Shallow copy
-	CopyForUpdate() Value                           // Deep copy for UPDATEs; returns Values whose SetIndex() can extend arrays
+	CopyForUpdate() Value                           // Deep copy for UPDATEs
 	Bytes() []byte                                  // JSON byte encoding
 	Field(field string) (Value, bool)               // Object field dereference, or MISSING; true if found
 	SetField(field string, val interface{}) error   // Object field setting
@@ -111,9 +111,9 @@ type Value interface {
 	Index(index int) (Value, bool)                  // Array index dereference, or MISSING; true if found
 	SetIndex(index int, val interface{}) error      // Array index setting
 	Slice(start, end int) (Value, bool)             // Array slicing; true if found
-	SliceTail(start int) (Value, bool)              // Array slicing; true if found
+	SliceTail(start int) (Value, bool)              // Array slicing to the end of the array; true if found
 	Descendants(buffer []interface{}) []interface{} // Depth-first listing of this value's descendants
-	Fields() map[string]interface{}
+	Fields() map[string]interface{}                 // Top-level field names, if any
 }
 
 var _CONVERSIONS = []reflect.Type{

@@ -79,7 +79,7 @@ func (this floatValue) CopyForUpdate() Value {
 }
 
 func (this floatValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
+	bytes, err := this.MarshalJSON()
 	if err != nil {
 		panic(_MARSHAL_ERROR)
 	}
