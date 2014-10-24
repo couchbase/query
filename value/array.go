@@ -33,7 +33,7 @@ func (this sliceValue) Equals(other Value) bool {
 	case sliceValue:
 		return arrayEquals(this, other)
 	case *listValue:
-		return arrayEquals(this, other.actual)
+		return arrayEquals(this, other.slice)
 	case *ScopeValue:
 		return this.Equals(other.Value)
 	case *annotatedValue:
@@ -50,7 +50,7 @@ func (this sliceValue) Collate(other Value) int {
 	case sliceValue:
 		return arrayCollate(this, other)
 	case *listValue:
-		return arrayCollate(this, other.actual)
+		return arrayCollate(this, other.slice)
 	case *ScopeValue:
 		return this.Collate(other.Value)
 	case *annotatedValue:
@@ -75,7 +75,7 @@ func (this sliceValue) CopyForUpdate() Value {
 }
 
 func (this sliceValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
+	bytes, err := this.MarshalJSON()
 	if err != nil {
 		panic(_MARSHAL_ERROR)
 	}
@@ -174,171 +174,87 @@ func (this sliceValue) Fields() map[string]interface{} {
 }
 
 type listValue struct {
-	actual []interface{}
+	slice sliceValue
 }
 
 func (this *listValue) MarshalJSON() ([]byte, error) {
-	return marshalArray(this.actual)
+	return this.slice.MarshalJSON()
 }
 
 func (this *listValue) Type() Type { return ARRAY }
 
 func (this *listValue) Actual() interface{} {
-	return this.actual
+	return this.slice.Actual()
 }
 
 func (this *listValue) Equals(other Value) bool {
-	switch other := other.(type) {
-	case *listValue:
-		return arrayEquals(this.actual, other.actual)
-	case sliceValue:
-		return arrayEquals(this.actual, other)
-	case *ScopeValue:
-		return this.Equals(other.Value)
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	case *parsedValue:
-		return this.Equals(other.parse())
-	default:
-		return false
-	}
+	return this.slice.Equals(other)
 }
 
 func (this *listValue) Collate(other Value) int {
-	switch other := other.(type) {
-	case *listValue:
-		return arrayCollate(this.actual, other.actual)
-	case sliceValue:
-		return arrayCollate(this.actual, other)
-	case *ScopeValue:
-		return this.Collate(other.Value)
-	case *annotatedValue:
-		return this.Collate(other.Value)
-	case *parsedValue:
-		return this.Collate(other.parse())
-	default:
-		return int(ARRAY - other.Type())
-	}
+	return this.slice.Collate(other)
 }
 
 func (this *listValue) Truth() bool {
-	return len(this.actual) > 0
+	return this.slice.Truth()
 }
 
 func (this *listValue) Copy() Value {
-	return &listValue{copySlice(this.actual, self)}
+	return &listValue{this.slice.Copy().(sliceValue)}
 }
 
 func (this *listValue) CopyForUpdate() Value {
-	return &listValue{copySlice(this.actual, copyForUpdate)}
+	return this.slice.CopyForUpdate()
 }
 
 func (this *listValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
+	return this.slice.Bytes()
 }
 
 func (this *listValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return this.slice.Field(field)
 }
 
 func (this *listValue) SetField(field string, val interface{}) error {
-	return Unsettable(field)
+	return this.slice.SetField(field, val)
 }
 
 func (this *listValue) UnsetField(field string) error {
-	return Unsettable(field)
+	return this.slice.UnsetField(field)
 }
 
 func (this *listValue) Index(index int) (Value, bool) {
-	if index < 0 {
-		index = len(this.actual) + index
-	}
-
-	if index >= 0 && index < len(this.actual) {
-		return NewValue(this.actual[index]), true
-	}
-
-	return missingIndex(index), false
+	return this.slice.Index(index)
 }
 
 func (this *listValue) SetIndex(index int, val interface{}) error {
-	if index < 0 {
-		index = len(this.actual) + index
-	}
-
-	if index < 0 {
-		return Unsettable(index)
-	}
-
-	if index >= len(this.actual) {
-		if index < cap(this.actual) {
-			this.actual = this.actual[0 : index+1]
+	if index >= len(this.slice) {
+		if index < cap(this.slice) {
+			this.slice = this.slice[0 : index+1]
 		} else {
-			actual := make([]interface{}, index+1, (index+1)<<1)
-			copy(actual, this.actual)
-			this.actual = actual
+			slice := make(sliceValue, index+1, (index+1)<<1)
+			copy(slice, this.slice)
+			this.slice = slice
 		}
 	}
 
-	switch val := val.(type) {
-	case missingValue:
-		this.actual[index] = nil
-	default:
-		this.actual[index] = val
-	}
-
-	return nil
+	return this.slice.SetIndex(index, val)
 }
 
 func (this *listValue) Slice(start, end int) (Value, bool) {
-	if start < 0 {
-		start = len(this.actual) + start
-	}
-
-	if end < 0 {
-		end = len(this.actual) + end
-	}
-
-	if start <= end && start >= 0 && end <= len(this.actual) {
-		return NewValue(this.actual[start:end]), true
-	}
-
-	return MISSING_VALUE, false
+	return this.slice.Slice(start, end)
 }
 
 func (this *listValue) SliceTail(start int) (Value, bool) {
-	if start < 0 {
-		start = len(this.actual) + start
-	}
-
-	if start >= 0 {
-		return NewValue(this.actual[start:]), true
-	}
-
-	return MISSING_VALUE, false
+	return this.slice.SliceTail(start)
 }
 
 func (this *listValue) Descendants(buffer []interface{}) []interface{} {
-	if cap(buffer) < len(buffer)+len(this.actual) {
-		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this.actual)+1)<<1)
-		copy(buf2, buffer)
-		buffer = buf2
-	}
-
-	for _, child := range this.actual {
-		buffer = append(buffer, child)
-		buffer = NewValue(child).Descendants(buffer)
-	}
-
-	return buffer
+	return this.slice.Descendants(buffer)
 }
 
 func (this *listValue) Fields() map[string]interface{} {
-	return nil
+	return this.slice.Fields()
 }
 
 func arrayEquals(array1, array2 []interface{}) bool {
@@ -363,7 +279,8 @@ func arrayCollate(array1, array2 []interface{}) int {
 			return 1
 		}
 
-		if cmp := NewValue(item1).Collate(NewValue(array2[i])); cmp != 0 {
+		cmp := NewValue(item1).Collate(NewValue(array2[i]))
+		if cmp != 0 {
 			return cmp
 		}
 	}
