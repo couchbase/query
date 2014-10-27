@@ -37,7 +37,7 @@ func (this *parsedValue) Type() Type { return this.parsedType }
 
 func (this *parsedValue) Actual() interface{} {
 	if this.parsedType == BINARY {
-		return nil
+		return this.raw
 	}
 
 	return this.parse().Actual()
