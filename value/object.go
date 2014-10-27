@@ -27,9 +27,9 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, 1<<8))
 	buf.WriteString("{")
 
-	keys := sortedKeys(this)
-	for i, k := range keys {
-		v := NewValue(this[k])
+	names := sortedNames(this)
+	for i, n := range names {
+		v := NewValue(this[n])
 		if v.Type() == MISSING {
 			continue
 		}
@@ -39,7 +39,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		}
 
 		buf.WriteString("\"")
-		buf.WriteString(k)
+		buf.WriteString(n)
 		buf.WriteString("\":")
 
 		b, err := json.Marshal(v)
@@ -103,7 +103,7 @@ func (this objectValue) CopyForUpdate() Value {
 }
 
 func (this objectValue) Bytes() []byte {
-	bytes, err := json.Marshal(this)
+	bytes, err := this.MarshalJSON()
 	if err != nil {
 		panic(_MARSHAL_ERROR)
 	}
@@ -152,7 +152,7 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this objectValue) Descendants(buffer []interface{}) []interface{} {
-	keys := sortedKeys(this)
+	names := sortedNames(this)
 
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -160,9 +160,10 @@ func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 		buffer = buf2
 	}
 
-	for _, key := range keys {
-		buffer = append(buffer, this[key])
-		buffer = NewValue(this[key]).Descendants(buffer)
+	for _, name := range names {
+		val := this[name]
+		buffer = append(buffer, val)
+		buffer = NewValue(val).Descendants(buffer)
 	}
 
 	return buffer
@@ -177,8 +178,8 @@ func objectEquals(obj1, obj2 map[string]interface{}) bool {
 		return false
 	}
 
-	for key1, val1 := range obj1 {
-		val2, ok := obj2[key1]
+	for name1, val1 := range obj1 {
+		val2, ok := obj2[name1]
 		if !ok || !NewValue(val1).Equals(NewValue(val2)) {
 			return false
 		}
@@ -196,45 +197,49 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 		return delta
 	}
 
-	// if not, proceed to do key by key comparision
+	// if not, proceed to do name by name comparision
 
-	// collect all the keys
-	allmap := make(map[string]bool, len(obj1)+len(obj2))
-	for k, _ := range obj1 {
-		allmap[k] = false
+	// collect all the names
+	allmap := make(map[string]bool, len(obj1)<<1)
+	for n, _ := range obj1 {
+		allmap[n] = false
 	}
-	for k, _ := range obj2 {
-		allmap[k] = false
+	for n, _ := range obj2 {
+		allmap[n] = false
 	}
 
-	allkeys := make(sort.StringSlice, len(allmap))
+	allnames := make(sort.StringSlice, len(allmap))
 	i := 0
-	for k, _ := range allmap {
-		allkeys[i] = k
+	for n, _ := range allmap {
+		allnames[i] = n
 		i++
 	}
 
-	// sort the keys
-	sort.Sort(allkeys)
+	// sort the names
+	allnames.Sort()
 
-	// now compare the values associated with each key
-	for _, key := range allkeys {
-		val1, ok := obj1[key]
+	// now compare the values associated with each name
+	for _, name := range allnames {
+		val1, ok := obj1[name]
 		if !ok {
-			// obj1 didn't have this key, so it is smaller
-			return -1
-		}
-		val2, ok := obj2[key]
-		if !ok {
-			// ojb2 didnt have this key, so its smaller
+			// obj1 did not have this name, so it is larger
 			return 1
 		}
-		// key was in both objects, need to compare them
-		if cmp := NewValue(val1).Collate(NewValue(val2)); cmp != 0 {
+
+		val2, ok := obj2[name]
+		if !ok {
+			// ojb2 did not have this name, so it is larger
+			return -1
+		}
+
+		// name was in both objects, so compare the corresponding values
+		cmp := NewValue(val1).Collate(NewValue(val2))
+		if cmp != 0 {
 			return cmp
 		}
 	}
 
+	// all names and values are equal
 	return 0
 }
 
@@ -244,19 +249,19 @@ func copyMap(source map[string]interface{}, copier copyFunc) map[string]interfac
 	}
 
 	result := make(map[string]interface{}, len(source))
-	for k, v := range source {
-		result[k] = copier(v)
+	for n, v := range source {
+		result[n] = copier(v)
 	}
 
 	return result
 }
 
-func sortedKeys(obj map[string]interface{}) []string {
-	keys := make(sort.StringSlice, 0, len(obj))
-	for key, _ := range obj {
-		keys = append(keys, key)
+func sortedNames(obj map[string]interface{}) []string {
+	names := make(sort.StringSlice, 0, len(obj))
+	for name, _ := range obj {
+		names = append(names, name)
 	}
 
-	sort.Sort(keys)
-	return keys
+	names.Sort()
+	return names
 }
