@@ -72,16 +72,14 @@ func (this *parsedValue) Truth() bool {
 }
 
 func (this *parsedValue) Copy() Value {
-	if this.parsed != nil {
-		return this.parsed.Copy()
+	if this.parsedType != BINARY && this.parsedType < ARRAY {
+		return this.parse().Copy()
 	}
 
-	rv := &parsedValue{
+	return &parsedValue{
 		raw:        this.raw,
 		parsedType: this.parsedType,
 	}
-
-	return rv
 }
 
 func (this *parsedValue) CopyForUpdate() Value {
