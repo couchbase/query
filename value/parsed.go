@@ -53,11 +53,11 @@ func (this *parsedValue) Equals(other Value) bool {
 
 func (this *parsedValue) Collate(other Value) int {
 	if this.parsedType == BINARY {
-		if other.Type() != BINARY {
-			return -other.Collate(this)
+		if other.Type() == BINARY {
+			return bytes.Compare(this.raw, other.Bytes())
+		} else {
+			return int(BINARY - other.Type())
 		}
-
-		return bytes.Compare(this.raw, other.Bytes())
 	}
 
 	return this.parse().Collate(other)
