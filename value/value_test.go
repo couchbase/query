@@ -45,7 +45,7 @@ func TestTypeRecognition(t *testing.T) {
 
 	var tests = []struct {
 		input        []byte
-		expectedType int
+		expectedType Type
 	}{
 		{[]byte(`asdf`), BINARY},
 		{[]byte(`null`), NULL},
@@ -80,20 +80,22 @@ func TestFieldAccess(t *testing.T) {
 	var tests = []struct {
 		field  string
 		result Value
-		err    error
+		ok     bool
 	}{
-		{"name", stringValue("marty"), nil},
-		{"address", &parsedValue{raw: []byte(`{"street":"sutton oaks"}`), parsedType: OBJECT}, nil},
-		{"dne", nil, Undefined("dne")},
+		{"name", stringValue("marty"), true},
+		{"address", &parsedValue{raw: []byte(`{"street":"sutton oaks"}`), parsedType: OBJECT}, true},
+		{"dne", missingField("dne"), false},
 	}
 
 	for _, test := range tests {
-		newval, err := val.Field(test.field)
-		if !reflect.DeepEqual(err, test.err) {
-			t.Errorf("Expected error %v got error %v for field %s", test.err, err, test.field)
+		result, ok := val.Field(test.field)
+
+		if ok != test.ok {
+			t.Errorf("Expected ok=%v, got ok=%v for field %s.", test.ok, ok, test.field)
 		}
-		if !reflect.DeepEqual(newval, test.result) {
-			t.Errorf("Expected %v got %v for field %s", test.result, newval, test.field)
+
+		if !reflect.DeepEqual(result, test.result) {
+			t.Errorf("Expected result=%v, got result=%v for field %s.", test.result, result, test.field)
 		}
 	}
 }
@@ -105,20 +107,22 @@ func TestIndexAccess(t *testing.T) {
 	var tests = []struct {
 		index  int
 		result Value
-		err    error
+		ok     bool
 	}{
-		{0, stringValue("marty"), nil},
-		{1, &parsedValue{raw: []byte(`{"type":"contact"}`), parsedType: OBJECT}, nil},
-		{2, nil, Undefined(2)},
+		{0, stringValue("marty"), true},
+		{1, &parsedValue{raw: []byte(`{"type":"contact"}`), parsedType: OBJECT}, true},
+		{2, missingIndex(2), false},
 	}
 
 	for _, test := range tests {
-		newval, err := val.Index(test.index)
-		if !reflect.DeepEqual(err, test.err) {
-			t.Errorf("Expected error %v got error %v for index %d", test.err, err, test.index)
+		result, ok := val.Index(test.index)
+
+		if !reflect.DeepEqual(ok, test.ok) {
+			t.Errorf("Expected ok=%v, got ok=%v for index %d.", test.ok, ok, test.index)
 		}
-		if !reflect.DeepEqual(newval, test.result) {
-			t.Errorf("Expected %v got %v for index %d", test.result, newval, test.index)
+
+		if !reflect.DeepEqual(result, test.result) {
+			t.Errorf("Expected result=%v, got result=%v for index %d.", test.result, result, test.index)
 		}
 	}
 
@@ -127,20 +131,22 @@ func TestIndexAccess(t *testing.T) {
 	tests = []struct {
 		index  int
 		result Value
-		err    error
+		ok     bool
 	}{
-		{0, stringValue("marty"), nil},
-		{1, objectValue(map[string]interface{}{"type": "contact"}), nil},
-		{2, nil, Undefined(2)},
+		{0, stringValue("marty"), true},
+		{1, objectValue(map[string]interface{}{"type": "contact"}), true},
+		{2, missingIndex(2), false},
 	}
 
 	for _, test := range tests {
-		newval, err := val.Index(test.index)
-		if !reflect.DeepEqual(err, test.err) {
-			t.Errorf("Expected error %v got error %v for index %d", test.err, err, test.index)
+		result, ok := val.Index(test.index)
+
+		if !reflect.DeepEqual(ok, test.ok) {
+			t.Errorf("Expected ok=%v, got ok=%v for index %d.", test.ok, ok, test.index)
 		}
-		if !reflect.DeepEqual(newval, test.result) {
-			t.Errorf("Expected %v got %v for index %d", test.result, newval, test.index)
+
+		if !reflect.DeepEqual(result, test.result) {
+			t.Errorf("Expected result=%v, got result=%v for index %d.", test.result, result, test.index)
 		}
 	}
 }
@@ -170,9 +176,9 @@ func TestRealWorkflow(t *testing.T) {
 	active := NewValue(true)
 	doc.SetField("active", active)
 
-	testActiveVal, err := doc.Field("active")
-	if err != nil {
-		t.Errorf("Error accessing active in doc")
+	testActiveVal, ok := doc.Field("active")
+	if !ok {
+		t.Errorf("Error accessing doc.active")
 	}
 
 	testActive := testActiveVal.Actual()
@@ -183,17 +189,17 @@ func TestRealWorkflow(t *testing.T) {
 	// create a reference to doc
 	top := NewValue(map[string]interface{}{"bucket": doc, "another": "rad"})
 
-	testDoc, err := top.Field("bucket")
-	if err != nil {
-		t.Errorf("Error accessing bucket in top")
+	testDoc, ok := top.Field("bucket")
+	if !ok {
+		t.Errorf("Error accessing top.bucket")
 	}
 	if !reflect.DeepEqual(testDoc, doc) {
 		t.Errorf("Expected doc %v to match testDoc %v", doc, testDoc)
 	}
 
-	testRad, err := top.Field("another")
-	if err != nil {
-		t.Errorf("Error accessing another in top")
+	testRad, ok := top.Field("another")
+	if !ok {
+		t.Errorf("Error accessing top.another")
 	}
 	expectedRad := NewValue("rad")
 	if !reflect.DeepEqual(testRad, expectedRad) {
@@ -201,42 +207,44 @@ func TestRealWorkflow(t *testing.T) {
 	}
 
 	// now project some value from the doc to a top-level alias
-	addressVal, err := doc.Field("address")
-	if err != nil {
-		t.Errorf("Error access field address in doc")
+	addressVal, ok := doc.Field("address")
+	if !ok {
+		t.Errorf("Error accessing doc.address")
 	}
 
 	top.SetField("a", addressVal)
 
 	// now access "a.street"
-	aVal, err := top.Field("a")
-	if err != nil {
-		t.Errorf("Error access a in top")
+	aVal, ok := top.Field("a")
+	if !ok {
+		t.Errorf("Error accessing top.a")
 	}
-	streetVal, err := aVal.Field("street")
-	if err != nil {
-		t.Errorf("Error accessing street in a")
+
+	streetVal, ok := aVal.Field("street")
+	if !ok {
+		t.Errorf("Error accessing a.street")
 	}
+
 	street := streetVal.Actual()
 	if street != "sutton oaks" {
 		t.Errorf("Expected sutton oaks, got %v", street)
 	}
 }
 
-func TestUndefined(t *testing.T) {
+func TestMissing(t *testing.T) {
 
-	x := Undefined("property")
+	x := missingField("property")
 	err := x.Error()
 
-	if err != "Field or index property is not defined." {
-		t.Errorf("Expected field or index property is not defined, got %v", err)
+	if err != "Missing field or index property." {
+		t.Errorf("Expected 'Missing field or index property.', got %v.", err)
 	}
 
-	y := Undefined("")
+	y := missingField("")
 	err = y.Error()
 
-	if err != "Not defined." {
-		t.Errorf("Expected not defined, got %v", err)
+	if err != "Missing field or index." {
+		t.Errorf("Expected 'Missing field or index.', got %v.", err)
 	}
 
 }
@@ -268,15 +276,15 @@ func TestValue(t *testing.T) {
 		{NewValueFromBytes([]byte("\"marty\"")), "marty"},
 		{NewValueFromBytes([]byte("[\"marty\"]")), []interface{}{"marty"}},
 		{NewValueFromBytes([]byte("{\"marty\": \"cool\"}")), map[string]interface{}{"marty": "cool"}},
-		{NewValueFromBytes([]byte("abc")), nil},
+		{NewValueFromBytes([]byte("abc")), []byte("abc")},
 		// new value from existing value
 		{NewValue(NewValue(true)), true},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		val := test.input.Actual()
 		if !reflect.DeepEqual(val, test.expectedValue) {
-			t.Errorf("Expected %#v, got %#v for %#v", test.expectedValue, val, test.input)
+			t.Errorf("Expected %#v, got %#v for %#v at index %d.", test.expectedValue, val, test.input, i)
 		}
 	}
 }
@@ -384,18 +392,18 @@ func BenchmarkLargeValue(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		var err error
+		var ok bool
 		val := NewValueFromBytes(codeJSON)
 		for _, key := range keys {
 			switch key := key.(type) {
 			case string:
-				val, err = val.Field(key)
-				if err != nil {
+				val, ok = val.Field(key)
+				if !ok {
 					b.Errorf("error accessing field %v", key)
 				}
 			case int:
-				val, err = val.Index(key)
-				if err != nil {
+				val, ok = val.Index(key)
+				if !ok {
 					b.Errorf("error accessing index %v", key)
 				}
 			}
@@ -477,30 +485,29 @@ func TestCopyValueFromBytes(t *testing.T) {
 	val2 := val.Copy()
 	val2.SetField("name", "bob")
 
-	name, err := val.Field("name")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	name, ok := val.Field("name")
+	if !ok {
+		t.Errorf("unexpected error accessing val.name")
 	}
-	name2, err := val2.Field("name")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	name2, ok := val2.Field("name")
+	if !ok {
+		t.Errorf("unexpected error accessing val2.name")
 	}
 	if reflect.DeepEqual(name, name2) {
 		t.Errorf("expected different names")
 	}
 
-	typ, err := val.Field("type")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	typ, ok := val.Field("type")
+	if !ok {
+		t.Errorf("unexpected error accessing val.type")
 	}
-	typ2, err := val2.Field("type")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	typ2, ok := val2.Field("type")
+	if !ok {
+		t.Errorf("unexpected error accessing val2.type")
 	}
 	if !reflect.DeepEqual(typ, typ2) {
 		t.Errorf("expected same types")
 	}
-
 }
 
 func TestCopyValueFromValue(t *testing.T) {
@@ -516,30 +523,29 @@ func TestCopyValueFromValue(t *testing.T) {
 	val2 := val.Copy()
 	val2.SetField("name", "bob")
 
-	name, err := val.Field("name")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	name, ok := val.Field("name")
+	if !ok {
+		t.Errorf("unexpected error accessing val.name")
 	}
-	name2, err := val2.Field("name")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	name2, ok := val2.Field("name")
+	if !ok {
+		t.Errorf("unexpected error accessing val2.name")
 	}
 	if reflect.DeepEqual(name, name2) {
-		t.Errorf("expected different names %s and %s", name, name2)
+		t.Errorf("expected different names")
 	}
 
-	typ, err := val.Field("type")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	typ, ok := val.Field("type")
+	if !ok {
+		t.Errorf("unexpected error accessing val.type")
 	}
-	typ2, err := val2.Field("type")
-	if err != nil {
-		t.Errorf("unexpected error %v", err)
+	typ2, ok := val2.Field("type")
+	if !ok {
+		t.Errorf("unexpected error accessing val2.type")
 	}
 	if !reflect.DeepEqual(typ, typ2) {
 		t.Errorf("expected same types")
 	}
-
 }
 
 func TestArraySetIndexLongerThanExistingArray(t *testing.T) {
