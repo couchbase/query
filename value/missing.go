@@ -30,9 +30,10 @@ func (this missingValue) MarshalJSON() ([]byte, error) {
 // Description of which property or index was undefined (if known).
 func (this missingValue) Error() string {
 	if string(this) != "" {
-		return fmt.Sprintf("Field or index %s is not defined.", string(this))
+		return fmt.Sprintf("Missing field or index %s.", string(this))
+	} else {
+		return "Missing field or index."
 	}
-	return "Not defined."
 }
 
 func (this missingValue) Type() Type { return MISSING }
@@ -103,10 +104,10 @@ func (this missingValue) Fields() map[string]interface{} {
 	return nil
 }
 
-func missingField(field string) Value {
+func missingField(field string) missingValue {
 	return missingValue(field)
 }
 
-func missingIndex(index int) Value {
+func missingIndex(index int) missingValue {
 	return missingValue(string(index))
 }
