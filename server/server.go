@@ -95,6 +95,13 @@ func (this *Server) doServe() {
 }
 
 func (this *Server) serviceRequest(request Request) {
+
+	// The request may have been failed - e.g. http request missing required params
+	// do not proceed if so
+	if request.State() == FATAL {
+		return
+	}
+
 	request.Servicing()
 
 	namespace := request.Namespace()

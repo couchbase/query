@@ -29,11 +29,15 @@ func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndp
 
 	rv.httpsrv.Addr = addr
 	rv.httpsrv.Handler = rv
+
+	// Bind HttpEndpoint object to /query endpoint; use default Server Mux
+	http.Handle("/query", rv)
+
 	return rv
 }
 
 func (this *HttpEndpoint) ListenAndServe() error {
-	return this.httpsrv.ListenAndServe()
+	return http.ListenAndServe(this.httpsrv.Addr, nil)
 }
 
 // If the server channel is full and we are unable to queue a request,
