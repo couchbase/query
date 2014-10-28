@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/query/accounting"
+	"github.com/couchbaselabs/query/accounting/gometrics"
 	"github.com/couchbaselabs/query/accounting/stub"
 
 	"github.com/couchbaselabs/query/errors"
@@ -22,6 +23,10 @@ import (
 func NewAcctstore(uri string) (accounting.AccountingStore, errors.Error) {
 	if strings.HasPrefix(uri, "stub:") {
 		return accounting_stub.NewAccountingStore(uri)
+	}
+
+	if strings.HasPrefix(uri, "gometrics:") {
+		return accounting_gm.NewAccountingStore(), nil
 	}
 
 	return nil, errors.NewError(nil, fmt.Sprintf("Invalid datastore uri: %s", uri))

@@ -24,20 +24,14 @@ type AccountingStore interface {
 	Id() string                               // Id of this AccountingStore
 	URL() string                              // URL to this AccountingStore
 	MetricRegistry() MetricRegistry           // The MetricRegistry that this AccountingStore is managing
+	MetricReporter() MetricReporter           // The MetricReporter that this AccountingStore is using
 	HealthCheckRegistry() HealthCheckRegistry // The HealthCheckRegistry that this AccountingStore is managing
-}
-
-// A point in time value
-type TimeSeriesPoint struct {
-	timestamp time.Time   // The time this TimeSeriesPoint was created
-	value     interface{} // The value for this TimeSeriesPoint
 }
 
 // Metric types
 
 // A Metric is a property that can be measured repeatedly and/or periodically
 type Metric interface {
-	History() []TimeSeriesPoint // The history of time series points captured for this metric
 }
 
 // Counter is an incrementing/decrementing count (#requests in a queue, #garbage collections)
@@ -46,51 +40,62 @@ type Counter interface {
 	Inc(amount int64) // Increment the counter by the given amount
 	Dec(amount int64) // Decrement the counter by the given amount
 	Count() int64     // Current Count value
+	Clear()
 }
 
 // Gauge is an instantaneous measurement of a property (cpu load, response size)
 type Gauge interface {
 	Metric
-	Value() float64 // The value of the Gauge
+	Value() int64 // The value of the Gauge
 }
 
 // Meter is a rate of change metric (queries per second, garbage collections per minute)
 type Meter interface {
 	Metric
-	RateN(n int) float64 // n-minute moving average rate
-	Mean() float64       // Mean throughput rate
-	Mark(n int64)        // Mark the occurance of n events
-	Count() int64        // The overall count of events
-}
-
-// Timer is a measurement of how long an activity took
-type Timer interface {
-	Metric
-	Start()               // Start the timer
-	Stop()                // Stop the timer
-	Value() time.Duration // Current value of the timer
+	Rate1() float64    // 1-minute moving average rate
+	Rate5() float64    // 5-minute moving average rate
+	Rate15() float64   // 15-minute moving average rate
+	RateMean() float64 // Mean throughput rate
+	Mark(n int64)      // Mark the occurance of n events
+	Count() int64      // The overall count of events
 }
 
 // Histogram provides summary statistics for a metric within a time window
 type Histogram interface {
 	Metric
+	Clear()                            // Clear the histogram
+	Count() int64                      // The number of values in the histogram
+	Max() int64                        // The maximum value in the histogram
+	Mean() float64                     // The mean value in the histogram
+	Min() int64                        // The minimum value in the histogram
+	Sum() int64                        // The sum of all values in the histogram
 	Percentile(n float64) float64      // The Nth percentile value (e.g. n = 50)
 	Percentiles(n []float64) []float64 // The Nth percentiles values (e.g. n = {50, 75, 90, 95, 99, 99.9})
 	StdDev() float64                   // The Standard Deviation of the values in the histogram
 	Variance() float64                 // The Variance of the values in the histogram
+	Update(n int64)                    // Sample a new value
 }
 
-// Aggregate provides aggregate statistics for a metric within a time window
-type Aggregate interface {
+// Timer is a measurement of how long an activity took
+type Timer interface {
 	Metric
-	Count() int64  // The number of values in the aggregate
-	Max() float64  // The maximum value in the aggregate
-	Mean() float64 // The mean value in the aggregate
-	Min() float64  // The minimum value in the aggregate
-	Sum() float64  // The sum of all values in the aggregate
+	Count() int64                      // The number of values in the timer
+	Rate1() float64                    // 1-minute moving average rate
+	Rate5() float64                    // 5-minute moving average rate
+	Rate15() float64                   // 15-minute moving average rate
+	RateMean() float64                 // Mean throughput rate
+	Max() int64                        // The maximum value in the timer
+	Mean() float64                     // The mean value in the timer
+	Min() int64                        // The minimum value in the timer
+	Sum() int64                        // The sum of all values in the timer
+	Percentile(n float64) float64      // The Nth percentile value (e.g. n = 50)
+	Percentiles(n []float64) []float64 // The Nth percentiles values (e.g. n = {50, 75, 90, 95, 99, 99.9})
+	StdDev() float64                   // The Standard Deviation of the values in the timer
+	Variance() float64                 // The Variance of the values in the timer
+	Update(t time.Duration)            // Sample a new value
 }
 
-// MetricsRegistry is the container for creating and maintaining Metrics
+// MetricRegistry is the container for creating and maintaining Metrics
 type MetricRegistry interface {
 	// Register a metric with a name.
 	// Possible reasons for error: name already in use
@@ -110,14 +115,12 @@ type MetricRegistry interface {
 	Meter(name string) Meter
 	Timer(name string) Timer
 	Histogram(name string) Histogram
-	Aggregate(name string) Aggregate
 
 	Counters() map[string]Counter     // all registered counters
 	Gauges() map[string]Gauge         // all registered gauges
 	Meters() map[string]Meter         // all registered meters
 	Timers() map[string]Timer         // all registered timers
 	Histograms() map[string]Histogram // all registered histograms
-	Aggregates() map[string]Aggregate // all registered aggregates
 }
 
 // A check that tests the status of an entity or compares a metric value against a
@@ -156,7 +159,7 @@ type HealthCheckRegistry interface {
 }
 
 // Periodically report all registered metrics to a source (console, log, service)
-type MetricsReporter interface {
+type MetricReporter interface {
 	MetricRegistry() MetricRegistry // The Metrics Registry being reported on
 
 	// Start reporting at the given interval and unit
