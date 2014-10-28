@@ -22,9 +22,9 @@ type ScopeValue struct {
 
 // ScopeValue provides alias scoping for subqueries, FORs, LETs,
 // projections, etc.
-func NewScopeValue(value interface{}, parent Value) Value {
+func NewScopeValue(val interface{}, parent Value) Value {
 	return &ScopeValue{
-		Value:  NewValue(value),
+		Value:  NewValue(val),
 		parent: parent,
 	}
 }
