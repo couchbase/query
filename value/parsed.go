@@ -26,11 +26,14 @@ type parsedValue struct {
 }
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
-	if this.parsedType == BINARY {
-		return nil, fmt.Errorf("Cannot marshal binary value.")
+	switch this.parsedType {
+	case OBJECT, ARRAY:
+		return this.parse().MarshalJSON()
+	case BINARY:
+		return this.raw, fmt.Errorf("Marshaling binary value returns raw bytes.")
+	default:
+		return this.raw, nil
 	}
-
-	return json.Marshal(this.parse())
 }
 
 func (this *parsedValue) Type() Type { return this.parsedType }
@@ -45,7 +48,8 @@ func (this *parsedValue) Actual() interface{} {
 
 func (this *parsedValue) Equals(other Value) bool {
 	if this.parsedType == BINARY {
-		return bytes.Equal(this.raw, other.Bytes())
+		b, _ := other.MarshalJSON()
+		return bytes.Equal(this.raw, b)
 	}
 
 	return this.parse().Equals(other)
@@ -54,7 +58,8 @@ func (this *parsedValue) Equals(other Value) bool {
 func (this *parsedValue) Collate(other Value) int {
 	if this.parsedType == BINARY {
 		if other.Type() == BINARY {
-			return bytes.Compare(this.raw, other.Bytes())
+			b, _ := other.MarshalJSON()
+			return bytes.Compare(this.raw, b)
 		} else {
 			return int(BINARY - other.Type())
 		}
@@ -88,15 +93,6 @@ func (this *parsedValue) CopyForUpdate() Value {
 	}
 
 	return this.parse().CopyForUpdate()
-}
-
-func (this *parsedValue) Bytes() []byte {
-	switch this.parsedType {
-	case ARRAY, OBJECT:
-		return this.parse().Bytes()
-	default:
-		return this.raw
-	}
 }
 
 func (this *parsedValue) Field(field string) (Value, bool) {

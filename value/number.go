@@ -78,14 +78,6 @@ func (this floatValue) CopyForUpdate() Value {
 	return this
 }
 
-func (this floatValue) Bytes() []byte {
-	bytes, err := this.MarshalJSON()
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
-}
-
 func (this floatValue) Field(field string) (Value, bool) {
 	return NULL_VALUE, false
 }

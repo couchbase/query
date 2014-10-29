@@ -356,7 +356,7 @@ func TestUnmodifiedValuesFromBytesBackToBytes(t *testing.T) {
 
 	for _, test := range tests {
 		val := NewValueFromBytes(test.input)
-		out := val.Bytes()
+		out, _ := val.MarshalJSON()
 		if !reflect.DeepEqual(out, test.expectedBytes) {
 			t.Errorf("Expected %s to be  %s, got %s", string(test.input), string(test.expectedBytes), string(out))
 		}
@@ -377,7 +377,7 @@ func TestUnmodifiedValuesBackToBytes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		out := test.input.Bytes()
+		out, _ := test.input.MarshalJSON()
 		if !reflect.DeepEqual(out, test.expectedBytes) {
 			t.Errorf("Expected %v to be  %s, got %s", test.input, string(test.expectedBytes), string(out))
 		}

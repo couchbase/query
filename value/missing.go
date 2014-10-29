@@ -62,12 +62,6 @@ func (this missingValue) CopyForUpdate() Value {
 	return this
 }
 
-var _MISSING_BYTES = []byte{}
-
-func (this missingValue) Bytes() []byte {
-	return _MISSING_BYTES
-}
-
 func (this missingValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }

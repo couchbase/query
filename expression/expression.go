@@ -33,7 +33,7 @@ type Expression interface {
 	// Evaluate this expression for the given value and context.
 	Evaluate(item value.Value, context Context) (value.Value, error)
 
-	// Terminal identifier if this is a path; else nil.
+	// Terminal identifier if this expression is a path; else "".
 	Alias() string
 
 	// Is this expression equivalent to the other.

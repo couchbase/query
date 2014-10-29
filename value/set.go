@@ -49,7 +49,8 @@ func (this *Set) Put(key, item Value) {
 
 	switch key.Type() {
 	case OBJECT:
-		this.objects[string(key.Bytes())] = item
+		b, _ := key.MarshalJSON()
+		this.objects[string(b)] = item
 	case MISSING:
 		this.missings = item
 	case NULL:
@@ -61,7 +62,8 @@ func (this *Set) Put(key, item Value) {
 	case STRING:
 		this.strings[key.Actual().(string)] = item
 	case ARRAY:
-		this.arrays[string(key.Bytes())] = item
+		b, _ := key.MarshalJSON()
+		this.arrays[string(b)] = item
 	case BINARY:
 		this.blobs = append(this.blobs, item) // FIXME: should compare bytes
 	default:
@@ -77,7 +79,8 @@ func (this *Set) Remove(key Value) {
 
 	switch key.Type() {
 	case OBJECT:
-		delete(this.objects, string(key.Bytes()))
+		b, _ := key.MarshalJSON()
+		delete(this.objects, string(b))
 	case MISSING:
 		this.missings = nil
 	case NULL:
@@ -89,7 +92,8 @@ func (this *Set) Remove(key Value) {
 	case STRING:
 		delete(this.strings, key.Actual().(string))
 	case ARRAY:
-		delete(this.arrays, string(key.Bytes()))
+		b, _ := key.MarshalJSON()
+		delete(this.arrays, string(b))
 	case BINARY:
 		// FIXME: should compare bytes
 	default:
@@ -105,7 +109,8 @@ func (this *Set) Has(key Value) bool {
 	ok := false
 	switch key.Type() {
 	case OBJECT:
-		_, ok = this.objects[string(key.Bytes())]
+		b, _ := key.MarshalJSON()
+		_, ok = this.objects[string(b)]
 	case MISSING:
 		return this.missings != nil
 	case NULL:
@@ -117,7 +122,8 @@ func (this *Set) Has(key Value) bool {
 	case STRING:
 		_, ok = this.strings[key.Actual().(string)]
 	case ARRAY:
-		_, ok = this.arrays[string(key.Bytes())]
+		b, _ := key.MarshalJSON()
+		_, ok = this.arrays[string(b)]
 	case BINARY:
 		// FIXME: should compare bytes
 		ok = false

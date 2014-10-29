@@ -46,7 +46,8 @@ func (this *Base64) Apply(context Context, operand value.Value) (value.Value, er
 		return operand, nil
 	}
 
-	str := base64.StdEncoding.EncodeToString(operand.Bytes())
+	bytes, _ := operand.MarshalJSON()
+	str := base64.StdEncoding.EncodeToString(bytes)
 	return value.NewValue(str), nil
 }
 

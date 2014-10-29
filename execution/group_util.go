@@ -27,5 +27,6 @@ func groupKey(item value.Value, keys expression.Expressions, context *Context) (
 		}
 	}
 
-	return string(value.NewValue(kvs).Bytes()), nil
+	bytes, _ := value.NewValue(kvs).MarshalJSON()
+	return string(bytes), nil
 }

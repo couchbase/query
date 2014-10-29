@@ -102,14 +102,6 @@ func (this objectValue) CopyForUpdate() Value {
 	return objectValue(copyMap(this, copyForUpdate))
 }
 
-func (this objectValue) Bytes() []byte {
-	bytes, err := this.MarshalJSON()
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
-}
-
 func (this objectValue) Field(field string) (Value, bool) {
 	result, ok := this[field]
 	if ok {

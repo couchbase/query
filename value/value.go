@@ -97,6 +97,7 @@ type CompositeValues []Values
 
 // An interface for storing and manipulating a (possibly JSON) value.
 type Value interface {
+	MarshalJSON() ([]byte, error)                   // JSON byte encoding; error is always nil
 	Type() Type                                     // Data type constant
 	Actual() interface{}                            // Native golang representation (non-N1QL) of _this_
 	Equals(other Value) bool                        // Faster than Collate()
@@ -104,7 +105,6 @@ type Value interface {
 	Truth() bool                                    // Truth value
 	Copy() Value                                    // Shallow copy
 	CopyForUpdate() Value                           // Deep copy for UPDATEs
-	Bytes() []byte                                  // JSON byte encoding
 	Field(field string) (Value, bool)               // Object field dereference, or MISSING; true if found
 	SetField(field string, val interface{}) error   // Object field setting
 	UnsetField(field string) error                  // Object field unsetting

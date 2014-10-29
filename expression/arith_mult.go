@@ -36,6 +36,7 @@ func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, erro
 func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 	prod := 1.0
+
 	for _, arg := range args {
 		if !null && arg.Type() == value.NUMBER {
 			prod *= arg.Actual().(float64)
