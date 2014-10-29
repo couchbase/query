@@ -16,6 +16,17 @@ type boolValue bool
 var FALSE_VALUE = NewValue(false)
 var TRUE_VALUE = NewValue(true)
 
+var _FALSE_BYTES = []byte("false")
+var _TRUE_BYTES = []byte("true")
+
+func (this boolValue) MarshalJSON() ([]byte, error) {
+	if this {
+		return _TRUE_BYTES, nil
+	} else {
+		return _FALSE_BYTES, nil
+	}
+}
+
 func (this boolValue) Type() Type { return BOOLEAN }
 
 func (this boolValue) Actual() interface{} {
@@ -65,17 +76,6 @@ func (this boolValue) Copy() Value {
 
 func (this boolValue) CopyForUpdate() Value {
 	return this
-}
-
-var _FALSE_BYTES = []byte("false")
-var _TRUE_BYTES = []byte("true")
-
-func (this boolValue) Bytes() []byte {
-	if this {
-		return _TRUE_BYTES
-	} else {
-		return _FALSE_BYTES
-	}
 }
 
 func (this boolValue) Field(field string) (Value, bool) {

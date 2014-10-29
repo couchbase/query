@@ -48,62 +48,43 @@ func (AccountingStoreStub) HealthCheckRegistry() accounting.HealthCheckRegistry 
 	return HealthCheckRegistryStub{}
 }
 
+func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
+	return MetricReporterStub{}
+}
+
 // CounterStub is a stub implementation of Counter
 type CounterStub struct{}
 
-func (CounterStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
+func (CounterStub) Inc(amount int64) {} // Nop
 
-func (CounterStub) Inc(amount int64) {} // No-op
-
-func (CounterStub) Dec(amount int64) {} // No-op
+func (CounterStub) Dec(amount int64) {} // Nop
 
 func (CounterStub) Count() int64 { return 0 }
+
+func (CounterStub) Clear() {} // Nop
 
 // GaugeStub is a stub implementation of Gauge
 type GaugeStub struct{}
 
-func (GaugeStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
-
-func (GaugeStub) Value() float64 { return 0.0 }
+func (GaugeStub) Value() int64 { return 0 }
 
 // MeterStub is a stub implementation of Meter
 type MeterStub struct{}
 
-func (MeterStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
+func (MeterStub) Rate1() float64 { return 0.0 }
 
-func (MeterStub) RateN(n int) float64 { return 0.0 }
+func (MeterStub) Rate5() float64 { return 0.0 }
 
-func (MeterStub) Mean() float64 { return 0.0 }
+func (MeterStub) Rate15() float64 { return 0.0 }
 
-func (MeterStub) Mark(n int64) {} // No-op
+func (MeterStub) RateMean() float64 { return 0.0 }
+
+func (MeterStub) Mark(n int64) {} // Nop
 
 func (MeterStub) Count() int64 { return 0 }
 
-// TimerStub is a stub implementation of Timer
-type TimerStub struct{}
-
-func (TimerStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
-
-func (TimerStub) Start() {} // No-op
-
-func (TimerStub) Stop() {} // No-op
-
-func (TimerStub) Value() time.Duration { return 0 }
-
 // HistogramStub is a stub implementation of Histogram
 type HistogramStub struct{}
-
-func (HistogramStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
 
 func (HistogramStub) Percentile(n float64) float64 { return 0.0 }
 
@@ -113,22 +94,52 @@ func (HistogramStub) StdDev() float64 { return 0.0 }
 
 func (HistogramStub) Variance() float64 { return 0.0 }
 
-// AggregateStub is a stub implementation of Aggregate
-type AggregateStub struct{}
+func (HistogramStub) Clear() {} // Nop
 
-func (AggregateStub) History() []accounting.TimeSeriesPoint {
-	return []accounting.TimeSeriesPoint{}
-}
+func (HistogramStub) Count() int64 { return 0 }
 
-func (AggregateStub) Count() int64 { return 0 }
+func (HistogramStub) Max() int64 { return 0 }
 
-func (AggregateStub) Max() float64 { return 0.0 }
+func (HistogramStub) Mean() float64 { return 0.0 }
 
-func (AggregateStub) Mean() float64 { return 0.0 }
+func (HistogramStub) Min() int64 { return 0 }
 
-func (AggregateStub) Min() float64 { return 0.0 }
+func (HistogramStub) Sum() int64 { return 0 }
 
-func (AggregateStub) Sum() float64 { return 0.0 }
+func (HistogramStub) Update(int64) {} // Nop
+
+// TimerStub is a stub implementation of Timer
+type TimerStub struct{}
+
+func (TimerStub) Percentile(n float64) float64 { return 0.0 }
+
+func (TimerStub) Percentiles(n []float64) []float64 { return make([]float64, len(n)) }
+
+func (TimerStub) StdDev() float64 { return 0.0 }
+
+func (TimerStub) Variance() float64 { return 0.0 }
+
+func (TimerStub) Clear() {} // Nop
+
+func (TimerStub) Count() int64 { return 0 }
+
+func (TimerStub) Max() int64 { return 0 }
+
+func (TimerStub) Mean() float64 { return 0.0 }
+
+func (TimerStub) Min() int64 { return 0 }
+
+func (TimerStub) Sum() int64 { return 0 }
+
+func (TimerStub) Update(time.Duration) {} // Nop
+
+func (TimerStub) Rate1() float64 { return 0.0 }
+
+func (TimerStub) Rate5() float64 { return 0.0 }
+
+func (TimerStub) Rate15() float64 { return 0.0 }
+
+func (TimerStub) RateMean() float64 { return 0.0 }
 
 // MetricRegistryStub is a stub implementation of MetricRegistry
 type MetricRegistryStub struct{}
@@ -165,10 +176,6 @@ func (MetricRegistryStub) Histogram(name string) accounting.Histogram {
 	return HistogramStub{}
 }
 
-func (MetricRegistryStub) Aggregate(name string) accounting.Aggregate {
-	return AggregateStub{}
-}
-
 func (MetricRegistryStub) Counters() map[string]accounting.Counter {
 	return nil
 }
@@ -186,10 +193,6 @@ func (MetricRegistryStub) Timers() map[string]accounting.Timer {
 }
 
 func (MetricRegistryStub) Histograms() map[string]accounting.Histogram {
-	return nil
-}
-
-func (MetricRegistryStub) Aggregates() map[string]accounting.Aggregate {
 	return nil
 }
 
@@ -229,16 +232,16 @@ func (HealthCheckRegistryStub) RunHealthCheck(name string) (accounting.HealthChe
 }
 
 // Periodically report all registered metrics to a source (console, log, service)
-type MetricsReporterStub struct{}
+type MetricReporterStub struct{}
 
-func (MetricsReporterStub) MetricRegistry() accounting.MetricRegistry {
+func (MetricReporterStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
 }
 
-func (MetricsReporterStub) Start(interval int64, unit time.Duration) {}
+func (MetricReporterStub) Start(interval int64, unit time.Duration) {}
 
-func (MetricsReporterStub) Stop() {}
+func (MetricReporterStub) Stop() {}
 
-func (MetricsReporterStub) Report() {}
+func (MetricReporterStub) Report() {}
 
-func (MetricsReporterStub) RateUnit() time.Duration { return 0 }
+func (MetricReporterStub) RateUnit() time.Duration { return 0 }

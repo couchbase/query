@@ -18,6 +18,8 @@ func NewNullValue() Value {
 	return NULL_VALUE
 }
 
+var _NULL_BYTES = []byte("null")
+
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }
@@ -46,12 +48,6 @@ func (this *nullValue) Copy() Value {
 
 func (this *nullValue) CopyForUpdate() Value {
 	return this
-}
-
-var _NULL_BYTES = []byte("null")
-
-func (this *nullValue) Bytes() []byte {
-	return _NULL_BYTES
 }
 
 func (this *nullValue) Field(field string) (Value, bool) {

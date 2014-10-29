@@ -74,14 +74,6 @@ func (this sliceValue) CopyForUpdate() Value {
 	return &listValue{copySlice(this, copyForUpdate)}
 }
 
-func (this sliceValue) Bytes() []byte {
-	bytes, err := this.MarshalJSON()
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
-}
-
 func (this sliceValue) Field(field string) (Value, bool) {
 	return NULL_VALUE, false
 }
@@ -205,10 +197,6 @@ func (this *listValue) Copy() Value {
 
 func (this *listValue) CopyForUpdate() Value {
 	return this.slice.CopyForUpdate()
-}
-
-func (this *listValue) Bytes() []byte {
-	return this.slice.Bytes()
 }
 
 func (this *listValue) Field(field string) (Value, bool) {

@@ -17,6 +17,10 @@ type stringValue string
 
 var EMPTY_STRING_VALUE = NewValue("")
 
+func (this stringValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(this))
+}
+
 func (this stringValue) Type() Type { return STRING }
 
 func (this stringValue) Actual() interface{} {
@@ -65,14 +69,6 @@ func (this stringValue) Copy() Value {
 
 func (this stringValue) CopyForUpdate() Value {
 	return this
-}
-
-func (this stringValue) Bytes() []byte {
-	bytes, err := json.Marshal(this.Actual())
-	if err != nil {
-		panic(_MARSHAL_ERROR)
-	}
-	return bytes
 }
 
 func (this stringValue) Field(field string) (Value, bool) {

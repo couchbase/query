@@ -330,7 +330,8 @@ func (this *Stringer) VisitConcat(expr *Concat) (interface{}, error) {
 
 // Constant
 func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
-	return json.Marshal(expr.value)
+	b, _ := expr.value.MarshalJSON()
+	return string(b), nil
 }
 
 // Identifier

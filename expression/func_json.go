@@ -95,7 +95,8 @@ func (this *EncodeJSON) Evaluate(item value.Value, context Context) (value.Value
 }
 
 func (this *EncodeJSON) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(string(arg.Bytes())), nil
+	bytes, _ := arg.MarshalJSON()
+	return value.NewValue(string(bytes)), nil
 }
 
 func (this *EncodeJSON) Constructor() FunctionConstructor {
@@ -131,7 +132,8 @@ func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Valu
 }
 
 func (this *EncodedSize) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(float64(len(arg.Bytes()))), nil
+	bytes, _ := arg.MarshalJSON()
+	return value.NewValue(float64(len(bytes))), nil
 }
 
 func (this *EncodedSize) Constructor() FunctionConstructor {
