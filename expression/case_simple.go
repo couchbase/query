@@ -50,7 +50,7 @@ func (this *SimpleCase) Type() value.Type {
 		tt := w.Then.Type()
 		if t > value.NULL && tt > value.NULL && tt != t {
 			return value.JSON
-		} else {
+		} else if t < tt {
 			t = tt
 		}
 	}
