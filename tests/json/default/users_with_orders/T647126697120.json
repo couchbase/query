@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Wed Aug 14 22:00:09 2013",
+        "order_id": "T647126697120"
+    },
+    "payment_details": {
+        "payment_mode": "Debit Card",
+        "total_charges": 552
+    },
+    "product_details": {
+        "currency": "GBP",
+        "list_price": 716,
+        "pct_discount": 25,
+        "product_id": "P2516365575",
+        "sale_price": 537
+    },
+    "shipping_details": {
+        "shipping_charges": 15,
+        "shipping_status": "Delivered",
+        "shipping_type": "Priority"
+    }
+}

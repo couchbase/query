@@ -1,0 +1,58 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 43,
+        "display_name": "Aliza Sanborn",
+        "email": "Aliza.Sanborn@snailmail.com",
+        "first_name": "Aliza",
+        "last_name": "Sanborn",
+        "state": "North Carolina"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Dec  4 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.14906461628687917,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Aliza50",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Wed Jul 27 22:00:10 2011",
+        "user_id": "Aliza_5452374"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Medicine",
+                "Diet & Health"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Blues and Folk"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

@@ -1,0 +1,73 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 18,
+        "display_name": "Carmelina Solomon",
+        "email": "Carmelina.Solomon@snailmail.com",
+        "first_name": "Carmelina",
+        "last_name": "Solomon",
+        "state": "North Dakota"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Oct 27 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 6.880868945345381,
+            "membership_type": "Silver",
+            "redeemed_points": 1566,
+            "reward_points": 1386
+        },
+        "password": "Carmelina36",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Wed May  1 22:00:09 2013",
+        "user_id": "Carmelina_83652573"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Documentary",
+                "Sci-Fi, Fantasy & Horror"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Aug 22 22:00:09 2013",
+            "order_id": "T681051646504"
+        },
+        {
+            "order_datetime": "Thu Jun 20 22:00:09 2013",
+            "order_id": "T740767026593"
+        },
+        {
+            "order_datetime": "Sat Jul 13 22:00:09 2013",
+            "order_id": "T129953161367"
+        },
+        {
+            "order_datetime": "Tue Oct 15 22:00:09 2013",
+            "order_id": "T413851914599"
+        },
+        {
+            "order_datetime": "Wed Sep 11 22:00:09 2013",
+            "order_id": "T689254152898"
+        }
+    ]
+}

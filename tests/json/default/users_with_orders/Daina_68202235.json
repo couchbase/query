@@ -1,0 +1,42 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 16,
+        "display_name": "Daina Forster",
+        "email": "Daina.Forster@snailmail.com",
+        "first_name": "Daina",
+        "last_name": "Forster",
+        "state": "Missouri"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Aug 24 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Carin_66303336",
+                "Eve_74255491"
+            ],
+            "loyalty_score": 7.051793388735804,
+            "membership_type": "Gold",
+            "redeemed_points": 798,
+            "reward_points": 1848
+        },
+        "password": "Daina74",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Thu Jan 24 22:00:09 2013",
+        "user_id": "Daina_68202235"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Jun  2 22:00:09 2013",
+            "order_id": "T890426382622"
+        }
+    ]
+}

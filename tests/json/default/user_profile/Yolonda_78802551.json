@@ -1,0 +1,44 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 35,
+        "display_name": "Yolonda Pape",
+        "email": "Yolonda.Pape@snailmail.com",
+        "first_name": "Yolonda",
+        "last_name": "Pape",
+        "state": "Alabama"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Feb 11 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.8325071388574337,
+            "membership_type": "Basic",
+            "redeemed_points": 828,
+            "reward_points": 702
+        },
+        "password": "Yolonda87",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Thu Aug  4 08:22:23 2011",
+        "user_id": "Yolonda_78802551"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Fri Apr 27 08:22:23 2012",
+            "order_id": "T619644692741"
+        },
+        {
+            "order_datetime": "Mon Oct  3 08:22:23 2011",
+            "order_id": "T803853867650"
+        }
+    ]
+}

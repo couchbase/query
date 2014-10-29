@@ -1,0 +1,53 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 34,
+        "display_name": "Eve Paulk",
+        "email": "Eve.Paulk@snailmail.com",
+        "first_name": "Eve",
+        "last_name": "Paulk",
+        "state": "Missouri"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Sep  5 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Lorraine_3104097"
+            ],
+            "loyalty_score": 6.077039587019263,
+            "membership_type": "Silver",
+            "redeemed_points": 1080,
+            "reward_points": 990
+        },
+        "password": "Eve54",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Thu Nov 29 22:00:09 2012",
+        "user_id": "Eve_74255491"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Aug  3 22:00:09 2013",
+            "order_id": "T699649912633"
+        },
+        {
+            "order_datetime": "Sat Jun  8 22:00:09 2013",
+            "order_id": "T138062011396"
+        },
+        {
+            "order_datetime": "Mon Dec 31 22:00:09 2012",
+            "order_id": "T345468016167"
+        },
+        {
+            "order_datetime": "Fri Aug  2 22:00:09 2013",
+            "order_id": "T269244435090"
+        },
+        {
+            "order_datetime": "Tue Jun 25 22:00:09 2013",
+            "order_id": "T532526784267"
+        }
+    ]
+}

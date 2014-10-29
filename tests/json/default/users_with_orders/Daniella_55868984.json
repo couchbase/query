@@ -1,0 +1,46 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 44,
+        "display_name": "Daniella Crane",
+        "email": "Daniella.Crane@snailmail.com",
+        "first_name": "Daniella",
+        "last_name": "Crane",
+        "state": "Nevada"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Nov 13 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.6404846642620396,
+            "membership_type": "Basic",
+            "redeemed_points": 84,
+            "reward_points": 279
+        },
+        "password": "Daniella36",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Sun Aug 11 22:00:09 2013",
+        "user_id": "Daniella_55868984"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Aug 18 22:00:09 2013",
+            "order_id": "T451450262181"
+        }
+    ]
+}

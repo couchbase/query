@@ -1,0 +1,30 @@
+    {
+        "asin": "B0094QY3AB",
+        "type": "Movies&TV",       
+        "title": "Zero Dark Thirty",
+        "description": "For a decade, an elite team on intelligence and military operatives working in secret across the globe devoted themselves to a single goal: to find and eliminate Osama bin Laden",
+
+        "pricing": {
+            "list": 599,
+            "retail": 449,
+            "savings": 150,
+            "pct_savings": 25
+        },
+
+        "dimensions": {
+            "length": 2.0,
+            "width": 2.5,
+            "height": 1
+        },
+
+        "tags" : ["new release", "english", "movie"],
+    
+        "details": {
+            "title": "ZERO DARK THIRTY",
+            "actors": ["Jessica Chastain", "Mark Strong"],
+            "director": "Kathryn Bigelow",
+            "format": "DVD",
+            "runtime": "157 mins",
+            "genre": ["Action", "Thriller"]
+        }
+     }

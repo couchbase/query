@@ -1,0 +1,58 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 42,
+        "display_name": "Marceline Billups",
+        "email": "Marceline.Billups@snailmail.com",
+        "first_name": "Marceline",
+        "last_name": "Billups",
+        "state": "North Carolina"
+    },
+    "profile_details": {
+        "last_login_time": "Wed May 29 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.23302626244742108,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Marceline43",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Mon Oct 31 22:00:11 2011",
+        "user_id": "Marceline_65544247"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "Medicine",
+                "Diet & Health"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music",
+                "Kid's Music",
+                "Pop Music"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

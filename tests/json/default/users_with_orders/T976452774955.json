@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Thu Jun 14 22:00:11 2012",
+        "order_id": "T976452774955"
+    },
+    "payment_details": {
+        "payment_mode": "Cash On Delivery",
+        "total_charges": 691
+    },
+    "product_details": {
+        "currency": "GBP",
+        "list_price": 795,
+        "pct_discount": 15,
+        "product_id": "P7475712802",
+        "sale_price": 676
+    },
+    "shipping_details": {
+        "shipping_charges": 15,
+        "shipping_status": "Delivered",
+        "shipping_type": "Priority"
+    }
+}

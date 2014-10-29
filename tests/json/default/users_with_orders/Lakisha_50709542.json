@@ -1,0 +1,75 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 30,
+        "display_name": "Lakisha Sturgill",
+        "email": "Lakisha.Sturgill@snailmail.com",
+        "first_name": "Lakisha",
+        "last_name": "Sturgill",
+        "state": "Nevada"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Jan  2 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Mitchell_37945034"
+            ],
+            "loyalty_score": 8.741351138531865,
+            "membership_type": "Gold",
+            "redeemed_points": 1176,
+            "reward_points": 1296
+        },
+        "password": "Lakisha93",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Tue Oct 11 22:00:10 2011",
+        "user_id": "Lakisha_50709542"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Documentary",
+                "Fitness / Instructional"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Broadway and Vocal"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Feb 13 22:00:10 2012",
+            "order_id": "T965735424675"
+        },
+        {
+            "order_datetime": "Mon Aug 20 22:00:10 2012",
+            "order_id": "T952631322242"
+        },
+        {
+            "order_datetime": "Thu Nov 24 22:00:10 2011",
+            "order_id": "T426736928477"
+        },
+        {
+            "order_datetime": "Thu Mar  1 22:00:10 2012",
+            "order_id": "T177061031781"
+        },
+        {
+            "order_datetime": "Sun Oct 16 22:00:10 2011",
+            "order_id": "T700840132149"
+        }
+    ]
+}

@@ -1,0 +1,52 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 24,
+        "display_name": "Neil Calhoun",
+        "email": "Neil.Calhoun@snailmail.com",
+        "first_name": "Neil",
+        "last_name": "Calhoun",
+        "state": "New Jersey"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Jan  7 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.802305425973312,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Neil89",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "English",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Wed Dec  7 22:00:10 2011",
+        "user_id": "Neil_54507669"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Comedy",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor",
+                "NonFiction"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

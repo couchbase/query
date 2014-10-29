@@ -1,0 +1,51 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 17,
+        "display_name": "Valene Slayton",
+        "email": "Valene.Slayton@snailmail.com",
+        "first_name": "Valene",
+        "last_name": "Slayton",
+        "state": "Montana"
+    },
+    "profile_details": {
+        "last_login_time": "Sun May  5 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.4941615961418497,
+            "membership_type": "Basic",
+            "redeemed_points": 66,
+            "reward_points": 294
+        },
+        "password": "Valene72",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Thu Jan 20 08:22:23 2011",
+        "user_id": "Valene_54838894"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Sci-Fi, Fantasy & Horror",
+                "Classic Films",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Children's Books"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Fri Dec 14 08:22:23 2012",
+            "order_id": "T782433935016"
+        }
+    ]
+}

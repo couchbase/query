@@ -1,0 +1,674 @@
+[
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name > \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name > \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name > \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name < \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name < \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name < \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name >= \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name >= \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name >= \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name <= \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name <= \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name <= \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name = \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name = \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name = \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name <> \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name <> \"harry\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name <> \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/low/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name LIKE \"har%\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name LIKE \"har%\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name LIKE \"har%\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": "har"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "has"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            }
+        ]
+    },
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "SELECT name, type FROM contacts WHERE name NOT LIKE \"har%\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "matchStatements": "SELECT name, type FROM contacts WHERE name NOT LIKE \"har%\" ORDER BY name"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts WHERE name NOT LIKE \"har%\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": "har"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/low/0",
+                "expect": "has"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score > 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score > 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score > 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score < 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score < 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score < 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score >= 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score >= 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score >= 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score <= 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score <= 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score <= 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score = 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score = 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score = 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score <> 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score <> 8 ORDER BY score"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score <> 8 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "low"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/low/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/1/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+
+    {
+		"description": "do a range scan that returns all objects (of mixed types) to ensure the same ordering",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+		"statements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT MISSING",
+		"postStatements": "DROP INDEX mixed.fidx",
+		"matchStatements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT MISSING ORDER BY f"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "EXPLAIN SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT MISSING",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "fidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "do a range scan that returns all objects (of mixed types) to ensure the same ordering",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT NULL",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "matchStatements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT NULL ORDER BY f"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "EXPLAIN SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT NULL",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "fidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+
+
+    {
+        "description": "do a range scan that returns all objects (of mixed types) to ensure the same ordering",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT VALUED",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "matchStatements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT VALUED ORDER BY f"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "EXPLAIN SELECT META().id AS id, field AS f FROM mixed WHERE field IS NOT VALUED",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "fidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/high/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "do a range scan that returns all objects (of mixed types) to ensure the same ordering",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NULL",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "matchStatements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS NULL ORDER BY f"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "EXPLAIN SELECT META().id AS id, field AS f FROM mixed WHERE field IS NULL",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "fidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/high/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "both"
+            }
+        ]
+    },
+
+
+    {
+        "description": "do a range scan that returns all objects (of mixed types) to ensure the same ordering",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS VALUED",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "matchStatements": "SELECT META().id AS id, field AS f FROM mixed WHERE field IS VALUED ORDER BY f"
+    },
+    {
+        "description": "verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX fidx ON mixed(field)",
+        "statements": "EXPLAIN SELECT META().id AS id, field AS f FROM mixed WHERE field IS VALUED",
+        "postStatements": "DROP INDEX mixed.fidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "fidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+    {
+        "description": "2 mergable CONDITIONS SAME FIELD - verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score > 8 AND score < 20 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score > 8 AND score < 20 ORDER BY score"
+    },
+    {
+        "description": "2 mergable CONDITIONS SAME FIELD - verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score > 8 AND score < 20 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 8
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/high/0",
+                "expect": 20
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "neither"
+            }
+        ]
+    },
+    {
+        "description": "2 overlapping CONDITIONS SAME FIELD - verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score, type FROM game WHERE score > 8 AND score > 20 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score, type FROM game WHERE score > 8 AND score > 20 ORDER BY score"
+    },
+    {
+        "description": "2 overlapping CONDITIONS SAME FIELD - verify that we get the same results with/without an index",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score, type FROM game WHERE score > 8 AND score > 20 ORDER BY score",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 20
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    },
+    {
+        "description": "verify that index is used even when table is aliased",
+        "preStatements": "CREATE INDEX nameidx ON contacts(name)",
+        "statements": "EXPLAIN SELECT name, type FROM contacts AS c WHERE name > \"harry\" ORDER BY name",
+        "postStatements": "DROP INDEX contacts.nameidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "nameidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": "harry"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            }
+        ]
+    }
+
+]

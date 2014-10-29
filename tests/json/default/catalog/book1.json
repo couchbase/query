@@ -1,0 +1,29 @@
+    {
+        "asin": "B0094QY7HE",
+        "type": "Book",       
+        "title": "Inferno",
+        "description": "by Dan Brown",
+
+        "pricing": {
+            "list": 300,
+            "retail": 270,
+            "savings": 30,
+            "pct_savings": 10
+        },
+
+        "dimensions": {
+            "length": 7.0,
+            "width": 12.0,
+            "height": 9.5
+        },
+
+        "tags" : ["bestseller", "imported", "free delivery"],
+    
+        "details": {
+            "title": "INFERNO",
+            "author": "Dan Brown",
+            "package": "Hardcover",
+            "published": "05/14/2013",
+            "genre": ["Fiction", "Thriller"]
+        }
+     }

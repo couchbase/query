@@ -1,0 +1,32 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 44,
+        "display_name": "Reda Delvalle",
+        "email": "Reda.Delvalle@snailmail.com",
+        "first_name": "Reda",
+        "last_name": "Delvalle",
+        "state": "Montana"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Jul 30 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Darrell_24316368"
+            ],
+            "loyalty_score": 6.7559905696985805,
+            "membership_type": "Silver",
+            "redeemed_points": 1386,
+            "reward_points": 1476
+        },
+        "password": "Reda28",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Wed May 16 08:22:23 2012",
+        "user_id": "Reda_56369093"
+    },
+    "shipped_order_history": []
+}

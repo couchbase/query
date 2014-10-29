@@ -1,0 +1,46 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 27,
+        "display_name": "Maragret Santiago",
+        "email": "Maragret.Santiago@snailmail.com",
+        "first_name": "Maragret",
+        "last_name": "Santiago",
+        "state": "Montana"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Oct 18 22:00:11 2012",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.5281110911924747,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Maragret44",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Sat May 21 22:00:11 2011",
+        "user_id": "Maragret_31017107"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary",
+                "Fitness / Instructional"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Fri Aug  2 22:00:09 2013",
+        "order_id": "T269244435090"
+    },
+    "payment_details": {
+        "payment_mode": "Debit Card",
+        "total_charges": 238
+    },
+    "product_details": {
+        "currency": "USD",
+        "list_price": 295,
+        "pct_discount": 20,
+        "product_id": "P8992264240",
+        "sale_price": 236
+    },
+    "shipping_details": {
+        "shipping_charges": 2,
+        "shipping_status": "Delivered",
+        "shipping_type": "Regular"
+    }
+}

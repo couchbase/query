@@ -1,0 +1,5 @@
+// Set of test cases that need to be fixed 
+
+SELECT VALUE() FROM default:catalog.tags
+select value() from default:catalog.tags[:3] as slice
+select value() from catalog.tags[0:3] as slice

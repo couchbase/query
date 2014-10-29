@@ -1,0 +1,235 @@
+[
+
+    {
+        "statements": "SELECT title AS T , details.author AS A , pricing.retail AS R, title AS Title FROM catalog WHERE title = \"Inferno\"",
+        "results": [
+        {
+            "A": "Dan Brown",
+            "R": 270,
+            "T": "Inferno",
+            "Title": "Inferno"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name AS _1 FROM tags",
+        "results": [
+        {
+            "_1": "beer"
+        },
+        {
+            "_1": "threemusketeers"
+        },
+        {
+            "_1": "mayan"
+        },
+        {
+            "_1": "terabithia"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title AS t, length(title) FROM catalog",
+        "results": [
+        {
+            "$1": 7,
+            "t": "Inferno"
+        },
+        {
+            "$1": 16,
+            "t": "Zero Dark Thirty"
+        },
+        {
+            "$1": 18,
+            "t": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "comments": "alias conflict with a column name in result expr, UPDATED now an error",
+        "statements": "SELECT title, details.title AS title FROM catalog",
+        "error": "Semantic Error - cause: alias title is defined more than once"
+    },
+
+    {
+        "statements": "SELECT title AS `$1`, details.title FROM catalog",
+        "results": [
+        {
+            "$1": "Inferno",
+            "title": "INFERNO"
+        },
+        {
+            "$1": "Zero Dark Thirty",
+            "title": "ZERO DARK THIRTY"
+        },
+        {
+            "$1": "Sherlock: Series 1",
+            "title": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title AS `$2`, details.title FROM catalog",
+        "results": [
+        {
+            "title": "INFERNO",
+            "$2": "Inferno"
+        },
+        {
+            "title": "ZERO DARK THIRTY",
+            "$2": "Zero Dark Thirty"
+        },
+        {
+            "title": "SHERLOCK: SERIES 1",
+            "$2": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title AS `$A`, title AS `A$`, title AS `_A`, title AS `A_` FROM catalog",
+        "results": [
+        {
+            "$A": "Inferno",
+            "A$": "Inferno",
+            "A_": "Inferno",
+            "_A": "Inferno"
+        },
+        {
+            "$A": "Zero Dark Thirty",
+            "A$": "Zero Dark Thirty",
+            "A_": "Zero Dark Thirty",
+            "_A": "Zero Dark Thirty"
+        },
+        {
+            "$A": "Sherlock: Series 1",
+            "A$": "Sherlock: Series 1",
+            "A_": "Sherlock: Series 1",
+            "_A": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+
+    {
+        "statements": "SELECT details.actors AS act, tags AS _tags, pricing AS P FROM catalog",
+        "results": [
+        {
+            "P": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            },
+            "_tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ]
+        },
+        {
+            "P": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            },
+            "_tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "act": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ]
+        },
+        {
+            "P": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            },
+            "_tags": [
+                "cash on delivery",
+                "english",
+                "TV"
+            ],
+            "act": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT C.details.actors AS act, C.tags AS _tags, C.pricing AS P FROM catalog AS C",
+        "results": [
+        {
+            "P": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            },
+            "_tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ]
+        },
+        {
+            "P": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            },
+            "_tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "act": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ]
+        },
+        {
+            "P": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            },
+            "_tags": [
+                "cash on delivery",
+                "english",
+                "TV"
+            ],
+            "act": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.* AS D FROM catalog",
+        "error":"Parse Error - syntax error"
+    },
+
+    {
+        "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog LIMIT 1",
+        "error": "alias $2 is defined more than once"
+    }
+
+]
+

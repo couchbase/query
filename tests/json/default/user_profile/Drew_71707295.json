@@ -1,0 +1,69 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 59,
+        "display_name": "Drew Talbott",
+        "email": "Drew.Talbott@snailmail.com",
+        "first_name": "Drew",
+        "last_name": "Talbott",
+        "state": "Alabama"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Feb 26 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 8.12683949111215,
+            "membership_type": "Gold",
+            "redeemed_points": 1968,
+            "reward_points": 240
+        },
+        "password": "Drew74",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Tue Oct  4 08:22:23 2011",
+        "user_id": "Drew_71707295"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Sci-Fi, Fantasy & Horror"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Business & Money"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Apr 22 08:22:23 2012",
+            "order_id": "T352155829988"
+        },
+        {
+            "order_datetime": "Thu Feb 14 08:22:23 2013",
+            "order_id": "T782663781809"
+        },
+        {
+            "order_datetime": "Thu Jan 31 08:22:23 2013",
+            "order_id": "T339738183491"
+        },
+        {
+            "order_datetime": "Wed Feb  8 08:22:23 2012",
+            "order_id": "T585931895139"
+        },
+        {
+            "order_datetime": "Sat Dec 29 08:22:23 2012",
+            "order_id": "T236369091384"
+        },
+        {
+            "order_datetime": "Wed Mar 28 08:22:23 2012",
+            "order_id": "T118033252098"
+        }
+    ]
+}

@@ -1,0 +1,154 @@
+[
+    {
+        "statements": "SELECT FIRST child FOR child IN children END AS first_child FROM contacts",
+        "results": [
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            }
+        },
+        {},
+        {},
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {}
+        ]
+    },
+    {
+        "statements": "SELECT FIRST child FOR child IN children WHEN child.age > 14 AND child.gender = \"m\" END AS first_male_over_14 FROM contacts",
+        "results": [
+        {
+            "first_male_over_14": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        },
+        {},
+        {},
+        {},
+        {
+            "first_male_over_14": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {}
+        ]
+    },
+
+    {
+        "statements": "SELECT ANY gen in details.genre satisfies gen = \"Thriller\" END AS D, array_length(tags), FIRST gen FOR gen IN details.genre END AS G FROM catalog",
+        "results": [
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Fiction"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Action"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Crime"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title FROM catalog WHERE FIRST director FOR director IN details.director  WHEN length(director) > 1 END",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  FIRST director FOR director IN details.director  END FROM catalog WHERE poly_length(details.director) > 1",
+        "results": [
+        {},
+        {
+            "$1": "Euros Lyn"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT FIRST children IN children END AS first_child FROM contacts",
+        "results": [
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            }
+        },
+        {},
+        {},
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {}
+        ]
+    },
+
+    {
+        "description": "FIRST expression referring to outer context",
+        "statements" : "SELECT name, FIRST child FOR child IN children WHEN child.name > name END as chosen_one FROM contacts",
+        "results" : [
+        {
+            "name": "dave"
+        },
+        {
+            "chosen_one": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            },
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    }
+
+]

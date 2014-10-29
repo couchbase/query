@@ -1,0 +1,72 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 37,
+        "display_name": "Berry Santos",
+        "email": "Berry.Santos@snailmail.com",
+        "first_name": "Berry",
+        "last_name": "Santos",
+        "state": "Iowa"
+    },
+    "profile_details": {
+        "last_login_time": "Sat May 25 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Juliann_7598556"
+            ],
+            "loyalty_score": 7.6098977037246165,
+            "membership_type": "Gold",
+            "redeemed_points": 1953,
+            "reward_points": 105
+        },
+        "password": "Berry27",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Wed Feb 29 22:00:09 2012",
+        "user_id": "Berry_8939806"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary",
+                "Music & Musicals"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Aug 11 22:00:09 2012",
+            "order_id": "T883659895619"
+        },
+        {
+            "order_datetime": "Mon Nov 19 22:00:09 2012",
+            "order_id": "T993364821049"
+        },
+        {
+            "order_datetime": "Tue Feb 26 22:00:09 2013",
+            "order_id": "T501625697010"
+        },
+        {
+            "order_datetime": "Sun Feb 17 22:00:09 2013",
+            "order_id": "T238254936907"
+        },
+        {
+            "order_datetime": "Mon Apr  9 22:00:09 2012",
+            "order_id": "T314236716840"
+        },
+        {
+            "order_datetime": "Sat Jan 26 22:00:09 2013",
+            "order_id": "T849726961912"
+        }
+    ]
+}

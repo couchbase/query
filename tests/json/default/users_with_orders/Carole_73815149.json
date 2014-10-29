@@ -1,0 +1,62 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 17,
+        "display_name": "Carole Mckenna",
+        "email": "Carole.Mckenna@snailmail.com",
+        "first_name": "Carole",
+        "last_name": "Mckenna",
+        "state": "Michigan"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Aug 22 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 4.7800824318984105,
+            "membership_type": "Silver",
+            "redeemed_points": 816,
+            "reward_points": 1056
+        },
+        "password": "Carole78",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Mon Apr  1 22:00:10 2013",
+        "user_id": "Carole_73815149"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Drama",
+                "Sci-Fi, Fantasy & Horror"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor",
+                "Travel"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Wed Apr 17 22:00:10 2013",
+            "order_id": "T387939872520"
+        },
+        {
+            "order_datetime": "Fri Jul  5 22:00:10 2013",
+            "order_id": "T602529323888"
+        }
+    ]
+}

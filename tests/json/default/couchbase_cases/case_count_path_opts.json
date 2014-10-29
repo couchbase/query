@@ -1,0 +1,60 @@
+[
+
+	{
+        "disabled": true,
+        "description": "verify projection of just COUNT(expr) on the same field with no where clause uses fastcount",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT COUNT(age) FROM contacts",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fastcount"
+            },
+            {
+                "pointer": "/0/input/index",
+                "expect": "ageidx"
+            },
+            {
+                "pointer": "/0/input/expr/left/path",
+                "expect": "contacts"
+            },
+            {
+                "pointer": "/0/input/expr/right/path",
+                "expect": "age"
+            }
+        ]
+    },
+    {
+        "description": "verify projection of COUNT(expr) with another aggregate on same field still does index scan",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT COUNT(age), MIN(age) FROM contacts",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/type",
+                "expect": "scan"
+            },
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "ageidx"
+            }
+        ]
+    },
+    {
+        "description": "verify projection of COUNT(expr) with a where clause on another field does full scan",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT COUNT(age) FROM contacts WHERE name = \"dave\"",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/type",
+                "expect": "scan"
+            },
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "#alldocs"
+            }
+        ]
+    }
+]

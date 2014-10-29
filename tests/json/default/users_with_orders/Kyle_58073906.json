@@ -1,0 +1,44 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 41,
+        "display_name": "Kyle Yamamoto",
+        "email": "Kyle.Yamamoto@snailmail.com",
+        "first_name": "Kyle",
+        "last_name": "Yamamoto",
+        "state": "Hawaii"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Nov  2 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.3471311346440293,
+            "membership_type": "Basic",
+            "redeemed_points": 423,
+            "reward_points": 198
+        },
+        "password": "Kyle69",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "English",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Sun Oct 21 22:00:09 2012",
+        "user_id": "Kyle_58073906"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue Apr 30 22:00:09 2013",
+            "order_id": "T370150189529"
+        },
+        {
+            "order_datetime": "Wed Jul 17 22:00:09 2013",
+            "order_id": "T560565358672"
+        }
+    ]
+}

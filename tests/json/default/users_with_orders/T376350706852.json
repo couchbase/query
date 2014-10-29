@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Fri Aug 10 22:00:09 2012",
+        "order_id": "T376350706852"
+    },
+    "payment_details": {
+        "payment_mode": "Reward Points",
+        "total_charges": 219
+    },
+    "product_details": {
+        "currency": "GBP",
+        "list_price": 278,
+        "pct_discount": 25,
+        "product_id": "P6333146164",
+        "sale_price": 209
+    },
+    "shipping_details": {
+        "shipping_charges": 10,
+        "shipping_status": "Delivered",
+        "shipping_type": "Overnight"
+    }
+}

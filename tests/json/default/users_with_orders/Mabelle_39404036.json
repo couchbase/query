@@ -1,0 +1,45 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 49,
+        "display_name": "Mabelle Kozlowski",
+        "email": "Mabelle.Kozlowski@snailmail.com",
+        "first_name": "Mabelle",
+        "last_name": "Kozlowski",
+        "state": "New Jersey"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Sep  7 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.7419778796445364,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Mabelle61",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Tue Jan 29 22:00:10 2013",
+        "user_id": "Mabelle_39404036"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "Medicine"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

@@ -1,0 +1,58 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 54,
+        "display_name": "Mitchell Rodrigue",
+        "email": "Mitchell.Rodrigue@snailmail.com",
+        "first_name": "Mitchell",
+        "last_name": "Rodrigue",
+        "state": "Arkansas"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Nov  1 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 2.0839458580006784,
+            "membership_type": "Basic",
+            "redeemed_points": 372,
+            "reward_points": 60
+        },
+        "password": "Mitchell74",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "English",
+            "ui_theme": "Ocean"
+        },
+        "user_creation_time": "Fri May 24 22:00:09 2013",
+        "user_id": "Mitchell_37945034"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Fri Oct  4 22:00:09 2013",
+            "order_id": "T214948712062"
+        },
+        {
+            "order_datetime": "Sat Jul 27 22:00:09 2013",
+            "order_id": "T883657628037"
+        }
+    ]
+}

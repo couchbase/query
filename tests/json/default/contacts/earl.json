@@ -1,0 +1,8 @@
+{"type":"contact",
+ "name":"earl",
+ "children":[
+        {"name":"xena","age":17,"gender":"f"},
+        {"name":"yuri","age":2,"gender":"m"}
+ ],
+ "hobbies":["surfing"]
+}

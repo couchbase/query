@@ -1,0 +1,73 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 43,
+        "display_name": "Fausto Hobbs",
+        "email": "Fausto.Hobbs@snailmail.com",
+        "first_name": "Fausto",
+        "last_name": "Hobbs",
+        "state": "New Hampshire"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Dec  3 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Amiee_7993471"
+            ],
+            "loyalty_score": 8.636303167409372,
+            "membership_type": "Gold",
+            "redeemed_points": 1800,
+            "reward_points": 1320
+        },
+        "password": "Fausto90",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Ocean"
+        },
+        "user_creation_time": "Sat Oct  1 22:00:09 2011",
+        "user_id": "Fausto_60268264"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music",
+                "Kid's Music",
+                "New Age"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Sep 16 22:00:09 2013",
+            "order_id": "T440564675703"
+        },
+        {
+            "order_datetime": "Fri Apr 20 22:00:09 2012",
+            "order_id": "T504820118089"
+        },
+        {
+            "order_datetime": "Wed May  8 22:00:09 2013",
+            "order_id": "T872358395049"
+        },
+        {
+            "order_datetime": "Wed Aug  1 22:00:09 2012",
+            "order_id": "T403023407666"
+        }
+    ]
+}

@@ -1,0 +1,35 @@
+{
+  "customer": "steve",
+  "items": [
+    {
+      "id": "0001",
+      "price": 1000.00,
+      "name": "coffee",
+      "quantity": 1
+    },
+    {
+      "id": "0002",
+      "price": 100.00,
+      "name": "tea",
+      "quantity": 1
+    },
+    {
+      "id": "0003",
+      "price": 100.00,
+      "name": "clipboard",
+      "quantity": 10
+    }
+  ],
+  "payments": [
+    {
+      "type": "giftcard",
+      "amount": 200
+    },
+    {
+      "type": "creditcard",
+      "amount": 1900
+    }
+  ],
+  "total": 2100.00
+}
+      

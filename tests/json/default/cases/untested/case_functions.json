@@ -1,0 +1,678 @@
+[
+    {
+        "statements": "SELECT lower(details.title) FROM catalog",
+        "results": [
+        {
+            "$1": "inferno"
+        },
+        {
+            "$1": "zero dark thirty"
+        },
+        {
+            "$1": "sherlock: series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT lower(title) FROM catalog.details",
+        "results": [
+        {
+            "$1": "inferno"
+        },
+        {
+            "$1": "zero dark thirty"
+        },
+        {
+            "$1": "sherlock: series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT lower(details.actors[0]) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": "jessica chastain"
+        },
+        {
+            "$1": "benedict cumberbatch"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT lower(actors[0]) FROM catalog.details",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": "jessica chastain"
+        },
+        {
+            "$1": "benedict cumberbatch"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT lower(pricing.list) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT lower(pricing.length) FROM catalog.dimensions",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(details.title) FROM catalog",
+        "results": [
+        {
+            "$1": "INFERNO"
+        },
+        {
+            "$1": "ZERO DARK THIRTY"
+        },
+        {
+            "$1": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(title) FROM catalog.details",
+        "results": [
+        {
+            "$1": "INFERNO"
+        },
+        {
+            "$1": "ZERO DARK THIRTY"
+        },
+        {
+            "$1": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(details.actors[0]) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": "JESSICA CHASTAIN"
+        },
+        {
+            "$1": "BENEDICT CUMBERBATCH"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(actors[0]) FROM catalog.details",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": "JESSICA CHASTAIN"
+        },
+        {
+            "$1": "BENEDICT CUMBERBATCH"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(pricing.list) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(pricing.length) FROM catalog.dimensions",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 0) FROM catalog WHERE type = \"Movies&TV\"",
+        "results": [
+        {
+            "$1": "Zero Dark Thirty"
+        },
+        {
+            "$1": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 1) FROM catalog WHERE type = \"Movies&TV\"",
+        "results": [
+        {
+            "$1": "ero Dark Thirty"
+        },
+        {
+            "$1": "herlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 4) FROM catalog WHERE type = \"Movies&TV\"",
+        "results": [
+        {
+            "$1": " Dark Thirty"
+        },
+        {
+            "$1": "lock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  META().id FROM catalog",
+        "results": [
+        {
+            "id": "book1"
+        },
+        {
+            "id": "movie1"
+        },
+        {
+            "id": "tvshow1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  META().id FROM contacts AS contact UNNEST contact.children AS child",
+        "error": "the META() function requires exactly 1 argument"
+    },
+
+    {
+        "statements": "SELECT  META(contact).id FROM contacts AS contact UNNEST contact.children AS child",
+        "results": [
+        {
+            "id": "dave"
+        },
+        {
+            "id": "dave"
+        },
+        {
+            "id": "earl"
+        },
+        {
+            "id": "earl"
+        },
+        {
+            "id": "ian"
+        },
+        {
+            "id": "ian"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT BASE64_VALUE() AS b64 FROM contacts",
+        "results": [
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImRhdmUiLAogImNoaWxkcmVuIjpbCiAgICAgICAgeyJuYW1lIjoiYWlkZW4iLCJhZ2UiOjE3LCJnZW5kZXIiOiJtIn0sCiAgICAgICAgeyJuYW1lIjoiYmlsbCIsImFnZSI6MiwiZ2VuZGVyIjoiZiJ9CiBdLAogImhvYmJpZXMiOlsiZ29sZiIsICJzdXJmaW5nIl0KfQo="
+        },
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImVhcmwiLAogImNoaWxkcmVuIjpbCiAgICAgICAgeyJuYW1lIjoieGVuYSIsImFnZSI6MTcsImdlbmRlciI6ImYifSwKICAgICAgICB7Im5hbWUiOiJ5dXJpIiwiYWdlIjoyLCJnZW5kZXIiOiJtIn0KIF0sCiAiaG9iYmllcyI6WyJzdXJmaW5nIl0KfQo="
+        },
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImZyZWQiLAogImhvYmJpZXMiOlsiZ29sZiIsInN1cmZpbmciXQp9Cg=="
+        },
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImhhcnJ5Igp9Cg=="
+        },
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImlhbiIsCiAiY2hpbGRyZW4iOlsKICAgIHsibmFtZSI6ImFiYW1hIiwiYWdlIjoxNywiZ2VuZGVyIjoibSJ9LAogICAgeyJuYW1lIjoiYmViYW1hIiwiYWdlIjoyMSwiZ2VuZGVyIjoibSJ9CiBdLAogImhvYmJpZXMiOlsiZ29sZiIsICJzdXJmaW5nIl0KfQo="
+        },
+        {
+            "b64": "eyJ0eXBlIjoiY29udGFjdCIsCiAibmFtZSI6ImphbmUiLAogImNvbnRhY3RzIjogWwogICB7CiAgICAibmFtZSI6ICJmcmVkIgogICB9LAogICB7CiAgICAibmFtZSI6ICJzaGVlbGEiCiAgIH0KIF0KfQo="
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT CEIL(score+0.5) FROM game",
+        "results": [
+        {
+            "$1": 11
+        },
+        {
+            "$1": 11
+        },
+        {
+            "$1": 101
+        },
+        {
+            "$1": 9
+        },
+        {
+            "$1": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT FLOOR(score+0.5) FROM game",
+        "results": [
+        {
+            "$1": 10
+        },
+        {
+            "$1": 10
+        },
+        {
+            "$1": 100
+        },
+        {
+            "$1": 8
+        },
+        {
+            "$1": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT GREATEST(score, 75) FROM game",
+        "results": [
+        {
+            "$1": 75
+        },
+        {
+            "$1": 75
+        },
+        {
+            "$1": 100
+        },
+        {
+            "$1": 75
+        },
+        {
+            "$1": 75
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT LEAST(score, 5) FROM game",
+        "results": [
+        {
+            "$1": 5
+        },
+        {
+            "$1": 5
+        },
+        {
+            "$1": 5
+        },
+        {
+            "$1": 5
+        },
+        {
+            "$1": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT IFMISSING(shipped-on,\"MISSING\") FROM orders",
+        "results": [
+        {
+            "$1": "2012/01/02"
+        },
+        {
+            "$1": "MISSING"
+        },
+        {
+            "$1": "MISSING"
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT IFNULL(shipped-on,\"NULL\") FROM orders",
+        "results": [
+        {
+            "$1": "2012/01/02"
+        },
+        {},
+        {},
+        {
+            "$1": "NULL"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT IFMISSINGORNULL(shipped-on,\"NOT THERE\") FROM orders",
+        "results": [
+        {
+            "$1": "2012/01/02"
+        },
+        {
+            "$1": "NOT THERE"
+        },
+        {
+            "$1": "NOT THERE"
+        },
+        {
+            "$1": "NOT THERE"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT NULLIF(score, 100) FROM game WHERE score > 50",
+        "results": [
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT MISSINGIF(score, 100) FROM game WHERE score > 50",
+        "results": [
+        {}
+    ]
+    },
+
+    {
+        "statements": "SELECT TRIM(name,\"d\") FROM contacts",
+        "results": [
+        {
+            "$1": "ave"
+        },
+        {
+            "$1": "earl"
+        },
+        {
+            "$1": "fre"
+        },
+        {
+            "$1": "harry"
+        },
+        {
+            "$1": "ian"
+        },
+        {
+            "$1": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT LTRIM(name,\"d\") FROM contacts",
+        "results": [
+        {
+            "$1": "ave"
+        },
+        {
+            "$1": "earl"
+        },
+        {
+            "$1": "fred"
+        },
+        {
+            "$1": "harry"
+        },
+        {
+            "$1": "ian"
+        },
+        {
+            "$1": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT RTRIM(name,\"d\") FROM contacts",
+        "results": [
+        {
+            "$1": "dave"
+        },
+        {
+            "$1": "earl"
+        },
+        {
+            "$1": "fre"
+        },
+        {
+            "$1": "harry"
+        },
+        {
+            "$1": "ian"
+        },
+        {
+            "$1": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT TRUNC(score+0.5) FROM game",
+        "results": [
+        {
+            "$1": 10
+        },
+        {
+            "$1": 10
+        },
+        {
+            "$1": 100
+        },
+        {
+            "$1": 8
+        },
+        {
+            "$1": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ROUND(score+0.5) FROM game",
+        "results": [
+        {
+            "$1": 11
+        },
+        {
+            "$1": 11
+        },
+        {
+            "$1": 101
+        },
+        {
+            "$1": 9
+        },
+        {
+            "$1": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT UPPER(type) || \" \" || LOWER(title) || \" \" || RTRIM(details.title, ' ') || \" \" || LTRIM(details.format, ' ' ) AS STR FROM catalog",
+        "results": [
+        {
+            "STR": null
+        },
+        {
+            "STR": "MOVIES&TV zero dark thirty ZERO DARK THIRTY DVD"
+        },
+        {
+            "STR": "MOVIES&TV sherlock: series 1 SHERLOCK: SERIES 1 Box Set"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT OBJECT_LENGTH(details) FROM catalog",
+        "results": [
+        {
+            "$1": 5
+        },
+        {
+            "$1": 6
+        },
+        {
+            "$1": 6
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT LENGTH(details.director) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": 15
+        },
+        {
+            "$1": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ARRAY_LENGTH(details.director) FROM catalog",
+        "results": [
+        {
+            "$1": null
+        },
+        {
+            "$1": null
+        },
+        {
+            "$1": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  ARRAY_LENGTH(ARRAY director FOR director IN details.director  END) AS D FROM catalog WHERE POLY_LENGTH(details.director) > 1",
+        "results": [
+        {
+            "D": null
+        },
+        {
+            "D": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART(\"year\", \"2004-07-09\") AS year, DATE_PART(\"month\", \"2004-07-09\") AS month, DATE_PART(\"day\", \"2004-07-09\") AS day",
+        "results": [
+        {
+            "day": 9,
+            "month": 7,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART(\"hour\", \"11:42:01Z\") AS hour, DATE_PART(\"minute\", \"11:42:01Z\") AS minute, DATE_PART(\"second\", \"11:42:01Z\") AS second",
+        "results": [
+        {
+            "hour": 11,
+            "minute": 42,
+            "second": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART(\"year\", \"2004-07-09T11:42:01Z\") AS year, DATE_PART(\"month\", \"2004-07-09T11:42:01Z\") AS month, DATE_PART(\"day\", \"2004-07-09T11:42:01Z\") AS day, DATE_PART(\"hour\", \"2004-07-09T11:42:01Z\") AS hour, DATE_PART(\"minute\", \"2004-07-09T11:42:01Z\") AS minute, DATE_PART(\"second\", \"2004-07-09T11:42:01Z\") AS second",
+        "results": [
+        {
+            "day": 9,
+            "hour": 11,
+            "minute": 42,
+            "month": 7,
+            "second": 1,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "description": "test fraction seconds",
+        "statements": "SELECT DATE_PART(\"milliseconds\", \"2013-10-13T11:42:01.56723-05:01\") AS ms",
+        "results": [
+        {
+            "ms": 1567
+        }
+    ]
+    },
+
+    {
+        "description": "test now_str",
+        "statements": "SELECT DATE_PART(\"millennium\", NOW_STR()) AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR()",
+        "results": [
+        {
+            "millennium": 3
+        }
+    ]
+    }
+
+]

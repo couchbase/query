@@ -1,0 +1,72 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 22,
+        "display_name": "Lakeesha Berman",
+        "email": "Lakeesha.Berman@snailmail.com",
+        "first_name": "Lakeesha",
+        "last_name": "Berman",
+        "state": "South Dakota"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Nov  8 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Dale_47487690",
+                "Mei_43996997",
+                "Francina_44076988",
+                "Kallie_56419938"
+            ],
+            "loyalty_score": 9.795686871889115,
+            "membership_type": "Platinum",
+            "redeemed_points": 1350,
+            "reward_points": 1647
+        },
+        "password": "Lakeesha33",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Fri Nov 30 22:00:09 2012",
+        "user_id": "Lakeesha_78622017"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Drama"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Jun 27 22:00:09 2013",
+            "order_id": "T883140375321"
+        },
+        {
+            "order_datetime": "Tue Oct  8 22:00:09 2013",
+            "order_id": "T212541498770"
+        },
+        {
+            "order_datetime": "Wed Aug 21 22:00:09 2013",
+            "order_id": "T697537834646"
+        },
+        {
+            "order_datetime": "Mon Jul  8 22:00:09 2013",
+            "order_id": "T545064239003"
+        },
+        {
+            "order_datetime": "Mon Dec 31 22:00:09 2012",
+            "order_id": "T610447164953"
+        },
+        {
+            "order_datetime": "Fri Dec 21 22:00:09 2012",
+            "order_id": "T571646213811"
+        }
+    ]
+}

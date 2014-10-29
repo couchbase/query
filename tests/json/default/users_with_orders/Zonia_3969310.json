@@ -1,0 +1,30 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 54,
+        "display_name": "Zonia Walton",
+        "email": "Zonia.Walton@snailmail.com",
+        "first_name": "Zonia",
+        "last_name": "Walton",
+        "state": "Missouri"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Dec  2 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.8521914618066149,
+            "membership_type": "Basic",
+            "redeemed_points": 36,
+            "reward_points": 186
+        },
+        "password": "Zonia24",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Sun Jun 10 22:00:10 2012",
+        "user_id": "Zonia_3969310"
+    },
+    "shipped_order_history": []
+}

@@ -1,0 +1,57 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 41,
+        "display_name": "Elroy Ely",
+        "email": "Elroy.Ely@snailmail.com",
+        "first_name": "Elroy",
+        "last_name": "Ely",
+        "state": "Vermont"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Oct 19 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 5.991133526775386,
+            "membership_type": "Silver",
+            "redeemed_points": 45,
+            "reward_points": 1455
+        },
+        "password": "Elroy39",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Tue Jul  9 22:00:10 2013",
+        "user_id": "Elroy_67806217"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Documentary",
+                "Music & Musicals"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Jul 15 22:00:10 2013",
+            "order_id": "T237156399157"
+        },
+        {
+            "order_datetime": "Thu Aug 22 22:00:10 2013",
+            "order_id": "T918140237656"
+        },
+        {
+            "order_datetime": "Sat Aug 31 22:00:10 2013",
+            "order_id": "T836156591818"
+        },
+        {
+            "order_datetime": "Mon Oct 14 22:00:10 2013",
+            "order_id": "T308067351109"
+        }
+    ]
+}

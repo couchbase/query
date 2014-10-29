@@ -1,0 +1,59 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 15,
+        "display_name": "Jonathon Street",
+        "email": "Jonathon.Street@snailmail.com",
+        "first_name": "Jonathon",
+        "last_name": "Street",
+        "state": "Rhode Island"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Oct 25 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 6.321962094169889,
+            "membership_type": "Silver",
+            "redeemed_points": 1494,
+            "reward_points": 1764
+        },
+        "password": "Jonathon12",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Ocean"
+        },
+        "user_creation_time": "Fri May 17 22:00:10 2013",
+        "user_id": "Jonathon_88025771"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Jun 17 22:00:10 2013",
+            "order_id": "T729940525745"
+        },
+        {
+            "order_datetime": "Sun Aug 25 22:00:10 2013",
+            "order_id": "T923564671930"
+        },
+        {
+            "order_datetime": "Sun Jul 14 22:00:10 2013",
+            "order_id": "T749550467162"
+        },
+        {
+            "order_datetime": "Mon Aug 26 22:00:10 2013",
+            "order_id": "T675447094917"
+        },
+        {
+            "order_datetime": "Fri Jun  7 22:00:10 2013",
+            "order_id": "T179729807373"
+        }
+    ]
+}

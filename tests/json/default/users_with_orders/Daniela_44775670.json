@@ -1,0 +1,39 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 60,
+        "display_name": "Daniela Slagle",
+        "email": "Daniela.Slagle@snailmail.com",
+        "first_name": "Daniela",
+        "last_name": "Slagle",
+        "state": "Pennsylvania"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Aug 24 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.7534661213694558,
+            "membership_type": "Basic",
+            "redeemed_points": 246,
+            "reward_points": 297
+        },
+        "password": "Daniela25",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Tue Jun 19 22:00:09 2012",
+        "user_id": "Daniela_44775670"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Comedy"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

@@ -1,0 +1,43 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 52,
+        "display_name": "Clorinda Beckett",
+        "email": "Clorinda.Beckett@snailmail.com",
+        "first_name": "Clorinda",
+        "last_name": "Beckett",
+        "state": "Wisconsin\n"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Jan 20 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 9.375195738344859,
+            "membership_type": "Platinum",
+            "redeemed_points": 837,
+            "reward_points": 2592
+        },
+        "password": "Clorinda22",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Sat Sep 10 22:00:11 2011",
+        "user_id": "Clorinda_81878696"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Jan  7 22:00:11 2013",
+            "order_id": "T848837229474"
+        },
+        {
+            "order_datetime": "Thu Jun 14 22:00:11 2012",
+            "order_id": "T976452774955"
+        },
+        {
+            "order_datetime": "Thu Nov 17 22:00:11 2011",
+            "order_id": "T882845249273"
+        }
+    ]
+}

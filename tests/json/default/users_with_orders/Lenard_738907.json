@@ -1,0 +1,40 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 31,
+        "display_name": "Lenard Polanco",
+        "email": "Lenard.Polanco@snailmail.com",
+        "first_name": "Lenard",
+        "last_name": "Polanco",
+        "state": "West Virginia"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Oct 19 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.4373881427244373,
+            "membership_type": "Basic",
+            "redeemed_points": 198,
+            "reward_points": 51
+        },
+        "password": "Lenard56",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Sat Mar 16 22:00:11 2013",
+        "user_id": "Lenard_738907"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Aug 31 22:00:11 2013",
+            "order_id": "T470135811712"
+        }
+    ]
+}

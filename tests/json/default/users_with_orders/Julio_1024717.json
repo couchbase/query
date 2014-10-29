@@ -1,0 +1,30 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 47,
+        "display_name": "Julio Canady",
+        "email": "Julio.Canady@snailmail.com",
+        "first_name": "Julio",
+        "last_name": "Canady",
+        "state": "Pennsylvania"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Dec 11 22:00:09 2012",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.5700323620786714,
+            "membership_type": "Basic",
+            "redeemed_points": 405,
+            "reward_points": 279
+        },
+        "password": "Julio36",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Sat Nov 19 22:00:09 2011",
+        "user_id": "Julio_1024717"
+    },
+    "shipped_order_history": []
+}

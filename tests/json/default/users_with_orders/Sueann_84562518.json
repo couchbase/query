@@ -1,0 +1,68 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 41,
+        "display_name": "Sueann Richie",
+        "email": "Sueann.Richie@snailmail.com",
+        "first_name": "Sueann",
+        "last_name": "Richie",
+        "state": "Nebraska"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Jul 12 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 7.346076109683134,
+            "membership_type": "Gold",
+            "redeemed_points": 441,
+            "reward_points": 714
+        },
+        "password": "Sueann61",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Sat Oct  1 22:00:09 2011",
+        "user_id": "Sueann_84562518"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Drama"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Jan  2 22:00:09 2012",
+            "order_id": "T812851042648"
+        },
+        {
+            "order_datetime": "Tue Nov  1 22:00:09 2011",
+            "order_id": "T558144134706"
+        },
+        {
+            "order_datetime": "Sat May 11 22:00:09 2013",
+            "order_id": "T339127568452"
+        },
+        {
+            "order_datetime": "Mon Jan 30 22:00:09 2012",
+            "order_id": "T899941429406"
+        },
+        {
+            "order_datetime": "Mon Apr  2 22:00:09 2012",
+            "order_id": "T729243037283"
+        },
+        {
+            "order_datetime": "Tue Oct 11 22:00:09 2011",
+            "order_id": "T657924073364"
+        },
+        {
+            "order_datetime": "Thu Mar  7 22:00:09 2013",
+            "order_id": "T869932057427"
+        }
+    ]
+}

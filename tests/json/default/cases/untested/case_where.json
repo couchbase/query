@@ -1,0 +1,462 @@
+
+[
+    {
+        "statements": "SELECT title, details.format, details.title, title  FROM catalog WHERE pricing.list > 300 and pricing.pct_savings >20",
+        "error": "Semantic Error - cause: alias title is defined more than once"
+    },
+
+    {
+        "statements": "SELECT banned-on FROM tags WHERE banned-on IS NOT MISSING",
+        "results": [
+        {
+            "banned-on": "2001/12/07"
+        },
+        {
+            "banned-on": null
+        },
+        {
+            "banned-on": "2012/02/02"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT banned-on FROM tags WHERE banned-on IS NOT NULL",
+        "results": [
+        {
+            "banned-on": "2001/12/07"
+        },
+        {
+            "banned-on": "2012/02/02"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT banned-on FROM tags WHERE banned-on IS NOT MISSING",
+        "results": [
+        {
+            "banned-on": "2001/12/07"
+        },
+        {
+            "banned-on": null
+        },
+        {
+            "banned-on": "2012/02/02"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT banned-on FROM tags WHERE banned-on IS NOT NULL",
+        "results": [
+        {
+            "banned-on": "2001/12/07"
+        },
+        {
+            "banned-on": "2012/02/02"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT actors FROM catalog.details WHERE actors[0] = \"Jessica Chastain\"",
+        "results": [
+        {
+            "actors": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT asin, title FROM catalog WHERE type = \"Movies&TV\" and title LIKE \"Sherlock%\"",
+        "results": [
+        {
+            "asin": "B0094QY3LI",
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT asin, title FROM catalog WHERE type = \"Movies&TV\" and tags[1] LIKE \"english\"",
+        "results": [
+        {
+            "asin": "B0094QY3AB",
+            "title": "Zero Dark Thirty"
+        },
+        {
+            "asin": "B0094QY3LI",
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title, tags FROM catalog WHERE tags = [\"new release\", \"english\", \"movie\"]",
+        "results": [
+        {
+            "tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "title": "Zero Dark Thirty"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name FROM tags WHERE length(name) > 10",
+        "results": [
+        {
+            "name": "threemusketeers"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name FROM contacts AS contact WHERE contact.name = \"dave\"",
+        "results": [
+        {
+            "name": "dave"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT dimensions.height FROM catalog WHERE pricing.list = 799",
+        "results": [
+        {
+            "height": 1.2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT asin, title, tags[1] FROM catalog WHERE tags[1] NOT LIKE \"english\"",
+        "results": [
+        {
+            "$1": "imported",
+            "asin": "B0094QY7HE",
+            "title": "Inferno"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title FROM catalog WHERE (ANY genre IN details.genre SATISFIES genre = \"Crime\"  END AND ANY tags in tags SATISFIES tags = \"english\" END) AND  pricing.pct_savings > 10.55",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+   {
+        "statements": "SELECT title FROM catalog WHERE (EVERY genre IN details.genre SATISFIES length(genre) > 5 END)",
+        "results": [
+        {
+            "title": "Inferno"
+        },
+        {
+            "title": "Zero Dark Thirty"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title FROM catalog WHERE (ANY genre IN details.genre SATISFIES genre = \"Crime\" END AND ANY tags IN tags SATISFIES tags = \"english\" END) AND NOT (pricing.pct_savings < 15)",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS NOT VALUED",
+        "results": [
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS VALUED",
+        "results": [
+        {
+            "id": "1200"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS NOT NULL",
+        "results": [
+        {
+            "id": "1200"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS NULL",
+        "results": [
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS NOT MISSING",
+        "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT id FROM orders WHERE shipped-on IS MISSING",
+        "results": [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name FROM contacts WHERE name <> \"dave\"",
+        "results": [
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT score FROM game WHERE score <= 8",
+        "results": [
+        {
+            "score": 8
+        },
+        {
+            "score": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT score FROM game WHERE score >= 10",
+        "results": [
+        {
+            "score": 10
+        },
+        {
+            "score": 10
+        },
+        {
+            "score": 100
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name FROM contacts WHERE name = \"dave\" OR name = \"earl\"",
+        "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT catalog.asin FROM catalog WHERE dimensions = { \"height\": 1.2, \"length\": 2, \"width\": 1.5 } AND details.genre = [ \"Crime\", \"Thriller\" ]",
+        "results": [
+        {
+            "asin": "B0094QY3LI"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT profile_details.user_id, profile_details.loyalty, personal_details.age FROM user_profile WHERE (profile_details.loyalty.loyalty_score > 6 AND profile_details.loyalty.loyalty_score < 9) AND (LENGTH(profile_details.loyalty.friends_referred) > 1 OR (profile_details.loyalty.reward_points + profile_details.loyalty.reward_points) > 900) OR  ( (personal_details.age > 55 OR personal_details.age < 20) AND profile_details.prefs.promotion_email = True) OR profile_details.loyalty.board_member = True ORDER BY profile_details.user_id",
+        "results": [
+        {
+            "age": 54,
+            "loyalty": {
+                "friends_referred": [],
+                "loyalty_score": 7.983110639312416,
+                "membership_type": "Gold",
+                "redeemed_points": 2016,
+                "reward_points": 2058
+            },
+            "user_id": "Ardelia_91499701"
+        },
+        {
+            "age": 33,
+            "loyalty": {
+                "friends_referred": [
+                    "Nicholas_66386033",
+                    "Reda_56369093"
+                ],
+                "loyalty_score": 7.665663810642913,
+                "membership_type": "Gold",
+                "redeemed_points": 357,
+                "reward_points": 630
+            },
+            "user_id": "Armanda_57083532"
+        },
+        {
+            "age": 49,
+            "loyalty": {
+                "friends_referred": [
+                    "Ardelia_91499701"
+                ],
+                "loyalty_score": 6.991706946717727,
+                "membership_type": "Silver",
+                "redeemed_points": 1152,
+                "reward_points": 1404
+            },
+            "user_id": "Casey_50744697"
+        },
+        {
+            "age": 46,
+            "loyalty": {
+                "friends_referred": [],
+                "loyalty_score": 7.065630034442833,
+                "membership_type": "Gold",
+                "redeemed_points": 777,
+                "reward_points": 546
+            },
+            "user_id": "Darrell_24316368"
+        },
+        {
+            "age": 23,
+            "loyalty": {
+                "friends_referred": [
+                    "Jovan_57838602"
+                ],
+                "loyalty_score": 6.649162416253482,
+                "membership_type": "Silver",
+                "redeemed_points": 1440,
+                "reward_points": 504
+            },
+            "user_id": "Lavona_56124224"
+        },
+        {
+            "age": 44,
+            "loyalty": {
+                "friends_referred": [
+                    "Darrell_24316368"
+                ],
+                "loyalty_score": 6.7559905696985805,
+                "membership_type": "Silver",
+                "redeemed_points": 1386,
+                "reward_points": 1476
+            },
+            "user_id": "Reda_56369093"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name FROM tweets WHERE user.id_str = \"6253287\"",
+        "matchStatements": "SELECT name FROM tweets WHERE \"6253287\" = user.id_str"
+    },
+    {
+        "statements": "SELECT title FROM catalog WHERE (EVERY details.genre SATISFIES length(genre) > 5 END)",
+        "results": [
+        {
+            "title": "Inferno"
+        },
+        {
+            "title": "Zero Dark Thirty"
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT id FROM orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product == \"tea111\" END",
+        "results" : [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product <> \"tea111\" END",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product != \"tea111\" END",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "description": "ALL expression referring to outer context",
+        "statements" : "SELECT name, children FROM contacts WHERE EVERY child IN children SATISFIES child.name > name END",
+        "results" : [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ],
+            "name": "earl"
+        }
+    ]
+    }
+]

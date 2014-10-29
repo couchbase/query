@@ -1,0 +1,54 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 15,
+        "display_name": "Kerrie Adler",
+        "email": "Kerrie.Adler@snailmail.com",
+        "first_name": "Kerrie",
+        "last_name": "Adler",
+        "state": "Alabama"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Oct 27 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Carmelina_83652573",
+                "Alishia_76728586"
+            ],
+            "loyalty_score": 7.298915802259228,
+            "membership_type": "Gold",
+            "redeemed_points": 1575,
+            "reward_points": 1680
+        },
+        "password": "Kerrie19",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Thu Jun  2 22:00:10 2011",
+        "user_id": "Kerrie_31949223"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Feb 26 22:00:10 2012",
+            "order_id": "T555249396948"
+        },
+        {
+            "order_datetime": "Thu Sep  6 22:00:10 2012",
+            "order_id": "T711039632537"
+        },
+        {
+            "order_datetime": "Sat May 11 22:00:10 2013",
+            "order_id": "T790267985723"
+        },
+        {
+            "order_datetime": "Sun Nov  4 22:00:10 2012",
+            "order_id": "T468924122600"
+        }
+    ]
+}

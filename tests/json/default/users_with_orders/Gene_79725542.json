@@ -1,0 +1,47 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 50,
+        "display_name": "Gene Mattison",
+        "email": "Gene.Mattison@snailmail.com",
+        "first_name": "Gene",
+        "last_name": "Mattison",
+        "state": "Virginia"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Nov  2 22:00:09 2012",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 4.866116139411421,
+            "membership_type": "Silver",
+            "redeemed_points": 924,
+            "reward_points": 648
+        },
+        "password": "Gene49",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Wed May 18 22:00:09 2011",
+        "user_id": "Gene_79725542"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Aug  1 22:00:09 2011",
+            "order_id": "T726824542576"
+        },
+        {
+            "order_datetime": "Wed Feb 29 22:00:09 2012",
+            "order_id": "T928254098925"
+        },
+        {
+            "order_datetime": "Wed Feb 15 22:00:09 2012",
+            "order_id": "T825237533328"
+        }
+    ]
+}

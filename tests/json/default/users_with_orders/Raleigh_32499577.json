@@ -1,0 +1,45 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 48,
+        "display_name": "Raleigh Limon",
+        "email": "Raleigh.Limon@snailmail.com",
+        "first_name": "Raleigh",
+        "last_name": "Limon",
+        "state": "Missouri"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Jul 10 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Edgardo_50071453"
+            ],
+            "loyalty_score": 6.448449197900802,
+            "membership_type": "Silver",
+            "redeemed_points": 1098,
+            "reward_points": 684
+        },
+        "password": "Raleigh16",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Sun Aug 21 22:00:09 2011",
+        "user_id": "Raleigh_32499577"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Wed Aug  8 22:00:09 2012",
+            "order_id": "T974148797695"
+        },
+        {
+            "order_datetime": "Fri Apr 20 22:00:09 2012",
+            "order_id": "T138839139972"
+        },
+        {
+            "order_datetime": "Wed Aug 31 22:00:09 2011",
+            "order_id": "T627065046452"
+        }
+    ]
+}

@@ -1,0 +1,582 @@
+[
+    {
+       "statements": "SELECT 1+1 as two",
+       "results": [
+        {
+            "two": 2
+        }
+    ]    
+    },
+
+    {
+        "statements": "SELECT title, genre, director[1], runtime FROM default:catalog.details",
+        "results": [
+        {
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "title": "INFERNO"
+        },
+        {
+            "$1": null,
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "runtime": "157 mins",
+            "title": "ZERO DARK THIRTY"
+        },
+        {
+            "$1": "Paul Mcguigan",
+            "genre": [
+                "Crime",
+                "Thriller"
+            ],
+            "runtime": "266.0 mins",
+            "title": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title, genre, director[1], `type`, runtime FROM default:catalog.details",
+        "results": [
+        {
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "title": "INFERNO"
+        },
+        {
+            "$1": null,
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "runtime": "157 mins",
+            "title": "ZERO DARK THIRTY"
+        },
+        {
+            "$1": "Paul Mcguigan",
+            "genre": [
+                "Crime",
+                "Thriller"
+            ],
+            "runtime": "266.0 mins",
+            "title": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT actors[0], actors[1], director FROM default:catalog.details WHERE actors[0] = \"Jessica Chastain\"",
+        "results": [
+        {
+            "$1": "Jessica Chastain",
+            "$2": "Mark Strong",
+            "director": "Kathryn Bigelow"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT `banned-on` FROM default:tags",
+        "results": [
+        {},
+        {
+            "banned-on": "2001/12/07"
+        },
+        {
+            "banned-on": null
+        },
+        {
+            "banned-on": "2012/02/02"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT * FROM default:contacts.children",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+        },
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+        },
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.* FROM default:catalog",
+        "results": [
+        {
+            "author": "Dan Brown",
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "package": "Hardcover",
+            "published": "05/14/2013",
+            "title": "INFERNO"
+        },
+        {
+            "actors": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ],
+            "director": "Kathryn Bigelow",
+            "format": "DVD",
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "runtime": "157 mins",
+            "title": "ZERO DARK THIRTY"
+        },
+        {
+            "actors": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ],
+            "director": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ],
+            "format": "Box Set",
+            "genre": [
+                "Crime",
+                "Thriller"
+            ],
+            "runtime": "266.0 mins",
+            "title": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.format.* FROM default:catalog",
+        "results": [
+        {},
+        {},
+        {}
+    ]
+    },
+
+    {
+        "statements": "SELECT details.*, pricing.*, tags.*, dimensions.* FROM default:catalog",
+        "results": [
+        {
+            "author": "Dan Brown",
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "height": 9.5,
+            "length": 7,
+            "list": 300,
+            "package": "Hardcover",
+            "pct_savings": 10,
+            "published": "05/14/2013",
+            "retail": 270,
+            "savings": 30,
+            "title": "INFERNO",
+            "width": 12
+        },
+        {
+            "actors": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ],
+            "director": "Kathryn Bigelow",
+            "format": "DVD",
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "height": 1,
+            "length": 2,
+            "list": 599,
+            "pct_savings": 25,
+            "retail": 449,
+            "runtime": "157 mins",
+            "savings": 150,
+            "title": "ZERO DARK THIRTY",
+            "width": 2.5
+        },
+        {
+            "actors": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ],
+            "director": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ],
+            "format": "Box Set",
+            "genre": [
+                "Crime",
+                "Thriller"
+            ],
+            "height": 1.2,
+            "length": 2,
+            "list": 799,
+            "pct_savings": 20,
+            "retail": 639,
+            "runtime": "266.0 mins",
+            "savings": 160,
+            "title": "SHERLOCK: SERIES 1",
+            "width": 1.5
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.*, tags, pricing.* FROM default:catalog",
+        "results": [
+        {
+            "author": "Dan Brown",
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "list": 300,
+            "package": "Hardcover",
+            "pct_savings": 10,
+            "published": "05/14/2013",
+            "retail": 270,
+            "savings": 30,
+            "tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ],
+            "title": "INFERNO"
+        },
+        {
+            "actors": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ],
+            "director": "Kathryn Bigelow",
+            "format": "DVD",
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "list": 599,
+            "pct_savings": 25,
+            "retail": 449,
+            "runtime": "157 mins",
+            "savings": 150,
+            "tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "title": "ZERO DARK THIRTY"
+        },
+        {
+            "actors": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ],
+            "director": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ],
+            "format": "Box Set",
+            "genre": [
+                "Crime",
+                "Thriller"
+            ],
+            "list": 799,
+            "pct_savings": 20,
+            "retail": 639,
+            "runtime": "266.0 mins",
+            "savings": 160,
+            "tags": [
+                "cash on delivery",
+                "english",
+                "TV"
+            ],
+            "title": "SHERLOCK: SERIES 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT 1, * FROM default:catalog.pricing",
+        "results": [
+        {
+            "$1": 1,
+            "pricing": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            }
+        },
+        {
+            "$1": 1,
+            "pricing": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            }
+        },
+        {
+            "$1": 1,
+            "pricing": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            }
+        }
+    ]
+    },
+
+
+    {
+        "statements": "SELECT list, * FROM default:catalog.pricing",
+        "results": [
+        {
+            "list": 300,
+            "pricing": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            }
+        },
+        {
+            "list": 599,
+            "pricing": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            }
+        },
+        {
+            "list": 799,
+            "pricing": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title, pricing.* FROM default:catalog",
+        "results": [
+        {
+            "list": 300,
+            "pct_savings": 10,
+            "retail": 270,
+            "savings": 30,
+            "title": "Inferno"
+        },
+        {
+            "list": 599,
+            "pct_savings": 25,
+            "retail": 449,
+            "savings": 150,
+            "title": "Zero Dark Thirty"
+        },
+        {
+            "list": 799,
+            "pct_savings": 20,
+            "retail": 639,
+            "savings": 160,
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT catalog.title FROM default:catalog LIMIT 1",
+        "results": [
+        {
+            "title": "Inferno"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT {\"name\": id} AS custom_obj FROM default:game",
+        "results": [
+        {
+            "custom_obj": {
+                "name": "damien"
+            }
+        },
+        {
+            "custom_obj": {
+                "name": "dustin"
+            }
+        },
+        {
+            "custom_obj": {
+                "name": "junyi"
+            }
+        },
+        {
+            "custom_obj": {
+                "name": "marty"
+            }
+        },
+        {
+            "custom_obj": {
+                "name": "steve"
+            }
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT a FROM default:complex_json WHERE a IS VALUED",
+        "results" : [
+        {
+            "a": 1
+        },
+        {
+            "a": "str"
+        },
+        {
+            "a": true
+        },
+        {
+            "a": [
+                0,
+                1
+            ]
+        },
+        {
+            "a": {
+                "f1": 1,
+                "f2": 2
+            }
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT a FROM default:complex_json WHERE a IS NULL",
+        "results" : [
+        {
+            "a": null
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT a FROM default:complex_json WHERE a = \"str\"",
+        "results" : [
+        {
+            "a": "str"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT `a.b_c.d` FROM default:complex_json",
+        "results" : [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            "a.b_c.d": 99
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT `b.c` FROM default:complex_json",
+        "results" : [
+        {
+            "b.c": 4
+        },
+        {
+            "b.c": 5
+        },
+        {},
+        {},
+        {},
+        {}
+    ]
+    },
+
+    {
+        "statements" : "SELECT b.c FROM default:complex_json",
+        "results": [
+        {
+            "c": {
+                "e": [
+                    5,
+                    6
+                ],
+                "f": [
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "c": null
+        },
+        {
+            "c": null
+        },
+        {},
+        {},
+        {}
+    ]
+    }
+
+]

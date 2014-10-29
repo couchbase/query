@@ -1,0 +1,76 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 54,
+        "display_name": "Ardelia Fusco",
+        "email": "Ardelia.Fusco@snailmail.com",
+        "first_name": "Ardelia",
+        "last_name": "Fusco",
+        "state": "Virginia"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Jun 21 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 7.983110639312416,
+            "membership_type": "Gold",
+            "redeemed_points": 2016,
+            "reward_points": 2058
+        },
+        "password": "Ardelia56",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Fri Sep 16 08:22:23 2011",
+        "user_id": "Ardelia_91499701"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Sci-Fi, Fantasy & Horror",
+                "Foreign Films",
+                "Comedy"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Cookbooks, Food & Wine",
+                "History",
+                "NonFiction"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Alternative",
+                "Blues and Folk",
+                "Kid's Music"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Oct 13 08:22:23 2011",
+            "order_id": "T932026642744"
+        },
+        {
+            "order_datetime": "Sun Apr 21 08:22:23 2013",
+            "order_id": "T798853751648"
+        },
+        {
+            "order_datetime": "Tue Nov 27 08:22:23 2012",
+            "order_id": "T424262646710"
+        },
+        {
+            "order_datetime": "Sun Jun  2 08:22:23 2013",
+            "order_id": "T782349958613"
+        }
+    ]
+}

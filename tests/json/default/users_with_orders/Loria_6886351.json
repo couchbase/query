@@ -1,0 +1,64 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 37,
+        "display_name": "Loria Hebert",
+        "email": "Loria.Hebert@snailmail.com",
+        "first_name": "Loria",
+        "last_name": "Hebert",
+        "state": "Idaho"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Nov 30 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 5.357913909610654,
+            "membership_type": "Silver",
+            "redeemed_points": 195,
+            "reward_points": 810
+        },
+        "password": "Loria99",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Sun Mar 11 22:00:11 2012",
+        "user_id": "Loria_6886351"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Blues and Folk",
+                "Country Music"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Jul 19 22:00:11 2012",
+            "order_id": "T581336681324"
+        },
+        {
+            "order_datetime": "Fri Aug  9 22:00:11 2013",
+            "order_id": "T739935577531"
+        },
+        {
+            "order_datetime": "Tue May 14 22:00:11 2013",
+            "order_id": "T789621474614"
+        }
+    ]
+}

@@ -1,0 +1,66 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 44,
+        "display_name": "Leif Madrigal",
+        "email": "Leif.Madrigal@snailmail.com",
+        "first_name": "Leif",
+        "last_name": "Madrigal",
+        "state": "Florida"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Oct 12 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 8.649258171173443,
+            "membership_type": "Gold",
+            "redeemed_points": 528,
+            "reward_points": 1152
+        },
+        "password": "Leif96",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Tue Apr 16 22:00:09 2013",
+        "user_id": "Leif_20105422"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue Jul  9 22:00:09 2013",
+            "order_id": "T275527432241"
+        },
+        {
+            "order_datetime": "Fri Jun 28 22:00:09 2013",
+            "order_id": "T105343889104"
+        },
+        {
+            "order_datetime": "Mon May 20 22:00:09 2013",
+            "order_id": "T778159812660"
+        },
+        {
+            "order_datetime": "Wed Jun 19 22:00:09 2013",
+            "order_id": "T926964316018"
+        },
+        {
+            "order_datetime": "Thu Jul 25 22:00:09 2013",
+            "order_id": "T771466861943"
+        },
+        {
+            "order_datetime": "Thu Jul 25 22:00:09 2013",
+            "order_id": "T901926226467"
+        },
+        {
+            "order_datetime": "Thu Jul 25 22:00:09 2013",
+            "order_id": "T651152156778"
+        },
+        {
+            "order_datetime": "Sun Oct  6 22:00:09 2013",
+            "order_id": "T984966304337"
+        }
+    ]
+}

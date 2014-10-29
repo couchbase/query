@@ -1,0 +1,50 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 36,
+        "display_name": "Jackie Barrett",
+        "email": "Jackie.Barrett@snailmail.com",
+        "first_name": "Jackie",
+        "last_name": "Barrett",
+        "state": "Vermont"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Apr  1 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.308369898859856,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Jackie16",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Wed Jul 13 22:00:09 2011",
+        "user_id": "Jackie_77489415"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Comedy",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

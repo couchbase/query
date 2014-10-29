@@ -1,0 +1,72 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 40,
+        "display_name": "Teri Peters",
+        "email": "Teri.Peters@snailmail.com",
+        "first_name": "Teri",
+        "last_name": "Peters",
+        "state": "Oregon"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Sep 19 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Anita_59632289",
+                "Devona_14385017",
+                "Williams_73738768",
+                "Tayna_6191610"
+            ],
+            "loyalty_score": 9.918130203646156,
+            "membership_type": "Platinum",
+            "redeemed_points": 27,
+            "reward_points": 999
+        },
+        "password": "Teri82",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Thu Dec 13 22:00:11 2012",
+        "user_id": "Teri_81271912"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Wed Mar 27 22:00:11 2013",
+            "order_id": "T205356703947"
+        },
+        {
+            "order_datetime": "Fri Jun  7 22:00:11 2013",
+            "order_id": "T527139094719"
+        },
+        {
+            "order_datetime": "Sat Aug 31 22:00:11 2013",
+            "order_id": "T836225511125"
+        },
+        {
+            "order_datetime": "Sun Mar 10 22:00:11 2013",
+            "order_id": "T713425858197"
+        },
+        {
+            "order_datetime": "Sun Feb 10 22:00:11 2013",
+            "order_id": "T519367261064"
+        },
+        {
+            "order_datetime": "Tue Sep  3 22:00:11 2013",
+            "order_id": "T442721539073"
+        },
+        {
+            "order_datetime": "Thu May  2 22:00:11 2013",
+            "order_id": "T313832515725"
+        }
+    ]
+}

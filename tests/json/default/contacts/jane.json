@@ -1,0 +1,11 @@
+{"type":"contact",
+ "name":"jane",
+ "contacts": [
+   {
+    "name": "fred"
+   },
+   {
+    "name": "sheela"
+   }
+ ]
+}

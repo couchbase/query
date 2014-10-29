@@ -1,0 +1,69 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 58,
+        "display_name": "Dale Skinner",
+        "email": "Dale.Skinner@snailmail.com",
+        "first_name": "Dale",
+        "last_name": "Skinner",
+        "state": "North Dakota"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Nov 14 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Del_49512473"
+            ],
+            "loyalty_score": 7.1669018264655415,
+            "membership_type": "Gold",
+            "redeemed_points": 273,
+            "reward_points": 399
+        },
+        "password": "Dale65",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Fri Apr 15 22:00:09 2011",
+        "user_id": "Dale_47487690"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun May 29 22:00:09 2011",
+            "order_id": "T521422841208"
+        },
+        {
+            "order_datetime": "Sat Jan 12 22:00:09 2013",
+            "order_id": "T223543881404"
+        },
+        {
+            "order_datetime": "Fri Jan  4 22:00:09 2013",
+            "order_id": "T450021497472"
+        },
+        {
+            "order_datetime": "Tue Oct  9 22:00:09 2012",
+            "order_id": "T426736924651"
+        },
+        {
+            "order_datetime": "Sat May 14 22:00:09 2011",
+            "order_id": "T490767747884"
+        },
+        {
+            "order_datetime": "Fri May 25 22:00:09 2012",
+            "order_id": "T854140224593"
+        },
+        {
+            "order_datetime": "Fri Aug 31 22:00:09 2012",
+            "order_id": "T249349897826"
+        }
+    ]
+}

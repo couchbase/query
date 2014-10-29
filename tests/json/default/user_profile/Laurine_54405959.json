@@ -1,0 +1,39 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 31,
+        "display_name": "Laurine Withers",
+        "email": "Laurine.Withers@snailmail.com",
+        "first_name": "Laurine",
+        "last_name": "Withers",
+        "state": "Florida"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Feb 25 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 4.910372159689706,
+            "membership_type": "Silver",
+            "redeemed_points": 900,
+            "reward_points": 1080
+        },
+        "password": "Laurine61",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Fri May 18 08:22:23 2012",
+        "user_id": "Laurine_54405959"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Feb 11 08:22:23 2013",
+            "order_id": "T754762666999"
+        }
+    ]
+}

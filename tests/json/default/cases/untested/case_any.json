@@ -1,0 +1,176 @@
+[
+    {
+        "statements": "SELECT name FROM contacts WHERE ANY child IN children SATISFIES child.age > 14 AND child.gender = \"m\" END",
+        "results": [
+          {
+            "name": "dave"
+          },
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT name FROM contacts WHERE ANY child in children satisfies child.age > 14 END",
+        "results": [
+          {
+            "name": "dave"
+          },
+          {
+            "name": "earl"
+          },
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT name FROM contacts WHERE ANY child IN children SATISFIES child.age > 14 END AND ANY hobby in hobbies SATISFIES hobby = \"golf\" END",
+        "results": [
+          {
+            "name": "dave"
+          },
+          {
+            "name": "ian"
+          }
+        ]
+    },
+
+    {
+        "statements": "SELECT title FROM catalog WHERE ANY director IN details.director satisfies director END",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.director FROM catalog  GROUP BY details.director HAVING ANY director IN details.director satisfies director END",
+        "results": [
+        {
+            "director": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT asin FROM catalog WHERE dimensions.height > 1 and ANY gen IN details.genre satisfies gen = \"Thriller\" END",
+        "results": [
+        {
+            "asin": "B0094QY7HE"
+        },
+        {
+            "asin": "B0094QY3LI"
+        }
+    ]
+    },
+
+    {
+        "statements": "select search_history from user_profile where (any search in search_history satisfies search.category = \"Films\" and (any subcat in search.sub-category satisfies subcat=\"Comedy\" end) end) AND  (ANY search IN search_history SATISFIES search.category = \"Books\" AND (ANY subcat IN search.sub-category SATISFIES subcat LIKE \"History%\" END)  END) AND (ANY search IN search_history SATISFIES search.category = \"Music\" AND (ANY subcat IN search.sub-category SATISFIES subcat LIKE \"%Folk\" END) END)",
+        "results": [
+        {
+            "search_history": [
+                {
+                    "category": "Films",
+                    "sub-category": [
+                        "Sci-Fi, Fantasy & Horror",
+                        "Foreign Films",
+                        "Comedy"
+                    ]
+                },
+                {
+                    "category": "Books",
+                    "sub-category": [
+                        "Cookbooks, Food & Wine",
+                        "History",
+                        "NonFiction"
+                    ]
+                },
+                {
+                    "category": "Music",
+                    "sub-category": [
+                        "Alternative",
+                        "Blues and Folk",
+                        "Kid's Music"
+                    ]
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements": "SELECT name FROM contacts WHERE ANY children satisfies children.age > 14 END",
+        "results": [
+          {
+            "name": "dave"
+          },
+          {
+            "name": "earl"
+          },
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product LIKE \"tea_11\" END",
+        "results" : [
+    ]
+    },
+
+    {
+        "statements" : "SELECT id FROM orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product NOT LIKE \"%tea_11\" END",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements" : "select id FROM orders WHERE ANY product in ARRAY ol.productId FOR ol in orderlines END SATISFIES product NOT LIKE \"tea11%\" END",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "description": "ANY expression referring to outer context",
+        "statements" : "SELECT name, children FROM contacts WHERE ANY child in children satisfies child.name > name END",
+        "results" : [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ],
+            "name": "earl"
+        }
+    ]
+    }
+]

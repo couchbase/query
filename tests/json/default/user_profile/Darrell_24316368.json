@@ -1,0 +1,60 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 46,
+        "display_name": "Darrell Perryman",
+        "email": "Darrell.Perryman@snailmail.com",
+        "first_name": "Darrell",
+        "last_name": "Perryman",
+        "state": "Utah"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Feb 12 08:22:23 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 7.065630034442833,
+            "membership_type": "Gold",
+            "redeemed_points": 777,
+            "reward_points": 546
+        },
+        "password": "Darrell40",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Sat Apr 14 08:22:23 2012",
+        "user_id": "Darrell_24316368"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Action",
+                "Action"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Nov 29 08:22:23 2012",
+            "order_id": "T600731277465"
+        },
+        {
+            "order_datetime": "Tue Jul 31 08:22:23 2012",
+            "order_id": "T799362008905"
+        },
+        {
+            "order_datetime": "Sun Jan 20 08:22:23 2013",
+            "order_id": "T708634001686"
+        },
+        {
+            "order_datetime": "Tue Dec 25 08:22:23 2012",
+            "order_id": "T178851875673"
+        },
+        {
+            "order_datetime": "Wed Aug 15 08:22:23 2012",
+            "order_id": "T251462402416"
+        }
+    ]
+}

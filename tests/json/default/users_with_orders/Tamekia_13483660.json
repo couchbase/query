@@ -1,0 +1,46 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 39,
+        "display_name": "Tamekia Akin",
+        "email": "Tamekia.Akin@snailmail.com",
+        "first_name": "Tamekia",
+        "last_name": "Akin",
+        "state": "Massachusetts"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Jul 15 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.5606904559258041,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Tamekia92",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Mon Jan 28 22:00:09 2013",
+        "user_id": "Tamekia_13483660"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Comedy"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor",
+                "NonFiction"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

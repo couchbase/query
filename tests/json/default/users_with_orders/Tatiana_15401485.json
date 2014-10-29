@@ -1,0 +1,67 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 27,
+        "display_name": "Tatiana Doe",
+        "email": "Tatiana.Doe@snailmail.com",
+        "first_name": "Tatiana",
+        "last_name": "Doe",
+        "state": "Maryland"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Dec  1 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 2.791549803506359,
+            "membership_type": "Basic",
+            "redeemed_points": 438,
+            "reward_points": 474
+        },
+        "password": "Tatiana86",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Tue Feb  7 22:00:09 2012",
+        "user_id": "Tatiana_15401485"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Travel",
+                "Diet & Health"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music",
+                "Kid's Music",
+                "New Age"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue Jul  2 22:00:09 2013",
+            "order_id": "T179222196325"
+        },
+        {
+            "order_datetime": "Fri Aug 10 22:00:09 2012",
+            "order_id": "T376350706852"
+        }
+    ]
+}

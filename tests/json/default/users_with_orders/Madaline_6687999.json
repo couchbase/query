@@ -1,0 +1,73 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 39,
+        "display_name": "Madaline Cambell",
+        "email": "Madaline.Cambell@snailmail.com",
+        "first_name": "Madaline",
+        "last_name": "Cambell",
+        "state": "Washington"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Oct 18 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Andrea_28317556",
+                "Weston_3077363"
+            ],
+            "loyalty_score": 8.156412809225863,
+            "membership_type": "Gold",
+            "redeemed_points": 336,
+            "reward_points": 1680
+        },
+        "password": "Madaline85",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Sat Jun 18 22:00:09 2011",
+        "user_id": "Madaline_6687999"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary",
+                "Fitness / Instructional"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Travel",
+                "Home & Garden"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Mar 24 22:00:09 2012",
+            "order_id": "T941427651424"
+        },
+        {
+            "order_datetime": "Sun Jul 24 22:00:09 2011",
+            "order_id": "T420546695608"
+        },
+        {
+            "order_datetime": "Sat Mar  9 22:00:09 2013",
+            "order_id": "T603552836056"
+        },
+        {
+            "order_datetime": "Tue Aug 14 22:00:09 2012",
+            "order_id": "T975057097133"
+        }
+    ]
+}

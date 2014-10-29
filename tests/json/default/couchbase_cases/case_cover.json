@@ -1,0 +1,120 @@
+[
+
+	{
+        "description": "verify that queries covered by index do not fetch",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score FROM game WHERE score > 9",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/type",
+                "expect": "scan"
+            },
+            {
+                "pointer": "/0/input/input/index",
+                "expect": "scoreidx"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/low/0",
+                "expect": 9
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/limit",
+                "expect": 0
+            }
+        ]
+    },
+    {
+        "description": "ensure that queries covered by index return same results after removing fetch",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "SELECT score FROM game WHERE score > 9",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "matchStatements": "SELECT score FROM game WHERE score > 9"
+    },
+    {
+        "description": "verify that queries NOT covered by index do fetch",
+        "preStatements": "CREATE INDEX scoreidx ON game(score)",
+        "statements": "EXPLAIN SELECT score,type FROM game WHERE score > 9",
+        "postStatements": "DROP INDEX game.scoreidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/type",
+                "expect": "fetch"
+            }
+        ]
+    },
+    {
+        "description": "verify that queries covered by index do not fetch (with DOT MEMBER)",
+        "preStatements": "CREATE INDEX loyaltyidx ON user_profile(profile_details.loyalty.loyalty_score)",
+        "statements": "EXPLAIN SELECT profile_details.loyalty.loyalty_score FROM user_profile where profile_details.loyalty.loyalty_score > 8.5",
+        "postStatements": "DROP INDEX user_profile.loyaltyidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/type",
+                "expect": "scan"
+            },
+            {
+                "pointer": "/0/input/input/index",
+                "expect": "loyaltyidx"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/low/0",
+                "expect": 8.5
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/limit",
+                "expect": 0
+            }
+        ]
+    },
+    {
+        "description": "ensure that queries covered by index return same results after removing fetch (with DOT MEMBER)",
+        "preStatements": "CREATE INDEX loyaltyidx ON user_profile(profile_details.loyalty.loyalty_score)",
+        "statements": "SELECT profile_details.loyalty.loyalty_score FROM user_profile where profile_details.loyalty.loyalty_score > 8.5",
+        "postStatements": "DROP INDEX user_profile.loyaltyidx",
+        "matchStatements": "SELECT profile_details.loyalty.loyalty_score FROM user_profile where profile_details.loyalty.loyalty_score > 8.5"
+    },
+    {
+        "description": "verify that queries covered by index do not fetch (with BRACKET MEMBER)",
+        "preStatements": "CREATE INDEX loyaltyidx ON user_profile(profile_details.loyalty.loyalty_score)",
+        "statements": "EXPLAIN SELECT profile_details.loyalty.loyalty_score FROM user_profile where profile_details.loyalty.loyalty_score > 8.5",
+        "postStatements": "DROP INDEX user_profile.loyaltyidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/type",
+                "expect": "scan"
+            },
+            {
+                "pointer": "/0/input/input/index",
+                "expect": "loyaltyidx"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/low/0",
+                "expect": 8.5
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/ranges/0/limit",
+                "expect": 0
+            }
+        ]
+    },
+    {
+        "description": "ensure that queries covered by index return same results after removing fetch (with BRACKET MEMBER)",
+        "preStatements": "CREATE INDEX sh0 ON user_profile(shipped_order_history[0].order_id)",
+        "statements": "SELECT shipped_order_history[0].order_id FROM user_profile WHERE shipped_order_history[0].order_id < \"a\" ORDER BY shipped_order_history[0].order_id ASC",
+        "postStatements": "DROP INDEX user_profile.sh0",
+        "matchStatements": "SELECT shipped_order_history[0].order_id FROM user_profile WHERE shipped_order_history[0].order_id < \"a\" ORDER BY shipped_order_history[0].order_id ASC"
+    }
+]

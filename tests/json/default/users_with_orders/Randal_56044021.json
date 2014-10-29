@@ -1,0 +1,74 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 33,
+        "display_name": "Randal Loera",
+        "email": "Randal.Loera@snailmail.com",
+        "first_name": "Randal",
+        "last_name": "Loera",
+        "state": "Florida"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Jun 17 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Gerda_83805577"
+            ],
+            "loyalty_score": 7.96907814803542,
+            "membership_type": "Gold",
+            "redeemed_points": 2016,
+            "reward_points": 1533
+        },
+        "password": "Randal81",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Wed Dec  5 22:00:10 2012",
+        "user_id": "Randal_56044021"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Comedy",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "Travel",
+                "Sports & Adventure"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Blues and Folk",
+                "Jazz"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Jan 20 22:00:10 2013",
+            "order_id": "T926629881796"
+        },
+        {
+            "order_datetime": "Wed Jun 12 22:00:10 2013",
+            "order_id": "T284048333904"
+        },
+        {
+            "order_datetime": "Mon May 13 22:00:10 2013",
+            "order_id": "T123328374845"
+        },
+        {
+            "order_datetime": "Sat Feb  2 22:00:10 2013",
+            "order_id": "T267147628219"
+        }
+    ]
+}

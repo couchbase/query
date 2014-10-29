@@ -1,0 +1,74 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 40,
+        "display_name": "Frankie Sadler",
+        "email": "Frankie.Sadler@snailmail.com",
+        "first_name": "Frankie",
+        "last_name": "Sadler",
+        "state": "Texas"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Oct 24 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 5.98214736800818,
+            "membership_type": "Silver",
+            "redeemed_points": 1230,
+            "reward_points": 975
+        },
+        "password": "Frankie25",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Wed Sep 19 22:00:10 2012",
+        "user_id": "Frankie_39839291"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "NonFiction",
+                "Home & Garden"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music",
+                "Country Music",
+                "Opera and Vocal"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Mon Oct  8 22:00:10 2012",
+            "order_id": "T609958478874"
+        },
+        {
+            "order_datetime": "Sat Feb 23 22:00:10 2013",
+            "order_id": "T587566764357"
+        },
+        {
+            "order_datetime": "Wed May 22 22:00:10 2013",
+            "order_id": "T368441127044"
+        },
+        {
+            "order_datetime": "Wed Mar 20 22:00:10 2013",
+            "order_id": "T222837463060"
+        }
+    ]
+}

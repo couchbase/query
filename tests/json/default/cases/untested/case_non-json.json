@@ -1,0 +1,6 @@
+[
+    {
+        "statements": "SELECT * FROM non-json",
+        "results": [ {}, {} ]
+    }
+]

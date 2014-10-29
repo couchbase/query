@@ -1,0 +1,96 @@
+[
+    {
+        "statements": "SELECT D.actors[0] AS act FROM catalog.details AS D",
+        "results": [
+        {},
+        {
+            "act": "Jessica Chastain"
+        },
+        {
+            "act": "Benedict Cumberbatch"
+        }
+    ]
+    },
+
+    {
+        "statements": "select name from contacts.children[0]",
+        "error": "Property reference name missing qualifier bucket/alias"
+    },
+
+    {
+        "statements": "select C.name from contacts.children[0] as C where C.name = \"xena\"",
+        "results": [
+        {
+            "name": "xena"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT price.list FROM catalog.pricing AS price WHERE price.pct_savings > 20",
+        "results": [
+        {
+            "list": 599
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT catalog.title, C.title, C.type FROM catalog AS C",
+        "error": "Semantic Error - cause: alias title is defined more than once"
+    },
+
+    {
+        "statements": "SELECT type FROM catalog.non.existing[3].apath",
+        "results": [
+    ]
+    },
+
+    {
+        "statements": "SELECT contacts.name FROM contacts",
+        "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT contact.name FROM contacts AS contact",
+        "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    }
+]

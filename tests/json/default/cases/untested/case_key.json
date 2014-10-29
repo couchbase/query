@@ -1,0 +1,260 @@
+[
+    {
+        "statements": "SELECT * FROM contacts KEY \"dave\"",
+        "results": [
+            {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        ]    
+    
+    },
+    {
+        "statements": "SELECT * FROM contacts KEY \"ia\"|| \"n\"",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "ian",
+            "type": "contact"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM contacts KEYS array_append([\"dave\", \"jane\"], \"ian\") where contacts.name = \"ian\"",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "ian",
+            "type": "contact"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT * FROM contacts KEYS [\"dave\", \"jane\"]",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "dave",
+            "type": "contact"
+        },
+        {
+            "contacts": [
+                {
+                    "name": "fred"
+                },
+                {
+                    "name": "sheela"
+                }
+            ],
+            "name": "jane",
+            "type": "contact"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM contacts key \"dave\" UNNEST contacts.children",
+        "results": [
+        {
+            "children": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            },
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 2,
+                "gender": "f",
+                "name": "bill"
+            },
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM contacts keys [\"dave\", \"jane\", \"ian\"] UNNEST contacts.contacts",
+        "results": [
+        {
+            "contacts": {
+                "name": "fred"
+            }
+        },
+        {
+            "contacts": {
+                "name": "sheela"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM contacts KEYS ARRAY c.name FOR c IN [{\"name\":\"dave\"},{\"name\":\"ian\"}] END",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "dave",
+            "type": "contact"
+        },
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "ian",
+            "type": "contact"
+        }
+        ]
+    },
+    {
+        "statements" : "select * FROM contacts KEYS FIRST c.name FOR c IN [{\"name\":\"dave\"},{\"name\":\"ian\"}] END",
+        "results": [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ],
+            "hobbies": [
+                "golf",
+                "surfing"
+            ],
+            "name": "dave",
+            "type": "contact"
+        }
+        ]
+    }
+]

@@ -1,0 +1,88 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 26,
+        "display_name": "Tayna Pannell",
+        "email": "Tayna.Pannell@snailmail.com",
+        "first_name": "Tayna",
+        "last_name": "Pannell",
+        "state": "West Virginia"
+    },
+    "profile_details": {
+        "last_login_time": "Sat May 18 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Bennett_7822875",
+                "Kyle_58073906",
+                "Raleigh_32499577",
+                "Julio_1024717"
+            ],
+            "loyalty_score": 9.574533637666008,
+            "membership_type": "Platinum",
+            "redeemed_points": 783,
+            "reward_points": 1242
+        },
+        "password": "Tayna57",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Fri May 18 22:00:10 2012",
+        "user_id": "Tayna_6191610"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat May 19 22:00:10 2012",
+            "order_id": "T613546125943"
+        },
+        {
+            "order_datetime": "Mon Dec 31 22:00:10 2012",
+            "order_id": "T498726759745"
+        },
+        {
+            "order_datetime": "Mon Sep 17 22:00:10 2012",
+            "order_id": "T124328404710"
+        },
+        {
+            "order_datetime": "Sun Sep 16 22:00:10 2012",
+            "order_id": "T680066008979"
+        },
+        {
+            "order_datetime": "Tue Jul 10 22:00:10 2012",
+            "order_id": "T261724988417"
+        },
+        {
+            "order_datetime": "Wed Jun 20 22:00:10 2012",
+            "order_id": "T523068014139"
+        },
+        {
+            "order_datetime": "Tue Nov 20 22:00:10 2012",
+            "order_id": "T617827793234"
+        },
+        {
+            "order_datetime": "Thu Oct 11 22:00:10 2012",
+            "order_id": "T167743839920"
+        },
+        {
+            "order_datetime": "Sun Dec 23 22:00:10 2012",
+            "order_id": "T633239293778"
+        }
+    ]
+}

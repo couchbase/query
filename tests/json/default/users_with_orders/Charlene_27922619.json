@@ -1,0 +1,74 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 18,
+        "display_name": "Charlene Weller",
+        "email": "Charlene.Weller@snailmail.com",
+        "first_name": "Charlene",
+        "last_name": "Weller",
+        "state": "Connecticut"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Dec 12 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Lesley_24847969"
+            ],
+            "loyalty_score": 8.894486125787013,
+            "membership_type": "Gold",
+            "redeemed_points": 1104,
+            "reward_points": 1560
+        },
+        "password": "Charlene30",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Thu Sep  6 22:00:09 2012",
+        "user_id": "Charlene_27922619"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "NonFiction"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Broadway and Vocal"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Jul 21 22:00:09 2013",
+            "order_id": "T979824273595"
+        },
+        {
+            "order_datetime": "Wed Apr 17 22:00:09 2013",
+            "order_id": "T893054814567"
+        },
+        {
+            "order_datetime": "Mon Jul 29 22:00:09 2013",
+            "order_id": "T677233511602"
+        },
+        {
+            "order_datetime": "Sat Apr  6 22:00:09 2013",
+            "order_id": "T402320858473"
+        }
+    ]
+}

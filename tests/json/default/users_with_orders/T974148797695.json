@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Wed Aug  8 22:00:09 2012",
+        "order_id": "T974148797695"
+    },
+    "payment_details": {
+        "payment_mode": "Reward Points",
+        "total_charges": 84
+    },
+    "product_details": {
+        "currency": "USD",
+        "list_price": 98,
+        "pct_discount": 20,
+        "product_id": "P5903953455",
+        "sale_price": 79
+    },
+    "shipping_details": {
+        "shipping_charges": 5,
+        "shipping_status": "Delivered",
+        "shipping_type": "Express"
+    }
+}

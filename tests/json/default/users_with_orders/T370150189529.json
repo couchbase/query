@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Tue Apr 30 22:00:09 2013",
+        "order_id": "T370150189529"
+    },
+    "payment_details": {
+        "payment_mode": "Cash On Delivery",
+        "total_charges": 56
+    },
+    "product_details": {
+        "currency": "EUR",
+        "list_price": 60,
+        "pct_discount": 15,
+        "product_id": "P3960183584",
+        "sale_price": 51
+    },
+    "shipping_details": {
+        "shipping_charges": 5,
+        "shipping_status": "Delivered",
+        "shipping_type": "Express"
+    }
+}

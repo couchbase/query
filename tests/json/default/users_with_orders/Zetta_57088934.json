@@ -1,0 +1,44 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 32,
+        "display_name": "Zetta Dorman",
+        "email": "Zetta.Dorman@snailmail.com",
+        "first_name": "Zetta",
+        "last_name": "Dorman",
+        "state": "New Mexico"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Nov  4 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 7.720235516309271,
+            "membership_type": "Gold",
+            "redeemed_points": 63,
+            "reward_points": 462
+        },
+        "password": "Zetta50",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Sun Apr 28 22:00:09 2013",
+        "user_id": "Zetta_57088934"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

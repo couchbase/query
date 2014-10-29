@@ -1,0 +1,51 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 50,
+        "display_name": "Mei Rivero",
+        "email": "Mei.Rivero@snailmail.com",
+        "first_name": "Mei",
+        "last_name": "Rivero",
+        "state": "Montana"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Dec 15 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.508638199180874,
+            "membership_type": "Basic",
+            "redeemed_points": 105,
+            "reward_points": 87
+        },
+        "password": "Mei14",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Sat Nov 30 22:00:09 2013",
+        "user_id": "Mei_43996997"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Comedy"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Travel"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Dec 15 22:00:09 2013",
+            "order_id": "T559134122391"
+        }
+    ]
+}

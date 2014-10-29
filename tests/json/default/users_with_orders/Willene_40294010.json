@@ -1,0 +1,40 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 37,
+        "display_name": "Willene Slagle",
+        "email": "Willene.Slagle@snailmail.com",
+        "first_name": "Willene",
+        "last_name": "Slagle",
+        "state": "North Dakota"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Dec 24 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.612579837507362,
+            "membership_type": "Basic",
+            "redeemed_points": 168,
+            "reward_points": 177
+        },
+        "password": "Willene80",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Sat Nov  9 22:00:10 2013",
+        "user_id": "Willene_40294010"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Drama",
+                "Sci-Fi, Fantasy & Horror"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

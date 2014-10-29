@@ -1,0 +1,30 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 54,
+        "display_name": "Lesley Watkins",
+        "email": "Lesley.Watkins@snailmail.com",
+        "first_name": "Lesley",
+        "last_name": "Watkins",
+        "state": "Washington"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Oct 23 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 4.460257200878456,
+            "membership_type": "Silver",
+            "redeemed_points": 444,
+            "reward_points": 180
+        },
+        "password": "Lesley20",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Sun Sep  9 22:00:09 2012",
+        "user_id": "Lesley_24847969"
+    },
+    "shipped_order_history": []
+}

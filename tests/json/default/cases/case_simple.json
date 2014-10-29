@@ -1,0 +1,34 @@
+[
+    {
+        "statements": "SELECT * FROM default:contacts WHERE name = \"dave\"",
+        "results": [
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM default:contacts WHERE name = \"ImSorryDave\"",
+        "results": []
+    }
+
+]

@@ -1,0 +1,30 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 20,
+        "display_name": "Ronda Dwyer",
+        "email": "Ronda.Dwyer@snailmail.com",
+        "first_name": "Ronda",
+        "last_name": "Dwyer",
+        "state": "Tennessee"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Dec  2 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.1055665636863732,
+            "membership_type": "Basic",
+            "redeemed_points": 294,
+            "reward_points": 264
+        },
+        "password": "Ronda58",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Fri Feb 15 22:00:09 2013",
+        "user_id": "Ronda_89913467"
+    },
+    "shipped_order_history": []
+}

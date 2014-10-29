@@ -1,0 +1,69 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 59,
+        "display_name": "Drew Talbott",
+        "email": "Drew.Talbott@snailmail.com",
+        "first_name": "Drew",
+        "last_name": "Talbott",
+        "state": "Alabama"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Jun 13 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 8.12683949111215,
+            "membership_type": "Gold",
+            "redeemed_points": 1968,
+            "reward_points": 240
+        },
+        "password": "Drew74",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Wood"
+        },
+        "user_creation_time": "Thu Jan 19 22:00:09 2012",
+        "user_id": "Drew_71707295"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue Aug  7 22:00:09 2012",
+            "order_id": "T352155829988"
+        },
+        {
+            "order_datetime": "Sat Jun  1 22:00:09 2013",
+            "order_id": "T782663781809"
+        },
+        {
+            "order_datetime": "Sat May 18 22:00:09 2013",
+            "order_id": "T339738183491"
+        },
+        {
+            "order_datetime": "Fri May 25 22:00:09 2012",
+            "order_id": "T585931895139"
+        },
+        {
+            "order_datetime": "Mon Apr 15 22:00:09 2013",
+            "order_id": "T236369091384"
+        },
+        {
+            "order_datetime": "Fri Jul 13 22:00:09 2012",
+            "order_id": "T118033252098"
+        }
+    ]
+}

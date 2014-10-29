@@ -1,0 +1,42 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 29,
+        "display_name": "Lilli Jenson",
+        "email": "Lilli.Jenson@snailmail.com",
+        "first_name": "Lilli",
+        "last_name": "Jenson",
+        "state": "New Jersey"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Apr 16 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.9752257080002134,
+            "membership_type": "Basic",
+            "redeemed_points": 111,
+            "reward_points": 234
+        },
+        "password": "Lilli31",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Mon Sep  5 22:00:10 2011",
+        "user_id": "Lilli_66227734"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

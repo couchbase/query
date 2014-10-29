@@ -1,0 +1,44 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 56,
+        "display_name": "Joy Aiken",
+        "email": "Joy.Aiken@snailmail.com",
+        "first_name": "Joy",
+        "last_name": "Aiken",
+        "state": "Washington"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Dec 14 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.4474236579152007,
+            "membership_type": "Basic",
+            "redeemed_points": 666,
+            "reward_points": 288
+        },
+        "password": "Joy88",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Thu May 30 22:00:09 2013",
+        "user_id": "Joy_30282690"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Drama"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Jul 13 22:00:09 2013",
+            "order_id": "T984729317603"
+        }
+    ]
+}

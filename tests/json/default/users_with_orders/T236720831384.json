@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Sat Jan 19 22:00:09 2013",
+        "order_id": "T236720831384"
+    },
+    "payment_details": {
+        "payment_mode": "Reward Points",
+        "total_charges": 578
+    },
+    "product_details": {
+        "currency": "EUR",
+        "list_price": 750,
+        "pct_discount": 25,
+        "product_id": "P7575482358",
+        "sale_price": 563
+    },
+    "shipping_details": {
+        "shipping_charges": 15,
+        "shipping_status": "Delivered",
+        "shipping_type": "Priority"
+    }
+}

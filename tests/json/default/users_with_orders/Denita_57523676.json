@@ -1,0 +1,72 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 18,
+        "display_name": "Denita Butterfield",
+        "email": "Denita.Butterfield@snailmail.com",
+        "first_name": "Denita",
+        "last_name": "Butterfield",
+        "state": "Washington"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Nov 12 22:00:10 2012",
+        "loyalty": {
+            "friends_referred": [
+                "Jackie_77489415",
+                "Jasmin_79389963"
+            ],
+            "loyalty_score": 8.259068276559109,
+            "membership_type": "Gold",
+            "redeemed_points": 2280,
+            "reward_points": 1728
+        },
+        "password": "Denita16",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Thu Aug 18 22:00:10 2011",
+        "user_id": "Denita_57523676"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Comedy",
+                "Fitness / Instructional"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Sep 24 22:00:10 2011",
+            "order_id": "T597164508171"
+        },
+        {
+            "order_datetime": "Sun Jul 29 22:00:10 2012",
+            "order_id": "T356433904753"
+        },
+        {
+            "order_datetime": "Fri Oct  7 22:00:10 2011",
+            "order_id": "T287933705863"
+        },
+        {
+            "order_datetime": "Tue Feb 14 22:00:10 2012",
+            "order_id": "T803860372940"
+        },
+        {
+            "order_datetime": "Mon Dec 19 22:00:10 2011",
+            "order_id": "T572332806296"
+        },
+        {
+            "order_datetime": "Thu Dec  1 22:00:10 2011",
+            "order_id": "T656631131201"
+        },
+        {
+            "order_datetime": "Sat Apr 28 22:00:10 2012",
+            "order_id": "T973220959199"
+        }
+    ]
+}

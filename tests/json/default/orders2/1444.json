@@ -1,0 +1,6 @@
+{"type":"order",
+ "id":"1333",
+ "custId":"manik",
+ "shipped-on":null,
+ "orderlines":[{"qty":1,"productId":"coffee01"},
+               {"qty":1,"productId":"sugar22"}]}

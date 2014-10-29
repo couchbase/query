@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Sun Mar 10 22:00:11 2013",
+        "order_id": "T713425858197"
+    },
+    "payment_details": {
+        "payment_mode": "Cash On Delivery",
+        "total_charges": 420
+    },
+    "product_details": {
+        "currency": "USD",
+        "list_price": 512,
+        "pct_discount": 20,
+        "product_id": "P9860546109",
+        "sale_price": 410
+    },
+    "shipping_details": {
+        "shipping_charges": 10,
+        "shipping_status": "Delivered",
+        "shipping_type": "Overnight"
+    }
+}

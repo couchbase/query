@@ -1,0 +1,43 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 25,
+        "display_name": "Jovan Thomason",
+        "email": "Jovan.Thomason@snailmail.com",
+        "first_name": "Jovan",
+        "last_name": "Thomason",
+        "state": "New York"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Dec 14 08:22:23 2012",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 9.480491542562305,
+            "membership_type": "Platinum",
+            "redeemed_points": 864,
+            "reward_points": 1134
+        },
+        "password": "Jovan55",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Tue Mar 22 08:22:23 2011",
+        "user_id": "Jovan_57838602"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue May 15 08:22:23 2012",
+            "order_id": "T412752468564"
+        },
+        {
+            "order_datetime": "Tue Sep  4 08:22:23 2012",
+            "order_id": "T899132047773"
+        },
+        {
+            "order_datetime": "Sun May  8 08:22:23 2011",
+            "order_id": "T364427703059"
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+{"type":"order",
+ "id":"1200",
+ "custId":"abc",
+ "shipped-on":"2012/01/02",
+ "orderlines":[{"qty":1,"productId":"coffee01"},
+               {"qty":1,"productId":"sugar22"}]}

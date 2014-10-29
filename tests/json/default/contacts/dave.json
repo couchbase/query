@@ -1,0 +1,8 @@
+{"type":"contact",
+ "name":"dave",
+ "children":[
+        {"name":"aiden","age":17,"gender":"m"},
+        {"name":"bill","age":2,"gender":"f"}
+ ],
+ "hobbies":["golf", "surfing"]
+}

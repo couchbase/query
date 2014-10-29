@@ -1,0 +1,54 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 31,
+        "display_name": "Neida Ramsey",
+        "email": "Neida.Ramsey@snailmail.com",
+        "first_name": "Neida",
+        "last_name": "Ramsey",
+        "state": "Illinois"
+    },
+    "profile_details": {
+        "last_login_time": "Wed Jul 24 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.9376088876469302,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Neida77",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "Spanish",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Mon Feb 11 22:00:09 2013",
+        "user_id": "Neida_6140889"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor",
+                "Medicine"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

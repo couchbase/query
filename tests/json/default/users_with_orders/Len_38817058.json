@@ -1,0 +1,86 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 51,
+        "display_name": "Len Trowbridge",
+        "email": "Len.Trowbridge@snailmail.com",
+        "first_name": "Len",
+        "last_name": "Trowbridge",
+        "state": "Pennsylvania"
+    },
+    "profile_details": {
+        "last_login_time": "Mon Jul 15 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Aliza_5452374"
+            ],
+            "loyalty_score": 7.521286720503503,
+            "membership_type": "Gold",
+            "redeemed_points": 1659,
+            "reward_points": 1344
+        },
+        "password": "Len96",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "German",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Sat Jun 25 22:00:10 2011",
+        "user_id": "Len_38817058"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Comedy"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Medicine"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Blues and Folk",
+                "Jazz",
+                "New Age"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Sep 24 22:00:10 2011",
+            "order_id": "T649141238588"
+        },
+        {
+            "order_datetime": "Wed Jan 11 22:00:10 2012",
+            "order_id": "T293239669325"
+        },
+        {
+            "order_datetime": "Wed Jan 18 22:00:10 2012",
+            "order_id": "T939847877405"
+        },
+        {
+            "order_datetime": "Sat Oct 22 22:00:10 2011",
+            "order_id": "T446643524296"
+        },
+        {
+            "order_datetime": "Thu Jan 31 22:00:10 2013",
+            "order_id": "T647235416106"
+        },
+        {
+            "order_datetime": "Sun Dec 11 22:00:10 2011",
+            "order_id": "T662354031538"
+        }
+    ]
+}

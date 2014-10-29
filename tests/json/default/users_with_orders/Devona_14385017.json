@@ -1,0 +1,43 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 54,
+        "display_name": "Devona Hardy",
+        "email": "Devona.Hardy@snailmail.com",
+        "first_name": "Devona",
+        "last_name": "Hardy",
+        "state": "Alabama"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Nov  5 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.530981020257121,
+            "membership_type": "Basic",
+            "redeemed_points": 855,
+            "reward_points": 603
+        },
+        "password": "Devona71",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Tue Sep  3 22:00:10 2013",
+        "user_id": "Devona_14385017"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Sep  7 22:00:10 2013",
+            "order_id": "T182622186757"
+        },
+        {
+            "order_datetime": "Tue Sep 24 22:00:10 2013",
+            "order_id": "T803322881333"
+        },
+        {
+            "order_datetime": "Thu Oct 17 22:00:10 2013",
+            "order_id": "T164757435719"
+        }
+    ]
+}

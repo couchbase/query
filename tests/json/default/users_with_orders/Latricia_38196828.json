@@ -1,0 +1,51 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 57,
+        "display_name": "Latricia Danforth",
+        "email": "Latricia.Danforth@snailmail.com",
+        "first_name": "Latricia",
+        "last_name": "Danforth",
+        "state": "Florida"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Aug  6 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 5.580099080326564,
+            "membership_type": "Silver",
+            "redeemed_points": 285,
+            "reward_points": 90
+        },
+        "password": "Latricia34",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Sat Oct  6 22:00:10 2012",
+        "user_id": "Latricia_38196828"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Fri Jan 18 22:00:10 2013",
+            "order_id": "T683043194971"
+        },
+        {
+            "order_datetime": "Sat Jan  5 22:00:10 2013",
+            "order_id": "T404936902646"
+        },
+        {
+            "order_datetime": "Fri Dec 28 22:00:10 2012",
+            "order_id": "T632629028329"
+        },
+        {
+            "order_datetime": "Wed Jul 17 22:00:10 2013",
+            "order_id": "T322634729755"
+        },
+        {
+            "order_datetime": "Sat Jan  5 22:00:10 2013",
+            "order_id": "T287248793265"
+        }
+    ]
+}

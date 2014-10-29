@@ -1,0 +1,30 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 29,
+        "display_name": "Armandina Magee",
+        "email": "Armandina.Magee@snailmail.com",
+        "first_name": "Armandina",
+        "last_name": "Magee",
+        "state": "Michigan"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Dec 10 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.5951282605503327,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Armandina24",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Mountains"
+        },
+        "user_creation_time": "Fri Mar  8 22:00:09 2013",
+        "user_id": "Armandina_7164099"
+    },
+    "shipped_order_history": []
+}

@@ -1,0 +1,69 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 24,
+        "display_name": "Aide Swank",
+        "email": "Aide.Swank@snailmail.com",
+        "first_name": "Aide",
+        "last_name": "Swank",
+        "state": "Oregon"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Feb 10 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 7.3004149775198215,
+            "membership_type": "Gold",
+            "redeemed_points": 630,
+            "reward_points": 651
+        },
+        "password": "Aide63",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "English",
+            "ui_theme": "Ocean"
+        },
+        "user_creation_time": "Mon Oct 31 22:00:11 2011",
+        "user_id": "Aide_48687583"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation",
+                "Drama",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Humor",
+                "Travel",
+                "Home & Garden"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Jan  7 22:00:11 2012",
+            "order_id": "T638751835595"
+        },
+        {
+            "order_datetime": "Fri Jan 20 22:00:11 2012",
+            "order_id": "T870351974549"
+        },
+        {
+            "order_datetime": "Sun Feb 19 22:00:11 2012",
+            "order_id": "T769348087819"
+        },
+        {
+            "order_datetime": "Mon Oct 15 22:00:11 2012",
+            "order_id": "T183428307793"
+        },
+        {
+            "order_datetime": "Sun Aug  5 22:00:11 2012",
+            "order_id": "T703068425987"
+        }
+    ]
+}

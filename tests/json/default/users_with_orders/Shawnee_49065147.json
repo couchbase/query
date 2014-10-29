@@ -1,0 +1,44 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 31,
+        "display_name": "Shawnee Goldman",
+        "email": "Shawnee.Goldman@snailmail.com",
+        "first_name": "Shawnee",
+        "last_name": "Goldman",
+        "state": "North Carolina"
+    },
+    "profile_details": {
+        "last_login_time": "Thu Jan 17 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 3.343549949227368,
+            "membership_type": "Basic",
+            "redeemed_points": 720,
+            "reward_points": 891
+        },
+        "password": "Shawnee64",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Sat Oct 29 22:00:10 2011",
+        "user_id": "Shawnee_49065147"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films",
+                "Documentary"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

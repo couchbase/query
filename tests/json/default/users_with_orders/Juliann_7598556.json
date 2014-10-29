@@ -1,0 +1,77 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 19,
+        "display_name": "Juliann Purcell",
+        "email": "Juliann.Purcell@snailmail.com",
+        "first_name": "Juliann",
+        "last_name": "Purcell",
+        "state": "Iowa"
+    },
+    "profile_details": {
+        "last_login_time": "Tue Sep 17 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 8.646172135741741,
+            "membership_type": "Gold",
+            "redeemed_points": 1704,
+            "reward_points": 1680
+        },
+        "password": "Juliann10",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music",
+                "Films"
+            ],
+            "promotion_email": true,
+            "ui_language": "French",
+            "ui_theme": "Planets"
+        },
+        "user_creation_time": "Thu Feb 28 22:00:09 2013",
+        "user_id": "Juliann_7598556"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "Travel"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Classical Music"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Thu Aug 22 22:00:09 2013",
+            "order_id": "T182359454499"
+        },
+        {
+            "order_datetime": "Sun Jun  2 22:00:09 2013",
+            "order_id": "T318460645928"
+        },
+        {
+            "order_datetime": "Sun Apr  7 22:00:09 2013",
+            "order_id": "T306128256394"
+        },
+        {
+            "order_datetime": "Tue Mar 12 22:00:09 2013",
+            "order_id": "T580945593818"
+        },
+        {
+            "order_datetime": "Fri Aug 16 22:00:09 2013",
+            "order_id": "T586443808905"
+        }
+    ]
+}

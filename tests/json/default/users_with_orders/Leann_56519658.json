@@ -1,0 +1,73 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 34,
+        "display_name": "Leann Ives",
+        "email": "Leann.Ives@snailmail.com",
+        "first_name": "Leann",
+        "last_name": "Ives",
+        "state": "Florida"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Dec 20 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Hailey_17926493",
+                "Dania_7021839"
+            ],
+            "loyalty_score": 7.20357561347027,
+            "membership_type": "Gold",
+            "redeemed_points": 1869,
+            "reward_points": 840
+        },
+        "password": "Leann27",
+        "prefs": {
+            "promotion_category": [
+                "Books",
+                "Music"
+            ],
+            "promotion_email": true,
+            "ui_language": "English",
+            "ui_theme": "Grafitti"
+        },
+        "user_creation_time": "Thu Nov 21 22:00:09 2013",
+        "user_id": "Leann_56519658"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Classic Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "History",
+                "Travel"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Dec  7 22:00:09 2013",
+            "order_id": "T710155831289"
+        },
+        {
+            "order_datetime": "Sun Nov 24 22:00:09 2013",
+            "order_id": "T466337106525"
+        },
+        {
+            "order_datetime": "Sun Dec 15 22:00:09 2013",
+            "order_id": "T553150947381"
+        },
+        {
+            "order_datetime": "Tue Dec 10 22:00:09 2013",
+            "order_id": "T959025942927"
+        },
+        {
+            "order_datetime": "Fri Nov 29 22:00:09 2013",
+            "order_id": "T827735448636"
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 39,
+        "display_name": "Kallie Gorman",
+        "email": "Kallie.Gorman@snailmail.com",
+        "first_name": "Kallie",
+        "last_name": "Gorman",
+        "state": "Tennessee"
+    },
+    "profile_details": {
+        "last_login_time": "Mon May 20 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 0.9147839515470191,
+            "membership_type": "Basic",
+            "redeemed_points": 0,
+            "reward_points": 0
+        },
+        "password": "Kallie80",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Tree Tops"
+        },
+        "user_creation_time": "Tue Aug 16 22:00:09 2011",
+        "user_id": "Kallie_56419938"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "NonFiction",
+                "Sports & Adventure"
+            ]
+        }
+    ],
+    "shipped_order_history": []
+}

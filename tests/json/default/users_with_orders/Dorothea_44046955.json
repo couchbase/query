@@ -1,0 +1,86 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 50,
+        "display_name": "Dorothea Terrill",
+        "email": "Dorothea.Terrill@snailmail.com",
+        "first_name": "Dorothea",
+        "last_name": "Terrill",
+        "state": "Indiana"
+    },
+    "profile_details": {
+        "last_login_time": "Sun Nov 24 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Adaline_67672807",
+                "Clarine_6651254",
+                "Drew_71707295"
+            ],
+            "loyalty_score": 9.171329593236017,
+            "membership_type": "Platinum",
+            "redeemed_points": 675,
+            "reward_points": 1431
+        },
+        "password": "Dorothea45",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "German",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Sat Sep 15 22:00:09 2012",
+        "user_id": "Dorothea_44046955"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Foreign Films",
+                "Documentary"
+            ]
+        },
+        {
+            "category": "Books",
+            "sub-category": [
+                "Religion",
+                "Travel",
+                "Diet & Health"
+            ]
+        },
+        {
+            "category": "Music",
+            "sub-category": [
+                "Blues and Folk"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Oct 19 22:00:09 2013",
+            "order_id": "T369824744541"
+        },
+        {
+            "order_datetime": "Thu Feb 14 22:00:09 2013",
+            "order_id": "T376222094938"
+        },
+        {
+            "order_datetime": "Wed May 22 22:00:09 2013",
+            "order_id": "T438061461103"
+        },
+        {
+            "order_datetime": "Wed Jun  5 22:00:09 2013",
+            "order_id": "T636943876971"
+        },
+        {
+            "order_datetime": "Tue Oct 15 22:00:09 2013",
+            "order_id": "T646249424084"
+        },
+        {
+            "order_datetime": "Fri Jan 18 22:00:09 2013",
+            "order_id": "T772859202679"
+        },
+        {
+            "order_datetime": "Wed Jun 12 22:00:09 2013",
+            "order_id": "T570853223083"
+        }
+    ]
+}

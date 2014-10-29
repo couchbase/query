@@ -1,0 +1,23 @@
+{
+    "doc_type": "order",
+    "order_details": {
+        "order_datetime": "Tue Oct 11 22:00:09 2011",
+        "order_id": "T657924073364"
+    },
+    "payment_details": {
+        "payment_mode": "Reward Points",
+        "total_charges": 108
+    },
+    "product_details": {
+        "currency": "USD",
+        "list_price": 141,
+        "pct_discount": 25,
+        "product_id": "P6348874963",
+        "sale_price": 106
+    },
+    "shipping_details": {
+        "shipping_charges": 2,
+        "shipping_status": "Delivered",
+        "shipping_type": "Regular"
+    }
+}

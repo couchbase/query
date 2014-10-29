@@ -1,0 +1,39 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 48,
+        "display_name": "Hailey Outlaw",
+        "email": "Hailey.Outlaw@snailmail.com",
+        "first_name": "Hailey",
+        "last_name": "Outlaw",
+        "state": "Nebraska"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Jan 25 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 2.75579938665092,
+            "membership_type": "Basic",
+            "redeemed_points": 48,
+            "reward_points": 504
+        },
+        "password": "Hailey90",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Sun Oct 30 22:00:09 2011",
+        "user_id": "Hailey_17926493"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sun Mar 18 22:00:09 2012",
+            "order_id": "T822543165641"
+        },
+        {
+            "order_datetime": "Sun Nov  4 22:00:09 2012",
+            "order_id": "T330335361508"
+        }
+    ]
+}

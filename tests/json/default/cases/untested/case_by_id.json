@@ -1,0 +1,161 @@
+[
+    {
+        "description": "query with WHERE clause only matching ID should not scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE META().id = \"damien\"",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fetch"
+            },
+            {
+                "pointer": "/0/input/ids/0",
+                "expect": "damien"
+            },
+            {
+                "pointer": "/0/input/input",
+                "expect": null
+            }
+        ]
+    },
+    {
+        "description": "query with WHERE clause only matching ID should not scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE \"damien\" = META().id",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fetch"
+            },
+            {
+                "pointer": "/0/input/ids/0",
+                "expect": "damien"
+            },
+            {
+                "pointer": "/0/input/input",
+                "expect": null
+            }
+        ]
+    },
+    {
+        "description": "non-existant id not an error, just empty results",
+        "statements": "SELECT * FROM game WHERE META().id = \"x\"",
+        "results": []
+    },
+    {
+        "description": "query with WHERE clause matches multiple IDs joined by OR should not scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE META().id = \"damien\" OR META().id = \"dustin\"",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fetch"
+            },
+            {
+                "pointer": "/0/input/ids/0",
+                "expect": "damien"
+            },
+            {
+                "pointer": "/0/input/ids/1",
+                "expect": "dustin"
+            },
+            {
+                "pointer": "/0/input/input",
+                "expect": null
+            }
+        ]
+    },
+    {
+        "description": "query with WHERE clause matches multiple IDs joined by OR should not scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE META().id = \"damien\" OR META().id = \"dustin\" OR META().id = \"junyi\"",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fetch"
+            },
+            {
+                "pointer": "/0/input/ids/0",
+                "expect": "damien"
+            },
+            {
+                "pointer": "/0/input/ids/1",
+                "expect": "dustin"
+            },
+            {
+                "pointer": "/0/input/ids/2",
+                "expect": "junyi"
+            },
+            {
+                "pointer": "/0/input/input",
+                "expect": null
+            }
+        ]
+    },
+    {
+        "description": "query with WHERE clause matches multiple IDs (some non-existant) joined by OR should not give error",
+        "statements": "SELECT META().id FROM game WHERE META().id = \"damien\" OR META().id = \"dustin\" OR META().id = \"does_not_exist\"",
+        "results": [
+        {
+            "id": "damien"
+        },
+        {
+            "id": "dustin"
+        }
+    ]
+    },
+    {
+        "description": "query with WHERE clause using OR but not only ID comparisons should scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE META().id = \"damien\" OR name = \"foo\"",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/type",
+                "expect": "scan"
+            }
+        ]
+    },
+    {
+        "description": "query with WHERE clause matches multiple IDs nested in ANY comparison with literal array of ids should not scan",
+        "statements": "EXPLAIN SELECT * FROM game WHERE ANY id IN [\"damien\", \"dustin\", \"junyi\"]  satisfies META().id = id END",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/type",
+                "expect": "fetch"
+            },
+            {
+                "pointer": "/0/input/ids/0",
+                "expect": "damien"
+            },
+            {
+                "pointer": "/0/input/ids/1",
+                "expect": "dustin"
+            },
+            {
+                "pointer": "/0/input/ids/2",
+                "expect": "junyi"
+            },
+            {
+                "pointer": "/0/input/input",
+                "expect": null
+            }
+        ]
+    },
+    {
+        "description": "query with WHERE clause matches multiple IDs (some non-existant) nested in ANY comparison with literal array of ids should not give error",
+        "statements": "SELECT META().id FROM game WHERE ANY id IN [\"damien\", \"dustin\", \"does_not_exist\"] satisfies META().id = id END",
+        "results": [
+        {
+            "id": "damien"
+        },
+        {
+            "id": "dustin"
+        }
+    ]
+    },
+    {
+        "description": "query with WHERE clause using ANY but not just comparison with literal array of docids should scan",
+        "statements": "explain SELECT META().id FROM game WHERE ANY id IN [\"damien\", \"dustin\", \"does_not_exist\"] satisfies META().id = id or id IS NOT NULL END",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/type",
+                "expect": "scan"
+            }
+        ]
+    }
+]

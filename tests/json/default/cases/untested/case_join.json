@@ -1,0 +1,1012 @@
+[
+    {
+        "statements" : "SELECT * from orders3 JOIN contacts KEYS orders3.customers",
+        "results": [
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "jane",
+                    "earl"
+                ],
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "jane",
+                    "earl"
+                ],
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        }
+        ]
+    },
+    {
+        "statements": "SELECT * FROM orders2 JOIN contacts AS cont  KEY orders2.custId",
+        "resultset": [
+        {
+            "cont": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "earl",
+                "id": "1000",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "dave",
+                "id": "1100",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "name": "harry",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "harry",
+                "id": "1111",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "jane",
+                "id": "1134",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "ian",
+                "id": "1135",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "name": "harry",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "harry",
+                "id": "1136",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "jane",
+                "id": "1200",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": "2012/01/02",
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "fred",
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "fred",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "jane",
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "ian",
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "cont": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders2": {
+                "custId": "dave",
+                "id": "1333",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT s.order_id oid FROM users_with_orders u KEY \"Adaline_67672807\" UNNEST u.shipped_order_history s",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT META(o).id oid FROM users_with_orders u KEY \"Adaline_67672807\" JOIN users_with_orders o KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT META(u).id uid, META(o).id oid FROM users_with_orders u KEY \"Aide_48687583\" JOIN users_with_orders o KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END", 
+   "results": [
+        {
+            "oid": "T638751835595",
+            "uid": "Aide_48687583"
+        },
+        {
+            "oid": "T870351974549",
+            "uid": "Aide_48687583"
+        },
+        {
+            "oid": "T769348087819",
+            "uid": "Aide_48687583"
+        },
+        {
+            "oid": "T183428307793",
+            "uid": "Aide_48687583"
+        },
+        {
+            "oid": "T703068425987",
+            "uid": "Aide_48687583"
+        }
+        ] 
+    },
+    {
+        "statements": "SELECT META(o).id oid FROM users_with_orders u KEY \"Adaline_67672807\" UNNEST u.shipped_order_history s JOIN users_with_orders o KEY s.order_id",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT s.order_id oid FROM users_with_orders u KEY \"Aide_48687583\" UNNEST u.shipped_order_history s",
+        "results": [
+          {
+            "oid": "T638751835595"
+          },
+          {
+	    "oid": "T870351974549"
+          },
+          {
+            "oid": "T769348087819"
+          },
+          {
+            "oid": "T183428307793"
+          },
+          {
+            "oid": "T703068425987"
+          }
+        ]
+    },
+    {
+        "description": "SELECT META(o).id oid FROM users_with_orders u KEY \"Aide_48687583\" JOIN users_with_orders o KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END",
+        "statements": "SELECT o.order_details.order_id AS oid FROM users_with_orders u KEY \"Aide_48687583\" JOIN users_with_orders o KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END",
+        "results": [
+          {
+            "oid": "T638751835595"
+          },
+          {
+	    "oid": "T870351974549"
+          },
+          {
+            "oid": "T769348087819"
+          },
+          {
+            "oid": "T183428307793"
+          },
+          {
+            "oid": "T703068425987"
+          }
+        ]
+    },
+    {
+        "description": "SELECT META(o).id oid FROM users_with_orders u KEY \"Aide_48687583\" UNNEST u.shipped_order_history s JOIN users_with_orders o KEY s.order_id",
+        "statements" : "SELECT  o.order_details.order_id as oid FROM users_with_orders u KEY \"Aide_48687583\" UNNEST u.shipped_order_history s JOIN users_with_orders o KEY s.order_id",
+        "results": [
+          {
+            "oid": "T638751835595"
+          },
+          {
+	    "oid": "T870351974549"
+          },
+          {
+            "oid": "T769348087819"
+          },
+          {
+            "oid": "T183428307793"
+          },
+          {
+            "oid": "T703068425987"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT META(o).id oid, META(u2).id uid, search.category cat FROM users_with_orders u KEY \"Aide_48687583\" UNNEST u.shipped_order_history s JOIN users_with_orders o KEY s.order_id JOIN users_with_orders u2 KEY META(u).id UNNEST u.search_history search",
+
+        "resultset": [
+        {
+            "cat": "Films",
+            "oid": "T638751835595",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T638751835595",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T870351974549",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T870351974549",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T769348087819",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T769348087819",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T183428307793",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T183428307793",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T703068425987",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T703068425987",
+            "uid": "Aide_48687583"
+        }
+        ]
+    },
+    {
+        "statements" : "SELECT DISTINCT * FROM orders3 LEFT OUTER JOIN contacts.name KEYS orders3.customers",
+        "results": [
+        {
+            "name": "fred",
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "name": "dave",
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "name": "fred",
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "name": "ian",
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "name": "jane",
+            "orders3": {
+                "customers": [
+                    "jane",
+                    "earl"
+                ],
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "name": "earl",
+            "orders3": {
+                "customers": [
+                    "jane",
+                    "earl"
+                ],
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "orders3": {
+                "customers": [
+                    "manik",
+                    "gerald"
+                ],
+                "id": "1373",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        }
+        ]
+    },
+    {
+        "statements" : "SELECT DISTINCT customer_name, orders3.id  FROM orders3 LEFT JOIN contacts.name customer_name  KEYS orders3.customers",
+        "results": [
+        {
+            "customer_name": "fred",
+            "id": "1222"
+        },
+        {
+            "customer_name": "dave",
+            "id": "1222"
+        },
+        {
+            "customer_name": "fred",
+            "id": "1234"
+        },
+        {
+            "customer_name": "ian",
+            "id": "1234"
+        },
+        {
+            "customer_name": "jane",
+            "id": "1235"
+        },
+        {
+            "customer_name": "earl",
+            "id": "1235"
+        },
+        {
+            "id": "1373"
+        }
+       ]
+    },
+    {
+        "statements" : "SELECT DISTINCT customer_name, orders3.orderlines FROM orders3 INNER JOIN contacts.name customer_name  KEYS orders3.customers",
+        "results": [
+        {
+            "customer_name": "fred",
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "dave",
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "fred",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "ian",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "jane",
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "earl",
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    }
+]

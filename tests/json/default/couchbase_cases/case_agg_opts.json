@@ -1,0 +1,99 @@
+[
+
+	{
+        "description": "verify projection of all aggregate functions on the same field with no where clause uses an index",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT MIN(age),MAX(age),SUM(age) FROM contacts",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "ageidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/limit",
+                "expect": 0
+            }
+        ]
+    },
+    {
+        "description": "verify projection of all aggregate functions on the same field with no where clause on the same field",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT MIN(age),MAX(age),SUM(age) FROM contacts WHERE age > 20",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "ageidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 20
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/limit",
+                "expect": 0
+            }
+        ]
+    },
+    {
+        "description": "verify projection of all MIN on the same field with no where clause uses an index has limit 1",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT MIN(age) FROM contacts",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/index",
+                "expect": "ageidx"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/low/0",
+                "expect": null
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/input/ranges/0/limit",
+                "expect": 1
+            }
+        ]
+    },
+    {
+        "description": "verify projection of all MIN on the same field with no where clause on the same field has limit 1",
+        "preStatements": "CREATE INDEX ageidx ON contacts(age)",
+        "statements": "EXPLAIN SELECT MIN(age) FROM contacts WHERE age > 20",
+        "postStatements": "DROP INDEX contacts.ageidx",
+        "resultAssertions": [
+            {
+                "pointer": "/0/input/input/input/input/index",
+                "expect": "ageidx"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/low/0",
+                "expect": 20
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/inclusion",
+                "expect": "high"
+            },
+            {
+                "pointer": "/0/input/input/input/input/ranges/0/limit",
+                "expect": 1
+            }
+        ]
+    }
+]

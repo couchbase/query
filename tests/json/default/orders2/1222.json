@@ -1,0 +1,5 @@
+{"type":"order",
+ "id":"1222",
+ "custId":"fred",
+ "orderlines":[{"qty":1,"productId":"tea111"},
+               {"qty":1,"productId":"sugar22"}]}

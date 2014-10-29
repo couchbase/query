@@ -1,0 +1,53 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 58,
+        "display_name": "Lasonya Haley",
+        "email": "Lasonya.Haley@snailmail.com",
+        "first_name": "Lasonya",
+        "last_name": "Haley",
+        "state": "Delaware"
+    },
+    "profile_details": {
+        "last_login_time": "Fri May  3 22:00:10 2013",
+        "loyalty": {
+            "friends_referred": [
+                "Sueann_84562518",
+                "Daina_68202235"
+            ],
+            "loyalty_score": 8.695856764461904,
+            "membership_type": "Gold",
+            "redeemed_points": 576,
+            "reward_points": 480
+        },
+        "password": "Lasonya77",
+        "prefs": {
+            "promotion_category": [
+                "Books"
+            ],
+            "promotion_email": true,
+            "ui_language": "English",
+            "ui_theme": "Beach"
+        },
+        "user_creation_time": "Sun Jul 15 22:00:10 2012",
+        "user_id": "Lasonya_1054342"
+    },
+    "search_history": [
+        {
+            "category": "Films",
+            "sub-category": [
+                "Animation"
+            ]
+        }
+    ],
+    "shipped_order_history": [
+        {
+            "order_datetime": "Tue Oct 30 22:00:10 2012",
+            "order_id": "T500465009059"
+        },
+        {
+            "order_datetime": "Sat Dec 29 22:00:10 2012",
+            "order_id": "T956120393594"
+        }
+    ]
+}

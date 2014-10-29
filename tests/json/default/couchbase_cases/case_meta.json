@@ -1,0 +1,16 @@
+[
+
+    {
+        "statements": "SELECT  META() AS meta FROM catalog WHERE META().id = \"book1\"",
+        "results": [
+        {
+            "meta": {
+            	"id":"book1", 
+            	"cas":2, 
+            	"type":"json", 
+            	"flags":0
+           }
+        }
+    ]
+    }
+]

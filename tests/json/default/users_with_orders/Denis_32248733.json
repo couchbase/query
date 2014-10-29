@@ -1,0 +1,35 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 23,
+        "display_name": "Denis Rapp",
+        "email": "Denis.Rapp@snailmail.com",
+        "first_name": "Denis",
+        "last_name": "Rapp",
+        "state": "Missouri"
+    },
+    "profile_details": {
+        "last_login_time": "Sat Jul  6 22:00:09 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 1.8803952985545414,
+            "membership_type": "Basic",
+            "redeemed_points": 294,
+            "reward_points": 261
+        },
+        "password": "Denis63",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "Spanish",
+            "ui_theme": "Ocean"
+        },
+        "user_creation_time": "Thu Dec  8 22:00:09 2011",
+        "user_id": "Denis_32248733"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Fri Jan 25 22:00:09 2013",
+            "order_id": "T104951629322"
+        }
+    ]
+}

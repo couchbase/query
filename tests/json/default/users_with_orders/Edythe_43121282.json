@@ -1,0 +1,39 @@
+{
+    "doc_type": "user_profile",
+    "personal_details": {
+        "age": 51,
+        "display_name": "Edythe Burt",
+        "email": "Edythe.Burt@snailmail.com",
+        "first_name": "Edythe",
+        "last_name": "Burt",
+        "state": "South Carolina"
+    },
+    "profile_details": {
+        "last_login_time": "Fri Oct 25 22:00:11 2013",
+        "loyalty": {
+            "friends_referred": [],
+            "loyalty_score": 5.366484986232621,
+            "membership_type": "Silver",
+            "redeemed_points": 225,
+            "reward_points": 855
+        },
+        "password": "Edythe47",
+        "prefs": {
+            "promotion_email": false,
+            "ui_language": "French",
+            "ui_theme": "Pebbles"
+        },
+        "user_creation_time": "Sat Aug  3 22:00:11 2013",
+        "user_id": "Edythe_43121282"
+    },
+    "shipped_order_history": [
+        {
+            "order_datetime": "Sat Sep  7 22:00:11 2013",
+            "order_id": "T645255981124"
+        },
+        {
+            "order_datetime": "Fri Oct  4 22:00:11 2013",
+            "order_id": "T504647326095"
+        }
+    ]
+}
