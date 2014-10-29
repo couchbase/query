@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [dp4-syntax-changes](https://github.com/couchbaselabs/query/blob/master/docs/dp4-syntax-changes.md)
-* Modified: 2014-10-27
+* Modified: 2014-10-29
 
 ## Introduction
 
@@ -13,15 +13,19 @@ and other consumers of N1QL specs.
 
 ## List of syntax changes
 
++ __site__ renamed to __datastore__
+
 + __pool__ renamed to __namespace__
 
 + __bucket__ renamed to __keyspace__
 
 + __:pool-name.bucket-name__ changed to __namespace-name:keyspace-name__ (moved the colon to the middle)
 
-+ FROM ... KEYS changing to FROM ... USE [ PRIMARY ] KEYS
++ FROM ... KEYS changed to FROM ... USE [ PRIMARY ] KEYS
 
-+ JOIN / NEST ... KEYS changing to JOIN / NEST ... ON [ PRIMARY ] KEYS
++ JOIN / NEST ... KEYS changed to JOIN / NEST ... ON [ PRIMARY ] KEYS
+
++ KEY replaced with KEYS in most cases
 
 
 ## List of additions
@@ -53,3 +57,7 @@ and other consumers of N1QL specs.
 ### Document History
 
 * 2014-10-27 - Initial version.
+
+* 2014-10-29 - KEYS and datastore
+    * KEY replaced with KEYS in most cases
+    * Renamed __site__ to __datastore__
