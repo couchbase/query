@@ -46,7 +46,7 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 		}
 
 		if val.Type() != value.MISSING {
-			m[key] = val.Actual()
+			m[key] = val
 		}
 	}
 

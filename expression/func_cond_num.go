@@ -58,6 +58,10 @@ func (this *IfInf) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NULL_VALUE, nil
 }
 
+func (this *IfInf) MinArgs() int { return 2 }
+
+func (this *IfInf) MaxArgs() int { return math.MaxInt16 }
+
 func (this *IfInf) Constructor() FunctionConstructor { return NewIfInf }
 
 ///////////////////////////////////////////////////
@@ -102,6 +106,10 @@ func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, err
 
 	return value.NULL_VALUE, nil
 }
+
+func (this *IfNaN) MinArgs() int { return 2 }
+
+func (this *IfNaN) MaxArgs() int { return math.MaxInt16 }
 
 func (this *IfNaN) Constructor() FunctionConstructor { return NewIfNaN }
 
@@ -148,6 +156,10 @@ func (this *IfNaNOrInf) Apply(context Context, args ...value.Value) (value.Value
 	return value.NULL_VALUE, nil
 }
 
+func (this *IfNaNOrInf) MinArgs() int { return 2 }
+
+func (this *IfNaNOrInf) MaxArgs() int { return math.MaxInt16 }
+
 func (this *IfNaNOrInf) Constructor() FunctionConstructor { return NewIfNaNOrInf }
 
 ///////////////////////////////////////////////////
@@ -192,6 +204,10 @@ func (this *IfNegInf) Apply(context Context, args ...value.Value) (value.Value, 
 
 	return value.NULL_VALUE, nil
 }
+
+func (this *IfNegInf) MinArgs() int { return 2 }
+
+func (this *IfNegInf) MaxArgs() int { return math.MaxInt16 }
 
 func (this *IfNegInf) Constructor() FunctionConstructor { return NewIfNegInf }
 
@@ -238,6 +254,10 @@ func (this *IfPosInf) Apply(context Context, args ...value.Value) (value.Value, 
 	return value.NULL_VALUE, nil
 }
 
+func (this *IfPosInf) MinArgs() int { return 2 }
+
+func (this *IfPosInf) MaxArgs() int { return math.MaxInt16 }
+
 func (this *IfPosInf) Constructor() FunctionConstructor { return NewIfPosInf }
 
 ///////////////////////////////////////////////////
@@ -282,6 +302,10 @@ func (this *FirstNum) Apply(context Context, args ...value.Value) (value.Value, 
 
 	return value.NULL_VALUE, nil
 }
+
+func (this *FirstNum) MinArgs() int { return 1 }
+
+func (this *FirstNum) MaxArgs() int { return math.MaxInt16 }
 
 func (this *FirstNum) Constructor() FunctionConstructor { return NewFirstNum }
 

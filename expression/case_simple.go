@@ -106,8 +106,8 @@ func (this *SimpleCase) SubsetOf(other Expression) bool {
 
 func (this *SimpleCase) Children() Expressions {
 	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
-
 	rv = append(rv, this.searchTerm)
+
 	for _, w := range this.whenTerms {
 		rv = append(rv, w.When)
 		rv = append(rv, w.Then)

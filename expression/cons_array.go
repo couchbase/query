@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -37,10 +39,14 @@ func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.V
 	aa := make([]interface{}, len(args))
 
 	for i, arg := range args {
-		aa[i] = arg.Actual()
+		aa[i] = arg
 	}
 
 	return value.NewValue(aa), nil
 }
+
+func (this *ArrayConstruct) MinArgs() int { return 0 }
+
+func (this *ArrayConstruct) MaxArgs() int { return math.MaxInt16 }
 
 func (this *ArrayConstruct) Constructor() FunctionConstructor { return NewArrayConstruct }

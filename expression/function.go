@@ -101,10 +101,6 @@ func (this *FunctionBase) Distinct() bool { return false }
 
 func (this *FunctionBase) Operands() Expressions { return this.operands }
 
-func (this *FunctionBase) MinArgs() int { return 2 }
-
-func (this *FunctionBase) MaxArgs() int { return math.MaxInt16 }
-
 type NullaryFunctionBase struct {
 	FunctionBase
 }
@@ -282,6 +278,10 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 func (this *CommutativeFunctionBase) SubsetOf(other Expression) bool {
 	return this.EquivalentTo(other)
 }
+
+func (this *CommutativeFunctionBase) MinArgs() int { return 2 }
+
+func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
 
 type Applied interface {
 	Apply(context Context, args ...value.Value) (value.Value, error)

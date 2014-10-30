@@ -10,6 +10,8 @@
 package expression
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -54,6 +56,10 @@ func (this *Greatest) Apply(context Context, args ...value.Value) (value.Value, 
 	return rv, nil
 }
 
+func (this *Greatest) MinArgs() int { return 2 }
+
+func (this *Greatest) MaxArgs() int { return math.MaxInt16 }
+
 func (this *Greatest) Constructor() FunctionConstructor { return NewGreatest }
 
 ///////////////////////////////////////////////////
@@ -97,5 +103,9 @@ func (this *Least) Apply(context Context, args ...value.Value) (value.Value, err
 
 	return rv, nil
 }
+
+func (this *Least) MinArgs() int { return 2 }
+
+func (this *Least) MaxArgs() int { return math.MaxInt16 }
 
 func (this *Least) Constructor() FunctionConstructor { return NewLeast }

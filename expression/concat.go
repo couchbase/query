@@ -11,6 +11,7 @@ package expression
 
 import (
 	"bytes"
+	"math"
 
 	"github.com/couchbaselabs/query/value"
 )
@@ -58,5 +59,9 @@ func (this *Concat) Apply(context Context, args ...value.Value) (value.Value, er
 
 	return value.NewValue(buf.String()), nil
 }
+
+func (this *Concat) MinArgs() int { return 2 }
+
+func (this *Concat) MaxArgs() int { return math.MaxInt16 }
 
 func (this *Concat) Constructor() FunctionConstructor { return NewConcat }
