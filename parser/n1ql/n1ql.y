@@ -205,6 +205,7 @@ indexType        datastore.IndexType
 %token VALUED
 %token VALUES
 %token VIEW
+%token LSM
 %token WHEN
 %token WHERE
 %token WHILE
@@ -1370,6 +1371,11 @@ index_using:
 USING VIEW
 {
     $$ = datastore.VIEW
+}
+|
+USING LSM
+{
+    $$ = datastore.LSM
 }
 ;
 

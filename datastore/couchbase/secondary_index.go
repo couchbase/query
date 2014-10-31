@@ -7,25 +7,21 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build ignore
-
 package couchbase
 
-import (
-	"encoding/json"
-	"sync"
+import "encoding/json"
+import "sync"
 
-	"github.com/couchbase/indexing/secondary/collatejson"
-	"github.com/couchbase/indexing/secondary/protobuf"
-	"github.com/couchbase/indexing/secondary/queryport"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
-)
-
-// ErrorNotImplemented is API not implemented.
-var ErrorNotImplemented = errors.NewError(nil, "secondary.notImplemented")
+import "github.com/couchbase/indexing/secondary/collatejson"
+import "github.com/couchbase/indexing/secondary/protobuf"
+import "github.com/couchbase/indexing/secondary/queryport"
+import "github.com/couchbaselabs/query/datastore"
+import "github.com/couchbaselabs/query/errors"
+import "github.com/couchbaselabs/query/expression"
+import "github.com/couchbaselabs/query/expression/parser"
+import "github.com/couchbaselabs/query/value"
+import "github.com/couchbaselabs/query/logging"
+import c "github.com/couchbase/indexing/secondary/common"
 
 // ErrorIndexEmpty is index not initialized.
 var ErrorIndexEmpty = errors.NewError(nil, "secondaryIndex.empty")
@@ -33,7 +29,7 @@ var ErrorIndexEmpty = errors.NewError(nil, "secondaryIndex.empty")
 // ErrorEmptyHost is no valid node hosting an index.
 var ErrorEmptyHost = errors.NewError(nil, "secondaryIndex.emptyHost")
 
-// ErrorEmptyStatistics is index-statistics not available
+// ErrorEmptyStatistics is index-statistics not available.
 var ErrorEmptyStatistics = errors.NewError(nil, "secondaryIndex.emptyStatistics")
 
 const QueryPortPageSize = 1
@@ -42,121 +38,135 @@ const QueryPortPageSize = 1
 // a single secondary-index.
 type secondaryIndex struct {
 	mu        sync.Mutex
-	defnID    string
 	name      string // name of the index
-	keySpace  string // bucket
+	defnID    string
+	keySpace  *keyspace
 	isPrimary bool
 	using     datastore.IndexType
 	partnExpr string
-	secExprs  string
-	indxs     *secondaryIndexes
+	secExprs  []string
+	whereExpr string
 	stats     *statistics
 	statBins  []*statistics
 	// remote node hosting this index.
-	host       string
-	hostClient *queryport.Client
+	hosts       []string
+	hostClients []*queryport.Client
 }
 
+func (si *secondaryIndex) getHostClient() (*queryport.Client, errors.Error) {
+	if si.hostClients == nil || len(si.hostClients) == 0 {
+		return nil, ErrorEmptyHost
+	}
+	// TODO: use round-robin or other statistical heuristics to load balance.
+	client := si.hostClients[0]
+	return client, nil
+}
+
+// KeyspaceId implement Index{} interface.
 func (si *secondaryIndex) KeyspaceId() string {
-	if si != nil {
-		return si.keySpace // immutable field
-	}
-	return ""
+	return si.keySpace.Id()
 }
 
+// Id implement Index{} interface.
 func (si *secondaryIndex) Id() string {
-	if si != nil {
-		return si.defnID // immutable field
-	}
-	return ""
+	return si.Name()
 }
 
+// Name implement Index{} interface.
 func (si *secondaryIndex) Name() string {
-	if si != nil {
-		return si.name // immutable field
-	}
-	return ""
+	return si.name
 }
 
+// Type implement Index{} interface.
 func (si *secondaryIndex) Type() datastore.IndexType {
-	if si != nil {
-		return si.using // immutable field
-	}
-	return ""
+	return si.using
 }
 
+// IsPrimary implement Index{} interface.
+func (si *secondaryIndex) IsPrimary() bool {
+	return false
+}
+
+// Drop implement Index{} interface.
 func (si *secondaryIndex) Drop() errors.Error {
 	if si == nil {
 		return ErrorIndexEmpty
 	}
-
-	return si.indxs.deleteIndex(si)
+	// TODO: connect with meta-data repository and delete this index.
+	delete(si.keySpace.indexes, si.Name())
+	return nil
 }
 
-func (si *secondaryIndex) EqualKey() (expr expression.Expressions) {
+// EqualKey implement Index{} interface.
+func (si *secondaryIndex) EqualKey() expression.Expressions {
 	if si != nil && si.partnExpr != "" {
-		// TODO:
-		// expr = expression.Parser(si.partnExpr)
+		expr, _ := parser.Parse(si.partnExpr)
+		return expression.Expressions{expr}
+	}
+	return nil
+}
+
+// RangeKey implement Index{} interface.
+func (si *secondaryIndex) RangeKey() expression.Expressions {
+	if si != nil && si.secExprs != nil {
+		exprs := make(expression.Expressions, 0, len(si.secExprs))
+		for _, exprS := range si.secExprs {
+			expr, _ := parser.Parse(exprS)
+			exprs = append(exprs, expr)
+		}
+		return exprs
+	}
+	return nil
+}
+
+// Condition implement Index{} interface.
+func (si *secondaryIndex) Condition() expression.Expression {
+	if si != nil && si.whereExpr != "" {
+		expr, _ := parser.Parse(si.whereExpr)
 		return expr
 	}
-	return
+	return nil
 }
 
-func (si *secondaryIndex) RangeKey() (expr expression.Expressions) {
-	if si != nil && si.partnExpr != "" {
-		// TODO:
-		// expr = expression.Parser(si.secExprs)
-		return
-	}
-	return
-}
-
-func (si *secondaryIndex) Condition() expression.Expression {
-	panic(ErrorNotImplemented)
-}
-
-func (si *secondaryIndex) Rename(name string) errors.Error {
-	panic(ErrorNotImplemented)
-}
-
+// Statistics implement Index{} interface.
 func (si *secondaryIndex) Statistics(
 	span *datastore.Span) (datastore.Statistics, errors.Error) {
 
-	if si.hostClient == nil {
-		return nil, ErrorEmptyHost
+	client, err := si.getHostClient()
+	if err != nil {
+		return nil, err
 	}
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
 	incl := uint32(span.Range.Inclusion)
-	pstats, err := si.hostClient.Statistics(low, high, incl)
-	if err != nil {
-		return nil, errors.NewError(nil, err.Error())
+	pstats, e := client.Statistics(low, high, incl)
+	if e != nil {
+		return nil, errors.NewError(nil, e.Error())
 	}
 
 	si.mu.Lock()
 	defer si.mu.Unlock()
-
 	si.stats = (&statistics{}).updateStats(pstats)
 	return si.stats, nil
 }
 
+// Scan implement Index{} interface.
 func (si *secondaryIndex) Scan(
 	span *datastore.Span, distinct bool, limit int64,
-	conn *datastore.IndexConnection) errors.Error {
-
-	if si.hostClient == nil {
-		return ErrorEmptyHost
-	}
+	conn *datastore.IndexConnection) {
 
 	entryChannel := conn.EntryChannel()
 	stopChannel := conn.StopChannel()
-
 	defer close(entryChannel)
+
+	client, err := si.getHostClient()
+	if err != nil {
+		return
+	}
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
 	incl := uint32(span.Range.Inclusion)
-
-	si.hostClient.Scan(
+	client.Scan(
 		low, high, incl, QueryPortPageSize, distinct, limit,
 		func(data interface{}) bool {
 			switch val := data.(type) {
@@ -166,14 +176,14 @@ func (si *secondaryIndex) Scan(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					key, id, err := json2Entry(entry.GetEntryKey())
+					key, err := json2Entry(entry.GetEntryKey())
 					if err != nil {
 						conn.Error(errors.NewError(nil, err.Error()))
 						return false
 					}
 					e := &datastore.IndexEntry{
 						EntryKey:   value.Values(key),
-						PrimaryKey: id,
+						PrimaryKey: string(entry.GetPrimaryKey()),
 					}
 					select {
 					case entryChannel <- e:
@@ -189,24 +199,22 @@ func (si *secondaryIndex) Scan(
 			}
 			return false
 		})
-	return nil
 }
 
-// PrimaryIndex{} interface
-
+// Scan implement PrimaryIndex{} interface.
 func (si *secondaryIndex) ScanEntries(
-	limit int64, conn *datastore.IndexConnection) errors.Error {
-
-	if si.hostClient == nil {
-		return ErrorEmptyHost
-	}
+	limit int64, conn *datastore.IndexConnection) {
 
 	entryChannel := conn.EntryChannel()
 	stopChannel := conn.StopChannel()
-
 	defer close(entryChannel)
 
-	si.hostClient.ScanAll(
+	client, err := si.getHostClient()
+	if err != nil {
+		return
+	}
+
+	client.ScanAll(
 		QueryPortPageSize, limit,
 		func(data interface{}) bool {
 			switch val := data.(type) {
@@ -216,14 +224,14 @@ func (si *secondaryIndex) ScanEntries(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					key, id, err := json2Entry(entry.GetEntryKey())
+					key, err := json2Entry(entry.GetEntryKey())
 					if err != nil {
 						conn.Error(errors.NewError(nil, err.Error()))
 						return false
 					}
 					e := &datastore.IndexEntry{
 						EntryKey:   value.Values(key),
-						PrimaryKey: id,
+						PrimaryKey: string(entry.GetPrimaryKey()),
 					}
 					select {
 					case entryChannel <- e:
@@ -239,7 +247,6 @@ func (si *secondaryIndex) ScanEntries(
 			}
 			return false
 		})
-	return nil
 }
 
 type statistics struct {
@@ -250,8 +257,7 @@ type statistics struct {
 	max        []byte // JSON represented max value.Value{}
 }
 
-// Statistics{} interface
-
+// Count implement Statistics{} interface.
 func (stats *statistics) Count() (int64, errors.Error) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
@@ -262,6 +268,7 @@ func (stats *statistics) Count() (int64, errors.Error) {
 	return stats.count, nil
 }
 
+// DistinctCount implement Statistics{} interface.
 func (stats *statistics) DistinctCount() (int64, errors.Error) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
@@ -272,6 +279,7 @@ func (stats *statistics) DistinctCount() (int64, errors.Error) {
 	return stats.uniqueKeys, nil
 }
 
+// Min implement Statistics{} interface.
 func (stats *statistics) Min() (value.Values, errors.Error) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
@@ -279,11 +287,15 @@ func (stats *statistics) Min() (value.Values, errors.Error) {
 	if stats == nil {
 		return nil, ErrorEmptyStatistics
 	}
-	// TODO: []bytes to implement value.Value{} interface.
-	// return stats.min, nil
-	return nil, nil
+	vals := value.NewValue(stats.min).Actual().([]interface{})
+	values := make(value.Values, 0, len(vals))
+	for _, val := range vals {
+		values = append(values, value.NewValue(val))
+	}
+	return values, nil
 }
 
+// Max implement Statistics{} interface.
 func (stats *statistics) Max() (value.Values, errors.Error) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
@@ -291,11 +303,15 @@ func (stats *statistics) Max() (value.Values, errors.Error) {
 	if stats == nil {
 		return nil, ErrorEmptyStatistics
 	}
-	// TODO: []bytes to implement value.Value{} interface.
-	// return stats.max, nil
-	return nil, nil
+	vals := value.NewValue(stats.max).Actual().([]interface{})
+	values := make(value.Values, 0, len(vals))
+	for _, val := range vals {
+		values = append(values, value.NewValue(val))
+	}
+	return values, nil
 }
 
+// Bins implement Statistics{} interface.
 func (stats *statistics) Bins() ([]datastore.Statistics, errors.Error) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
@@ -310,14 +326,20 @@ func (stats *statistics) Bins() ([]datastore.Statistics, errors.Error) {
 // meta-data information, host network-address from coordinator
 // notifications.
 
-func (si *secondaryIndex) setHost(host string) {
+// create a queryport client connected to `host`.
+func (si *secondaryIndex) setHost(hosts []string) {
 	si.mu.Lock()
 	defer si.mu.Unlock()
 
-	si.host = host
-	// TODO: avoid magic numbers
-	si.hostClient =
-		queryport.NewClient(si.host, 5 /*poolSize*/, 2 /*poolOverflow*/)
+	si.hosts = hosts
+	config := c.SystemConfig.Clone()
+	if len(hosts) > 0 {
+		si.hostClients = make([]*queryport.Client, 0, len(hosts))
+		for _, host := range hosts {
+			c := queryport.NewClient(host, config)
+			si.hostClients = append(si.hostClients, c)
+		}
+	}
 }
 
 func (stats *statistics) updateStats(pstats *protobuf.IndexStatistics) *statistics {
@@ -344,10 +366,14 @@ func keys2JSON(arg value.Values) []byte {
 	for i, val := range values {
 		arr.SetIndex(i, val)
 	}
-	return arr.Bytes()
+	bin, err := arr.MarshalJSON()
+	if err != nil {
+		logging.Errorf("unable to marshal %v: %v", arg, err)
+	}
+	return bin
 }
 
-// shape of return key from scan-coordinatory is,
+// shape of return key from scan-coordinator is,
 //      [key1, key2, ... keyN]
 // where N keys where evaluated using N expressions supplied in
 // CREATE INDEX.
@@ -356,23 +382,21 @@ func keys2JSON(arg value.Values) []byte {
 //   value.Value{}.
 // * Missing key will be composed using NewMissingValue(), btw,
 //   `key1` will never be missing.
-func json2Entry(data []byte) ([]value.Value, string, error) {
+func json2Entry(data []byte) ([]value.Value, error) {
 	arr := []interface{}{}
 	err := json.Unmarshal(data, &arr)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	// skip docid from [key1, key2, ... keyN, docid]
-	key := make([]value.Value, len(arr)-1)
-	for i := 0; i < len(arr)-1; i++ {
+	// [key1, key2, ... keyN]
+	key := make([]value.Value, len(arr))
+	for i := 0; i < len(arr); i++ {
 		if s, ok := arr[i].(string); ok && collatejson.MissingLiteral.Equal(s) {
 			key[i] = value.NewMissingValue()
 		} else {
 			key[i] = value.NewValue(arr[i])
 		}
 	}
-	// Extract the docid from [key1, key2, ... keyN, docid]
-	id := string(arr[len(arr)-1].(string))
-	return key, id, nil
+	return key, nil
 }

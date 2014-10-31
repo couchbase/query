@@ -95,11 +95,11 @@ func (vi *viewIndex) Drop() errors.Error {
 	return nil
 }
 
-func (b *keyspace) loadIndexes() errors.Error {
+func (b *keyspace) loadViewIndexes() errors.Error {
 	// #alldocs implicitly exists
 	/*
-		pi := newAllDocsIndex(b)
-		b.indexes[pi.name] = pi
+	   pi := newAllDocsIndex(b)
+	   b.indexes[pi.name] = pi
 	*/
 
 	// and recreate remaining from ddocs
@@ -220,36 +220,36 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 /*
 
 func (vi *viewIndex) ValueCount() (int64, errors.Error) {
-	indexItemChannel := make(catalog.EntryChannel)
-	indexWarnChannel := make(query.ErrorChannel)
-	indexErrorChannel := make(query.ErrorChannel)
+    indexItemChannel := make(catalog.EntryChannel)
+    indexWarnChannel := make(query.ErrorChannel)
+    indexErrorChannel := make(query.ErrorChannel)
 
-	go vi.ScanRange(catalog.LookupValue{dparval.NewValue(nil)}, catalog.LookupValue{dparval.NewValue(nil)}, catalog.Both, 0, indexItemChannel, indexWarnChannel, indexErrorChannel)
+    go vi.ScanRange(catalog.LookupValue{dparval.NewValue(nil)}, catalog.LookupValue{dparval.NewValue(nil)}, catalog.Both, 0, indexItemChannel, indexWarnChannel, indexErrorChannel)
 
-	var err query.Error
-	nullCount := int64(0)
-	ok := true
-	for ok {
-		select {
-		case _, ok = <-indexItemChannel:
-			if ok {
-				nullCount += 1
-			}
-		case _, ok = <-indexWarnChannel:
-			// ignore warnings here
-		case err, ok = <-indexErrorChannel:
-			if err != nil {
-				return 0, err
-			}
-		}
-	}
+    var err query.Error
+    nullCount := int64(0)
+    ok := true
+    for ok {
+        select {
+        case _, ok = <-indexItemChannel:
+            if ok {
+                nullCount += 1
+            }
+        case _, ok = <-indexWarnChannel:
+            // ignore warnings here
+        case err, ok = <-indexErrorChannel:
+            if err != nil {
+                return 0, err
+            }
+        }
+    }
 
-	totalCount, err := ViewTotalRows(vi.bucket.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
-	if err != nil {
-		return 0, err
-	}
+    totalCount, err := ViewTotalRows(vi.bucket.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+    if err != nil {
+        return 0, err
+    }
 
-	return totalCount - nullCount, nil
+    return totalCount - nullCount, nil
 
 }
 

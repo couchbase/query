@@ -37,7 +37,6 @@ const (
 type site struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
-
 }
 
 func (s *site) Id() string {
@@ -99,7 +98,6 @@ func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 	logging.Infof("New site created with url %s", url)
 
 	return site, nil
-
 }
 
 func loadNamespace(s *site, name string) (*namespace, errors.Error) {
@@ -389,15 +387,25 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		using = datastore.VIEW
 	}
 
+	if _, exists := b.indexes[name]; exists {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+	}
+
 	switch using {
 	case datastore.VIEW:
-		if _, exists := b.indexes[name]; exists {
-			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
-		}
 		idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, b)
 		if err != nil {
 			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
 		}
+		b.indexes[idx.Name()] = idx
+		return idx, nil
+
+	case datastore.LSM:
+		idx, err := new2iIndex(name, equalKey, rangeKey, where, using, b)
+		if err != nil {
+			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+		}
+		logging.Debugf("Created 2i index `%s`", idx.Name())
 		b.indexes[idx.Name()] = idx
 		return idx, nil
 
@@ -565,6 +573,16 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 
 func (b *keyspace) Release() {
 	b.cbbucket.Close()
+}
+
+func (b *keyspace) loadIndexes() errors.Error {
+	if err := b.loadViewIndexes(); err != nil {
+		return err
+	}
+	if err := b.load2iIndexes(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // primaryIndex performs full keyspace scans.

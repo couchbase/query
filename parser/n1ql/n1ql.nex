@@ -222,6 +222,7 @@
 /[vV][aA][lL][uU][eE][dD]/			 { logToken("VALUED"); return VALUED }
 /[vV][aA][lL][uU][eE][sS]/			 { logToken("VALUES"); return VALUES }
 /[vV][iI][eE][wW]/				 { logToken("VIEW"); return VIEW }
+/[lL][sS][mM]/				 { logToken("LSM"); return LSM }
 /[wW][hH][eE][nN]/				 { logToken("WHEN"); return WHEN }
 /[wW][hH][eE][rR][eE]/				 { logToken("WHERE"); return WHERE }
 /[wW][hH][iI][lL][eE]/				 { logToken("WHILE"); return WHILE }
