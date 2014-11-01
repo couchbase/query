@@ -36,6 +36,9 @@ type Expression interface {
 	// Terminal identifier if this expression is a path; else "".
 	Alias() string
 
+	// Is this expression usable as a secondary index key.
+	Indexable() bool
+
 	// Is this expression equivalent to the other.
 	EquivalentTo(other Expression) bool
 

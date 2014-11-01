@@ -78,6 +78,10 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	return ev, nil
 }
 
+func (this *SearchedCase) Indexable() bool {
+	return this.indexable(this)
+}
+
 func (this *SearchedCase) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }

@@ -96,6 +96,10 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	return ev, nil
 }
 
+func (this *SimpleCase) Indexable() bool {
+	return this.indexable(this)
+}
+
 func (this *SimpleCase) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }

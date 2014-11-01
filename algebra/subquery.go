@@ -44,6 +44,10 @@ func (this *Subquery) Evaluate(item value.Value, context expression.Context) (va
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
 
+func (this *Subquery) Indexable() bool {
+	return false
+}
+
 func (this *Subquery) EquivalentTo(other expression.Expression) bool {
 	return false
 }

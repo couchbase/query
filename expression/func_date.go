@@ -45,6 +45,10 @@ func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *ClockMillis) Indexable() bool {
+	return false
+}
+
 func (this *ClockMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return this }
 }
@@ -90,6 +94,10 @@ func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, 
 	}
 
 	return value.NewValue(timeToStr(time.Now(), fmt)), nil
+}
+
+func (this *ClockStr) Indexable() bool {
+	return false
 }
 
 func (this *ClockStr) MinArgs() int { return 0 }
@@ -720,6 +728,10 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *NowMillis) Indexable() bool {
+	return false
+}
+
 func (this *NowMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return this }
 }
@@ -766,6 +778,10 @@ func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, er
 
 	now := context.Now()
 	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+func (this *NowStr) Indexable() bool {
+	return false
 }
 
 func (this *NowStr) MinArgs() int { return 0 }

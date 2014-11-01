@@ -40,6 +40,10 @@ func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.value, nil
 }
 
+func (this *Constant) Indexable() bool {
+	return true
+}
+
 func (this *Constant) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Constant:

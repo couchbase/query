@@ -53,6 +53,10 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 	return value.NewValue(m), nil
 }
 
+func (this *ObjectConstruct) Indexable() bool {
+	return this.indexable(this)
+}
+
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	ol, ok := other.(*ObjectConstruct)
 	if !ok {

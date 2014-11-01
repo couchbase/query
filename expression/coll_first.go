@@ -102,6 +102,10 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.MISSING_VALUE, nil
 }
 
+func (this *First) Indexable() bool {
+	return this.indexable(this)
+}
+
 func (this *First) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }

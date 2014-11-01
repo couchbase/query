@@ -54,6 +54,16 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 	return applied.Apply(context, args...)
 }
 
+func (this *FunctionBase) Indexable() bool {
+	for _, operand := range this.operands {
+		if !operand.Indexable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this *FunctionBase) EquivalentTo(other Expression) bool {
 	that, ok := other.(Function)
 	if !ok {

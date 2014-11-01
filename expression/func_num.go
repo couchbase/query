@@ -708,6 +708,10 @@ func (this *Random) Apply(context Context, args ...value.Value) (value.Value, er
 	return value.NewValue(gen.Float64()), nil
 }
 
+func (this *Random) Indexable() bool {
+	return false
+}
+
 func (this *Random) MinArgs() int { return 0 }
 
 func (this *Random) MaxArgs() int { return 1 }

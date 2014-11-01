@@ -39,6 +39,10 @@ func (this *Identifier) Alias() string {
 	return this.identifier
 }
 
+func (this *Identifier) Indexable() bool {
+	return true
+}
+
 func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Identifier:

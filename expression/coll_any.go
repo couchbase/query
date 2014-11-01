@@ -92,6 +92,10 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 	return value.NewValue(false), nil
 }
 
+func (this *Any) Indexable() bool {
+	return this.indexable(this)
+}
+
 func (this *Any) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }

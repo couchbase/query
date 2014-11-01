@@ -54,6 +54,10 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	return
 }
 
+func (this *AggregateBase) Indexable() bool {
+	return false
+}
+
 func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
 	return false
 }

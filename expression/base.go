@@ -20,6 +20,16 @@ func (this *ExpressionBase) Alias() string {
 	return ""
 }
 
+func (this *ExpressionBase) indexable(expr Expression) bool {
+	for _, child := range expr.Children() {
+		if !child.Indexable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 	if reflect.TypeOf(expr) != reflect.TypeOf(other) {
 		return false
