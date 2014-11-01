@@ -38,7 +38,8 @@ const (
 type Request interface {
 	Statement() string
 	Prepared() *plan.Prepared
-	Arguments() map[string]value.Value
+	NamedArgs() map[string]value.Value
+	PositionalArgs() value.Values
 	Namespace() string
 	Timeout() time.Duration
 	Readonly() bool
@@ -55,43 +56,45 @@ type Request interface {
 }
 
 type BaseRequest struct {
-	statement   string
-	prepared    *plan.Prepared
-	arguments   map[string]value.Value
-	namespace   string
-	timeout     time.Duration
-	readonly    bool
-	metrics     value.Tristate
-	requestTime time.Time
-	serviceTime time.Time
-	state       State
-	results     value.ValueChannel
-	errors      errors.ErrorChannel
-	warnings    errors.ErrorChannel
-	closeNotify chan bool // implement http.CloseNotifier
-	stopNotify  chan bool // notified when request execution stops
-	stopResult  chan bool // stop consuming results
-	stopExecute chan bool // stop executing request
+	statement      string
+	prepared       *plan.Prepared
+	namedArgs      map[string]value.Value
+	positionalArgs value.Values
+	namespace      string
+	timeout        time.Duration
+	readonly       bool
+	metrics        value.Tristate
+	requestTime    time.Time
+	serviceTime    time.Time
+	state          State
+	results        value.ValueChannel
+	errors         errors.ErrorChannel
+	warnings       errors.ErrorChannel
+	closeNotify    chan bool // implement http.CloseNotifier
+	stopNotify     chan bool // notified when request execution stops
+	stopResult     chan bool // stop consuming results
+	stopExecute    chan bool // stop executing request
 }
 
-func NewBaseRequest(statement string, prepared *plan.Prepared, arguments map[string]value.Value,
-	namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
+func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
+	positionalArgs value.Values, namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
 	rv := &BaseRequest{
-		statement:   statement,
-		prepared:    prepared,
-		arguments:   arguments,
-		namespace:   namespace,
-		readonly:    readonly,
-		metrics:     metrics,
-		requestTime: time.Now(),
-		serviceTime: time.Now(),
-		state:       RUNNING,
-		results:     make(value.ValueChannel, RESULT_CAP),
-		errors:      make(errors.ErrorChannel, ERROR_CAP),
-		warnings:    make(errors.ErrorChannel, ERROR_CAP),
-		closeNotify: make(chan bool, 1),
-		stopResult:  make(chan bool, 1),
-		stopExecute: make(chan bool, 1),
+		statement:      statement,
+		prepared:       prepared,
+		namedArgs:      namedArgs,
+		positionalArgs: positionalArgs,
+		namespace:      namespace,
+		readonly:       readonly,
+		metrics:        metrics,
+		requestTime:    time.Now(),
+		serviceTime:    time.Now(),
+		state:          RUNNING,
+		results:        make(value.ValueChannel, RESULT_CAP),
+		errors:         make(errors.ErrorChannel, ERROR_CAP),
+		warnings:       make(errors.ErrorChannel, ERROR_CAP),
+		closeNotify:    make(chan bool, 1),
+		stopResult:     make(chan bool, 1),
+		stopExecute:    make(chan bool, 1),
 	}
 
 	return rv
@@ -114,8 +117,12 @@ func (this *BaseRequest) Prepared() *plan.Prepared {
 	return this.prepared
 }
 
-func (this *BaseRequest) Arguments() map[string]value.Value {
-	return this.arguments
+func (this *BaseRequest) NamedArgs() map[string]value.Value {
+	return this.namedArgs
+}
+
+func (this *BaseRequest) PositionalArgs() value.Values {
+	return this.positionalArgs
 }
 
 func (this *BaseRequest) Namespace() string {

@@ -35,14 +35,14 @@
 
 /(0|[1-9][0-9]*)[eE][+\-]?[0-9]+/ {
 		  // We differentiate NUMBER from INT
-		    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64)
+		    lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
 		    logToken("NUMBER - %f", lval.f)
 		    return NUMBER
 		  }
 
 /0|[1-9][0-9]*/ {
 		  // We differentiate NUMBER from INT
-		    lval.n,_ = strconv.Atoi(yylex.Text())
+		    lval.n, _ = strconv.Atoi(yylex.Text())
 		    logToken("INT - %d", lval.n)
 		    return INT
 		  }
@@ -153,6 +153,7 @@
 /[lL][eE][tT][tT][iI][nN][gG]/			 { logToken("LETTING"); return LETTING }
 /[lL][iI][kK][eE]/				 { logToken("LIKE"); return LIKE }
 /[lL][iI][mM][iI][tT]/				 { logToken("LIMIT"); return LIMIT }
+/[lL][sS][mM]/					 { logToken("LSM"); return LSM }
 /[mM][aA][pP]/					 { logToken("MAP"); return MAP }
 /[mM][aA][pP][pP][iI][nN][gG]/			 { logToken("MAPPING"); return MAPPING }
 /[mM][aA][tT][cC][hH][eE][dD]/			 { logToken("MATCHED"); return MATCHED }
@@ -222,7 +223,6 @@
 /[vV][aA][lL][uU][eE][dD]/			 { logToken("VALUED"); return VALUED }
 /[vV][aA][lL][uU][eE][sS]/			 { logToken("VALUES"); return VALUES }
 /[vV][iI][eE][wW]/				 { logToken("VIEW"); return VIEW }
-/[lL][sS][mM]/				 { logToken("LSM"); return LSM }
 /[wW][hH][eE][nN]/				 { logToken("WHEN"); return WHEN }
 /[wW][hH][eE][rR][eE]/				 { logToken("WHERE"); return WHERE }
 /[wW][hH][iI][lL][eE]/				 { logToken("WHILE"); return WHILE }
@@ -231,10 +231,22 @@
 /[wW][oO][rR][kK]/				 { logToken("WORK"); return WORK }
 /[xX][oO][rR]/					 { logToken("XOR"); return XOR }
 
-/[a-zA-Z_][a-zA-Z0-9_\$]*/     {
+/[a-zA-Z_][a-zA-Z0-9_]*/     {
 		    lval.s = yylex.Text()
 		    logToken("IDENTIFIER - %s", lval.s)
 		    return IDENTIFIER
+		  }
+
+/\$[a-zA-Z_][a-zA-Z0-9_]*/     {
+		    lval.s = yylex.Text()[1:]
+		    logToken("NAMED_PARAM - %s", lval.s)
+		    return NAMED_PARAM
+		  }
+
+/\$[1-9][0-9]*/     {
+		    lval.n, _ = strconv.Atoi(yylex.Text()[1:])
+		    logToken("POSITIONAL_PARAM - %d", lval.n)
+		    return POSITIONAL_PARAM
 		  }
 //
 package n1ql

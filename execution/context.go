@@ -29,29 +29,31 @@ type Output interface {
 }
 
 type Context struct {
-	datastore   datastore.Datastore
-	systemstore datastore.Datastore
-	namespace   string
-	readonly    bool
-	now         time.Time
-	arguments   map[string]value.Value
-	output      Output
-	subplans    *subqueryMap
-	subresults  *subqueryMap
+	datastore      datastore.Datastore
+	systemstore    datastore.Datastore
+	namespace      string
+	readonly       bool
+	now            time.Time
+	namedArgs      map[string]value.Value
+	positionalArgs value.Values
+	output         Output
+	subplans       *subqueryMap
+	subresults     *subqueryMap
 }
 
-func NewContext(datastore, systemstore datastore.Datastore, namespace string,
-	readonly bool, arguments map[string]value.Value, output Output) *Context {
+func NewContext(datastore, systemstore datastore.Datastore, namespace string, readonly bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values, output Output) *Context {
 	return &Context{
-		datastore:   datastore,
-		systemstore: systemstore,
-		namespace:   namespace,
-		readonly:    readonly,
-		now:         time.Now(),
-		arguments:   arguments,
-		output:      output,
-		subplans:    newSubqueryMap(),
-		subresults:  newSubqueryMap(),
+		datastore:      datastore,
+		systemstore:    systemstore,
+		namespace:      namespace,
+		readonly:       readonly,
+		now:            time.Now(),
+		namedArgs:      namedArgs,
+		positionalArgs: positionalArgs,
+		output:         output,
+		subplans:       newSubqueryMap(),
+		subresults:     newSubqueryMap(),
 	}
 }
 
@@ -75,9 +77,20 @@ func (this *Context) Now() time.Time {
 	return this.now
 }
 
-func (this *Context) Argument(parameter string) (value.Value, bool) {
-	val, ok := this.arguments[parameter]
+func (this *Context) NamedArg(name string) (value.Value, bool) {
+	val, ok := this.namedArgs[name]
 	return val, ok
+}
+
+// The position is 1-based (i.e. 1 is the first position)
+func (this *Context) PositionalArg(position int) (value.Value, bool) {
+	position--
+
+	if position >= 0 && position < len(this.positionalArgs) {
+		return this.positionalArgs[position], true
+	} else {
+		return nil, false
+	}
 }
 
 func (this *Context) Result(item value.Value) bool {

@@ -34,7 +34,7 @@ func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
 	case expression.Mapper:
 		return this, nil
 	default:
-		panic(fmt.Sprintf("Subquery visited by %T", visitor))
+		panic(fmt.Sprintf("Subquery visited by %T.", visitor))
 	}
 }
 

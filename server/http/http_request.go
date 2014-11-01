@@ -50,9 +50,14 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		err = fmt.Errorf("Either statement or prepared must be provided.")
 	}
 
-	var arguments map[string]value.Value
+	var namedArgs map[string]value.Value
 	if err == nil {
-		arguments, err = getArguments(req)
+		namedArgs, err = getNamedArgs(req)
+	}
+
+	var positionalArgs value.Values
+	if err == nil {
+		positionalArgs, err = getPositionalArgs(req)
 	}
 
 	var namespace string
@@ -75,7 +80,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		metrics, err = getMetrics(req)
 	}
 
-	base := server.NewBaseRequest(statement, prepared, arguments, namespace, readonly, metrics)
+	base := server.NewBaseRequest(statement, prepared, namedArgs,
+		positionalArgs, namespace, readonly, metrics)
+
 	rv := &httpRequest{
 		BaseRequest: *base,
 		resp:        resp,
@@ -145,11 +152,19 @@ func getPrepared(req *http.Request) (*plan.Prepared, error) {
 }
 
 // XXX TODO
-func getArguments(req *http.Request) (map[string]value.Value, error) {
-	var arguments map[string]value.Value
+func getNamedArgs(req *http.Request) (map[string]value.Value, error) {
+	var namedArgs map[string]value.Value
 
 	// XXX TODO
-	return arguments, nil
+	return namedArgs, nil
+}
+
+// XXX TODO
+func getPositionalArgs(req *http.Request) (value.Values, error) {
+	var positionalArgs value.Values
+
+	// XXX TODO
+	return positionalArgs, nil
 }
 
 func getTimeout(req *http.Request) (time.Duration, error) {

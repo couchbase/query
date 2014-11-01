@@ -49,4 +49,6 @@ type ExpressionVisitor interface {
 	expression.Visitor
 
 	VisitSubquery(expr *Subquery) (interface{}, error)
+	VisitNamedParameter(expr *NamedParameter) (interface{}, error)
+	VisitPositionalParameter(expr *PositionalParameter) (interface{}, error)
 }

@@ -136,6 +136,7 @@ indexType        datastore.IndexType
 %token LETTING
 %token LIKE
 %token LIMIT
+%token LSM
 %token MAP
 %token MAPPING
 %token MATCHED
@@ -205,7 +206,6 @@ indexType        datastore.IndexType
 %token VALUED
 %token VALUES
 %token VIEW
-%token LSM
 %token WHEN
 %token WHERE
 %token WHILE
@@ -214,7 +214,7 @@ indexType        datastore.IndexType
 %token WORK
 %token XOR
 
-%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE
+%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -247,9 +247,12 @@ indexType        datastore.IndexType
 /* Types */
 %type <s>                STRING
 %type <s>                IDENTIFIER IDENTIFIER_ICASE
+%type <s>                NAMED_PARAM
 %type <f>                NUMBER
 %type <n>                INT
-%type <expr>             literal object array
+%type <n>                POSITIONAL_PARAM
+%type <expr>             literal construction_expr object array
+%type <expr>             param_expr
 %type <binding>          member
 %type <bindings>         members opt_members
 
@@ -1674,11 +1677,17 @@ c_expr:
 /* Literal */
 literal
 |
+/* Construction */
+construction_expr
+|
 /* Identifier */
 IDENTIFIER
 {
     $$ = expression.NewIdentifier($1)
 }
+|
+/* Parameter */
+param_expr
 |
 /* Function */
 function_expr
@@ -1812,7 +1821,16 @@ STRING
 {
     $$ = expression.NewConstant(value.NewValue($1))
 }
-|
+;
+
+
+/*************************************************
+ *
+ * Construction
+ *
+ *************************************************/
+
+construction_expr:
 object
 |
 array
@@ -1867,6 +1885,25 @@ opt_exprs:
 }
 |
 exprs
+;
+
+
+/*************************************************
+ *
+ * Parameter
+ *
+ *************************************************/
+
+param_expr:
+NAMED_PARAM
+{
+    $$ = algebra.NewNamedParameter($1)
+}
+|
+POSITIONAL_PARAM
+{
+    $$ = algebra.NewPositionalParameter($1)
+}
 ;
 
 

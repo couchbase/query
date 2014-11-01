@@ -10,6 +10,9 @@
 package server
 
 import (
+	"fmt"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -95,6 +98,14 @@ func (this *Server) doServe() {
 }
 
 func (this *Server) serviceRequest(request Request) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			buf := make([]byte, 1<<16)
+			fmt.Printf("%v\n%s\n", err, runtime.Stack(buf, false))
+			os.Stdout.Sync()
+		}
+	}()
 
 	// The request may have been failed - e.g. http request missing required params
 	// do not proceed if so
@@ -135,8 +146,8 @@ func (this *Server) serviceRequest(request Request) {
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
-	context := execution.NewContext(this.datastore, this.systemstore,
-		namespace, this.readonly, request.Arguments(), request.Output())
+	context := execution.NewContext(this.datastore, this.systemstore, namespace,
+		this.readonly, request.NamedArgs(), request.PositionalArgs(), request.Output())
 	operator.RunOnce(context, nil)
 }
 
