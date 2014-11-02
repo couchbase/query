@@ -670,8 +670,6 @@ _having-clause:_
 
 ![](diagram/having-clause.png)
 
-### HAVING
-
 ## SELECT clause
 
 _select-clause:_

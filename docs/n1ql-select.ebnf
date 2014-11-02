@@ -47,7 +47,7 @@ cond ::= expr
 /*
  *  group-by clause
  */
-group-by-clause ::= 'GROUP' 'BY' expr (',' expr)* letting-clause? having-clause?
+group-by-clause ::= 'GROUP' 'BY' expr (',' expr)* letting-clause? having-clause? | letting-clause
 letting-clause ::= 'LETTING' alias '=' expr (',' alias '=' expr)*
 having-clause ::= 'HAVING' cond
 
