@@ -10,6 +10,7 @@
 package file
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -18,7 +19,7 @@ import (
 )
 
 func TestFile(t *testing.T) {
-	store, err := NewDatastore("../../test")
+	store, err := NewDatastore("../../test/json")
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
@@ -28,11 +29,11 @@ func TestFile(t *testing.T) {
 		t.Errorf("failed to get namespace ids: %v", err)
 	}
 
-	if len(namespaceIds) != 1 || namespaceIds[0] != "json" {
-		t.Errorf("expected 1 namespace id'd json")
+	if len(namespaceIds) != 1 || namespaceIds[0] != "default" {
+		t.Errorf("expected 1 namespace id'd default")
 	}
 
-	namespace, err := store.NamespaceById("json")
+	namespace, err := store.NamespaceById("default")
 	if err != nil {
 		t.Errorf("failed to get namespace: %v", err)
 	}
@@ -42,19 +43,23 @@ func TestFile(t *testing.T) {
 		t.Errorf("failed to get namespace names: %v", err)
 	}
 
-	if len(namespaceNames) != 1 || namespaceNames[0] != "json" {
+	if len(namespaceNames) != 1 || namespaceNames[0] != "default" {
 		t.Errorf("expected 1 namespace named json")
 	}
 
-	namespace, err = store.NamespaceByName("json")
+	fmt.Printf("Found namespaces %v", namespaceNames)
+
+	namespace, err = store.NamespaceByName("default")
 	if err != nil {
 		t.Fatalf("failed to get namespace: %v", err)
 	}
 
-	_, err = namespace.KeyspaceIds()
+	ks, err := namespace.KeyspaceIds()
 	if err != nil {
 		t.Errorf("failed to get keyspace ids: %v", err)
 	}
+
+	fmt.Printf("Keyspace ids %v", ks)
 
 	keyspace, err := namespace.KeyspaceById("contacts")
 	if err != nil {
@@ -94,14 +99,73 @@ func TestFile(t *testing.T) {
 	for ok {
 		entry, ok := <-conn.EntryChannel()
 		if ok {
-			t.Logf("Scanned %s", entry.PrimaryKey)
+			fmt.Printf("\nScanned %s", entry.PrimaryKey)
+		} else {
+			break
 		}
 	}
 
-	_, err = keyspace.FetchOne("fred")
+	fred, err := keyspace.FetchOne("fred")
 	if err != nil {
 		t.Errorf("failed to fetch fred: %v", err)
 	}
+
+	// DML test cases
+
+	var dmlKey datastore.Pair
+	dmlKey.Key = "fred2"
+	dmlKey.Value = fred
+
+	_, err = keyspace.Insert([]datastore.Pair{dmlKey})
+	if err != nil {
+		t.Errorf("failed to insert fred2: %v", err)
+	}
+
+	_, err = keyspace.Update([]datastore.Pair{dmlKey})
+	if err != nil {
+		t.Errorf("failed to insert fred2: %v", err)
+	}
+
+	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	if err != nil {
+		t.Errorf("failed to insert fred2: %v", err)
+	}
+
+	dmlKey.Key = "fred3"
+	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	if err != nil {
+		t.Errorf("failed to insert fred2: %v", err)
+	}
+
+	// negative cases
+	_, err = keyspace.Insert([]datastore.Pair{dmlKey})
+	if err == nil {
+		t.Errorf("Insert should not have succeeded for fred2")
+	}
+
+	// delete all the freds
+	err = keyspace.Delete([]string{"fred2", "fred3"})
+	if err != nil {
+		fmt.Printf("Warning: Failed to delete. Error %v", err)
+	}
+
+	_, err = keyspace.Update([]datastore.Pair{dmlKey})
+	if err == nil {
+		t.Errorf("Update should have failed. Key fred3 doesn't exist")
+	}
+
+	// finally upsert the key. this should work
+	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	if err != nil {
+		t.Errorf("failed to insert fred2: %v", err)
+	}
+
+	// some deletes should fail
+	err = keyspace.Delete([]string{"fred2", "fred3"})
+	if err != nil {
+		fmt.Println(err)
+	}
+
 }
 
 type testingContext struct {
@@ -113,5 +177,9 @@ func (this *testingContext) Error(err errors.Error) {
 }
 
 func (this *testingContext) Warning(wrn errors.Error) {
-	this.t.Logf("Scan warning: %v", wrn)
+	this.t.Logf("scan warning: %v", wrn)
+}
+
+func (this *testingContext) Fatal(fatal errors.Error) {
+	this.t.Logf("scan fatal: %v", fatal)
 }

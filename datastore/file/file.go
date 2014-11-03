@@ -400,8 +400,9 @@ func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Er
 func (b *keyspace) Delete(deletes []string) errors.Error {
 
 	var fileError []string
-	for _, path := range deletes {
-		if err := os.RemoveAll(path); err != nil {
+	for _, key := range deletes {
+		filename := filepath.Join(b.path(), key+".json")
+		if err := os.Remove(filename); err != nil {
 			fileError = append(fileError, err.Error())
 		}
 	}
@@ -528,6 +529,8 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, c
 
 	var n int64 = 0
 	for _, dirEntry := range dirEntries {
+
+		fmt.Printf("Dir entry being scanned %v", dirEntry.Name())
 		if limit > 0 && n > limit {
 			break
 		}
