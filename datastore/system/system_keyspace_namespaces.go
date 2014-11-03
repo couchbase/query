@@ -131,7 +131,7 @@ func (b *namespaceKeyspace) Delete(deletes []string) errors.Error {
 	return errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+func (b *namespaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}

@@ -18,11 +18,13 @@ import (
 type CreatePrimaryIndex struct {
 	readwrite
 	keyspace datastore.Keyspace
+	node     *algebra.CreatePrimaryIndex
 }
 
-func NewCreatePrimaryIndex(keyspace datastore.Keyspace) *CreatePrimaryIndex {
+func NewCreatePrimaryIndex(keyspace datastore.Keyspace, node *algebra.CreatePrimaryIndex) *CreatePrimaryIndex {
 	return &CreatePrimaryIndex{
 		keyspace: keyspace,
+		node:     node,
 	}
 }
 
@@ -32,6 +34,10 @@ func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *CreatePrimaryIndex) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *CreatePrimaryIndex) Node() *algebra.CreatePrimaryIndex {
+	return this.node
 }
 
 // Create index

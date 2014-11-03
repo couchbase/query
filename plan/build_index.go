@@ -24,7 +24,7 @@ func (this *builder) VisitCreatePrimaryIndex(node *algebra.CreatePrimaryIndex) (
 		return nil, err
 	}
 
-	return NewCreatePrimaryIndex(keyspace), nil
+	return NewCreatePrimaryIndex(keyspace, node), nil
 }
 
 func (this *builder) VisitCreateIndex(node *algebra.CreateIndex) (interface{}, error) {

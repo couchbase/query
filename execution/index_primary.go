@@ -47,7 +47,8 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		// Actually create primary index
-		_, err := this.plan.Keyspace().CreatePrimaryIndex()
+		node := this.plan.Node()
+		_, err := this.plan.Keyspace().CreatePrimaryIndex(node.Using())
 		if err != nil {
 			context.Error(err)
 		}

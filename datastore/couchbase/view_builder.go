@@ -168,7 +168,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 	return indexes, nil
 }
 
-func newPrimaryIndex(b *keyspace) (*primaryIndex, error) {
+func newViewPrimaryIndex(b *keyspace) (*primaryIndex, error) {
 	ddoc := newPrimaryDDoc()
 	doc := expression.NewIdentifier(b.Name())
 	meta := expression.NewMeta(doc)

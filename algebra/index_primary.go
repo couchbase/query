@@ -10,16 +10,19 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/value"
 )
 
 type CreatePrimaryIndex struct {
-	keyspace *KeyspaceRef `json:"keyspace"`
+	keyspace *KeyspaceRef        `json:"keyspace"`
+	using    datastore.IndexType `json:"using"`
 }
 
-func NewCreatePrimaryIndex(keyspace *KeyspaceRef) *CreatePrimaryIndex {
+func NewCreatePrimaryIndex(keyspace *KeyspaceRef, using datastore.IndexType) *CreatePrimaryIndex {
 	return &CreatePrimaryIndex{
 		keyspace: keyspace,
+		using:    using,
 	}
 }
 
@@ -37,4 +40,8 @@ func (this *CreatePrimaryIndex) Formalize() error {
 
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
+}
+
+func (this *CreatePrimaryIndex) Using() datastore.IndexType {
+	return this.using
 }

@@ -73,7 +73,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// try create a primary index
-	index, err := ks.CreatePrimaryIndex()
+	index, err := ks.CreatePrimaryIndex(datastore.VIEW)
 	if err != nil {
 		// keep going. maybe index already exists
 		fmt.Printf(" Cannot create a primary index on bucket. Error %v", err)

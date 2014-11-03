@@ -367,16 +367,30 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
 	if _, exists := b.indexes[PRIMARY_INDEX]; exists {
 		return nil, errors.NewError(nil, "Primary index already exists")
 	}
-	idx, err := newPrimaryIndex(b)
-	if err != nil {
-		return nil, errors.NewError(err, "Error creating primary index")
+	switch using {
+	case datastore.VIEW:
+		idx, err := newViewPrimaryIndex(b)
+		if err != nil {
+			return nil, errors.NewError(err, "Error creating primary index")
+		}
+		b.indexes[idx.Name()] = idx
+		return idx, nil
+
+	case datastore.LSM:
+		idx, err := new2iPrimaryIndex(b)
+		if err != nil {
+			return nil, errors.NewError(err, "Error creating primary index")
+		}
+		b.indexes[idx.Name()] = idx
+		return idx, nil
+
+	default:
+		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
-	b.indexes[idx.Name()] = idx
-	return idx, nil
 }
 
 func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,

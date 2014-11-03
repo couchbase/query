@@ -173,7 +173,7 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil
 	}

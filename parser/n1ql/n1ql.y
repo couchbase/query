@@ -1326,9 +1326,9 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX ON named_keyspace_ref
+CREATE PRIMARY INDEX ON named_keyspace_ref index_using
 {
-  $$ = algebra.NewCreatePrimaryIndex($5)
+  $$ = algebra.NewCreatePrimaryIndex($5, $6)
 }
 |
 CREATE INDEX index_name ON named_keyspace_ref LPAREN exprs RPAREN index_partition opt_where index_using

@@ -38,6 +38,24 @@ func getCoordinatorIndexes(
 }
 
 // create a new 2i index.
+func new2iPrimaryIndex(b *keyspace) (*secondaryIndex, errors.Error) {
+	index := &secondaryIndex{
+		name:      PRIMARY_INDEX,
+		defnID:    "", // computed by coordinator
+		keySpace:  b,
+		isPrimary: true,
+		using:     datastore.LSM,
+		// remote node hosting this index.
+		hosts: nil, // to becomputed by coordinator
+	}
+	// TODO: publish this to coordinator.
+	// TODO: fetch the new index topology from coordinator.
+	//       until then localhost:9998 will be used as indexer.
+	index.setHost([]string{"localhost:9998"})
+	return index, nil
+}
+
+// create a new 2i index.
 func new2iIndex(
 	name string,
 	equalKey, rangeKey expression.Expressions, where expression.Expression,

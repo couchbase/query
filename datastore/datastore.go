@@ -59,17 +59,17 @@ type Namespace interface {
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	NamespaceId() string                              // Id of the namespace that contains this keyspace
-	Id() string                                       // Id of this keyspace
-	Name() string                                     // Name of this keyspace
-	Count() (int64, errors.Error)                     // Number of key-value entries in this keyspace
-	IndexIds() ([]string, errors.Error)               // Ids of the indexes defined on this keyspace
-	IndexNames() ([]string, errors.Error)             // Names of the indexes defined on this keyspace
-	IndexById(id string) (Index, errors.Error)        // Find an index on this keyspace using the index's id
-	IndexByName(name string) (Index, errors.Error)    // Find an index on this keyspace using the index's name
-	IndexByPrimary() (PrimaryIndex, errors.Error)     // Returns the server-recommended primary index
-	Indexes() ([]Index, errors.Error)                 // Returns all the indexes defined on this keyspace
-	CreatePrimaryIndex() (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
+	NamespaceId() string                                       // Id of the namespace that contains this keyspace
+	Id() string                                                // Id of this keyspace
+	Name() string                                              // Name of this keyspace
+	Count() (int64, errors.Error)                              // Number of key-value entries in this keyspace
+	IndexIds() ([]string, errors.Error)                        // Ids of the indexes defined on this keyspace
+	IndexNames() ([]string, errors.Error)                      // Names of the indexes defined on this keyspace
+	IndexById(id string) (Index, errors.Error)                 // Find an index on this keyspace using the index's id
+	IndexByName(name string) (Index, errors.Error)             // Find an index on this keyspace using the index's name
+	IndexByPrimary() (PrimaryIndex, errors.Error)              // Returns the server-recommended primary index
+	Indexes() ([]Index, errors.Error)                          // Returns all the indexes defined on this keyspace
+	CreatePrimaryIndex(IndexType) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
 
 	CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 		where expression.Expression, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
