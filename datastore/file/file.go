@@ -16,11 +16,13 @@ package.
 package file
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
@@ -203,6 +205,7 @@ type keyspace struct {
 	name      string
 	indexes   map[string]datastore.Index
 	primary   datastore.PrimaryIndex
+	fileLock  sync.Mutex
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -299,24 +302,116 @@ func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 	return item, e
 }
 
+const (
+	INSERT = 0x01
+	UPDATE = 0x02
+	UPSERT = 0x04
+)
+
+func opToString(op int) string {
+
+	switch op {
+	case INSERT:
+		return "insert"
+	case UPDATE:
+		return "update"
+	case UPSERT:
+		return "upsert"
+	}
+
+	return "unknown operation"
+}
+
+func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair, errors.Error) {
+
+	if len(kvPairs) == 0 {
+		return nil, errors.NewError(nil, "No keys to insert")
+	}
+
+	insertedKeys := make([]datastore.Pair, 0)
+	var returnErr errors.Error
+
+	// this lock can be mode more granular FIXME
+	b.fileLock.Lock()
+	defer b.fileLock.Unlock()
+
+	for _, kv := range kvPairs {
+		var file *os.File
+		var err error
+
+		key := kv.Key
+		value, _ := json.Marshal(kv.Value.Actual())
+		filename := filepath.Join(b.path(), key+".json")
+
+		switch op {
+
+		case INSERT:
+			// add the key only if it doesn't exist
+			if _, err = os.Stat(filename); err == nil {
+				err = errors.NewError(nil, "File "+filename+" exists")
+			} else {
+				// create and write the file
+				if file, err = os.Create(filename); err == nil {
+					_, err = file.Write(value)
+					file.Close()
+				}
+			}
+		case UPDATE:
+			// add the key only if it doesn't exist
+			if _, err = os.Stat(filename); err == nil {
+				// open and write the file
+				if file, err = os.OpenFile(filename, os.O_TRUNC|os.O_RDWR, 0666); err == nil {
+					_, err = file.Write(value)
+					file.Close()
+				}
+			}
+
+		case UPSERT:
+			// open the file for writing, if doesn't exist then create
+			if file, err = os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666); err == nil {
+				_, err = file.Write(value)
+				file.Close()
+			}
+		}
+
+		if err != nil {
+			returnErr = errors.NewError(returnErr, opToString(op)+" Failed "+err.Error())
+		} else {
+			insertedKeys = append(insertedKeys, kv)
+		}
+	}
+
+	return insertedKeys, returnErr
+
+}
+
 func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Insert not yet implemented.")
+	return b.performOp(INSERT, inserts)
 }
 
 func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Update not yet implemented.")
+	return b.performOp(UPDATE, updates)
 }
 
 func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Upsert not yet implemented.")
+	return b.performOp(UPSERT, upserts)
 }
 
 func (b *keyspace) Delete(deletes []string) errors.Error {
-	// FIXME
-	return errors.NewError(nil, "Delete not yet implemented.")
+
+	var fileError []string
+	for _, path := range deletes {
+		if err := os.RemoveAll(path); err != nil {
+			fileError = append(fileError, err.Error())
+		}
+	}
+
+	if len(fileError) > 0 {
+		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
+		return errors.NewError(nil, errLine)
+	}
+
+	return nil
 }
 
 func (b *keyspace) Release() {
