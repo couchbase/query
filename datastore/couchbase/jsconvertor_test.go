@@ -100,10 +100,16 @@ func TestConvertor(t *testing.T) {
 	s1 = NewJSConvertor().Visit(expression.NewOr(
 		expression.NewUpper(m1), expression.NewLower(m2)))
 
-	s2 = "(((`bucket`.`id`).toUpperCase()) || ((`bucket`.`type`).toLowerCase()))"
+	s2 = "((`bucket`.`id`.toUpperCase()) || (`bucket`.`type`.toLowerCase()))"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
+
+	doc = expression.NewIdentifier("bucket")
+	m1 = expression.NewField(doc, expression.NewFieldName("geo"))
+	m2 = expression.NewField(m1, expression.NewFieldName("accuracy"))
+
+	fmt.Printf("Expression %s", NewJSConvertor().Visit(m2))
 
 	a1 := expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type")))
 

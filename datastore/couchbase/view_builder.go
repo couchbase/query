@@ -410,9 +410,10 @@ func (this *JsStatement) JS() string {
 func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, error) {
 
 	this.js.WriteString("doc.")
-	stringer := expression.NewStringer().Visit(e)
+	stringer := NewJSConvertor().Visit(e)
 	if stringer != "" {
-		this.js.WriteString(strings.Trim(stringer, "`"))
+		stringer = strings.Replace(stringer, "`", "", -1)
+		this.js.WriteString(stringer)
 	} else {
 		return e, errors.New("This Expression is not supported by indexing")
 	}

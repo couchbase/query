@@ -410,11 +410,14 @@ func (this *JSConvertor) VisitElement(expr *expression.Element) (interface{}, er
 
 func (this *JSConvertor) VisitField(expr *expression.Field) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("(")
+	// parenthesis causing problems with certain expressions
+	// lack of thereof could still present a problem with other
+	// types of expressions. FIXME MAYBE
+	//buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
 	buf.WriteString(".")
 	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
+	//buf.WriteString(")")
 	// if the stack is not empty, pop the function
 	for this.stack.Size() != 0 {
 		funcExpr := this.stack.Pop().(*funcExpr)
