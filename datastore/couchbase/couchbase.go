@@ -17,6 +17,7 @@ package.
 package couchbase
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -448,7 +449,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 
 		Value := value.NewAnnotatedValue(value.NewValueFromBytes(v.Body))
 
-		meta_flags := (v.Extras[0]&0xff)<<24 | (v.Extras[1]&0xff)<<16 | (v.Extras[2]&0xff)<<8 | (v.Extras[3] & 0xff)
+		meta_flags := binary.BigEndian.Uint32(v.Extras[0:4])
 		meta_type := "json"
 		if Value.Type() == value.BINARY {
 			meta_type = "base64"
@@ -459,6 +460,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 			"type":  meta_type,
 			"flags": float64(meta_flags),
 		})
+
 		doc.Value = Value
 		rv[i] = doc
 		i++

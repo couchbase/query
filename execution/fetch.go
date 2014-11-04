@@ -111,7 +111,12 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 		av := this.batch[i]
 		fv := value.NewAnnotatedValue(item)
-		fv.SetAttachment("meta", av.GetAttachment("meta"))
+		meta := item.(value.AnnotatedValue).GetAttachment("meta")
+		if meta != nil {
+			fv.SetAttachment("meta", meta)
+		} else {
+			fv.SetAttachment("meta", av.GetAttachment("meta"))
+		}
 		av.SetField(this.plan.Alias(), fv)
 
 		if !this.sendItem(av) {
