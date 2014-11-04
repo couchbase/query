@@ -623,7 +623,7 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return pi.viewIndex.Drop()
 }
 
 func (pi *primaryIndex) EqualKey() expression.Expressions {

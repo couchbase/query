@@ -1390,6 +1390,11 @@ USING LSM
  *************************************************/
 
 drop_index:
+DROP PRIMARY INDEX ON named_keyspace_ref
+{
+    $$ = algebra.NewDropIndex($5, "#primary") 
+}
+|
 DROP INDEX named_keyspace_ref DOT index_name
 {
     $$ = algebra.NewDropIndex($3, $5)

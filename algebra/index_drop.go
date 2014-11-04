@@ -16,6 +16,7 @@ import (
 type DropIndex struct {
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
+	primary  bool         `json:"primary"`
 }
 
 func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
