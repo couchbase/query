@@ -389,11 +389,12 @@ func (this *JSConvertor) VisitOr(expr *expression.Or) (interface{}, error) {
 
 func (this *JSConvertor) VisitElement(expr *expression.Element) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("(")
+	//buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
 	buf.WriteString("[")
 	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString("])")
+	buf.WriteString("]")
+	//buf.WriteString(")")
 
 	// if the stack is not empty, pop the function
 	for this.stack.Size() != 0 {

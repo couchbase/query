@@ -10,7 +10,6 @@
 package couchbase
 
 import (
-	"fmt"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 	"testing"
@@ -109,9 +108,25 @@ func TestConvertor(t *testing.T) {
 	m1 = expression.NewField(doc, expression.NewFieldName("geo"))
 	m2 = expression.NewField(m1, expression.NewFieldName("accuracy"))
 
-	fmt.Printf("Expression %s", NewJSConvertor().Visit(m2))
+	s1 = NewJSConvertor().Visit(m2)
+	s2 = "`bucket`.`geo`.`accuracy`"
+	if s1 != s2 {
+		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
+	}
 
-	a1 := expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type")))
+	doc = expression.NewIdentifier("bucket")
+	m1 = expression.NewField(doc, expression.NewElement(expression.NewFieldName("address"), constant(0)))
 
-	fmt.Printf("%s", NewJSConvertor().Visit(a1))
+	s1 = NewJSConvertor().Visit(m1)
+	s2 = "`bucket`.`address`[0]"
+	if s1 != s2 {
+		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
+	}
+
+	s1 = NewJSConvertor().Visit(expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type"))))
+	s2 = "(`bucket`[`type`].length)"
+	if s1 != s2 {
+		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
+	}
+
 }
