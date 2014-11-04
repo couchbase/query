@@ -84,9 +84,12 @@ func (vi *viewIndex) Condition() expression.Expression {
 
 func (vi *viewIndex) Drop() errors.Error {
 	bucket := vi.keyspace
-	if vi.IsPrimary() {
-		return errors.NewError(nil, "Primary index cannot be dropped.")
-	}
+	// allow dropping of primary indexes. We may need to revisit MB-12505
+	/*
+		if vi.IsPrimary() {
+			return errors.NewError(nil, "Primary index cannot be dropped.")
+		}
+	*/
 	err := vi.DropViewIndex()
 	if err != nil {
 		return errors.NewError(err, fmt.Sprintf("Cannot drop index %s", vi.Name()))
