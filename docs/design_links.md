@@ -8,6 +8,9 @@
 
 This document provides links to external design documents; links are provided under relevant heading.
 
+## Core Query Engine
+* [N1QL Query API](http://goo.gl/ezpmVx) - design document for query REST API
+
 ## Clustering Management
 
 * [Overview of Clustering Management Survey](http://goo.gl/gid7LX) - identifies the high level concerns in clustered systems
