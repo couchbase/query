@@ -8,15 +8,15 @@ cd parser/n1ql
 ./build.sh $1
 cd ../..
 
-echo cd server/main
-cd server/main
+echo cd server/cbq-engine
+cd server/cbq-engine
 ./build.sh $1
 cd ../..
 
-echo cd shell
-cd shell
+echo cd shell/cbq
+cd shell/cbq
 ./build.sh $1
-cd ..
+cd ../..
 
 echo cd tutorial
 cd tutorial
