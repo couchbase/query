@@ -528,7 +528,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
 			// to update the key
-			rv := make([]string, 0, 10)
+			rv := map[string]interface{}{}
 			var cas uint64
 
 			err = b.cbbucket.Gets(key, &rv, &cas)
