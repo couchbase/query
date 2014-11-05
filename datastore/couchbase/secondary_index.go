@@ -92,7 +92,11 @@ func (si *secondaryIndex) Drop() errors.Error {
 	if si == nil {
 		return ErrorIndexEmpty
 	}
-	// TODO: connect with meta-data repository and delete this index.
+	client := queryport.NewClusterClient(ClusterManagerAddr)
+	err := client.DropIndex(si.defnID)
+	if err != nil {
+		return errors.NewError(nil, err.Error())
+	}
 	delete(si.keySpace.indexes, si.Name())
 	return nil
 }

@@ -12,12 +12,19 @@ package couchbase
 import "github.com/couchbaselabs/query/datastore"
 import "github.com/couchbaselabs/query/errors"
 import "github.com/couchbaselabs/query/expression"
+import "github.com/couchbaselabs/query/expression/parser"
 import "github.com/couchbaselabs/query/logging"
-import "github.com/couchbaselabs/go-couchbase"
+import "github.com/couchbase/indexing/secondary/queryport"
+
+// ClusterManagerAddr is temporary hard-coded address for cluster-manager-agent
+const ClusterManagerAddr = "localhost:9997"
+
+// IndexerAddr is temporary hard-coded address for indexer node.
+const IndexerAddr = "localhost:9998"
 
 // load 2i indexes and remember them as part of keyspace.indexes.
 func (b *keyspace) load2iIndexes() errors.Error {
-	indexes, err := getCoordinatorIndexes(b.namespace.site.client)
+	indexes, err := getCoordinatorIndexes(b)
 	if err != nil {
 		return errors.NewError(err, "Error loading indexes")
 	}
@@ -30,28 +37,63 @@ func (b *keyspace) load2iIndexes() errors.Error {
 }
 
 // get the list of indexes from coordinator.
-func getCoordinatorIndexes(
-	client couchbase.Client) (map[string]datastore.Index, error) {
-
-	// TODO: actually fetch the list from coordinator.
-	return nil, nil
+func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
+	indexes := make(map[string]datastore.Index)
+	client := queryport.NewClusterClient(ClusterManagerAddr)
+	infos, err := client.List()
+	if err != nil {
+		return indexes, err
+	}
+	for _, info := range infos {
+		rkeys := make(expression.Expressions, 0)
+		for _, secExpr := range info.SecExprs {
+			expr, err := parser.Parse(secExpr)
+			if err != nil {
+				return nil, err
+			}
+			rkeys = append(rkeys, expr)
+		}
+		expr, err := parser.Parse(info.PartnExpr)
+		if err != nil {
+			return nil, err
+		}
+		ekey := expression.Expressions{expr}
+		wkey, err := parser.Parse(info.WhereExpr)
+		if err != nil {
+			return nil, err
+		}
+		using := datastore.IndexType(info.Using)
+		index, err := new2iIndex(info.Name, ekey, rkeys, wkey, using, b)
+		if err != nil {
+			return nil, err
+		}
+		indexes[index.Name()] = index
+	}
+	return indexes, nil
 }
 
 // create a new 2i index.
-func new2iPrimaryIndex(b *keyspace) (*secondaryIndex, errors.Error) {
+func new2iPrimaryIndex(
+	b *keyspace, using datastore.IndexType) (*secondaryIndex, errors.Error) {
+
+	bucket := b.Name()
+	client := queryport.NewClusterClient(ClusterManagerAddr)
+	info, err := client.CreateIndex(
+		PRIMARY_INDEX, bucket, string(using), "", "", nil, true)
+	if err != nil {
+		return nil, errors.NewError(nil, err.Error())
+	}
 	index := &secondaryIndex{
 		name:      PRIMARY_INDEX,
-		defnID:    "", // computed by coordinator
+		defnID:    info.DefnID,
 		keySpace:  b,
 		isPrimary: true,
 		using:     datastore.LSM,
 		// remote node hosting this index.
 		hosts: nil, // to becomputed by coordinator
 	}
-	// TODO: publish this to coordinator.
 	// TODO: fetch the new index topology from coordinator.
-	//       until then localhost:9998 will be used as indexer.
-	index.setHost([]string{"localhost:9998"})
+	index.setHost([]string{IndexerAddr})
 	return index, nil
 }
 
@@ -78,9 +120,16 @@ func new2iIndex(
 		secStrs[i] = s
 	}
 
+	bucket := b.Name()
+	client := queryport.NewClusterClient(ClusterManagerAddr)
+	info, err := client.CreateIndex(
+		name, bucket, string(using), partnStr, whereStr, secStrs, false)
+	if err != nil {
+		return nil, errors.NewError(nil, err.Error())
+	}
 	index := &secondaryIndex{
 		name:      name,
-		defnID:    "", // computed by coordinator
+		defnID:    info.DefnID,
 		keySpace:  b,
 		isPrimary: false,
 		using:     using,
@@ -90,9 +139,7 @@ func new2iIndex(
 		// remote node hosting this index.
 		hosts: nil, // to becomputed by coordinator
 	}
-	// TODO: publish this to coordinator.
 	// TODO: fetch the new index topology from coordinator.
-	//       until then localhost:9998 will be used as indexer.
-	index.setHost([]string{"localhost:9998"})
+	index.setHost([]string{IndexerAddr})
 	return index, nil
 }

@@ -382,7 +382,7 @@ func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.Prim
 		return idx, nil
 
 	case datastore.LSM:
-		idx, err := new2iPrimaryIndex(b)
+		idx, err := new2iPrimaryIndex(b, using)
 		if err != nil {
 			return nil, errors.NewError(err, "Error creating primary index")
 		}
