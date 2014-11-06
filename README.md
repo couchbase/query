@@ -427,17 +427,17 @@ data-parallelization and serialization points.
 
 ### Get a working repository
 
-$ export GOPATH=$HOME/query/
-$ mkdir -p $GOPATH/src/github.com/couchbaselabs/
-$ cd ~/query
-$ mkdir bin pkg
-$ cd $GOPATH/src/github.com/couchbaselabs/
+*$ export GOPATH=$HOME/query/
+*$ mkdir -p $GOPATH/src/github.com/couchbaselabs/
+*$ cd ~/query
+*$ mkdir bin pkg
+*$ cd $GOPATH/src/github.com/couchbaselabs/
 
 Clone the git repo into the current working directory, to get the source, so as to be able to make a build. This clones it into query:
 
-$ git clone https://github.com/couchbaselabs/query query
-$ cd query 
-$ ./build.sh
+*$ git clone https://github.com/couchbaselabs/query query
+*$ cd query 
+*$ ./build.sh
 
 All the builds exist in their respective directories. You can find the cbq and cbq-engine binaries in the shell and server directories. 
 
@@ -457,12 +457,14 @@ $ mkdir ~/sample_build/tutorial/data
 4.	Unzip the sample using the command 
 $ unzip sampledb.zip
 5.	Go back to the directory containing the binaries 
-$ cd ~/sample_build/
+        * $ cd ~/sample_build/
 6.	First run the cbq-engine executable using the –datastore “<directory path>”  -namespace <name of subdirectory it is in> &(here the ampersand is used to run the  process in the background and get the prompt back :
-$ ./cbq-engine -datastore "/Users/isha/sample_build/tutorial" -namespace data &
+
+        *$ ./cbq-engine -datastore "/Users/isha/sample_build/tutorial" -namespace data &
+
 7.	Then run the cbq executable. This should give you the N1QL command line interface shell. 
-$ ./cbq
-cbq> select * from tutorial;
+        *$ ./cbq
+        *cbq> select * from tutorial;
 8.	TIME TO EXPERIMENT ☺ 
 
 ###Using the Admin UI 
@@ -470,8 +472,8 @@ cbq> select * from tutorial;
 2.	Open up localhost:8091 and follow setup instructions
 3.	Create your own buckets and fill in data.
 4.	Connect N1QL with the Couchbase server we need to run the following command
-$ ./cbq-engine –datastore “http://127.0.0.1:8091/” &
-$ ./cbq
+*$ ./cbq-engine –datastore “http://127.0.0.1:8091/” &
+*$ ./cbq
 5.	Run the following command on the created buckets before querying them
 cbq> create primary index on [bucket_name]  
 6.	Run N1QL queries on the CLI.
