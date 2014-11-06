@@ -427,23 +427,17 @@ data-parallelization and serialization points.
 
 ### Get a working repository
 
-$ export GOPATH=$HOME/query/
-
-$ mkdir -p $GOPATH/src/github.com/couchbaselabs/
-
-$ cd ~/query
-
-$ mkdir bin pkg
-
-$ cd $GOPATH/src/github.com/couchbaselabs/
+     $ export GOPATH=$HOME/query/
+     $ mkdir -p $GOPATH/src/github.com/couchbaselabs/
+     $ cd ~/query
+     $ mkdir bin pkg
+     $ cd $GOPATH/src/github.com/couchbaselabs/
 
 Clone the git repo into the current working directory, to get the source, so as to be able to make a build. This clones it into query:
 
-$ git clone https://github.com/couchbaselabs/query query
-
-$ cd query 
-
-$ ./build.sh
+     $ git clone https://github.com/couchbaselabs/query query
+     $ cd query 
+     $ ./build.sh
 
 All the builds exist in their respective directories. You can find the cbq and cbq-engine binaries in the shell and server directories. 
 
