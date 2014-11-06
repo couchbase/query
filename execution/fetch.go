@@ -111,10 +111,11 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 		av := this.batch[i]
 		fv := value.NewAnnotatedValue(item)
-		meta := item.(value.AnnotatedValue).GetAttachment("meta")
-		if meta != nil {
+		switch item := item.(type) {
+		case value.AnnotatedValue:
+			meta := item.(value.AnnotatedValue).GetAttachment("meta")
 			fv.SetAttachment("meta", meta)
-		} else {
+		default:
 			fv.SetAttachment("meta", av.GetAttachment("meta"))
 		}
 		av.SetField(this.plan.Alias(), fv)

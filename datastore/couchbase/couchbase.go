@@ -619,7 +619,7 @@ func (pi *primaryIndex) Name() string {
 }
 
 func (pi *primaryIndex) Type() datastore.IndexType {
-	return pi.Type()
+	return pi.viewIndex.Type()
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
