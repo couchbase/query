@@ -63,7 +63,7 @@ func (this *nullValue) UnsetField(field string) error {
 }
 
 func (this *nullValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this *nullValue) SetIndex(index int, val interface{}) error {

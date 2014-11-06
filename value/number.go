@@ -91,7 +91,7 @@ func (this floatValue) UnsetField(field string) error {
 }
 
 func (this floatValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this floatValue) SetIndex(index int, val interface{}) error {

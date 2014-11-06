@@ -84,7 +84,7 @@ func (this stringValue) UnsetField(field string) error {
 }
 
 func (this stringValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this stringValue) SetIndex(index int, val interface{}) error {
