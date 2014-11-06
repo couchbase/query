@@ -191,7 +191,6 @@ indexType        datastore.IndexType
 %token TRIGGER
 %token TRUE
 %token TRUNCATE
-%token TYPE
 %token UNDER
 %token UNION
 %token UNIQUE

@@ -208,7 +208,6 @@
 /[tT][rR][iI][gG][gG][eE][rR]/			 { logToken("TRIGGER"); return TRIGGER }
 /[tT][rR][uU][eE]/				 { logToken("TRUE"); return TRUE }
 /[tT][rR][uU][nN][cC][aA][tT][eE]/		 { logToken("TRUNCATE"); return TRUNCATE }
-/[tT][yY][pP][eE]/				 { logToken("TYPE"); return TYPE }
 /[uU][nN][dD][eE][rR]/				 { logToken("UNDER"); return UNDER }
 /[uU][nN][iI][oO][nN]/				 { logToken("UNION"); return UNION }
 /[uU][nN][iI][qQ][uU][eE]/			 { logToken("UNIQUE"); return UNIQUE }

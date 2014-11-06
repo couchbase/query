@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-10-18
+* Modified: 2014-11-05
 
 ## Introduction
 
@@ -2036,7 +2036,6 @@ for future use.
 * __TRIGGER__
 * __TRUE__
 * __TRUNCATE__
-* __TYPE__
 * __UNDER__
 * __UNION__
 * __UNIQUE__
@@ -2428,6 +2427,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Use the terms "keyspace" and "namespace".
 * 2014-10-18 - WITHIN and nested expressions
     * Enhance syntax for WITHIN and for nested expressions.
+* 2014-11-05 - TYPE
+    * Drop reserve word TYPE due to legacy usage.
 
 ### Open issues
 
