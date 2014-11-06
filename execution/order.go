@@ -10,9 +10,11 @@
 package execution
 
 import (
+	"sort"
+
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/sort"
+	_ "github.com/couchbaselabs/query/sort"
 	"github.com/couchbaselabs/query/value"
 )
 
