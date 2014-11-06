@@ -69,6 +69,18 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			switch key := key.(type) {
 			case string:
 				keys[i] = key
+			case value.Value:
+				switch key.Actual().(type) {
+				case string:
+					keys[i] = key.Actual().(string)
+				default:
+					context.Error(errors.NewError(nil, fmt.Sprintf(
+						"Missing or invalid primary key %v of type %T.",
+						key, key)))
+					return false
+
+				}
+
 			default:
 				context.Error(errors.NewError(nil, fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
