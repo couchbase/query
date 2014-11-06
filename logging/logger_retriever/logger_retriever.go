@@ -12,7 +12,7 @@ package logger_retriever
 import (
 	"reflect"
 
-	"github.com/couchbaselabs/query/accounting"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/querylog"
 	"github.com/couchbaselabs/retriever/logger"
 )
@@ -55,29 +55,29 @@ func (rl *RetrieverLogger) Debug(args ...interface{}) {
 	rl.logWriter.LogDebug(getTraceID(args), getKey(args), getMessage(args), getMessageArgs(args)...)
 }
 
-func (rl *RetrieverLogger) Log(level accounting.LogLevel, args ...interface{}) {
+func (rl *RetrieverLogger) Log(level logging.Level, args ...interface{}) {
 	switch level {
-	case accounting.Error:
+	case logging.Error:
 		rl.Error(args)
-	case accounting.Warn:
+	case logging.Warn:
 		rl.Warn(args)
-	case accounting.Info:
+	case logging.Info:
 		rl.Info(args)
-	case accounting.Debug:
+	case logging.Debug:
 		rl.Debug(args)
 	}
 }
 
 // change log level
-func (rl *RetrieverLogger) SetLevel(level accounting.LogLevel) {
+func (rl *RetrieverLogger) SetLevel(level logging.Level) {
 	switch level {
-	case accounting.Error:
+	case logging.Error:
 		rl.logWriter.SetLogLevel(logger.LevelError)
-	case accounting.Warn:
+	case logging.Warn:
 		rl.logWriter.SetLogLevel(logger.LevelWarn)
-	case accounting.Info:
+	case logging.Info:
 		rl.logWriter.SetLogLevel(logger.LevelInfo)
-	case accounting.Debug:
+	case logging.Debug:
 		rl.logWriter.SetLogLevel(logger.LevelDebug)
 	}
 }
