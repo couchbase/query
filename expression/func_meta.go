@@ -13,6 +13,8 @@ import (
 	"encoding/base64"
 
 	"github.com/couchbaselabs/query/value"
+
+	"github.com/twinj/uuid"
 )
 
 ///////////////////////////////////////////////////
@@ -99,5 +101,46 @@ func (this *Meta) Apply(context Context, operand value.Value) (value.Value, erro
 func (this *Meta) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMeta(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// Uuid
+//
+///////////////////////////////////////////////////
+
+type Uuid struct {
+	NullaryFunctionBase
+}
+
+func init() {
+	uuid.SwitchFormat(uuid.CleanHyphen)
+}
+
+func NewUuid() Function {
+	return &Uuid{
+		*NewNullaryFunctionBase("uuid"),
+	}
+}
+
+func (this *Uuid) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Uuid) Type() value.Type { return value.STRING }
+
+func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, error) {
+	u := uuid.NewV4()
+	return value.NewValue(u.String()), nil
+}
+
+func (this *Uuid) Indexable() bool {
+	return false
+}
+
+func (this *Uuid) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return this
 	}
 }

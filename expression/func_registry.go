@@ -183,6 +183,7 @@ var _FUNCTIONS = map[string]Function{
 	// Meta
 	"meta":   &Meta{},
 	"base64": &Base64{},
+	"uuid":   &Uuid{},
 
 	// Type checking
 	"isarray":  &IsArray{},
