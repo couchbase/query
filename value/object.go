@@ -128,7 +128,7 @@ func (this objectValue) UnsetField(field string) error {
 }
 
 func (this objectValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this objectValue) SetIndex(index int, val interface{}) error {

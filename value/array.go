@@ -75,7 +75,7 @@ func (this sliceValue) CopyForUpdate() Value {
 }
 
 func (this sliceValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return missingField(field), false
 }
 
 func (this sliceValue) SetField(field string, val interface{}) error {

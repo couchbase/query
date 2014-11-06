@@ -79,7 +79,7 @@ func (this boolValue) CopyForUpdate() Value {
 }
 
 func (this boolValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return missingField(field), false
 }
 
 func (this boolValue) SetField(field string, val interface{}) error {
@@ -91,7 +91,7 @@ func (this boolValue) UnsetField(field string) error {
 }
 
 func (this boolValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this boolValue) SetIndex(index int, val interface{}) error {

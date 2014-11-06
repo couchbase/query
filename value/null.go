@@ -51,7 +51,7 @@ func (this *nullValue) CopyForUpdate() Value {
 }
 
 func (this *nullValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return missingField(field), false
 }
 
 func (this *nullValue) SetField(field string, val interface{}) error {
@@ -63,7 +63,7 @@ func (this *nullValue) UnsetField(field string) error {
 }
 
 func (this *nullValue) Index(index int) (Value, bool) {
-	return NULL_VALUE, false
+	return missingIndex(index), false
 }
 
 func (this *nullValue) SetIndex(index int, val interface{}) error {
