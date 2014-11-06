@@ -79,7 +79,7 @@ func (this floatValue) CopyForUpdate() Value {
 }
 
 func (this floatValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return missingField(field), false
 }
 
 func (this floatValue) SetField(field string, val interface{}) error {

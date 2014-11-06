@@ -79,7 +79,7 @@ func (this boolValue) CopyForUpdate() Value {
 }
 
 func (this boolValue) Field(field string) (Value, bool) {
-	return NULL_VALUE, false
+	return missingField(field), false
 }
 
 func (this boolValue) SetField(field string, val interface{}) error {
