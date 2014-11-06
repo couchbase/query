@@ -10,6 +10,7 @@
 package value
 
 import (
+	"encoding/base64"
 	"fmt"
 )
 
@@ -23,17 +24,19 @@ type Set struct {
 	strings  map[string]Value
 	arrays   map[string]Value
 	objects  map[string]Value
-	blobs    []Value
+	blobs    map[string]Value
 }
+
+var _MAP_CAP = 64
 
 func NewSet(objectCap int) *Set {
 	return &Set{
 		booleans: make(map[bool]Value, 2),
-		numbers:  make(map[float64]Value),
-		strings:  make(map[string]Value),
-		arrays:   make(map[string]Value),
+		numbers:  make(map[float64]Value, _MAP_CAP),
+		strings:  make(map[string]Value, _MAP_CAP),
+		arrays:   make(map[string]Value, _MAP_CAP),
 		objects:  make(map[string]Value, objectCap),
-		blobs:    make([]Value, 0, 16),
+		blobs:    make(map[string]Value, _MAP_CAP),
 	}
 }
 
@@ -65,7 +68,8 @@ func (this *Set) Put(key, item Value) {
 		b, _ := key.MarshalJSON()
 		this.arrays[string(b)] = item
 	case BINARY:
-		this.blobs = append(this.blobs, item) // FIXME: should compare bytes
+		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
+		this.blobs[str] = item
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -95,7 +99,8 @@ func (this *Set) Remove(key Value) {
 		b, _ := key.MarshalJSON()
 		delete(this.arrays, string(b))
 	case BINARY:
-		// FIXME: should compare bytes
+		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
+		delete(this.blobs, str)
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -125,8 +130,8 @@ func (this *Set) Has(key Value) bool {
 		b, _ := key.MarshalJSON()
 		_, ok = this.arrays[string(b)]
 	case BINARY:
-		// FIXME: should compare bytes
-		ok = false
+		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
+		_, ok = this.blobs[str]
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
