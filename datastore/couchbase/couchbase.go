@@ -523,8 +523,12 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		switch op {
 
 		case INSERT:
+			var added bool
 			// add the key to the backend
-			_, err = b.cbbucket.Add(key, 0, value)
+			added, err = b.cbbucket.Add(key, 0, value)
+			if added == false {
+				err = errors.NewError(nil, "Key "+key+" Exists")
+			}
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
 			// to update the key
