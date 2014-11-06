@@ -93,3 +93,9 @@ type Pair struct {
 	Key   string
 	Value value.Value
 }
+
+// Key-value pair
+type AnnotatedPair struct {
+	Key   string
+	Value value.AnnotatedValue
+}
