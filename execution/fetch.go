@@ -65,26 +65,14 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		switch meta := meta.(type) {
 		case map[string]interface{}:
 			key := meta["id"]
-
-			switch key := key.(type) {
+			act := value.NewValue(key).Actual()
+			switch act := act.(type) {
 			case string:
-				keys[i] = key
-			case value.Value:
-				switch key.Actual().(type) {
-				case string:
-					keys[i] = key.Actual().(string)
-				default:
-					context.Error(errors.NewError(nil, fmt.Sprintf(
-						"Missing or invalid primary key %v of type %T.",
-						key, key)))
-					return false
-
-				}
-
+				keys[i] = act
 			default:
 				context.Error(errors.NewError(nil, fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
-					key, key)))
+					act, act)))
 				return false
 			}
 		default:

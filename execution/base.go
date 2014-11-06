@@ -233,21 +233,12 @@ func (this *base) requireKey(item value.AnnotatedValue, context *Context) (strin
 		return "", false
 	}
 
-	switch key := key.(type) {
+	act := value.NewValue(key).Actual()
+	switch act := act.(type) {
 	case string:
-		return key, true
-	case value.Value:
-		switch key.Actual().(type) {
-		case string:
-			return key.Actual().(string), true
-		default:
-			e := errors.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
-			context.Error(e)
-			return "", false
-
-		}
+		return act, true
 	default:
-		e := errors.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", key, key))
+		e := errors.NewError(nil, fmt.Sprintf("Unable to process non-string key %v of type %T.", act, act))
 		context.Error(e)
 		return "", false
 	}
