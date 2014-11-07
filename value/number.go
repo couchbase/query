@@ -55,7 +55,14 @@ func (this floatValue) Equals(other Value) bool {
 func (this floatValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case floatValue:
-		return int(this - other)
+		result := float64(this - other)
+		switch {
+		case result < 0.0:
+			return -1
+		case result > 0.0:
+			return 1
+		}
+		return 0
 	case *parsedValue:
 		return this.Collate(other.parse())
 	case *annotatedValue:
