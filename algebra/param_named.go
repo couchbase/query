@@ -31,8 +31,6 @@ func (this *NamedParameter) Accept(visitor expression.Visitor) (interface{}, err
 	switch v := visitor.(type) {
 	case ExpressionVisitor:
 		return v.VisitNamedParameter(this)
-	case expression.Mapper:
-		return this, nil
 	default:
 		panic(fmt.Sprintf("NamedParameter visited by %T,", visitor))
 	}
