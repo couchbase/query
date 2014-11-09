@@ -45,6 +45,9 @@ func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopN
 	close(this.response.done)
 }
 
+func (this *MockQuery) Failed(srvr *server.Server) {
+}
+
 func (this *MockQuery) Expire() {
 	defer this.Stop(server.TIMEOUT)
 	this.response.err = errors.NewError(nil, "Query timed out")

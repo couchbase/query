@@ -10,6 +10,9 @@
 package server
 
 import (
+	"crypto/rand"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -36,6 +39,7 @@ const (
 )
 
 type Request interface {
+	Id() RequestID
 	Statement() string
 	Prepared() *plan.Prepared
 	NamedArgs() map[string]value.Value
@@ -51,11 +55,17 @@ type Request interface {
 	Servicing()
 	Fail(err errors.Error)
 	Execute(server *Server, signature value.Value, notifyStop chan bool)
+	Failed(server *Server)
 	Expire()
 	State() State
 }
 
+type RequestID interface {
+	String() string
+}
+
 type BaseRequest struct {
+	id             *requestIDImpl
 	statement      string
 	prepared       *plan.Prepared
 	namedArgs      map[string]value.Value
@@ -74,6 +84,15 @@ type BaseRequest struct {
 	stopNotify     chan bool // notified when request execution stops
 	stopResult     chan bool // stop consuming results
 	stopExecute    chan bool // stop executing request
+}
+
+type requestIDImpl struct {
+	id string
+}
+
+// requestIDImpl implements the RequestID interface
+func (r *requestIDImpl) String() string {
+	return r.id
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
@@ -96,7 +115,11 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
 	}
-
+	uuid, id_err := newUUID()
+	if id_err != nil {
+		// TODO: deal with unable to generate UUID; log warning, set uuid to empty request ID
+	}
+	rv.id = uuid
 	return rv
 }
 
@@ -107,6 +130,10 @@ func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
 	if timeout > 0 {
 		time.AfterFunc(timeout, func() { request.Expire() })
 	}
+}
+
+func (this *BaseRequest) Id() RequestID {
+	return this.id
 }
 
 func (this *BaseRequest) Statement() string {
@@ -238,4 +265,18 @@ func sendStop(ch chan bool) {
 	case ch <- false:
 	default:
 	}
+}
+
+// newUUID generates a random UUID according to RFC 4122
+func newUUID() (*requestIDImpl, error) {
+	uuid := make([]byte, 16)
+	n, err := io.ReadFull(rand.Reader, uuid)
+	if n != len(uuid) || err != nil {
+		return nil, err
+	}
+	// variant bits; see section 4.1.1
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	// version 4 (pseudo-random); see section 4.1.3
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return &requestIDImpl{id: fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])}, nil
 }

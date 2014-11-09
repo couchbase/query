@@ -18,6 +18,7 @@ import (
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
 )
@@ -29,8 +30,27 @@ func (this *httpRequest) Output() execution.Output {
 func (this *httpRequest) Fail(err errors.Error) {
 	defer this.Stop(server.FATAL)
 
-	this.resp.WriteHeader(http.StatusInternalServerError)
-	this.writeString(err.Error())
+	logging.Errorp("httpRequest.Fail", logging.Pair{"err", err})
+	// Figure out appropriate http response code based on the error
+	this.httpRespCode = mapErrorToHttpResponse(err)
+	// Put the error on the errors channel
+	this.Errors() <- err
+}
+
+func mapErrorToHttpResponse(err errors.Error) int {
+	switch err.Code() {
+	// TODO return appropriate
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func (this *httpRequest) Failed(srvr *server.Server) {
+	logging.Infop("httpRequest.Failed", logging.Pair{"this.httpRespCode", this.httpRespCode})
+	this.resp.WriteHeader(this.httpRespCode)
+	this.writeString("{\n")
+	this.writeRequestID()
+	this.writeSuffix(srvr.Metrics(), "")
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
@@ -38,6 +58,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.NotifyStop(stopNotify)
 
+	logging.Infop("httpRequest.Execute", logging.Pair{"this.httpRespCode", this.httpRespCode})
 	this.resp.WriteHeader(http.StatusOK)
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&
@@ -52,8 +73,15 @@ func (this *httpRequest) Expire() {
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
 	return this.writeString("{\n") &&
+		this.writeRequestID() &&
 		(!srvr.Signature() || this.writeSignature(signature)) &&
 		this.writeString("    \"results\": [")
+}
+
+func (this *httpRequest) writeRequestID() bool {
+	return this.writeString("    \"request_id\": \"") &&
+		this.writeString(this.Id().String()) &&
+		this.writeString("\",\n")
 }
 
 func (this *httpRequest) writeSignature(signature value.Value) bool {
@@ -105,6 +133,7 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 		panic(err.Error())
 	}
 
+	this.resultSize += len(bytes)
 	this.resultCount++
 
 	return rv &&
@@ -224,7 +253,8 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 	rv := this.writeString(",\n    \"metrics\": {") &&
 		this.writeString(fmt.Sprintf("\n        \"elapsedTime\": \"%v\"", time.Since(this.RequestTime()))) &&
 		this.writeString(fmt.Sprintf(",\n        \"executionTime\": \"%v\"", time.Since(this.ServiceTime()))) &&
-		this.writeString(fmt.Sprintf(",\n        \"resultCount\": %d", this.resultCount))
+		this.writeString(fmt.Sprintf(",\n        \"resultCount\": %d", this.resultCount)) &&
+		this.writeString(fmt.Sprintf(",\n        \"resultSize\": %d", this.resultSize))
 
 	if this.errorCount > 0 {
 		rv = rv && this.writeString(fmt.Sprintf(",\n        \"errorCount\": %d", this.errorCount))

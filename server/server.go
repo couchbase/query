@@ -111,12 +111,6 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}()
 
-	// The request may have been failed - e.g. http request missing required params
-	// do not proceed if so
-	if request.State() == FATAL {
-		return
-	}
-
 	request.Servicing()
 
 	namespace := request.Namespace()
@@ -127,18 +121,25 @@ func (this *Server) serviceRequest(request Request) {
 	prepared, err := this.getPrepared(request, namespace)
 	if err != nil {
 		request.Fail(errors.NewError(err, ""))
-		return
 	}
 
-	if (this.readonly || request.Readonly()) && !prepared.Readonly() {
+	if (this.readonly || request.Readonly()) && (prepared != nil && !prepared.Readonly()) {
 		request.Fail(errors.NewError(nil, "The server or request is read-only"+
 			" and cannot accept this write statement."))
-		return
 	}
 
-	operator, err := execution.Build(prepared)
-	if err != nil {
-		request.Fail(errors.NewError(err, ""))
+	var operator execution.Operator
+	if request.State() != FATAL {
+		operator, err = execution.Build(prepared)
+		if err != nil {
+			request.Fail(errors.NewError(err, ""))
+		}
+	}
+
+	if request.State() == FATAL {
+		// Fail the request - Write out response - and return
+		logging.Infop("serviceRequest - invoking Failed on request")
+		request.Failed(this)
 		return
 	}
 

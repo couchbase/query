@@ -44,6 +44,10 @@ func (this *HttpEndpoint) ListenAndServe() error {
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	request := newHttpRequest(resp, req)
+	if request.State() == server.FATAL {
+		request.Failed(this.server)
+		return
+	}
 	select {
 	case this.server.Channel() <- request:
 		// Wait until the request exits.

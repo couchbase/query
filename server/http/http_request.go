@@ -14,9 +14,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
@@ -28,13 +30,21 @@ type httpRequest struct {
 	server.BaseRequest
 	resp         http.ResponseWriter
 	req          *http.Request
+	httpRespCode int
 	resultCount  int
+	resultSize   int
 	errorCount   int
 	warningCount int
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 	err := req.ParseForm()
+
+	logging.Infop("newHttpRequest", logging.Pair{"req.Form", req.Form})
+	logging.Infop("newHttpRequest", logging.Pair{"req.PostForm", req.PostForm})
+	logging.Infop("newHttpRequest", logging.Pair{"req.Method", req.Method})
+	logging.Infop("newHttpRequest", logging.Pair{"req.Header", req.Header})
+	logging.Infop("newHttpRequest", logging.Pair{"req.Body", req.Body})
 
 	var statement string
 	if err == nil {
@@ -151,19 +161,68 @@ func getPrepared(req *http.Request) (*plan.Prepared, error) {
 	return prepared, err
 }
 
-// XXX TODO
 func getNamedArgs(req *http.Request) (map[string]value.Value, error) {
 	var namedArgs map[string]value.Value
 
-	// XXX TODO
+	for namedArg, _ := range req.Form {
+		if strings.HasPrefix(namedArg, "$") {
+			argString, err := formValue(req, namedArg)
+			if err != nil {
+				return namedArgs, err
+			}
+			logging.Infop("getNamedArgs - found named arg", logging.Pair{"name", namedArg}, logging.Pair{"value", argString}, logging.Pair{"len(argString", len(argString)})
+			if len(argString) == 0 {
+				//This is an error - there _has_ to be a value for a named argument
+				err := fmt.Errorf("Named argument %s must have a value", namedArg)
+				return namedArgs, err
+			}
+			// Found a named argument - parse it into a value.Value
+			arg := value.NewValueFromBytes([]byte(argString))
+			if namedArgs == nil {
+				namedArgs = make(map[string]value.Value)
+			}
+			namedArgs[namedArg] = arg
+		}
+	}
+	for n, v := range namedArgs {
+		logging.Infop("getNamedArgs", logging.Pair{"n", n}, logging.Pair{"v", v}, logging.Pair{"v.Type()", v.Type()})
+	}
 	return namedArgs, nil
 }
 
-// XXX TODO
 func getPositionalArgs(req *http.Request) (value.Values, error) {
 	var positionalArgs value.Values
 
-	// XXX TODO
+	args_field, err := formValue(req, "args")
+	if err != nil || args_field == "" {
+		return positionalArgs, err
+	}
+	args := value.NewValueFromBytes([]byte(args_field))
+	if args.Type() != value.ARRAY {
+		err := fmt.Errorf("args must be a json array")
+		return nil, err
+	}
+	// Determine the number of args, allocate postionalArgs:
+	numArgs := 0
+	for {
+		_, found := args.Index(numArgs)
+		if found {
+			numArgs++
+		} else {
+			break
+		}
+	}
+	positionalArgs = make([]value.Value, numArgs)
+	// Put each element of args into positionalArgs
+	for i := 0; i < numArgs; i++ {
+		positionalArgs[i], _ = args.Index(i)
+	}
+	for ix, v := range positionalArgs {
+		logging.Infop("getPositionalArgs",
+			logging.Pair{"index", ix},
+			logging.Pair{"value", v},
+			logging.Pair{"Type", v.Type()})
+	}
 	return positionalArgs, nil
 }
 
