@@ -1132,8 +1132,18 @@ func timeTrunc(t time.Time, part string) (time.Time, error) {
 }
 
 func dateDiff(t1, t2 time.Time, part string) (int64, error) {
-	diff := diffDates(t1, t2)
-	return diffPart(t1, t2, diff, part)
+	var diff *date
+	if t1.String() > t2.String() {
+		diff = diffDates(t1, t2)
+		return diffPart(t1, t2, diff, part)
+	} else {
+		diff = diffDates(t2, t1)
+		result, e := diffPart(t1, t2, diff, part)
+		if result != 0 {
+			return -result, e
+		}
+		return result, e
+	}
 }
 
 func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
@@ -1147,7 +1157,7 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 		}
 		return (sec * 1000) + int64(diff.millisecond), nil
 	case "second":
-		min, e := diffPart(t1, t2, diff, "min")
+		min, e := diffPart(t1, t2, diff, "minute")
 		if e != nil {
 			return 0, e
 		}
@@ -1194,41 +1204,13 @@ func diffDates(t1, t2 time.Time) *date {
 	setDate(&d1, t1)
 	setDate(&d2, t2)
 
-	if d1.millisecond < d2.millisecond {
-		d1.millisecond += 1000
-		d1.second--
-	}
 	diff.millisecond = d1.millisecond - d2.millisecond
-
-	if d1.second < d2.second {
-		d1.second += 60
-		d1.minute--
-	}
 	diff.second = d1.second - d2.second
-
-	if d1.minute < d2.minute {
-		d1.minute += 60
-		d1.hour--
-	}
 	diff.minute = d1.minute - d2.minute
-
-	if d1.hour < d2.hour {
-		d1.hour += 24
-		d1.doy--
-	}
 	diff.hour = d1.hour - d2.hour
-
-	if d1.doy < d2.doy {
-		if isLeapYear(d2.year) {
-			d2.doy -= 366
-		} else {
-			d2.doy -= 365
-		}
-		d2.year++
-	}
 	diff.doy = d1.doy - d2.doy
-
 	diff.year = d1.year - d2.year
+
 	return &diff
 }
 
