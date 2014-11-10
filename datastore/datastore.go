@@ -75,8 +75,8 @@ type Keyspace interface {
 		where expression.Expression, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]Pair, errors.Error)      // Bulk key-value fetch from this keyspace
-	FetchOne(key string) (value.Value, errors.Error) // Single key-value fetch from this keyspace
+	Fetch(keys []string) ([]AnnotatedPair, errors.Error)      // Bulk key-value fetch from this keyspace
+	FetchOne(key string) (value.AnnotatedValue, errors.Error) // Single key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys

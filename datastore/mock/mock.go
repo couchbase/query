@@ -186,8 +186,8 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
-	rv := make([]datastore.Pair, len(keys))
+func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
+	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -201,7 +201,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
+func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	i, e := strconv.Atoi(key)
 	if e != nil {
 		return nil, errors.NewError(e, fmt.Sprintf("no mock item: %v", key))
@@ -211,7 +211,7 @@ func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
 }
 
 // generate a mock document - used by FetchOne to mock a document in the keyspace
-func genItem(i int, nitems int) (value.Value, errors.Error) {
+func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	if i < 0 || i >= nitems {
 		return nil, errors.NewError(nil,
 			fmt.Sprintf("item out of mock range: %v [0,%v)", i, nitems))

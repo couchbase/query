@@ -94,8 +94,8 @@ func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Ex
 	return nil, errors.NewError(nil, "Not supported.")
 }
 
-func (b *dualKeyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
-	rv := make([]datastore.Pair, len(keys))
+func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
+	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -108,9 +108,9 @@ func (b *dualKeyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *dualKeyspace) FetchOne(key string) (value.Value, errors.Error) {
+func (b *dualKeyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	doc := map[string]interface{}{}
-	return value.NewValue(doc), nil
+	return value.NewAnnotatedValue(doc), nil
 }
 
 func (b *dualKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {

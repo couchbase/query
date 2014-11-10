@@ -277,8 +277,8 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 	return nil, errors.NewError(nil, "Create index is not supported for file-based datastore.")
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
-	rv := make([]datastore.Pair, len(keys))
+func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
+	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if e != nil {
@@ -292,7 +292,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
+func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	path := filepath.Join(b.path(), key+".json")
 	item, e := fetch(path)
 	if e != nil {
@@ -579,7 +579,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection
 	}
 }
 
-func fetch(path string) (item value.Value, e errors.Error) {
+func fetch(path string) (item value.AnnotatedValue, e errors.Error) {
 	bytes, er := ioutil.ReadFile(path)
 	if er != nil {
 		if os.IsNotExist(er) {

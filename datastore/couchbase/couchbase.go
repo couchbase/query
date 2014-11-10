@@ -429,13 +429,13 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 	}
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 
 	if len(keys) == 0 {
 		return nil, errors.NewError(nil, "No keys to fetch")
 	}
 
-	rv := make([]datastore.Pair, len(keys))
+	rv := make([]datastore.AnnotatedPair, len(keys))
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		return nil, errors.NewError(err, "Error doing bulk get")
@@ -444,7 +444,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 	i := 0
 	for k, v := range bulkResponse {
 
-		var doc datastore.Pair
+		var doc datastore.AnnotatedPair
 		doc.Key = k
 
 		Value := value.NewAnnotatedValue(value.NewValueFromBytes(v.Body))
@@ -472,7 +472,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.Pair, errors.Error) {
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.Value, errors.Error) {
+func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
 
 	item, e := b.Fetch([]string{key})
 	if e != nil {

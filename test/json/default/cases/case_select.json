@@ -19,7 +19,6 @@
             "title": "INFERNO"
         },
         {
-            "$1": null,
             "genre": [
                 "Action",
                 "Thriller"
@@ -36,7 +35,7 @@
             "runtime": "266.0 mins",
             "title": "SHERLOCK: SERIES 1"
         }
-    ]
+    ] 
     },
 
     {
@@ -50,7 +49,6 @@
             "title": "INFERNO"
         },
         {
-            "$1": null,
             "genre": [
                 "Action",
                 "Thriller"
@@ -568,10 +566,8 @@
             }
         },
         {
-            "c": null
         },
         {
-            "c": null
         },
         {},
         {},

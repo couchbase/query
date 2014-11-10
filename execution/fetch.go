@@ -92,25 +92,28 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	// Attach meta and send
 	for i, pair := range pairs {
 		item := pair.Value
+		var fv value.AnnotatedValue
 
 		// Apply projection, if any
 		project := this.plan.Project()
 		if project != nil {
-			var e error
-			item, e = project.Evaluate(item, context)
+			projectedItem, e := project.Evaluate(item, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating fetch path."))
 				return false
 			}
 
-			if item.Type() == value.MISSING {
+			if projectedItem.Type() == value.MISSING {
 				continue
 			}
+			fv = value.NewAnnotatedValue(projectedItem)
+		} else {
+
+			fv = value.NewAnnotatedValue(item)
 		}
 
 		av := this.batch[i]
-		fv := value.NewAnnotatedValue(item)
 		switch item := item.(type) {
 		case value.AnnotatedValue:
 			meta := item.(value.AnnotatedValue).GetAttachment("meta")

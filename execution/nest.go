@@ -91,24 +91,26 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	nvs := make([]interface{}, len(pairs))
 	for i, pair := range pairs {
 		nestItem := pair.Value
+		var nv value.AnnotatedValue
 
 		// Apply projection, if any
 		project := this.plan.Term().Right().Project()
 		if project != nil {
-			var e error
-			nestItem, e = project.Evaluate(nestItem, context)
+			projectedItem, e := project.Evaluate(nestItem, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating nest path."))
 				return false
 			}
 
-			if nestItem.Type() == value.MISSING {
+			if projectedItem.Type() == value.MISSING {
 				continue
 			}
+			nv = value.NewAnnotatedValue(projectedItem)
+		} else {
+			nv = value.NewAnnotatedValue(nestItem)
 		}
 
-		nv := value.NewAnnotatedValue(nestItem)
 		nv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
 		nvs[i] = nv
 	}

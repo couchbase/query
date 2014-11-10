@@ -92,26 +92,28 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	// Attach and send
 	for i, pair := range pairs {
 		joinItem := pair.Value
+		var jv value.AnnotatedValue
 
 		// Apply projection, if any
 		project := this.plan.Term().Right().Project()
 		if project != nil {
-			var e error
-			joinItem, e = project.Evaluate(joinItem, context)
+			projectedItem, e := project.Evaluate(joinItem, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating join path."))
 				return false
 			}
 
-			if joinItem.Type() == value.MISSING {
+			if projectedItem.Type() == value.MISSING {
 				continue
 			} else {
 				found = true
 			}
+			jv = value.NewAnnotatedValue(projectedItem)
+		} else {
+			jv = value.NewAnnotatedValue(joinItem)
 		}
 
-		jv := value.NewAnnotatedValue(joinItem)
 		jv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
 
 		var av value.AnnotatedValue
