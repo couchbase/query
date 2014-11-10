@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -190,8 +191,12 @@ func (this *Context) Recover() {
 	err := recover()
 	if err != nil {
 		buf := make([]byte, 1<<16)
+		n := runtime.Stack(buf, false)
+		s := string(buf[0:n])
 		logging.Severep("", logging.Pair{"panic", err},
-			logging.Pair{"stack", runtime.Stack(buf, false)})
+			logging.Pair{"stack", s})
+		os.Stderr.WriteString(s)
+		os.Stderr.Sync()
 
 		switch err := err.(type) {
 		case error:

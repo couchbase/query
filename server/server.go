@@ -10,6 +10,7 @@
 package server
 
 import (
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -101,8 +102,12 @@ func (this *Server) serviceRequest(request Request) {
 		err := recover()
 		if err != nil {
 			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
 			logging.Severep("", logging.Pair{"panic", err},
-				logging.Pair{"stack", runtime.Stack(buf, false)})
+				logging.Pair{"stack", s})
+			os.Stderr.WriteString(s)
+			os.Stderr.Sync()
 		}
 	}()
 
