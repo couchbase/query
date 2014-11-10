@@ -39,13 +39,14 @@ func (this *CreateIndex) Copy() Operator {
 }
 
 func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
-	if context.Readonly() {
-		return
-	}
-
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+
+		if context.Readonly() {
+			return
+		}
 
 		// Actually create index
 		node := this.plan.Node()

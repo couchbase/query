@@ -43,6 +43,7 @@ func (this *KeyScan) Copy() Operator {
 
 func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 

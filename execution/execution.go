@@ -34,7 +34,7 @@ type Operator interface {
 	Parent() Parent                               // Notified when this operator stops
 	SetParent(parent Parent)                      // Can be set
 	Copy() Operator                               // Keep input/output/parent; make new channels
-	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once
+	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
 }
 
 type Parent interface {

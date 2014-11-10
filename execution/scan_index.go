@@ -46,6 +46,7 @@ func (this *IndexScan) Copy() Operator {
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
@@ -110,6 +111,7 @@ func (this *spanScan) Copy() Operator {
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 

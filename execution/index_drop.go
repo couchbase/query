@@ -38,13 +38,14 @@ func (this *DropIndex) Copy() Operator {
 }
 
 func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
-	if context.Readonly() {
-		return
-	}
-
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+
+		if context.Readonly() {
+			return
+		}
 
 		// Actually drop index
 		err := this.plan.Index().Drop()

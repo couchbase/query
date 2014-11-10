@@ -43,9 +43,7 @@ func (this *SendUpdate) Copy() Operator {
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
-	if !context.Readonly() {
-		this.runConsumer(this, context, parent)
-	}
+	this.runConsumer(this, context, parent)
 }
 
 func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -96,4 +94,8 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	this.batch = nil
 	return true
+}
+
+func (this *SendUpdate) readonly() bool {
+	return false
 }

@@ -10,12 +10,15 @@
 package execution
 
 import (
+	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -181,4 +184,20 @@ func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
 	this.mutex.Lock()
 	this.entries[key] = value
 	this.mutex.Unlock()
+}
+
+func (this *Context) Recover() {
+	err := recover()
+	if err != nil {
+		buf := make([]byte, 1<<16)
+		logging.Severep("", logging.Pair{"panic", err},
+			logging.Pair{"stack", runtime.Stack(buf, false)})
+
+		switch err := err.(type) {
+		case error:
+			this.Fatal(errors.NewError(err, fmt.Sprintf("Panic: %v", err)))
+		default:
+			this.Fatal(errors.NewError(nil, fmt.Sprintf("Panic: %v", err)))
+		}
+	}
 }

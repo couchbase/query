@@ -115,13 +115,19 @@ type consumer interface {
 	beforeItems(context *Context, parent value.Value) bool
 	processItem(item value.AnnotatedValue, context *Context) bool
 	afterItems(context *Context)
+	readonly() bool
 }
 
 func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
 	this.once.Do(func() {
+		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 		defer func() { this.batch = nil }()
+
+		if context.Readonly() && !cons.readonly() {
+			return
+		}
 
 		ok := cons.beforeItems(context, parent)
 
@@ -160,6 +166,11 @@ func (this *base) beforeItems(context *Context, parent value.Value) bool {
 
 // Override if needed
 func (this *base) afterItems(context *Context) {
+}
+
+// Override if needed
+func (this *base) readonly() bool {
+	return true
 }
 
 // Unblock all dependencies.

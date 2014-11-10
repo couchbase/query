@@ -10,8 +10,6 @@
 package server
 
 import (
-	"fmt"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -21,6 +19,7 @@ import (
 	"github.com/couchbaselabs/query/datastore/system"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/parser/n1ql"
 	"github.com/couchbaselabs/query/plan"
 )
@@ -102,8 +101,8 @@ func (this *Server) serviceRequest(request Request) {
 		err := recover()
 		if err != nil {
 			buf := make([]byte, 1<<16)
-			fmt.Printf("%v\n%s\n", err, runtime.Stack(buf, false))
-			os.Stdout.Sync()
+			logging.Severep("", logging.Pair{"panic", err},
+				logging.Pair{"stack", runtime.Stack(buf, false)})
 		}
 	}()
 

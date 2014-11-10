@@ -38,9 +38,7 @@ func (this *SendDelete) Copy() Operator {
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
-	if !context.Readonly() {
-		this.runConsumer(this, context, parent)
-	}
+	this.runConsumer(this, context, parent)
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -81,4 +79,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	this.batch = nil
 	return true
+}
+
+func (this *SendDelete) readonly() bool {
+	return false
 }
