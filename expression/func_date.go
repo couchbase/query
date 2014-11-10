@@ -210,7 +210,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(timeToStr(t, da)), nil
+	return value.NewValue(t.String()), nil
 }
 
 func (this *DateAddStr) Constructor() FunctionConstructor {
