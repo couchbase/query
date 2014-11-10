@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/datastore/system"
@@ -29,6 +30,7 @@ type Server struct {
 	datastore   datastore.Datastore
 	systemstore datastore.Datastore
 	configstore clustering.ConfigurationStore
+	acctstore   accounting.AccountingStore
 	namespace   string
 	readonly    bool
 	channel     RequestChannel
@@ -40,11 +42,13 @@ type Server struct {
 }
 
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
+	acctng accounting.AccountingStore,
 	namespace string, readonly bool, channel RequestChannel, threadCount int,
 	timeout time.Duration, signature, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		configstore: config,
+		acctstore:   acctng,
 		namespace:   namespace,
 		readonly:    readonly,
 		channel:     channel,
@@ -65,6 +69,14 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 
 func (this *Server) Datastore() datastore.Datastore {
 	return this.datastore
+}
+
+func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
+	return this.configstore
+}
+
+func (this *Server) AccountingStore() accounting.AccountingStore {
+	return this.acctstore
 }
 
 func (this *Server) Channel() RequestChannel {

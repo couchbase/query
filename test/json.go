@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"os"
 
+	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
 	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
 	"github.com/couchbaselabs/query/datastore/resolver"
 	"github.com/couchbaselabs/query/errors"
@@ -153,8 +154,15 @@ func Start(site, pool string) *server.Server {
 		)
 	}
 
+	acctstore, err := acct_resolver.NewAcctstore("stub:")
+	if err != nil {
+		logging.Errorp("Could not connect to acctstore",
+			logging.Pair{"error", err},
+		)
+	}
+
 	channel := make(server.RequestChannel, 10)
-	server, err := server.NewServer(datastore, configstore, "json", false, channel,
+	server, err := server.NewServer(datastore, configstore, acctstore, "json", false, channel,
 		4, 0, false, false)
 	if err != nil {
 		logging.Errorp(err.Error())
