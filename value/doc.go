@@ -1,4 +1,5 @@
-## Source code distribution :
+/*
+ ## Source code distribution :
 
 ###Note: 
 *Any definition starting with a capital letter is public; the small case definitions can be seen only by that particular package. 
@@ -175,8 +176,5 @@ Set implements a hash set of values. It is a type defined as a struct containing
 The Values() method, returns a slice of Value that contains all the values in the Set. It creates a variable that is a slice of Values and appends all the existing elements in the set to it. The Actuals method is similar to the Values method except that before appending the values to the slice of interface, we convert it into a golang type by calling actual and then return the slice.
 
 
-
-
-
-
-
+*/
+package value
