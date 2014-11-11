@@ -48,7 +48,7 @@ func (this *Collect) RunOnce(context *Context, parent value.Value) {
 
 func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bool {
 	if len(this.values) == cap(this.values) {
-		values := make([]interface{}, len(this.values)<<1)
+		values := make([]interface{}, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}

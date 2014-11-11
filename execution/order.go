@@ -10,11 +10,9 @@
 package execution
 
 import (
-	"sort"
-
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
-	_ "github.com/couchbaselabs/query/sort"
+	"github.com/couchbaselabs/query/sort"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -56,7 +54,7 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
 	if len(this.values) == cap(this.values) {
-		values := make(value.AnnotatedValues, len(this.values)<<1)
+		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}
