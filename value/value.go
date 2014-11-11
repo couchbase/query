@@ -8,8 +8,11 @@
 //  and limitations under the License.
 
 /*
-Package value represents the data model. It is the in memory representation of the data in 
-flight. It provides a native abstraction for JSON data values, with delayed parsing.
+
+Package value represents the data model. It is the in memory
+representation of the data in flight. It provides a native abstraction
+for JSON data values, with delayed parsing.
+
 */
 package value
 
@@ -29,7 +32,15 @@ const (
 )
 
 /*
- Function ToTristate converts a boolean into a Tristate type. If the function argument represents a True then it returns a True Tristate value, else it returns False. It is used to represent the metrics (which is defined as a type of value. Tristate in the struct of type BaseRequest) in server/http/http_request.go, which handles the http request step in the N1ql Architecture diagram and provides the metadata before the results. 
+
+Function ToTristate converts a boolean into a Tristate type. If the
+function argument represents a True then it returns a True Tristate
+value, else it returns False. It is used to represent the metrics
+(which is defined as a type of value. Tristate in the struct of type
+BaseRequest) in server/http/http_request.go, which handles the http
+request step in the N1ql Architecture diagram and provides the
+metadata before the results.
+
 */
 func ToTristate(b bool) Tristate {
 	if b {
@@ -40,7 +51,9 @@ func ToTristate(b bool) Tristate {
 }
 
 /*
-Function ToBool converts a Tristate value to a boolean. 
+
+Function ToBool converts a Tristate value to a boolean.
+
 */
 func ToBool(t Tristate) bool {
 	return t == TRUE
@@ -50,8 +63,12 @@ func ToBool(t Tristate) bool {
 type Type int
 
 /*
-List of valid N1QL types. Missing is specific to N1QL and Binary refers to unparsed JSON bytes,
-represented by a bytes array. It is a non-JSON value. The value type JSON is all-encompassing and covers all N1ql values.
+
+List of valid N1QL types. Missing is specific to N1QL and Binary
+refers to unparsed JSON bytes, represented by a bytes array. It is a
+non-JSON value. The value type JSON is all-encompassing and covers all
+N1ql values.
+
 */
 const (
 	MISSING = Type(iota) // Missing field
@@ -65,14 +82,18 @@ const (
 	JSON                 // Non-specific JSON; used in result sets
 )
 
-// Stringer interface, which is used in expression/stringer.go to visit nodes and convert from 
-// type defined to a string and return it.
+// Stringer interface, which is used in expression/stringer.go to
+// visit nodes and convert from type defined to a string and return
+// it.
 func (this Type) String() string {
 	return _TYPE_NAMES[this]
 }
 
 /*
-The _TYPE_NAMES variable is a slice of strings that contains the Type and its corresponding string representation.
+
+The _TYPE_NAMES variable is a slice of strings that contains the Type
+and its corresponding string representation.
+
 */
 var _TYPE_NAMES = []string{
 	MISSING: "missing",
@@ -99,7 +120,12 @@ func (this Unsettable) Error() string {
 }
 
 /*
-The _MARSHAL_ERROR constant represents an error string that is output when there is an unexpected marshal error on valid data. Marshal returns the JSON encoding of any input interface. It is used while implementing the method MarshalJSON
+
+The _MARSHAL_ERROR constant represents an error string that is output
+when there is an unexpected marshal error on valid data. Marshal
+returns the JSON encoding of any input interface. It is used while
+implementing the method MarshalJSON
+
 */
 const _MARSHAL_ERROR = "Unexpected marshal error on valid data."
 
@@ -110,106 +136,162 @@ type ValueChannel chan Value
 type Values []Value
 type CompositeValues []Values
 
-// An interface for storing and manipulating a JSON value.Each 'value' implements the methods that
-//correspond to it.
-
+// An interface for storing and manipulating a JSON value.Each 'value'
+// implements the methods that correspond to it.
 type Value interface {
 	/* 
-           This method is used by the json package. It is used to convert to JSON byte encoding; 
-           and returns a byte array of valid JSON values. error is always nil. 
+
+           This method is used by the json package. It is used to
+           convert to JSON byte encoding; and returns a byte array of
+           valid JSON values. error is always nil.
+
         */
         MarshalJSON() ([]byte, error)                  
 
         /*
-           Returns the type of the input based on the previously defined Types(Data type constant).
+
+           Returns the type of the input based on the previously
+           defined Types(Data type constant).
+
         */
 	Type() Type                                     
 
         /*
-           N1QL to native Go representation of method receiver. It returns an interface.
+
+           N1QL to native Go representation of method receiver. It
+           returns an interface.
+
         */
 	Actual() interface{}                            
 
         /*
-           Returns a Boolean based on if receiver and input argument Value are equal. It is faster than Collate().
+
+           Returns a Boolean based on if receiver and input argument
+           Value are equal. It is faster than Collate().
+
         */
 	Equals(other Value) bool                        
 
         /*
-           Returns –int, 0 or +int depending on if the receiver this sorts less than, equal to, or greater 
-           than the input argument Value to the method. It uses the type order defined previously.
-           (This order has also been defined in the N1QL spec under order by.) 
+
+           Returns –int, 0 or +int depending on if the receiver this
+           sorts less than, equal to, or greater than the input
+           argument Value to the method. It uses the type order
+           defined previously.  (This order has also been defined in
+           the N1QL spec under order by.)
+
         */
 	Collate(other Value) int                        
 
         /*
-           Returns the Boolean interpretation of the input this for different values(Truth value).
+
+           Returns the Boolean interpretation of the input this for
+           different values(Truth value).
+
         */
 	Truth() bool                                    
 
         /*
-           Returns a Value, which is a shallow copy of the input. 
+
+           Returns a Value, which is a shallow copy of the input.
+
         */
 	Copy() Value                                    
 
         /*
-           Returns a Value that is a deep copy of the receiver. It is used for Updates.
+
+           Returns a Value that is a deep copy of the receiver. It is
+           used for Updates.
+
         */
 	CopyForUpdate() Value                          
 
         /*
-           Access a field or nested data in an object.(Object field dereference) Returns a value and a Boolean; 
-           the value being either a missing or the N1QL Value of the input for objects, and a true if found.
-           This function returns a missingField and false; for all the value types except Object.
+
+           Access a field or nested data in an object.(Object field
+           dereference) Returns a value and a Boolean; the value being
+           either a missing or the N1QL Value of the input for
+           objects, and a true if found.  This function returns a
+           missingField and false; for all the value types except
+           Object.
+
         */
 	Field(field string) (Value, bool)               
 
         /*
-           Set a field in an object. For types other than object, Unsettable is called since this 
-           method is not valid for those types.
+
+           Set a field in an object. For types other than object,
+           Unsettable is called since this method is not valid for
+           those types.
+
         */
 	SetField(field string, val interface{}) error   
 
         /*
-           It deletes the input field for an object. For types other than object, Unsettable is called.
+
+           It deletes the input field for an object. For types other
+           than object, Unsettable is called.
+
         */
 	UnsetField(field string) error                  
 
         /*
-           Access an entry at a particular index in the array.(Array index dereference) The return value is the 
-           Value at that index and a Boolean; the value being a N1QL value of the input for the slice and a 
-           true if found. It returns missingIndex and false; for all types except slice/array.
+
+           Access an entry at a particular index in the array.(Array
+           index dereference) The return value is the Value at that
+           index and a Boolean; the value being a N1QL value of the
+           input for the slice and a true if found. It returns
+           missingIndex and false; for all types except slice/array.
+
         */
 	Index(index int) (Value, bool)                  
 	
         /*
-           Populate the value at a particular index in the slice with val of type interface. Slices do not 
-           extend beyond their length. For any attempt to set an index that is greater than length, 
-           Unsettable is called.
+
+           Populate the value at a particular index in the slice with
+           val of type interface. Slices do not extend beyond their
+           length. For any attempt to set an index that is greater
+           than length, Unsettable is called.
+
         */
         SetIndex(index int, val interface{}) error      
 
         /*
-           Array slicing. Takes a start and end index and returns a new slice; also returns a bool that is true 
-           if receiver is of type array. For all non slice values it returns NULL_VALUE and false.
+
+           Array slicing. Takes a start and end index and returns a
+           new slice; also returns a bool that is true if receiver is
+           of type array. For all non slice values it returns
+           NULL_VALUE and false.
+
         */
 	Slice(start, end int) (Value, bool)             
  
         /*
-           Array slicing to the end of the array. Takes a start index and returns a new slice till the end of
-           the slice; bool returns true if found. For all non array/slice values it returns a NULL_VALUE and false.
+
+           Array slicing to the end of the array. Takes a start index
+           and returns a new slice till the end of the slice; bool
+           returns true if found. For all non array/slice values it
+           returns a NULL_VALUE and false.
+
         */
 	SliceTail(start int) (Value, bool)              
 
         /*
-           Lists the descendants of an array or object in depth first order (multilevel list flattening) 
-           by adding it to an input buffer and returning it.
+
+           Lists the descendants of an array or object in depth first
+           order (multilevel list flattening) by adding it to an input
+           buffer and returning it.
+
         */
 	Descendants(buffer []interface{}) []interface{} 
 	
         /*
-           Gives you the object fields by adding them to a string to interface map. This returns null for all 
-           types except object. ( it is used in expression/nav_field.go to navigate through fields of value Value).
+
+           Gives you the object fields by adding them to a string to
+           interface map. This returns null for all types except
+           object. ( it is used in expression/nav_field.go to navigate
+           through fields of value Value).
+
         */
         Fields() map[string]interface{}                
 }
