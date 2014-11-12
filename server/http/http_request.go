@@ -39,9 +39,17 @@ type httpRequest struct {
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
+	var httpArgs httpRequestArgs
+
 	err := req.ParseForm()
 
-	httpArgs, err := getRequestParams(req)
+	if req.Method != "GET" && req.Method != "POST" {
+		err = fmt.Errorf("Unsupported http method: %s", req.Method)
+	}
+
+	if err == nil {
+		httpArgs, err = getRequestParams(req)
+	}
 
 	var statement string
 	if err == nil {
