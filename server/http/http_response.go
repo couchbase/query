@@ -18,7 +18,6 @@ import (
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
-	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
 )
@@ -30,8 +29,7 @@ func (this *httpRequest) Output() execution.Output {
 func (this *httpRequest) Fail(err errors.Error) {
 	defer this.Stop(server.FATAL)
 
-	logging.Errorp("httpRequest.Fail", logging.Pair{"err", err})
-	// Figure out appropriate http response code based on the error
+	// Determin the appropriate http response code based on the error
 	this.httpRespCode = mapErrorToHttpResponse(err)
 	// Put the error on the errors channel
 	this.Errors() <- err
@@ -39,18 +37,25 @@ func (this *httpRequest) Fail(err errors.Error) {
 
 func mapErrorToHttpResponse(err errors.Error) int {
 	switch err.Code() {
-	// TODO return appropriate
+	// TODO return appropriate http error code for warning
+	case 5000:
+		return http.StatusInternalServerError
+	case 4100:
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
-	logging.Infop("httpRequest.Failed", logging.Pair{"this.httpRespCode", this.httpRespCode})
 	this.resp.WriteHeader(this.httpRespCode)
 	this.writeString("{\n")
 	this.writeRequestID()
-	this.writeSuffix(srvr.Metrics(), "")
+	this.writeErrors()
+	this.writeWarnings()
+	this.writeState("")
+	this.writeMetrics(srvr.Metrics())
+	this.writeString("\n}\n")
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
@@ -58,7 +63,6 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.NotifyStop(stopNotify)
 
-	logging.Infop("httpRequest.Execute", logging.Pair{"this.httpRespCode", this.httpRespCode})
 	this.resp.WriteHeader(http.StatusOK)
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&
@@ -85,6 +89,9 @@ func (this *httpRequest) writeRequestID() bool {
 }
 
 func (this *httpRequest) writeSignature(signature value.Value) bool {
+	if !this.Signature() {
+		return true
+	}
 	return this.writeString("    \"signature\": ") &&
 		this.writeValue(signature) &&
 		this.writeString(",\n")
@@ -190,7 +197,7 @@ loop:
 		case err, ok = <-this.Errors():
 			if ok {
 				if this.errorCount == 0 {
-					this.writeString(",\n    \"errors\": [")
+					this.writeString("\n    \"errors\": [")
 				}
 				ok = this.writeError(err, this.errorCount)
 				this.errorCount++
@@ -212,7 +219,7 @@ loop:
 		case err, ok = <-this.Warnings():
 			if ok {
 				if this.warningCount == 0 {
-					this.writeString(",\n    \"warnings\": [")
+					this.writeString("\n    \"warnings\": [")
 				}
 				ok = this.writeError(err, this.warningCount)
 				this.warningCount++

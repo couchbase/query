@@ -48,6 +48,7 @@ type Request interface {
 	Timeout() time.Duration
 	Readonly() bool
 	Metrics() value.Tristate
+	Signature() bool
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
@@ -73,6 +74,7 @@ type BaseRequest struct {
 	namespace      string
 	timeout        time.Duration
 	readonly       bool
+	signature      bool
 	metrics        value.Tristate
 	requestTime    time.Time
 	serviceTime    time.Time
@@ -96,7 +98,7 @@ func (r *requestIDImpl) String() string {
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
-	positionalArgs value.Values, namespace string, readonly bool, metrics value.Tristate) *BaseRequest {
+	positionalArgs value.Values, namespace string, readonly bool, metrics value.Tristate, hdr bool) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
@@ -104,6 +106,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		positionalArgs: positionalArgs,
 		namespace:      namespace,
 		readonly:       readonly,
+		signature:      hdr,
 		metrics:        metrics,
 		requestTime:    time.Now(),
 		serviceTime:    time.Now(),
@@ -115,10 +118,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
 	}
-	uuid, id_err := newUUID()
-	if id_err != nil {
-		// TODO: deal with unable to generate UUID; log warning, set uuid to empty request ID
-	}
+	uuid, _ := newUUID()
 	rv.id = uuid
 	return rv
 }
@@ -162,6 +162,10 @@ func (this *BaseRequest) Timeout() time.Duration {
 
 func (this *BaseRequest) Readonly() bool {
 	return this.readonly
+}
+
+func (this *BaseRequest) Signature() bool {
+	return this.signature
 }
 
 func (this *BaseRequest) Metrics() value.Tristate {
@@ -272,7 +276,7 @@ func newUUID() (*requestIDImpl, error) {
 	uuid := make([]byte, 16)
 	n, err := io.ReadFull(rand.Reader, uuid)
 	if n != len(uuid) || err != nil {
-		return nil, err
+		return &requestIDImpl{id: ""}, err
 	}
 	// variant bits; see section 4.1.1
 	uuid[8] = uuid[8]&^0xc0 | 0x80

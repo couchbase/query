@@ -30,7 +30,10 @@ func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndp
 	rv.httpsrv.Addr = addr
 	rv.httpsrv.Handler = rv
 
-	// Bind HttpEndpoint object to /query endpoint; use default Server Mux
+	// Bind HttpEndpoint object to /query/service endpoint; use default Server Mux
+	http.Handle("/query/service", rv)
+
+	// TODO: Deprecate (remove) this binding after QE has migrated to /query
 	http.Handle("/query", rv)
 
 	return rv
@@ -44,7 +47,9 @@ func (this *HttpEndpoint) ListenAndServe() error {
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	request := newHttpRequest(resp, req)
+
 	if request.State() == server.FATAL {
+		// There was problems creating the request: Fail it and return
 		request.Failed(this.server)
 		return
 	}

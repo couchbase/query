@@ -138,7 +138,6 @@ func (this *Server) serviceRequest(request Request) {
 
 	if request.State() == FATAL {
 		// Fail the request - Write out response - and return
-		logging.Infop("serviceRequest - invoking Failed on request")
 		request.Failed(this)
 		return
 	}
