@@ -29,7 +29,7 @@ func (this *httpRequest) Output() execution.Output {
 func (this *httpRequest) Fail(err errors.Error) {
 	defer this.Stop(server.FATAL)
 
-	// Determin the appropriate http response code based on the error
+	// Determine the appropriate http response code based on the error
 	this.httpRespCode = mapErrorToHttpResponse(err)
 	// Put the error on the errors channel
 	this.Errors() <- err

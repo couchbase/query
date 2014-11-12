@@ -33,7 +33,7 @@ func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndp
 	// Bind HttpEndpoint object to /query/service endpoint; use default Server Mux
 	http.Handle("/query/service", rv)
 
-	// TODO: Deprecate (remove) this binding after QE has migrated to /query
+	// TODO: Deprecate (remove) this binding after QE has migrated to /query/service
 	http.Handle("/query", rv)
 
 	return rv

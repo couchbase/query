@@ -25,7 +25,7 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-const MAX_REQUEST_BYTES = 20
+const MAX_REQUEST_BYTES = 1 << 20
 
 type httpRequest struct {
 	server.BaseRequest
