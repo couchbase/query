@@ -7,8 +7,6 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build ignore
-
 package couchbase
 
 import "github.com/couchbaselabs/query/datastore"
@@ -19,10 +17,10 @@ import "github.com/couchbaselabs/query/logging"
 import "github.com/couchbase/indexing/secondary/queryport"
 
 // ClusterManagerAddr is temporary hard-coded address for cluster-manager-agent
-const ClusterManagerAddr = "localhost:9997"
+const ClusterManagerAddr = "localhost:9101"
 
 // IndexerAddr is temporary hard-coded address for indexer node.
-const IndexerAddr = "localhost:9998"
+const IndexerAddr = "localhost:9102"
 
 // load 2i indexes and remember them as part of keyspace.indexes.
 func (b *keyspace) load2iIndexes() errors.Error {
@@ -47,29 +45,30 @@ func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
 		return indexes, err
 	}
 	for _, info := range infos {
-		rkeys := make(expression.Expressions, 0)
-		for _, secExpr := range info.SecExprs {
-			expr, err := parser.Parse(secExpr)
+		rkeys, err := parseExprs(info.SecExprs)
+		if err != nil {
+			return nil, err
+		}
+		ekeys, err := parseExprs([]string{info.PartnExpr})
+		if err != nil {
+			return nil, err
+		}
+		wkey := expression.Expression(nil)
+		if len(info.WhereExpr) > 0 {
+			expr, err := parser.Parse(info.WhereExpr)
 			if err != nil {
 				return nil, err
 			}
-			rkeys = append(rkeys, expr)
-		}
-		expr, err := parser.Parse(info.PartnExpr)
-		if err != nil {
-			return nil, err
-		}
-		ekey := expression.Expressions{expr}
-		wkey, err := parser.Parse(info.WhereExpr)
-		if err != nil {
-			return nil, err
+			wkey = expr
 		}
 		using := datastore.IndexType(info.Using)
-		index, err := new2iIndex(info.Name, ekey, rkeys, wkey, using, b)
-		if err != nil {
-			return nil, err
+		if idx, err := b.IndexById(info.Name); err == nil && idx == nil {
+			index, err := new2iIndex(info.Name, ekeys, rkeys, wkey, using, b)
+			if err != nil {
+				return nil, err
+			}
+			indexes[index.Name()] = index
 		}
-		indexes[index.Name()] = index
 	}
 	return indexes, nil
 }
@@ -78,10 +77,16 @@ func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
 func new2iPrimaryIndex(
 	b *keyspace, using datastore.IndexType) (*secondaryIndex, errors.Error) {
 
+	if idx, err := b.IndexByName(PRIMARY_INDEX); idx != nil {
+		return nil, errors.NewError(err, "Primary index already created")
+	} else if err != nil {
+		return nil, errors.NewError(err, "Can't create primary index")
+	}
+
 	bucket := b.Name()
 	client := queryport.NewClusterClient(ClusterManagerAddr)
 	info, err := client.CreateIndex(
-		PRIMARY_INDEX, bucket, string(using), "", "", nil, true)
+		PRIMARY_INDEX, bucket, string(using), "N1QL", "", "", nil, true)
 	if err != nil {
 		return nil, errors.NewError(nil, err.Error())
 	}
@@ -125,7 +130,7 @@ func new2iIndex(
 	bucket := b.Name()
 	client := queryport.NewClusterClient(ClusterManagerAddr)
 	info, err := client.CreateIndex(
-		name, bucket, string(using), partnStr, whereStr, secStrs, false)
+		name, bucket, string(using), "N1QL", partnStr, whereStr, secStrs, false)
 	if err != nil {
 		return nil, errors.NewError(nil, err.Error())
 	}
@@ -144,4 +149,18 @@ func new2iIndex(
 	// TODO: fetch the new index topology from coordinator.
 	index.setHost([]string{IndexerAddr})
 	return index, nil
+}
+
+func parseExprs(exprs []string) (expression.Expressions, error) {
+	keys := expression.Expressions(nil)
+	if len(exprs) > 0 {
+		for _, expr := range exprs {
+			key, err := parser.Parse(expr)
+			if err != nil {
+				return nil, err
+			}
+			keys = append(keys, key)
+		}
+	}
+	return keys, nil
 }

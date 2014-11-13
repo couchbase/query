@@ -7,8 +7,6 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build ignore
-
 package couchbase
 
 import "encoding/json"
@@ -135,8 +133,10 @@ func (si *secondaryIndex) Statistics(
 	}
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
+	equal := [][]byte{keys2JSON(span.Equal)}
 	incl := uint32(span.Range.Inclusion)
-	pstats, e := client.Statistics(low, high, incl)
+	indexn, bucketn := si.name, si.keySpace.Name()
+	pstats, e := client.Statistics(indexn, bucketn, low, high, equal, incl)
 	if e != nil {
 		return nil, errors.NewError(nil, e.Error())
 	}
@@ -158,6 +158,7 @@ func (si *secondaryIndex) Drop() errors.Error {
 		return errors.NewError(nil, err.Error())
 	}
 	delete(si.keySpace.indexes, si.Name())
+	logging.Infof("Dropped index %v", si.Name())
 	return nil
 }
 
@@ -176,9 +177,12 @@ func (si *secondaryIndex) Scan(
 	}
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
+	equal := [][]byte{keys2JSON(span.Equal)}
 	incl := uint32(span.Range.Inclusion)
+	indexn, bucketn := si.name, si.keySpace.Name()
 	client.Scan(
-		low, high, incl, QueryPortPageSize, distinct, limit,
+		indexn, bucketn, low, high, equal, incl,
+		QueryPortPageSize, distinct, limit,
 		func(data interface{}) bool {
 			switch val := data.(type) {
 			case *protobuf.ResponseStream:
@@ -225,8 +229,9 @@ func (si *secondaryIndex) ScanEntries(
 		return
 	}
 
+	indexn, bucketn := si.name, si.keySpace.Name()
 	client.ScanAll(
-		QueryPortPageSize, limit,
+		indexn, bucketn, QueryPortPageSize, limit,
 		func(data interface{}) bool {
 			switch val := data.(type) {
 			case *protobuf.ResponseStream:
