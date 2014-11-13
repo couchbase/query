@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Parallel struct {
 	child Operator
 }
@@ -27,4 +31,10 @@ func (this *Parallel) Readonly() bool {
 
 func (this *Parallel) Child() Operator {
 	return this.child
+}
+
+func (this *Parallel) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "parallel"}
+	r["children"] = this.child
+	return json.Marshal(r)
 }

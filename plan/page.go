@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -32,6 +33,13 @@ func (this *Offset) Expression() expression.Expression {
 	return this.expr
 }
 
+func (this *Offset) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"Type": "offset"}
+	exprStr := expression.NewStringer().Visit(this.expr)
+	r["Expr"] = exprStr
+	return json.Marshal(r)
+}
+
 type Limit struct {
 	readonly
 	expr expression.Expression
@@ -49,4 +57,11 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Limit) Expression() expression.Expression {
 	return this.expr
+}
+
+func (this *Limit) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"Type": "limit"}
+	exprStr := expression.NewStringer().Visit(this.expr)
+	r["Expr"] = exprStr
+	return json.Marshal(r)
 }

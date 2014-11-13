@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -87,6 +88,12 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 	}
 
 	return nil
+}
+
+func (this *AggregateBase) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "aggregateFunction"}
+	r["function"] = this.UnaryFunctionBase.Name()
+	return json.Marshal(r)
 }
 
 type DistinctAggregateBase struct {

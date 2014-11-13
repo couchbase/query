@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 )
@@ -40,6 +41,13 @@ func (this *CreatePrimaryIndex) Node() *algebra.CreatePrimaryIndex {
 	return this.node
 }
 
+func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "createPrimaryIndex"}
+	r["keyspace"] = this.keyspace.Name()
+	r["name"] = this.node
+	return json.Marshal(r)
+}
+
 // Create index
 type CreateIndex struct {
 	readwrite
@@ -64,6 +72,13 @@ func (this *CreateIndex) Keyspace() datastore.Keyspace {
 
 func (this *CreateIndex) Node() *algebra.CreateIndex {
 	return this.node
+}
+
+func (this *CreateIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "createIndex"}
+	r["keyspace"] = this.keyspace.Name()
+	r["name"] = this.node
+	return json.Marshal(r)
 }
 
 // Drop index
@@ -92,6 +107,12 @@ func (this *DropIndex) Node() *algebra.DropIndex {
 	return this.node
 }
 
+func (this *DropIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "dropIndex"}
+	r["name"] = this.node
+	return json.Marshal(r)
+}
+
 // Alter index
 type AlterIndex struct {
 	readwrite
@@ -116,4 +137,11 @@ func (this *AlterIndex) Index() datastore.Index {
 
 func (this *AlterIndex) Node() *algebra.AlterIndex {
 	return this.node
+}
+
+func (this *AlterIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "alterIndex"}
+	r["index"] = this.index.Name()
+	r["name"] = this.node
+	return json.Marshal(r)
 }

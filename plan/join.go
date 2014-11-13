@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 )
@@ -76,6 +77,14 @@ func (this *Nest) Alias() string {
 	return this.alias
 }
 
+func (this *Nest) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "nest"}
+	r["keyspace"] = this.keyspace.Name()
+	r["term"] = this.term
+	r["as"] = this.alias
+	return json.Marshal(r)
+}
+
 type Unnest struct {
 	readonly
 	term  *algebra.Unnest
@@ -99,4 +108,11 @@ func (this *Unnest) Term() *algebra.Unnest {
 
 func (this *Unnest) Alias() string {
 	return this.alias
+}
+
+func (this *Unnest) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "unnest"}
+	r["term"] = this.term
+	r["as"] = this.alias
+	return json.Marshal(r)
 }

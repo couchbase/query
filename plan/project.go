@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 )
 
@@ -47,6 +48,13 @@ func (this *InitialProject) Terms() ProjectTerms {
 	return this.terms
 }
 
+func (this *InitialProject) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "initialProject"}
+	r["projection"] = this.projection
+	r["terms"] = this.terms
+	return json.Marshal(r)
+}
+
 type FinalProject struct {
 	readonly
 }
@@ -59,6 +67,11 @@ func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalProject(this)
 }
 
+func (this *FinalProject) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "finalProject"}
+	return json.Marshal(r)
+}
+
 type ProjectTerms []*ProjectTerm
 
 type ProjectTerm struct {
@@ -67,4 +80,10 @@ type ProjectTerm struct {
 
 func (this *ProjectTerm) Result() *algebra.ResultTerm {
 	return this.result
+}
+
+func (this *ProjectTerm) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "resultProject"}
+	r["result"] = this.result
+	return json.Marshal(r)
 }

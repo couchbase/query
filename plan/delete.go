@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 )
 
@@ -30,4 +31,10 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *SendDelete) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "delete"}
+	r["keyspace"] = this.keyspace.Name()
+	return json.Marshal(r)
 }

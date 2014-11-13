@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 )
 
@@ -30,4 +31,10 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Order) Terms() algebra.SortTerms {
 	return this.terms
+}
+
+func (this *Order) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "order"}
+	r["by"] = this.terms
+	return json.Marshal(r)
 }

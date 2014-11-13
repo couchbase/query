@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -31,6 +32,12 @@ func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 	return this.index
+}
+
+func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "primaryScan"}
+	r["index"] = this.index.(datastore.Index).Name()
+	return json.Marshal(r)
 }
 
 type IndexScan struct {
@@ -66,6 +73,15 @@ func (this *IndexScan) Limit() int64 {
 	return this.limit
 }
 
+func (this *IndexScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "indexScan"}
+	r["index"] = this.index.Name()
+	r["spans"] = this.spans
+	r["distinct"] = this.distinct
+	r["limit"] = this.limit
+	return json.Marshal(r)
+}
+
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).
 type KeyScan struct {
 	readonly
@@ -86,6 +102,12 @@ func (this *KeyScan) Keys() expression.Expression {
 	return this.keys
 }
 
+func (this *KeyScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "keyScan"}
+	r["keys"] = expression.NewStringer().Visit(this.keys)
+	return json.Marshal(r)
+}
+
 // ParentScan is used for UNNEST subqueries.
 type ParentScan struct {
 	readonly
@@ -97,6 +119,11 @@ func NewParentScan() *ParentScan {
 
 func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitParentScan(this)
+}
+
+func (this *ParentScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "parentScan"}
+	return json.Marshal(r)
 }
 
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
@@ -119,6 +146,12 @@ func (this *ValueScan) Values() expression.Expression {
 	return this.values
 }
 
+func (this *ValueScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "valueScan"}
+	r["values"] = expression.NewStringer().Visit(this.values)
+	return json.Marshal(r)
+}
+
 // DummyScan is used for SELECTs with no FROM clause.
 type DummyScan struct {
 	readonly
@@ -130,6 +163,10 @@ func NewDummyScan() *DummyScan {
 
 func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDummyScan(this)
+}
+
+func (this *DummyScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{"type": "dummyScan"})
 }
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
@@ -152,6 +189,12 @@ func (this *CountScan) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *CountScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "countScan"}
+	r["keyspace"] = this.keyspace.Name()
+	return json.Marshal(r)
+}
+
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
 	readonly
@@ -170,4 +213,10 @@ func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IntersectScan) Scans() []Operator {
 	return this.scans
+}
+
+func (this *IntersectScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "intersectScan"}
+	r["scans"] = this.scans
+	return json.Marshal(r)
 }

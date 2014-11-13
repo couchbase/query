@@ -12,6 +12,7 @@ package algebra
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -124,6 +125,20 @@ func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
 }
 
+func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "keyspaceTerm"}
+	r["as"] = this.as
+	if this.keys != nil {
+		r["keys"] = expression.NewStringer().Visit(this.keys)
+	}
+	r["namespace"] = this.namespace
+	r["keyspace"] = this.keyspace
+	if this.project != nil {
+		r["path"] = expression.NewStringer().Visit(this.project)
+	}
+	return json.Marshal(r)
+}
+
 type Join struct {
 	left  FromTerm
 	right *KeyspaceTerm
@@ -195,6 +210,14 @@ func (this *Join) Outer() bool {
 	return this.outer
 }
 
+func (this *Join) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "join"}
+	r["left"] = this.left
+	r["right"] = this.right
+	r["outer"] = this.outer
+	return json.Marshal(r)
+}
+
 type Nest struct {
 	left  FromTerm
 	right *KeyspaceTerm
@@ -264,6 +287,14 @@ func (this *Nest) Right() *KeyspaceTerm {
 
 func (this *Nest) Outer() bool {
 	return this.outer
+}
+
+func (this *Nest) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "nest"}
+	r["left"] = this.left
+	r["right"] = this.right
+	r["outer"] = this.outer
+	return json.Marshal(r)
 }
 
 type Unnest struct {
@@ -345,4 +376,15 @@ func (this *Unnest) Expression() expression.Expression {
 
 func (this *Unnest) As() string {
 	return this.as
+}
+
+func (this *Unnest) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "unnest"}
+	r["left"] = this.left
+	r["as"] = this.as
+	r["outer"] = this.outer
+	if this.expr != nil {
+		r["expr"] = expression.NewStringer().Visit(this.expr)
+	}
+	return json.Marshal(r)
 }

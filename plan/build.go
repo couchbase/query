@@ -47,6 +47,7 @@ type builder struct {
 	distinct     bool
 	children     []Operator
 	subChildren  []Operator
+	Type         string
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
@@ -56,6 +57,7 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		namespace:    namespace,
 		subquery:     subquery,
 		projectFinal: true,
+		Type:         "builder",
 	}
 }
 

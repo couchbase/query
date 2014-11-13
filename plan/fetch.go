@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -43,4 +44,14 @@ func (this *Fetch) Project() expression.Expression {
 
 func (this *Fetch) Alias() string {
 	return this.alias
+}
+
+func (this *Fetch) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "fetch"}
+	if this.project != nil {
+		r["projection"] = expression.NewStringer().Visit(this.project)
+	}
+	r["keyspace"] = this.keyspace.Name()
+	r["as"] = this.alias
+	return json.Marshal(r)
 }

@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -293,6 +294,14 @@ func (this *SetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
 }
 
+func (this *SetTerm) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "setTerm"}
+	r["path"] = expression.NewStringer().Visit(this.path)
+	r["value"] = expression.NewStringer().Visit(this.value)
+	r["updateFor"] = this.updateFor
+	return json.Marshal(r)
+}
+
 type UnsetTerms []*UnsetTerm
 
 type UnsetTerm struct {
@@ -345,6 +354,13 @@ func (this *UnsetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
 }
 
+func (this *UnsetTerm) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "unsetTerm"}
+	r["path"] = expression.NewStringer().Visit(this.path)
+	r["updateFor"] = this.updateFor
+	return json.Marshal(r)
+}
+
 type UpdateFor struct {
 	bindings expression.Bindings
 	when     expression.Expression
@@ -376,4 +392,13 @@ func (this *UpdateFor) Bindings() expression.Bindings {
 
 func (this *UpdateFor) When() expression.Expression {
 	return this.when
+}
+
+func (this *UpdateFor) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "updateFor"}
+	r["bindings"] = this.bindings
+	if this.when != nil {
+		r["when"] = expression.NewStringer().Visit(this.when)
+	}
+	return json.Marshal(r)
 }

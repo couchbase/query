@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Distinct struct {
 	readonly
 }
@@ -19,4 +23,9 @@ func NewDistinct() *Distinct {
 
 func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDistinct(this)
+}
+
+func (this *Distinct) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "distinct"}
+	return json.Marshal(r)
 }

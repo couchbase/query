@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/value"
 )
@@ -44,4 +45,11 @@ func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 
 func (this *CreatePrimaryIndex) Using() datastore.IndexType {
 	return this.using
+}
+
+func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "createPrimaryIndex"}
+	r["keyspaceRef"] = this.keyspace
+	r["using"] = this.using
+	return json.Marshal(r)
 }

@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Sequence struct {
 	children []Operator
 }
@@ -33,4 +37,10 @@ func (this *Sequence) Readonly() bool {
 
 func (this *Sequence) Children() []Operator {
 	return this.children
+}
+
+func (this *Sequence) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "serial"}
+	r["children"] = this.children
+	return json.Marshal(r)
 }

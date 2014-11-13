@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -37,4 +38,11 @@ func (this *SendUpsert) Keyspace() datastore.Keyspace {
 
 func (this *SendUpsert) Key() expression.Expression {
 	return this.key
+}
+
+func (this *SendUpsert) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "sendUpsert"}
+	r["key"] = expression.NewStringer().Visit(this.key)
+	r["keyspace"] = this.keyspace.Name()
+	return json.Marshal(r)
 }

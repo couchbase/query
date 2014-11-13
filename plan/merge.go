@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
@@ -63,4 +64,15 @@ func (this *Merge) Delete() Operator {
 
 func (this *Merge) Insert() Operator {
 	return this.insert
+}
+
+func (this *Merge) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "merge"}
+	r["keyspace"] = this.keyspace.Name()
+	r["keyspaceRef"] = this.ref
+	r["key"] = expression.NewStringer().Visit(this.key)
+	r["update"] = this.update
+	r["delete"] = this.delete
+	r["insert"] = this.insert
+	return json.Marshal(r)
 }

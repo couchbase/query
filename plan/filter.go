@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -30,4 +31,10 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Filter) Condition() expression.Expression {
 	return this.cond
+}
+
+func (this *Filter) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "where"}
+	r["condition"] = expression.NewStringer().Visit(this.cond)
+	return json.Marshal(r)
 }

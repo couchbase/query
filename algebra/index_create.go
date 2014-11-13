@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -70,4 +71,18 @@ func (this *CreateIndex) Where() expression.Expression {
 
 func (this *CreateIndex) Using() datastore.IndexType {
 	return this.using
+}
+
+func (this *CreateIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "createIndex"}
+	r["keyspaceRef"] = this.keyspace
+	r["name"] = this.name
+	if this.partition != nil {
+		r["partition"] = expression.NewStringer().Visit(this.partition)
+	}
+	r["using"] = this.using
+	if this.where != nil {
+		r["where"] = expression.NewStringer().Visit(this.where)
+	}
+	return json.Marshal(r)
 }

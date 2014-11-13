@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Alias struct {
 	readonly
 	alias string
@@ -26,4 +30,9 @@ func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Alias) Alias() string {
 	return this.alias
+}
+
+func (this *Alias) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"as": this.alias}
+	return json.Marshal(r)
 }

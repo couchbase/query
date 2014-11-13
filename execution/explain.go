@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -43,6 +45,15 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		// TODO: Perform EXPLAIN
+		bytes, err := json.Marshal(this.plan)
+		if err != nil {
+			fmt.Printf(" Failed to marshal %v", err)
+			return
+		}
+		value := value.NewAnnotatedValue(bytes)
+		if !this.sendItem(value) {
+			return
+		}
+
 	})
 }

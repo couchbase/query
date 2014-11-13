@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -40,6 +41,17 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *InitialGroup) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "initialGroup"}
+	keylist := make([]string, 0)
+	for _, key := range this.keys {
+		keylist = append(keylist, expression.NewStringer().Visit(key))
+	}
+	r["keys"] = keylist
+	r["aggregate"] = this.aggregates
+	return json.Marshal(r)
+}
+
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
 	readonly
@@ -66,6 +78,17 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "intermediateGroup"}
+	keylist := make([]string, 0)
+	for _, key := range this.keys {
+		keylist = append(keylist, expression.NewStringer().Visit(key))
+	}
+	r["keys"] = keylist
+	r["aggregate"] = this.aggregates
+	return json.Marshal(r)
+}
+
 // Final grouping and aggregation.
 type FinalGroup struct {
 	readonly
@@ -90,4 +113,15 @@ func (this *FinalGroup) Keys() expression.Expressions {
 
 func (this *FinalGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
+}
+
+func (this *FinalGroup) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "finalGroup"}
+	keylist := make([]string, 0)
+	for _, key := range this.keys {
+		keylist = append(keylist, expression.NewStringer().Visit(key))
+	}
+	r["keys"] = keylist
+	r["aggregate"] = this.aggregates
+	return json.Marshal(r)
 }

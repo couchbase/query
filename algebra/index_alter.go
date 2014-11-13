@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -49,4 +50,12 @@ func (this *AlterIndex) Name() string {
 
 func (this *AlterIndex) Rename() string {
 	return this.rename
+}
+
+func (this *AlterIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "alterIndex"}
+	r["keyspaceRef"] = this.keyspace
+	r["name"] = this.name
+	r["rename"] = this.rename
+	return json.Marshal(r)
 }

@@ -12,6 +12,7 @@ package algebra
 import (
 	"strconv"
 
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -105,6 +106,14 @@ func (this *Projection) setAliases() {
 	}
 }
 
+func (this *Projection) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "projection"}
+	r["distinct"] = this.distinct
+	r["raw"] = this.raw
+	r["terms"] = this.terms
+	return json.Marshal(r)
+}
+
 type ResultTerms []*ResultTerm
 
 type ResultTerm struct {
@@ -163,4 +172,15 @@ func (this *ResultTerm) setAlias(a int) int {
 	}
 
 	return a
+}
+
+func (this *ResultTerm) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "resultTerm"}
+	r["alias"] = this.alias
+	r["as"] = this.as
+	if this.expr != nil {
+		r["expr"] = expression.NewStringer().Visit(this.expr)
+	}
+	r["star"] = this.star
+	return json.Marshal(r)
 }

@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type UnionAll struct {
 	readonly
 	children []Operator
@@ -26,4 +30,10 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *UnionAll) Children() []Operator {
 	return this.children
+}
+
+func (this *UnionAll) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "unionAll"}
+	r["children"] = this.children
+	return json.Marshal(r)
 }

@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Discard struct {
 	readonly
 }
@@ -19,4 +23,9 @@ func NewDiscard() *Discard {
 
 func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDiscard(this)
+}
+
+func (this *Discard) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "discard"}
+	return json.Marshal(r)
 }

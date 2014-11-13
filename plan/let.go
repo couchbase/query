@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -30,4 +31,10 @@ func (this *Let) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Let) Bindings() expression.Bindings {
 	return this.bindings
+}
+
+func (this *Let) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "let"}
+	r["bindings"] = this.bindings
+	return json.Marshal(r)
 }

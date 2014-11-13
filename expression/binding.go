@@ -9,6 +9,10 @@
 
 package expression
 
+import (
+	"encoding/json"
+)
+
 type Bindings []*Binding
 
 type Binding struct {
@@ -52,4 +56,12 @@ func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+func (this Binding) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "binding"}
+	r["variable"] = this.variable
+	r["expr"] = NewStringer().Visit(this.expr)
+	r["descend"] = this.descend
+	return json.Marshal(r)
 }

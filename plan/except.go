@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type ExceptAll struct {
 	readonly
 	first  Operator
@@ -32,4 +36,11 @@ func (this *ExceptAll) First() Operator {
 
 func (this *ExceptAll) Second() Operator {
 	return this.second
+}
+
+func (this *ExceptAll) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "exceptAll"}
+	r["first"] = this.first
+	r["second"] = this.second
+	return json.Marshal(r)
 }

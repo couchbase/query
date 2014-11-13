@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 )
@@ -45,6 +46,11 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitClone(this)
 }
 
+func (this *Clone) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "clone"}
+	return json.Marshal(r)
+}
+
 func NewSet(node *algebra.Set) *Set {
 	return &Set{
 		node: node,
@@ -57,6 +63,12 @@ func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Set) Node() *algebra.Set {
 	return this.node
+}
+
+func (this *Set) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "set"}
+	r["node"] = this.node.Terms()
+	return json.Marshal(r)
 }
 
 func NewUnset(node *algebra.Unset) *Unset {
@@ -73,6 +85,12 @@ func (this *Unset) Node() *algebra.Unset {
 	return this.node
 }
 
+func (this *Unset) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "unset"}
+	r["node"] = this.node.Terms()
+	return json.Marshal(r)
+}
+
 func NewSendUpdate(keyspace datastore.Keyspace) *SendUpdate {
 	return &SendUpdate{
 		keyspace: keyspace,
@@ -85,4 +103,10 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *SendUpdate) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *SendUpdate) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "sendUpdate"}
+	r["keyspace"] = this.keyspace.Name()
+	return json.Marshal(r)
 }

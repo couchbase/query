@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -43,4 +44,11 @@ func (this *DropIndex) Keyspace() *KeyspaceRef {
 
 func (this *DropIndex) Name() string {
 	return this.name
+}
+
+func (this *DropIndex) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "dropIndex"}
+	r["keyspaceRef"] = this.keyspace
+	r["name"] = this.name
+	return json.Marshal(r)
 }

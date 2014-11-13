@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
@@ -58,4 +59,12 @@ func (this *KeyspaceRef) Alias() string {
 	} else {
 		return this.keyspace
 	}
+}
+
+func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "keyspaceRef"}
+	r["as"] = this.as
+	r["keyspace"] = this.keyspace
+	r["namespace"] = this.namespace
+	return json.Marshal(r)
 }

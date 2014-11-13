@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/value"
@@ -40,4 +41,11 @@ func newPrepared(operator Operator, signature value.Value) *Prepared {
 
 func (this *Prepared) Signature() value.Value {
 	return this.signature
+}
+
+func (this *Prepared) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "preparedStmt"}
+	r["statement"] = this.Operator
+	r["signature"] = this.signature
+	return json.Marshal(r)
 }

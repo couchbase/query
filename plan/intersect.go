@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type IntersectAll struct {
 	readonly
 	first  Operator
@@ -32,4 +36,11 @@ func (this *IntersectAll) First() Operator {
 
 func (this *IntersectAll) Second() Operator {
 	return this.second
+}
+
+func (this *IntersectAll) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "intersectAll"}
+	r["first"] = this.first
+	r["second"] = this.second
+	return json.Marshal(r)
 }
