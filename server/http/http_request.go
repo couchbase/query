@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
@@ -58,7 +57,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	var prepared *plan.Prepared
 	if err == nil {
-		prepared, err = httpArgs.getPrepared()
+		prepared, err = getPrepared(httpArgs)
 	}
 
 	if err == nil && statement == "" && prepared == nil {
@@ -77,27 +76,27 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	var namespace string
 	if err == nil {
-		namespace, err = httpArgs.getNamespace()
+		namespace, err = httpArgs.getString(NAMESPACE, "")
 	}
 
 	var timeout time.Duration
 	if err == nil {
-		timeout, err = httpArgs.getTimeout()
+		timeout, err = httpArgs.getTimeDuration(TIMEOUT)
 	}
 
 	readonly := req.Method == "GET"
 	if err == nil {
-		readonly, err = httpArgs.getReadonly()
+		readonly, err = getReadonly(httpArgs, readonly)
 	}
 
 	var metrics value.Tristate
 	if err == nil {
-		metrics, err = httpArgs.getMetrics()
+		metrics, err = getMetrics(httpArgs)
 	}
 
 	var format Format
 	if err == nil {
-		format, err = httpArgs.getFormat()
+		format, err = getFormat(httpArgs)
 	}
 
 	if err == nil && format != JSON {
@@ -106,12 +105,12 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	var signature bool
 	if err == nil {
-		signature, err = httpArgs.getSignature()
+		signature, err = httpArgs.getBoolean(SIGNATURE, true)
 	}
 
 	var compression Compression
 	if err == nil {
-		compression, err = httpArgs.getCompression()
+		compression, err = getCompression(httpArgs)
 	}
 
 	if err == nil && compression != NONE {
@@ -120,7 +119,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	var encoding Encoding
 	if err == nil {
-		encoding, err = httpArgs.getEncoding()
+		encoding, err = getEncoding(httpArgs)
 	}
 
 	if err == nil && encoding != UTF8 {
@@ -129,15 +128,22 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	var pretty bool
 	if err == nil {
-		pretty, err = httpArgs.getPretty()
+		pretty, err = httpArgs.getBoolean(PRETTY, true)
 	}
 
 	if err == nil && !pretty {
 		err = fmt.Errorf("%v pretty printing not yet supported", pretty)
 	}
 
-	base := server.NewBaseRequest(statement, prepared, namedArgs,
-		positionalArgs, namespace, readonly, metrics, signature)
+	var consistency *scanConfigImpl
+
+	if err == nil {
+		consistency, err = getScanConfiguration(httpArgs)
+
+	}
+
+	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
+		namespace, readonly, metrics, signature, consistency)
 
 	rv := &httpRequest{
 		BaseRequest: *base,
@@ -170,35 +176,30 @@ const (
 )
 
 const ( // Request argument names
-	READONLY    = "readonly"
-	METRICS     = "metrics"
-	NAMESPACE   = "namespace"
-	TIMEOUT     = "timeout"
-	ARGS        = "args"
-	PREPARED    = "prepared"
-	STATEMENT   = "statement"
-	FORMAT      = "format"
-	ENCODING    = "encoding"
-	COMPRESSION = "compression"
-	SIGNATURE   = "signature"
-	PRETTY      = "pretty"
+	READONLY         = "readonly"
+	METRICS          = "metrics"
+	NAMESPACE        = "namespace"
+	TIMEOUT          = "timeout"
+	ARGS             = "args"
+	PREPARED         = "prepared"
+	STATEMENT        = "statement"
+	FORMAT           = "format"
+	ENCODING         = "encoding"
+	COMPRESSION      = "compression"
+	SIGNATURE        = "signature"
+	PRETTY           = "pretty"
+	SCAN_CONSISTENCY = "scan_consistency"
+	SCAN_WAIT        = "scan_wait"
 )
 
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
-	getStatement() (string, error)
-	getPrepared() (*plan.Prepared, error)
-	getNamespace() (string, error)
+	getString(string, string) (string, error)
+	getBoolean(string, bool) (bool, error)
+	getTimeDuration(string) (time.Duration, error)
 	getNamedArgs() (map[string]value.Value, error)
 	getPositionalArgs() (value.Values, error)
-	getTimeout() (time.Duration, error)
-	getReadonly() (bool, error)
-	getMetrics() (value.Tristate, error)
-	getSignature() (bool, error)
-	getPretty() (bool, error)
-	getEncoding() (Encoding, error)
-	getFormat() (Format, error)
-	getCompression() (Compression, error)
+	getStatement() (string, error)
 }
 
 // getRequestParams creates a httpRequestArgs implementation,
@@ -221,6 +222,101 @@ func getRequestParams(req *http.Request) (httpRequestArgs, error) {
 	}
 
 	return &urlArgs{req: req}, nil
+}
+
+func getPrepared(a httpRequestArgs) (*plan.Prepared, error) {
+	var prepared *plan.Prepared
+
+	prepared_field, err := a.getString(PREPARED, "")
+	if err == nil && prepared_field != "" {
+		// XXX TODO unmarshal
+		prepared = nil
+	}
+
+	return prepared, err
+}
+
+func getReadonly(a httpRequestArgs, isGet bool) (bool, error) {
+	readonly, err := a.getBoolean(READONLY, isGet)
+
+	if err != nil && !readonly && isGet {
+		readonly = true
+		err = fmt.Errorf("%s=false cannot be used with HTTP GET method.", READONLY)
+	}
+
+	return readonly, err
+}
+
+func getMetrics(a httpRequestArgs) (value.Tristate, error) {
+	var metrics value.Tristate
+	m, err := a.getBoolean(METRICS, true)
+
+	if err != nil {
+		metrics = value.ToTristate(m)
+	}
+
+	return metrics, err
+
+}
+
+func getCompression(a httpRequestArgs) (Compression, error) {
+	var compression Compression
+
+	compression_field, err := a.getString(COMPRESSION, "NONE")
+	if err == nil && compression_field != "" {
+		compression = newCompression(compression_field)
+		if compression == UNDEFINED_COMPRESSION {
+			err = fmt.Errorf("Unknown %s value: %s", COMPRESSION, compression)
+		}
+	}
+
+	return compression, err
+}
+
+func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, error) {
+	var sc scanConfigImpl
+
+	scan_consistency_field, err := a.getString(SCAN_CONSISTENCY, "NOT_BOUNDED")
+	if err == nil {
+		sc.scan_level = newScanConsistency(scan_consistency_field)
+		if sc.scan_level == server.UNDEFINED_CONSISTENCY {
+			err = fmt.Errorf("Unknown %s value: %s", SCAN_CONSISTENCY, scan_consistency_field)
+		}
+	}
+
+	if err == nil {
+		sc.scan_wait, err = a.getTimeDuration(SCAN_WAIT)
+	}
+
+	return &sc, err
+}
+
+func getEncoding(a httpRequestArgs) (Encoding, error) {
+	var encoding Encoding
+
+	encoding_field, err := a.getString(ENCODING, "UTF-8")
+	if err == nil && encoding_field != "" {
+		encoding = newEncoding(encoding_field)
+		if encoding == UNDEFINED_ENCODING {
+			err = fmt.Errorf("Unknown %s value: %s", ENCODING, encoding)
+		}
+	}
+
+	return encoding, err
+}
+
+func getFormat(a httpRequestArgs) (Format, error) {
+	var format Format
+
+	format_field, err := a.getString(FORMAT, "JSON")
+	if err == nil && format_field != "" {
+		format = newFormat(format_field)
+		if format == UNDEFINED_FORMAT {
+			err = fmt.Errorf("Unknown %s value: %s", FORMAT, format)
+		}
+	}
+
+	return format, err
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
@@ -247,18 +343,6 @@ func (this *urlArgs) getStatement() (string, error) {
 	return statement, nil
 }
 
-func (this *urlArgs) getPrepared() (*plan.Prepared, error) {
-	var prepared *plan.Prepared
-
-	prepared_field, err := this.formValue(PREPARED)
-	if err == nil && prepared_field != "" {
-		// XXX TODO unmarshal
-		prepared = nil
-	}
-
-	return prepared, err
-}
-
 // A named argument is an argument of the form: $<identifier>=json_value
 func (this *urlArgs) getNamedArgs() (map[string]value.Value, error) {
 	var namedArgs map[string]value.Value
@@ -281,12 +365,7 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, error) {
 		}
 		namedArgs[namedArg] = argValue
 	}
-	for name, value := range namedArgs {
-		logging.Infop("getNamedArgs",
-			logging.Pair{"name", name},
-			logging.Pair{"value", value},
-			logging.Pair{"value.Type()", value.Type()})
-	}
+
 	return namedArgs, nil
 }
 
@@ -312,19 +391,14 @@ func (this *urlArgs) getPositionalArgs() (value.Values, error) {
 	for i, arg := range args {
 		positionalArgs[i] = value.NewValue(arg)
 	}
-	for ix, v := range positionalArgs {
-		logging.Infop("getPositionalArgs",
-			logging.Pair{"index", ix},
-			logging.Pair{"value", v},
-			logging.Pair{"Type", v.Type()})
-	}
+
 	return positionalArgs, nil
 }
 
-func (this *urlArgs) getTimeout() (time.Duration, error) {
+func (this *urlArgs) getTimeDuration(f string) (time.Duration, error) {
 	var timeout time.Duration
 
-	timeout_field, err := this.formValue(TIMEOUT)
+	timeout_field, err := this.formValue(f)
 	if err == nil && timeout_field != "" {
 		timeout, err = time.ParseDuration(timeout_field)
 	}
@@ -332,33 +406,15 @@ func (this *urlArgs) getTimeout() (time.Duration, error) {
 	return timeout, err
 }
 
-func (this *urlArgs) getReadonly() (bool, error) {
-	readonly, err := this.getBoolean(READONLY, this.req.Method == "GET")
+func (this *urlArgs) getString(f string, dflt string) (string, error) {
+	value := dflt
 
-	if err != nil && !readonly && this.req.Method == "GET" {
-		readonly = true
-		err = fmt.Errorf("%s=false cannot be used with HTTP GET method.", READONLY)
+	value_field, err := this.formValue(f)
+	if err == nil {
+		value = value_field
 	}
 
-	return readonly, err
-}
-
-func (this *urlArgs) getMetrics() (value.Tristate, error) {
-	var metrics value.Tristate
-
-	metrics_field, err := this.formValue("metrics")
-	if err == nil && metrics_field != "" {
-		m, err := strconv.ParseBool(metrics_field)
-		if err == nil {
-			metrics = value.ToTristate(m)
-		}
-	}
-
-	return metrics, err
-}
-
-func (this *urlArgs) getNamespace() (string, error) {
-	return this.formValue(NAMESPACE)
+	return value, err
 }
 
 func (this *urlArgs) getBoolean(f string, dflt bool) (bool, error) {
@@ -370,56 +426,6 @@ func (this *urlArgs) getBoolean(f string, dflt bool) (bool, error) {
 	}
 
 	return value, err
-}
-
-func (this *urlArgs) getSignature() (bool, error) {
-	return this.getBoolean(SIGNATURE, true)
-}
-
-func (this *urlArgs) getPretty() (bool, error) {
-	return this.getBoolean(PRETTY, true)
-}
-
-func (this *urlArgs) getCompression() (Compression, error) {
-	compression := NONE
-
-	compression_field, err := this.formValue(COMPRESSION)
-	if err == nil && compression_field != "" {
-		compression = newCompression(compression_field)
-		if compression == UNDEFINED_COMPRESSION {
-			err = fmt.Errorf("Unknown %s value: %s", COMPRESSION, compression)
-		}
-	}
-
-	return compression, err
-}
-
-func (this *urlArgs) getEncoding() (Encoding, error) {
-	encoding := UTF8
-
-	encoding_field, err := this.formValue(ENCODING)
-	if err == nil && encoding_field != "" {
-		encoding = newEncoding(encoding_field)
-		if encoding == UNDEFINED_ENCODING {
-			err = fmt.Errorf("Unknown %s value: %s", ENCODING, encoding)
-		}
-	}
-
-	return encoding, err
-}
-
-func (this *urlArgs) getFormat() (Format, error) {
-	format := JSON
-
-	format_field, err := this.formValue(FORMAT)
-	if err == nil && format_field != "" {
-		format = newFormat(format_field)
-		if format == UNDEFINED_FORMAT {
-			err = fmt.Errorf("Unknown %s value: %s", FORMAT, format)
-		}
-	}
-
-	return format, err
 }
 
 func (this *urlArgs) formValue(field string) (string, error) {
@@ -458,21 +464,6 @@ func (this *jsonArgs) getStatement() (string, error) {
 	return this.getString(STATEMENT, "")
 }
 
-func (this *jsonArgs) getPrepared() (*plan.Prepared, error) {
-	var prepared *plan.Prepared
-
-	prepared_field, err := this.getString(PREPARED, "")
-
-	if prepared_field == "" {
-		return prepared, err
-	}
-
-	// XXX TODO unmarshal
-	prepared = nil
-
-	return prepared, err
-}
-
 func (this *jsonArgs) getNamedArgs() (map[string]value.Value, error) {
 	var namedArgs map[string]value.Value
 
@@ -486,12 +477,7 @@ func (this *jsonArgs) getNamedArgs() (map[string]value.Value, error) {
 			namedArgs[namedArg] = argValue
 		}
 	}
-	for name, value := range namedArgs {
-		logging.Infop("getNamedArgs",
-			logging.Pair{"name", name},
-			logging.Pair{"value", value},
-			logging.Pair{"value.Type()", value.Type()})
-	}
+
 	return namedArgs, nil
 }
 
@@ -515,19 +501,14 @@ func (this *jsonArgs) getPositionalArgs() (value.Values, error) {
 	for i, arg := range args {
 		positionalArgs[i] = value.NewValue(arg)
 	}
-	for ix, v := range positionalArgs {
-		logging.Infop("getPositionalArgs",
-			logging.Pair{"index", ix},
-			logging.Pair{"value", v},
-			logging.Pair{"Type", v.Type()})
-	}
+
 	return positionalArgs, nil
 }
 
-func (this *jsonArgs) getTimeout() (time.Duration, error) {
+func (this *jsonArgs) getTimeDuration(f string) (time.Duration, error) {
 	var timeout time.Duration
 
-	t, err := this.getString(TIMEOUT, "0")
+	t, err := this.getString(f, "0")
 
 	if err != nil {
 		timeout, err = time.ParseDuration(t)
@@ -564,11 +545,8 @@ func (this *jsonArgs) getString(f string, dflt string) (string, error) {
 	value_field, in_request := this.args[f]
 
 	if !in_request {
-		logging.Infop("getString", logging.Pair{"NotInRequest:", f})
 		return value, nil
 	}
-
-	logging.Infop("getString", logging.Pair{"InRequest:", f}, logging.Pair{"Value:", value_field})
 
 	s, type_ok := value_field.(string)
 
@@ -579,77 +557,6 @@ func (this *jsonArgs) getString(f string, dflt string) (string, error) {
 	value = s
 
 	return s, nil
-}
-
-func (this *jsonArgs) getReadonly() (bool, error) {
-	readonly, err := this.getBoolean(READONLY, this.req.Method == "GET")
-
-	if err != nil && !readonly && this.req.Method == "GET" {
-		readonly = true
-		err = fmt.Errorf("%s=false cannot be used with HTTP GET method.", READONLY)
-	}
-
-	return readonly, err
-}
-
-func (this *jsonArgs) getMetrics() (value.Tristate, error) {
-	var metrics value.Tristate
-
-	m, err := this.getBoolean(METRICS, true)
-
-	if err != nil {
-		metrics = value.ToTristate(m)
-	}
-
-	return metrics, err
-}
-
-func (this *jsonArgs) getNamespace() (string, error) {
-	return this.getString(NAMESPACE, "")
-}
-
-func (this *jsonArgs) getSignature() (bool, error) {
-	return this.getBoolean(SIGNATURE, true)
-}
-
-func (this *jsonArgs) getPretty() (bool, error) {
-	return this.getBoolean(PRETTY, true)
-}
-
-func (this *jsonArgs) getEncoding() (Encoding, error) {
-	var encoding Encoding
-	encoding_field, err := this.getString(ENCODING, "UTF-8")
-	if err == nil {
-		encoding = newEncoding(encoding_field)
-		if encoding == UNDEFINED_ENCODING {
-			err = fmt.Errorf("Undefined %s value: %s", ENCODING, encoding_field)
-		}
-	}
-	return encoding, err
-}
-
-func (this *jsonArgs) getFormat() (Format, error) {
-	var format Format
-	format_field, err := this.getString(FORMAT, "JSON")
-	if err == nil {
-		format = newFormat(format_field)
-		if format == UNDEFINED_FORMAT {
-			err = fmt.Errorf("Undefined %s value: %s", FORMAT, format_field)
-		}
-	}
-	return format, err
-}
-
-func (this *jsonArgs) getCompression() (Compression, error) {
-	var compression Compression
-	compression_field, err := this.getString(COMPRESSION, "NONE")
-	if err == nil {
-		compression = newCompression(compression_field)
-		if compression == UNDEFINED_COMPRESSION {
-			err = fmt.Errorf("Undefined %s value: %s", COMPRESSION, compression_field)
-		}
-	}
-	return compression, err
 }
 
 type Encoding int
@@ -766,4 +673,32 @@ func (c Compression) String() string {
 		s = "UNDEFINED_COMPRESSION"
 	}
 	return s
+}
+
+type scanConfigImpl struct {
+	scan_level server.ScanConsistency
+	scan_wait  time.Duration
+}
+
+func (this *scanConfigImpl) ScanConsistency() server.ScanConsistency {
+	return this.scan_level
+}
+
+func (this *scanConfigImpl) ScanWait() time.Duration {
+	return this.scan_wait
+}
+
+func newScanConsistency(s string) server.ScanConsistency {
+	switch strings.ToUpper(s) {
+	case "NOT_BOUNDED":
+		return server.NOT_BOUNDED
+	case "REQUEST_PLUS":
+		return server.REQUEST_PLUS
+	case "STATEMENT_PLUS":
+		return server.STATEMENT_PLUS
+	case "AT_PLUS":
+		return server.AT_PLUS
+	default:
+		return server.UNDEFINED_CONSISTENCY
+	}
 }

@@ -49,6 +49,7 @@ type Request interface {
 	Readonly() bool
 	Metrics() value.Tristate
 	Signature() bool
+	ScanConfiguration() ScanConfiguration
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
@@ -65,6 +66,22 @@ type RequestID interface {
 	String() string
 }
 
+type ScanConsistency int
+
+const (
+	NOT_BOUNDED ScanConsistency = iota
+	REQUEST_PLUS
+	STATEMENT_PLUS
+	AT_PLUS
+	UNDEFINED_CONSISTENCY
+)
+
+type ScanConfiguration interface {
+	ScanConsistency() ScanConsistency
+	ScanWait() time.Duration
+	// ScanVector() TBD
+}
+
 type BaseRequest struct {
 	id             *requestIDImpl
 	statement      string
@@ -76,6 +93,7 @@ type BaseRequest struct {
 	readonly       bool
 	signature      bool
 	metrics        value.Tristate
+	consistency    ScanConfiguration
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -97,8 +115,8 @@ func (r *requestIDImpl) String() string {
 	return r.id
 }
 
-func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value,
-	positionalArgs value.Values, namespace string, readonly bool, metrics value.Tristate, hdr bool) *BaseRequest {
+func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
+	namespace string, readonly bool, metrics value.Tristate, signature bool, consistency ScanConfiguration) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
@@ -106,8 +124,9 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		positionalArgs: positionalArgs,
 		namespace:      namespace,
 		readonly:       readonly,
-		signature:      hdr,
+		signature:      signature,
 		metrics:        metrics,
+		consistency:    consistency,
 		requestTime:    time.Now(),
 		serviceTime:    time.Now(),
 		state:          RUNNING,
@@ -170,6 +189,10 @@ func (this *BaseRequest) Signature() bool {
 
 func (this *BaseRequest) Metrics() value.Tristate {
 	return this.metrics
+}
+
+func (this *BaseRequest) ScanConfiguration() ScanConfiguration {
+	return this.consistency
 }
 
 func (this *BaseRequest) RequestTime() time.Time {
