@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo go get
+echo go get -d -v ./...
 go get -d -v ./...
 
 echo cd parser/n1ql
@@ -20,9 +20,8 @@ cd ../..
 
 echo cd tutorial
 cd tutorial
-echo go build
-go build
+./build.sh $1
 cd ..
 
-echo go install ./...
-go install ./...
+echo go install -gcflags "-N" ./...
+go install -gcflags "-N" ./...

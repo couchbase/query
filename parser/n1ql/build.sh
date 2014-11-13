@@ -1,8 +1,8 @@
 #! /bin/bash
 
-echo nex...
+echo nex n1ql.nex
 nex n1ql.nex
-echo goyacc...
+echo go tool yacc n1ql.y
 go tool yacc n1ql.y
-echo go build...
+echo go build
 go build
