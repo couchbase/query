@@ -354,23 +354,27 @@ func getJsonString(i interface{}) string {
 
 // ns_server shutdown protocol: poll stdin and exit upon reciept of EOF
 func Enable_ns_server_shutdown() {
-	go pollStdinForEOF()
+	go pollStdin()
 }
 
-func pollStdinForEOF() {
+func pollStdin() {
 	reader := bufio.NewReader(os.Stdin)
-	buf := make([]byte, 4)
 	logging.Infop("pollEOF: About to start stdin polling")
 	for {
-		_, err := reader.Read(buf)
+		ch, err := reader.ReadByte()
+		if err == io.EOF {
+			logging.Infop("Received EOF; Exiting...")
+			os.Exit(0)
+		}
 		if err != nil {
-			if err == io.EOF {
-				logging.Infop("Received EOF; Exiting...")
-				os.Exit(0)
-			}
 			logging.Errorp("Unexpected error polling stdin",
-				logging.Pair{"error", err},
-			)
+				logging.Pair{"error", err})
+			os.Exit(1)
+		}
+		if ch == '\n' || ch == '\r' {
+			logging.Infop("Received EOL; Exiting...")
+			// TODO: "graceful" shutdown should be placed here
+			os.Exit(0)
 		}
 	}
 }
