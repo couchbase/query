@@ -9,7 +9,7 @@
 
 /*
 
-Package value represents the data model. It is the in memory
+Package value represents the N1QL data model. It is the in memory
 representation of the data in flight. It provides a native abstraction
 for JSON data values, with delayed parsing.
 
@@ -320,7 +320,7 @@ func NewValue(val interface{}) Value {
 	case nil:
 		return NULL_VALUE
 	case []byte:
-		return NewValueFromBytes(val)
+		return newValueFromBytes(val)
 	case []interface{}:
 		return sliceValue(val)
 	case map[string]interface{}:
@@ -349,7 +349,7 @@ func NewValue(val interface{}) Value {
 }
 
 // Create a new Value from a slice of bytes. (this need not be valid JSON)
-func NewValueFromBytes(bytes []byte) Value {
+func newValueFromBytes(bytes []byte) Value {
 	var parsedType Type
 	err := json.Validate(bytes)
 

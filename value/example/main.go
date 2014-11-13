@@ -20,7 +20,7 @@ func main() {
 	bytes := []byte(`{"type":"test"}`)
 
 	// create a Value object
-	doc := value.NewValueFromBytes(bytes)
+	doc := value.NewValue(bytes)
 
 	// attempt to access a nested Value
 	docType, ok := doc.Field("type")

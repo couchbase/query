@@ -589,7 +589,7 @@ func fetch(path string) (item value.AnnotatedValue, e errors.Error) {
 		return nil, errors.NewError(er, "")
 	}
 
-	doc := value.NewAnnotatedValue(value.NewValueFromBytes(bytes))
+	doc := value.NewAnnotatedValue(value.NewValue(bytes))
 	doc.SetAttachment("meta", map[string]interface{}{"id": documentPathToId(path)})
 	item = doc
 

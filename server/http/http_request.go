@@ -359,7 +359,7 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, error) {
 			//This is an error - there _has_ to be a value for a named argument
 			return namedArgs, fmt.Errorf("Named argument %s must have a value", namedArg)
 		}
-		argValue := value.NewValueFromBytes([]byte(argString))
+		argValue := value.NewValue([]byte(argString))
 		if namedArgs == nil {
 			namedArgs = make(map[string]value.Value)
 		}

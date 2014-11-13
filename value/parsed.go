@@ -109,7 +109,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		return missingField(field), false
 	}
 	if res != nil {
-		return NewValueFromBytes(res), true
+		return NewValue(res), true
 	}
 
 	return missingField(field), false
@@ -146,7 +146,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 			return missingIndex(index), false
 		}
 		if res != nil {
-			return NewValueFromBytes(res), true
+			return NewValue(res), true
 		}
 	}
 

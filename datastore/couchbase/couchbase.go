@@ -447,7 +447,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 		var doc datastore.AnnotatedPair
 		doc.Key = k
 
-		Value := value.NewAnnotatedValue(value.NewValueFromBytes(v.Body))
+		Value := value.NewAnnotatedValue(value.NewValue(v.Body))
 
 		meta_flags := binary.BigEndian.Uint32(v.Extras[0:4])
 		meta_type := "json"
