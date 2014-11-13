@@ -410,7 +410,7 @@ func (this *urlArgs) getString(f string, dflt string) (string, error) {
 	value := dflt
 
 	value_field, err := this.formValue(f)
-	if err == nil {
+	if err == nil && value_field != "" {
 		value = value_field
 	}
 
