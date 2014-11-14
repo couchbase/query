@@ -16,7 +16,6 @@ import (
 )
 
 type IndexType string
-type IndexKey expression.Expressions
 
 const (
 	DEFAULT     IndexType = "default"     // default may vary per backend
@@ -25,39 +24,40 @@ const (
 	LSM         IndexType = "lsm"
 )
 
-// Index is the base type for indexes.
+type IndexState string
+
+const (
+	PENDING IndexState = "pending"
+	ONLINE  IndexState = "online"
+	OFFLINE IndexState = "offline"
+)
+
+type IndexKey expression.Expressions
+
+/*
+Index is the base type for indexes, which may be distributed.
+*/
 type Index interface {
-	KeyspaceId() string // Id of the keyspace to which this index belongs
-	Id() string         // Id of this index
-	Name() string       // Name of this index
-	Type() IndexType    // Type of this index
-	Drop() errors.Error // Drop / delete this index
-	//Rename(newName string) errors.Error                                 // Rename this index
-	EqualKey() expression.Expressions                                   // Equality keys
-	RangeKey() expression.Expressions                                   // Range keys
-	Condition() expression.Expression                                   // Condition, if any
-	Statistics(span *Span) (Statistics, errors.Error)                   // Obtain statistics for this index
-	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
-}
-
-// PrimaryIndex represents primary key indexes.
-type PrimaryIndex interface {
-	ScanEntries(limit int64, conn *IndexConnection) // Perform a scan of all the entries in this index
-}
-
-// SecondaryIndex is the base type secondary indexes.
-type SecondaryIndex interface {
 	KeyspaceId() string                                                 // Id of the keyspace to which this index belongs
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index
-	Drop() errors.Error                                                 // Drop / delete this index
-	Rename(newName string) errors.Error                                 // Rename this index
 	EqualKey() expression.Expressions                                   // Equality keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any
+	State() (IndexState, errors.Error)                                  // Obtain state of this index
 	Statistics(span *Span) (Statistics, errors.Error)                   // Obtain statistics for this index
+	Drop() errors.Error                                                 // Drop / delete this index
 	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
+}
+
+/*
+PrimaryIndex represents primary key indexes.
+*/
+type PrimaryIndex interface {
+	Index
+
+	ScanEntries(limit int64, conn *IndexConnection) // Perform a scan of all the entries in this index
 }
 
 type Range struct {

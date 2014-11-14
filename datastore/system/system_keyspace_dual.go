@@ -164,10 +164,6 @@ func (pi *dualIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *dualIndex) Drop() errors.Error {
-	return errors.NewError(nil, "Primary index cannot be dropped.")
-}
-
 func (pi *dualIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -180,15 +176,16 @@ func (pi *dualIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *dualIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (pi *dualIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *dualIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
-	conn.EntryChannel() <- &entry
+func (pi *dualIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
 func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
@@ -209,4 +206,11 @@ func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 		entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
 		conn.EntryChannel() <- &entry
 	}
+}
+
+func (pi *dualIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+	defer close(conn.EntryChannel())
+
+	entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
+	conn.EntryChannel() <- &entry
 }

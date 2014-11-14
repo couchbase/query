@@ -234,10 +234,6 @@ func (pi *indexIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *indexIndex) Drop() errors.Error {
-	return errors.NewError(nil, "Primary index cannot be dropped.")
-}
-
 func (pi *indexIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -250,43 +246,19 @@ func (pi *indexIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *indexIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (pi *indexIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *indexIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
-	if err == nil {
-		for _, namespaceId := range namespaceIds {
-			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
-			if err == nil {
-				keyspaceIds, err := namespace.KeyspaceIds()
-				if err == nil {
-					for _, keyspaceId := range keyspaceIds {
-						keyspace, err := namespace.KeyspaceById(keyspaceId)
-						if err == nil {
-							indexIds, err := keyspace.IndexIds()
-							if err == nil {
-								for i, indexId := range indexIds {
-									if limit > 0 && int64(i) > limit {
-										break
-									}
-
-									entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
-									conn.EntryChannel() <- &entry
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+func (pi *indexIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
-func (pi *indexIndex) Scan(span datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
+func (pi *indexIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
@@ -319,5 +291,37 @@ func (pi *indexIndex) Scan(span datastore.Span, distinct bool, limit int64, conn
 	if keyspace != nil {
 		entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespace.Id(), keyspace.Id(), index.Id())}
 		conn.EntryChannel() <- &entry
+	}
+}
+
+func (pi *indexIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+	defer close(conn.EntryChannel())
+
+	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+	if err == nil {
+		for _, namespaceId := range namespaceIds {
+			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+			if err == nil {
+				keyspaceIds, err := namespace.KeyspaceIds()
+				if err == nil {
+					for _, keyspaceId := range keyspaceIds {
+						keyspace, err := namespace.KeyspaceById(keyspaceId)
+						if err == nil {
+							indexIds, err := keyspace.IndexIds()
+							if err == nil {
+								for i, indexId := range indexIds {
+									if limit > 0 && int64(i) > limit {
+										break
+									}
+
+									entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
+									conn.EntryChannel() <- &entry
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }

@@ -626,10 +626,6 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 	return pi.viewIndex.Type()
 }
 
-func (pi *primaryIndex) Drop() errors.Error {
-	return pi.viewIndex.Drop()
-}
-
 func (pi *primaryIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -643,16 +639,22 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *primaryIndex) State() (datastore.IndexState, errors.Error) {
+	return pi.viewIndex.State()
+}
+
 func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
-	return nil, nil
+	return pi.viewIndex.Statistics(span)
+}
+
+func (pi *primaryIndex) Drop() errors.Error {
+	return pi.viewIndex.Drop()
 }
 
 func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	pi.viewIndex.Scan(span, distinct, limit, conn)
-
 }
 
 func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	pi.viewIndex.ScanEntries(limit, conn)
-
 }

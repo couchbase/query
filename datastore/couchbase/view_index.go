@@ -82,22 +82,6 @@ func (vi *viewIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (vi *viewIndex) Drop() errors.Error {
-	bucket := vi.keyspace
-	// allow dropping of primary indexes. We may need to revisit MB-12505
-	/*
-		if vi.IsPrimary() {
-			return errors.NewError(nil, "Primary index cannot be dropped.")
-		}
-	*/
-	err := vi.DropViewIndex()
-	if err != nil {
-		return errors.NewError(err, fmt.Sprintf("Cannot drop index %s", vi.Name()))
-	}
-	delete(bucket.indexes, vi.name)
-	return nil
-}
-
 func (b *keyspace) loadViewIndexes() errors.Error {
 	// #alldocs implicitly exists
 	/*
@@ -125,12 +109,32 @@ func (b *keyspace) loadViewIndexes() errors.Error {
 	return nil
 }
 
+func (vi *viewIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (vi *viewIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
 func (vi *viewIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	vi.Scan(nil, false, limit, conn)
+}
+
+func (vi *viewIndex) Drop() errors.Error {
+	bucket := vi.keyspace
+	// allow dropping of primary indexes. We may need to revisit MB-12505
+	/*
+		if vi.IsPrimary() {
+			return errors.NewError(nil, "Primary index cannot be dropped.")
+		}
+	*/
+	err := vi.DropViewIndex()
+	if err != nil {
+		return errors.NewError(err, fmt.Sprintf("Cannot drop index %s", vi.Name()))
+	}
+	delete(bucket.indexes, vi.name)
+	return nil
 }
 
 func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {

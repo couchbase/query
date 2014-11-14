@@ -469,10 +469,6 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *primaryIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
-}
-
 func (pi *primaryIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -486,8 +482,16 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *primaryIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
+}
+
+func (pi *primaryIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
 func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {

@@ -89,20 +89,6 @@ func (si *secondaryIndex) IsPrimary() bool {
 	return false
 }
 
-// Drop implement Index{} interface.
-func (si *secondaryIndex) Drop() errors.Error {
-	if si == nil {
-		return ErrorIndexEmpty
-	}
-	client := queryport.NewClusterClient(ClusterManagerAddr)
-	err := client.DropIndex(si.defnID)
-	if err != nil {
-		return errors.NewError(nil, err.Error())
-	}
-	delete(si.keySpace.indexes, si.Name())
-	return nil
-}
-
 // EqualKey implement Index{} interface.
 func (si *secondaryIndex) EqualKey() expression.Expressions {
 	if si != nil && si.partnExpr != "" {
@@ -134,6 +120,11 @@ func (si *secondaryIndex) Condition() expression.Expression {
 	return nil
 }
 
+// State implement Index{} interface.
+func (si *secondaryIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 // Statistics implement Index{} interface.
 func (si *secondaryIndex) Statistics(
 	span *datastore.Span) (datastore.Statistics, errors.Error) {
@@ -154,6 +145,20 @@ func (si *secondaryIndex) Statistics(
 	defer si.mu.Unlock()
 	si.stats = (&statistics{}).updateStats(pstats)
 	return si.stats, nil
+}
+
+// Drop implement Index{} interface.
+func (si *secondaryIndex) Drop() errors.Error {
+	if si == nil {
+		return ErrorIndexEmpty
+	}
+	client := queryport.NewClusterClient(ClusterManagerAddr)
+	err := client.DropIndex(si.defnID)
+	if err != nil {
+		return errors.NewError(nil, err.Error())
+	}
+	delete(si.keySpace.indexes, si.Name())
+	return nil
 }
 
 // Scan implement Index{} interface.

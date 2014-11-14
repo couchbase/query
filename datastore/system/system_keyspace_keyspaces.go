@@ -196,10 +196,6 @@ func (pi *keyspaceIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *keyspaceIndex) Drop() errors.Error {
-	return errors.NewError(nil, "Primary index cannot be dropped.")
-}
-
 func (pi *keyspaceIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -212,34 +208,19 @@ func (pi *keyspaceIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *keyspaceIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (pi *keyspaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *keyspaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
-	if err == nil {
-		for _, namespaceId := range namespaceIds {
-			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
-			if err == nil {
-				keyspaceIds, err := namespace.KeyspaceIds()
-				if err == nil {
-					for i, keyspaceId := range keyspaceIds {
-						if limit > 0 && int64(i) > limit {
-							break
-						}
-						entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespaceId, keyspaceId)}
-						conn.EntryChannel() <- &entry
-					}
-				}
-			}
-		}
-	}
+func (pi *keyspaceIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
-func (pi *keyspaceIndex) Scan(span datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
+func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
@@ -267,5 +248,28 @@ func (pi *keyspaceIndex) Scan(span datastore.Span, distinct bool, limit int64, c
 	if keyspace != nil {
 		entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespace.Id(), keyspace.Id())}
 		conn.EntryChannel() <- &entry
+	}
+}
+
+func (pi *keyspaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+	defer close(conn.EntryChannel())
+
+	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+	if err == nil {
+		for _, namespaceId := range namespaceIds {
+			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+			if err == nil {
+				keyspaceIds, err := namespace.KeyspaceIds()
+				if err == nil {
+					for i, keyspaceId := range keyspaceIds {
+						if limit > 0 && int64(i) > limit {
+							break
+						}
+						entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespaceId, keyspaceId)}
+						conn.EntryChannel() <- &entry
+					}
+				}
+			}
+		}
 	}
 }

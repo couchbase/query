@@ -175,10 +175,6 @@ func (pi *namespaceIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *namespaceIndex) Drop() errors.Error {
-	return errors.NewError(nil, "Primary index cannot be dropped.")
-}
-
 func (pi *namespaceIndex) EqualKey() expression.Expressions {
 	return nil
 }
@@ -191,24 +187,16 @@ func (pi *namespaceIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *namespaceIndex) State() (datastore.IndexState, errors.Error) {
+	return datastore.ONLINE, nil
+}
+
 func (pi *namespaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *namespaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
-	if err == nil {
-		for i, namespaceId := range namespaceIds {
-			if limit > 0 && int64(i) > limit {
-				break
-			}
-
-			entry := datastore.IndexEntry{PrimaryKey: namespaceId}
-			conn.EntryChannel() <- &entry
-		}
-	}
+func (pi *namespaceIndex) Drop() errors.Error {
+	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
 func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
@@ -229,5 +217,21 @@ func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	if namespace != nil {
 		entry := datastore.IndexEntry{PrimaryKey: namespace.Id()}
 		conn.EntryChannel() <- &entry
+	}
+}
+
+func (pi *namespaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+	defer close(conn.EntryChannel())
+
+	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+	if err == nil {
+		for i, namespaceId := range namespaceIds {
+			if limit > 0 && int64(i) > limit {
+				break
+			}
+
+			entry := datastore.IndexEntry{PrimaryKey: namespaceId}
+			conn.EntryChannel() <- &entry
+		}
 	}
 }
