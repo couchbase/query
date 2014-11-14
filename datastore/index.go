@@ -27,9 +27,9 @@ const (
 type IndexState string
 
 const (
-	PENDING IndexState = "pending"
-	ONLINE  IndexState = "online"
-	OFFLINE IndexState = "offline"
+	PENDING IndexState = "pending" // The index is being built or rebuilt
+	ONLINE  IndexState = "online"  // The index is available for use
+	OFFLINE IndexState = "offline" // The index requires manual intervention
 )
 
 type IndexKey expression.Expressions
