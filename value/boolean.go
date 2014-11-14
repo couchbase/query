@@ -11,14 +11,31 @@ package value
 
 import ()
 
+/*
+BoolValue is defined as a bool type.
+*/
 type boolValue bool
 
+/*
+FALSE_VALUE/ TRUE_VALUE are assigned a false and true value 
+(NewValue() is called to ensure that it is a value), and 
+_FALSE _BYTES / _TRUE _BYTES that are slices of bytes 
+representing false and true.
+*/
 var FALSE_VALUE = NewValue(false)
 var TRUE_VALUE = NewValue(true)
 
+/*
+_FALSE _BYTES / _TRUE _BYTES that are slices of bytes 
+representing false and true.
+*/
 var _FALSE_BYTES = []byte("false")
 var _TRUE_BYTES = []byte("true")
 
+/*
+Returns the byte arrays _False/_TRUE _BYTES depending on
+whether the reciever true or false.
+*/
 func (this boolValue) MarshalJSON() ([]byte, error) {
 	if this {
 		return _TRUE_BYTES, nil
@@ -27,12 +44,24 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 	}
 }
 
+/*
+Type Boolean
+*/
 func (this boolValue) Type() Type { return BOOLEAN }
 
+/*
+Cast receiver to bool and return.
+*/
 func (this boolValue) Actual() interface{} {
 	return bool(this)
 }
 
+/*
+If other is a boolValue, compare it with the receiver. If
+it is a parsedValue or annotated value then call Equals
+by parsing other or Values respectively. If it is any other
+type we return false.
+*/
 func (this boolValue) Equals(other Value) bool {
 	switch other := other.(type) {
 	case boolValue:
@@ -46,6 +75,12 @@ func (this boolValue) Equals(other Value) bool {
 	}
 }
 
+/*
+If other is type boolValue, return 0 if equal, -1 if receiver 
+is false and 1 otherwise. For value of type parsedValue and 
+annotated value call collate again with the value. The default 
+behavior is to return the position wrt others type. 
+*/
 func (this boolValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case boolValue:
@@ -63,53 +98,88 @@ func (this boolValue) Collate(other Value) int {
 	default:
 		return int(BOOLEAN - other.Type())
 	}
-
 }
 
+/*
+Cast receiver to bool and return.
+*/
 func (this boolValue) Truth() bool {
 	return bool(this)
 }
 
+/*
+Return receiver.
+*/
 func (this boolValue) Copy() Value {
 	return this
 }
 
+/*
+Return receiver.
+*/
 func (this boolValue) CopyForUpdate() Value {
 	return this
 }
 
+/*
+Calls missingField.
+*/
 func (this boolValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
+/*
+Not valid for bool.
+*/
 func (this boolValue) SetField(field string, val interface{}) error {
 	return Unsettable(field)
 }
 
+/*
+Not valid for bool.
+*/
 func (this boolValue) UnsetField(field string) error {
 	return Unsettable(field)
 }
 
+/*
+Calls missingIndex.
+*/
 func (this boolValue) Index(index int) (Value, bool) {
 	return missingIndex(index), false
 }
 
+/*
+Not valid for bool.
+*/
 func (this boolValue) SetIndex(index int, val interface{}) error {
 	return Unsettable(index)
 }
 
+/*
+Returns NULL_VALUE
+*/
 func (this boolValue) Slice(start, end int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
+/*
+Returns NULL_VALUE
+*/
 func (this boolValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
+/*
+Returns the input buffer as is.
+*/
 func (this boolValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
+/*
+Bool has no fields to list. Hence return nil.
+*/
 func (this boolValue) Fields() map[string]interface{} {
 	return nil
 }
