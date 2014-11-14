@@ -14,6 +14,7 @@
 package accounting
 
 import (
+	"strings"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -174,4 +175,65 @@ type MetricReporter interface {
 
 	// The rate unit to use for reporting
 	RateUnit() time.Duration
+}
+
+// Define names for all the metrics we are interested in:
+const (
+	REQUESTS        = "requests"
+	SELECTS         = "selects"
+	UPDATES         = "updates"
+	INSERTS         = "inserts"
+	DELETES         = "deletes"
+	ACTIVE_REQUESTS = "active_requests"
+	QUEUED_REQUESTS = "queued_requests"
+	REQUEST_TIME    = "request_time"
+	SERVICE_TIME    = "service_time"
+	RESULT_COUNT    = "result_count"
+	RESULT_SIZE     = "result_size"
+	ERRORS          = "errors"
+	WARNINGS        = "warnings"
+	MUTATIONS       = "mutations"
+)
+
+var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS,
+	QUEUED_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
+	WARNINGS, MUTATIONS}
+
+// Use the give AccountingStore to create counters for all the metrics we are interested in:
+func RegisterMetrics(acctstore AccountingStore) {
+	ms := acctstore.MetricRegistry()
+	for _, name := range metricNames {
+		ms.Counter(name)
+	}
+}
+
+func RecordMetrics(acctstore AccountingStore,
+	request_time time.Duration, service_time time.Duration,
+	result_count int, result_size int,
+	error_count int, warn_count int, stmt string) {
+
+	ms := acctstore.MetricRegistry()
+	ms.Counter(REQUESTS).Inc(1)
+	ms.Counter(REQUEST_TIME).Inc(int64(request_time))
+	ms.Counter(SERVICE_TIME).Inc(int64(service_time))
+	ms.Counter(RESULT_COUNT).Inc(int64(result_count))
+	ms.Counter(RESULT_SIZE).Inc(int64(result_size))
+	ms.Counter(ERRORS).Inc(int64(error_count))
+	ms.Counter(WARNINGS).Inc(int64(warn_count))
+
+	stmt_tokens := strings.Split(strings.TrimSpace(stmt), " ")
+	if len(stmt_tokens) < 1 {
+		return
+	}
+	switch strings.ToLower(stmt_tokens[0]) {
+	case "select":
+		ms.Counter(SELECTS).Inc(1)
+	case "insert":
+		ms.Counter(UPDATES).Inc(1)
+	case "update":
+		ms.Counter(INSERTS).Inc(1)
+	case "delete":
+		ms.Counter(DELETES).Inc(1)
+	}
+
 }

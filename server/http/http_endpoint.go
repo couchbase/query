@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/server"
 )
 
@@ -38,13 +38,7 @@ func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndp
 	// TODO: Deprecate (remove) this binding after QE has migrated to /query/service
 	http.Handle("/query", rv)
 
-	http.HandleFunc("/stats", statsHandler)
-
 	return rv
-}
-
-func statsHandler(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, "/debug/vars", http.StatusFound)
 }
 
 func (this *HttpEndpoint) ListenAndServe() error {
@@ -56,11 +50,14 @@ func (this *HttpEndpoint) ListenAndServe() error {
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	request := newHttpRequest(resp, req)
 
+	defer this.doStats(request)
+
 	if request.State() == server.FATAL {
 		// There was problems creating the request: Fail it and return
 		request.Failed(this.server)
 		return
 	}
+
 	select {
 	case this.server.Channel() <- request:
 		// Wait until the request exits.
@@ -70,27 +67,13 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		resp.WriteHeader(http.StatusServiceUnavailable)
 	}
 
-	// Update metrics TODO:
-	request_time := time.Since(request.RequestTime())
+}
+
+func (this *HttpEndpoint) doStats(request *httpRequest) {
+	// Update metrics:
 	service_time := time.Since(request.ServiceTime())
-	ms := this.server.AccountingStore().MetricRegistry()
-	ms.Counter("request_count").Inc(1)
-	ms.Counter("request_overall_time").Inc(int64(request_time))
-	ms.Meter("request_rate").Mark(1)
-	ms.Meter("error_rate").Mark(int64(request.errorCount))
-	ms.Histogram("response_count").Update(int64(request.resultCount))
-	ms.Timer("request_time").Update(request_time)
-	ms.Timer("service_time").Update(service_time)
-
-	logging.Infop("Finished request:",
-		logging.Pair{"request_state", request.State()},
-		logging.Pair{"result_count", request.resultCount},
-		logging.Pair{"error_count", request.errorCount},
-		logging.Pair{"warning_count", request.warningCount},
-		logging.Pair{"request_time", request_time},
-		logging.Pair{"service_time", service_time},
-		logging.Pair{"request_time_nanosecs", int64(request_time)},
-		logging.Pair{"service_time_nanosecs", int64(service_time)},
-	)
-
+	request_time := time.Since(request.RequestTime())
+	acctstore := this.server.AccountingStore()
+	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
+		request.resultSize, request.errorCount, request.warningCount, request.Statement())
 }

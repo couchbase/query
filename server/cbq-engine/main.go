@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/couchbaselabs/query/accounting"
 	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
 	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
 	"github.com/couchbaselabs/query/datastore/resolver"
@@ -29,7 +30,7 @@ var VERSION = "0.7.0" // Build-time overriddable.
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
 var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
-var ACCTSTORE = flag.String("acctstore", "stub:", "Accounting store address (http://URL or stub:)")
+var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout; use zero or negative value to disable")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
@@ -83,21 +84,10 @@ func main() {
 		logging.Errorp("Could not connect to acctstore",
 			logging.Pair{"error", err},
 		)
-	}
-
-	if *METRICS {
-		// Define the metrics we want to record
-		ms := acctstore.MetricRegistry()
-		ms.Counter("request_count")
-		ms.Counter("request_overall_time")
-		ms.Meter("request_rate")
-		ms.Meter("error_rate")
-		ms.Histogram("response_count")
-		ms.Histogram("response_size")
-		ms.Timer("request_time")
-		ms.Timer("service_time")
-
-		// Start metrics reporting
+	} else {
+		// Create the metrics we are interested in
+		accounting.RegisterMetrics(acctstore)
+		// Make metrics available
 		acctstore.MetricReporter().Start(1, 1)
 	}
 

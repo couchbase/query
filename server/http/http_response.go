@@ -257,9 +257,11 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 		return true
 	}
 
+	ts := time.Since(this.ServiceTime())
+	tr := time.Since(this.RequestTime())
 	rv := this.writeString(",\n    \"metrics\": {") &&
-		this.writeString(fmt.Sprintf("\n        \"elapsedTime\": \"%v\"", time.Since(this.RequestTime()))) &&
-		this.writeString(fmt.Sprintf(",\n        \"executionTime\": \"%v\"", time.Since(this.ServiceTime()))) &&
+		this.writeString(fmt.Sprintf("\n        \"elapsedTime\": \"%v\"", tr)) &&
+		this.writeString(fmt.Sprintf(",\n        \"executionTime\": \"%v\"", ts)) &&
 		this.writeString(fmt.Sprintf(",\n        \"resultCount\": %d", this.resultCount)) &&
 		this.writeString(fmt.Sprintf(",\n        \"resultSize\": %d", this.resultSize))
 

@@ -16,6 +16,7 @@ package accounting_gm
 import (
 	"expvar"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -113,7 +114,14 @@ func (g *goMetricReporter) MetricRegistry() accounting.MetricRegistry {
 	return &goMetricRegistry{}
 }
 
+func statsHandler(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, "/debug/vars", http.StatusFound)
+}
+
 func (g *goMetricReporter) Start(interval int64, unit time.Duration) {
+	// Enable expvars endpoint
+	http.HandleFunc("/query/stats/", statsHandler)
+
 	// Expose the metrics to expvars
 	publish_expvars(metrics.DefaultRegistry)
 }

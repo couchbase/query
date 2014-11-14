@@ -14,6 +14,8 @@
 package accounting_stub
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -238,7 +240,14 @@ func (MetricReporterStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
 }
 
-func (MetricReporterStub) Start(interval int64, unit time.Duration) {}
+func statsHandler(w http.ResponseWriter, req *http.Request) {
+	// NOP: write empty stats body
+	fmt.Fprintf(w, "{}")
+}
+
+func (MetricReporterStub) Start(interval int64, unit time.Duration) {
+	http.HandleFunc("/query/stats/", statsHandler)
+}
 
 func (MetricReporterStub) Stop() {}
 
