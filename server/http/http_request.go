@@ -10,10 +10,12 @@
 package http
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -142,6 +144,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 
 	}
 
+	if err == nil {
+		_, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
+	}
+
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
 		namespace, readonly, metrics, signature, consistency)
 
@@ -170,11 +176,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 	return rv
 }
 
-const (
-	URL_CONTENT  = "application/x-www-form-urlencoded"
-	JSON_CONTENT = "application/json"
-)
-
 const ( // Request argument names
 	READONLY         = "readonly"
 	METRICS          = "metrics"
@@ -190,39 +191,8 @@ const ( // Request argument names
 	PRETTY           = "pretty"
 	SCAN_CONSISTENCY = "scan_consistency"
 	SCAN_WAIT        = "scan_wait"
+	CREDS            = "creds"
 )
-
-// httpRequestArgs is an interface for getting the arguments in a http request
-type httpRequestArgs interface {
-	getString(string, string) (string, error)
-	getBoolean(string, bool) (bool, error)
-	getTimeDuration(string) (time.Duration, error)
-	getNamedArgs() (map[string]value.Value, error)
-	getPositionalArgs() (value.Values, error)
-	getStatement() (string, error)
-}
-
-// getRequestParams creates a httpRequestArgs implementation,
-// depending on the content type in the request
-func getRequestParams(req *http.Request) (httpRequestArgs, error) {
-	content_types := req.Header["Content-Type"]
-
-	content_type := URL_CONTENT
-
-	if len(content_types) > 0 {
-		content_type = content_types[0]
-	}
-
-	if strings.HasPrefix(content_type, URL_CONTENT) {
-		return &urlArgs{req: req}, nil
-	}
-
-	if strings.HasPrefix(content_type, JSON_CONTENT) {
-		return newJsonArgs(req)
-	}
-
-	return &urlArgs{req: req}, nil
-}
 
 func getPrepared(a httpRequestArgs) (*plan.Prepared, error) {
 	var prepared *plan.Prepared
@@ -317,6 +287,94 @@ func getFormat(a httpRequestArgs) (Format, error) {
 	}
 
 	return format, err
+}
+
+func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) ([]*url.Userinfo, error) {
+	var cred_data []map[string]string
+	var creds []*url.Userinfo
+	var err error
+
+	if hdrCreds != nil {
+		// Credentials are in the request URL:
+		creds = make([]*url.Userinfo, 1)
+		creds[0] = hdrCreds
+		return creds, err
+	}
+
+	if len(auths) > 0 {
+		// Credentials are in the request header:
+		// TODO: implement non-Basic auth (digest, ntlm)
+		creds = make([]*url.Userinfo, 1)
+		auth := auths[0]
+		if strings.HasPrefix(auth, "Basic ") {
+			var decoded_creds []byte
+			encoded_creds := strings.Split(auth, " ")[1]
+			decoded_creds, err = base64.StdEncoding.DecodeString(encoded_creds)
+			if err == nil {
+				u_details := strings.Split(string(decoded_creds), ":")
+				if len(u_details) == 2 {
+					creds = make([]*url.Userinfo, 1)
+					creds[0] = url.UserPassword(u_details[0], u_details[1])
+				}
+			}
+		}
+		return creds, err
+	}
+
+	// Credentials may be in request arguments:
+	cred_data, err = a.getCredentials()
+	if err == nil && len(cred_data) > 0 {
+		creds = make([]*url.Userinfo, len(cred_data))
+		for i, cred := range cred_data {
+			user, user_ok := cred["user"]
+			pass, pass_ok := cred["pass"]
+			if user_ok && pass_ok {
+				creds[i] = url.UserPassword(user, pass)
+			} else {
+				err = fmt.Errorf("creds requires both user and pass")
+				break
+			}
+		}
+	}
+
+	return creds, err
+}
+
+// httpRequestArgs is an interface for getting the arguments in a http request
+type httpRequestArgs interface {
+	getString(string, string) (string, error)
+	getBoolean(string, bool) (bool, error)
+	getTimeDuration(string) (time.Duration, error)
+	getNamedArgs() (map[string]value.Value, error)
+	getPositionalArgs() (value.Values, error)
+	getStatement() (string, error)
+	getCredentials() ([]map[string]string, error)
+}
+
+// getRequestParams creates a httpRequestArgs implementation,
+// depending on the content type in the request
+func getRequestParams(req *http.Request) (httpRequestArgs, error) {
+
+	const (
+		URL_CONTENT  = "application/x-www-form-urlencoded"
+		JSON_CONTENT = "application/json"
+	)
+	content_types := req.Header["Content-Type"]
+	content_type := URL_CONTENT
+
+	if len(content_types) > 0 {
+		content_type = content_types[0]
+	}
+
+	if strings.HasPrefix(content_type, URL_CONTENT) {
+		return &urlArgs{req: req}, nil
+	}
+
+	if strings.HasPrefix(content_type, JSON_CONTENT) {
+		return newJsonArgs(req)
+	}
+
+	return &urlArgs{req: req}, nil
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
@@ -428,6 +486,17 @@ func (this *urlArgs) getBoolean(f string, dflt bool) (bool, error) {
 	return value, err
 }
 
+func (this *urlArgs) getCredentials() ([]map[string]string, error) {
+	var creds_data []map[string]string
+
+	creds_field, err := this.formValue(CREDS)
+	if err == nil && creds_field != "" {
+		decoder := json.NewDecoder(strings.NewReader(creds_field))
+		err = decoder.Decode(&creds_data)
+	}
+	return creds_data, err
+}
+
 func (this *urlArgs) formValue(field string) (string, error) {
 	values := this.req.Form[field]
 
@@ -503,6 +572,24 @@ func (this *jsonArgs) getPositionalArgs() (value.Values, error) {
 	}
 
 	return positionalArgs, nil
+}
+
+func (this *jsonArgs) getCredentials() ([]map[string]string, error) {
+	var creds_data []map[string]string
+
+	creds_field, in_request := this.args[CREDS]
+
+	if !in_request {
+		return creds_data, nil
+	}
+
+	creds_data, type_ok := creds_field.([]map[string]string)
+
+	if !type_ok {
+		return creds_data, fmt.Errorf("%s parameter has to be an %s", CREDS, "array of { user, pass }")
+	}
+
+	return creds_data, nil
 }
 
 func (this *jsonArgs) getTimeDuration(f string) (time.Duration, error) {
