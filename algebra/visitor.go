@@ -11,7 +11,27 @@ package algebra
 
 type Visitor interface {
 	// SELECT
-	VisitSelect(node *Select) (interface{}, error)
+	VisitSelect(stmt *Select) (interface{}, error)
+
+	// DML
+	VisitInsert(stmt *Insert) (interface{}, error)
+	VisitUpsert(stmt *Upsert) (interface{}, error)
+	VisitDelete(stmt *Delete) (interface{}, error)
+	VisitUpdate(stmt *Update) (interface{}, error)
+	VisitMerge(stmt *Merge) (interface{}, error)
+
+	// DDL
+	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (interface{}, error)
+	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
+	VisitDropIndex(stmt *DropIndex) (interface{}, error)
+	VisitAlterIndex(stmt *AlterIndex) (interface{}, error)
+
+	// EXPLAIN
+	VisitExplain(stmt *Explain) (interface{}, error)
+}
+
+type NodeVisitor interface {
+	// SELECT
 	VisitSubselect(node *Subselect) (interface{}, error)
 	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
 	VisitJoin(node *Join) (interface{}, error)
@@ -23,20 +43,4 @@ type Visitor interface {
 	VisitIntersectAll(node *IntersectAll) (interface{}, error)
 	VisitExcept(node *Except) (interface{}, error)
 	VisitExceptAll(node *ExceptAll) (interface{}, error)
-
-	// DML
-	VisitInsert(node *Insert) (interface{}, error)
-	VisitUpsert(node *Upsert) (interface{}, error)
-	VisitDelete(node *Delete) (interface{}, error)
-	VisitUpdate(node *Update) (interface{}, error)
-	VisitMerge(node *Merge) (interface{}, error)
-
-	// DDL
-	VisitCreatePrimaryIndex(node *CreatePrimaryIndex) (interface{}, error)
-	VisitCreateIndex(node *CreateIndex) (interface{}, error)
-	VisitDropIndex(node *DropIndex) (interface{}, error)
-	VisitAlterIndex(node *AlterIndex) (interface{}, error)
-
-	// EXPLAIN
-	VisitExplain(node *Explain) (interface{}, error)
 }

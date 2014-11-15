@@ -8,14 +8,24 @@
 //  and limitations under the License.
 
 /*
-
-Package algebra provides a language-independent algebra. Any language
+Package algebra provides a syntax-independent algebra. Any language
 flavor or syntax that can be converted to this algebra can then be
 processed by the query engine.
-
 */
 package algebra
 
-type Node interface {
+import (
+	_ "github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
+)
+
+type Statement interface {
 	Accept(visitor Visitor) (interface{}, error)
+	Signature() value.Value
+	Formalize() error
+	//MapExpressions(mapper expression.Mapper) error
+}
+
+type Node interface {
+	Accept(visitor NodeVisitor) (interface{}, error)
 }

@@ -38,7 +38,7 @@ func NewKeyspaceTerm(namespace, keyspace string, project expression.Path, as str
 	return &KeyspaceTerm{namespace, keyspace, project, as, keys}
 }
 
-func (this *KeyspaceTerm) Accept(visitor Visitor) (interface{}, error) {
+func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitKeyspaceTerm(this)
 }
 
@@ -149,7 +149,7 @@ func NewJoin(left FromTerm, outer bool, right *KeyspaceTerm) *Join {
 	return &Join{left, right, outer}
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
+func (this *Join) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
@@ -228,7 +228,7 @@ func NewNest(left FromTerm, outer bool, right *KeyspaceTerm) *Nest {
 	return &Nest{left, right, outer}
 }
 
-func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Nest) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
@@ -308,7 +308,7 @@ func NewUnnest(left FromTerm, outer bool, expr expression.Expression, as string)
 	return &Unnest{left, outer, expr, as}
 }
 
-func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Unnest) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
 }
 

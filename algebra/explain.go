@@ -10,6 +10,7 @@
 package algebra
 
 import (
+	_ "github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -32,6 +33,12 @@ func (this *Explain) Signature() value.Value {
 func (this *Explain) Formalize() error {
 	return this.stmt.Formalize()
 }
+
+/*
+func (this *Explain) MapExpressions(mapper expression.Mapper) error {
+	return this.stmt.MapExpressions(mapper)
+}
+*/
 
 func (this *Explain) Statement() Statement {
 	return this.stmt

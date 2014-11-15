@@ -17,10 +17,10 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 )
 
-func Build(node algebra.Node, datastore, systemstore datastore.Datastore,
+func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool) (Operator, error) {
 	builder := newBuilder(datastore, systemstore, namespace, subquery)
-	op, err := node.Accept(builder)
+	op, err := stmt.Accept(builder)
 
 	if err != nil {
 		return nil, err

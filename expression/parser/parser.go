@@ -8,9 +8,7 @@
 //  and limitations under the License.
 
 /*
-
 Package parser parses N1QL strings into expressions.
-
 */
 package parser
 

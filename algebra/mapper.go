@@ -9,8 +9,10 @@
 
 package algebra
 
+/*
 type Mapper interface {
 	Visitor
 
 	Map(node Node) error
 }
+*/
