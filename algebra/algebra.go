@@ -15,7 +15,7 @@ processed by the query engine.
 package algebra
 
 import (
-	_ "github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -23,7 +23,7 @@ type Statement interface {
 	Accept(visitor Visitor) (interface{}, error)
 	Signature() value.Value
 	Formalize() error
-	//MapExpressions(mapper expression.Mapper) error
+	MapExpressions(mapper expression.Mapper) error
 }
 
 type Node interface {

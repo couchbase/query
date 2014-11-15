@@ -11,7 +11,9 @@ package algebra
 
 import (
 	"encoding/json"
+
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -36,6 +38,10 @@ func (this *CreatePrimaryIndex) Signature() value.Value {
 }
 
 func (this *CreatePrimaryIndex) Formalize() error {
+	return nil
+}
+
+func (this *CreatePrimaryIndex) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 

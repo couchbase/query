@@ -11,6 +11,8 @@ package algebra
 
 import (
 	"encoding/json"
+
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -37,6 +39,10 @@ func (this *AlterIndex) Signature() value.Value {
 }
 
 func (this *AlterIndex) Formalize() error {
+	return nil
+}
+
+func (this *AlterIndex) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 
