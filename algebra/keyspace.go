@@ -12,6 +12,7 @@ package algebra
 import (
 	"encoding/json"
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -25,7 +26,7 @@ func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
 	return &KeyspaceRef{namespace, keyspace, as}
 }
 
-func (this *KeyspaceRef) Formalize() (f *Formalizer, err error) {
+func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
 		err = errors.NewError(nil, "Keyspace term must have a name or alias.")
@@ -35,7 +36,7 @@ func (this *KeyspaceRef) Formalize() (f *Formalizer, err error) {
 	allowed := value.NewValue(make(map[string]interface{}))
 	allowed.SetField(keyspace, keyspace)
 
-	f = NewFormalizer()
+	f = expression.NewFormalizer()
 	f.Keyspace = keyspace
 	f.Allowed = allowed
 	return

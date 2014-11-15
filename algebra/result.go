@@ -74,7 +74,7 @@ func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Projection) Formalize(f *Formalizer) (err error) {
+func (this *Projection) Formalize(f *expression.Formalizer) (err error) {
 	for _, term := range this.terms {
 		if term.expr != nil {
 			term.expr, err = f.Map(term.expr)

@@ -28,12 +28,7 @@ func NewNamedParameter(name string) expression.Expression {
 }
 
 func (this *NamedParameter) Accept(visitor expression.Visitor) (interface{}, error) {
-	switch v := visitor.(type) {
-	case ExpressionVisitor:
-		return v.VisitNamedParameter(this)
-	default:
-		panic(fmt.Sprintf("NamedParameter visited by %T,", visitor))
-	}
+	return visitor.VisitNamedParameter(this)
 }
 
 func (this *NamedParameter) Type() value.Type { return value.JSON }
@@ -72,4 +67,8 @@ func (this *NamedParameter) Children() expression.Expressions {
 
 func (this *NamedParameter) MapChildren(mapper expression.Mapper) error {
 	return nil
+}
+
+func (this *NamedParameter) Name() string {
+	return this.name
 }

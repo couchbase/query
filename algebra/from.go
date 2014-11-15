@@ -21,7 +21,7 @@ import (
 type FromTerm interface {
 	Node
 	MapExpressions(mapper expression.Mapper) error
-	Formalize(parent *Formalizer) (f *Formalizer, err error)
+	Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error)
 	PrimaryTerm() FromTerm
 	Alias() string
 }
@@ -62,7 +62,7 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *KeyspaceTerm) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
 		err = errors.NewError(nil, "FROM term must have a name or alias.")
@@ -85,7 +85,7 @@ func (this *KeyspaceTerm) Formalize(parent *Formalizer) (f *Formalizer, err erro
 	allowed := value.NewScopeValue(make(map[string]interface{}), parent.Allowed)
 	allowed.SetField(keyspace, keyspace)
 
-	f = NewFormalizer()
+	f = expression.NewFormalizer()
 	f.Keyspace = keyspace
 	f.Allowed = allowed
 	return
@@ -162,7 +162,7 @@ func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.right.MapExpressions(mapper)
 }
 
-func (this *Join) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return
@@ -241,7 +241,7 @@ func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.right.MapExpressions(mapper)
 }
 
-func (this *Nest) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return
@@ -322,7 +322,7 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Unnest) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
 	if err != nil {
 		return

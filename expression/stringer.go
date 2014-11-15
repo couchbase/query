@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 )
 
 type Stringer struct {
@@ -512,8 +513,22 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	return buf.String(), nil
 }
 
-// Bindings
+// Subquery
+func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
+	return expr.String(), nil
+}
 
+// NamedParameter
+func (this *Stringer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+	return "$" + expr.Name(), nil
+}
+
+// PositionalParameter
+func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+	return "$" + strconv.Itoa(expr.Position()), nil
+}
+
+// Bindings
 func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within string) {
 	for i, b := range bindings {
 		if i > 0 {

@@ -91,7 +91,7 @@ func (this *Update) Formalize() (err error) {
 		return err
 	}
 
-	empty := NewFormalizer()
+	empty := expression.NewFormalizer()
 
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
@@ -182,7 +182,7 @@ func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Set) Formalize(f *Formalizer) (err error) {
+func (this *Set) Formalize(f *expression.Formalizer) (err error) {
 	for _, term := range this.terms {
 		err = term.Formalize(f)
 		if err != nil {
@@ -216,7 +216,7 @@ func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Unset) Formalize(f *Formalizer) (err error) {
+func (this *Unset) Formalize(f *expression.Formalizer) (err error) {
 	for _, term := range this.terms {
 		err = term.Formalize(f)
 		if err != nil {
@@ -263,7 +263,7 @@ func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *SetTerm) Formalize(f *Formalizer) (err error) {
+func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		defer f.PopBindings()
 		err = f.PushBindings(this.updateFor.bindings)
@@ -328,7 +328,7 @@ func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *UnsetTerm) Formalize(f *Formalizer) (err error) {
+func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		defer f.PopBindings()
 		err = f.PushBindings(this.updateFor.bindings)

@@ -87,7 +87,7 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *Upsert) Formalize() (err error) {
 	if this.values != nil {
-		this.values, err = NewFormalizer().Map(this.values)
+		this.values, err = expression.NewFormalizer().Map(this.values)
 		if err != nil {
 			return
 		}

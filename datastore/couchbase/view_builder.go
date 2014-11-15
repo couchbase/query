@@ -410,7 +410,7 @@ func (this *JsStatement) JS() string {
 func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, error) {
 
 	this.js.WriteString("doc.")
-	stringer := NewJSConvertor().Visit(e)
+	stringer := NewJSConverter().Visit(e)
 	if stringer != "" {
 		stringer = strings.Replace(stringer, "`", "", -1)
 		this.js.WriteString(stringer)
@@ -424,7 +424,7 @@ func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, 
 // inorder traversal of the where expression AST to get JS expression out of it
 func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) (expression.Expression, error) {
 
-	stringer := NewJSConvertor().Visit(e)
+	stringer := NewJSConverter().Visit(e)
 	if stringer != "" {
 		stringer = strings.Replace(stringer, "`", "", -1)
 		// replace all instances of bucket-name with doc.bucket-name

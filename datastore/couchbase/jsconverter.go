@@ -17,9 +17,10 @@ import (
 	"github.com/couchbaselabs/query/expression"
 	stack "github.com/couchbaselabs/query/util"
 	"io"
+	"strings"
 )
 
-type JSConvertor struct {
+type JSConverter struct {
 	stack stack.Stack
 }
 
@@ -31,7 +32,7 @@ type funcExpr struct {
 func writeOperands(operands *list.List) string {
 	var buf bytes.Buffer
 	for e := operands.Front(); e != nil; e = e.Next() {
-		jsc := NewJSConvertor()
+		jsc := NewJSConverter()
 		buf.WriteString(jsc.Visit(e.Value.(expression.Expression)))
 		if e.Next() != nil {
 			buf.WriteString(",")
@@ -42,15 +43,15 @@ func writeOperands(operands *list.List) string {
 
 }
 
-func NewJSConvertor() *JSConvertor {
-	return &JSConvertor{stack: stack.Stack{}}
+func NewJSConverter() *JSConverter {
+	return &JSConverter{stack: stack.Stack{}}
 }
 
-func (this *JSConvertor) Visit(expr expression.Expression) string {
+func (this *JSConverter) Visit(expr expression.Expression) string {
 	var buf bytes.Buffer
 	s, err := expr.Accept(this)
 	if err != nil {
-		panic(fmt.Sprintf("Unexpected error in JSConvertor: %v", err))
+		panic(fmt.Sprintf("Unexpected error in JSConverter: %v", err))
 	}
 
 	switch s := s.(type) {
@@ -84,7 +85,7 @@ func (this *JSConvertor) Visit(expr expression.Expression) string {
 
 // Arithmetic
 
-func (this *JSConvertor) VisitAdd(expr *expression.Add) (interface{}, error) {
+func (this *JSConverter) VisitAdd(expr *expression.Add) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 
@@ -101,7 +102,7 @@ func (this *JSConvertor) VisitAdd(expr *expression.Add) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitDiv(expr *expression.Div) (interface{}, error) {
+func (this *JSConverter) VisitDiv(expr *expression.Div) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -111,7 +112,7 @@ func (this *JSConvertor) VisitDiv(expr *expression.Div) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitMod(expr *expression.Mod) (interface{}, error) {
+func (this *JSConverter) VisitMod(expr *expression.Mod) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -121,7 +122,7 @@ func (this *JSConvertor) VisitMod(expr *expression.Mod) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitMult(expr *expression.Mult) (interface{}, error) {
+func (this *JSConverter) VisitMult(expr *expression.Mult) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 
@@ -138,7 +139,7 @@ func (this *JSConvertor) VisitMult(expr *expression.Mult) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitNeg(expr *expression.Neg) (interface{}, error) {
+func (this *JSConverter) VisitNeg(expr *expression.Neg) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(-")
 	buf.WriteString(this.Visit(expr.Operand()))
@@ -146,7 +147,7 @@ func (this *JSConvertor) VisitNeg(expr *expression.Neg) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitSub(expr *expression.Sub) (interface{}, error) {
+func (this *JSConverter) VisitSub(expr *expression.Sub) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -158,48 +159,48 @@ func (this *JSConvertor) VisitSub(expr *expression.Sub) (interface{}, error) {
 
 // Case
 
-func (this *JSConvertor) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
-	return nil, fmt.Errorf("Expression Not supported")
+func (this *JSConverter) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
+func (this *JSConverter) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
 
-	return nil, fmt.Errorf("Expression not supported")
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
 // Collection
 
-func (this *JSConvertor) VisitAny(expr *expression.Any) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitAny(expr *expression.Any) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitArray(expr *expression.Array) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitArray(expr *expression.Array) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitEvery(expr *expression.Every) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitEvery(expr *expression.Every) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitExists(expr *expression.Exists) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitExists(expr *expression.Exists) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitFirst(expr *expression.First) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitFirst(expr *expression.First) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitIn(expr *expression.In) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitIn(expr *expression.In) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitWithin(expr *expression.Within) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
 // Comparison
 
-func (this *JSConvertor) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *JSConverter) VisitBetween(expr *expression.Between) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -213,7 +214,7 @@ func (this *JSConvertor) VisitBetween(expr *expression.Between) (interface{}, er
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitEq(expr *expression.Eq) (interface{}, error) {
+func (this *JSConverter) VisitEq(expr *expression.Eq) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -223,7 +224,7 @@ func (this *JSConvertor) VisitEq(expr *expression.Eq) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitLE(expr *expression.LE) (interface{}, error) {
+func (this *JSConverter) VisitLE(expr *expression.LE) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -233,11 +234,11 @@ func (this *JSConvertor) VisitLE(expr *expression.LE) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitLike(expr *expression.Like) (interface{}, error) {
-	return nil, fmt.Errorf("Expression not supported")
+func (this *JSConverter) VisitLike(expr *expression.Like) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
 }
 
-func (this *JSConvertor) VisitLT(expr *expression.LT) (interface{}, error) {
+func (this *JSConverter) VisitLT(expr *expression.LT) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -247,7 +248,7 @@ func (this *JSConvertor) VisitLT(expr *expression.LT) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
+func (this *JSConverter) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operand()))
@@ -255,7 +256,7 @@ func (this *JSConvertor) VisitIsMissing(expr *expression.IsMissing) (interface{}
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
+func (this *JSConverter) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operand()))
@@ -263,7 +264,7 @@ func (this *JSConvertor) VisitIsNull(expr *expression.IsNull) (interface{}, erro
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
+func (this *JSConverter) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operand()))
@@ -272,7 +273,7 @@ func (this *JSConvertor) VisitIsValued(expr *expression.IsValued) (interface{}, 
 }
 
 // Concat
-func (this *JSConvertor) VisitConcat(expr *expression.Concat) (interface{}, error) {
+func (this *JSConverter) VisitConcat(expr *expression.Concat) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 
@@ -289,12 +290,12 @@ func (this *JSConvertor) VisitConcat(expr *expression.Concat) (interface{}, erro
 }
 
 // Constant
-func (this *JSConvertor) VisitConstant(expr *expression.Constant) (interface{}, error) {
+func (this *JSConverter) VisitConstant(expr *expression.Constant) (interface{}, error) {
 	return json.Marshal(expr.Value())
 }
 
 // Identifier
-func (this *JSConvertor) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
+func (this *JSConverter) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
 
 	var buf bytes.Buffer
 
@@ -306,7 +307,7 @@ func (this *JSConvertor) VisitIdentifier(expr *expression.Identifier) (interface
 
 // Construction
 
-func (this *JSConvertor) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
+func (this *JSConverter) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("[")
 
@@ -322,7 +323,7 @@ func (this *JSConvertor) VisitArrayConstruct(expr *expression.ArrayConstruct) (i
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
+func (this *JSConverter) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("{")
 
@@ -345,7 +346,7 @@ func (this *JSConvertor) VisitObjectConstruct(expr *expression.ObjectConstruct) 
 
 // Logic
 
-func (this *JSConvertor) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *JSConverter) VisitAnd(expr *expression.And) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 
@@ -361,7 +362,7 @@ func (this *JSConvertor) VisitAnd(expr *expression.And) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *JSConverter) VisitNot(expr *expression.Not) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(! ")
 	buf.WriteString(this.Visit(expr.Operand()))
@@ -369,7 +370,7 @@ func (this *JSConvertor) VisitNot(expr *expression.Not) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *JSConverter) VisitOr(expr *expression.Or) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 
@@ -387,7 +388,7 @@ func (this *JSConvertor) VisitOr(expr *expression.Or) (interface{}, error) {
 
 // Navigation
 
-func (this *JSConvertor) VisitElement(expr *expression.Element) (interface{}, error) {
+func (this *JSConverter) VisitElement(expr *expression.Element) (interface{}, error) {
 	var buf bytes.Buffer
 	//buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.First()))
@@ -409,7 +410,7 @@ func (this *JSConvertor) VisitElement(expr *expression.Element) (interface{}, er
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitField(expr *expression.Field) (interface{}, error) {
+func (this *JSConverter) VisitField(expr *expression.Field) (interface{}, error) {
 	var buf bytes.Buffer
 	// parenthesis causing problems with certain expressions
 	// lack of thereof could still present a problem with other
@@ -432,7 +433,7 @@ func (this *JSConvertor) VisitField(expr *expression.Field) (interface{}, error)
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitFieldName(expr *expression.FieldName) (interface{}, error) {
+func (this *JSConverter) VisitFieldName(expr *expression.FieldName) (interface{}, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, len(expr.Alias())+2))
 	buf.WriteString("`")
 	buf.WriteString(expr.Alias())
@@ -441,7 +442,7 @@ func (this *JSConvertor) VisitFieldName(expr *expression.FieldName) (interface{}
 	return buf.String(), nil
 }
 
-func (this *JSConvertor) VisitSlice(expr *expression.Slice) (interface{}, error) {
+func (this *JSConverter) VisitSlice(expr *expression.Slice) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operands()[0]))
@@ -458,7 +459,7 @@ func (this *JSConvertor) VisitSlice(expr *expression.Slice) (interface{}, error)
 }
 
 // Function
-func (this *JSConvertor) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, error) {
 	var buf bytes.Buffer
 
 	functionExpr := &funcExpr{operands: list.New()}
@@ -467,7 +468,7 @@ func (this *JSConvertor) VisitFunction(expr expression.Function) (interface{}, e
 	var nopush bool
 	var pushOperands bool
 
-	switch expr.Name() {
+	switch strings.ToLower(expr.Name()) {
 	case "lower":
 		functionExpr.name = ".toLowerCase()"
 		this.stack.Push(functionExpr)
@@ -496,10 +497,6 @@ func (this *JSConvertor) VisitFunction(expr expression.Function) (interface{}, e
 		nopush = true
 		buf.WriteString(expr.Name())
 		buf.WriteString("(")
-	}
-
-	if expr.Distinct() {
-		//buf.WriteString("distinct ")
 	}
 
 	var firstOp expression.Expression
@@ -540,9 +537,24 @@ func (this *JSConvertor) VisitFunction(expr expression.Function) (interface{}, e
 	return buf.String(), nil
 }
 
+// Subqueries
+func (this *JSConverter) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+	return nil, fmt.Errorf("Subqueries cannot be index expressions")
+}
+
+// Named parameters
+func (this *JSConverter) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
+	return nil, fmt.Errorf("Parameters cannot be index expressions")
+}
+
+// Positional parameters
+func (this *JSConverter) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
+	return nil, fmt.Errorf("Parameters cannot be index expressions")
+}
+
 // Bindings
 
-func (this *JSConvertor) visitBindings(bindings expression.Bindings, w io.Writer, in, within string) {
+func (this *JSConverter) visitBindings(bindings expression.Bindings, w io.Writer, in, within string) {
 	for i, b := range bindings {
 		if i > 0 {
 			io.WriteString(w, ", ")

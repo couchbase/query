@@ -99,7 +99,7 @@ func (this *Merge) Formalize() (err error) {
 		return fmt.Errorf("Duplicate alias %s.", kf.Keyspace)
 	}
 
-	f := NewFormalizer()
+	f := expression.NewFormalizer()
 	f.Allowed.SetField(kf.Keyspace, kf.Keyspace)
 	f.Allowed.SetField(sf.Keyspace, sf.Keyspace)
 	err = this.actions.MapExpressions(f)
@@ -108,7 +108,7 @@ func (this *Merge) Formalize() (err error) {
 	}
 
 	if this.limit != nil {
-		_, err = this.limit.Accept(NewFormalizer())
+		_, err = this.limit.Accept(expression.NewFormalizer())
 		if err != nil {
 			return
 		}
@@ -176,9 +176,9 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *MergeSource) Formalize() (f *Formalizer, err error) {
+func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 	if this.from != nil {
-		_, err = this.from.Formalize(NewFormalizer())
+		_, err = this.from.Formalize(expression.NewFormalizer())
 		if err != nil {
 			return
 		}
@@ -196,7 +196,7 @@ func (this *MergeSource) Formalize() (f *Formalizer, err error) {
 		return nil, fmt.Errorf("MergeSource missing alias.")
 	}
 
-	f = NewFormalizer()
+	f = expression.NewFormalizer()
 	f.Keyspace = keyspace
 	f.Allowed.SetField(keyspace, keyspace)
 	return

@@ -67,4 +67,11 @@ type Visitor interface {
 
 	// Function
 	VisitFunction(expr Function) (interface{}, error)
+
+	// Subquery
+	VisitSubquery(expr Subquery) (interface{}, error)
+
+	// Parameters
+	VisitNamedParameter(expr NamedParameter) (interface{}, error)
+	VisitPositionalParameter(expr PositionalParameter) (interface{}, error)
 }

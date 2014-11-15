@@ -10,8 +10,6 @@
 package algebra
 
 import (
-	"fmt"
-
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -27,13 +25,13 @@ func NewSubquery(query *Select) expression.Expression {
 	}
 }
 
+func (this *Subquery) String() string {
+	// FIXME
+	return "(select 1)"
+}
+
 func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
-	switch v := visitor.(type) {
-	case ExpressionVisitor:
-		return v.VisitSubquery(this)
-	default:
-		panic(fmt.Sprintf("Subquery visited by %T.", visitor))
-	}
+	return visitor.VisitSubquery(this)
 }
 
 func (this *Subquery) Type() value.Type { return value.ARRAY }
@@ -60,6 +58,10 @@ func (this *Subquery) Children() expression.Expressions {
 
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
 	return nil
+}
+
+func (this *Subquery) Formalize(parent *expression.Formalizer) error {
+	return this.query.FormalizeSubquery(parent)
 }
 
 func (this *Subquery) Select() *Select {

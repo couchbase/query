@@ -28,12 +28,7 @@ func NewPositionalParameter(position int) expression.Expression {
 }
 
 func (this *PositionalParameter) Accept(visitor expression.Visitor) (interface{}, error) {
-	switch v := visitor.(type) {
-	case ExpressionVisitor:
-		return v.VisitPositionalParameter(this)
-	default:
-		panic(fmt.Sprintf("PositionalParameter visited by %T,", visitor))
-	}
+	return visitor.VisitPositionalParameter(this)
 }
 
 func (this *PositionalParameter) Type() value.Type { return value.JSON }
@@ -72,4 +67,8 @@ func (this *PositionalParameter) Children() expression.Expressions {
 
 func (this *PositionalParameter) MapChildren(mapper expression.Mapper) error {
 	return nil
+}
+
+func (this *PositionalParameter) Position() int {
+	return this.position
 }

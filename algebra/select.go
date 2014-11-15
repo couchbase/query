@@ -63,10 +63,10 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *Select) Formalize() (err error) {
-	return this.FormalizeSubquery(NewFormalizer())
+	return this.FormalizeSubquery(expression.NewFormalizer())
 }
 
-func (this *Select) FormalizeSubquery(parent *Formalizer) (err error) {
+func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
 	formalizer, err := this.subresult.Formalize(parent)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ type Subresult interface {
 	Signature() value.Value
 	IsCorrelated() bool
 	MapExpressions(mapper expression.Mapper) error
-	Formalize(parent *Formalizer) (formalizer *Formalizer, err error)
+	Formalize(parent *expression.Formalizer) (formalizer *expression.Formalizer, err error)
 }
 
 type Subselect struct {
@@ -232,7 +232,7 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 	return this.projection.MapExpressions(mapper)
 }
 
-func (this *Subselect) Formalize(parent *Formalizer) (f *Formalizer, err error) {
+func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	if this.from != nil {
 		f, err = this.from.Formalize(parent)
 		if err != nil {
@@ -329,7 +329,7 @@ func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
-func (this *Group) Formalize(f *Formalizer) (*Formalizer, error) {
+func (this *Group) Formalize(f *expression.Formalizer) (*expression.Formalizer, error) {
 	var err error
 
 	if this.by != nil {
@@ -392,8 +392,8 @@ func (this *binarySubresult) MapExpressions(mapper expression.Mapper) (err error
 	return this.second.MapExpressions(mapper)
 }
 
-func (this *binarySubresult) Formalize(parent *Formalizer) (f *Formalizer, err error) {
-	var ff, sf *Formalizer
+func (this *binarySubresult) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
+	var ff, sf *expression.Formalizer
 	ff, err = this.first.Formalize(parent)
 	if err != nil {
 		return nil, err

@@ -74,7 +74,7 @@ func (this *Delete) Formalize() (err error) {
 		return err
 	}
 
-	empty := NewFormalizer()
+	empty := expression.NewFormalizer()
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
 		if err != nil {
