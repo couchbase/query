@@ -11,7 +11,8 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
@@ -47,13 +48,12 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 
 		bytes, err := json.Marshal(this.plan)
 		if err != nil {
-			fmt.Printf(" Failed to marshal %v", err)
+			context.Fatal(errors.NewError(err, "Failed to marshal JSON."))
 			return
 		}
+
 		value := value.NewAnnotatedValue(bytes)
-		if !this.sendItem(value) {
-			return
-		}
+		this.sendItem(value)
 
 	})
 }
