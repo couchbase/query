@@ -176,7 +176,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 		}
 	}
 
-	err = this.projection.MapExpressions(f)
+	f, err = this.projection.Formalize(f)
 	if err != nil {
 		return nil, err
 	}

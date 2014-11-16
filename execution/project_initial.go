@@ -42,6 +42,8 @@ func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+var _EMPTY_ANNOTATED_VALUE = value.NewAnnotatedValue(map[string]interface{}{})
+
 func (this *InitialProject) processItem(item value.AnnotatedValue, context *Context) bool {
 	terms := this.plan.Terms()
 	n := len(terms)
@@ -51,70 +53,69 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	}
 
 	if n == 0 {
-		// No terms; send raw value
-		item.SetAttachment("project", item.GetValue())
 		return this.sendItem(item)
 	}
 
 	// n == 1
+
 	result := terms[0].Result()
 	expr := result.Expression()
 
-	// Special cases
 	if expr == nil {
-		// Unprefixed star or raw projection of item
-		if item.Type() == value.OBJECT || this.plan.Projection().Raw() {
-			item.SetAttachment("project", item.GetValue())
+		// Unprefixed star
+		if item.Type() == value.OBJECT {
+			return this.sendItem(item)
 		} else {
-			item.SetAttachment("project",
-				value.NewValue(map[string]interface{}{}))
+			return this.sendItem(_EMPTY_ANNOTATED_VALUE)
 		}
-		return this.sendItem(item)
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression
-		val, err := expr.Evaluate(item, context)
+		v, err := expr.Evaluate(item, context)
 		if err != nil {
 			context.Error(errors.NewError(err, "Error evaluating projection."))
 			return false
 		}
-		item.SetAttachment("project", val)
-		return this.sendItem(item)
+
+		if v.Type() == value.MISSING {
+			return true
+		}
+
+		if result.As() == "" {
+			return this.sendItem(value.NewAnnotatedValue(v))
+		}
+
+		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
+		sv.SetField(result.As(), v)
+		av := value.NewAnnotatedValue(sv)
+		av.SetAttachment("projection", v)
+		return this.sendItem(av)
 	} else {
-		// Default
+		// Any other projection
 		return this.processTerms(item, context)
 	}
 }
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
-
+	sv := value.NewScopeValue(make(map[string]interface{}, n+32), item)
 	pv := value.NewAnnotatedValue(sv)
 	pv.SetAttachments(item.Attachments())
 
-	project := value.NewValue(make(map[string]interface{}))
-	pv.SetAttachment("project", project)
-
 	for _, term := range this.plan.Terms() {
 		if term.Result().Alias() != "" {
-			val, err := term.Result().Expression().Evaluate(item, context)
+			v, err := term.Result().Expression().Evaluate(item, context)
 			if err != nil {
 				context.Error(errors.NewError(err, "Error evaluating projection."))
 				return false
 			}
 
-			project.SetField(term.Result().Alias(), val)
-
-			// Explicit aliases overshadow data
-			if term.Result().As() != "" {
-				pv.SetField(term.Result().Alias(), val)
-			}
+			pv.SetField(term.Result().Alias(), v)
 		} else {
 			// Star
-			starValue := item.(value.Value)
+			starval := item.GetValue()
 			if term.Result().Expression() != nil {
 				var err error
-				starValue, err = term.Result().Expression().Evaluate(item, context)
+				starval, err = term.Result().Expression().Evaluate(item, context)
 				if err != nil {
 					context.Error(errors.NewError(err, "Error evaluating projection."))
 					return false
@@ -122,10 +123,10 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			}
 
 			// Latest star overwrites previous star
-			switch starActual := starValue.Actual().(type) {
+			switch sa := starval.Actual().(type) {
 			case map[string]interface{}:
-				for k, v := range starActual {
-					project.SetField(k, value.NewValue(v))
+				for k, v := range sa {
+					pv.SetField(k, v)
 				}
 			}
 		}

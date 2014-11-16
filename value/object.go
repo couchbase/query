@@ -17,8 +17,6 @@ import (
 
 type objectValue map[string]interface{}
 
-var EMPTY_OBJECT_VALUE = NewValue(map[string]interface{}{})
-
 func (this objectValue) MarshalJSON() ([]byte, error) {
 	if this == nil {
 		return _NULL_BYTES, nil

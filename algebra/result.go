@@ -63,24 +63,28 @@ func (this *Projection) Signature() value.Value {
 	return rv
 }
 
+func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Formalizer, err error) {
+	f = &expression.Formalizer{
+		Allowed:  in.Allowed.Copy(),
+		Keyspace: in.Keyspace,
+	}
+
+	// Exempt explicit aliases from being formalized
+	for _, term := range this.terms {
+		if term.as != "" {
+			f.Allowed.SetField(term.as, term.as)
+		}
+	}
+
+	err = this.MapExpressions(f)
+	return
+}
+
 func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
 		err = term.MapExpression(mapper)
 		if err != nil {
 			return
-		}
-	}
-
-	return
-}
-
-func (this *Projection) Formalize(f *expression.Formalizer) (err error) {
-	for _, term := range this.terms {
-		if term.expr != nil {
-			term.expr, err = f.Map(term.expr)
-			if err != nil {
-				return
-			}
 		}
 	}
 

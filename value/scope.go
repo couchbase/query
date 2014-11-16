@@ -9,14 +9,14 @@
 
 package value
 
-// ScopeValue provides alias scoping for subqueries, FORs, LETs,
+// ScopeValue provides alias scoping for subqueries, ranging, LETs,
 // projections, etc.
 type ScopeValue struct {
 	Value
 	parent Value
 }
 
-// ScopeValue provides alias scoping for subqueries, FORs, LETs,
+// ScopeValue provides alias scoping for subqueries, ranging, LETs,
 // projections, etc.
 func NewScopeValue(val interface{}, parent Value) Value {
 	return &ScopeValue{
@@ -43,7 +43,7 @@ func (this *ScopeValue) CopyForUpdate() Value {
 	}
 }
 
-// Search self, the parent. Implements scoping.
+// Search self, then parent. Implements scoping.
 func (this *ScopeValue) Field(field string) (Value, bool) {
 	result, ok := this.Value.Field(field)
 	if ok {
@@ -75,4 +75,8 @@ func (this *ScopeValue) Fields() map[string]interface{} {
 	}
 
 	return rv
+}
+
+func (this *ScopeValue) GetValue() Value {
+	return this.Value
 }
