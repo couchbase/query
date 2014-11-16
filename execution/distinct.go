@@ -49,12 +49,12 @@ func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
-	project := item.GetAttachment("project")
-	if project == nil {
-		project = item
+	p := item.GetAttachment("projection")
+	if p == nil {
+		p = item
 	}
 
-	this.set.Put(project.(value.Value), item)
+	this.set.Put(p.(value.Value), item)
 	return true
 }
 

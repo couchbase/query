@@ -39,20 +39,11 @@ func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *FinalProject) processItem(item value.AnnotatedValue, context *Context) bool {
-	// Used by RAW projection
 	pv := item.GetAttachment("projection")
 	if pv != nil {
 		v := pv.(value.Value)
 		return this.sendItem(value.NewAnnotatedValue(v))
 	}
 
-	v := item.GetValue()
-
-	switch v := v.(type) {
-	case *value.ScopeValue:
-		// Discard parent scopes
-		return this.sendItem(value.NewAnnotatedValue(v.GetValue()))
-	default:
-		return this.sendItem(item)
-	}
+	return this.sendItem(item)
 }

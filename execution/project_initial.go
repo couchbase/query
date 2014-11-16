@@ -96,10 +96,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 }
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
-	n := len(this.plan.Terms())
-	sv := value.NewScopeValue(make(map[string]interface{}, n+32), item)
-	pv := value.NewAnnotatedValue(sv)
+	pv := value.NewAnnotatedValue(item.Copy().Fields())
 	pv.SetAttachments(item.Attachments())
+
+	n := len(this.plan.Terms())
+	p := value.NewValue(make(map[string]interface{}, n+32))
+	pv.SetAttachment("projection", p)
 
 	for _, term := range this.plan.Terms() {
 		if term.Result().Alias() != "" {
@@ -109,7 +111,12 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				return false
 			}
 
-			pv.SetField(term.Result().Alias(), v)
+			p.SetField(term.Result().Alias(), v)
+
+			// Explicit aliases override data
+			if term.Result().As() != "" {
+				pv.SetField(term.Result().As(), v)
+			}
 		} else {
 			// Star
 			starval := item.GetValue()
@@ -126,7 +133,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			switch sa := starval.Actual().(type) {
 			case map[string]interface{}:
 				for k, v := range sa {
-					pv.SetField(k, v)
+					p.SetField(k, v)
 				}
 			}
 		}
