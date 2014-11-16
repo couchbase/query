@@ -13,8 +13,8 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
-func (this *builder) VisitExplain(node *algebra.Explain) (interface{}, error) {
-	op, err := node.Statement().Accept(this)
+func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+	op, err := stmt.Statement().Accept(this)
 	if err != nil {
 		return nil, err
 	}

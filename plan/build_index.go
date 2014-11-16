@@ -17,54 +17,54 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 )
 
-func (this *builder) VisitCreatePrimaryIndex(node *algebra.CreatePrimaryIndex) (interface{}, error) {
-	ksref := node.Keyspace()
+func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
+	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	return NewCreatePrimaryIndex(keyspace, node), nil
+	return NewCreatePrimaryIndex(keyspace, stmt), nil
 }
 
-func (this *builder) VisitCreateIndex(node *algebra.CreateIndex) (interface{}, error) {
-	ksref := node.Keyspace()
+func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
+	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	return NewCreateIndex(keyspace, node), nil
+	return NewCreateIndex(keyspace, stmt), nil
 }
 
-func (this *builder) VisitDropIndex(node *algebra.DropIndex) (interface{}, error) {
-	ksref := node.Keyspace()
+func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
+	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	index, er := keyspace.IndexByName(node.Name())
+	index, er := keyspace.IndexByName(stmt.Name())
 	if er != nil {
 		return nil, er
 	}
 
-	return NewDropIndex(index, node), nil
+	return NewDropIndex(index, stmt), nil
 }
 
-func (this *builder) VisitAlterIndex(node *algebra.AlterIndex) (interface{}, error) {
-	ksref := node.Keyspace()
+func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
+	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	index, er := keyspace.IndexByName(node.Name())
+	index, er := keyspace.IndexByName(stmt.Name())
 	if er != nil {
 		return nil, er
 	}
 
-	return NewAlterIndex(index, node), nil
+	return NewAlterIndex(index, stmt), nil
 }
 
 func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {

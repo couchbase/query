@@ -13,14 +13,14 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
-func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
-	ksref := node.KeyspaceRef()
+func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
+	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
+	err = this.beginMutate(keyspace, ksref.Alias(), stmt.Keys(), stmt.Where())
 	if err != nil {
 		return nil, err
 	}
@@ -28,25 +28,25 @@ func (this *builder) VisitUpdate(node *algebra.Update) (interface{}, error) {
 	subChildren := this.subChildren
 	subChildren = append(subChildren, NewClone())
 
-	if node.Set() != nil {
-		subChildren = append(subChildren, NewSet(node.Set()))
+	if stmt.Set() != nil {
+		subChildren = append(subChildren, NewSet(stmt.Set()))
 	}
 
-	if node.Unset() != nil {
-		subChildren = append(subChildren, NewUnset(node.Unset()))
+	if stmt.Unset() != nil {
+		subChildren = append(subChildren, NewUnset(stmt.Unset()))
 	}
 
 	subChildren = append(subChildren, NewSendUpdate(keyspace))
 
-	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	if stmt.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))
 	this.children = append(this.children, parallel)
 
-	if node.Limit() != nil {
-		this.children = append(this.children, NewLimit(node.Limit()))
+	if stmt.Limit() != nil {
+		this.children = append(this.children, NewLimit(stmt.Limit()))
 	}
 
 	return NewSequence(this.children...), nil

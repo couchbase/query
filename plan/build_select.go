@@ -19,17 +19,17 @@ import (
 
 // SELECT
 
-func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
-	order := node.Order()
-	offset := node.Offset()
-	limit := node.Limit()
+func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
+	order := stmt.Order()
+	offset := stmt.Offset()
+	limit := stmt.Limit()
 
 	// If there is an ORDER BY, delay the final projection
 	if order != nil {
-		this.projectFinal = false
+		this.delayProjection = true
 	}
 
-	sub, err := node.Subresult().Accept(this)
+	sub, err := stmt.Subresult().Accept(this)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (this *builder) VisitSelect(node *algebra.Select) (interface{}, error) {
 	}
 
 	// Perform the delayed final projection now, after the ORDER BY
-	if !this.projectFinal {
+	if this.delayProjection {
 		children = append(children, NewParallel(NewFinalProject()))
 	}
 
@@ -118,8 +118,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.subChildren = append(this.subChildren, NewDistinct())
 	}
 
-	// Perform the final projection if there is no subsequent ORDER BY
-	if this.projectFinal {
+	if !this.delayProjection {
+		// Perform the final projection if there is no subsequent ORDER BY
 		this.subChildren = append(this.subChildren, NewFinalProject())
 	}
 
@@ -264,7 +264,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -281,7 +281,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -302,7 +302,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -318,7 +318,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -344,7 +344,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -360,7 +360,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
-	this.projectFinal = true
+	this.delayProjection = false
 
 	first, err := node.First().Accept(this)
 	if err != nil {

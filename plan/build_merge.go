@@ -15,10 +15,10 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
-func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
+func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	children := make([]Operator, 0, 8)
 	subChildren := make([]Operator, 0, 8)
-	source := node.Source()
+	source := stmt.Source()
 
 	if source.Select() != nil {
 		sel, err := source.Select().Accept(this)
@@ -45,13 +45,13 @@ func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
 		subChildren = append(subChildren, NewAlias(source.As()))
 	}
 
-	ksref := node.KeyspaceRef()
+	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	actions := node.Actions()
+	actions := stmt.Actions()
 	var update, delete, insert Operator
 
 	if actions.Update() != nil {
@@ -94,22 +94,22 @@ func (this *builder) VisitMerge(node *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendInsert(keyspace, node.Key()))
+		ops = append(ops, NewSendInsert(keyspace, stmt.Key()))
 		insert = NewSequence(ops...)
 	}
 
-	merge := NewMerge(keyspace, ksref, node.Key(), update, delete, insert)
+	merge := NewMerge(keyspace, ksref, stmt.Key(), update, delete, insert)
 	subChildren = append(subChildren, merge)
 
-	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	if stmt.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))
 	children = append(children, parallel)
 
-	if node.Limit() != nil {
-		children = append(children, NewLimit(node.Limit()))
+	if stmt.Limit() != nil {
+		children = append(children, NewLimit(stmt.Limit()))
 	}
 
 	return NewSequence(children...), nil

@@ -15,8 +15,8 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 )
 
-func (this *builder) VisitUpsert(node *algebra.Upsert) (interface{}, error) {
-	ksref := node.KeyspaceRef()
+func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
+	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
@@ -24,10 +24,10 @@ func (this *builder) VisitUpsert(node *algebra.Upsert) (interface{}, error) {
 
 	children := make([]Operator, 0, 2)
 
-	if node.Values() != nil {
-		children = append(children, NewValueScan(node.Values()))
-	} else if node.Select() != nil {
-		sel, err := node.Select().Accept(this)
+	if stmt.Values() != nil {
+		children = append(children, NewValueScan(stmt.Values()))
+	} else if stmt.Select() != nil {
+		sel, err := stmt.Select().Accept(this)
 		if err != nil {
 			return nil, err
 		}
@@ -38,9 +38,9 @@ func (this *builder) VisitUpsert(node *algebra.Upsert) (interface{}, error) {
 	}
 
 	subChildren := make([]Operator, 0, 3)
-	subChildren = append(subChildren, NewSendUpsert(keyspace, node.Key()))
-	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	subChildren = append(subChildren, NewSendUpsert(keyspace, stmt.Key()))
+	if stmt.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))

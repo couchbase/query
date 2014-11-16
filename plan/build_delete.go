@@ -15,14 +15,14 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
-	ksref := node.KeyspaceRef()
+func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
+	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref.Alias(), node.Keys(), node.Where())
+	err = this.beginMutate(keyspace, ksref.Alias(), stmt.Keys(), stmt.Where())
 	if err != nil {
 		return nil, err
 	}
@@ -30,15 +30,15 @@ func (this *builder) VisitDelete(node *algebra.Delete) (interface{}, error) {
 	subChildren := this.subChildren
 	subChildren = append(subChildren, NewSendDelete(keyspace))
 
-	if node.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(node.Returning()), NewFinalProject())
+	if stmt.Returning() != nil {
+		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))
 	this.children = append(this.children, parallel)
 
-	if node.Limit() != nil {
-		this.children = append(this.children, NewLimit(node.Limit()))
+	if stmt.Limit() != nil {
+		this.children = append(this.children, NewLimit(stmt.Limit()))
 	}
 
 	return NewSequence(this.children...), nil

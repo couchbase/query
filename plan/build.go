@@ -10,7 +10,6 @@
 package plan
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/couchbaselabs/query/algebra"
@@ -20,44 +19,40 @@ import (
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool) (Operator, error) {
 	builder := newBuilder(datastore, systemstore, namespace, subquery)
-	op, err := stmt.Accept(builder)
+	o, err := stmt.Accept(builder)
 
 	if err != nil {
 		return nil, err
 	}
 
-	switch op := op.(type) {
-	case Operator:
-		if !subquery {
-			return NewSequence(op, NewStream()), nil
-		} else {
-			return op, nil
-		}
-	default:
-		panic(fmt.Sprintf("Expected plan.Operator instead of %T.", op))
+	op := o.(Operator)
+	if !subquery {
+		return NewSequence(op, NewStream()), nil
+	} else {
+		return op, nil
 	}
 }
 
 type builder struct {
-	datastore    datastore.Datastore
-	systemstore  datastore.Datastore
-	namespace    string
-	subquery     bool
-	projectFinal bool
-	distinct     bool
-	children     []Operator
-	subChildren  []Operator
-	Type         string
+	datastore       datastore.Datastore
+	systemstore     datastore.Datastore
+	namespace       string
+	subquery        bool
+	delayProjection bool
+	distinct        bool
+	children        []Operator
+	subChildren     []Operator
+	Type            string
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
 	return &builder{
-		datastore:    datastore,
-		systemstore:  systemstore,
-		namespace:    namespace,
-		subquery:     subquery,
-		projectFinal: true,
-		Type:         "builder",
+		datastore:       datastore,
+		systemstore:     systemstore,
+		namespace:       namespace,
+		subquery:        subquery,
+		delayProjection: false,
+		Type:            "builder",
 	}
 }
 
