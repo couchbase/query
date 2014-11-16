@@ -332,6 +332,8 @@ indexType        datastore.IndexType
 %type <expr>             index_partition
 %type <indexType>        index_using
 %type <s>                rename
+%type <expr>             index_expr index_where
+%type <exprs>            index_exprs
 
 %start input
 
@@ -1330,7 +1332,7 @@ CREATE PRIMARY INDEX ON named_keyspace_ref index_using
   $$ = algebra.NewCreatePrimaryIndex($5, $6)
 }
 |
-CREATE INDEX index_name ON named_keyspace_ref LPAREN exprs RPAREN index_partition opt_where index_using
+CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where index_using
 {
   $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11)
 }
@@ -1378,6 +1380,41 @@ USING VIEW
 USING LSM
 {
     $$ = datastore.LSM
+}
+;
+
+index_exprs:
+index_expr
+{
+    $$ = expression.Expressions{$1}
+}
+|
+index_exprs COMMA index_expr
+{
+    $$ = append($1, $3)
+}
+;
+
+index_expr:
+expr
+{
+    e := $1
+    if !e.Indexable() {
+        yylex.Error(fmt.Sprintf("Expression not indexable."))
+    }
+
+    $$ = e
+}
+
+index_where:
+/* empty */
+{
+    $$ = nil
+}
+|
+WHERE index_expr
+{
+    $$ = $2
 }
 ;
 
