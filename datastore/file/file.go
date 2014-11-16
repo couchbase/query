@@ -281,6 +281,12 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
+		if item == nil {
+			// Skip nil item - requires resizing the pair list
+			rv = append(rv[:i], rv[i+1:]...)
+			continue
+		}
+
 		if e != nil {
 			return nil, e
 		}
