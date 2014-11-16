@@ -34,11 +34,11 @@ func NewProjection(distinct bool, terms ResultTerms) *Projection {
 	return rv
 }
 
-func NewRawProjection(distinct bool, expr expression.Expression) *Projection {
+func NewRawProjection(distinct bool, expr expression.Expression, as string) *Projection {
 	rv := &Projection{
 		distinct: distinct,
 		raw:      true,
-		terms:    ResultTerms{NewResultTerm(expr, false, "")},
+		terms:    ResultTerms{NewResultTerm(expr, false, as)},
 	}
 
 	rv.setAliases()

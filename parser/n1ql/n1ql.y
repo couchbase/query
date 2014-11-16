@@ -494,14 +494,14 @@ ALL projects
     $$ = algebra.NewProjection(false, $2)
 }
 |
-raw expr
+raw expr opt_as_alias
 {
-    $$ = algebra.NewRawProjection(false, $2)
+    $$ = algebra.NewRawProjection(false, $2, $3)
 }
 |
-DISTINCT raw expr
+DISTINCT raw expr opt_as_alias
 {
-    $$ = algebra.NewRawProjection(true, $3)
+    $$ = algebra.NewRawProjection(true, $3, $4)
 }
 ;
 
@@ -1040,7 +1040,7 @@ projects
 |
 raw expr
 {
-    $$ = algebra.NewRawProjection(false, $2)
+    $$ = algebra.NewRawProjection(false, $2, "")
 }
 ;
 
