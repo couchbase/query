@@ -1,0 +1,229 @@
+[
+
+    {
+        "statements": "SELECT title AS T , details.author AS A , pricing.retail AS R, title AS Title FROM default:catalog WHERE title = \"Inferno\" ORDER BY title",
+        "results": [
+        {
+            "A": "Dan Brown",
+            "R": 270,
+            "T": "Inferno",
+            "Title": "Inferno"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT name AS _1 FROM default:tags ORDER BY name",
+        "results": [
+        {
+            "_1": "beer"
+        },
+        {
+            "_1": "mayan"
+        },
+        {
+            "_1": "terabithia"
+        },
+        {
+            "_1": "threemusketeers"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT title AS t, length(title) FROM default:catalog ORDER BY title",
+        "results": [
+       {
+            "$1": 7,
+            "t": "Inferno"
+        },
+        {
+            "$1": 18,
+            "t": "Sherlock: Series 1"
+        },
+        {
+            "$1": 16,
+            "t": "Zero Dark Thirty"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title AS `$1`, details.title FROM default:catalog ORDER BY `$1`",
+        "results": [
+            {
+                 "$1": "Inferno",
+                 "title": "INFERNO"
+            },
+            {
+                 "$1": "Sherlock: Series 1",
+                 "title": "SHERLOCK: SERIES 1"
+            },
+            {
+                 "$1": "Zero Dark Thirty",
+                 "title": "ZERO DARK THIRTY"
+            }
+    ]
+    },
+
+    {
+        "statements": "SELECT title AS `$2`, details.title FROM default:catalog ORDER BY title",
+        "results": [
+        {
+            "$2": "Inferno",
+            "title": "INFERNO"
+        },
+        {
+            "$2": "Sherlock: Series 1",
+            "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "$2": "Zero Dark Thirty",
+            "title": "ZERO DARK THIRTY"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT title AS `$A`, title AS `A$`, title AS `_A`, title AS `A_` FROM default:catalog ORDER BY title",
+        "results": [
+        {
+            "$A": "Inferno",
+            "A$": "Inferno",
+            "A_": "Inferno",
+            "_A": "Inferno"
+        },
+        {
+            "$A": "Sherlock: Series 1",
+            "A$": "Sherlock: Series 1",
+            "A_": "Sherlock: Series 1",
+            "_A": "Sherlock: Series 1"
+        },
+        {
+            "$A": "Zero Dark Thirty",
+            "A$": "Zero Dark Thirty",
+            "A_": "Zero Dark Thirty",
+            "_A": "Zero Dark Thirty"
+        }
+   ]
+    },
+
+
+    {
+        "statements": "SELECT details.actors AS act, tags AS _tags, pricing AS P FROM default:catalog ORDER BY act",
+        "results": [
+         {
+            "P": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            },
+            "_tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ]
+        },
+        {
+            "P": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            },
+            "_tags": [
+                "cash on delivery",
+                "english",
+                "TV"
+            ],
+            "act": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ]
+        },
+        {
+            "P": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            },
+            "_tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "act": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ]
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT C.details.actors AS act, C.tags AS _tags, C.pricing AS P FROM default:catalog AS C ORDER BY act",
+        "results": [
+          {
+            "P": {
+                "list": 300,
+                "pct_savings": 10,
+                "retail": 270,
+                "savings": 30
+            },
+            "_tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ]
+        },
+        {
+            "P": {
+                "list": 799,
+                "pct_savings": 20,
+                "retail": 639,
+                "savings": 160
+            },
+            "_tags": [
+                "cash on delivery",
+                "english",
+                "TV"
+            ],
+            "act": [
+                "Benedict Cumberbatch",
+                "Martin Freeman"
+            ]
+        },
+        {
+            "P": {
+                "list": 599,
+                "pct_savings": 25,
+                "retail": 449,
+                "savings": 150
+            },
+            "_tags": [
+                "new release",
+                "english",
+                "movie"
+            ],
+            "act": [
+                "Jessica Chastain",
+                "Mark Strong"
+            ]
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT details.* AS D FROM default:catalog ORDER BY D",
+        "error":"Parse Error - syntax error"
+    },
+
+    {
+        "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog ORDER BY `$2` LIMIT 1",
+        "error": "alias $2 is defined more than once"
+    }
+
+]
+

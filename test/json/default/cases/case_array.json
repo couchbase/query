@@ -1,0 +1,491 @@
+[
+    {
+        "statements": "SELECT ARRAY child FOR child IN children END AS all_children FROM default:contacts ORDER BY all_children",
+        "results": [
+        {},
+        {},
+        {},
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+        },
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        },
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+        }
+     ]
+    },
+    {
+        "statements": "SELECT ARRAY child FOR child IN children WHEN child.age > 14 AND child.gender = \"m\" END AS all_males_over_14 FROM default:contacts ORDER BY all_children",
+        "results": [
+        {
+            "all_males_over_14": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                }
+            ]
+        },
+        {
+            "all_males_over_14": []
+        },
+        {},
+        {},
+        {
+            "all_males_over_14": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        },
+        {}
+        ]
+    },
+    {
+        "statements" : "select DISTINCT (ARRAY ol.productId FOR ol IN orderlines END) AS A FROM default:orders ORDER BY A",
+        "results" : [
+         {
+            "A": [
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22"
+            ]
+        }
+      ]
+    },
+   
+    {
+        "statements" : "select id from default:orders WHERE ARRAY ol.productId FOR ol IN orderlines END = [ \"coffee01\", \"sugar22\" ] ORDER BY id",
+        "results" : [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT profile_details.user_id, profile_details.loyalty, personal_details.age FROM default:user_profile WHERE (profile_details.loyalty.loyalty_score > 6.7 AND profile_details.loyalty.loyalty_score < 9) AND ( ANY friend IN profile_details.loyalty.friends_referred SATISFIES friend END AND (profile_details.loyalty.reward_points + profile_details.loyalty.redeemed_points) > 1100) AND  ( (personal_details.age > 45 OR personal_details.age < 35) ) OR profile_details.loyalty.board_member <> True ORDER BY profile_details.user_id",
+        "results" : [
+        {
+            "age": 49,
+            "loyalty": {
+                "friends_referred": [
+                    "Ardelia_91499701"
+                ],
+                "loyalty_score": 6.991706946717727,
+                "membership_type": "Silver",
+                "redeemed_points": 1152,
+                "reward_points": 1404
+            },
+            "user_id": "Casey_50744697"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT ARRAY child FOR child IN children END AS all_children FROM default:contacts ORDER BY all_children",
+        "results": [
+       {},
+        {},
+        {},
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+        },
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        },
+        {
+            "all_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+        }
+       ]
+    },
+
+    {
+        "description": "ARRAY expression referring to outer context",
+        "statements" : "SELECT name, ARRAY child FOR child IN children WHEN child.name > name END as chosen_one FROM default:contacts ORDER BY chosen_one",
+        "results" : [
+           {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "jane"
+        },
+        {
+            "chosen_one": [],
+            "name": "dave"
+        },
+        {
+            "chosen_one": [],
+            "name": "ian"
+        },
+        {
+            "chosen_one": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ],
+            "name": "earl"
+        }
+      ]
+    },
+
+    {
+        "description" : "ARRAY tests for slicing",
+        "statements" : "SELECT children[0:2] as first_two_children from default:contacts ORDER BY first_two_children",
+        "results": [
+        {},
+        {},
+        {},
+        {
+            "first_two_children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+        },
+        {
+            "first_two_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        },
+        {
+            "first_two_children": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+        }
+    ] 
+    },
+    {
+        "description" : "ARRAY tests for slicing",
+        "statements"  : "SELECT children[0:]  from default:contacts ORDER BY children",
+        "results": [
+         {},
+         {},
+         {},
+         {
+            "$1": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+         },
+         {
+            "$1": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+         },
+         {
+            "$1": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+         }
+   ]
+    },
+    {
+        "description" : "Array slicing and unnesting test",
+        "statements" : "select name, children[0:2] as two_teenagers from default:contacts where every child in contacts.children satisfies child.age > 10 end ORDER BY name",
+        "results": [
+        {
+            "name": "ian",
+            "two_teenagers": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT name, array_append(array_agg(name), [1,2]) AS names FROM default:contacts GROUP BY contacts.name ORDER BY contacts.name",
+        "resultset": [
+        {
+            "name": "ian",
+            "names": [
+                "ian",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "name": "jane",
+            "names": [
+                "jane",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "name": "dave",
+            "names": [
+                "dave",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "name": "earl",
+            "names": [
+                "earl",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "name": "fred",
+            "names": [
+                "ian",
+                [
+                    1,
+                    2
+                ]
+            ]
+        },
+        {
+            "name": "harry",
+            "names": [
+                "jane",
+                [
+                    1,
+                    2
+                ]
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements" : "SELECT name, array_prepend([\"manik\", \"gerald\", \"steve\"], array_agg(name)) AS names FROM default:contacts GROUP BY contacts.name ORDER BY contacts.name",
+        "resultset": [
+        {
+            "name": "harry",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "harry"
+            ]
+        },
+        {
+            "name": "ian",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "ian"
+            ]
+        },
+        {
+            "name": "jane",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "jane"
+            ]
+        },
+        {
+            "name": "dave",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "dave"
+            ]
+        },
+        {
+            "name": "earl",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "earl"
+            ]
+        },
+        {
+            "name": "fred",
+            "names": [
+                [
+                    "manik",
+                    "gerald",
+                    "steve"
+                ],
+                "fred"
+            ]
+        }
+    ]
+    }
+]

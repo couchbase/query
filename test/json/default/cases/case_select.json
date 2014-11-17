@@ -9,7 +9,7 @@
     },
 
     {
-        "statements": "SELECT title, genre, director[1], runtime FROM default:catalog.details",
+        "statements": "SELECT title, genre, director[1], runtime FROM default:catalog.details ORDER BY title",
         "results": [
         {
             "genre": [
@@ -19,14 +19,6 @@
             "title": "INFERNO"
         },
         {
-            "genre": [
-                "Action",
-                "Thriller"
-            ],
-            "runtime": "157 mins",
-            "title": "ZERO DARK THIRTY"
-        },
-        {
             "$1": "Paul Mcguigan",
             "genre": [
                 "Crime",
@@ -34,12 +26,20 @@
             ],
             "runtime": "266.0 mins",
             "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "runtime": "157 mins",
+            "title": "ZERO DARK THIRTY"
         }
     ] 
     },
 
     {
-        "statements": "SELECT title, genre, director[1], `type`, runtime FROM default:catalog.details",
+        "statements": "SELECT title, genre, director[1], `type`, runtime FROM default:catalog.details ORDER BY title",
         "results": [
         {
             "genre": [
@@ -49,14 +49,6 @@
             "title": "INFERNO"
         },
         {
-            "genre": [
-                "Action",
-                "Thriller"
-            ],
-            "runtime": "157 mins",
-            "title": "ZERO DARK THIRTY"
-        },
-        {
             "$1": "Paul Mcguigan",
             "genre": [
                 "Crime",
@@ -64,12 +56,20 @@
             ],
             "runtime": "266.0 mins",
             "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "genre": [
+                "Action",
+                "Thriller"
+            ],
+            "runtime": "157 mins",
+            "title": "ZERO DARK THIRTY"
         }
     ]
     },
 
     {
-        "statements": "SELECT actors[0], actors[1], director FROM default:catalog.details WHERE actors[0] = \"Jessica Chastain\"",
+        "statements": "SELECT actors[0], actors[1], director FROM default:catalog.details WHERE actors[0] = \"Jessica Chastain\" ORDER BY actors[0]",
         "results": [
         {
             "$1": "Jessica Chastain",
@@ -80,14 +80,14 @@
     },
 
     {
-        "statements": "SELECT `banned-on` FROM default:tags",
+        "statements": "SELECT `banned-on` FROM default:tags ORDER BY `banned-on`",
         "results": [
         {},
         {
-            "banned-on": "2001/12/07"
+            "banned-on": null
         },
         {
-            "banned-on": null
+            "banned-on": "2001/12/07"
         },
         {
             "banned-on": "2012/02/02"
@@ -96,7 +96,7 @@
     },
 
     {
-        "statements": "SELECT * FROM default:contacts.children",
+        "statements": "SELECT * FROM default:contacts.children ORDER BY contacts.children.name",
         "results": [
         {
             "children": [
@@ -144,18 +144,8 @@
     },
 
     {
-        "statements": "SELECT details.* FROM default:catalog",
+        "statements": "SELECT details.* FROM default:catalog ORDER BY details.author",
         "results": [
-        {
-            "author": "Dan Brown",
-            "genre": [
-                "Fiction",
-                "Thriller"
-            ],
-            "package": "Hardcover",
-            "published": "05/14/2013",
-            "title": "INFERNO"
-        },
         {
             "actors": [
                 "Jessica Chastain",
@@ -186,12 +176,22 @@
             ],
             "runtime": "266.0 mins",
             "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "author": "Dan Brown",
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "package": "Hardcover",
+            "published": "05/14/2013",
+            "title": "INFERNO"
         }
     ]
     },
 
     {
-        "statements": "SELECT details.format.* FROM default:catalog",
+        "statements": "SELECT details.format.* FROM default:catalog ORDER BY details.format",
         "results": [
         {},
         {},
@@ -200,25 +200,8 @@
     },
 
     {
-        "statements": "SELECT details.*, pricing.*, tags.*, dimensions.* FROM default:catalog",
+        "statements": "SELECT details.*, pricing.*, tags.*, dimensions.* FROM default:catalog ORDER BY details.author",
         "results": [
-        {
-            "author": "Dan Brown",
-            "genre": [
-                "Fiction",
-                "Thriller"
-            ],
-            "height": 9.5,
-            "length": 7,
-            "list": 300,
-            "package": "Hardcover",
-            "pct_savings": 10,
-            "published": "05/14/2013",
-            "retail": 270,
-            "savings": 30,
-            "title": "INFERNO",
-            "width": 12
-        },
         {
             "actors": [
                 "Jessica Chastain",
@@ -263,32 +246,30 @@
             "savings": 160,
             "title": "SHERLOCK: SERIES 1",
             "width": 1.5
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT details.*, tags, pricing.* FROM default:catalog",
-        "results": [
+        },
         {
             "author": "Dan Brown",
             "genre": [
                 "Fiction",
                 "Thriller"
             ],
+            "height": 9.5,
+            "length": 7,
             "list": 300,
             "package": "Hardcover",
             "pct_savings": 10,
             "published": "05/14/2013",
             "retail": 270,
             "savings": 30,
-            "tags": [
-                "bestseller",
-                "imported",
-                "free delivery"
-            ],
-            "title": "INFERNO"
-        },
+            "title": "INFERNO",
+            "width": 12
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.*, tags, pricing.* FROM default:catalog ORDER BY details.author",
+        "results": [
         {
             "actors": [
                 "Jessica Chastain",
@@ -337,12 +318,31 @@
                 "TV"
             ],
             "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "author": "Dan Brown",
+            "genre": [
+                "Fiction",
+                "Thriller"
+            ],
+            "list": 300,
+            "package": "Hardcover",
+            "pct_savings": 10,
+            "published": "05/14/2013",
+            "retail": 270,
+            "savings": 30,
+            "tags": [
+                "bestseller",
+                "imported",
+                "free delivery"
+            ],
+            "title": "INFERNO"
         }
     ]
     },
 
     {
-        "statements": "SELECT 1, * FROM default:catalog.pricing",
+        "statements": "SELECT 1, * FROM default:catalog.pricing ORDER BY 1",
         "results": [
         {
             "$1": 1,
@@ -376,7 +376,7 @@
 
 
     {
-        "statements": "SELECT list, * FROM default:catalog.pricing",
+        "statements": "SELECT list, * FROM default:catalog.pricing ORDER BY list",
         "results": [
         {
             "list": 300,
@@ -409,7 +409,7 @@
     },
 
     {
-        "statements": "SELECT title, pricing.* FROM default:catalog",
+        "statements": "SELECT title, pricing.* FROM default:catalog ORDER BY list",
         "results": [
         {
             "list": 300,
@@ -436,16 +436,16 @@
     },
 
     {
-        "statements": "SELECT catalog.title FROM default:catalog LIMIT 1",
+        "statements": "SELECT catalog.title FROM default:catalog ORDER BY catalog.title LIMIT 1",
         "results": [
         {
             "title": "Inferno"
         }
     ]
     },
-
+   
     {
-        "statements": "SELECT {\"name\": id} AS custom_obj FROM default:game",
+        "statements": "SELECT {\"name\": id} AS custom_obj FROM default:game ORDER BY custom_obj",
         "results": [
         {
             "custom_obj": {
@@ -473,19 +473,19 @@
             }
         }
     ]
-    },
-
+    }, 
+    
     {
-        "statements" : "SELECT a FROM default:complex_json WHERE a IS VALUED",
+        "statements" : "SELECT a FROM default:complex_json WHERE a IS VALUED ORDER BY a",
         "results" : [
+        {
+            "a": true
+        },
         {
             "a": 1
         },
         {
             "a": "str"
-        },
-        {
-            "a": true
         },
         {
             "a": [
@@ -503,7 +503,7 @@
     },
 
     {
-        "statements" : "SELECT a FROM default:complex_json WHERE a IS NULL",
+        "statements" : "SELECT a FROM default:complex_json WHERE a IS NULL ORDER BY a",
         "results" : [
         {
             "a": null
@@ -512,7 +512,7 @@
     },
 
     {
-        "statements" : "SELECT a FROM default:complex_json WHERE a = \"str\"",
+        "statements" : "SELECT a FROM default:complex_json WHERE a = \"str\" ORDER BY a",
         "results" : [
         {
             "a": "str"
@@ -521,7 +521,7 @@
     },
 
     {
-        "statements" : "SELECT `a.b_c.d` FROM default:complex_json",
+        "statements" : "SELECT `a.b_c.d` FROM default:complex_json ORDER BY `a.b_c.d`",
         "results" : [
         {},
         {},
@@ -535,24 +535,29 @@
     },
 
     {
-        "statements" : "SELECT `b.c` FROM default:complex_json",
+        "statements" : "SELECT `b.c` FROM default:complex_json ORDER BY `b.c`",
         "results" : [
+        {},
+        {},
+        {},
+        {},
         {
             "b.c": 4
         },
         {
             "b.c": 5
-        },
-        {},
-        {},
-        {},
-        {}
+        }
     ]
     },
 
     {
-        "statements" : "SELECT b.c FROM default:complex_json",
+        "statements" : "SELECT b.c FROM default:complex_json ORDER BY b.c",
         "results": [
+        {},
+        {},
+        {},
+        {},
+        {},
         {
             "c": {
                 "e": [
@@ -564,14 +569,7 @@
                     8
                 ]
             }
-        },
-        {
-        },
-        {
-        },
-        {},
-        {},
-        {}
+        }
     ]
     }
 

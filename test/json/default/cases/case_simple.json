@@ -1,6 +1,6 @@
 [
     {
-        "statements": "SELECT * FROM default:contacts WHERE name = \"dave\"",
+        "statements": "SELECT * FROM default:contacts WHERE name = \"dave\" ORDER BY 1",
         "results": [
         {
             "contacts": {
@@ -27,7 +27,7 @@
     ]
     },
     {
-        "statements": "SELECT * FROM default:contacts WHERE name = \"ImSorryDave\"",
+        "statements": "SELECT * FROM default:contacts WHERE name = \"ImSorryDave\" ORDER BY 1",
         "results": []
     }
 
