@@ -1778,7 +1778,7 @@ __NEGINFIF(expr1, expr2)__ - NegInf if expr1 = expr2; else expr1.
 
 __POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
 
-### Meta and value functions
+### Meta functions
 
 __BASE64(expr)__ - base64-encoding of expr.
 

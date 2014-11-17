@@ -8,25 +8,25 @@
 
 ddl-stmt ::= index-stmt
 
-index-stmt ::= create-primary-index | create-index | drop-index | alter-index
+index-stmt ::= create-primary-index | create-index | drop-primary-index | drop-index
 
 
 /*
  *  index
  */
 
-create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-bucket-ref
+create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
 
-create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-bucket-ref '(' expr (',' expr)* ')' partition? where-clause? using?
+create-index ::= 'CREATE' 'INDEX' index-name 'ON' keyspace-ref '(' expr (',' expr)* ')' where-clause? using?
 
 index-name ::= identifier
 
-named-bucket-ref ::= (pool-name ':')? bucket-name
+named-keyspace-ref ::= (namespace ':')? keyspace
 
 partition ::= 'PARTITION' 'BY' expr
 
 using ::= 'USING' 'VIEW'
 
-drop-index ::= 'DROP' 'INDEX' named-bucket-ref '.' index-name
+drop-primary-index ::= 'DROP' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
 
-alter-index ::= 'ALTER' 'INDEX' named-bucket-ref '.' index-name 'RENAME' 'TO' index-name
+drop-index ::= 'DROP' 'INDEX' named-keyspace-ref '.' index-name

@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2014-09-08
+* Modified: 2014-11-17
 
 ## Summary
 
@@ -100,6 +100,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added WHERE clause to CREATE INDEX
 * 2014-09-08 - CREATE PRIMARY INDEX
     * Added CREATE PRIMARY INDEX
+* 2014-11-17 - DROP PRIMARY INDEX
+    * Added DROP PRIMARY INDEX
+* 2014-11-17 - ALTER INDEX
+    * Removed ALTER INDEX (not currently in scope)
 
 ### Open Issues
 
