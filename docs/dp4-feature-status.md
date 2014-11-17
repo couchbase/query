@@ -205,26 +205,19 @@ The new syntax will be implemented by 11/21/2014.
 
 ### DELETE
 
-DELETE is implemented and testable for file-based datastores.
-
-The implementation for Couchbase datastore is not yet complete and
-requires CAS semantics.
+DELETE is implemented and testable for Couchbase and file-based
+datastores.
 
 ### UPDATE
 
-UPDATE is implemented and testable for file-based datastores.
-
-The implementation for Couchbase datastore is not yet complete and
-requires CAS semantics.
+UPDATE is implemented and testable for Couchbase and file-based
+datastores.
 
 ### MERGE
 
-MERGE is implemented and testable for file-based datastores. The
-current implementation is known to cause a crash See
+MERGE is implemented and testable for Couchbase and file-based
+datastores. The current implementation is known to cause a crash See
 [MB-12327](http://www.couchbase.com/issues/browse/MB-12327).
-
-The implementation for Couchbase datastore is not yet complete and
-requires CAS semantics.
 
 ## About this Document
 
