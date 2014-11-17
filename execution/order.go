@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"strconv"
+
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/sort"
@@ -85,24 +87,42 @@ func (this *Order) Less(i, j int) bool {
 	v1 := this.values[i]
 	v2 := this.values[j]
 
-	var e1, e2 value.Value
+	var ev1, ev2 value.Value
 	var c int
 	var e error
 
-	for _, term := range this.plan.Terms() {
-		e1, e = term.Expression().Evaluate(v1, this.context)
-		if e != nil {
-			this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
-			return false
+	for i, term := range this.plan.Terms() {
+		s := strconv.Itoa(i)
+
+		sv1 := v1.GetAttachment(s)
+		switch sv1 := sv1.(type) {
+		case value.Value:
+			ev1 = sv1
+		default:
+			ev1, e = term.Expression().Evaluate(v1, this.context)
+			if e != nil {
+				this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
+				return false
+			}
+
+			v1.SetAttachment(s, ev1)
 		}
 
-		e2, e = term.Expression().Evaluate(v2, this.context)
-		if e != nil {
-			this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
-			return false
+		sv2 := v2.GetAttachment(s)
+		switch sv2 := sv2.(type) {
+		case value.Value:
+			ev2 = sv2
+		default:
+			ev2, e = term.Expression().Evaluate(v2, this.context)
+			if e != nil {
+				this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
+				return false
+			}
+
+			v2.SetAttachment(s, ev2)
 		}
 
-		c = e1.Collate(e2)
+		c = ev1.Collate(ev2)
 
 		if c == 0 {
 			continue
