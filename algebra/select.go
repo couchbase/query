@@ -72,7 +72,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 		return err
 	}
 
-	if this.order != nil {
+	if this.order != nil && formalizer.Keyspace != "" {
 		err = this.order.MapExpressions(formalizer)
 		if err != nil {
 			return

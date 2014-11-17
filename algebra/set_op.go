@@ -37,33 +37,17 @@ func (this *setOp) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 func (this *setOp) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	var ff, sf *expression.Formalizer
-	ff, err = this.first.Formalize(parent)
+	_, err = this.first.Formalize(parent)
 	if err != nil {
 		return nil, err
 	}
 
-	sf, err = this.second.Formalize(parent)
+	_, err = this.second.Formalize(parent)
 	if err != nil {
 		return nil, err
 	}
 
-	// Intersection
-	fa := ff.Allowed.Fields()
-	sa := sf.Allowed.Fields()
-	for field, _ := range fa {
-		_, ok := sa[field]
-		if !ok {
-			delete(fa, field)
-		}
-	}
-
-	ff.Allowed = value.NewValue(fa)
-	if ff.Keyspace != sf.Keyspace {
-		ff.Keyspace = ""
-	}
-
-	return ff, nil
+	return expression.NewFormalizer(), nil
 }
 
 func (this *setOp) First() Subresult {
