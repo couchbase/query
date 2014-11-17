@@ -148,6 +148,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		_, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
 	}
 
+	if err == nil {
+		_, err = getClientContextID(httpArgs)
+	}
+
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
 		namespace, readonly, metrics, signature, consistency)
 
@@ -177,21 +181,23 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 }
 
 const ( // Request argument names
-	READONLY         = "readonly"
-	METRICS          = "metrics"
-	NAMESPACE        = "namespace"
-	TIMEOUT          = "timeout"
-	ARGS             = "args"
-	PREPARED         = "prepared"
-	STATEMENT        = "statement"
-	FORMAT           = "format"
-	ENCODING         = "encoding"
-	COMPRESSION      = "compression"
-	SIGNATURE        = "signature"
-	PRETTY           = "pretty"
-	SCAN_CONSISTENCY = "scan_consistency"
-	SCAN_WAIT        = "scan_wait"
-	CREDS            = "creds"
+	READONLY          = "readonly"
+	METRICS           = "metrics"
+	NAMESPACE         = "namespace"
+	TIMEOUT           = "timeout"
+	ARGS              = "args"
+	PREPARED          = "prepared"
+	STATEMENT         = "statement"
+	FORMAT            = "format"
+	ENCODING          = "encoding"
+	COMPRESSION       = "compression"
+	SIGNATURE         = "signature"
+	PRETTY            = "pretty"
+	SCAN_CONSISTENCY  = "scan_consistency"
+	SCAN_WAIT         = "scan_wait"
+	SCAN_VECTOR       = "scan_vector"
+	CREDS             = "creds"
+	CLIENT_CONTEXT_ID = "client_context_id"
 )
 
 func getPrepared(a httpRequestArgs) (*plan.Prepared, error) {
@@ -256,6 +262,22 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, error) {
 
 	if err == nil {
 		sc.scan_wait, err = a.getTimeDuration(SCAN_WAIT)
+	}
+
+	if err == nil {
+		sc.scan_vector_full, sc.scan_vector_sparse, err = a.getScanVector()
+	}
+
+	if sc.scan_vector_full != nil && len(sc.scan_vector_full) != SCAN_VECTOR_SIZE {
+		err = fmt.Errorf("%s parameter has to contain %d sequence numbers", SCAN_VECTOR, SCAN_VECTOR_SIZE)
+	}
+
+	if sc.scan_vector_sparse != nil && len(sc.scan_vector_sparse) < 1 {
+		err = fmt.Errorf("%s parameter has to contain at least one sequence number", SCAN_VECTOR)
+	}
+
+	if sc.scan_level == server.AT_PLUS && sc.scan_vector_sparse == nil && sc.scan_vector_full == nil {
+		err = fmt.Errorf("%s parameter value of AT_PLUS requires %s", SCAN_CONSISTENCY, SCAN_VECTOR)
 	}
 
 	return &sc, err
@@ -340,6 +362,15 @@ func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (
 	return creds, err
 }
 
+func getClientContextID(a httpRequestArgs) (*clientID, error) {
+	var clientCtxtID *clientID
+	client_field, err := a.getString(CLIENT_CONTEXT_ID, "")
+	if err == nil && client_field != "" {
+		clientCtxtID = newClientCtxtID(client_field)
+	}
+	return clientCtxtID, err
+}
+
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
 	getString(string, string) (string, error)
@@ -349,6 +380,7 @@ type httpRequestArgs interface {
 	getPositionalArgs() (value.Values, error)
 	getStatement() (string, error)
 	getCredentials() ([]map[string]string, error)
+	getScanVector() ([]int, map[string]int, error)
 }
 
 // getRequestParams creates a httpRequestArgs implementation,
@@ -451,6 +483,28 @@ func (this *urlArgs) getPositionalArgs() (value.Values, error) {
 	}
 
 	return positionalArgs, nil
+}
+
+func (this *urlArgs) getScanVector() ([]int, map[string]int, error) {
+	var full_vect []int
+	var sparse_vect map[string]int
+
+	scan_vect_field, err := this.formValue(SCAN_VECTOR)
+
+	if err != nil || scan_vect_field == "" {
+		return full_vect, sparse_vect, err
+	}
+
+	decoder := json.NewDecoder(strings.NewReader(scan_vect_field))
+	err = decoder.Decode(&full_vect)
+	if err == nil {
+		return full_vect, sparse_vect, err
+	}
+
+	decoder = json.NewDecoder(strings.NewReader(scan_vect_field))
+	err = decoder.Decode(&sparse_vect)
+
+	return full_vect, sparse_vect, err
 }
 
 func (this *urlArgs) getTimeDuration(f string) (time.Duration, error) {
@@ -590,6 +644,42 @@ func (this *jsonArgs) getCredentials() ([]map[string]string, error) {
 	}
 
 	return creds_data, nil
+}
+
+func (this *jsonArgs) getScanVector() (full_vect []int, sparse_vect map[string]int, err error) {
+	var type_ok bool
+
+	scan_vect_field, in_request := this.args[SCAN_VECTOR]
+
+	if !in_request {
+		return
+	}
+
+	full_vect, type_ok = scan_vect_field.([]int)
+
+	if type_ok {
+		return
+	}
+
+	sparse_vect_i, type_ok := scan_vect_field.(map[string]interface{})
+
+	if !type_ok {
+		err = fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+
+	// the json library marshals numbers to float64 - need to convert these to ints:
+	sparse_vect = make(map[string]int, len(sparse_vect_i))
+
+	for vbuck_no, seq_no := range sparse_vect_i {
+		switch seq_no := seq_no.(type) {
+		case float64:
+			sparse_vect[vbuck_no] = int(seq_no)
+		default:
+			err = fmt.Errorf("%s parameter - invalid format for sequence number: %v", SCAN_VECTOR, seq_no)
+			break
+		}
+	}
+	return
 }
 
 func (this *jsonArgs) getTimeDuration(f string) (time.Duration, error) {
@@ -762,9 +852,13 @@ func (c Compression) String() string {
 	return s
 }
 
+const SCAN_VECTOR_SIZE = 1024
+
 type scanConfigImpl struct {
-	scan_level server.ScanConsistency
-	scan_wait  time.Duration
+	scan_level         server.ScanConsistency
+	scan_wait          time.Duration
+	scan_vector_full   []int
+	scan_vector_sparse map[string]int
 }
 
 func (this *scanConfigImpl) ScanConsistency() server.ScanConsistency {
@@ -773,6 +867,19 @@ func (this *scanConfigImpl) ScanConsistency() server.ScanConsistency {
 
 func (this *scanConfigImpl) ScanWait() time.Duration {
 	return this.scan_wait
+}
+
+func (this *scanConfigImpl) ScanVectorFull() []int {
+	return this.scan_vector_full
+}
+
+func (this *scanConfigImpl) ScanVectorSparse() map[string]int {
+	return this.scan_vector_sparse
+}
+
+func (this *scanConfigImpl) String() string {
+	return fmt.Sprintf("scan_level: %d, scan_wait: %s, scan_vector_full: %v, scan_vector_sparse: %v",
+		this.scan_level, this.scan_wait, this.scan_vector_full, this.scan_vector_sparse)
 }
 
 func newScanConsistency(s string) server.ScanConsistency {
@@ -788,4 +895,24 @@ func newScanConsistency(s string) server.ScanConsistency {
 	default:
 		return server.UNDEFINED_CONSISTENCY
 	}
+}
+
+type clientID struct {
+	id string
+}
+
+const MAX_CLIENTID_SIZE = 64
+
+func newClientCtxtID(c string) *clientID {
+	if len(c) > MAX_CLIENTID_SIZE {
+		c_cut := make([]byte, MAX_CLIENTID_SIZE)
+		copy(c_cut[:], c)
+		return &clientID{id: string(c_cut)}
+	}
+	return &clientID{id: c}
+}
+
+// clientID implements server.Request interface
+func (this *clientID) String() string {
+	return (this.id)
 }

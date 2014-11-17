@@ -185,7 +185,7 @@ func (this *httpRequest) writeState(state server.State) bool {
 		}
 	}
 
-	return this.writeString(fmt.Sprintf(",\n    \"state\": \"%s\"", state))
+	return this.writeString(fmt.Sprintf(",\n    \"status\": \"%s\"", state))
 }
 
 func (this *httpRequest) writeErrors() bool {

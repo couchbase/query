@@ -79,7 +79,8 @@ const (
 type ScanConfiguration interface {
 	ScanConsistency() ScanConsistency
 	ScanWait() time.Duration
-	// ScanVector() TBD
+	ScanVectorFull() []int
+	ScanVectorSparse() map[string]int
 }
 
 type BaseRequest struct {
