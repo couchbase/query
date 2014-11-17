@@ -194,7 +194,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 	}
 
 	da := date.Actual().(string)
-	t, err := strToTime(da)
+	t, fmt, err := strToTimeFormat(da)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -210,7 +210,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(t.String()), nil
+	return value.NewValue(timeToStr(t, fmt)), nil
 }
 
 func (this *DateAddStr) Constructor() FunctionConstructor {
@@ -952,6 +952,19 @@ func strToTime(s string) (time.Time, error) {
 	}
 
 	return t, err
+}
+
+func strToTimeFormat(s string) (time.Time, string, error) {
+	var t time.Time
+	var err error
+	for _, f := range _DATE_FORMATS {
+		t, err = time.Parse(f, s)
+		if err == nil {
+			return t, f, nil
+		}
+	}
+
+	return t, _DEFAULT_FORMAT, err
 }
 
 func timeToStr(t time.Time, format string) string {
