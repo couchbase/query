@@ -47,16 +47,15 @@ func NewRawProjection(distinct bool, expr expression.Expression, as string) *Pro
 
 func (this *Projection) Signature() value.Value {
 	if this.raw {
-		return value.NewValue(this.terms[0].Expression().Type().String())
+		return value.NewValue(this.terms[0].expr.Type().String())
 	}
 
 	rv := value.NewValue(make(map[string]interface{}, len(this.terms)))
 	for _, term := range this.terms {
-		alias := term.Alias()
-		if alias == "" {
+		if term.star {
 			rv.SetField("*", "*")
 		} else {
-			rv.SetField(alias, term.Expression().Type().String())
+			rv.SetField(term.alias, term.expr.Type().String())
 		}
 	}
 
@@ -69,6 +68,11 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 		Keyspace: in.Keyspace,
 	}
 
+	err = this.MapExpressions(f)
+	if err != nil {
+		return
+	}
+
 	// Exempt explicit aliases from being formalized
 	for _, term := range this.terms {
 		if term.as != "" {
@@ -76,7 +80,6 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 		}
 	}
 
-	err = this.MapExpressions(f)
 	return
 }
 
