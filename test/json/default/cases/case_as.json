@@ -214,6 +214,21 @@
         }
    ]
     },
+    
+    {
+        "statements": "SELECT title, details.title AS title FROM default:catalog ORDER BY title",
+        "results": [
+        {
+            "title": "INFERNO"
+        },
+        {
+            "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "title": "ZERO DARK THIRTY"
+        }
+   ]
+    },
 
     {
         "statements": "SELECT details.* AS D FROM default:catalog ORDER BY D",

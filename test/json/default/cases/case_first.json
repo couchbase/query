@@ -1,0 +1,156 @@
+[
+    {
+        "statements": "SELECT FIRST child FOR child IN children END AS first_child FROM default:contacts ORDER BY first_child",
+        "results": [
+        {},
+        {},
+        {},
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT FIRST child FOR child IN children WHEN child.age > 14 AND child.gender = \"m\" END AS first_male_over_14 FROM default:contacts ORDER BY first_male_over",
+        "results": [
+        {
+            "first_male_over_14": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        },
+        {},
+        {},
+        {},
+        {
+            "first_male_over_14": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {}
+       ]
+    },
+
+    {
+        "statements": "SELECT ANY gen in details.genre satisfies gen = \"Thriller\" END AS D, array_length(tags), FIRST gen1 FOR gen1 IN details.genre END AS G FROM default:catalog ORDER BY D",
+        "results": [
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Fiction"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Action"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Crime"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title FROM default:catalog WHERE FIRST director FOR director IN details.director  WHEN length(director) > 1 END ORDER BY title",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT  FIRST director FOR director IN details.director END AS A FROM default:catalog WHERE poly_length(details.director) > 1 ORDER BY A",
+        "results": [
+        {
+            "A": null
+        },
+        {
+            "A": "Euros Lyn"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT FIRST child FOR child IN children END AS first_child FROM default:contacts ORDER BY first_child",
+        "results": [
+          {},
+        {},
+        {},
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            }
+        },
+        {
+            "first_child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        }
+    ]
+    },
+
+    {
+        "description": "FIRST expression referring to outer context",
+        "statements" : "SELECT name, FIRST child FOR child IN children WHEN child.name > name END as chosen_one FROM default:contacts ORDER BY name",
+        "results" : [
+        {
+            "name": "dave"
+        },
+        {
+            "chosen_one": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            },
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    }
+
+]

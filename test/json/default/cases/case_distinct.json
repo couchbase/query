@@ -1,0 +1,16 @@
+[
+ 
+    {
+        "statements": "SELECT DISTINCT parent FROM default:categories1 ORDER BY parent",
+        "results": [
+        {},
+        {
+            "parent": "entertainment"
+        },
+        {
+            "parent": "science"
+        }
+    ]
+    }
+]
+

@@ -1,0 +1,49 @@
+[
+    {
+        "statements": "SELECT children as offspring FROM default:contacts.children ORDER BY children",
+        "results": [
+           {
+            "offspring": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ]
+        },
+        {
+            "offspring": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "abama"
+                },
+                {
+                    "age": 21,
+                    "gender": "m",
+                    "name": "bebama"
+                }
+            ]
+        },
+        {
+            "offspring": [
+                {
+                    "age": 17,
+                    "gender": "m",
+                    "name": "aiden"
+                },
+                {
+                    "age": 2,
+                    "gender": "f",
+                    "name": "bill"
+                }
+            ]
+        }
+    ]
+    }
+]
