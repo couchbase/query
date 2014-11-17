@@ -19,6 +19,7 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
@@ -315,11 +316,20 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count() (int64, errors.Error) {
-	// need equivalent of all_docs. TODO with view engine supporty
 	var err error
+
+	statsMap := b.cbbucket.GetStats("")
+	for _, stats := range statsMap {
+		itemCount := stats["curr_items_tot"]
+		if totalCount, err := strconv.Atoi(itemCount); err == nil {
+			return int64(totalCount), nil
+		}
+
+	}
+
 	pi, err := b.IndexByPrimary()
 	if err != nil || pi == nil {
-		return 0, errors.NewError(nil, "No primary index found. Please create a primary index on bucket "+b.Name())
+		return 0, errors.NewError(nil, "Unable to get item count and no primary index found for bucket "+b.Name())
 	}
 
 	var totalCount int64
