@@ -54,10 +54,9 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	conn := datastore.NewIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
-	go this.plan.Index().ScanEntries(math.MaxInt64, conn)
+	go this.scanEntries(context, conn)
 
 	var entry *datastore.IndexEntry
-
 	ok := true
 	for ok {
 		select {
@@ -78,4 +77,9 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 			return
 		}
 	}
+}
+
+func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
+	defer context.Recover() // Recover from any panic
+	this.plan.Index().ScanEntries(math.MaxInt64, conn)
 }

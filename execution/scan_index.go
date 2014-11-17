@@ -118,17 +118,14 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn) // Notify index that I have stopped
 
-		go this.plan.Index().Scan(this.span, this.plan.Distinct(), this.plan.Limit(), conn)
+		go this.scan(context, conn)
 
 		var entry *datastore.IndexEntry
-
 		ok := true
-
-	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
-				break loop
+				return
 			default:
 			}
 
@@ -141,8 +138,13 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 					ok = this.sendItem(av)
 				}
 			case <-this.stopChannel:
-				break loop
+				return
 			}
 		}
 	})
+}
+
+func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
+	defer context.Recover() // Recover from any panic
+	this.plan.Index().Scan(this.span, this.plan.Distinct(), this.plan.Limit(), conn)
 }
