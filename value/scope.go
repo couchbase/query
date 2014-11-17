@@ -23,7 +23,7 @@ type ScopeValue struct {
 Return a pointer to a new ScopeValue populated using the input
 arguments value and parent. 
 */
-func NewScopeValue(val interface{}, parent Value) Value {
+func NewScopeValue(val interface{}, parent Value) *ScopeValue {
 	return &ScopeValue{
 		Value:  NewValue(val),
 		parent: parent,
@@ -112,4 +112,11 @@ Return the value field in the scopeValue struct.
 */
 func (this *ScopeValue) GetValue() Value {
 	return this.Value
+}
+
+/*
+Return the value field in the scopeValue struct.
+*/
+func (this *ScopeValue) Parent() Value {
+	return this.parent
 }

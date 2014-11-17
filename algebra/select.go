@@ -156,7 +156,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	}
 
 	if this.let != nil {
-		err = f.PushBindings(this.let)
+		_, err = f.PushBindings(this.let)
 		if err != nil {
 			return nil, err
 		}

@@ -76,27 +76,25 @@ func (this *Formalizer) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
 
 // Collection
 
-func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
-	defer this.PopBindings()
-	err := this.PushBindings(expr.Bindings())
-	if err != nil {
-		return nil, err
-	}
-
-	err = expr.MapChildren(this)
-	if err != nil {
-		return nil, err
-	}
-
-	return expr, nil
+func (this *Formalizer) VisitExists(expr *Exists) (interface{}, error) {
+	return expr, expr.MapChildren(this)
 }
 
-func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
-	defer this.PopBindings()
-	err := this.PushBindings(expr.Bindings())
+func (this *Formalizer) VisitIn(expr *In) (interface{}, error) {
+	return expr, expr.MapChildren(this)
+}
+
+func (this *Formalizer) VisitWithin(expr *Within) (interface{}, error) {
+	return expr, expr.MapChildren(this)
+}
+
+func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
+	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
+
+	defer this.PopBindings(sv)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -107,11 +105,12 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 }
 
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
-	defer this.PopBindings()
-	err := this.PushBindings(expr.Bindings())
+	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
+
+	defer this.PopBindings(sv)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -121,16 +120,29 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitExists(expr *Exists) (interface{}, error) {
-	return expr, expr.MapChildren(this)
+func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
+	sv, err := this.PushBindings(expr.Bindings())
+	if err != nil {
+		return nil, err
+	}
+
+	defer this.PopBindings(sv)
+
+	err = expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return expr, nil
 }
 
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
-	defer this.PopBindings()
-	err := this.PushBindings(expr.Bindings())
+	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
+
+	defer this.PopBindings(sv)
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -138,14 +150,6 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 	}
 
 	return expr, nil
-}
-
-func (this *Formalizer) VisitIn(expr *In) (interface{}, error) {
-	return expr, expr.MapChildren(this)
-}
-
-func (this *Formalizer) VisitWithin(expr *Within) (interface{}, error) {
-	return expr, expr.MapChildren(this)
 }
 
 // Comparison
@@ -281,28 +285,30 @@ func (this *Formalizer) VisitPositionalParameter(expr PositionalParameter) (inte
 }
 
 // Bindings
-func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
-	this.Allowed = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.Allowed)
+func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, err error) {
+	sv = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.Allowed)
 
+	var expr Expression
 	for _, b := range bindings {
 		_, ok := this.Allowed.Field(b.Variable())
 		if ok {
-			return errors.NewError(nil,
+			return nil, errors.NewError(nil,
 				fmt.Sprintf("Bind alias %s already in scope.", b.Variable()))
 		}
 
-		expr, err := this.Map(b.Expression())
+		expr, err = this.Map(b.Expression())
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		b.SetExpression(expr)
-		this.Allowed.SetField(b.Variable(), b.Variable())
+		sv.SetField(b.Variable(), b.Variable())
 	}
 
-	return nil
+	this.Allowed = sv
+	return sv, nil
 }
 
-func (this *Formalizer) PopBindings() {
-	this.Allowed = this.Allowed.(*value.ScopeValue).Value
+func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
+	this.Allowed = sv.Parent()
 }

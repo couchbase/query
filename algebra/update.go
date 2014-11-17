@@ -265,11 +265,12 @@ func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
-		defer f.PopBindings()
-		err = f.PushBindings(this.updateFor.bindings)
+		sv, err := f.PushBindings(this.updateFor.bindings)
 		if err != nil {
-			return
+			return err
 		}
+
+		defer f.PopBindings(sv)
 	}
 
 	path, err := f.Map(this.path)
@@ -330,11 +331,12 @@ func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
-		defer f.PopBindings()
-		err = f.PushBindings(this.updateFor.bindings)
+		sv, err := f.PushBindings(this.updateFor.bindings)
 		if err != nil {
-			return
+			return err
 		}
+
+		defer f.PopBindings(sv)
 	}
 
 	path, err := f.Map(this.path)
