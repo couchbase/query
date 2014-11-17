@@ -228,11 +228,43 @@ func keepPoolFresh(p *namespace) {
 }
 
 type keyspace struct {
-	namespace *namespace
-	name      string
-	indexes   map[string]datastore.Index
-	primary   datastore.PrimaryIndex
-	cbbucket  *cb.Bucket
+	namespace        *namespace
+	name             string
+	indexes          map[string]datastore.Index
+	primary          datastore.PrimaryIndex
+	cbbucket         *cb.Bucket
+	nonUsableIndexes []string // indexes that cannot be used
+}
+
+func (b *keyspace) refresh() {
+	// trigger refresh of this pool
+	logging.Infof("Refreshing Indexes in keyspace %s", b.name)
+
+	indexes, err := loadViewIndexes(b)
+	if err != nil {
+		logging.Errorf(" Error loading indexes for bucket %s", b.name)
+		return
+	}
+
+	if len(indexes) == 0 {
+		return
+	}
+
+	for _, index := range indexes {
+		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), b.name)
+		name := (*index).Name()
+		b.indexes[name] = *index
+	}
+
+}
+
+func keepIndexesFresh(b *keyspace) {
+
+	tickChan := time.Tick(1 * time.Minute)
+
+	for _ = range tickChan {
+		b.refresh()
+	}
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -253,15 +285,18 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	}
 
 	rv := &keyspace{
-		namespace: p,
-		name:      name,
-		cbbucket:  cbbucket,
-		indexes:   make(map[string]datastore.Index),
+		namespace:        p,
+		name:             name,
+		cbbucket:         cbbucket,
+		indexes:          make(map[string]datastore.Index),
+		nonUsableIndexes: make([]string, 0),
 	}
 
 	//discover existing indexes
 	if ierr := rv.loadIndexes(); ierr != nil {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
+	} else {
+		go keepIndexesFresh(rv)
 	}
 
 	return rv, nil
@@ -404,6 +439,13 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 
 	if _, exists := b.indexes[name]; exists {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+	}
+
+	// if the name matches any of the unusable indexes, return an error
+	for _, iname := range b.nonUsableIndexes {
+		if name == iname {
+			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+		}
 	}
 
 	switch using {
