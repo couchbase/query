@@ -9,15 +9,20 @@
 
 package value
 
-// ScopeValue provides alias scoping for subqueries, ranging, LETs,
-// projections, etc.
+/*
+ScopeValue provides alias scoping for subqueries, ranging, LETs,
+projections, etc. It is a type struct that inherits Value and 
+has a parent Value.
+*/
 type ScopeValue struct {
 	Value
 	parent Value
 }
 
-// ScopeValue provides alias scoping for subqueries, ranging, LETs,
-// projections, etc.
+/*
+Return a pointer to a new ScopeValue populated using the input
+arguments value and parent. 
+*/
 func NewScopeValue(val interface{}, parent Value) Value {
 	return &ScopeValue{
 		Value:  NewValue(val),
@@ -25,10 +30,18 @@ func NewScopeValue(val interface{}, parent Value) Value {
 	}
 }
 
+/*
+Call the Values MarshalJSON implementation.
+*/
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
 }
 
+/*
+Return a pointer to the ScopeValue, where the Value field
+is the receivers value Copy and the parent is the receivers
+parent.
+*/
 func (this *ScopeValue) Copy() Value {
 	return &ScopeValue{
 		Value:  this.Value.Copy(),
@@ -36,6 +49,11 @@ func (this *ScopeValue) Copy() Value {
 	}
 }
 
+/*
+Return a pointer to the ScopeValue, where the Value field
+calls the CopyForUpdate the receivers value, and the parent 
+is assigned to the parent field in the receiver.
+*/
 func (this *ScopeValue) CopyForUpdate() Value {
 	return &ScopeValue{
 		Value:  this.Value.CopyForUpdate(),
@@ -43,7 +61,13 @@ func (this *ScopeValue) CopyForUpdate() Value {
 	}
 }
 
-// Search self, then parent. Implements scoping.
+/*
+Implements scoping. Checks field of the value in the receiver 
+into result, and if valid returns the result.  If the parent 
+is not nil call Field on the parent and return that. Else a 
+missingField is returned. It searches itself and then the 
+parent for the input parameter field.
+*/
 func (this *ScopeValue) Field(field string) (Value, bool) {
 	result, ok := this.Value.Field(field)
 	if ok {
@@ -57,6 +81,12 @@ func (this *ScopeValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
+/*
+Flattens out the fields from the parent and value into a map
+and returns it. If the parent in scopeValue is nil then, 
+return the fields in the value. If not, create a map that 
+contains both the parents’ fields and the values fields and return that map.
+*/
 func (this *ScopeValue) Fields() map[string]interface{} {
 	if this.parent == nil {
 		return this.Value.Fields()
@@ -77,6 +107,9 @@ func (this *ScopeValue) Fields() map[string]interface{} {
 	return rv
 }
 
+/*
+Return the value field in the scopeValue struct.
+*/
 func (this *ScopeValue) GetValue() Value {
 	return this.Value
 }

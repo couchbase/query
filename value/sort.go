@@ -9,15 +9,26 @@
 
 package value
 
-// Sorter sorts an ARRAY Value in place.
+/*
+Sorter sorts an ARRAY Value in place. It is a structure 
+containing one element of type Value.
+*/
 type Sorter struct {
 	value Value
 }
-
+/*
+Returns a pointer to a struct, with the value field. 
+*/
 func NewSorter(value Value) *Sorter {
 	return &Sorter{value: NewValue(value)}
 }
 
+/*
+Calculate the length. It initially converts the value 
+into a valid Go type, and checks its type. If it is a 
+slice of interfaces then return the length of the 
+Go type, if not return 0.
+*/
 func (this *Sorter) Len() int {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {
@@ -28,6 +39,11 @@ func (this *Sorter) Len() int {
 	}
 }
 
+/*
+Checks if the first element in the slice of interfaces 
+is less than the second. This is done, by calling 
+Collate on the values. For any other type return false. 
+*/
 func (this *Sorter) Less(i, j int) bool {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {
@@ -38,6 +54,9 @@ func (this *Sorter) Less(i, j int) bool {
 	}
 }
 
+/*
+Swap elements in index i and j.
+*/
 func (this *Sorter) Swap(i, j int) {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {

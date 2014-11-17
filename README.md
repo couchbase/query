@@ -464,11 +464,11 @@ Data sample set zip file(sample set of json documents)
         
         $ cd ~/sample_build/
 
-6.	First run the cbq-engine executable using the –datastore “<directory path>”  -namespace <name of subdirectory it is in> &(here the ampersand is used to run the  process in the background and get the prompt back :
+6.	First run the cbq-engine executable using the –datastore “<directory path>”  -namespace <name of subdirectory the data is in. ( here the ampersand can be used to run the process in the background and get the prompt back) :
 
-        $ ./cbq-engine -datastore "/Users/isha/sample_build/tutorial" -namespace data &
+        $ ./cbq-engine -datastore "$HOME/sample_build/tutorial" -namespace data 
 
-7.	Then run the cbq executable. This should give you the N1QL command line interface shell. 
+7.	Then run the cbq executable in a new terminal. This should give you the N1QL command line interface shell. 
         
         $ ./cbq
         cbq> select * from tutorial;
@@ -479,9 +479,9 @@ Data sample set zip file(sample set of json documents)
 1.	Download the Couchbase server and install it (for the mac add it to the Applications folder)
 2.	Open up localhost:8091 and follow setup instructions
 3.	Create your own buckets and fill in data.
-4.	Connect N1QL with the Couchbase server we need to run the following command
+4.	Connect N1QL with the Couchbase server we need to run the following command in two terminals one after the other. 
       
-        $ ./cbq-engine –datastore “http://127.0.0.1:8091/” &
+        $ ./cbq-engine –datastore “http://127.0.0.1:8091/” 
         $ ./cbq
 
 5.	Run the following command on the created buckets before querying them
@@ -489,3 +489,5 @@ Data sample set zip file(sample set of json documents)
         cbq> create primary index on [bucket_name]  
 
 6.	Run N1QL queries on the CLI.
+
+NOTE : Ctrl + c should allow you to exit the running cbq and cbq-engine processes.
