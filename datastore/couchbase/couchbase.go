@@ -296,9 +296,9 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	//discover existing indexes
 	if ierr := rv.loadIndexes(); ierr != nil {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
-	} else {
-		go keepIndexesFresh(rv)
 	}
+
+	go keepIndexesFresh(rv)
 
 	return rv, nil
 }
