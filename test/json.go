@@ -19,9 +19,15 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/logging"
+	log_resolver "github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/value"
 )
+
+func init() {
+	logger, _ := log_resolver.NewLogger("golog")
+	logging.SetLogger(logger)
+}
 
 type MockQuery struct {
 	server.BaseRequest

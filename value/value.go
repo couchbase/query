@@ -256,10 +256,10 @@ type Value interface {
 	Descendants(buffer []interface{}) []interface{} 
 	
         /*
-           Gives you the object fields by adding them to a string to
-           interface map. This returns null for all types except
-           object. ( it is used in expression/nav_field.go to navigate
-           through fields of value Value).
+           Gives you the object fields as a name-value map. This
+           returns nil for all types except object. ( it is used in
+           expression/nav_field.go to navigate through fields of value
+           Value).
         */
         Fields() map[string]interface{}                
 }

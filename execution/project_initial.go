@@ -96,10 +96,20 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 }
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
-	pv := value.NewAnnotatedValue(item.Copy().Fields())
+	n := len(this.plan.Terms())
+
+	var f map[string]interface{}
+	if item.Type() == value.OBJECT {
+		f = item.Copy().Fields()
+	}
+
+	if f == nil {
+		f = make(map[string]interface{}, n)
+	}
+
+	pv := value.NewAnnotatedValue(f)
 	pv.SetAttachments(item.Attachments())
 
-	n := len(this.plan.Terms())
 	p := value.NewValue(make(map[string]interface{}, n+32))
 	pv.SetAttachment("projection", p)
 
