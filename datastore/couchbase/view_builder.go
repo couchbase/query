@@ -98,9 +98,18 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 		if strings.HasPrefix(id, "_design/ddl_") {
 			iname := strings.TrimPrefix(id, "_design/ddl_")
 			inames = append(inames, iname)
+		} else if strings.HasPrefix(id, "_design/dev_") {
+			// append this to the list of non-usuable indexes
+			iname := strings.TrimPrefix(id, "_design/dev_")
+			for _, name := range b.nonUsableIndexes {
+				if iname == name {
+					continue
+				}
+			}
+			nonUsableIndexes = append(nonUsableIndexes, iname)
+
 		} else if strings.HasPrefix(id, "_design/") {
 			iname := strings.TrimPrefix(id, "_design/")
-			// append this to the list of non-usuable indexes
 			for _, name := range b.nonUsableIndexes {
 				if iname == name {
 					continue
@@ -108,6 +117,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 			}
 			nonUsableIndexes = append(nonUsableIndexes, iname)
 		}
+
 	}
 
 	indexes := make([]*datastore.Index, 0, len(inames))
