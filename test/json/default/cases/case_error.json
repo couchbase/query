@@ -6,5 +6,9 @@
     {
         "statements": "SELECT * FROM",
         "error": "missing a FROM bucket"
+    },
+    {
+        "statements": "SELECT * FROM default:contacts USE KEYS [\"dave\", \"jane\", \"ian\"] UNNEST contacts.contacts",
+        "error" : "Duplicate UNNEST alias contacts"
     }
 ]

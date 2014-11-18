@@ -151,6 +151,26 @@
             "name": "jane"
         }
     ]
-    }
+    },
 
+    {
+         "statements" : "SELECT ANY gen IN details.genre satisfies gen = \"Thriller\" END AS D, array_length(tags), FIRST gen FOR gen IN details.genre END AS G FROM default:catalog ORDER BY D",
+           "results": [
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Fiction"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Action"
+        },
+        {
+            "$1": 3,
+            "D": true,
+            "G": "Crime"
+        }
+      ]
+    }
 ]
