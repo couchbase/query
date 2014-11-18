@@ -43,7 +43,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
-	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
+	kv, e := this.plan.Term().Keys().Evaluate(item, context)
 	if e != nil {
 		context.Error(errors.NewError(e, "Error evaluating NEST keys."))
 		return false
@@ -61,7 +61,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	acts := actuals.([]interface{})
 	if len(acts) == 0 {
 		// Outer nest
-		return !this.plan.Term().Outer() || this.sendItem(item)
+		return !this.plan.Outer() || this.sendItem(item)
 	}
 
 	// Build list of keys
@@ -83,7 +83,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 
 	found := len(pairs) > 0
 
-	if !found && !this.plan.Term().Outer() {
+	if !found && !this.plan.Outer() {
 		return true
 	}
 
@@ -93,7 +93,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		var nv value.AnnotatedValue
 
 		// Apply projection, if any
-		project := this.plan.Term().Right().Project()
+		project := this.plan.Term().Project()
 		if project != nil {
 			projectedItem, e := project.Evaluate(nestItem, context)
 			if e != nil {
@@ -115,6 +115,6 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Attach and send
-	item.SetField(this.plan.Alias(), nvs)
+	item.SetField(this.plan.Term().Alias(), nvs)
 	return this.sendItem(item)
 }

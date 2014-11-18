@@ -11,6 +11,7 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 )
@@ -18,15 +19,15 @@ import (
 type Join struct {
 	readonly
 	keyspace datastore.Keyspace
-	term     *algebra.Join
-	alias    string
+	term     *algebra.KeyspaceTerm
+	outer    bool
 }
 
-func NewJoin(keyspace datastore.Keyspace, term *algebra.Join) *Join {
+func NewJoin(keyspace datastore.Keyspace, join *algebra.Join) *Join {
 	return &Join{
 		keyspace: keyspace,
-		term:     term,
-		alias:    term.Alias(),
+		term:     join.Right(),
+		outer:    join.Outer(),
 	}
 }
 
@@ -38,26 +39,26 @@ func (this *Join) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Join) Term() *algebra.Join {
+func (this *Join) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *Join) Alias() string {
-	return this.alias
+func (this *Join) Outer() bool {
+	return this.outer
 }
 
 type Nest struct {
 	readonly
 	keyspace datastore.Keyspace
-	term     *algebra.Nest
-	alias    string
+	term     *algebra.KeyspaceTerm
+	outer    bool
 }
 
-func NewNest(keyspace datastore.Keyspace, term *algebra.Nest) *Nest {
+func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest) *Nest {
 	return &Nest{
 		keyspace: keyspace,
-		term:     term,
-		alias:    term.Alias(),
+		term:     nest.Right(),
+		outer:    nest.Outer(),
 	}
 }
 
@@ -69,14 +70,15 @@ func (this *Nest) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Nest) Term() *algebra.Nest {
+func (this *Nest) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *Nest) Alias() string {
-	return this.alias
+func (this *Nest) Outer() bool {
+	return this.outer
 }
 
+/*
 func (this *Nest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "nest"}
 	r["keyspace"] = this.keyspace.Name()
@@ -84,6 +86,7 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 	r["as"] = this.alias
 	return json.Marshal(r)
 }
+*/
 
 type Unnest struct {
 	readonly

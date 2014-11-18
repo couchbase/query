@@ -43,7 +43,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
-	kv, e := this.plan.Term().Right().Keys().Evaluate(item, context)
+	kv, e := this.plan.Term().Keys().Evaluate(item, context)
 	if e != nil {
 		context.Error(errors.NewError(e, "Error evaluating JOIN keys."))
 		return false
@@ -61,7 +61,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	acts := actuals.([]interface{})
 	if len(acts) == 0 {
 		// Outer join
-		return !this.plan.Term().Outer() || this.sendItem(item)
+		return !this.plan.Outer() || this.sendItem(item)
 	}
 
 	// Build list of keys
@@ -89,7 +89,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		var jv value.AnnotatedValue
 
 		// Apply projection, if any
-		project := this.plan.Term().Right().Project()
+		project := this.plan.Term().Project()
 		if project != nil {
 			projectedItem, e := project.Evaluate(joinItem, context)
 			if e != nil {
@@ -112,12 +112,12 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			av = item
 		}
 
-		av.SetField(this.plan.Alias(), jv)
+		av.SetField(this.plan.Term().Alias(), jv)
 
 		if !this.sendItem(av) {
 			return false
 		}
 	}
 
-	return found || !this.plan.Term().Outer() || this.sendItem(item)
+	return found || !this.plan.Outer() || this.sendItem(item)
 }
