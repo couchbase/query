@@ -9,8 +9,18 @@
 
 package expression
 
+/*
+The type of Visitor is an interface with a list of methods that are 
+implemented in Stringer.go. The general class of methods fall under 
+are Arithmetic and Case Expressions, collections, concat, constant, 
+identifier, construction, logic, navigation, and function all of 
+which take an input parameter of that type and return an interface 
+and an error.
+*/
 type Visitor interface {
-	// Arithmetic
+	/*
+        Arithmetic Expressions.
+        */
 	VisitAdd(expr *Add) (interface{}, error)
 	VisitDiv(expr *Div) (interface{}, error)
 	VisitMod(expr *Mod) (interface{}, error)
@@ -18,11 +28,18 @@ type Visitor interface {
 	VisitNeg(expr *Neg) (interface{}, error)
 	VisitSub(expr *Sub) (interface{}, error)
 
-	// Case
+	/*
+        Case Expressions. There are two types, searched case and 
+        simple case expressions. Refer to N1QL specs.
+        */
 	VisitSearchedCase(expr *SearchedCase) (interface{}, error)
 	VisitSimpleCase(expr *SimpleCase) (interface{}, error)
 
-	// Collection
+	/*
+        Collections. (A collection is an ordered group of elements).
+        Refer to the N1QL specs for the list of supported 
+        collections.
+        */
 	VisitAny(expr *Any) (interface{}, error)
 	VisitArray(expr *Array) (interface{}, error)
 	VisitEvery(expr *Every) (interface{}, error)
@@ -31,7 +48,11 @@ type Visitor interface {
 	VisitIn(expr *In) (interface{}, error)
 	VisitWithin(expr *Within) (interface{}, error)
 
-	// Comparison
+	/*
+        Comparison terms hwlp compare two or more expressions.
+        Refer to the N1QL specs for the list of supported
+        comparison terms.
+        */
 	VisitBetween(expr *Between) (interface{}, error)
 	VisitEq(expr *Eq) (interface{}, error)
 	VisitLE(expr *LE) (interface{}, error)
@@ -41,37 +62,62 @@ type Visitor interface {
 	VisitIsNull(expr *IsNull) (interface{}, error)
 	VisitIsValued(expr *IsValued) (interface{}, error)
 
-	// Concat
+	/*
+        Concat. Both expressions need to be strings, else
+        returns null.
+        */
 	VisitConcat(expr *Concat) (interface{}, error)
 
-	// Constant
+	/*
+        Visit a Constant expression.
+        */
 	VisitConstant(expr *Constant) (interface{}, error)
 
-	// Identifier
+	/*
+        Identifier. They can be of two types, escaped and unescaped.
+        Refer to the N1QL specs.
+        */
 	VisitIdentifier(expr *Identifier) (interface{}, error)
 
-	// Construction
+	/*
+        Construction. As per the N1ql specs, objects and arrays can 
+        be constructed with arbitrary structure, nesting, and 
+        embedded expressions.
+        */
 	VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error)
 	VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error)
 
-	// Logic
+	/*
+        Logical Terms use boolean logic. Standard operators.
+        */
 	VisitAnd(expr *And) (interface{}, error)
 	VisitNot(expr *Not) (interface{}, error)
 	VisitOr(expr *Or) (interface{}, error)
 
-	// Navigation
+	/* 
+        Navigation. Used to navigate through objects and 
+        slices(arrays).
+        */
 	VisitElement(expr *Element) (interface{}, error)
 	VisitField(expr *Field) (interface{}, error)
 	VisitFieldName(expr *FieldName) (interface{}, error)
 	VisitSlice(expr *Slice) (interface{}, error)
 
-	// Function
+	/*
+        Function. Refer to N1QL for a list of supported functions.
+        */
 	VisitFunction(expr Function) (interface{}, error)
 
-	// Subquery
+	/*
+        Subquery. Returns the subquery string.
+        */
 	VisitSubquery(expr Subquery) (interface{}, error)
 
-	// Parameters
+	/* 
+        Parameters. There are 2 types, named and positional.
+        It allows passing of parameters into the query using
+        position or name. 
+        */
 	VisitNamedParameter(expr NamedParameter) (interface{}, error)
 	VisitPositionalParameter(expr PositionalParameter) (interface{}, error)
 }

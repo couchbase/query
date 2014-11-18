@@ -13,8 +13,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Expression path. The type Paths is a slice of Path. 
+*/
 type Paths []Path
 
+/*
+Path is of type interface that inherits Expression.  
+It also contains 2 methods Set and Unset. They take
+as input an item, value or type Value, and a context 
+and return a boolean value that depicts if the path 
+was set or unset. 
+*/
 type Path interface {
 	Expression
 	Set(item, val value.Value, context Context) bool
