@@ -1,0 +1,10 @@
+[
+    {
+        "statements": "this isn't a query",
+        "error": "this is a bad query"
+    },
+    {
+        "statements": "SELECT * FROM",
+        "error": "missing a FROM bucket"
+    }
+]

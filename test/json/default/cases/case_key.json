@@ -1,0 +1,298 @@
+[
+    {
+        "statements": "SELECT * FROM default:contacts USE KEYS \"dave\" ORDER BY children",
+        "results": [
+       {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+        ]    
+    },
+    {
+        "statements": "SELECT * FROM default:contacts USE KEYS \"ia\"|| \"n\" ORDER BY children",
+        "results": [
+     {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM default:contacts USE KEYS array_append([\"dave\", \"jane\"], \"ian\") where contacts.name = \"ian\" ORDER BY children",
+        "results": [
+       {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT * FROM default:contacts USE KEYS [\"dave\", \"jane\"] ORDER BY children",
+        "results": [
+      {
+            "contacts": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }   
+     ]
+    },
+    {
+        "statements": "SELECT * FROM default:contacts USE PRIMARY KEYS \"dave\" UNNEST contacts.children ORDER BY children",
+        "results": [
+      {
+            "children": {
+                "age": 2,
+                "gender": "f",
+                "name": "bill"
+            },
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            },
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM default:contacts as C USE KEYS [\"dave\", \"jane\", \"ian\"] UNNEST C.contacts ORDER BY contacts",
+        "results": [
+       {
+            "C": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "contacts": {
+                "name": "fred"
+            }
+        },
+        {
+            "C": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "contacts": {
+                "name": "sheela"
+            }
+        }   
+      ]
+    },
+    {
+        "statements" : "SELECT * FROM default:contacts USE KEYS ARRAY c.name FOR c IN [{\"name\":\"dave\"},{\"name\":\"ian\"}] END ORDER BY children",
+        "results": [
+         {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }           ]
+    },
+    {
+        "statements" : "select * FROM default:contacts USE KEYS FIRST c.name FOR c IN [{\"name\":\"dave\"},{\"name\":\"ian\"}] END order by children",
+        "results": [
+           {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+        ]
+    }
+]

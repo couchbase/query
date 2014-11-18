@@ -1,0 +1,503 @@
+[
+    {
+        "statements": "SELECT * FROM default:contacts AS contact UNNEST contact.children AS child ORDER BY child",
+        "results": [
+         {
+            "child": {
+                "age": 2,
+                "gender": "f",
+                "name": "bill"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "child": {
+                "age": 2,
+                "gender": "m",
+                "name": "yuri"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            }
+        },
+        {
+            "child": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            }
+        },
+        {
+            "child": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        },
+        {
+            "child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "child": {
+                "age": 21,
+                "gender": "m",
+                "name": "bebama"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT * FROM default:contacts AS contact UNNEST contact.children AS child WHERE child.name = \"aiden\" ORDER BY child",
+        "results": [
+        {
+            "child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT child FROM default:contacts AS contact UNNEST contact.children AS child WHERE child.name = \"aiden\" ORDER BY child",
+        "results": [
+        {
+            "child": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT contact FROM default:contacts AS contact UNNEST contact.children[0:1] AS child WHERE child.name = \"aiden\" ORDER BY contact",
+        "results": [
+        {
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT contact.* FROM default:contacts AS contact UNNEST contact.children AS child WHERE child.name = \"aiden\" ORDER BY child",
+        "results": [
+        {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+        }
+    ]
+    },
+
+
+    {
+        "statements": "SELECT search.category AS most_searched_category, count(*) AS count FROM default:user_profile AS search_hist UNNEST search_hist.search_history AS search GROUP BY search.category ORDER BY count DESC",
+        "results": [
+        {
+            "count": 11,
+            "most_searched_category": "Films"
+        },
+        {
+            "count": 7,
+            "most_searched_category": "Books"
+        },
+        {
+            "count": 2,
+            "most_searched_category": "Music"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT search.category, subcat, count(*) AS C FROM default:user_profile AS search_hist UNNEST search_hist.search_history AS search UNNEST search.`sub-category` AS subcat GROUP BY search.category, subcat HAVING search.category = \"Films\" ORDER BY subcat",
+        "results": [
+      {
+            "C": 4,
+            "category": "Films",
+            "subcat": "Action"
+        },
+        {
+            "C": 2,
+            "category": "Films",
+            "subcat": "Animation"
+        },
+        {
+            "C": 4,
+            "category": "Films",
+            "subcat": "Classic Films"
+        },
+        {
+            "C": 1,
+            "category": "Films",
+            "subcat": "Comedy"
+        },
+        {
+            "C": 2,
+            "category": "Films",
+            "subcat": "Documentary"
+        },
+        {
+            "C": 1,
+            "category": "Films",
+            "subcat": "Drama"
+        },
+        {
+            "C": 2,
+            "category": "Films",
+            "subcat": "Foreign Films"
+        },
+        {
+            "C": 3,
+            "category": "Films",
+            "subcat": "Music \u0026 Musicals"
+        },
+        {
+            "C": 5,
+            "category": "Films",
+            "subcat": "Sci-Fi, Fantasy \u0026 Horror"
+        }
+    ]    
+    },
+    {
+        "statements": "SELECT * FROM default:contacts AS contact UNNEST contact.children ORDER BY children",
+        "results": [
+      {
+            "children": {
+                "age": 2,
+                "gender": "f",
+                "name": "bill"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 2,
+                "gender": "m",
+                "name": "yuri"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 17,
+                "gender": "f",
+                "name": "xena"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "f",
+                        "name": "xena"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "m",
+                        "name": "yuri"
+                    }
+                ],
+                "hobbies": [
+                    "surfing"
+                ],
+                "name": "earl",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 17,
+                "gender": "m",
+                "name": "abama"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 17,
+                "gender": "m",
+                "name": "aiden"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        },
+        {
+            "children": {
+                "age": 21,
+                "gender": "m",
+                "name": "bebama"
+            },
+            "contact": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            }
+        }
+     ]
+    }
+
+]
