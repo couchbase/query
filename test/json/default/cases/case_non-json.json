@@ -1,0 +1,12 @@
+[
+    {
+        "statements": "SELECT * FROM default:`non-json`",
+        "results": [     {
+            "non-json": "hello"
+        },
+        {
+            "non-json": "world"
+        }
+]
+    }
+]

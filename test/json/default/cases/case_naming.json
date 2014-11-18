@@ -1,0 +1,91 @@
+[
+    {
+        "statements": "SELECT name FROM default:contacts WHERE name = 'ian'",
+        "results": [
+            {
+                "name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT emp.name FROM default:contacts AS emp WHERE name = 'ian'",
+        "results": [
+            {
+                "name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT contacts.name FROM default:contacts WHERE name = 'ian'",
+        "results": [
+            {
+                "name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT contacts.name AS explicit_name FROM default:contacts WHERE name = 'ian'",
+        "results": [
+            {
+                "explicit_name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT emp.name AS explicit_name FROM default:contacts AS emp WHERE name = 'ian'",
+        "results": [
+            {
+                "explicit_name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT name FROM default:contacts AS emp WHERE name = 'ian'",
+        "results": [
+            {
+                "name": "ian"
+            }
+        ]
+    },
+    {
+        "statements": "SELECT contacts.name AS explicit_name FROM default:contacts AS emp WHERE name = 'ian'",
+        "results": [
+            {
+            }
+        ]
+    },
+    {
+        "statements": "SELECT contacts FROM default:contacts WHERE name = 'jane'",
+        "results": [
+          {
+             "contacts": {
+             "name": "jane",
+             "type": "contact",
+                "contacts": [
+                   {
+                      "name": "fred"
+                   },
+                   {
+                      "name": "sheela"
+                   }
+                ]
+             }
+          }
+        ]
+    },
+    {
+        "statements": "SELECT contacts.contacts FROM default:contacts WHERE name = 'jane'",
+        "results": [
+            {
+                "contacts": [
+                    {
+                       "name": "fred"
+                    },
+                    {
+                       "name": "sheela"
+                    }
+                ]
+            }
+        ]
+    }
+]

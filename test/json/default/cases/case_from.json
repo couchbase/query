@@ -1,0 +1,91 @@
+[
+    {
+        "statements": "SELECT D.actors[0] AS act FROM default:catalog.details AS D ORDER BY act",
+        "results": [
+        {},
+        {
+            "act": "Benedict Cumberbatch"
+        },
+        {
+            "act": "Jessica Chastain"
+        }
+   ]
+    },
+
+    {
+        "statements": "select name from default:contacts.children[0] order by name",
+        "error": "Property reference name missing qualifier bucket/alias"
+    },
+
+    {
+        "statements": "select C.name from default:contacts.children[0] as C where C.name = \"xena\" order by C.name",
+        "results": [
+        {
+            "name": "xena"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT price.list FROM default:catalog.pricing AS price WHERE price.pct_savings > 20 ORDER BY price.list",
+        "results": [
+        {
+            "list": 599
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT type FROM default:catalog.non.existing[3].apath ORDER BY type",
+        "results": [
+    ]
+    },
+
+    {
+        "statements": "SELECT contacts.name FROM default:contacts ORDER BY contacts.name",
+        "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT contact.name FROM default:contacts AS contact ORDER BY contact.name",
+        "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "harry"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    }
+]
