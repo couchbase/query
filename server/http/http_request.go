@@ -148,12 +148,13 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 		_, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
 	}
 
+	client_id := ""
 	if err == nil {
-		_, err = getClientContextID(httpArgs)
+		client_id, err = httpArgs.getString(CLIENT_CONTEXT_ID, "")
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
-		namespace, readonly, metrics, signature, consistency)
+		namespace, readonly, metrics, signature, consistency, client_id)
 
 	rv := &httpRequest{
 		BaseRequest: *base,
@@ -360,15 +361,6 @@ func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (
 	}
 
 	return creds, err
-}
-
-func getClientContextID(a httpRequestArgs) (*clientID, error) {
-	var clientCtxtID *clientID
-	client_field, err := a.getString(CLIENT_CONTEXT_ID, "")
-	if err == nil && client_field != "" {
-		clientCtxtID = newClientCtxtID(client_field)
-	}
-	return clientCtxtID, err
 }
 
 // httpRequestArgs is an interface for getting the arguments in a http request
@@ -895,24 +887,4 @@ func newScanConsistency(s string) server.ScanConsistency {
 	default:
 		return server.UNDEFINED_CONSISTENCY
 	}
-}
-
-type clientID struct {
-	id string
-}
-
-const MAX_CLIENTID_SIZE = 64
-
-func newClientCtxtID(c string) *clientID {
-	if len(c) > MAX_CLIENTID_SIZE {
-		c_cut := make([]byte, MAX_CLIENTID_SIZE)
-		copy(c_cut[:], c)
-		return &clientID{id: string(c_cut)}
-	}
-	return &clientID{id: c}
-}
-
-// clientID implements server.Request interface
-func (this *clientID) String() string {
-	return (this.id)
 }

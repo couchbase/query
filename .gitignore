@@ -1,7 +1,7 @@
 .DS_Store
 *~
 y.output
-cbq/cbq
-cbq-engine/cbq-engine
+shell/cbq/cbq
+server/cbq-engine/cbq-engine
 tutorial/tutorial
 *.swp

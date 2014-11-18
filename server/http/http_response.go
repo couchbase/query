@@ -51,6 +51,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.resp.WriteHeader(this.httpRespCode)
 	this.writeString("{\n")
 	this.writeRequestID()
+	this.writeClientContextID()
 	this.writeErrors()
 	this.writeWarnings()
 	this.writeState("")
@@ -78,6 +79,7 @@ func (this *httpRequest) Expire() {
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
 	return this.writeString("{\n") &&
 		this.writeRequestID() &&
+		this.writeClientContextID() &&
 		(!srvr.Signature() || this.writeSignature(signature)) &&
 		this.writeString("    \"results\": [")
 }
@@ -85,6 +87,15 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value)
 func (this *httpRequest) writeRequestID() bool {
 	return this.writeString("    \"request_id\": \"") &&
 		this.writeString(this.Id().String()) &&
+		this.writeString("\",\n")
+}
+
+func (this *httpRequest) writeClientContextID() bool {
+	if !this.ClientID().IsValid() {
+		return true
+	}
+	return this.writeString("    \"client_context_id\": \"") &&
+		this.writeString(this.ClientID().String()) &&
 		this.writeString("\",\n")
 }
 

@@ -40,6 +40,7 @@ const (
 
 type Request interface {
 	Id() RequestID
+	ClientID() ClientContextID
 	Statement() string
 	Prepared() *plan.Prepared
 	NamedArgs() map[string]value.Value
@@ -66,6 +67,11 @@ type RequestID interface {
 	String() string
 }
 
+type ClientContextID interface {
+	IsValid() bool
+	String() string
+}
+
 type ScanConsistency int
 
 const (
@@ -85,6 +91,7 @@ type ScanConfiguration interface {
 
 type BaseRequest struct {
 	id             *requestIDImpl
+	client_id      *clientContextIDImpl
 	statement      string
 	prepared       *plan.Prepared
 	namedArgs      map[string]value.Value
@@ -116,8 +123,31 @@ func (r *requestIDImpl) String() string {
 	return r.id
 }
 
+type clientContextIDImpl struct {
+	id string
+}
+
+func (this *clientContextIDImpl) IsValid() bool {
+	return len(this.id) > 0
+}
+
+func (this *clientContextIDImpl) String() string {
+	return this.id
+}
+
+const MAX_CLIENTID = 64
+
+func newClientContextIDImpl(id string) *clientContextIDImpl {
+	if len(id) > MAX_CLIENTID {
+		id_cut := make([]byte, MAX_CLIENTID)
+		copy(id_cut[:], id)
+		return &clientContextIDImpl{id: string(id_cut)}
+	}
+	return &clientContextIDImpl{id: id}
+}
+
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, readonly bool, metrics value.Tristate, signature bool, consistency ScanConfiguration) *BaseRequest {
+	namespace string, readonly bool, metrics value.Tristate, signature bool, consistency ScanConfiguration, client_id string) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
@@ -140,6 +170,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	}
 	uuid, _ := newUUID()
 	rv.id = uuid
+	rv.client_id = newClientContextIDImpl(client_id)
 	return rv
 }
 
@@ -154,6 +185,10 @@ func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
 
 func (this *BaseRequest) Id() RequestID {
 	return this.id
+}
+
+func (this *BaseRequest) ClientID() ClientContextID {
+	return this.client_id
 }
 
 func (this *BaseRequest) Statement() string {
