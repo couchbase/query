@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [design_links](https://github.com/couchbaselabs/query/blob/master/docs/design_links.md)
-* Modified: 2014-09-05
+* Modified: 2014-11-17
 
 ## Introduction
 
@@ -17,6 +17,7 @@ This document provides links to external design documents; links are provided un
 * [Cluster Management Survey](http://goo.gl/gid7LX) - a survey of best practices and common policies in clustered distributed systems
 * [Cluster Management Topics](http://goo.gl/RFa2Yb) - a design document for Clustering Management in N1QL
 * [N1QL Cluster Management API](http://goo.gl/yKZ6v5) - design document for the Clustering API in N1QL
+* [N1QL Stats for Sherlock](http://goo.gl/ZlVeag) - spec of N1QL stats for Sherlock release
 
 ## Shell
 
