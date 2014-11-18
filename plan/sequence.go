@@ -14,7 +14,7 @@ import (
 )
 
 type Sequence struct {
-	children []Operator
+	children []Operator `json:"children"`
 }
 
 func NewSequence(children ...Operator) *Sequence {
@@ -40,7 +40,7 @@ func (this *Sequence) Children() []Operator {
 }
 
 func (this *Sequence) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "serial"}
-	r["children"] = this.children
+	r := map[string]interface{}{"#operator": "Sequence"}
+	r["~children"] = this.children
 	return json.Marshal(r)
 }

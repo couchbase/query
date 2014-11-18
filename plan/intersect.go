@@ -39,7 +39,7 @@ func (this *IntersectAll) Second() Operator {
 }
 
 func (this *IntersectAll) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "intersectAll"}
+	r := map[string]interface{}{"#operator": "IntersectAll"}
 	r["first"] = this.first
 	r["second"] = this.second
 	return json.Marshal(r)

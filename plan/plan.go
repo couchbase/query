@@ -19,5 +19,4 @@ type Operators []Operator
 type Operator interface {
 	Accept(visitor Visitor) (interface{}, error)
 	Readonly() bool
-	//	MarshalJSON() ([]byte, error)
 }

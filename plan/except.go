@@ -39,7 +39,7 @@ func (this *ExceptAll) Second() Operator {
 }
 
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "exceptAll"}
+	r := map[string]interface{}{"#operator": "ExceptAll"}
 	r["first"] = this.first
 	r["second"] = this.second
 	return json.Marshal(r)

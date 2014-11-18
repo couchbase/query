@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 )
 
 // Enable copy-before-write, so that all reads use old values
@@ -47,7 +48,7 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Clone) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "clone"}
+	r := map[string]interface{}{"#operator": "Clone"}
 	return json.Marshal(r)
 }
 
@@ -66,8 +67,15 @@ func (this *Set) Node() *algebra.Set {
 }
 
 func (this *Set) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "set"}
-	r["node"] = this.node.Terms()
+	r := map[string]interface{}{"#operator": "Set"}
+	s := make([]interface{}, 0)
+	for _, term := range this.node.Terms() {
+		t := make(map[string]interface{})
+		t["path"] = expression.NewStringer().Visit(term.Path())
+		t["expr"] = expression.NewStringer().Visit(term.Value())
+		s = append(s, t)
+	}
+	r["set_terms"] = s
 	return json.Marshal(r)
 }
 
@@ -86,8 +94,18 @@ func (this *Unset) Node() *algebra.Unset {
 }
 
 func (this *Unset) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "unset"}
-	r["node"] = this.node.Terms()
+	r := map[string]interface{}{"#operator": "Unset"}
+	s := make([]interface{}, 0)
+	for _, term := range this.node.Terms() {
+		t := make(map[string]interface{})
+		t["path"] = expression.NewStringer().Visit(term.Path())
+		// FIXME
+		//t["expr"] = expression.NewStringer().Visit(term.UpdateFor().Bindings())
+		t["expr"] = "FIXME"
+		s = append(s, t)
+	}
+	r["unset_terms"] = s
+
 	return json.Marshal(r)
 }
 
@@ -106,7 +124,7 @@ func (this *SendUpdate) Keyspace() datastore.Keyspace {
 }
 
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "sendUpdate"}
+	r := map[string]interface{}{"#operator": "SendUpdate"}
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }

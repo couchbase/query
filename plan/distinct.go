@@ -26,6 +26,6 @@ func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Distinct) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "distinct"}
+	r := map[string]interface{}{"#operator": "Distinct"}
 	return json.Marshal(r)
 }

@@ -34,7 +34,7 @@ func (this *Filter) Condition() expression.Expression {
 }
 
 func (this *Filter) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "where"}
+	r := map[string]interface{}{"#operator": "Filter"}
 	r["condition"] = expression.NewStringer().Visit(this.cond)
 	return json.Marshal(r)
 }

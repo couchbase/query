@@ -41,7 +41,7 @@ func (this *SendInsert) Key() expression.Expression {
 }
 
 func (this *SendInsert) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "insert"}
+	r := map[string]interface{}{"#operator": "Insert"}
 	r["keyspace"] = this.keyspace.Name()
 	r["key"] = expression.NewStringer().Visit(this.key)
 	return json.Marshal(r)

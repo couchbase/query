@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type InitialProject struct {
@@ -49,9 +50,18 @@ func (this *InitialProject) Terms() ProjectTerms {
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "initialProject"}
-	r["projection"] = this.projection
-	r["terms"] = this.terms
+	r := map[string]interface{}{"#operator": "InitialProject"}
+	r["distinct"] = this.projection.Distinct()
+	r["raw"] = this.projection.Raw()
+	s := make([]interface{}, 0)
+	for _, term := range this.terms {
+		t := make(map[string]interface{})
+		t["star"] = term.Result().Star()
+		t["as"] = term.Result().As()
+		t["expr"] = expression.NewStringer().Visit(term.Result().Expression())
+		s = append(s, t)
+	}
+	r["result_terms"] = s
 	return json.Marshal(r)
 }
 
@@ -68,7 +78,7 @@ func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalProject) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "finalProject"}
+	r := map[string]interface{}{"#operator": "FinalProject"}
 	return json.Marshal(r)
 }
 
@@ -80,10 +90,4 @@ type ProjectTerm struct {
 
 func (this *ProjectTerm) Result() *algebra.ResultTerm {
 	return this.result
-}
-
-func (this *ProjectTerm) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "resultProject"}
-	r["result"] = this.result
-	return json.Marshal(r)
 }

@@ -35,7 +35,7 @@ func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 }
 
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "primaryScan"}
+	r := map[string]interface{}{"#operator": "PrimaryScan"}
 	r["index"] = this.index.(datastore.Index).Name()
 	return json.Marshal(r)
 }
@@ -74,7 +74,7 @@ func (this *IndexScan) Limit() int64 {
 }
 
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "indexScan"}
+	r := map[string]interface{}{"#operator": "IndexScan"}
 	r["index"] = this.index.Name()
 	r["spans"] = this.spans
 	r["distinct"] = this.distinct
@@ -103,7 +103,7 @@ func (this *KeyScan) Keys() expression.Expression {
 }
 
 func (this *KeyScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "keyScan"}
+	r := map[string]interface{}{"#operator": "KeyScan"}
 	r["keys"] = expression.NewStringer().Visit(this.keys)
 	return json.Marshal(r)
 }
@@ -122,7 +122,7 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ParentScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "parentScan"}
+	r := map[string]interface{}{"#operator": "ParentScan"}
 	return json.Marshal(r)
 }
 
@@ -147,7 +147,7 @@ func (this *ValueScan) Values() expression.Expression {
 }
 
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "valueScan"}
+	r := map[string]interface{}{"#operator": "ValueScan"}
 	r["values"] = expression.NewStringer().Visit(this.values)
 	return json.Marshal(r)
 }
@@ -166,7 +166,7 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{"type": "dummyScan"})
+	return json.Marshal(map[string]interface{}{"#operator": "DummyScan"})
 }
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
@@ -190,7 +190,7 @@ func (this *CountScan) Keyspace() datastore.Keyspace {
 }
 
 func (this *CountScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "countScan"}
+	r := map[string]interface{}{"#operator": "CountScan"}
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }
@@ -216,7 +216,7 @@ func (this *IntersectScan) Scans() []Operator {
 }
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "intersectScan"}
+	r := map[string]interface{}{"#operator": "IntersectScan"}
 	r["scans"] = this.scans
 	return json.Marshal(r)
 }

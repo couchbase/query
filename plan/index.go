@@ -42,7 +42,7 @@ func (this *CreatePrimaryIndex) Node() *algebra.CreatePrimaryIndex {
 }
 
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createPrimaryIndex"}
+	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["name"] = this.node
 	return json.Marshal(r)
@@ -75,7 +75,7 @@ func (this *CreateIndex) Node() *algebra.CreateIndex {
 }
 
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createIndex"}
+	r := map[string]interface{}{"#operator": "CreateIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["name"] = this.node
 	return json.Marshal(r)
@@ -108,7 +108,7 @@ func (this *DropIndex) Node() *algebra.DropIndex {
 }
 
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropIndex"}
+	r := map[string]interface{}{"#operator": "DropIndex"}
 	r["name"] = this.node
 	return json.Marshal(r)
 }
@@ -140,7 +140,7 @@ func (this *AlterIndex) Node() *algebra.AlterIndex {
 }
 
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterIndex"}
+	r := map[string]interface{}{"#operator": "AlterIndex"}
 	r["index"] = this.index.Name()
 	r["name"] = this.node
 	return json.Marshal(r)

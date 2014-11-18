@@ -33,7 +33,7 @@ func (this *UnionAll) Children() []Operator {
 }
 
 func (this *UnionAll) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "unionAll"}
+	r := map[string]interface{}{"#operator": "UnionAll"}
 	r["children"] = this.children
 	return json.Marshal(r)
 }

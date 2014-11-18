@@ -34,7 +34,7 @@ func (this *Parallel) Child() Operator {
 }
 
 func (this *Parallel) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "parallel"}
-	r["children"] = this.child
+	r := map[string]interface{}{"#operator": "Parallel"}
+	r["~child"] = this.child
 	return json.Marshal(r)
 }

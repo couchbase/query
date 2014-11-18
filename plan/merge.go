@@ -67,7 +67,7 @@ func (this *Merge) Insert() Operator {
 }
 
 func (this *Merge) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "merge"}
+	r := map[string]interface{}{"#operator": "Merge"}
 	r["keyspace"] = this.keyspace.Name()
 	r["keyspaceRef"] = this.ref
 	r["key"] = expression.NewStringer().Visit(this.key)

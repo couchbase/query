@@ -44,7 +44,7 @@ func (this *Prepared) Signature() value.Value {
 }
 
 func (this *Prepared) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "preparedStmt"}
+	r := map[string]interface{}{"type": "PreparedStatement"}
 	r["statement"] = this.Operator
 	r["signature"] = this.signature
 	return json.Marshal(r)

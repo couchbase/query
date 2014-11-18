@@ -34,7 +34,7 @@ func (this *SendDelete) Keyspace() datastore.Keyspace {
 }
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "delete"}
+	r := map[string]interface{}{"#operator": "Delete"}
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }

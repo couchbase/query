@@ -26,6 +26,6 @@ func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Discard) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "discard"}
+	r := map[string]interface{}{"#operator": "Discard"}
 	return json.Marshal(r)
 }

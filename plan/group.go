@@ -42,13 +42,17 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "initialGroup"}
+	r := map[string]interface{}{"#operator": "InitialGroup"}
 	keylist := make([]string, 0)
 	for _, key := range this.keys {
 		keylist = append(keylist, expression.NewStringer().Visit(key))
 	}
-	r["keys"] = keylist
-	r["aggregate"] = this.aggregates
+	r["group_keys"] = keylist
+	s := make([]interface{}, 0)
+	for _, agg := range this.aggregates {
+		s = append(s, expression.NewStringer().Visit(agg))
+	}
+	r["aggregates"] = s
 	return json.Marshal(r)
 }
 
@@ -79,13 +83,17 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "intermediateGroup"}
+	r := map[string]interface{}{"#operator": "IntermediateGroup"}
 	keylist := make([]string, 0)
 	for _, key := range this.keys {
 		keylist = append(keylist, expression.NewStringer().Visit(key))
 	}
-	r["keys"] = keylist
-	r["aggregate"] = this.aggregates
+	r["group_keys"] = keylist
+	s := make([]interface{}, 0)
+	for _, agg := range this.aggregates {
+		s = append(s, expression.NewStringer().Visit(agg))
+	}
+	r["aggregates"] = s
 	return json.Marshal(r)
 }
 
@@ -116,12 +124,16 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "finalGroup"}
+	r := map[string]interface{}{"#operator": "FinalGroup"}
 	keylist := make([]string, 0)
 	for _, key := range this.keys {
 		keylist = append(keylist, expression.NewStringer().Visit(key))
 	}
-	r["keys"] = keylist
-	r["aggregate"] = this.aggregates
+	r["group_keys"] = keylist
+	s := make([]interface{}, 0)
+	for _, agg := range this.aggregates {
+		s = append(s, expression.NewStringer().Visit(agg))
+	}
+	r["aggregates"] = s
 	return json.Marshal(r)
 }

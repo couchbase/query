@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type Order struct {
@@ -34,7 +35,16 @@ func (this *Order) Terms() algebra.SortTerms {
 }
 
 func (this *Order) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "order"}
-	r["by"] = this.terms
+	r := map[string]interface{}{"#operator": "Order"}
+
+	/* generate sort terms */
+	s := make([]interface{}, 0)
+	for _, term := range this.terms {
+		q := make(map[string]interface{})
+		q["expr"] = expression.NewStringer().Visit(term.Expression())
+		q["desc"] = term.Descending()
+		s = append(s, q)
+	}
+	r["sort_terms"] = s
 	return json.Marshal(r)
 }

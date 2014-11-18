@@ -34,7 +34,7 @@ func (this *Let) Bindings() expression.Bindings {
 }
 
 func (this *Let) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "let"}
+	r := map[string]interface{}{"#operator": "Let"}
 	r["bindings"] = this.bindings
 	return json.Marshal(r)
 }

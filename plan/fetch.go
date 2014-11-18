@@ -47,7 +47,7 @@ func (this *Fetch) Alias() string {
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "fetch"}
+	r := map[string]interface{}{"#operator": "Fetch"}
 	if this.projection != nil {
 		r["projection"] = expression.NewStringer().Visit(this.projection)
 	}
