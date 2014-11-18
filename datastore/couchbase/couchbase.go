@@ -210,7 +210,7 @@ func (p *namespace) refresh() {
 		logging.Infof(" Checking keyspace %s", name)
 		_, err := p.cbNamespace.GetBucket(name)
 		if err != nil {
-			logging.Errorf(" Error retrieving bucket %d", name)
+			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
 		}

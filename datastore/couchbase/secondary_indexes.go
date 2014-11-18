@@ -43,7 +43,10 @@ func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
 	infos, err := client.List()
 	if err != nil {
 		return indexes, err
+	} else if infos == nil {
+		return nil, errors.NewError(nil, "2i List() failed")
 	}
+
 	for _, info := range infos {
 		rkeys, err := parseExprs(info.SecExprs)
 		if err != nil {
@@ -89,7 +92,10 @@ func new2iPrimaryIndex(
 		PRIMARY_INDEX, bucket, string(using), "N1QL", "", "", nil, true)
 	if err != nil {
 		return nil, errors.NewError(nil, err.Error())
+	} else if info == nil {
+		return nil, errors.NewError(nil, "2i primary CreateIndex() failed")
 	}
+
 	index := &secondaryIndex{
 		name:      PRIMARY_INDEX,
 		defnID:    info.DefnID,
@@ -133,7 +139,10 @@ func new2iIndex(
 		name, bucket, string(using), "N1QL", partnStr, whereStr, secStrs, false)
 	if err != nil {
 		return nil, errors.NewError(nil, err.Error())
+	} else if info == nil {
+		return nil, errors.NewError(nil, "2i CreateIndex() failed")
 	}
+
 	index := &secondaryIndex{
 		name:      name,
 		defnID:    info.DefnID,
