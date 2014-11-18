@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-11-15
+* Modified: 2014-11-17
 
 ## Introduction
 
@@ -2435,6 +2435,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Drop reserved word TYPE due to legacy usage.
 * 2014-11-15 - RAW
     * Allow RAW exprs to be aliased; useful for ORDER BY
+* 2014-11-17 - MISSING literal
+    * Add MISSING as a literal expression.
 
 ### Open issues
 
