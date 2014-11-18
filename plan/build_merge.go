@@ -112,5 +112,9 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		children = append(children, NewLimit(stmt.Limit()))
 	}
 
+	if stmt.Returning() == nil {
+		children = append(children, NewDiscard())
+	}
+
 	return NewSequence(children...), nil
 }

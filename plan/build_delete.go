@@ -41,12 +41,16 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		this.children = append(this.children, NewLimit(stmt.Limit()))
 	}
 
+	if stmt.Returning() == nil {
+		this.children = append(this.children, NewDiscard())
+	}
+
 	return NewSequence(this.children...), nil
 }
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace,
 	alias string, keys, where expression.Expression) error {
-	this.children = make([]Operator, 0, 4)
+	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 8)
 
 	if keys != nil {

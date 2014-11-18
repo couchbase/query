@@ -49,5 +49,9 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		this.children = append(this.children, NewLimit(stmt.Limit()))
 	}
 
+	if stmt.Returning() == nil {
+		this.children = append(this.children, NewDiscard())
+	}
+
 	return NewSequence(this.children...), nil
 }

@@ -22,7 +22,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		return nil, err
 	}
 
-	children := make([]Operator, 0, 2)
+	children := make([]Operator, 0, 4)
 
 	if stmt.Values() != nil {
 		children = append(children, NewValueScan(stmt.Values()))
@@ -37,10 +37,13 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		return nil, fmt.Errorf("UPSERT missing both VALUES and SELECT.")
 	}
 
-	subChildren := make([]Operator, 0, 3)
+	subChildren := make([]Operator, 0, 4)
 	subChildren = append(subChildren, NewSendUpsert(keyspace, stmt.Key()))
+
 	if stmt.Returning() != nil {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
+	} else {
+		subChildren = append(subChildren, NewDiscard())
 	}
 
 	parallel := NewParallel(NewSequence(subChildren...))
