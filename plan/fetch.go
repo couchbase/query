@@ -17,16 +17,16 @@ import (
 
 type Fetch struct {
 	readonly
-	keyspace datastore.Keyspace
-	project  expression.Expression
-	alias    string
+	keyspace   datastore.Keyspace
+	projection expression.Expression
+	alias      string
 }
 
-func NewFetch(keyspace datastore.Keyspace, project expression.Expression, alias string) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, projection expression.Expression, alias string) *Fetch {
 	return &Fetch{
-		keyspace: keyspace,
-		project:  project,
-		alias:    alias,
+		keyspace:   keyspace,
+		projection: projection,
+		alias:      alias,
 	}
 }
 
@@ -38,8 +38,8 @@ func (this *Fetch) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Fetch) Project() expression.Expression {
-	return this.project
+func (this *Fetch) Projection() expression.Expression {
+	return this.projection
 }
 
 func (this *Fetch) Alias() string {
@@ -48,8 +48,8 @@ func (this *Fetch) Alias() string {
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "fetch"}
-	if this.project != nil {
-		r["projection"] = expression.NewStringer().Visit(this.project)
+	if this.projection != nil {
+		r["projection"] = expression.NewStringer().Visit(this.projection)
 	}
 	r["keyspace"] = this.keyspace.Name()
 	r["as"] = this.alias

@@ -95,9 +95,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		var fv value.AnnotatedValue
 
 		// Apply projection, if any
-		project := this.plan.Project()
-		if project != nil {
-			projectedItem, e := project.Evaluate(item, context)
+		projection := this.plan.Projection()
+		if projection != nil {
+			projectedItem, e := projection.Evaluate(item, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating fetch path."))

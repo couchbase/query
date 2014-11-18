@@ -27,15 +27,15 @@ type FromTerm interface {
 }
 
 type KeyspaceTerm struct {
-	namespace string
-	keyspace  string
-	project   expression.Path
-	as        string
-	keys      expression.Expression
+	namespace  string
+	keyspace   string
+	projection expression.Path
+	as         string
+	keys       expression.Expression
 }
 
-func NewKeyspaceTerm(namespace, keyspace string, project expression.Path, as string, keys expression.Expression) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, project, as, keys}
+func NewKeyspaceTerm(namespace, keyspace string, projection expression.Path, as string, keys expression.Expression) *KeyspaceTerm {
+	return &KeyspaceTerm{namespace, keyspace, projection, as, keys}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -43,13 +43,13 @@ func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
-	if this.project != nil {
-		expr, err := mapper.Map(this.project)
+	if this.projection != nil {
+		expr, err := mapper.Map(this.projection)
 		if err != nil {
 			return err
 		}
 
-		this.project = expr.(expression.Path)
+		this.projection = expr.(expression.Path)
 	}
 
 	if this.keys != nil {
@@ -98,8 +98,8 @@ func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
 func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
 		return this.as
-	} else if this.project != nil {
-		return this.project.Alias()
+	} else if this.projection != nil {
+		return this.projection.Alias()
 	} else {
 		return this.keyspace
 	}
@@ -113,8 +113,8 @@ func (this *KeyspaceTerm) Keyspace() string {
 	return this.keyspace
 }
 
-func (this *KeyspaceTerm) Project() expression.Path {
-	return this.project
+func (this *KeyspaceTerm) Projection() expression.Path {
+	return this.projection
 }
 
 func (this *KeyspaceTerm) As() string {
@@ -133,8 +133,8 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	}
 	r["namespace"] = this.namespace
 	r["keyspace"] = this.keyspace
-	if this.project != nil {
-		r["path"] = expression.NewStringer().Visit(this.project)
+	if this.projection != nil {
+		r["projection"] = expression.NewStringer().Visit(this.projection)
 	}
 	return json.Marshal(r)
 }

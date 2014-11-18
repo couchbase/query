@@ -187,7 +187,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		this.children = append(this.children, scan)
 	}
 
-	fetch := NewFetch(keyspace, node.Project(), node.Alias())
+	fetch := NewFetch(keyspace, node.Projection(), node.Alias())
 	this.subChildren = append(this.subChildren, fetch)
 	return fetch, nil
 }

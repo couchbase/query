@@ -93,9 +93,9 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		var nv value.AnnotatedValue
 
 		// Apply projection, if any
-		project := this.plan.Term().Project()
-		if project != nil {
-			projectedItem, e := project.Evaluate(nestItem, context)
+		projection := this.plan.Term().Projection()
+		if projection != nil {
+			projectedItem, e := projection.Evaluate(nestItem, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating nest path."))
