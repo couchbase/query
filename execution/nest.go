@@ -10,8 +10,6 @@
 package execution
 
 import (
-	"fmt"
-
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -67,16 +65,12 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Build list of keys
-	keys := make([]string, len(acts))
-	for i, key := range acts {
-		switch key := key.(type) {
+	keys := make([]string, 0, len(acts))
+	for _, key := range acts {
+		k := value.NewValue(key).Actual()
+		switch k := k.(type) {
 		case string:
-			keys[i] = key
-		default:
-			context.Error(errors.NewError(nil, fmt.Sprintf(
-				"Missing or invalid nest key %v of type %T.",
-				key, key)))
-			return false
+			keys = append(keys, k)
 		}
 	}
 
@@ -87,8 +81,13 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		return false
 	}
 
-	// Attach meta
-	nvs := make([]interface{}, len(pairs))
+	found := len(pairs) > 0
+
+	if !found && !this.plan.Term().Outer() {
+		return true
+	}
+
+	nvs := make([]interface{}, 0, len(pairs))
 	for i, pair := range pairs {
 		nestItem := pair.Value
 		var nv value.AnnotatedValue
@@ -112,7 +111,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		}
 
 		nv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
-		nvs[i] = nv
+		nvs = append(nvs, nv)
 	}
 
 	// Attach and send

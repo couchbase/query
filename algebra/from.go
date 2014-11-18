@@ -168,6 +168,7 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return
 	}
 
+	f.Keyspace = ""
 	this.right.keys, err = f.Map(this.right.keys)
 	if err != nil {
 		return
@@ -185,7 +186,6 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return nil, err
 	}
 
-	f.Keyspace = ""
 	f.Allowed.SetField(alias, alias)
 	return
 }
@@ -247,6 +247,7 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return
 	}
 
+	f.Keyspace = ""
 	this.right.keys, err = f.Map(this.right.keys)
 	if err != nil {
 		return
@@ -264,7 +265,6 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return nil, err
 	}
 
-	f.Keyspace = ""
 	f.Allowed.SetField(alias, alias)
 	return
 }

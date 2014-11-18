@@ -68,7 +68,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	for i, act := range acts {
 		var av value.AnnotatedValue
 		if i < len(acts)-1 {
-			av = item.Copy().(value.AnnotatedValue)
+			av = value.NewAnnotatedValue(item.Copy())
 		} else {
 			av = item
 		}

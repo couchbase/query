@@ -10,8 +10,6 @@
 package execution
 
 import (
-	"fmt"
-
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -67,16 +65,12 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Build list of keys
-	keys := make([]string, len(acts))
-	for i, key := range acts {
-		switch key := key.(type) {
+	keys := make([]string, 0, len(acts))
+	for _, key := range acts {
+		k := value.NewValue(key).Actual()
+		switch k := k.(type) {
 		case string:
-			keys[i] = key
-		default:
-			context.Error(errors.NewError(nil, fmt.Sprintf(
-				"Missing or invalid join key %v of type %T.",
-				key, key)))
-			return false
+			keys = append(keys, k)
 		}
 	}
 
@@ -87,7 +81,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		return false
 	}
 
-	found := false
+	found := len(pairs) > 0
 
 	// Attach and send
 	for i, pair := range pairs {
@@ -104,11 +98,6 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 				return false
 			}
 
-			if projectedItem.Type() == value.MISSING {
-				continue
-			} else {
-				found = true
-			}
 			jv = value.NewAnnotatedValue(projectedItem)
 		} else {
 			jv = value.NewAnnotatedValue(joinItem)
@@ -118,7 +107,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 
 		var av value.AnnotatedValue
 		if i < len(pairs)-1 {
-			av = item.Copy().(value.AnnotatedValue)
+			av = value.NewAnnotatedValue(item.Copy())
 		} else {
 			av = item
 		}
