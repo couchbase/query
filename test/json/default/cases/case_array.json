@@ -487,5 +487,88 @@
             ]
         }
     ]
-    }
+    },
+    
+    {  
+        "statements" : "select id FROM default:orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product = \"tea111\" END ORDER BY id",
+        "results": [
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        }
+    ]
+    },
+    
+    {
+       "statements" : "SELECT id FROM default:orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product = \"tea111\" END AND ANY qty IN ARRAY ol.qty FOR ol IN orderlines END SATISFIES qty > 1 END ORDER BY id", 
+       "results": [
+        {
+            "id": "1234"
+        }
+    ]
+    },
+    {
+      "statements" : "SELECT id FROM default:orders WHERE EVERY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product NOT LIKE \"%tea_11\" END ORDER BY id", 
+      "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1236"
+        }
+      ]
+    },
+     {
+         "statements" : "SELECT id FROM default:orders WHERE ANY product IN ARRAY ol.productId FOR ol IN orderlines END SATISFIES product NOT LIKE \"tea_11%\" END ORDER BY id",
+         "results": [
+        {
+            "id": "1200"
+        },
+        {
+            "id": "1234"
+        },
+        {
+            "id": "1235"
+        },
+        {
+            "id": "1236"
+        }
+    ]
+ },
+
+ {
+     "statements" : "select search_history from default:user_profile where (any search in search_history satisfies search.category = \"Films\" and (any subcat in search.`sub-category` satisfies subcat=\"Comedy\" end) end) AND  (ANY search IN search_history SATISFIES search.category = \"Books\" AND (ANY subcat IN search.`sub-category` SATISFIES subcat LIKE \"History%\" END)  END) AND (ANY search IN search_history SATISFIES search.category = \"Music\" AND (ANY subcat IN search.`sub-category` SATISFIES subcat LIKE \"%Folk\" END) END) ORDER BY search_history",
+         "results": [
+        {
+            "search_history": [
+                {
+                    "category": "Films",
+                    "sub-category": [
+                        "Sci-Fi, Fantasy \u0026 Horror",
+                        "Foreign Films",
+                        "Comedy"
+                    ]
+                },
+                {
+                    "category": "Books",
+                    "sub-category": [
+                        "Cookbooks, Food \u0026 Wine",
+                        "History",
+                        "NonFiction"
+                    ]
+                },
+                {
+                    "category": "Music",
+                    "sub-category": [
+                        "Alternative",
+                        "Blues and Folk",
+                        "Kid's Music"
+                    ]
+                }
+            ]
+        }
+    ] 
+ }
 ]
