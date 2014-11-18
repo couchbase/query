@@ -1838,6 +1838,11 @@ NULL
     $$ = expression.NULL_EXPR
 }
 |
+MISSING
+{
+    $$ = expression.MISSING_EXPR
+}
+|
 FALSE
 {
     $$ = expression.FALSE_EXPR

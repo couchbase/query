@@ -123,7 +123,7 @@ escaped-identifier ::= '`' chars '`'
 /*
  *  literals
  */
-literal ::= string | number | 'TRUE' | 'FALSE' | 'NULL'
+literal ::= string | number | 'TRUE' | 'FALSE' | 'NULL' | 'MISSING'
 string ::= '"' chars? '"'
 chars ::= char chars?
 char ::= unicode-character | '\' ('\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' hex-digit hex-digit hex-digit hex-digit )

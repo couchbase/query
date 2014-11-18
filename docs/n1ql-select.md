@@ -1318,11 +1318,15 @@ operators:
 ## Appendix - Literals
 
 The following rules are the same as defined by
-[json.org](http://json.org/) with one change:
+[json.org](http://json.org/), with the following changes:
 
 1. In standard JSON "true", "false" and "null" are case-sensitive.  In
    N1QL, to be consistent with other keywords, they are defined to be
    case-insensitive.
+
+1. "missing" is added as a literal expression, although it is not
+   returned in final results. Missing is omitted from objects, and is
+   converted to null in result arrays.
 
 _literal:_
 

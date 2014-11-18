@@ -19,6 +19,7 @@ type Constant struct {
 }
 
 var NULL_EXPR = NewConstant(value.NULL_VALUE)
+var MISSING_EXPR = NewConstant(value.MISSING_VALUE)
 var FALSE_EXPR = NewConstant(value.FALSE_VALUE)
 var TRUE_EXPR = NewConstant(value.TRUE_VALUE)
 var ZERO_EXPR = NewConstant(value.ZERO_VALUE)
