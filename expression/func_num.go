@@ -524,6 +524,70 @@ func (this *Floor) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// NaN
+//
+///////////////////////////////////////////////////
+
+type NaN struct {
+	NullaryFunctionBase
+}
+
+func NewNaN() Function {
+	return &NaN{
+		*NewNullaryFunctionBase("nan"),
+	}
+}
+
+func (this *NaN) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NaN) Type() value.Type { return value.NUMBER }
+
+func (this *NaN) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return _NAN_VALUE, nil
+}
+
+func (this *NaN) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
+}
+
+var _NAN_VALUE = value.NewValue(math.NaN())
+
+///////////////////////////////////////////////////
+//
+// NegInf
+//
+///////////////////////////////////////////////////
+
+type NegInf struct {
+	NullaryFunctionBase
+}
+
+func NewNegInf() Function {
+	return &NegInf{
+		*NewNullaryFunctionBase("neginf"),
+	}
+}
+
+func (this *NegInf) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NegInf) Type() value.Type { return value.NUMBER }
+
+func (this *NegInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return _NEGINF_VALUE, nil
+}
+
+func (this *NegInf) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
+}
+
+var _NEGINF_VALUE = value.NewValue(math.Inf(-1))
+
+///////////////////////////////////////////////////
+//
 // PI
 //
 ///////////////////////////////////////////////////
@@ -553,6 +617,38 @@ func (this *PI) Constructor() FunctionConstructor {
 }
 
 var _PI_VALUE = value.NewValue(math.Pi)
+
+///////////////////////////////////////////////////
+//
+// PosInf
+//
+///////////////////////////////////////////////////
+
+type PosInf struct {
+	NullaryFunctionBase
+}
+
+func NewPosInf() Function {
+	return &PosInf{
+		*NewNullaryFunctionBase("neginf"),
+	}
+}
+
+func (this *PosInf) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *PosInf) Type() value.Type { return value.NUMBER }
+
+func (this *PosInf) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return _POSINF_VALUE, nil
+}
+
+func (this *PosInf) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
+}
+
+var _POSINF_VALUE = value.NewValue(math.Inf(1))
 
 ///////////////////////////////////////////////////
 //
