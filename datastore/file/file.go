@@ -279,12 +279,12 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
+	nils_count := 0
 	for i, k := range keys {
 		item, e := b.FetchOne(k)
 		if item == nil {
-			// Skip nil item - requires resizing the pair list
-			rv = append(rv[:i], rv[i+1:]...)
-			continue
+			// Keep track of nils - they will be removed from slice
+			nils_count++
 		}
 
 		if e != nil {
@@ -295,6 +295,18 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 		rv[i].Value = item
 	}
 
+	if nils_count > 0 {
+		_rv := make([]datastore.AnnotatedPair, len(keys)-nils_count)
+		i := 0
+		for _, k := range rv {
+			if k.Value != nil {
+				_rv[i].Key = k.Key
+				_rv[i].Value = k.Value
+				i++
+			}
+		}
+		rv = _rv
+	}
 	return rv, nil
 }
 
