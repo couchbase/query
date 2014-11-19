@@ -487,13 +487,13 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 		return nil, errors.NewError(nil, "No keys to fetch")
 	}
 
-	rv := make([]datastore.AnnotatedPair, len(keys))
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		return nil, errors.NewError(err, "Error doing bulk get")
 	}
 
 	i := 0
+	rv := make([]datastore.AnnotatedPair, len(bulkResponse))
 	for k, v := range bulkResponse {
 
 		var doc datastore.AnnotatedPair
