@@ -1,0 +1,76 @@
+[
+    {
+        "statements": "SELECT s.category FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s ORDER BY s.category",
+        "results": [
+       {
+            "category": "Books"
+        },
+        {
+            "category": "Films"
+        }
+       ]
+    },
+    {
+        "statements": "SELECT s1.category cat1, s2.category cat2 FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s1 UNNEST u.search_history s2 ORDER BY cat1 DESC",
+        "results": [
+          {
+            "cat1": "Films",
+            "cat2": "Films"
+          },
+          {
+            "cat1": "Films",
+            "cat2": "Books"
+          },
+          {
+            "cat1": "Books",
+            "cat2": "Films"
+          },
+          {
+            "cat1": "Books",
+            "cat2": "Books"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT s.`sub-category` FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s ORDER BY s.sub-category",
+        "results": [
+        {
+            "sub-category": [
+                "Animation",
+                "Drama",
+                "Music & Musicals"
+            ]
+        },
+        {
+            "sub-category": [
+                "Humor",
+                "Travel",
+                "Home & Garden"
+            ]
+        }
+        ]
+    },
+    {
+        "statements": "SELECT c FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s UNNEST s.`sub-category` c ORDER BY c",
+        "results": [
+        {
+            "c": "Animation"
+        },
+        {
+            "c": "Drama"
+        },
+        {
+            "c": "Home \u0026 Garden"
+        },
+        {
+            "c": "Humor"
+        },
+        {
+            "c": "Music \u0026 Musicals"
+        },
+        {
+            "c": "Travel"
+        }
+        ]
+    }
+]
