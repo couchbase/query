@@ -13,13 +13,26 @@ import (
 	"reflect"
 )
 
+/*
+Type ExpressionBase is defined as an empty struct. 
+*/
 type ExpressionBase struct {
 }
 
+/*
+It returns an empty string for the terminal identifier of
+the expression.
+*/
 func (this *ExpressionBase) Alias() string {
 	return ""
 }
 
+/*
+Range over the children of the expression, and check if each
+child is indexable. If not then return false as the expression
+is not indexable. If all children are indexable, then return 
+true.
+*/
 func (this *ExpressionBase) indexable(expr Expression) bool {
 	for _, child := range expr.Children() {
 		if !child.Indexable() {
@@ -30,6 +43,17 @@ func (this *ExpressionBase) indexable(expr Expression) bool {
 	return true
 }
 
+/*
+Check if two expressions are equivalent. First compare the dynamic
+type information of the two expressions, using reflect.TypeOf. If 
+it is not the same, then return false. Compare the length of the 
+two expressions. If they are not the same, then not equal, hence
+return false. If the lengths are equal, range through the children 
+and check if they are equivalent by calling the EquivalentTo method
+for each set of children and return false if not equal. If the 
+method hasnt returned till this point, then the expressions are
+equal and return true.
+*/
 func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 	if reflect.TypeOf(expr) != reflect.TypeOf(other) {
 		return false
@@ -51,6 +75,9 @@ func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 	return true
 }
 
+/*
+This has not been implemented and calls EquivalentTo.
+*/
 func (this *ExpressionBase) subsetOf(expr, other Expression) bool {
 	return expr.EquivalentTo(other)
 }
