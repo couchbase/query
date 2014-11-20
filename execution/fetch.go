@@ -95,7 +95,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		var fv value.AnnotatedValue
 
 		// Apply projection, if any
-		projection := this.plan.Projection()
+		projection := this.plan.Term().Projection()
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(item, context)
 			if e != nil {
@@ -121,7 +121,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		default:
 			fv.SetAttachment("meta", av.GetAttachment("meta"))
 		}
-		av.SetField(this.plan.Alias(), fv)
+		av.SetField(this.plan.Term().Alias(), fv)
 
 		if !this.sendItem(av) {
 			return false

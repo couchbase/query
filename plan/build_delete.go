@@ -22,7 +22,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref.Alias(), stmt.Keys(), stmt.Where())
+	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Where())
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 }
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace,
-	alias string, keys, where expression.Expression) error {
+	ksref *algebra.KeyspaceRef, keys, where expression.Expression) error {
 	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 8)
 
@@ -66,7 +66,8 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace,
 		this.children = append(this.children, scan)
 	}
 
-	fetch := NewFetch(keyspace, nil, alias)
+	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil)
+	fetch := NewFetch(keyspace, term)
 	this.subChildren = append(this.subChildren, fetch)
 
 	if where != nil {

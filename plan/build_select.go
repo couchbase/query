@@ -26,6 +26,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	// If there is an ORDER BY, delay the final projection
 	if order != nil {
+		this.order = order
 		this.delayProjection = true
 	}
 
@@ -96,6 +97,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	projection := node.Projection()
 	if projection != nil {
 		for _, term := range projection.Terms() {
+			if term.Expression() != nil {
+				aggs = collectAggregates(aggs, term.Expression())
+			}
+		}
+	}
+
+	if this.order != nil {
+		for _, term := range this.order.Terms() {
 			if term.Expression() != nil {
 				aggs = collectAggregates(aggs, term.Expression())
 			}
@@ -187,7 +196,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		this.children = append(this.children, scan)
 	}
 
-	fetch := NewFetch(keyspace, node.Projection(), node.Alias())
+	fetch := NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
 	return fetch, nil
 }
@@ -264,7 +273,8 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -281,7 +291,8 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -302,7 +313,8 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -318,7 +330,8 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -344,7 +357,8 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	this.distinct = true
 	defer func() { this.distinct = distinct }()
 
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -360,7 +374,8 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
-	this.delayProjection = false
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
 	first, err := node.First().Accept(this)
 	if err != nil {

@@ -38,11 +38,11 @@ type builder struct {
 	systemstore     datastore.Datastore
 	namespace       string
 	subquery        bool
-	delayProjection bool
+	delayProjection bool           // Used to allow ORDER BY non-projected expressions
+	order           *algebra.Order // Used to collect aggregates from ORDER BY
 	distinct        bool
 	children        []Operator
 	subChildren     []Operator
-	Type            string
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
@@ -52,7 +52,6 @@ func newBuilder(datastore, systemstore datastore.Datastore, namespace string, su
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
-		Type:            "builder",
 	}
 }
 

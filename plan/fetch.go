@@ -11,22 +11,22 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
 type Fetch struct {
 	readonly
-	keyspace   datastore.Keyspace
-	projection expression.Expression
-	alias      string
+	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
 }
 
-func NewFetch(keyspace datastore.Keyspace, projection expression.Expression, alias string) *Fetch {
+func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Fetch {
 	return &Fetch{
-		keyspace:   keyspace,
-		projection: projection,
-		alias:      alias,
+		keyspace: keyspace,
+		term:     term,
 	}
 }
 
@@ -38,20 +38,19 @@ func (this *Fetch) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Fetch) Projection() expression.Expression {
-	return this.projection
-}
-
-func (this *Fetch) Alias() string {
-	return this.alias
+func (this *Fetch) Term() *algebra.KeyspaceTerm {
+	return this.term
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Fetch"}
-	if this.projection != nil {
-		r["projection"] = expression.NewStringer().Visit(this.projection)
+	if this.term.Projection() != nil {
+		r["projection"] = expression.NewStringer().Visit(this.term.Projection())
 	}
-	r["keyspace"] = this.keyspace.Name()
-	r["as"] = this.alias
+	r["namespace"] = this.term.Namespace()
+	r["keyspace"] = this.term.Keyspace()
+	if this.term.As() != "" {
+		r["as"] = this.term.As()
+	}
 	return json.Marshal(r)
 }
