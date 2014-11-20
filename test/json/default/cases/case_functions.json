@@ -1,0 +1,651 @@
+[
+    {
+        "statements": "SELECT lower(details.title) as title FROM default:catalog ORDER BY title",
+        "results": [
+        {
+            "title": "inferno"
+        },
+        {
+            "title": "sherlock: series 1"
+        },
+        {
+            "title": "zero dark thirty"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT lower(title) as title FROM default:catalog.details ORDER BY title",
+        "results": [
+        {
+            "title": "inferno"
+        },
+        {
+            "title": "sherlock: series 1"
+        },
+        {
+            "title": "zero dark thirty"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT lower(details.actors[0]) as act FROM default:catalog ORDER BY act",
+        "results": [
+        {},
+        {
+            "act": "benedict cumberbatch"
+        },
+        {
+            "act": "jessica chastain"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT lower(actors[0]) as act FROM default:catalog.details ORDER BY act",
+        "results": [
+        {},
+        {
+            "act": "benedict cumberbatch"
+        },
+        {
+            "act": "jessica chastain"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT lower(pricing.list) as list FROM default:catalog ORDER BY list",
+        "results": [
+        {
+            "list": null
+        },
+        {
+            "list": null
+        },
+        {
+            "list": null
+        }
+  ]
+    },
+
+    {
+        "statements": "SELECT lower(pricing.length) as len FROM default:catalog.dimensions ORDER BY len",
+        "results": [
+         {},
+        {},
+        {}  
+    ]
+    },
+
+    {
+        "statements": "SELECT upper(details.title) as title FROM default:catalog ORDER BY title",
+        "results": [
+        {
+            "title": "INFERNO"
+        },
+        {
+            "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "title": "ZERO DARK THIRTY"
+        }
+  ]
+    },
+
+    {
+        "statements": "SELECT upper(title) as title FROM default:catalog.details ORDER BY title",
+        "results": [
+        {
+            "title": "INFERNO"
+        },
+        {
+            "title": "SHERLOCK: SERIES 1"
+        },
+        {
+            "title": "ZERO DARK THIRTY"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT upper(details.actors[0]) as act FROM default:catalog ORDER BY act",
+        "results": [
+        {},
+        {
+            "act": "BENEDICT CUMBERBATCH"
+        },
+        {
+            "act": "JESSICA CHASTAIN"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT upper(actors[0]) as act FROM default:catalog.details ORDER BY act",
+        "results": [
+        {},
+        {
+            "act": "BENEDICT CUMBERBATCH"
+        },
+        {
+            "act": "JESSICA CHASTAIN"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT upper(pricing.list) as list FROM default:catalog ORDER BY list",
+        "results": [
+          {
+            "list": null
+        },
+        {
+            "list": null
+        },
+        {
+            "list": null
+        }
+ ]
+    },
+
+    {
+        "statements": "SELECT upper(pricing.length) as len FROM default:catalog.dimensions ORDER BY len",
+        "results": [
+        {},
+        {},
+        {}  
+   ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 0) as subs FROM default:catalog WHERE type = \"Movies&TV\" ORDER BY subs",
+        "results": [
+        {
+            "subs": "Sherlock: Series 1"
+        },
+        {
+            "subs": "Zero Dark Thirty"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 1) as subs FROM default:catalog WHERE type = \"Movies&TV\" ORDER BY subs",
+        "results": [
+          {
+            "subs": "ero Dark Thirty"
+        },
+        {
+            "subs": "herlock: Series 1"
+        }
+ ]
+    },
+
+    {
+        "statements": "SELECT  substr(title, 4) as subs FROM default:catalog WHERE type = \"Movies&TV\" ORDER BY subs",
+        "results": [
+       {
+            "subs": " Dark Thirty"
+        },
+        {
+            "subs": "lock: Series 1"
+        }
+   ]
+    },
+
+    {
+
+        "statements": "SELECT  META(contacts) as meta_c FROM default:contacts ORDER BY meta_c",
+        "results": [
+       {
+            "meta_c": {
+                "id": "dave"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "earl"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "fred"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "harry"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "ian"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "jane"
+            }
+        }
+   ]
+    },
+
+    {
+
+        "statements": "SELECT  META()  FROM default:contacts AS contact UNNEST contact.children AS child",
+        "error": "the META() function requires exactly 1 argument"
+    },
+
+     {
+        "statements": "SELECT BASE64(contacts) AS b64 FROM default:contacts ORDER BY b64",
+        "results": [
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoiZiIsIm5hbWUiOiJ4ZW5hIn0seyJhZ2UiOjIsImdlbmRlciI6Im0iLCJuYW1lIjoieXVyaSJ9XSwiaG9iYmllcyI6WyJzdXJmaW5nIl0sIm5hbWUiOiJlYXJsIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoibSIsIm5hbWUiOiJhYmFtYSJ9LHsiYWdlIjoyMSwiZ2VuZGVyIjoibSIsIm5hbWUiOiJiZWJhbWEifV0sImhvYmJpZXMiOlsiZ29sZiIsInN1cmZpbmciXSwibmFtZSI6ImlhbiIsInR5cGUiOiJjb250YWN0In0="
+        },
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoibSIsIm5hbWUiOiJhaWRlbiJ9LHsiYWdlIjoyLCJnZW5kZXIiOiJmIiwibmFtZSI6ImJpbGwifV0sImhvYmJpZXMiOlsiZ29sZiIsInN1cmZpbmciXSwibmFtZSI6ImRhdmUiLCJ0eXBlIjoiY29udGFjdCJ9"
+        },
+        {
+            "b64": "eyJjb250YWN0cyI6W3sibmFtZSI6ImZyZWQifSx7Im5hbWUiOiJzaGVlbGEifV0sIm5hbWUiOiJqYW5lIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJob2JiaWVzIjpbImdvbGYiLCJzdXJmaW5nIl0sIm5hbWUiOiJmcmVkIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJuYW1lIjoiaGFycnkiLCJ0eXBlIjoiY29udGFjdCJ9"
+        }
+  ]
+    },
+
+    {
+        "statements": "SELECT CEIL(score+0.5) as sc FROM default:game ORDER BY sc",
+        "results": [
+           {
+            "sc": 2
+        },
+        {
+            "sc": 9
+        },
+        {
+            "sc": 11
+        },
+        {
+            "sc": 11
+        },
+        {
+            "sc": 101
+        }
+]
+    },
+
+    {
+        "statements": "SELECT FLOOR(score+0.5) as sc FROM default:game ORDER BY sc",
+        "results": [
+        {
+            "sc": 1
+        },
+        {
+            "sc": 8
+        },
+        {
+            "sc": 10
+        },
+        {
+            "sc": 10
+        },
+        {
+            "sc": 100
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT GREATEST(score, 75) as gr FROM default:game ORDER BY gr",
+        "results": [
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 100
+        }
+]
+    },
+
+    {
+        "statements": "SELECT LEAST(score, 5) as le FROM default:game ORDER BY le",
+        "results": [
+      {
+            "le": 1
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT IFMISSING(`shipped-on`,\"MISSING\") as mis FROM default:orders ORDER BY mis",
+        "results": [
+      {
+            "mis": null
+        },
+        {
+            "mis": "2012/01/02"
+        },
+        {
+            "mis": "MISSING"
+        },
+        {
+            "mis": "MISSING"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT IFNULL(`shipped-on`,\"NULL\") as nu FROM default:orders ORDER BY nu",
+        "results": [
+          {},
+        {},
+        {
+            "nu": "2012/01/02"
+        },
+        {
+            "nu": "NULL"
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT IFMISSINGORNULL(`shipped-on`,\"NOT THERE\") as m_or_n FROM default:orders ORDER BY m_or_n",
+        "results": [
+      {
+            "m_or_n": "2012/01/02"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT NULLIF(score, 100) as n_if FROM default:game WHERE score > 50 ORDER BY n_if",
+        "results": [
+            {
+            "n_if": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT MISSINGIF(score, 100) FROM default:game WHERE score > 50",
+        "results": [
+        {}
+    ]
+    },
+
+    {
+        "statements": "SELECT TRIM(name,\"d\") as tr FROM default:contacts ORDER BY tr",
+        "results": [
+        {
+            "tr": "ave"
+        },
+        {
+            "tr": "earl"
+        },
+        {
+            "tr": "fre"
+        },
+        {
+            "tr": "harry"
+        },
+        {
+            "tr": "ian"
+        },
+        {
+            "tr": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT LTRIM(name,\"d\") as ltr FROM default:contacts ORDER BY ltr",
+        "results": [
+        {
+            "ltr": "ave"
+        },
+        {
+            "ltr": "earl"
+        },
+        {
+            "ltr": "fred"
+        },
+        {
+            "ltr": "harry"
+        },
+        {
+            "ltr": "ian"
+        },
+        {
+            "ltr": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT RTRIM(name,\"d\") as rtr FROM default:contacts ORDER BY rtr",
+        "results": [
+        {
+            "rtr": "dave"
+        },
+        {
+            "rtr": "earl"
+        },
+        {
+            "rtr": "fre"
+        },
+        {
+            "rtr": "harry"
+        },
+        {
+            "rtr": "ian"
+        },
+        {
+            "rtr": "jane"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT TRUNC(score+0.5) as trun FROM default:game ORDER BY trun",
+        "results": [
+         {
+            "trun": 1
+        },
+        {
+            "trun": 8
+        },
+        {
+            "trun": 10
+        },
+        {
+            "trun": 10
+        },
+        {
+            "trun": 100
+        }
+ ]
+    },
+
+    {
+        "statements": "SELECT ROUND(score+0.5) as rnd FROM default:game ORDER BY rnd",
+        "results": [
+      {
+            "rnd": 2
+        },
+        {
+            "rnd": 8
+        },
+        {
+            "rnd": 10
+        },
+        {
+            "rnd": 10
+        },
+        {
+            "rnd": 100
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT UPPER(type) || \" \" || LOWER(title) || \" \" || RTRIM(details.title, ' ') || \" \" || LTRIM(details.format, ' ' ) AS STR FROM default:catalog ORDER BY str",
+        "results": [
+      {},
+        {
+            "STR": "MOVIES\u0026TV zero dark thirty ZERO DARK THIRTY DVD"
+        },
+        {
+            "STR": "MOVIES\u0026TV sherlock: series 1 SHERLOCK: SERIES 1 Box Set"
+        }
+ ]
+    },
+
+    {
+        "statements": "SELECT OBJECT_LENGTH(details) as objlen FROM default:catalog ORDER BY objlen",
+        "results": [
+          {
+            "objlen": 5
+        },
+        {
+            "objlen": 6
+        },
+        {
+            "objlen": 6
+        }
+]
+    },
+
+    {
+        "statements": "SELECT LENGTH(details.director) dirlen FROM default:catalog ORDER BY dirlen",
+        "results": [
+        {},
+        {
+            "dirlen": null
+        },
+        {
+            "dirlen": 15
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT ARRAY_LENGTH(details.director) as dirlen FROM default:catalog ORDER BY dirlen",
+        "results": [
+     {},
+        {
+            "dirlen": null
+        },
+        {
+            "dirlen": 2
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT  ARRAY_LENGTH(ARRAY director FOR director IN details.director  END) AS D FROM default:catalog WHERE POLY_LENGTH(details.director) > 1 ORDER BY D",
+        "results": [
+        {
+            "D": null
+        },
+        {
+            "D": 2
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART_STR(\"2004-07-09\", \"year\") AS year, DATE_PART_STR(\"2004-07-09\", \"month\") AS month, DATE_PART_STR( \"2004-07-09\",\"day\") AS day ORDER BY day",
+        "results": [
+        {
+            "day": 9,
+            "month": 7,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART_STR(\"11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"11:42:01Z\",\"minute\") AS minute, DATE_PART_STR(\"11:42:01Z\",\"second\") AS second ORDER BY hour",
+        "results": [
+        {
+            "hour": 11,
+            "minute": 42,
+            "second": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"year\") AS year, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"month\") AS month, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"day\") AS day, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"minute\") AS minute, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"second\") AS second ORDER BY day",
+        "results": [
+        {
+            "day": 9,
+            "hour": 11,
+            "minute": 42,
+            "month": 7,
+            "second": 1,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "description": "test fraction seconds",
+        "statements": "SELECT DATE_PART_MILLIS(1.412243464575684768e+12, \"millisecond\")  AS ms ORDER BY ms",
+        "results": [
+        {
+            "ms": 575
+        }
+    ]
+    },
+
+    {
+        "description": "test now_str",
+        "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR() ORDER BY millennium",
+        "results": [
+        {
+            "millennium": 3
+        }
+    ]
+    }
+
+]
