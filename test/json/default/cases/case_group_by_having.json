@@ -1,0 +1,327 @@
+[
+    {
+        "description": "simple group by usage",
+        "statements": "SELECT type, COUNT(*) AS count FROM default:catalog GROUP BY type ORDER BY count",
+        "results": [
+        {
+            "count": 1,
+            "type": "Book"
+        },
+        {
+            "count": 2,
+            "type": "Movies&TV"
+        }
+    ]
+    },
+
+    {
+        "description": "use all aggregate functions, no group by",
+        "statements": "SELECT MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog ORDER BY min",
+        "results": [
+        {
+            "avg": 566,
+            "count": 3,
+            "max": 799,
+            "min": 300,
+            "sum": 1698
+        }
+    ]
+    },
+
+    {
+        "description": "use all aggregate functions, this type with group by",
+        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type ORDER BY min",
+        "results": [
+        {
+            "avg": 300,
+            "count": 1,
+            "max": 300,
+            "min": 300,
+            "sum": 300,
+            "type": "Book"
+        },
+        {
+            "avg": 699,
+            "count": 2,
+            "max": 799,
+            "min": 599,
+            "sum": 1398,
+            "type": "Movies&TV"
+        }
+    ]
+    },
+
+    {
+        "description": "use all aggregate functions, with group by and having",
+        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type HAVING count(pricing.list) > 1 ORDER BY min ",
+        "results": [
+        {
+            "avg": 699,
+            "count": 2,
+            "max": 799,
+            "min": 599,
+            "sum": 1398,
+            "type": "Movies&TV"
+        }
+    ]
+    },
+
+    {
+        "description": "use array aggregate function",
+        "statements": "SELECT ARRAY_AGG(asin) AS agg FROM default:catalog ORDER BY agg",
+        "results": [
+         {
+            "agg": [
+                "B0094QY3AB",
+                "B0094QY3LI",
+                "B0094QY7HE"
+            ]
+        }
+        ]
+    },
+
+    {
+        "statements": "SELECT orderlines[1], count(*) AS count FROM default:orders GROUP BY orderlines[1] ORDER BY count",
+        "results": [
+       {
+            "$1": {
+                "productId": "tea111",
+                "qty": 1
+            },
+            "count": 1
+        },
+        {
+            "$1": {
+                "productId": "sugar22",
+                "qty": 1
+            },
+            "count": 3
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT orderlines,  count(*) AS count FROM default:orders GROUP BY orderlines ORDER BY orderlines",
+        "results" : [
+        {
+            "count": 2,
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "count": 1,
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 2
+                },
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "count": 1,
+            "orderlines": [
+                {
+                    "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT details.director AS D, count(*) AS count FROM default:catalog WHERE ANY director IN details.director SATISFIES director END GROUP BY details.director HAVING ARRAY_LENGTH(details.director) > 1 ORDER BY D",
+        "results": [
+        {
+            "D": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ],
+            "count": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT title, SUM(dimensions.length), SUM(dimensions.width) FROM default:catalog WHERE dimensions.height > 0.5 AND ANY gen IN details.genre SATISFIES gen = \"Thriller\" END GROUP BY title HAVING SUM(dimensions.width) > 1 and SUM(dimensions.length) > 1 ORDER BY title",
+        "results": [
+       {
+            "$1": 7,
+            "$2": 12,
+            "title": "Inferno"
+        },
+        {
+            "$1": 2,
+            "$2": 1.5,
+            "title": "Sherlock: Series 1"
+        },
+        {
+            "$1": 2,
+            "$2": 2.5,
+            "title": "Zero Dark Thirty"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT personal_details.state, profile_details.loyalty.membership_type, count(*) AS gold_members FROM default:user_profile GROUP BY personal_details.state, profile_details.loyalty.membership_type HAVING profile_details.loyalty.membership_type = \"Gold\" ORDER BY personal_details.state",
+        "results": [
+        {
+            "gold_members": 1,
+            "membership_type": "Gold",
+            "state": "Alabama"
+        },
+        {
+            "gold_members": 1,
+            "membership_type": "Gold",
+            "state": "Nebraska"
+        },
+        {
+            "gold_members": 1,
+            "membership_type": "Gold",
+            "state": "Utah"
+        },
+        {
+            "gold_members": 1,
+            "membership_type": "Gold",
+            "state": "Virginia"
+        }
+    ]
+
+    },
+
+    {
+        "statements": "SELECT profile_details.prefs.ui_theme, count(*) AS theme_usage FROM default:user_profile GROUP BY profile_details.prefs.ui_theme ORDER BY profile_details.prefs.ui_theme",
+        "results": [
+         {
+            "theme_usage": 2,
+            "ui_theme": "Grafitti"
+        },
+        {
+            "theme_usage": 2,
+            "ui_theme": "Mountains"
+        },
+        {
+            "theme_usage": 1,
+            "ui_theme": "Pebbles"
+        },
+        {
+            "theme_usage": 2,
+            "ui_theme": "Planets"
+        },
+        {
+            "theme_usage": 5,
+            "ui_theme": "Tree Tops"
+        },
+        {
+            "theme_usage": 3,
+            "ui_theme": "Wood"
+        }
+   ]
+    },
+
+{
+        "description": "test that distinct count works with group by",
+        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_title_count, join_yr",
+        "results": [
+        {
+            "distinct_title_count": 3,
+            "join_yr": 2010
+        },
+        {
+            "distinct_title_count": 3,
+            "join_yr": 2011
+        }
+    ]
+    },
+
+    {
+        "description": "test that distinct array agg works with group by",
+        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_titles, join_yr",
+        "results": [
+       {
+            "distinct_titles": [
+                "Engineer",
+                "Sales",
+                "Support"
+            ],
+            "join_yr": 2010
+        },
+        {
+            "distinct_titles": [
+                "Engineer",
+                "Sales",
+                "Support"
+            ],
+            "join_yr": 2011
+        }
+    ]
+    },
+
+   {
+        "description": "test that distinct count and count work at the same time",
+        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, COUNT(job_title) AS title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_title_count, join_yr",
+        "results": [
+        {
+            "distinct_title_count": 3,
+            "join_yr": 2010,
+            "title_count": 3
+        },
+        {
+            "distinct_title_count": 3,
+            "join_yr": 2011,
+            "title_count": 4
+        }
+    ]
+    },
+
+    {
+        "description": "test that distinct array agg and array agg work at the same time",
+        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, ARRAY_AGG(job_title) AS titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_titles, join_yr ",
+        "results": [
+       {
+            "distinct_titles": [
+                "Engineer",
+                "Sales",
+                "Support"
+            ],
+            "join_yr": 2010,
+            "titles": [
+                "Engineer",
+                "Sales",
+                "Support"
+            ]
+        },
+        {
+            "distinct_titles": [
+                "Engineer",
+                "Sales",
+                "Support"
+            ],
+            "join_yr": 2011,
+            "titles": [
+                "Engineer",
+                "Sales",
+                "Sales",
+                "Support"
+            ]
+        }
+   ]
+    }
+]
