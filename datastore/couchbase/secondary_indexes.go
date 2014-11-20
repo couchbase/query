@@ -20,7 +20,7 @@ import "github.com/couchbase/indexing/secondary/queryport"
 const ClusterManagerAddr = "localhost:9101"
 
 // IndexerAddr is temporary hard-coded address for indexer node.
-const IndexerAddr = "localhost:9102"
+const IndexerAddr = "localhost:7000"
 
 // load 2i indexes and remember them as part of keyspace.indexes.
 func (b *keyspace) load2iIndexes() errors.Error {
