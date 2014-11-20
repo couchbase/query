@@ -323,5 +323,35 @@
             ]
         }
    ]
-    }
+    },
+
+   {
+       "statements": "SELECT profile_details.prefs.ui_theme, count(*) AS theme_usage FROM default:user_profile GROUP BY profile_details.prefs.ui_theme ORDER BY count(*), profile_details.prefs.ui_theme", 
+           "results": [
+    {
+            "theme_usage": 1,
+            "ui_theme": "Pebbles"
+        },
+        {
+            "theme_usage": 2,
+            "ui_theme": "Grafitti"
+        },
+        {
+            "theme_usage": 2,
+            "ui_theme": "Mountains"
+        },
+        {
+            "theme_usage": 2,
+            "ui_theme": "Planets"
+        },
+        {
+            "theme_usage": 3,
+            "ui_theme": "Wood"
+        },
+        {
+            "theme_usage": 5,
+            "ui_theme": "Tree Tops"
+        }
+   ]
+   }
 ]
