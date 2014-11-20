@@ -13,16 +13,32 @@ import (
 	"time"
 )
 
+/*
+Type IndexContext is a structure containing a variable
+now that is of type Time which represents an instant in
+time.
+*/
 type IndexContext struct {
 	now time.Time
 }
 
+/*
+This method returns a pointer to the IndecContext 
+structure, after assigning its value now with the
+current local time using the time package's Now
+function.
+*/
 func NewIndexContext() Context {
 	return &IndexContext{
 		now: time.Now(),
 	}
 }
 
+/*
+This method allows us to access the value now in the
+receiver of type IndexContext. It returns the now
+value from the receiver.
+*/
 func (this *IndexContext) Now() time.Time {
 	return this.now
 }

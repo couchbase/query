@@ -13,6 +13,15 @@ import (
 	"fmt"
 )
 
+/*
+Used to implement subqueries. Type Subquery is 
+an interface that inherits from Expression. It 
+also inherits Stringer, from the fmt package, 
+that is used to print specific values as defined 
+by the package specs (Refer to the GOlang package 
+docs). It also implements a method Formalize that 
+takes as input a type Formalizer, and returns an error.
+*/
 type Subquery interface {
 	fmt.Stringer
 	Expression
