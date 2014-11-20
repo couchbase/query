@@ -1,7 +1,7 @@
 # Query README
 
 * Latest: [Query README](https://github.com/couchbaselabs/query/blob/master/README.md)
-* Modified: 2014-05-26
+* Modified: 2014-11-20
 
 ## Introduction
 
@@ -354,6 +354,20 @@ This package provides a parallel sort. It was copied from the Golang
 source and basic parallelism was added, but it has not been
 fine-tuned.
 
+### Client/go_cbq
+
+This package provides a client library that will be used by the
+command-line shell to encapsulate cluster-awareness and other
+connectivity concerns.
+
+The library will implement the standard golang database APIs at
+[database/sql](http://golang.org/pkg/database/sql/) and
+[database/sql/driver](http://golang.org/pkg/database/sql/driver/).
+
+The library will connect using the [Query REST
+API](http://goo.gl/ezpmVx) and the [Query Clustering
+API](http://goo.gl/yKZ6v5).
+
 ## Data parallelism
 
 The query engine is designed to be highly data-parallel. By
@@ -423,7 +437,7 @@ data-parallelization and serialization points.
 1. SendUpdate
 1. Returning (Projection)
 
-##Steps to create a dp4 build.
+## Steps to create a DP4 build.
 
 ### Get a working repository
 
