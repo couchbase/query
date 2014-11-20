@@ -26,7 +26,7 @@ const IndexerAddr = "localhost:7000"
 func (b *keyspace) load2iIndexes() errors.Error {
 	indexes, err := getCoordinatorIndexes(b)
 	if err != nil {
-		return errors.NewError(err, "Error loading indexes")
+		return errors.NewError(err, "Error loading 2i indexes")
 	}
 	for _, index := range indexes {
 		logging.Infof("found index on keyspace %s", index.Name())
@@ -81,9 +81,9 @@ func new2iPrimaryIndex(
 	b *keyspace, using datastore.IndexType) (*secondaryIndex, errors.Error) {
 
 	if idx, err := b.IndexByName(PRIMARY_INDEX); idx != nil {
-		return nil, errors.NewError(err, "Primary index already created")
+		return nil, errors.NewError(err, "Primary index with 2i already created")
 	} else if err != nil {
-		return nil, errors.NewError(err, "Can't create primary index")
+		return nil, errors.NewError(err, "Can't create primary index with 2i")
 	}
 
 	bucket := b.Name()
