@@ -12,7 +12,6 @@ package expression
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -292,8 +291,7 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 	for _, b := range bindings {
 		_, ok := this.Allowed.Field(b.Variable())
 		if ok {
-			return nil, errors.NewError(nil,
-				fmt.Sprintf("Bind alias %s already in scope.", b.Variable()))
+			return nil, fmt.Errorf("Bind alias %s already in scope.", b.Variable())
 		}
 
 		expr, err = this.Map(b.Expression())
