@@ -24,6 +24,10 @@ func NewMax(operand expression.Expression) Aggregate {
 	}
 }
 
+func (this *Max) String() string {
+	return this.toString(this)
+}
+
 func (this *Max) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

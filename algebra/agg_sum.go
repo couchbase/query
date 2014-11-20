@@ -26,6 +26,10 @@ func NewSum(operand expression.Expression) Aggregate {
 	}
 }
 
+func (this *Sum) String() string {
+	return this.toString(this)
+}
+
 func (this *Sum) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

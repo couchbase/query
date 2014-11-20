@@ -24,6 +24,10 @@ func NewCountDistinct(operand expression.Expression) Aggregate {
 	}
 }
 
+func (this *CountDistinct) String() string {
+	return this.toString(this)
+}
+
 func (this *CountDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

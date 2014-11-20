@@ -24,6 +24,10 @@ func NewMin(operand expression.Expression) Aggregate {
 	}
 }
 
+func (this *Min) String() string {
+	return this.toString(this)
+}
+
 func (this *Min) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

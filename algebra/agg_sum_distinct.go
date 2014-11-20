@@ -26,6 +26,10 @@ func NewSumDistinct(operand expression.Expression) Aggregate {
 	}
 }
 
+func (this *SumDistinct) String() string {
+	return this.toString(this)
+}
+
 func (this *SumDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

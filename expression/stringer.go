@@ -489,7 +489,6 @@ func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
 // Function
 func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("(")
 	buf.WriteString(expr.Name())
 	buf.WriteString("(")
 
@@ -509,7 +508,7 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 		}
 	}
 
-	buf.WriteString("))")
+	buf.WriteString(")")
 	return buf.String(), nil
 }
 
