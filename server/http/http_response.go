@@ -251,7 +251,11 @@ func (this *httpRequest) writeError(err errors.Error, count int) bool {
 		rv = this.writeString(",\n")
 	}
 
-	bytes, er := json.MarshalIndent(err, "        ", "    ")
+	m := map[string]interface{}{
+		"code": err.Code(),
+		"msg":  err.Error(),
+	}
+	bytes, er := json.MarshalIndent(m, "        ", "    ")
 	if er != nil {
 		return false
 	}
