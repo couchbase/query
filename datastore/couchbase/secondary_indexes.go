@@ -44,7 +44,7 @@ func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
 	if err != nil {
 		return indexes, err
 	} else if infos == nil {
-		return nil, errors.NewError(nil, "2i List() failed")
+		return indexes, nil
 	}
 
 	for _, info := range infos {
