@@ -15,7 +15,6 @@ import "sync"
 import "github.com/couchbase/indexing/secondary/collatejson"
 import "github.com/couchbase/indexing/secondary/protobuf"
 import "github.com/couchbase/indexing/secondary/queryport"
-import "github.com/couchbase/indexing/secondary/indexer"
 import "github.com/couchbaselabs/query/datastore"
 import "github.com/couchbaselabs/query/errors"
 import "github.com/couchbaselabs/query/expression"
@@ -54,11 +53,13 @@ type secondaryIndex struct {
 	hostClients []*queryport.Client
 }
 
-var twoiInclusion = map[datastore.Inclusion]indexer.Inclusion{
-	datastore.NEITHER: indexer.Neither,
-	datastore.LOW:     indexer.Low,
-	datastore.HIGH:    indexer.High,
-	datastore.BOTH:    indexer.Both,
+// TODO: instead of hardcoding these values find a way to integrate with
+// scan-coordinator.
+var twoiInclusion = map[datastore.Inclusion]int{
+	datastore.NEITHER: 0,
+	datastore.LOW:     1,
+	datastore.HIGH:    2,
+	datastore.BOTH:    3,
 }
 
 func (si *secondaryIndex) getHostClient() (*queryport.Client, errors.Error) {
