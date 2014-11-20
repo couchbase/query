@@ -15,6 +15,7 @@ import "sync"
 import "github.com/couchbase/indexing/secondary/collatejson"
 import "github.com/couchbase/indexing/secondary/protobuf"
 import "github.com/couchbase/indexing/secondary/queryport"
+import "github.com/couchbase/indexing/secondary/indexer"
 import "github.com/couchbaselabs/query/datastore"
 import "github.com/couchbaselabs/query/errors"
 import "github.com/couchbaselabs/query/expression"
@@ -51,6 +52,13 @@ type secondaryIndex struct {
 	// remote node hosting this index.
 	hosts       []string
 	hostClients []*queryport.Client
+}
+
+var twoiInclusion = map[datastore.Inclusion]indexer.Inclusion{
+	datastore.NEITHER: indexer.Neither,
+	datastore.LOW:     indexer.Low,
+	datastore.HIGH:    indexer.High,
+	datastore.BOTH:    indexer.Both,
 }
 
 func (si *secondaryIndex) getHostClient() (*queryport.Client, errors.Error) {
@@ -134,7 +142,7 @@ func (si *secondaryIndex) Statistics(
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
 	equal := [][]byte{keys2JSON(span.Equal)}
-	incl := uint32(span.Range.Inclusion)
+	incl := uint32(twoiInclusion[span.Range.Inclusion])
 	indexn, bucketn := si.name, si.keySpace.Name()
 	pstats, e := client.Statistics(indexn, bucketn, low, high, equal, incl)
 	if e != nil {
@@ -178,7 +186,7 @@ func (si *secondaryIndex) Scan(
 
 	low, high := keys2JSON(span.Range.Low), keys2JSON(span.Range.High)
 	equal := [][]byte{keys2JSON(span.Equal)}
-	incl := uint32(span.Range.Inclusion)
+	incl := uint32(twoiInclusion[span.Range.Inclusion])
 	indexn, bucketn := si.name, si.keySpace.Name()
 	client.Scan(
 		indexn, bucketn, low, high, equal, incl,
