@@ -45,6 +45,9 @@ func getCoordinatorIndexes(b *keyspace) ([]datastore.Index, error) {
 	var index *secondaryIndex
 
 	for _, info := range infos {
+		if info.Bucket != b.name {
+			continue
+		}
 		using := datastore.IndexType(info.Using)
 		if info.Name == PRIMARY_INDEX {
 			index, err = new2iPrimaryIndex(b, using, &info)
@@ -59,7 +62,7 @@ func getCoordinatorIndexes(b *keyspace) ([]datastore.Index, error) {
 			}
 		}
 		indexes = append(indexes, index)
-		logging.Infof(" found index on keyspace %s", index.Name())
+		logging.Infof(" found index %q on keyspace %q", index.Name(), b.name)
 	}
 	return indexes, nil
 }

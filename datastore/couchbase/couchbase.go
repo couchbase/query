@@ -288,17 +288,13 @@ func (p *namespace) refresh() {
 	// keyspaces in the pool
 	for name := range pool.BucketMap {
 		logging.Infof(" Checking keyspace %s", name)
-		_, err := pool.GetBucket(name)
-		if err == nil {
+		if _, exists := p.GetKeyspace(name); !exists {
 			if b, err := newKeyspace(p, name); err == nil {
 				p.SetKeyspace(name, b)
 			} else {
 				logging.Errorf(" Error creating keyspace %s", name)
 			}
 
-		} else {
-			logging.Errorf(" Error retrieving bucket %s", name)
-			p.DelKeyspace(name)
 		}
 	}
 }
@@ -314,7 +310,7 @@ type keyspace struct {
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
-	logging.Infof("Created New Bucket %s", name)
+	logging.Infof(" Created New Bucket %s", name)
 	pool := p.GetCbNamespace()
 	cbbucket, err := pool.GetBucket(name)
 	if err != nil {

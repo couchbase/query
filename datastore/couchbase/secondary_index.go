@@ -11,7 +11,6 @@ package couchbase
 
 import "encoding/json"
 import "sync"
-import "fmt"
 
 import "github.com/couchbase/indexing/secondary/collatejson"
 import "github.com/couchbase/indexing/secondary/protobuf"
@@ -206,7 +205,6 @@ func (si *secondaryIndex) Scan(
 						PrimaryKey: string(entry.GetPrimaryKey()),
 					}
 					secKey := entry.GetEntryKey()
-					fmt.Println(secKey)
 					if len(secKey) > 0 {
 						key, err := json2Entry(secKey)
 						if err != nil {
