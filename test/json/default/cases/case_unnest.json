@@ -32,7 +32,7 @@
         ]
     },
     {
-        "statements": "SELECT s.`sub-category` FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s ORDER BY s.sub-category",
+        "statements": "SELECT s.`sub-category` FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.search_history s ORDER BY s.`sub-category`",
         "results": [
         {
             "sub-category": [
