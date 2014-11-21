@@ -109,6 +109,12 @@ func (this *KeyspaceTerm) Namespace() string {
 	return this.namespace
 }
 
+func (this *KeyspaceTerm) SetDefaultNamespace(namespace string) {
+	if this.namespace == "" {
+		this.namespace = namespace
+	}
+}
+
 func (this *KeyspaceTerm) Keyspace() string {
 	return this.keyspace
 }

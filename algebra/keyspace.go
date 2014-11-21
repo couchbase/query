@@ -47,6 +47,12 @@ func (this *KeyspaceRef) Namespace() string {
 	return this.namespace
 }
 
+func (this *KeyspaceRef) SetDefaultNamespace(namespace string) {
+	if this.namespace == "" {
+		this.namespace = namespace
+	}
+}
+
 func (this *KeyspaceRef) Keyspace() string {
 	return this.keyspace
 }

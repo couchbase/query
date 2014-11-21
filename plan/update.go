@@ -69,7 +69,7 @@ func (this *Set) Node() *algebra.Set {
 
 func (this *Set) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Set"}
-	s := make([]interface{}, 0)
+	s := make([]interface{}, 0, len(this.node.Terms()))
 	for _, term := range this.node.Terms() {
 		t := make(map[string]interface{})
 		t["path"] = expression.NewStringer().Visit(term.Path())
@@ -96,7 +96,7 @@ func (this *Unset) Node() *algebra.Unset {
 
 func (this *Unset) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Unset"}
-	s := make([]interface{}, 0)
+	s := make([]interface{}, 0, len(this.node.Terms()))
 	for _, term := range this.node.Terms() {
 		t := make(map[string]interface{})
 		t["path"] = expression.NewStringer().Visit(term.Path())

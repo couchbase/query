@@ -50,6 +50,8 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace,
 	ksref *algebra.KeyspaceRef, keys, where expression.Expression) error {
+	ksref.SetDefaultNamespace(this.namespace)
+
 	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 8)
 

@@ -52,14 +52,32 @@ func (this *InitialProject) Terms() ProjectTerms {
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "InitialProject"}
-	r["distinct"] = this.projection.Distinct()
-	r["raw"] = this.projection.Raw()
-	s := make([]interface{}, 0)
+
+	if this.projection.Distinct() {
+		r["distinct"] = this.projection.Distinct()
+	}
+
+	if this.projection.Raw() {
+		r["raw"] = this.projection.Raw()
+	}
+
+	s := make([]interface{}, 0, len(this.terms))
 	for _, term := range this.terms {
 		t := make(map[string]interface{})
-		t["star"] = term.Result().Star()
-		t["as"] = term.Result().As()
-		t["expr"] = expression.NewStringer().Visit(term.Result().Expression())
+
+		if term.Result().Star() {
+			t["star"] = term.Result().Star()
+		}
+
+		if term.Result().As() != "" {
+			t["as"] = term.Result().As()
+		}
+
+		expr := term.Result().Expression()
+		if expr != nil {
+			t["expr"] = expression.NewStringer().Visit(expr)
+		}
+
 		s = append(s, t)
 	}
 	r["result_terms"] = s

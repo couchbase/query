@@ -53,7 +53,11 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["on_keys"] = expression.NewStringer().Visit(this.term.Keys())
-	r["outer"] = this.outer
+
+	if this.outer {
+		r["outer"] = this.outer
+	}
+
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
@@ -96,7 +100,11 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["on_keys"] = expression.NewStringer().Visit(this.term.Keys())
-	r["outer"] = this.outer
+
+	if this.outer {
+		r["outer"] = this.outer
+	}
+
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
@@ -130,7 +138,11 @@ func (this *Unnest) Alias() string {
 
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Unnest"}
-	r["outer"] = this.term.Outer()
+
+	if this.term.Outer() {
+		r["outer"] = this.term.Outer()
+	}
+
 	r["expr"] = expression.NewStringer().Visit(this.term.Expression())
 	if this.alias != "" {
 		r["as"] = this.alias

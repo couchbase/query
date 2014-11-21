@@ -172,6 +172,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 }
 
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+	node.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getTermKeyspace(node)
 	if err != nil {
 		return nil, err
@@ -207,17 +208,14 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	ns := node.Right().Namespace()
-	if ns == "" {
-		ns = this.namespace
-	}
-
-	namespace, err := this.datastore.NamespaceByName(ns)
+	right := node.Right()
+	right.SetDefaultNamespace(this.namespace)
+	namespace, err := this.datastore.NamespaceByName(right.Namespace())
 	if err != nil {
 		return nil, err
 	}
 
-	keyspace, err := namespace.KeyspaceByName(node.Right().Keyspace())
+	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
 	if err != nil {
 		return nil, err
 	}
@@ -234,17 +232,14 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
-	ns := node.Right().Namespace()
-	if ns == "" {
-		ns = this.namespace
-	}
-
-	namespace, err := this.datastore.NamespaceByName(ns)
+	right := node.Right()
+	right.SetDefaultNamespace(this.namespace)
+	namespace, err := this.datastore.NamespaceByName(right.Namespace())
 	if err != nil {
 		return nil, err
 	}
 
-	keyspace, err := namespace.KeyspaceByName(node.Right().Keyspace())
+	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
 	if err != nil {
 		return nil, err
 	}
