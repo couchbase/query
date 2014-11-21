@@ -13,36 +13,71 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Type identifier is a struct that implements ExpressionBase. 
+It contains a variable identifier of type string that 
+represents identifiers. 
+*/
 type Identifier struct {
 	ExpressionBase
 	identifier string
 }
 
+/*
+This method returns a pointer to an Identifier structure 
+that has its identifier fied populated by the input argument.
+*/
 func NewIdentifier(identifier string) Path {
 	return &Identifier{
 		identifier: identifier,
 	}
 }
 
+/*
+It calls the VisitIdentifier method by passing in the receiver to
+process identifier expressions, and returns the interface. It is 
+a visitor pattern.
+*/
 func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIdentifier(this)
 }
 
+/*
+It returns JSON value that is all-encompassing. 
+*/
 func (this *Identifier) Type() value.Type { return value.JSON }
 
+/*
+Call the Field method using the item value input argument on the 
+receiver. This returns a value. To evaluate an identifier, look 
+into the current item, find a field whose name is the 
+identifier, and return the value of that field within the current 
+item. 
+*/
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, _ := item.Field(this.identifier)
 	return rv, nil
 }
 
+/*
+Return the identifier string field of the receiver.
+*/
 func (this *Identifier) Alias() string {
 	return this.identifier
 }
 
+/*
+An identifier can be used as an index. Hence return true.
+*/
 func (this *Identifier) Indexable() bool {
 	return true
 }
 
+/*
+This method checks if the input expression is an Identifier type.
+It it is return true if the identifiers are equal. If not return 
+false.
+*/
 func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Identifier:
@@ -52,28 +87,53 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
+/*
+This method calls EquivalentTo. It is yet to be implemented.
+*/
 func (this *Identifier) SubsetOf(other Expression) bool {
 	return this.EquivalentTo(other)
 }
 
+/*
+Since identifiers dont have children this returns nil.
+*/
 func (this *Identifier) Children() Expressions {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *Identifier) MapChildren(mapper Mapper) error {
 	return nil
 }
 
+/*
+Call SetField using item value and set the identifier 
+string to the value. The SetField method returns a 
+boolean value. If it is nil return true since no error
+was encountered while setting the field. 
+*/
 func (this *Identifier) Set(item, val value.Value, context Context) bool {
 	er := item.SetField(this.identifier, val)
 	return er == nil
 }
 
+/*
+Call UnsetFiled using item value and unset the identifier.
+(delete it). The UnsetField returns a boolean value. If it 
+is nil return true since no error was encountered while 
+setting the field. 
+*/
 func (this *Identifier) Unset(item value.Value, context Context) bool {
 	er := item.UnsetField(this.identifier)
 	return er == nil
 }
 
+/*
+This method is used to access the identifier string 
+using the receiver.
+*/
 func (this *Identifier) Identifier() string {
 	return this.identifier
 }
