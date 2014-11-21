@@ -381,6 +381,7 @@ func (b *keyspace) SetIndex(name string, index datastore.Index) {
 	if name == PRIMARY_INDEX {
 		b.primary = index.(datastore.PrimaryIndex)
 	}
+	logging.Infof("Primary index %T", index)
 }
 
 func (b *keyspace) DelIndex(name string) {
@@ -506,7 +507,7 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if _, exists := b.indexes[PRIMARY_INDEX]; exists {
+	if _, exists := b.GetIndex(PRIMARY_INDEX); exists {
 		return nil, errors.NewError(nil, "Primary index already exists")
 	}
 	switch using {
@@ -519,7 +520,7 @@ func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.Prim
 		return idx, nil
 
 	case datastore.LSM:
-		idx, err := new2iPrimaryIndex(b, using)
+		idx, err := create2iPrimaryIndex(b, using)
 		if err != nil {
 			return nil, errors.NewError(err, "")
 		}
@@ -562,7 +563,7 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		return idx, nil
 
 	case datastore.LSM:
-		idx, err := new2iIndex(name, equalKey, rangeKey, where, using, b)
+		idx, err := create2iIndex(name, equalKey, rangeKey, where, using, b)
 		if err != nil {
 			return nil, errors.NewError(err, fmt.Sprintf("Error creating 2i index: %q", name))
 		}

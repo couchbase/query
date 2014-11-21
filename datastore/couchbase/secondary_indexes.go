@@ -45,49 +45,28 @@ func getCoordinatorIndexes(b *keyspace) ([]datastore.Index, error) {
 	var index *secondaryIndex
 
 	for _, info := range infos {
-		rkeys, err := parseExprs(info.SecExprs)
-		if err != nil {
-			return nil, err
-		}
-		ekeys, err := parseExprs([]string{info.PartnExpr})
-		if err != nil {
-			return nil, err
-		}
-		wkey := expression.Expression(nil)
-		if len(info.WhereExpr) > 0 {
-			expr, err := parser.Parse(info.WhereExpr)
+		using := datastore.IndexType(info.Using)
+		if info.Name == PRIMARY_INDEX {
+			index, err = new2iPrimaryIndex(b, using, &info)
 			if err != nil {
 				return nil, err
 			}
-			wkey = expr
-		}
-		using := datastore.IndexType(info.Using)
-		if idx, err := b.IndexById(info.Name); err == nil && idx == nil {
-			if info.Name == PRIMARY_INDEX {
-				index, err = new2iIndex(info.Name, ekeys, rkeys, wkey, using, b)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				index, err = new2iPrimaryIndex(b, using)
-				if err != nil {
-					return nil, err
-				}
+
+		} else {
+			index, err = new2iIndex(b, &info)
+			if err != nil {
+				return nil, err
 			}
-			indexes = append(indexes, index)
-			logging.Infof(" found index on keyspace %s", index.Name())
 		}
+		indexes = append(indexes, index)
+		logging.Infof(" found index on keyspace %s", index.Name())
 	}
 	return indexes, nil
 }
 
-// create a new 2i index.
-func new2iPrimaryIndex(
+// create 2i primary index
+func create2iPrimaryIndex(
 	b *keyspace, using datastore.IndexType) (*secondaryIndex, errors.Error) {
-
-	if idx, err := b.IndexByName(PRIMARY_INDEX); idx != nil {
-		return nil, errors.NewError(err, " Primary index with 2i already created")
-	}
 
 	bucket := b.Name()
 	client := queryport.NewClusterClient(ClusterManagerAddr)
@@ -98,6 +77,13 @@ func new2iPrimaryIndex(
 	} else if info == nil {
 		return nil, errors.NewError(nil, " primary CreateIndex() with 2i failed")
 	}
+	return new2iPrimaryIndex(b, using, info)
+}
+
+// new 2i index.
+func new2iPrimaryIndex(
+	b *keyspace, using datastore.IndexType,
+	info *queryport.IndexInfo) (*secondaryIndex, errors.Error) {
 
 	index := &secondaryIndex{
 		name:      PRIMARY_INDEX,
@@ -113,8 +99,8 @@ func new2iPrimaryIndex(
 	return index, nil
 }
 
-// create a new 2i index.
-func new2iIndex(
+// create 2i index
+func create2iIndex(
 	name string,
 	equalKey, rangeKey expression.Expressions, where expression.Expression,
 	using datastore.IndexType,
@@ -145,16 +131,22 @@ func new2iIndex(
 	} else if info == nil {
 		return nil, errors.NewError(nil, "2i CreateIndex() failed")
 	}
+	return new2iIndex(b, info)
+}
+
+// new 2i index.
+func new2iIndex(
+	b *keyspace, info *queryport.IndexInfo) (*secondaryIndex, errors.Error) {
 
 	index := &secondaryIndex{
-		name:      name,
+		name:      info.Name,
 		defnID:    info.DefnID,
 		keySpace:  b,
-		isPrimary: false,
-		using:     using,
-		partnExpr: partnStr,
-		secExprs:  secStrs,
-		whereExpr: whereStr,
+		isPrimary: info.IsPrimary,
+		using:     datastore.IndexType(info.Using),
+		partnExpr: info.PartnExpr,
+		secExprs:  info.SecExprs,
+		whereExpr: info.WhereExpr,
 		// remote node hosting this index.
 		hosts: nil, // to becomputed by coordinator
 	}

@@ -11,6 +11,7 @@ package couchbase
 
 import "encoding/json"
 import "sync"
+import "fmt"
 
 import "github.com/couchbase/indexing/secondary/collatejson"
 import "github.com/couchbase/indexing/secondary/protobuf"
@@ -200,14 +201,19 @@ func (si *secondaryIndex) Scan(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					key, err := json2Entry(entry.GetEntryKey())
-					if err != nil {
-						conn.Error(errors.NewError(nil, err.Error()))
-						return false
-					}
+					// Primary-key is mandatory.
 					e := &datastore.IndexEntry{
-						EntryKey:   value.Values(key),
 						PrimaryKey: string(entry.GetPrimaryKey()),
+					}
+					secKey := entry.GetEntryKey()
+					fmt.Println(secKey)
+					if len(secKey) > 0 {
+						key, err := json2Entry(secKey)
+						if err != nil {
+							conn.Error(errors.NewError(nil, err.Error()))
+							return false
+						}
+						e.EntryKey = value.Values(key)
 					}
 					select {
 					case entryChannel <- e:
@@ -249,14 +255,18 @@ func (si *secondaryIndex) ScanEntries(
 					return false
 				}
 				for _, entry := range val.GetEntries() {
-					key, err := json2Entry(entry.GetEntryKey())
-					if err != nil {
-						conn.Error(errors.NewError(nil, err.Error()))
-						return false
-					}
+					// Primary-key is mandatory.
 					e := &datastore.IndexEntry{
-						EntryKey:   value.Values(key),
 						PrimaryKey: string(entry.GetPrimaryKey()),
+					}
+					secKey := entry.GetEntryKey()
+					if len(secKey) > 0 {
+						key, err := json2Entry(secKey)
+						if err != nil {
+							conn.Error(errors.NewError(nil, err.Error()))
+							return false
+						}
+						e.EntryKey = value.Values(key)
 					}
 					select {
 					case entryChannel <- e:
