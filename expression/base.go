@@ -14,6 +14,7 @@ import (
 )
 
 /*
+ExpressionBase is a base class for all expressions.
 Type ExpressionBase is defined as an empty struct. 
 */
 type ExpressionBase struct {
