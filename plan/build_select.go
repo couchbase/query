@@ -193,7 +193,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			return nil, err
 		}
 
-		scan := NewPrimaryScan(index)
+		scan := NewPrimaryScan(index, node)
 		this.children = append(this.children, scan)
 	}
 

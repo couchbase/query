@@ -35,9 +35,8 @@ func (this *Offset) Expression() expression.Expression {
 }
 
 func (this *Offset) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"Type": "offset"}
-	exprStr := expression.NewStringer().Visit(this.expr)
-	r["Expr"] = exprStr
+	r := map[string]interface{}{"#operator": "Offset"}
+	r["expr"] = expression.NewStringer().Visit(this.expr)
 	return json.Marshal(r)
 }
 
@@ -61,8 +60,7 @@ func (this *Limit) Expression() expression.Expression {
 }
 
 func (this *Limit) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"Type": "limit"}
-	exprStr := expression.NewStringer().Visit(this.expr)
-	r["Expr"] = exprStr
+	r := map[string]interface{}{"#operator": "Limit"}
+	r["expr"] = expression.NewStringer().Visit(this.expr)
 	return json.Marshal(r)
 }

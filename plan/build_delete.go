@@ -51,6 +51,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 func (this *builder) beginMutate(keyspace datastore.Keyspace,
 	ksref *algebra.KeyspaceRef, keys, where expression.Expression) error {
 	ksref.SetDefaultNamespace(this.namespace)
+	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil)
 
 	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 8)
@@ -64,11 +65,10 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace,
 			return err
 		}
 
-		scan := NewPrimaryScan(index)
+		scan := NewPrimaryScan(index, term)
 		this.children = append(this.children, scan)
 	}
 
-	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil)
 	fetch := NewFetch(keyspace, term)
 	this.subChildren = append(this.subChildren, fetch)
 

@@ -12,6 +12,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -19,11 +20,13 @@ import (
 type PrimaryScan struct {
 	readonly
 	index datastore.PrimaryIndex
+	term  *algebra.KeyspaceTerm
 }
 
-func NewPrimaryScan(index datastore.PrimaryIndex) *PrimaryScan {
+func NewPrimaryScan(index datastore.PrimaryIndex, term *algebra.KeyspaceTerm) *PrimaryScan {
 	return &PrimaryScan{
 		index: index,
+		term:  term,
 	}
 }
 
@@ -35,23 +38,32 @@ func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 	return this.index
 }
 
+func (this *PrimaryScan) Term() *algebra.KeyspaceTerm {
+	return this.term
+}
+
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "PrimaryScan"}
-	r["index"] = this.index.(datastore.Index).Name()
+	r["index"] = this.index.Name()
+	r["namespace"] = this.term.Namespace()
+	r["keyspace"] = this.term.Keyspace()
 	return json.Marshal(r)
 }
 
 type IndexScan struct {
 	readonly
 	index    datastore.Index
+	term     *algebra.KeyspaceTerm
 	spans    datastore.Spans
 	distinct bool
 	limit    int64
 }
 
-func NewIndexScan(index datastore.Index, spans datastore.Spans, distinct bool, limit int64) *IndexScan {
+func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
+	spans datastore.Spans, distinct bool, limit int64) *IndexScan {
 	return &IndexScan{
 		index:    index,
+		term:     term,
 		spans:    spans,
 		distinct: distinct,
 		limit:    limit,
@@ -60,6 +72,10 @@ func NewIndexScan(index datastore.Index, spans datastore.Spans, distinct bool, l
 
 func (this *IndexScan) Index() datastore.Index {
 	return this.index
+}
+
+func (this *IndexScan) Term() *algebra.KeyspaceTerm {
+	return this.term
 }
 
 func (this *IndexScan) Spans() datastore.Spans {
@@ -77,9 +93,20 @@ func (this *IndexScan) Limit() int64 {
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IndexScan"}
 	r["index"] = this.index.Name()
+	r["namespace"] = this.term.Namespace()
+	r["keyspace"] = this.term.Keyspace()
+
+	// FIXME
 	r["spans"] = this.spans
-	r["distinct"] = this.distinct
-	r["limit"] = this.limit
+
+	if this.distinct {
+		r["distinct"] = this.distinct
+	}
+
+	if this.limit >= 0 {
+		r["limit"] = this.limit
+	}
+
 	return json.Marshal(r)
 }
 
@@ -218,6 +245,9 @@ func (this *IntersectScan) Scans() []Operator {
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IntersectScan"}
+
+	// FIXME
 	r["scans"] = this.scans
+
 	return json.Marshal(r)
 }
