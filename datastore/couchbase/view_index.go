@@ -83,29 +83,15 @@ func (vi *viewIndex) Condition() expression.Expression {
 }
 
 func (b *keyspace) loadViewIndexes() errors.Error {
-	// #alldocs implicitly exists
-	/*
-	   pi := newAllDocsIndex(b)
-	   b.indexes[pi.name] = pi
-	*/
-
-	// and recreate remaining from ddocs
 	indexes, err := loadViewIndexes(b)
 	if err != nil {
 		return errors.NewError(err, "Error loading indexes")
 	}
-
-	if len(indexes) == 0 {
-		logging.Errorf("No indexes found for bucket %s", b.Name())
-		return errors.NewError(nil, "No primary index found for bucket "+b.Name()+". Create a primary index ")
-	}
-
 	for _, index := range indexes {
-		logging.Infof("Found index on keyspace %s", (*index).Name())
-		name := (*index).Name()
-		b.indexes[name] = *index
+		name := index.Name()
+		logging.Infof("Found index on keyspace %s", name)
+		b.SetIndex(name, index)
 	}
-
 	return nil
 }
 
@@ -125,9 +111,9 @@ func (vi *viewIndex) Drop() errors.Error {
 	bucket := vi.keyspace
 	// allow dropping of primary indexes. We may need to revisit MB-12505
 	/*
-		if vi.IsPrimary() {
-			return errors.NewError(nil, "Primary index cannot be dropped.")
-		}
+	   if vi.IsPrimary() {
+	       return errors.NewError(nil, "Primary index cannot be dropped.")
+	   }
 	*/
 	err := vi.DropViewIndex()
 	if err != nil {

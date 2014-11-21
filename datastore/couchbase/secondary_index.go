@@ -166,7 +166,7 @@ func (si *secondaryIndex) Drop() errors.Error {
 	if err != nil {
 		return errors.NewError(nil, err.Error())
 	}
-	delete(si.keySpace.indexes, si.Name())
+	si.keySpace.DelIndex(si.Name())
 	logging.Infof("Dropped index %v", si.Name())
 	return nil
 }

@@ -23,29 +23,26 @@ const ClusterManagerAddr = "localhost:9101"
 const IndexerAddr = "localhost:7000"
 
 // load 2i indexes and remember them as part of keyspace.indexes.
-func (b *keyspace) load2iIndexes() errors.Error {
+func (b *keyspace) load2iIndexes() ([]datastore.Index, errors.Error) {
 	indexes, err := getCoordinatorIndexes(b)
 	if err != nil {
-		return errors.NewError(err, "Error loading 2i indexes")
+		return nil, errors.NewError(err, " Error loading 2i indexes")
 	}
-	for _, index := range indexes {
-		logging.Infof("found index on keyspace %s", index.Name())
-		name := index.Name()
-		b.indexes[name] = index
-	}
-	return nil
+	return indexes, nil
 }
 
 // get the list of indexes from coordinator.
-func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
-	indexes := make(map[string]datastore.Index)
+func getCoordinatorIndexes(b *keyspace) ([]datastore.Index, error) {
+	indexes := make([]datastore.Index, 0)
 	client := queryport.NewClusterClient(ClusterManagerAddr)
 	infos, err := client.List()
 	if err != nil {
-		return indexes, err
-	} else if infos == nil {
-		return indexes, nil
+		return nil, err
+	} else if infos == nil { // empty list of indexes
+		return nil, nil
 	}
+
+	var index *secondaryIndex
 
 	for _, info := range infos {
 		rkeys, err := parseExprs(info.SecExprs)
@@ -66,11 +63,19 @@ func getCoordinatorIndexes(b *keyspace) (map[string]datastore.Index, error) {
 		}
 		using := datastore.IndexType(info.Using)
 		if idx, err := b.IndexById(info.Name); err == nil && idx == nil {
-			index, err := new2iIndex(info.Name, ekeys, rkeys, wkey, using, b)
-			if err != nil {
-				return nil, err
+			if info.Name == PRIMARY_INDEX {
+				index, err = new2iIndex(info.Name, ekeys, rkeys, wkey, using, b)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				index, err = new2iPrimaryIndex(b, using)
+				if err != nil {
+					return nil, err
+				}
 			}
-			indexes[index.Name()] = index
+			indexes = append(indexes, index)
+			logging.Infof(" found index on keyspace %s", index.Name())
 		}
 	}
 	return indexes, nil
@@ -81,9 +86,7 @@ func new2iPrimaryIndex(
 	b *keyspace, using datastore.IndexType) (*secondaryIndex, errors.Error) {
 
 	if idx, err := b.IndexByName(PRIMARY_INDEX); idx != nil {
-		return nil, errors.NewError(err, "Primary index with 2i already created")
-	} else if err != nil {
-		return nil, errors.NewError(err, "Can't create primary index with 2i")
+		return nil, errors.NewError(err, " Primary index with 2i already created")
 	}
 
 	bucket := b.Name()
@@ -91,9 +94,9 @@ func new2iPrimaryIndex(
 	info, err := client.CreateIndex(
 		PRIMARY_INDEX, bucket, string(using), "N1QL", "", "", nil, true)
 	if err != nil {
-		return nil, errors.NewError(nil, err.Error())
+		return nil, errors.NewError(err, " Primary CreateIndex() with 2i failed")
 	} else if info == nil {
-		return nil, errors.NewError(nil, "2i primary CreateIndex() failed")
+		return nil, errors.NewError(nil, " primary CreateIndex() with 2i failed")
 	}
 
 	index := &secondaryIndex{
@@ -164,11 +167,13 @@ func parseExprs(exprs []string) (expression.Expressions, error) {
 	keys := expression.Expressions(nil)
 	if len(exprs) > 0 {
 		for _, expr := range exprs {
-			key, err := parser.Parse(expr)
-			if err != nil {
-				return nil, err
+			if len(expr) > 0 {
+				key, err := parser.Parse(expr)
+				if err != nil {
+					return nil, err
+				}
+				keys = append(keys, key)
 			}
-			keys = append(keys, key)
 		}
 	}
 	return keys, nil

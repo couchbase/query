@@ -94,6 +94,9 @@ type EntryChannel chan *IndexEntry
 type StopChannel chan bool
 
 // Statistics captures statistics for a range.
+// - it may return heuristics and/or outdated values.
+// - query shall not depend on the accuracy of this statistics.
+// - primarily intended for optimizer's consumption.
 type Statistics interface {
 	Count() (int64, errors.Error)
 	Min() (value.Values, errors.Error)
