@@ -15,10 +15,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/couchbaselabs/clog"
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -39,7 +39,7 @@ func ViewTotalRows(bucket *cb.Bucket, ddoc string, view string, options map[stri
 
 	logURL, err := bucket.ViewURL(ddoc, view, options)
 	if err == nil {
-		clog.To(NETWORK_CHANNEL, "Request View: %v", logURL)
+		logging.Infof("Request View: %v", logURL)
 	}
 	vres, err := bucket.View(ddoc, view, options)
 	if err != nil {
@@ -62,7 +62,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 	defer func() {
 		r := recover()
 		if r != nil {
-			clog.Error(fmt.Errorf("View Walking Panic: %v\n%s", r, debug.Stack()))
+			logging.Errorf("View Walking Panic: %v\n%s", r, debug.Stack())
 			errs <- errors.NewError(nil, "Panic In View Walking")
 		}
 	}()
@@ -75,7 +75,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 
 		logURL, err := bucket.ViewURL(ddoc, view, options)
 		if err == nil {
-			clog.To(NETWORK_CHANNEL, "Request View: %v", logURL)
+			logging.Infof("Request View: %v", logURL)
 		}
 		vres, err := bucket.View(ddoc, view, options)
 		if err != nil {
