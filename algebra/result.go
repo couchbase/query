@@ -10,9 +10,9 @@
 package algebra
 
 import (
+	"encoding/json"
 	"strconv"
 
-	"encoding/json"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )

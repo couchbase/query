@@ -11,6 +11,7 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/expression"
 )

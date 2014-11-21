@@ -10,9 +10,9 @@
 package algebra
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"encoding/json"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"

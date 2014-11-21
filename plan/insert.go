@@ -11,6 +11,7 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
