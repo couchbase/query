@@ -11,6 +11,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/couchbaselabs/query/expression"
@@ -63,6 +64,20 @@ func (this *Projection) Signature() value.Value {
 }
 
 func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Formalizer, err error) {
+	// Disallow duplicate aliases
+	aliases := make(map[string]bool, len(this.terms))
+	for _, term := range this.terms {
+		if term.alias == "" {
+			continue
+		}
+
+		if aliases[term.alias] {
+			return nil, fmt.Errorf("Duplicate result alias %s.", term.alias)
+		}
+
+		aliases[term.alias] = true
+	}
+
 	f = &expression.Formalizer{
 		Allowed:  in.Allowed.Copy(),
 		Keyspace: in.Keyspace,
@@ -173,7 +188,7 @@ func (this *ResultTerm) setAlias(a int) int {
 		this.alias = this.expr.Alias()
 	}
 
-	if this.alias == "" {
+	if this.expr != nil && this.alias == "" {
 		this.alias = "$" + strconv.Itoa(a)
 		a++
 	}

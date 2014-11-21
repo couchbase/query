@@ -115,7 +115,7 @@ func (this *Merge) Formalize() (err error) {
 	}
 
 	if this.returning != nil {
-		err = this.returning.MapExpressions(kf)
+		_, err = this.returning.Formalize(kf)
 	}
 
 	return

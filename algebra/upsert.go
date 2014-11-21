@@ -106,7 +106,7 @@ func (this *Upsert) Formalize() (err error) {
 	}
 
 	if this.returning != nil {
-		err = this.returning.MapExpressions(f)
+		_, err = this.returning.Formalize(f)
 	}
 
 	return
