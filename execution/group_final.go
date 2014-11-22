@@ -12,13 +12,11 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
-// Compute DistinctCount() and Avg().
 type FinalGroup struct {
 	base
 	plan   *plan.FinalGroup
@@ -77,16 +75,18 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	// Compute final aggregates
 	aggregates := gv.GetAttachment("aggregates")
 	switch aggregates := aggregates.(type) {
-	case map[algebra.Aggregate]value.Value:
-		for agg, val := range aggregates {
-			v, e := agg.ComputeFinal(val, context)
+	case map[string]value.Value:
+		for _, agg := range this.plan.Aggregates() {
+			v, e := agg.ComputeFinal(aggregates[agg.String()], context)
 			if e != nil {
 				context.Error(errors.NewError(
 					e, "Error updating GROUP value."))
 				return false
 			}
-			aggregates[agg] = v
+
+			aggregates[agg.String()] = v
 		}
+
 		return true
 	default:
 		context.Error(errors.NewError(nil, fmt.Sprintf(
@@ -104,11 +104,11 @@ func (this *FinalGroup) afterItems(context *Context) {
 		}
 	} else {
 		av := value.NewAnnotatedValue(nil)
-		aggregates := make(map[algebra.Aggregate]value.Value, len(this.plan.Aggregates()))
+		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
 
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg] = agg.Default()
+			aggregates[agg.String()] = agg.Default()
 		}
 
 		this.sendItem(av)

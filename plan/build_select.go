@@ -11,6 +11,7 @@ package plan
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/errors"
@@ -93,12 +94,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Check for aggregates
-	aggs := make(algebra.Aggregates, 0, 16)
+	aggs := make(map[string]algebra.Aggregate)
 	projection := node.Projection()
 	if projection != nil {
 		for _, term := range projection.Terms() {
 			if term.Expression() != nil {
-				aggs = collectAggregates(aggs, term.Expression())
+				collectAggregates(aggs, term.Expression())
 			}
 		}
 	}
@@ -106,7 +107,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if this.order != nil {
 		for _, term := range this.order.Terms() {
 			if term.Expression() != nil {
-				aggs = collectAggregates(aggs, term.Expression())
+				collectAggregates(aggs, term.Expression())
 			}
 		}
 	}
@@ -144,22 +145,33 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	return NewSequence(this.children...), nil
 }
 
-func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
+func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Aggregate) {
 	letting := group.Letting()
 	for _, binding := range letting {
-		aggs = collectAggregates(aggs, binding.Expression())
+		collectAggregates(aggs, binding.Expression())
 	}
 
 	having := group.Having()
 	if having != nil {
-		aggs = collectAggregates(aggs, having)
+		collectAggregates(aggs, having)
 	}
 
-	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggs))
-	this.subChildren = append(this.subChildren, NewIntermediateGroup(group.By(), aggs))
+	aggn := make(sort.StringSlice, 0, len(aggs))
+	for n, _ := range aggs {
+		aggn = append(aggn, n)
+	}
+
+	aggn.Sort()
+	aggv := make(algebra.Aggregates, len(aggs))
+	for i, n := range aggn {
+		aggv[i] = aggs[n]
+	}
+
+	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggv))
+	this.subChildren = append(this.subChildren, NewIntermediateGroup(group.By(), aggv))
 	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
-	this.children = append(this.children, NewIntermediateGroup(group.By(), aggs))
-	this.children = append(this.children, NewFinalGroup(group.By(), aggs))
+	this.children = append(this.children, NewIntermediateGroup(group.By(), aggv))
+	this.children = append(this.children, NewFinalGroup(group.By(), aggv))
 	this.subChildren = make([]Operator, 0, 4)
 
 	if letting != nil {
@@ -390,27 +402,21 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	return NewExceptAll(first.(Operator), second.(Operator)), nil
 }
 
-func collectAggregates(aggs algebra.Aggregates, exprs ...expression.Expression) algebra.Aggregates {
+func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Expression) {
+	stringer := expression.NewStringer()
+
 	for _, expr := range exprs {
 		agg, ok := expr.(algebra.Aggregate)
-
 		if ok {
-			if len(aggs) == cap(aggs) {
-				aggs2 := make(algebra.Aggregates, len(aggs), (len(aggs)+1)<<1)
-				copy(aggs2, aggs)
-				aggs = aggs2
-			}
-
-			aggs = append(aggs, agg)
+			str := stringer.Visit(agg)
+			aggs[str] = agg
 		}
 
 		children := expr.Children()
 		if len(children) > 0 {
-			aggs = collectAggregates(aggs, children...)
+			collectAggregates(aggs, children...)
 		}
 	}
-
-	return aggs
 }
 
 func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {

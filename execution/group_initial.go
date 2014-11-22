@@ -10,7 +10,6 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -68,22 +67,23 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		gv = item
 		this.groups[gk] = gv
 
-		aggregates := make(map[algebra.Aggregate]value.Value)
+		aggregates := make(map[string]value.Value)
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg] = agg.Default()
+			aggregates[agg.String()] = agg.Default()
 		}
 	}
 
 	// Cumulate aggregates
-	aggregates := gv.GetAttachment("aggregates").(map[algebra.Aggregate]value.Value)
-	for agg, val := range aggregates {
-		v, e := agg.CumulateInitial(item, val, context)
+	aggregates := gv.GetAttachment("aggregates").(map[string]value.Value)
+	for _, agg := range this.plan.Aggregates() {
+		v, e := agg.CumulateInitial(item, aggregates[agg.String()], context)
 		if e != nil {
 			context.Error(errors.NewError(e, "Error updating GROUP value."))
 			return false
 		}
-		aggregates[agg] = v
+
+		aggregates[agg.String()] = v
 	}
 
 	return true

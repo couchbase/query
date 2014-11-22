@@ -12,7 +12,6 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
@@ -75,16 +74,18 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	// Cumulate aggregates
 	aggregates := gv.GetAttachment("aggregates")
 	switch aggregates := aggregates.(type) {
-	case map[algebra.Aggregate]value.Value:
-		for agg, val := range aggregates {
-			v, e := agg.CumulateIntermediate(item, val, context)
+	case map[string]value.Value:
+		for _, agg := range this.plan.Aggregates() {
+			v, e := agg.CumulateIntermediate(item, aggregates[agg.String()], context)
 			if e != nil {
 				context.Error(errors.NewError(
 					e, "Error updating GROUP value."))
 				return false
 			}
-			aggregates[agg] = v
+
+			aggregates[agg.String()] = v
 		}
+
 		return true
 	default:
 		context.Error(errors.NewError(nil, fmt.Sprintf(

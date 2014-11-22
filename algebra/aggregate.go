@@ -54,13 +54,12 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	av := item.(value.AnnotatedValue)
 	aggregates := av.GetAttachment("aggregates")
 	if aggregates != nil {
-		aggs := aggregates.(map[Aggregate]value.Value)
-		result = aggs[agg]
+		aggs := aggregates.(map[string]value.Value)
+		result = aggs[agg.String()]
 	}
 
 	if result == nil {
-		s := expression.NewStringer().Visit(agg)
-		err = fmt.Errorf("Aggregate %s not found.", s)
+		err = fmt.Errorf("Aggregate %s not found.", agg.String())
 	}
 
 	return
