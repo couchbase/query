@@ -90,7 +90,7 @@ func (b *keyspace) loadViewIndexes() errors.Error {
 	for _, index := range indexes {
 		name := index.Name()
 		logging.Infof("Found index on keyspace %s", name)
-		b.SetIndex(name, index)
+		b.setIndex(name, index)
 	}
 	return nil
 }

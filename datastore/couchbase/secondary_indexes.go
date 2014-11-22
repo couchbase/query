@@ -14,6 +14,7 @@ import "github.com/couchbaselabs/query/errors"
 import "github.com/couchbaselabs/query/expression"
 import "github.com/couchbaselabs/query/expression/parser"
 import "github.com/couchbaselabs/query/logging"
+import indexc "github.com/couchbase/indexing/secondary/common"
 import "github.com/couchbase/indexing/secondary/queryport"
 
 // ClusterManagerAddr is temporary hard-coded address for cluster-manager-agent
@@ -172,4 +173,9 @@ func parseExprs(exprs []string) (expression.Expressions, error) {
 		}
 	}
 	return keys, nil
+}
+
+func init() {
+	// TODO: how to blend with query logging ?
+	indexc.SetLogLevel(indexc.LogLevelDebug)
 }
