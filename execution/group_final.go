@@ -102,7 +102,8 @@ func (this *FinalGroup) afterItems(context *Context) {
 				return
 			}
 		}
-	} else {
+	} else if this.plan.Keys() == nil {
+		// Grouping over all inputs -- always send a result
 		av := value.NewAnnotatedValue(nil)
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
