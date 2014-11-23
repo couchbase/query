@@ -44,6 +44,17 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	children = append(children, sub.(Operator))
 
 	if order != nil {
+		if this.order == nil {
+			// Disallow aggregates in ORDER BY
+			aggs := make(map[string]algebra.Aggregate)
+			for _, term := range order.Terms() {
+				collectAggregates(aggs, term.Expression())
+				if len(aggs) > 0 {
+					return nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
+				}
+			}
+		}
+
 		children = append(children, NewOrder(order))
 	}
 
@@ -85,16 +96,29 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.children = append(this.children, scan)
 	}
 
+	aggs := make(map[string]algebra.Aggregate)
+
 	if node.Let() != nil {
+		for _, binding := range node.Let() {
+			collectAggregates(aggs, binding.Expression())
+			if len(aggs) > 0 {
+				return nil, fmt.Errorf("Aggregates not allowed in LET.")
+			}
+		}
+
 		this.subChildren = append(this.subChildren, NewLet(node.Let()))
 	}
 
 	if node.Where() != nil {
+		collectAggregates(aggs, node.Where())
+		if len(aggs) > 0 {
+			return nil, fmt.Errorf("Aggregates not allowed in WHERE.")
+		}
+
 		this.subChildren = append(this.subChildren, NewFilter(node.Where()))
 	}
 
 	// Check for aggregates
-	aggs := make(map[string]algebra.Aggregate)
 	projection := node.Projection()
 	if projection != nil {
 		for _, term := range projection.Terms() {
@@ -104,15 +128,19 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
-	if this.order != nil {
+	group := node.Group()
+	if this.order != nil && (group != nil || len(aggs) > 0) {
+		// Grouping -- include aggregates from ORDER BY
 		for _, term := range this.order.Terms() {
 			if term.Expression() != nil {
 				collectAggregates(aggs, term.Expression())
 			}
 		}
+	} else {
+		// Not grouping -- disallow aggregates in ORDER BY
+		this.order = nil
 	}
 
-	group := node.Group()
 	if group == nil && len(aggs) > 0 {
 		group = algebra.NewGroup(nil, nil, nil)
 	}
