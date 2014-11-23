@@ -107,6 +107,7 @@
 /[dD][aA][tT][aA][sS][eE][tT]/			 { logToken("DATASET"); return DATASET }
 /[dD][aA][tT][aA][sS][tT][oO][rR][eE]/		 { logToken("DATASTORE"); return DATASTORE }
 /[dD][eE][cC][lL][aA][rR][eE]/			 { logToken("DECLARE"); return DECLARE }
+/[dD][eE][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("DECREMENT"); return DECREMENT }
 /[dD][eE][lL][eE][tT][eE]/			 { logToken("DELETE"); return DELETE }
 /[dD][eE][rR][iI][vV][eE][dD]/			 { logToken("DERIVED"); return DERIVED }
 /[dD][eE][sS][cC]/				 { logToken("DESC"); return DESC }
@@ -136,6 +137,7 @@
 /[iI][fF]/					 { logToken("IF"); return IF }
 /[iI][nN]/					 { logToken("IN"); return IN }
 /[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
+/[iI][nN][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("INCREMENT"); return INCREMENT }
 /[iI][nN][dD][eE][xX]/				 { logToken("INDEX"); return INDEX }
 /[iI][nN][lL][iI][nN][eE]/			 { logToken("INLINE"); return INLINE }
 /[iI][nN][nN][eE][rR]/				 { logToken("INNER"); return INNER }

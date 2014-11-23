@@ -90,6 +90,7 @@ indexType        datastore.IndexType
 %token DATASET
 %token DATASTORE
 %token DECLARE
+%token DECREMENT
 %token DELETE
 %token DERIVED
 %token DESC
@@ -119,6 +120,7 @@ indexType        datastore.IndexType
 %token IF
 %token IN
 %token INCLUDE
+%token INCREMENT
 %token INDEX
 %token INLINE
 %token INNER
@@ -806,6 +808,11 @@ group:
 GROUP BY exprs opt_letting opt_having
 {
     $$ = algebra.NewGroup($3, $4, $5)
+}
+|
+letting
+{
+    $$ = algebra.NewGroup(nil, $1, nil)
 }
 ;
 
