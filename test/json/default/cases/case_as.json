@@ -217,17 +217,15 @@
     
     {
         "statements": "SELECT title, details.title AS title FROM default:catalog ORDER BY title",
-        "results": [
-        {
-            "title": "INFERNO"
-        },
-        {
-            "title": "SHERLOCK: SERIES 1"
-        },
-        {
-            "title": "ZERO DARK THIRTY"
-        }
-   ]
+        "error" : "Duplicate result alias title"
+    },
+    {
+        "statements": "SELECT catalog.title, C.title, C.type FROM default:catalog AS C ORDER BY catalog.title",
+        "error" : "Duplicate result alias title"
+    },
+    {
+        "statements": "SELECT title, details.format, details.title, title  FROM default:catalog WHERE pricing.list > 300 and pricing.pct_savings >20 ORDER BY title",
+        "error" : "Duplicate result alias title"
     },
 
     {
