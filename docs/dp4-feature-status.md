@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [dp4-feature-status](https://github.com/couchbaselabs/query/blob/master/docs/dp4-feature-status.md)
-* Modified: 2014-11-17
+* Modified: 2014-11-24
 
 ## Introduction
 
@@ -194,14 +194,14 @@ ALTER INDEX is currently not in scope for DP4 or Sherlock.
 The syntax for INSERT has changed, so the implementation is no longer
 identical to the spec.
 
-The new syntax will be implemented by 11/21/2014.
+The new syntax will be implemented by 11/28/2014.
 
 ### UPSERT
 
 The syntax for UPSERT has changed, so the implementation is no longer
 identical to the spec.
 
-The new syntax will be implemented by 11/21/2014.
+The new syntax will be implemented by 11/28/2014.
 
 ### DELETE
 
@@ -223,4 +223,6 @@ datastores. The current implementation is known to cause a crash See
 
 ### Document History
 
-* 2014-11-17 - Initial version.
+* 2014-11-17 - Initial version
+* 2014-11-24 - Delivery dates
+    * New dates for implementing INSERT and UPSERT
