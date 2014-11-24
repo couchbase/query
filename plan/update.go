@@ -38,6 +38,7 @@ type Unset struct {
 type SendUpdate struct {
 	readwrite
 	keyspace datastore.Keyspace
+	alias    string
 }
 
 func NewClone() *Clone {
@@ -110,9 +111,10 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func NewSendUpdate(keyspace datastore.Keyspace) *SendUpdate {
+func NewSendUpdate(keyspace datastore.Keyspace, alias string) *SendUpdate {
 	return &SendUpdate{
 		keyspace: keyspace,
+		alias:    alias,
 	}
 }
 
@@ -124,8 +126,13 @@ func (this *SendUpdate) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *SendUpdate) Alias() string {
+	return this.alias
+}
+
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "SendUpdate"}
 	r["keyspace"] = this.keyspace.Name()
+	r["alias"] = this.alias
 	return json.Marshal(r)
 }

@@ -72,7 +72,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewUnset(act.Unset()))
 		}
 
-		ops = append(ops, NewSendUpdate(keyspace))
+		ops = append(ops, NewSendUpdate(keyspace, ksref.Alias()))
 		update = NewSequence(ops...)
 	}
 

@@ -75,6 +75,11 @@ func (this *Field) Constructor() FunctionConstructor {
 }
 
 func (this *Field) Set(item, val value.Value, context Context) bool {
+	first, er := this.First().Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
 	second, er := this.Second().Evaluate(item, context)
 	if er != nil {
 		return false
@@ -82,7 +87,7 @@ func (this *Field) Set(item, val value.Value, context Context) bool {
 
 	switch second.Type() {
 	case value.STRING:
-		er := item.SetField(second.Actual().(string), val)
+		er := first.SetField(second.Actual().(string), val)
 		return er == nil
 	default:
 		return false

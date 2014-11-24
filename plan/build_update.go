@@ -36,7 +36,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		subChildren = append(subChildren, NewUnset(stmt.Unset()))
 	}
 
-	subChildren = append(subChildren, NewSendUpdate(keyspace))
+	subChildren = append(subChildren, NewSendUpdate(keyspace, ksref.Alias()))
 
 	if stmt.Returning() != nil {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
