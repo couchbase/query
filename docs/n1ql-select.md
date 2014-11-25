@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-11-17
+* Modified: 2014-11-23
 
 ## Introduction
 
@@ -1643,8 +1643,8 @@ __ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
 __ARRAY\_AVG(expr)__ - arithmetic mean (average) of all the non-NULL
 number values in the array, or NULL if there are no such values.
 
-__ARRAY\_CONCAT(expr1, expr2)__ - new array with the concatenation of
-the input arrays.
+__ARRAY\_CONCAT(expr1, expr2, ...)__ - new array with the
+concatenation of the input arrays.
 
 __ARRAY\_CONTAINS(expr, value)__ - true if the array contains _value._
 
@@ -1851,6 +1851,13 @@ __TONUM(expr)__ - number as follows:
 * numbers are themselves
 * strings that parse as numbers are those numbers
 * all other values are NULL
+
+__TOOBJ(expr)__ - object as follows:
+
+* MISSING is MISSING
+* NULL is NULL
+* objects are themselves
+* all other values are the empty object
 
 __TOSTR(expr)__ - string as follows:
 
@@ -2437,6 +2444,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Allow RAW exprs to be aliased; useful for ORDER BY
 * 2014-11-17 - MISSING literal
     * Add MISSING as a literal expression.
+* 2014-11-23 - INCREMENT and DECREMENT
+    * Add keywords INCREMENT and DECREMENT.
 
 ### Open issues
 
