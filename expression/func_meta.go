@@ -23,26 +23,55 @@ import (
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Meta function BASE64(expr). It returns
+the base64-encoding of expr. Type Base64 is a struct that 
+implements UnaryFuncitonBase. 
+*/
 type Base64 struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewBase64 takes as input an expression and returns
+a pointer to the Base64 struct that calls NewUnaryFunctionBase to
+create a function named BASE64 with an input operand as the
+expression.
+*/
 func NewBase64(operand Expression) Function {
 	return &Base64{
 		*NewUnaryFunctionBase("base64", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Base64) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a String value.
+*/
 func (this *Base64) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for unary functions and passes in the 
+receiver, current item and current context.
+*/
 func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an operand value and context and returns a value.
+If the type of operand is missing then return it. Call MarshalJSON
+to get the bytes, and then use Go's encoding/base64 package to
+encode the bytes to string. Create a newValue using the string and 
+return it.
+*/
 func (this *Base64) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
@@ -53,6 +82,10 @@ func (this *Base64) Apply(context Context, operand value.Value) (value.Value, er
 	return value.NewValue(str), nil
 }
 
+/*
+The constructor returns a NewBase64 with an operand cast to a 
+Function as the FunctionConstructor.
+*/
 func (this *Base64) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewBase64(operands[0])
@@ -65,26 +98,55 @@ func (this *Base64) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Meta function META(expr). It returns
+the meta data for the document expr. Type Meta is a struct 
+that implements UnaryFuncitonBase.
+*/
 type Meta struct {
 	UnaryFunctionBase
 }
 
+/*       
+The function NewMeta takes as input an expression and returns
+a pointer to the Meta struct that calls NewUnaryFunctionBase to
+create a function named META with an input operand as the
+expression.
+*/
 func NewMeta(operand Expression) Function {
 	return &Meta{
 		*NewUnaryFunctionBase("meta", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a OBJECT value.
+*/
 func (this *Meta) Type() value.Type { return value.OBJECT }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an operand value and context and returns a value.
+If the type of operand is missing then return it. If the operand
+type is AnnotatedValue then we call NewValue using the GetAttachment
+method on the operand with input string meta. In the event the there 
+is no attachment present, the default case is to return a NULL value.
+*/
 func (this *Meta) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
@@ -98,6 +160,10 @@ func (this *Meta) Apply(context Context, operand value.Value) (value.Value, erro
 	}
 }
 
+/*
+The constructor returns a NewMeta with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *Meta) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMeta(operands[0])
@@ -110,35 +176,67 @@ func (this *Meta) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Meta function UUID(). It returns
+a version 4 Universally Unique Identifier. Type Uuid 
+is a struct that implements NullaryFuncitonBase.
+*/
 type Uuid struct {
 	NullaryFunctionBase
 }
 
+/*
+The init method is used to set the format of the uuid output.
+The current set format is CleanHyphen Format = "%x-%x-%x-%x%x-%x".
+*/
 func init() {
 	uuid.SwitchFormat(uuid.CleanHyphen)
 }
 
+/*
+The function NewUuid returns a pointer to the NewNullaryFunctionBase 
+to create a function named UUID. It has no input arguments.
+*/
 func NewUuid() Function {
 	return &Uuid{
 		*NewNullaryFunctionBase("uuid"),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Uuid) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a string value.
+*/
 func (this *Uuid) Type() value.Type { return value.STRING }
 
+/*
+Generate a Version 4 UUID as specified in RFC 4122 using
+package github/com/twinj/uuid, function NewV4. This returns
+a string. Call newValue and return it.
+*/
 func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, error) {
 	u := uuid.NewV4()
 	return value.NewValue(u.String()), nil
 }
 
+/*
+It is not indexable.
+*/
 func (this *Uuid) Indexable() bool {
 	return false
 }
 
+/*
+The constructor returns a NewUuid by casting the receiver to a
+Function as the FunctionConstructor.
+*/
 func (this *Uuid) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return this

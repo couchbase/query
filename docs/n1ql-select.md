@@ -1788,6 +1788,8 @@ __BASE64(expr)__ - base64-encoding of expr.
 
 __META(expr)__ - meta data for the document _expr_.
 
+__UUID()__ - a version 4 Universally Unique Identifier(UUID).
+
 ### Type checking functions
 
 __ISARRAY(expr)__ - true if expr is an array; else false.
