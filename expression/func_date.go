@@ -945,7 +945,7 @@ func strToTime(s string) (time.Time, error) {
 	var t time.Time
 	var err error
 	for _, f := range _DATE_FORMATS {
-		t, err = time.Parse(f, s)
+		t, err = time.ParseInLocation(f, s, time.Local)
 		if err == nil {
 			return t, nil
 		}
@@ -958,7 +958,7 @@ func strToTimeFormat(s string) (time.Time, string, error) {
 	var t time.Time
 	var err error
 	for _, f := range _DATE_FORMATS {
-		t, err = time.Parse(f, s)
+		t, err = time.ParseInLocation(f, s, time.Local)
 		if err == nil {
 			return t, f, nil
 		}
