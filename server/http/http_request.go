@@ -334,10 +334,15 @@ func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (
 			encoded_creds := strings.Split(auth, " ")[1]
 			decoded_creds, err = base64.StdEncoding.DecodeString(encoded_creds)
 			if err == nil {
+				// Authorization header is in format "user:pass"
+				// per http://tools.ietf.org/html/rfc1945#section-10.2
 				u_details := strings.Split(string(decoded_creds), ":")
 				if len(u_details) == 2 {
-					creds = make([]*url.Userinfo, 1)
 					creds[0] = url.UserPassword(u_details[0], u_details[1])
+				}
+				if len(u_details) == 3 {
+					// Support usernames like "local:xxx" or "admin:xxx"
+					creds[0] = url.UserPassword(strings.Join(u_details[:2], ":"), u_details[2])
 				}
 			}
 		}
