@@ -205,8 +205,8 @@ var _FUNCTIONS = map[string]Function{
 
 	// Meta
 	"base64": &Base64{},
-	"item":   &Item{},
 	"meta":   &Meta{},
+	"self":   &Self{},
 	"uuid":   &Uuid{},
 
 	// Type checking

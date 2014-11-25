@@ -94,36 +94,6 @@ func (this *Base64) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// Item
-//
-///////////////////////////////////////////////////
-
-type Item struct {
-	NullaryFunctionBase
-}
-
-func NewItem() Function {
-	return &Item{
-		*NewNullaryFunctionBase("item"),
-	}
-}
-
-func (this *Item) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-func (this *Item) Type() value.Type { return value.JSON }
-
-func (this *Item) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return item, nil
-}
-
-func (this *Item) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
-}
-
-///////////////////////////////////////////////////
-//
 // Meta
 //
 ///////////////////////////////////////////////////
@@ -198,6 +168,36 @@ func (this *Meta) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMeta(operands[0])
 	}
+}
+
+///////////////////////////////////////////////////
+//
+// Self
+//
+///////////////////////////////////////////////////
+
+type Self struct {
+	NullaryFunctionBase
+}
+
+func NewSelf() Function {
+	return &Self{
+		*NewNullaryFunctionBase("self"),
+	}
+}
+
+func (this *Self) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Self) Type() value.Type { return value.JSON }
+
+func (this *Self) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return item, nil
+}
+
+func (this *Self) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
 }
 
 ///////////////////////////////////////////////////

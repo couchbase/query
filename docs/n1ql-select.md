@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-11-23
+* Modified: 2014-11-25
 
 ## Introduction
 
@@ -1788,6 +1788,8 @@ __BASE64(expr)__ - base64-encoding of expr.
 
 __META(expr)__ - meta data for the document _expr_.
 
+__SELF()__ - the top-level value in the current context.
+
 __UUID()__ - a version 4 Universally Unique Identifier(UUID).
 
 ### Type checking functions
@@ -2448,6 +2450,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add MISSING as a literal expression.
 * 2014-11-23 - INCREMENT and DECREMENT
     * Add keywords INCREMENT and DECREMENT.
+* 2014-11-25 - SELF()
+    * Add SELF() function.
 
 ### Open issues
 
