@@ -15,11 +15,11 @@ import (
 
 /*
 This method is used to retrieve a function by the parser.
-Based on the input string name it looks through a map and 
-retrieves the function that corresponds to it. If the 
+Based on the input string name it looks through a map and
+retrieves the function that corresponds to it. If the
 function exists it returns true and the function. While
 looking into the map, convert the string name to lower
-case. 
+case.
 */
 func GetFunction(name string) (Function, bool) {
 	rv, ok := _FUNCTIONS[strings.ToLower(name)]
@@ -27,10 +27,10 @@ func GetFunction(name string) (Function, bool) {
 }
 
 /*
-The variable _FUNCTIONS represents a map from string to 
+The variable _FUNCTIONS represents a map from string to
 Function. Each string returns a pointer to that function.
 The types of functions can be grouped into Arithmetic,
-Collection, Comparison, Concat, Construction, Logic, 
+Collection, Comparison, Concat, Construction, Logic,
 Navigation, Date, String, Numeric, Array, Object, JSON,
 Comparison, Conditional for numbers and unknowns, meta,
 type checking and type conversion.
@@ -204,8 +204,9 @@ var _FUNCTIONS = map[string]Function{
 	"posinfif":   &PosInfIf{},
 
 	// Meta
-	"meta":   &Meta{},
 	"base64": &Base64{},
+	"item":   &Item{},
+	"meta":   &Meta{},
 	"uuid":   &Uuid{},
 
 	// Type checking

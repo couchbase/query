@@ -76,10 +76,6 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			return false
 		}
 
-		if v.Type() == value.MISSING {
-			return true
-		}
-
 		if result.As() == "" {
 			return this.sendItem(value.NewAnnotatedValue(v))
 		}

@@ -123,6 +123,10 @@ func NewNullaryFunctionBase(name string) *NullaryFunctionBase {
 	}
 }
 
+func (this *NullaryFunctionBase) Indexable() bool {
+	return false
+}
+
 func (this *NullaryFunctionBase) MinArgs() int { return 0 }
 
 func (this *NullaryFunctionBase) MaxArgs() int { return 0 }
