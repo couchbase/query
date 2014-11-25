@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
@@ -38,68 +37,8 @@ const (
 
 // datasite is the root for the couchbase datasite
 type site struct {
-	mu             sync.Mutex
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
-}
-
-// NewDatastore creates a new Couchbase site for the given url.
-func NewDatastore(url string) (datastore.Datastore, errors.Error) {
-	client, err := cb.Connect(url)
-	if err != nil {
-		return nil, errors.NewError(err, "Cannot connect to url "+url)
-	}
-
-	s := &site{
-		client:         client,
-		namespaceCache: make(map[string]*namespace),
-	}
-	defaultPool, Err := loadNamespace(s, "default")
-	if Err != nil {
-		logging.Errorf("Cannot connect to default pool")
-		return nil, Err
-	}
-
-	s.setNamespace("default", defaultPool)
-	logging.Infof("New site created with url %s", url)
-	return s, nil
-}
-
-func (s *site) setClient(client cb.Client) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.client = client
-	s.namespaceCache = make(map[string]*namespace)
-}
-
-func (s *site) getPool(name string) (cb.Pool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.client.GetPool(name)
-}
-
-func (s *site) getNamespace(name string) (*namespace, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	n, ok := s.namespaceCache[name]
-	return n, ok
-}
-
-func (s *site) setNamespace(name string, n *namespace) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.namespaceCache[name] = n
-}
-
-func (s *site) delNamespace(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.namespaceCache, name)
 }
 
 func (s *site) Id() string {
@@ -107,9 +46,6 @@ func (s *site) Id() string {
 }
 
 func (s *site) URL() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	return s.client.BaseURL.String()
 }
 
@@ -125,46 +61,64 @@ func (s *site) NamespaceById(id string) (p datastore.Namespace, e errors.Error) 
 	return s.NamespaceByName(id)
 }
 
-func (s *site) NamespaceByName(name string) (datastore.Namespace, errors.Error) {
-	var err errors.Error
-
-	p, exists := s.getNamespace(name)
-	if !exists {
-		if p, err = loadNamespace(s, name); err != nil {
+func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
+	p, ok := s.namespaceCache[name]
+	if !ok {
+		var err errors.Error
+		p, err = loadNamespace(s, name)
+		if err != nil {
 			return nil, err
 		}
-		s.setNamespace(name, p)
+		s.namespaceCache[name] = p.(*namespace)
 	}
 	return p, nil
 }
 
-// a namespace represents a couchbase pool
-type namespace struct {
-	mu            sync.Mutex
-	site          *site
-	name          string
-	cbNamespace   cb.Pool
-	keyspaceCache map[string]datastore.Keyspace
+// NewSite creates a new Couchbase site for the given url.
+func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
+
+	client, err := cb.Connect(url)
+	if err != nil {
+		return nil, errors.NewError(err, "Cannot connect to url "+url)
+	}
+
+	site := &site{
+		client:         client,
+		namespaceCache: make(map[string]*namespace),
+	}
+
+	// initialize the default pool.
+	// TODO can couchbase server contain more than one pool ?
+
+	defaultPool, Err := loadNamespace(site, "default")
+	if Err != nil {
+		logging.Errorf("Cannot connect to default pool")
+		return nil, Err
+	}
+
+	site.namespaceCache["default"] = defaultPool
+	logging.Infof("New site created with url %s", url)
+
+	return site, nil
 }
 
 func loadNamespace(s *site, name string) (*namespace, errors.Error) {
-	msg := fmt.Sprintf("Pool %v not found.", name)
-	cbpool, err := s.getPool(name)
+
+	cbpool, err := s.client.GetPool(name)
 	if err != nil {
 		if name == "default" {
 			// if default pool is not available, try reconnecting to the server
-			client, err := cb.Connect(s.URL())
+			url := s.URL()
+			client, err := cb.Connect(url)
 			if err != nil {
-				return nil, errors.NewError(nil, msg)
+				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
 			}
 			// check if the default pool exists
-			if cbpool, err = client.GetPool(name); err != nil {
-				return nil, errors.NewError(nil, msg)
+			cbpool, err = client.GetPool(name)
+			if err != nil {
+				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
 			}
-			s.setClient(client)
-
-		} else {
-			return nil, errors.NewError(nil, msg)
+			s.client = client
 		}
 	}
 
@@ -178,41 +132,12 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 	return &rv, nil
 }
 
-func (p *namespace) getCbNamespace() cb.Pool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	return p.cbNamespace
-}
-
-func (p *namespace) setCbNamespace(pool cb.Pool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.cbNamespace = pool
-	p.keyspaceCache = make(map[string]datastore.Keyspace)
-}
-
-func (p *namespace) getKeyspace(name string) (datastore.Keyspace, bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	ks, ok := p.keyspaceCache[name]
-	return ks, ok
-}
-
-func (p *namespace) setKeyspace(name string, ks datastore.Keyspace) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.keyspaceCache[name] = ks
-}
-
-func (p *namespace) delKeyspace(name string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	delete(p.keyspaceCache, name)
+// a namespace represents a couchbase pool
+type namespace struct {
+	site          *site
+	name          string
+	cbNamespace   cb.Pool
+	keyspaceCache map[string]datastore.Keyspace
 }
 
 func (p *namespace) DatastoreId() string {
@@ -232,27 +157,23 @@ func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
 }
 
 func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	rv := make([]string, 0, len(p.keyspaceCache))
-	for name := range p.keyspaceCache {
+	rv := make([]string, 0, len(p.cbNamespace.BucketMap))
+	for name, _ := range p.cbNamespace.BucketMap {
 		rv = append(rv, name)
 	}
 	return rv, nil
 }
 
-func (p *namespace) KeyspaceByName(
-	name string) (b datastore.Keyspace, e errors.Error) {
+func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
 
-	b, ok := p.getKeyspace(name)
+	b, ok := p.keyspaceCache[name]
 	if !ok {
 		var err errors.Error
 		b, err = newKeyspace(p, name)
 		if err != nil {
 			return nil, errors.NewError(err, "Keyspace "+name+" name not found")
 		}
-		p.setKeyspace(name, b)
+		p.keyspaceCache[name] = b
 	}
 	return b, nil
 }
@@ -263,69 +184,107 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 
 func (p *namespace) refresh() {
 	// trigger refresh of this pool
-	logging.Infof(" Refreshing pool %s", p.name)
+	logging.Infof("Refreshing pool %s", p.name)
 
-	pool, err := p.site.getPool(p.name) // pool gets refreshed here.
+	newpool, err := p.site.client.GetPool(p.name)
 	if err != nil {
-		logging.Errorf(" Error updating pool name %s: Error %v", p.name, err)
+		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
 		url := p.site.URL()
 		client, err := cb.Connect(url)
 		if err != nil {
-			logging.Errorf(" Error connecting to URL %s", url)
+			logging.Errorf("Error connecting to URL %s", url)
 			return
 		}
 		// check if the default pool exists
-		pool, err = client.GetPool(p.name)
+		newpool, err = client.GetPool(p.name)
 		if err != nil {
-			msg := " Retry Failed Error updating pool name %s: Error %v"
-			logging.Errorf(msg, p.name, err)
+			logging.Errorf("Retry Failed Error updating pool name %s: Error %v", p.name, err)
 			return
 		}
-		p.site.setClient(client)
-		p.setCbNamespace(pool)
+		p.site.client = client
+
 	}
 
 	// keyspaces in the pool
-	for name := range pool.BucketMap {
+	for name, _ := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
-		if _, exists := p.getKeyspace(name); !exists {
-			if b, err := newKeyspace(p, name); err == nil {
-				p.setKeyspace(name, b)
-			} else {
-				logging.Errorf(" Error creating keyspace %s", name)
-			}
+		_, err := p.cbNamespace.GetBucket(name)
+		if err != nil {
+			logging.Errorf(" Error retrieving bucket %s", name)
+			delete(p.keyspaceCache, name)
 
 		}
+	}
+
+	p.cbNamespace = newpool
+}
+
+func keepPoolFresh(p *namespace) {
+
+	tickChan := time.Tick(1 * time.Minute)
+
+	for _ = range tickChan {
+		p.refresh()
 	}
 }
 
 type keyspace struct {
-	mu               sync.Mutex
 	namespace        *namespace
 	name             string
-	cbbucket         *cb.Bucket
 	indexes          map[string]datastore.Index
 	primary          datastore.PrimaryIndex
+	cbbucket         *cb.Bucket
 	nonUsableIndexes []string // indexes that cannot be used
 }
 
+func (b *keyspace) refresh() {
+	// trigger refresh of this pool
+	logging.Infof("Refreshing Indexes in keyspace %s", b.name)
+
+	indexes, err := loadViewIndexes(b)
+	if err != nil {
+		logging.Errorf(" Error loading indexes for bucket %s", b.name)
+		return
+	}
+
+	if len(indexes) == 0 {
+		return
+	}
+
+	for _, index := range indexes {
+		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), b.name)
+		name := (*index).Name()
+		b.indexes[name] = *index
+	}
+
+}
+
+func keepIndexesFresh(b *keyspace) {
+
+	tickChan := time.Tick(1 * time.Minute)
+
+	for _ = range tickChan {
+		b.refresh()
+	}
+}
+
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
-	logging.Infof(" Created New Bucket %s", name)
-	pool := p.getCbNamespace()
-	cbbucket, err := pool.GetBucket(name)
+
+	logging.Infof("Created New Bucket %s", name)
+	cbbucket, err := p.cbNamespace.GetBucket(name)
 	if err != nil {
 		// go-couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
 		p.refresh()
 		// and then check one more time
-		cbbucket, err = pool.GetBucket(name)
+		cbbucket, err = p.cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
-			msg := fmt.Sprintf("Bucket %v not found.", name)
-			return nil, errors.NewError(nil, msg)
+			return nil, errors.NewError(nil, fmt.Sprintf("Bucket %v not found.", name))
 		}
 	}
+
 	rv := &keyspace{
 		namespace:        p,
 		name:             name,
@@ -333,82 +292,15 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		indexes:          make(map[string]datastore.Index),
 		nonUsableIndexes: make([]string, 0),
 	}
+
 	//discover existing indexes
-	indexes, err := rv.loadIndexes()
-	if err != nil {
-		logging.Warnf("Error loading indexes for keyspace %s: %v", name, err)
-	}
-	for name, index := range indexes {
-		rv.setIndex(name, index)
+	if ierr := rv.loadIndexes(); ierr != nil {
+		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
 
 	go keepIndexesFresh(rv)
+
 	return rv, nil
-}
-
-func (b *keyspace) getBucket() *cb.Bucket {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.cbbucket
-}
-
-func (b *keyspace) setBucket(cbbucket *cb.Bucket) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	b.cbbucket = cbbucket
-}
-
-func (b *keyspace) getIndex(name string) (datastore.Index, bool) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	index, ok := b.indexes[name]
-	return index, ok
-}
-
-func (b *keyspace) setIndex(name string, index datastore.Index) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	b.indexes[name] = index
-	// if index is primary set primary index.
-	if name == PRIMARY_INDEX {
-		b.primary = index.(datastore.PrimaryIndex)
-	}
-	logging.Infof("Primary index %T", index)
-}
-
-func (b *keyspace) delIndex(name string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	delete(b.indexes, name)
-}
-
-func (b *keyspace) getPrimaryIndex() datastore.PrimaryIndex {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.primary
-}
-
-func (b *keyspace) refresh() {
-	// trigger refresh of this pool
-	// TODO: only updated/inserted/deleted index tables should be
-	// touched in `keyspace` object.
-	logging.Infof(" Refreshing Indexes in keyspace %s", b.name)
-	indexes, err := b.loadIndexes()
-	if err != nil {
-		logging.Errorf(" Error loading indexes for bucket %s", b.name)
-
-	} else {
-		for name, index := range indexes {
-			b.setIndex(name, index)
-			logging.Infof(" Found index %s on keyspace %s", name, b.name)
-		}
-	}
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -424,26 +316,51 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count() (int64, errors.Error) {
-	statsMap := b.getBucket().GetStats("")
+	var err error
+
+	statsMap := b.cbbucket.GetStats("")
 	for _, stats := range statsMap {
 		itemCount := stats["curr_items_tot"]
 		if totalCount, err := strconv.Atoi(itemCount); err == nil {
 			return int64(totalCount), nil
 		}
+
 	}
-	return 0, errors.NewError(nil, fmt.Sprintf("Unable to STAT %v", b.name))
+
+	pi, err := b.IndexByPrimary()
+	if err != nil || pi == nil {
+		return 0, errors.NewError(nil, "Unable to get item count and no primary index found for bucket "+b.Name())
+	}
+
+	var totalCount int64
+
+	switch pi := pi.(type) {
+	case *primaryIndex:
+		vi := pi
+		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+	case *viewIndex:
+		vi := pi
+		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
+	}
+
+	if err != nil {
+		return 0, errors.NewError(err, "")
+	}
+
+	return totalCount, nil
 }
 
 func (b *keyspace) IndexIds() ([]string, errors.Error) {
-	return b.IndexNames()
+	rv := make([]string, 0, len(b.indexes))
+	for name, _ := range b.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
 }
 
 func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	rv := make([]string, 0, len(b.indexes))
-	for name := range b.indexes {
+	for name, _ := range b.indexes {
 		rv = append(rv, name)
 	}
 	return rv, nil
@@ -454,9 +371,6 @@ func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	index, ok := b.indexes[name]
 	if !ok {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
@@ -465,38 +379,33 @@ func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	if b.getPrimaryIndex() == nil {
-		indexes, err := b.Indexes()
-		if err != nil {
-			return nil, err
-		}
-		if len(indexes) == 0 {
-			indexes, err := b.loadIndexes()
-			if err != nil {
+
+	if b.primary == nil {
+
+		logging.Infof("Number of indexes %d", len(b.indexes))
+
+		if len(b.indexes) == 0 {
+			if err := b.loadIndexes(); err != nil {
 				return nil, errors.NewError(err, "No indexes found. Please create a primary index")
+
 			}
-			for name, index := range indexes {
-				b.setIndex(name, index)
-			}
+
 		}
-		idx, ok := b.getIndex(PRIMARY_INDEX)
+		idx, ok := b.indexes[PRIMARY_INDEX]
 		if ok {
 			primary := idx.(datastore.PrimaryIndex)
 			return primary, nil
 		}
-		all, ok := b.getIndex(ALLDOCS_INDEX)
+		all, ok := b.indexes[ALLDOCS_INDEX]
 		if ok {
 			primary := all.(datastore.PrimaryIndex)
 			return primary, nil
 		}
 	}
-	return b.getPrimaryIndex(), nil
+	return b.primary, nil
 }
 
 func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	rv := make([]datastore.Index, 0, len(b.indexes))
 	for _, index := range b.indexes {
 		rv = append(rv, index)
@@ -505,7 +414,7 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if _, exists := b.getIndex(PRIMARY_INDEX); exists {
+	if _, exists := b.indexes[PRIMARY_INDEX]; exists {
 		return nil, errors.NewError(nil, "Primary index already exists")
 	}
 	switch using {
@@ -514,18 +423,19 @@ func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.Prim
 		if err != nil {
 			return nil, errors.NewError(err, "Error creating primary index")
 		}
-		b.setIndex(idx.Name(), idx)
+		b.indexes[idx.Name()] = idx
 		return idx, nil
 
-	case datastore.LSM:
-		idx, err := create2iPrimaryIndex(b, using)
-		if err != nil {
-			return nil, errors.NewError(err, "")
-		}
-		logging.Debugf("Created Primary index using 2i `%s`", idx.Name())
-		b.setIndex(idx.Name(), idx)
-		return idx, nil
-
+		/*
+			case datastore.LSM:
+				idx, err := new2iPrimaryIndex(b, using)
+				if err != nil {
+					return nil, errors.NewError(err, "Error creating primary index")
+				}
+				logging.Debugf("Created Primary 2i index `%s`", idx.Name())
+				b.indexes[idx.Name()] = idx
+				return idx, nil
+		*/
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
@@ -539,12 +449,11 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		using = datastore.VIEW
 	}
 
-	if _, exists := b.getIndex(name); exists {
+	if _, exists := b.indexes[name]; exists {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
 	}
 
 	// if the name matches any of the unusable indexes, return an error
-	// TODO: what is non-usable index ?
 	for _, iname := range b.nonUsableIndexes {
 		if name == iname {
 			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
@@ -557,18 +466,19 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 		if err != nil {
 			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
 		}
-		b.setIndex(idx.Name(), idx)
+		b.indexes[idx.Name()] = idx
 		return idx, nil
 
-	case datastore.LSM:
-		idx, err := create2iIndex(name, equalKey, rangeKey, where, using, b)
-		if err != nil {
-			return nil, errors.NewError(err, fmt.Sprintf("Error creating 2i index: %q", name))
-		}
-		logging.Debugf("Created 2i index %q", idx.Name())
-		b.setIndex(idx.Name(), idx)
-		return idx, nil
-
+		/*
+			case datastore.LSM:
+				idx, err := new2iIndex(name, equalKey, rangeKey, where, using, b)
+				if err != nil {
+					return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+				}
+				logging.Debugf("Created 2i index `%s`", idx.Name())
+				b.indexes[idx.Name()] = idx
+				return idx, nil
+		*/
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
@@ -580,7 +490,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 		return nil, errors.NewError(nil, "No keys to fetch")
 	}
 
-	bulkResponse, err := b.getBucket().GetBulk(keys)
+	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		return nil, errors.NewError(err, "Error doing bulk get")
 	}
@@ -670,7 +580,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		case INSERT:
 			var added bool
 			// add the key to the backend
-			added, err = b.getBucket().Add(key, 0, value)
+			added, err = b.cbbucket.Add(key, 0, value)
 			if added == false {
 				err = errors.NewError(nil, "Key "+key+" Exists")
 			}
@@ -680,14 +590,14 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			rv := map[string]interface{}{}
 			var cas uint64
 
-			err = b.getBucket().Gets(key, &rv, &cas)
+			err = b.cbbucket.Gets(key, &rv, &cas)
 			if err == nil {
-				err = b.getBucket().Set(key, 0, value)
+				err = b.cbbucket.Set(key, 0, value)
 			} else {
 				logging.Errorf("Failed to insert. Key exists %s", key)
 			}
 		case UPSERT:
-			err = b.getBucket().Set(key, 0, value)
+			err = b.cbbucket.Set(key, 0, value)
 		}
 
 		if err != nil {
@@ -723,7 +633,7 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 	failedDeletes := make([]string, 0)
 	var err error
 	for _, key := range deletes {
-		if err = b.getBucket().Delete(key); err != nil {
+		if err = b.cbbucket.Delete(key); err != nil {
 			logging.Infof("Failed to delete key %s", key)
 			failedDeletes = append(failedDeletes, key)
 		}
@@ -737,31 +647,19 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 }
 
 func (b *keyspace) Release() {
-	b.getBucket().Close()
+	b.cbbucket.Close()
 }
 
-func (b *keyspace) loadIndexes() (map[string]datastore.Index, errors.Error) {
-	indexes := make(map[string]datastore.Index)
-	xs, err := loadViewIndexes(b)
-	if err != nil {
-		return nil, errors.NewError(nil, err.Error())
+func (b *keyspace) loadIndexes() (err errors.Error) {
+	if err1 := b.loadViewIndexes(); err1 != nil {
+		err = err1
 	}
-	for _, index := range xs {
-		indexes[index.Name()] = index
-	}
-
-	if xs, err = b.load2iIndexes(); err != nil {
-		return nil, errors.NewError(nil, err.Error())
-	}
-	for _, index := range xs {
-		name := index.Name()
-		if _, ok := indexes[name]; ok {
-			logging.Errorf("Index %q already loaded from view", name)
-		} else {
-			indexes[name] = index
+	/*
+		if err2 := b.load2iIndexes(); err2 != nil {
+			err = err2
 		}
-	}
-	return indexes, nil
+	*/
+	return
 }
 
 // primaryIndex performs full keyspace scans.
@@ -816,18 +714,4 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, c
 
 func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 	pi.viewIndex.ScanEntries(limit, conn)
-}
-
-// go-routine, keep refreshing bucket (aka keyspace).
-func keepIndexesFresh(b *keyspace) {
-	for _ = range time.Tick(1 * time.Minute) {
-		b.refresh()
-	}
-}
-
-// go-routine, keep refreshing pool (aka namespace).
-func keepPoolFresh(p *namespace) {
-	for _ = range time.Tick(1 * time.Minute) {
-		p.refresh()
-	}
 }
