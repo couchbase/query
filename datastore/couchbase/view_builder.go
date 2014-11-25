@@ -82,7 +82,8 @@ func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, wher
 	return &doc, nil
 }
 
-func loadViewIndexes(b *keyspace) ([]datastore.Index, error) {
+func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
+
 	rows, err := b.cbbucket.GetDDocs()
 	if err != nil {
 		return nil, err
@@ -119,7 +120,7 @@ func loadViewIndexes(b *keyspace) ([]datastore.Index, error) {
 
 	}
 
-	indexes := make([]datastore.Index, 0, len(inames))
+	indexes := make([]*datastore.Index, 0, len(inames))
 	for _, iname := range inames {
 		ddname := "ddl_" + iname
 		jdoc, err := getDesignDoc(b, ddname)
@@ -171,7 +172,7 @@ func loadViewIndexes(b *keyspace) ([]datastore.Index, error) {
 				ddoc:     &ddoc,
 				on:       exprlist,
 			}
-			indexes = append(indexes, index)
+			indexes = append(indexes, &index)
 		} else {
 			index = &viewIndex{
 				name:     iname,
@@ -180,7 +181,7 @@ func loadViewIndexes(b *keyspace) ([]datastore.Index, error) {
 				ddoc:     &ddoc,
 				on:       exprlist,
 			}
-			indexes = append(indexes, index)
+			indexes = append(indexes, &index)
 		}
 	}
 	b.nonUsableIndexes = nonUsableIndexes
