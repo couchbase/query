@@ -175,7 +175,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, err
 		}
 
-		prepared, err = plan.Prepare(stmt, this.datastore, this.systemstore, namespace, false)
+		prepared, err = plan.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, err
 		}

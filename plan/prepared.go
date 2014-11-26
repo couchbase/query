@@ -15,7 +15,7 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-func Prepare(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
+func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery bool) (*Prepared, error) {
 	operator, err := Build(stmt, datastore, systemstore, namespace, subquery)
 	if err != nil {

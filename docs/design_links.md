@@ -9,7 +9,9 @@
 This document provides links to external design documents; links are provided under relevant heading.
 
 ## Core Query Engine
+
 * [N1QL Query API](http://goo.gl/ezpmVx) - design document for query REST API
+* [Prepared Statements](http://goo.gl/T8l7nd) - design document for prepared statements
 
 ## Clustering Management
 
