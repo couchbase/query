@@ -181,6 +181,7 @@ indexType        datastore.IndexType
 %token SATISFIES
 %token SCHEMA
 %token SELECT
+%token SELF
 %token SET
 %token SHOW
 %token SOME
@@ -1732,6 +1733,12 @@ construction_expr
 IDENTIFIER
 {
     $$ = expression.NewIdentifier($1)
+}
+|
+/* Self */
+SELF
+{
+    $$ = expression.NewSelf()
 }
 |
 /* Parameter */

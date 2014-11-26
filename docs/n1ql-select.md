@@ -1788,8 +1788,6 @@ __BASE64(expr)__ - base64-encoding of expr.
 
 __META(expr)__ - meta data for the document _expr_.
 
-__SELF()__ - the top-level value in the current context.
-
 __UUID()__ - a version 4 Universally Unique Identifier(UUID).
 
 ### Type checking functions
@@ -2039,6 +2037,7 @@ for future use.
 * __SATISFIES__
 * __SCHEMA__
 * __SELECT__
+* __SELF__
 * __SET__
 * __SHOW__
 * __SOME__

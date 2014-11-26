@@ -198,6 +198,7 @@
 /[sS][aA][tT][iI][sS][fF][iI][eE][sS]/		 { logToken("SATISFIES"); return SATISFIES }
 /[sS][cC][hH][eE][mM][aA]/			 { logToken("SCHEMA"); return SCHEMA }
 /[sS][eE][lL][eE][cC][tT]/			 { logToken("SELECT"); return SELECT }
+/[sS][eE][lL][fF]/				 { logToken("SELF"); return SELF }
 /[sS][eE][tT]/					 { logToken("SET"); return SET }
 /[sS][hH][oO][wW]/				 { logToken("SHOW"); return SHOW }
 /[sS][oO][mM][eE]/				 { logToken("SOME"); return SOME }
