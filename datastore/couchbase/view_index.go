@@ -202,7 +202,9 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 						logging.Errorf("%v", err)
 
 						// remove this specific bucket from the pool cache
+						vi.keyspace.namespace.lock.Lock()
 						delete(vi.keyspace.namespace.keyspaceCache, vi.keyspace.Name())
+						vi.keyspace.namespace.lock.Unlock()
 						// close this bucket
 						vi.keyspace.Release()
 						// ask the pool to refresh

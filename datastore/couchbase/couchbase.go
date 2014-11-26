@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
@@ -138,6 +139,8 @@ type namespace struct {
 	name          string
 	cbNamespace   cb.Pool
 	keyspaceCache map[string]datastore.Keyspace
+	lock          sync.Mutex   // lock to guard the keyspaceCache
+	nslock        sync.RWMutex // lock for this structure
 }
 
 func (p *namespace) DatastoreId() string {
@@ -173,6 +176,8 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		if err != nil {
 			return nil, errors.NewError(err, "Keyspace "+name+" name not found")
 		}
+		p.lock.Lock()
+		defer p.lock.Unlock()
 		p.keyspaceCache[name] = b
 	}
 	return b, nil
@@ -180,6 +185,18 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 
 func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 	return p.KeyspaceByName(id)
+}
+
+func (p *namespace) setPool(cbpool cb.Pool) {
+	p.nslock.Lock()
+	defer p.nslock.Unlock()
+	p.cbNamespace = cbpool
+}
+
+func (p *namespace) getPool() cb.Pool {
+	p.nslock.RLock()
+	defer p.nslock.RUnlock()
+	return p.cbNamespace
 }
 
 func (p *namespace) refresh() {
@@ -205,18 +222,20 @@ func (p *namespace) refresh() {
 
 	}
 
-	// keyspaces in the pool
-	for name, _ := range p.keyspaceCache {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	for name, keySpace := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
 		_, err := p.cbNamespace.GetBucket(name)
 		if err != nil {
+			keySpace.(*keyspace).deleted = true
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
 		}
 	}
 
-	p.cbNamespace = newpool
+	p.setPool(newpool)
 }
 
 func keepPoolFresh(p *namespace) {
@@ -234,6 +253,7 @@ type keyspace struct {
 	indexes          map[string]datastore.Index
 	primary          datastore.PrimaryIndex
 	cbbucket         *cb.Bucket
+	deleted          bool
 	nonUsableIndexes []string // indexes that cannot be used
 }
 
@@ -264,21 +284,25 @@ func keepIndexesFresh(b *keyspace) {
 	tickChan := time.Tick(1 * time.Minute)
 
 	for _ = range tickChan {
+		if b.deleted == true {
+			return
+		}
 		b.refresh()
 	}
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
-	logging.Infof("Created New Bucket %s", name)
-	cbbucket, err := p.cbNamespace.GetBucket(name)
+	cbNamespace := p.getPool()
+	cbbucket, err := cbNamespace.GetBucket(name)
 	if err != nil {
+		logging.Infof(" keyspace %s not found %v", name, err)
 		// go-couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
 		p.refresh()
 		// and then check one more time
-		cbbucket, err = p.cbNamespace.GetBucket(name)
+		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
 			return nil, errors.NewError(nil, fmt.Sprintf("Bucket %v not found.", name))
@@ -292,6 +316,8 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		indexes:          make(map[string]datastore.Index),
 		nonUsableIndexes: make([]string, 0),
 	}
+
+	logging.Infof("Created New Bucket %s", name)
 
 	//discover existing indexes
 	if ierr := rv.loadIndexes(); ierr != nil {
@@ -647,6 +673,7 @@ func (b *keyspace) Delete(deletes []string) errors.Error {
 }
 
 func (b *keyspace) Release() {
+	b.deleted = true
 	b.cbbucket.Close()
 }
 
