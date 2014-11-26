@@ -71,6 +71,8 @@ builddistpackages() {
     cp -r $DIST/tutorial_tmp/tutorial/content/ $DIST/stage/static/tutorial
     mkdir -p $DIST/stage/data/default/tutorial
     unzip tutorial/data/sampledb.zip -d $DIST/stage/data/default/
+    mkdir $DIST/stage/$version
+    mv $DIST/stage/* $DIST/stage/$version
     cd $DIST/stage
     zip $DIST/couchbase-query_dev_preview4_x86_64_mac.zip -r .
     cd $top
@@ -88,6 +90,8 @@ builddistpackages() {
     cp -r $DIST/tutorial_tmp/tutorial/content/ $DIST/stage/static/tutorial
     mkdir -p $DIST/stage/data/default/tutorial
     unzip tutorial/data/sampledb.zip -d $DIST/stage/data/default/
+    mkdir $DIST/stage/$version
+    mv $DIST/stage/* $DIST/stage/$version
     cd $DIST/stage
     tar zcvf $DIST/couchbase-query_dev_preview4_x86_linux.tar.gz .
     cd $top
@@ -105,6 +109,8 @@ builddistpackages() {
     cp -r $DIST/tutorial_tmp/tutorial/content/ $DIST/stage/static/tutorial
     mkdir -p $DIST/stage/data/default/tutorial
     unzip tutorial/data/sampledb.zip -d $DIST/stage/data/default/
+    mkdir $DIST/stage/$version
+    mv $DIST/stage/* $DIST/stage/$version
     cd $DIST/stage
     tar zcvf $DIST/couchbase-query_dev_preview4_x86_64_linux.tar.gz .
     cd $top
@@ -122,6 +128,8 @@ builddistpackages() {
     cp -r $DIST/tutorial_tmp/tutorial/content/ $DIST/stage/static/tutorial
     mkdir -p $DIST/stage/data/default/tutorial
     unzip tutorial/data/sampledb.zip -d $DIST/stage/data/default/
+    mkdir $DIST/stage/$version
+    mv $DIST/stage/* $DIST/stage/$version
     cd $DIST/stage
     zip $DIST/couchbase-query_dev_preview4_x86_win.zip -r .
     cd $top
@@ -139,12 +147,15 @@ builddistpackages() {
     cp -r $DIST/tutorial_tmp/tutorial/content/ $DIST/stage/static/tutorial
     mkdir -p $DIST/stage/data/default/tutorial
     unzip tutorial/data/sampledb.zip -d $DIST/stage/data/default/
+    mkdir $DIST/stage/$version
+    mv $DIST/stage/* $DIST/stage/$version
     cd $DIST/stage
     zip $DIST/couchbase-query_dev_preview4_x86_64_win.zip -r .
     cd $top
     rm -rf $DIST/stage
 
     rm -rf $DIST/tutorial_tmp
+
     
 }
 
