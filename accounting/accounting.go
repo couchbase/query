@@ -221,16 +221,21 @@ func RecordMetrics(acctstore AccountingStore,
 	ms.Counter(ERRORS).Inc(int64(error_count))
 	ms.Counter(WARNINGS).Inc(int64(warn_count))
 
+	if error_count > 0 {
+		return
+	}
+
 	stmt_tokens := strings.Split(strings.TrimSpace(stmt), " ")
 	if len(stmt_tokens) < 1 {
 		return
 	}
+
 	switch strings.ToLower(stmt_tokens[0]) {
 	case "select":
 		ms.Counter(SELECTS).Inc(1)
-	case "insert":
-		ms.Counter(UPDATES).Inc(1)
 	case "update":
+		ms.Counter(UPDATES).Inc(1)
+	case "insert":
 		ms.Counter(INSERTS).Inc(1)
 	case "delete":
 		ms.Counter(DELETES).Inc(1)
