@@ -86,12 +86,12 @@ func (b *dualKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.
 		return b.primary, nil
 	}
 
-	return nil, errors.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Not supported.")
+	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
@@ -109,28 +109,23 @@ func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.E
 }
 
 func (b *dualKeyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
-	doc := map[string]interface{}{}
-	return value.NewAnnotatedValue(doc), nil
+	return value.NewAnnotatedValue(nil), nil
 }
 
 func (b *dualKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Delete(deletes []string) errors.Error {
-	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return errors.NewError(nil, "Mutations not allowed on system:dual.")
 }
 
 func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
@@ -138,7 +133,7 @@ func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_DUAL
 
-	b.primary = &dualIndex{name: "primary", keyspace: b}
+	b.primary = &dualIndex{name: "#primary", keyspace: b}
 
 	return b, nil
 }
