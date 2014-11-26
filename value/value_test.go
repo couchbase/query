@@ -65,7 +65,7 @@ func TestTypeRecognition(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		val := NewValueFromBytes(test.input)
+		val := NewValue(test.input)
 		actualType := val.Type()
 		if actualType != test.expectedType {
 			t.Errorf("Expected type of %s to be %d, got %d", string(test.input), test.expectedType, actualType)
@@ -75,7 +75,7 @@ func TestTypeRecognition(t *testing.T) {
 
 func TestFieldAccess(t *testing.T) {
 
-	val := NewValueFromBytes([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
+	val := NewValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
 
 	var tests = []struct {
 		field  string
@@ -102,7 +102,7 @@ func TestFieldAccess(t *testing.T) {
 
 func TestIndexAccess(t *testing.T) {
 
-	val := NewValueFromBytes([]byte(`["marty",{"type":"contact"}]`))
+	val := NewValue([]byte(`["marty",{"type":"contact"}]`))
 
 	var tests = []struct {
 		index  int
@@ -266,17 +266,17 @@ func TestValue(t *testing.T) {
 		{NewValue([]interface{}{NewValue("marty2")}), []interface{}{stringValue("marty2")}},
 		{NewValue(map[string]interface{}{"marty": "cool"}), map[string]interface{}{"marty": "cool"}},
 		{NewValue(map[string]interface{}{"marty3": NewValue("cool")}), map[string]interface{}{"marty3": stringValue("cool")}},
-		{NewValueFromBytes([]byte("null")), nil},
-		{NewValueFromBytes([]byte("true")), true},
-		{NewValueFromBytes([]byte("false")), false},
-		{NewValueFromBytes([]byte("1")), 1.0},
-		{NewValueFromBytes([]byte("3.14")), 3.14},
-		{NewValueFromBytes([]byte("-7")), -7.0},
-		{NewValueFromBytes([]byte("\"\"")), ""},
-		{NewValueFromBytes([]byte("\"marty\"")), "marty"},
-		{NewValueFromBytes([]byte("[\"marty\"]")), []interface{}{"marty"}},
-		{NewValueFromBytes([]byte("{\"marty\": \"cool\"}")), map[string]interface{}{"marty": "cool"}},
-		{NewValueFromBytes([]byte("abc")), []byte("abc")},
+		{NewValue([]byte("null")), nil},
+		{NewValue([]byte("true")), true},
+		{NewValue([]byte("false")), false},
+		{NewValue([]byte("1")), 1.0},
+		{NewValue([]byte("3.14")), 3.14},
+		{NewValue([]byte("-7")), -7.0},
+		{NewValue([]byte("\"\"")), ""},
+		{NewValue([]byte("\"marty\"")), "marty"},
+		{NewValue([]byte("[\"marty\"]")), []interface{}{"marty"}},
+		{NewValue([]byte("{\"marty\": \"cool\"}")), map[string]interface{}{"marty": "cool"}},
+		{NewValue([]byte("abc")), []byte("abc")},
 		// new value from existing value
 		{NewValue(NewValue(true)), true},
 	}
@@ -290,7 +290,7 @@ func TestValue(t *testing.T) {
 }
 
 func TestValueOverlay(t *testing.T) {
-	val := NewValueFromBytes([]byte("{\"marty\": \"cool\"}"))
+	val := NewValue([]byte("{\"marty\": \"cool\"}"))
 	val.SetField("marty", "ok")
 	expectedVal := map[string]interface{}{"marty": "ok"}
 	actualVal := val.Actual()
@@ -305,7 +305,7 @@ func TestValueOverlay(t *testing.T) {
 		t.Errorf("Expected %v, got %v, for value of %v", expectedVal, actualVal, val)
 	}
 
-	val = NewValueFromBytes([]byte("[\"marty\"]"))
+	val = NewValue([]byte("[\"marty\"]"))
 	val.SetIndex(0, "gerald")
 	expectedVal2 := []interface{}{"gerald"}
 	actualVal = val.Actual()
@@ -326,7 +326,7 @@ func TestComplexOverlay(t *testing.T) {
 	// then add an alias
 	// then call value which causes it to be parsed
 	// then call value again, which goes through a different field with the already parsed data
-	val := NewValueFromBytes([]byte("{\"marty\": \"cool\"}"))
+	val := NewValue([]byte("{\"marty\": \"cool\"}"))
 	val.SetField("marty", "ok")
 	expectedVal := map[string]interface{}{"marty": "ok"}
 	actualVal := val.Actual()
@@ -355,7 +355,7 @@ func TestUnmodifiedValuesFromBytesBackToBytes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		val := NewValueFromBytes(test.input)
+		val := NewValue(test.input)
 		out, _ := val.MarshalJSON()
 		if !reflect.DeepEqual(out, test.expectedBytes) {
 			t.Errorf("Expected %s to be  %s, got %s", string(test.input), string(test.expectedBytes), string(out))
@@ -393,7 +393,7 @@ func BenchmarkLargeValue(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		var ok bool
-		val := NewValueFromBytes(codeJSON)
+		val := NewValue(codeJSON)
 		for _, key := range keys {
 			switch key := key.(type) {
 			case string:
@@ -480,7 +480,7 @@ func TestJsonPointerInvalidJSON(t *testing.T) {
 
 func TestCopyValueFromBytes(t *testing.T) {
 
-	val := NewValueFromBytes([]byte(`{"name":"marty","type":"contact","address":{"street":"sutton oaks"}}`))
+	val := NewValue([]byte(`{"name":"marty","type":"contact","address":{"street":"sutton oaks"}}`))
 
 	val2 := val.Copy()
 	val2.SetField("name", "bob")
@@ -549,7 +549,7 @@ func TestCopyValueFromValue(t *testing.T) {
 }
 
 func TestArraySetIndexLongerThanExistingArray(t *testing.T) {
-	val := NewValueFromBytes([]byte(`[]`))
+	val := NewValue([]byte(`[]`))
 	val = val.CopyForUpdate()
 	val.SetIndex(0, "gerald")
 

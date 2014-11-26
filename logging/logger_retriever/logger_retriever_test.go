@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/couchbaselabs/query/accounting"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/querylog"
 )
 
@@ -25,7 +25,7 @@ func TestRetrieverLogger(t *testing.T) {
 		t.Errorf("Could not create Retriever Logger")
 	}
 
-	var logApi accounting.Logger = rl
+	var logApi logging.Logger = rl
 
 	traceId := "0x007"
 
