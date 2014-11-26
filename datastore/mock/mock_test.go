@@ -229,13 +229,13 @@ func doIndexScan(t *testing.T, b datastore.Keyspace, span *datastore.Span) (
 
 	go idx.Scan(span, false, nitems, conn)
 
-	var entry *datastore.IndexEntry
-	ok := true
-	for ok {
-		entry, ok = <-conn.EntryChannel()
-		if ok {
-			e = append(e, entry)
+	for {
+		entry, ok := <-conn.EntryChannel()
+		if !ok {
+			return
 		}
+
+		e = append(e, entry)
 	}
 
 	return
