@@ -10,15 +10,16 @@
 package logger_retriever
 
 import (
-	"runtime"
 	"testing"
 
+	/*
 	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/querylog"
+*/
 )
 
 func TestRetrieverLogger(t *testing.T) {
-
+/*
 	rl := NewRetrieverLogger(nil)
 
 	if rl == nil {
@@ -48,4 +49,5 @@ func TestRetrieverLogger(t *testing.T) {
 	rl.logWriter.DisableTraceLogging()
 
 	logApi.Error(traceId, querylog.DATASTORE, "this will go to the file")
+*/
 }

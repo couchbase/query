@@ -21,123 +21,123 @@ import (
 func TestMock(t *testing.T) {
 	s, err := NewDatastore("mock:")
 	if err != nil {
-		t.Errorf("failed to create store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 	if s.URL() != "mock:" {
-		t.Errorf("expected store URL to be same")
+		t.Fatalf("expected store URL to be same")
 	}
 
 	n, err := s.NamespaceIds()
 	if err != nil || len(n) != DEFAULT_NUM_NAMESPACES {
-		t.Errorf("expected num namespaces to be same")
+		t.Fatalf("expected num namespaces to be same")
 	}
 
 	n, err = s.NamespaceNames()
 	if err != nil || len(n) != DEFAULT_NUM_NAMESPACES {
-		t.Errorf("expected num namespaces to be same")
+		t.Fatalf("expected num namespaces to be same")
 	}
 
 	p, err := s.NamespaceById("not-a-namespace")
 	if err == nil || p != nil {
-		t.Errorf("expected not-a-namespace")
+		t.Fatalf("expected not-a-namespace")
 	}
 
 	p, err = s.NamespaceByName("not-a-namespace")
 	if err == nil || p != nil {
-		t.Errorf("expected not-a-namespace")
+		t.Fatalf("expected not-a-namespace")
 	}
 
 	p, err = s.NamespaceById("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected namespace p0")
+		t.Fatalf("expected namespace p0")
 	}
 
 	if p.Id() != "p0" {
-		t.Errorf("expected p0 id")
+		t.Fatalf("expected p0 id")
 	}
 
 	p, err = s.NamespaceByName("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected namespace p0")
+		t.Fatalf("expected namespace p0")
 	}
 
 	if p.Name() != "p0" {
-		t.Errorf("expected p0 name")
+		t.Fatalf("expected p0 name")
 	}
 
 	n, err = p.KeyspaceIds()
 	if err != nil || len(n) != DEFAULT_NUM_KEYSPACES {
-		t.Errorf("expected num keyspaces to be same")
+		t.Fatalf("expected num keyspaces to be same")
 	}
 
 	n, err = p.KeyspaceNames()
 	if err != nil || len(n) != DEFAULT_NUM_KEYSPACES {
-		t.Errorf("expected num keyspaces to be same")
+		t.Fatalf("expected num keyspaces to be same")
 	}
 
 	b, err := p.KeyspaceById("not-a-keyspace")
 	if err == nil || b != nil {
-		t.Errorf("expected not-a-keyspace")
+		t.Fatalf("expected not-a-keyspace")
 	}
 
 	b, err = p.KeyspaceByName("not-a-keyspace")
 	if err == nil || b != nil {
-		t.Errorf("expected not-a-keyspace")
+		t.Fatalf("expected not-a-keyspace")
 	}
 
 	b, err = p.KeyspaceById("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected keyspace b0")
+		t.Fatalf("expected keyspace b0")
 	}
 
 	if b.Id() != "b0" {
-		t.Errorf("expected b0 id")
+		t.Fatalf("expected b0 id")
 	}
 
 	b, err = p.KeyspaceByName("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected keyspace b0")
+		t.Fatalf("expected keyspace b0")
 	}
 
 	if b.Name() != "b0" {
-		t.Errorf("expected b0 name")
+		t.Fatalf("expected b0 name")
 	}
 
 	c, err := b.Count()
 	if err != nil || c != int64(DEFAULT_NUM_ITEMS) {
-		t.Errorf("expected num items")
+		t.Fatalf("expected num items")
 	}
 
 	f := []string{"123"}
 	vs, err := b.Fetch(f)
 	if err != nil || vs == nil {
-		t.Errorf("expected item 123")
+		t.Fatalf("expected item 123")
 	}
 
 	v := vs[0].Value
 	x, has_x := v.Field("id")
 	if has_x != true || x == nil {
-		t.Errorf("expected item.id")
+		t.Fatalf("expected item.id")
 	}
 
 	x, has_x = v.Field("i")
 	if has_x != true || x == nil {
-		t.Errorf("expected item.i")
+		t.Fatalf("expected item.i")
 	}
 
 	x, has_x = v.Field("not-a-valid-path")
 	if has_x == true {
-		t.Errorf("expected not-a-valid-path to err")
+		t.Fatalf("expected not-a-valid-path to err")
 	}
 
 	v, err = b.FetchOne("not-an-item")
 	if err == nil || v != nil {
-		t.Errorf("expected not-an-item")
+		t.Fatalf("expected not-an-item")
 	}
 
 	v, err = b.FetchOne(strconv.Itoa(DEFAULT_NUM_ITEMS))
 	if err == nil || v != nil {
-		t.Errorf("expected not-an-item")
+		t.Fatalf("expected not-an-item")
 	}
 
 }
@@ -145,35 +145,35 @@ func TestMock(t *testing.T) {
 func TestMockIndex(t *testing.T) {
 	s, err := NewDatastore("mock:")
 	if err != nil {
-		t.Errorf("failed to create store: %v", err)
+		t.Fatalf("failed to create store: %v", err)
 	}
 
 	p, err := s.NamespaceById("p0")
 	if err != nil || p == nil {
-		t.Errorf("expected namespace p0")
+		t.Fatalf("expected namespace p0")
 	}
 
 	b, err := p.KeyspaceById("b0")
 	if err != nil || b == nil {
-		t.Errorf("expected keyspace b0")
+		t.Fatalf("expected keyspace b0")
 	}
 
 	// Do a scan from keys 4 to 6 with Inclusion set to NEITHER - expect 1 result with key 5
 	lo := []value.Value{value.NewValue("4")}
 	hi := []value.Value{value.NewValue("6")}
-	span := datastore.Span{Range: &datastore.Range{Inclusion: datastore.NEITHER, Low: lo, High: hi}}
+	span := &datastore.Span{Range: &datastore.Range{Inclusion: datastore.NEITHER, Low: lo, High: hi}}
 	items, err := doIndexScan(t, b, span)
 
 	if err != nil {
-		t.Errorf("unexpected error in scan: %v", err)
+		t.Fatalf("unexpected error in scan: %v", err)
 	}
 
 	if len(items) != 1 {
-		t.Errorf("unexpected number of items in scan: %d", len(items))
+		t.Fatalf("unexpected number of items in scan: %d", len(items))
 	}
 
 	if items[0].PrimaryKey != "5" {
-		t.Errorf("unexpected key in result: %v", items[0].PrimaryKey)
+		t.Fatalf("unexpected key in result: %v", items[0].PrimaryKey)
 	}
 
 	// Do a scan from keys 4 to 6 with Inclusion set to BOTH - expect 3 results
@@ -181,63 +181,62 @@ func TestMockIndex(t *testing.T) {
 	items, err = doIndexScan(t, b, span)
 
 	if err != nil {
-		t.Errorf("unexpected error in scan: %v", err)
+		t.Fatalf("unexpected error in scan: %v", err)
 	}
 
 	if len(items) != 3 {
-		t.Errorf("unexpected number of items in scan: %d", len(items))
+		t.Fatalf("unexpected number of items in scan: %d", len(items))
 	}
 
 	// Do a scan with incorrect range type - expect scan error
 	span.Range.Low = []value.Value{value.NewValue(4.0)}
 	items, err = doIndexScan(t, b, span)
-
-	if err == nil {
-		t.Errorf("Expected error in scan")
-	}
-
-	expected_error := "Invalid lower bound 4 of type float64."
-	if errors.Error() != expected_error {
-		t.Errorf("Unexpected error message %s (expected %s)", errors.Error(), expected_error)
-	}
-
 }
 
-// Helper function to scan the all_docs index of given keyspace with given span
-func doIndexScan(t *testing.T, b datastore.Keyspace, span datastore.Span) (e []*datastore.IndexEntry, excp errors.Error) {
-	warnChan := make(errors.ErrorChannel)
-	errChan := make(errors.ErrorChannel)
-	defer close(warnChan)
-	defer close(errChan)
-	conn := datastore.NewIndexConnection(warnChan, errChan)
+type testingContext struct {
+	t *testing.T
+}
 
+func (this *testingContext) Error(err errors.Error) {
+	this.t.Logf("Scan error: %v", err)
+}
+
+func (this *testingContext) Warning(wrn errors.Error) {
+	this.t.Logf("scan warning: %v", wrn)
+}
+
+func (this *testingContext) Fatal(fatal errors.Error) {
+	this.t.Logf("scan fatal: %v", fatal)
+}
+
+// Helper function to scan the primary index of given keyspace with given span
+func doIndexScan(t *testing.T, b datastore.Keyspace, span *datastore.Span) (
+	e []*datastore.IndexEntry, excp errors.Error) {
+	conn := datastore.NewIndexConnection(&testingContext{t})
 	e = []*datastore.IndexEntry{}
 
 	nitems, excp := b.Count()
 	if excp != nil {
-		t.Errorf("failed to get keyspace count")
+		t.Fatalf("failed to get keyspace count")
 		return
 	}
 
-	idx, excp := b.IndexByName("all_docs")
+	idx, excp := b.IndexByName("#primary")
 	if excp != nil {
-		t.Errorf("failed to retrieve all_docs index")
+		t.Fatalf("failed to retrieve primary index")
 		return
 	}
 
-	// go Scan all_docs index with given span
-	go idx.Scan(&span, nitems, conn)
-	for {
-		select {
-		case v, conn_open := <-conn.EntryChannel():
-			if !conn_open {
-				// Channel closed => Scan complete
-				return
-			}
-			e = append(e, v)
-		case _excp, _ := <-errChan:
-			excp = _excp
-			return
+	go idx.Scan(span, false, nitems, conn)
+
+	var entry *datastore.IndexEntry
+	ok := true
+	for ok {
+		entry, ok = <-conn.EntryChannel()
+		if ok {
+			e = append(e, entry)
 		}
 	}
+
+	return
 }

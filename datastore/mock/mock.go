@@ -280,9 +280,9 @@ func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 		for j := 0; j < nkeyspaces; j++ {
 			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems,
 				indexes: map[string]datastore.Index{}}
-			pi := &primaryIndex{name: "all_docs", keyspace: b}
+			pi := &primaryIndex{name: "#primary", keyspace: b}
 			b.primary = pi
-			b.indexes["all_docs"] = pi
+			b.indexes["#primary"] = pi
 			p.keyspaces[b.name] = b
 			p.keyspaceNames = append(p.keyspaceNames, b.name)
 		}
@@ -348,6 +348,7 @@ func (pi *primaryIndex) Drop() errors.Error {
 
 func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
+
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
 	low, high := "", ""
@@ -379,6 +380,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, c
 	if limit == 0 {
 		limit = int64(pi.keyspace.nitems)
 	}
+
 	for i := 0; i < pi.keyspace.nitems && int64(i) < limit; i++ {
 		id := strconv.Itoa(i)
 
