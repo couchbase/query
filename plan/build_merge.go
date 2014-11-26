@@ -32,13 +32,15 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			return nil, fmt.Errorf("MERGE missing source.")
 		}
 
-		this.children = children
-		this.subChildren = subChildren
-
 		_, err := source.From().Accept(this)
 		if err != nil {
 			return nil, err
 		}
+
+		// Update local operator slices with results of building From:
+		children = append(children, this.children...)
+		subChildren = append(subChildren, this.subChildren...)
+
 	}
 
 	if source.As() != "" {
