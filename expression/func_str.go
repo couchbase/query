@@ -22,26 +22,55 @@ import (
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function CONTAINS(expr, substr).
+It returns true if the string contains the substring. Type
+Contains is a struct that implements BinaryFunctionBase.
+*/
 type Contains struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewContains calls NewBinaryFunctionBase to
+create a function named CONTAINS with the two
+expressions as input.
+*/
 func NewContains(first, second Expression) Function {
 	return &Contains{
 		*NewBinaryFunctionBase("contains", first, second),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Contains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type BOOLEAN.
+*/
 func (this *Contains) Type() value.Type { return value.BOOLEAN }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method takes in two values and returns new value that returns a boolean
+value that depicts if the second value is contained within the first. If
+either of the input values are missing, return a missing value, and if they
+arent strings then return a null value. Use the Contains method from the
+string package to return a boolean value that is true if substring (second) 
+is within the string(first).  
+*/
 func (this *Contains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -53,6 +82,10 @@ func (this *Contains) Apply(context Context, first, second value.Value) (value.V
 	return value.NewValue(rv), nil
 }
 
+/*
+The constructor returns a NewContains with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Contains) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewContains(operands[0], operands[1])
@@ -65,26 +98,54 @@ func (this *Contains) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function LENGTH(expr). It 
+returns the length of the string value. Type Length
+is a struct that implements UnaryFunctionBase.
+*/
 type Length struct {
 	UnaryFunctionBase
 }
 
+/*       
+The function NewLength calls NewUnaryFunctionBase to
+create a function named LENGTH with an expression as 
+input.
+*/
 func NewLength(operand Expression) Function {
 	return &Length{
 		*NewUnaryFunctionBase("length", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/  
 func (this *Length) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *Length) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an argument value and returns its length 
+as value. If the input type is missing return missing, and if
+it isnt string then return null value. Use the len method to 
+return the length of the input string. Convert it into valid
+N1QL value and return.
+*/
 func (this *Length) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -96,6 +157,10 @@ func (this *Length) Apply(context Context, arg value.Value) (value.Value, error)
 	return value.NewValue(float64(rv)), nil
 }
 
+/*
+The constructor returns a NewLength with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Length) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewLength(operands[0])
@@ -108,26 +173,56 @@ func (this *Length) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function LOWER(expr). It returns 
+the lowercase of the string value. Type Lower is a struct 
+that implements UnaryFunctionBase.
+*/
 type Lower struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewLower calls NewUnaryFunctionBase to
+create a function named LOWER with an expression as
+input.
+*/
 func NewLower(operand Expression) Function {
 	return &Lower{
 		*NewUnaryFunctionBase("lower", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Lower) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Lower) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an argument value and returns a 
+lowercase string as value. If the input type is 
+missing return missing, and if it isnt string then 
+return null value. Use the ToLower method to 
+convert the string to lower case on a valid Go type
+from the Actual method on the argument value. Return
+this lower case string as Value. 
+*/
 func (this *Lower) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -139,6 +234,10 @@ func (this *Lower) Apply(context Context, arg value.Value) (value.Value, error) 
 	return value.NewValue(rv), nil
 }
 
+/*
+The constructor returns a NewLower with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Lower) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewLower(operands[0])
@@ -151,26 +250,59 @@ func (this *Lower) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function LTRIM(expr [, chars ]).
+It returns a string with all leading chars removed 
+(whitespace by default). Type NewLTrim is a struct that 
+implements FunctionBase.
+*/
 type LTrim struct {
 	FunctionBase
 }
 
+/*
+The function NewLTrim calls NewFunctionBase to create a
+function named LTRIM with input arguments as the
+operands from the input expression.
+*/
 func NewLTrim(operands ...Expression) Function {
 	return &LTrim{
 		*NewFunctionBase("ltrim", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *LTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *LTrim) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method takes in input arguments and returns a value that
+is a string with the leading chars removed. Range over the 
+args, if its type is missing, return missing. If the argument
+type is not a string, set boolean null as true. If null is
+true it indicates that one of the args is not a string and
+hence return a null value. If not, all input arguments are 
+strings. If there is more than 1 input arg, use that value
+to call TrimLeft method from the strings method and trim that
+value from the input string. Return this trimmed value.
+*/
 func (this *LTrim) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -195,12 +327,27 @@ func (this *LTrim) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required for the LTRIM function
+is 1.
+*/
 func (this *LTrim) MinArgs() int { return 1 }
 
+/*
+Maximum input arguments required for the LTRIM function
+is 2.
+*/
 func (this *LTrim) MaxArgs() int { return 2 }
 
+/*
+Return NewLTrim as FunctionConstructor.
+*/
 func (this *LTrim) Constructor() FunctionConstructor { return NewLTrim }
 
+/*
+Define variable whitespace that constructs a value from 
+' ','\t','\n','\f' and '\r'.
+*/
 var _WHITESPACE = value.NewValue(" \t\n\f\r")
 
 ///////////////////////////////////////////////////
@@ -209,26 +356,56 @@ var _WHITESPACE = value.NewValue(" \t\n\f\r")
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function POSITION(expr, substr). 
+It returns the first position of the substring within the 
+string, or -1. The position is 0-based. Type Position is a 
+struct that implements BinaryFunctionBase.
+*/
 type Position struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewPosition calls NewBinaryFunctionBase to
+create a function named POSITION with two expressions as
+input.
+*/
 func NewPosition(first, second Expression) Function {
 	return &Position{
 		*NewBinaryFunctionBase("position", first, second),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Position) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *Position) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Position) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method takes in two values and returns a value that 
+corresponds to the second expressions position in the 
+first.  If the input type is missing return missing, and 
+if it isnt string then return null value. Use the Index
+method defined by the strings package to calculate the
+offset position of the second string. Return that value.
+*/
 func (this *Position) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -240,6 +417,10 @@ func (this *Position) Apply(context Context, first, second value.Value) (value.V
 	return value.NewValue(float64(rv)), nil
 }
 
+/*
+The constructor returns a NewPosition with two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Position) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewPosition(operands[0], operands[1])
@@ -252,26 +433,56 @@ func (this *Position) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function REPEAT(expr, n).
+It returns string formed by repeating expr n times.
+Type Repeat is a struct that implements BinaryFunctionBase.
+*/
 type Repeat struct {
 	BinaryFunctionBase
 }
 
+/*       
+The function NewRepeat calls NewBinaryFunctionBase to
+create a function named REPEAT with the two
+expressions as input.
+*/
 func NewRepeat(first, second Expression) Function {
 	return &Repeat{
 		*NewBinaryFunctionBase("repeat", first, second),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Repeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Repeat) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method returns a string value that repeats the first value
+second number of times. If either of the input values are 
+missing, return a missing value, and if the first isnt a string 
+and the second isnt a number then return a null value. Check if the
+number n is less than 0 and if it isnt an integer, then return null
+value. Call the Repeat method from the strings package with the 
+string and number and return that stringvalue. 
+*/
 func (this *Repeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -288,6 +499,10 @@ func (this *Repeat) Apply(context Context, first, second value.Value) (value.Val
 	return value.NewValue(rv), nil
 }
 
+/*
+The constructor returns a NewRepeat with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Repeat) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewRepeat(operands[0], operands[1])
@@ -300,26 +515,59 @@ func (this *Repeat) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function REPLACE(expr, substr, repl [, n ]). 
+It returns a string with all occurences of substr replaced with repl. 
+If n is given, at most n replacements are performed. Replace is a type
+struct that implements FunctionBase.
+*/
 type Replace struct {
 	FunctionBase
 }
 
+/*
+The function NewReplace calls NewFunctionBase to create a
+function named REPLACE with input arguments as the
+operands from the input expression.
+*/
 func NewReplace(operands ...Expression) Function {
 	return &Replace{
 		*NewFunctionBase("replace", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Replace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Replace) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method has input args that depict the string, what to replace it with
+and the number of allowable replacements n. Loop over the arguments. If its 
+type is missing, return missing. If the argument type is not a string, 
+set boolean null as true. If any of the first 3 arguments are not a 
+string then return null. If there are 4 input values, and the 4th is not
+a number return a null value. Make sure it is an absolute number, and if not
+return a null value. If n is not present initialize it to -1 and use the 
+Replace method defined by the strings package. Return the final string value
+after creating a valid N!QL value out of the string.
+*/
 func (this *Replace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -357,10 +605,21 @@ func (this *Replace) Apply(context Context, args ...value.Value) (value.Value, e
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required for the REPLACE function
+is 3.
+*/
 func (this *Replace) MinArgs() int { return 3 }
 
+/*
+Maximum input arguments required for the REPLACE function
+is 4.
+*/
 func (this *Replace) MaxArgs() int { return 4 }
 
+/*
+Return NewReplace as FunctionConstructor.
+*/
 func (this *Replace) Constructor() FunctionConstructor { return NewReplace }
 
 ///////////////////////////////////////////////////
@@ -369,26 +628,58 @@ func (this *Replace) Constructor() FunctionConstructor { return NewReplace }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function RTRIM(expr, [, chars ]).
+It returns a string with all trailing chars removed (whitespace 
+by default). RTrim is a type struct that implements FunctionBase.
+*/
 type RTrim struct {
 	FunctionBase
 }
 
+/*
+The function NewRTrim calls NewFunctionBase to create a
+function named RTRIM with input arguments as the
+operands from the input expression.
+*/
 func NewRTrim(operands ...Expression) Function {
 	return &RTrim{
 		*NewFunctionBase("rtrim", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *RTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *RTrim) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method takes in input arguments and returns a value that
+is a string with the leading chars removed. Range over the
+args, if its type is missing, return missing. If the argument
+type is not a string, set boolean null as true. If null is
+true it indicates that one of the args is not a string and
+hence return a null value. If not, all input arguments are
+strings. If there is more than 1 input arg, use that value
+to call TrimRight method from the strings method and trim that
+value from the input string. Return this trimmed value.
+*/
 func (this *RTrim) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -413,10 +704,21 @@ func (this *RTrim) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required for the RTRIM function
+is 1.
+*/
 func (this *RTrim) MinArgs() int { return 1 }
 
+/*
+Maximum input arguments required for the RTRIM function
+is 2.
+*/
 func (this *RTrim) MaxArgs() int { return 2 }
 
+/*
+Return NewRTrim as FunctionConstructor.
+*/
 func (this *RTrim) Constructor() FunctionConstructor { return NewRTrim }
 
 ///////////////////////////////////////////////////
@@ -670,6 +972,9 @@ func (this *Trim) Constructor() FunctionConstructor { return NewTrim }
 //
 ///////////////////////////////////////////////////
 
+/*
+
+*/
 type Upper struct {
 	UnaryFunctionBase
 }

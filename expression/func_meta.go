@@ -176,26 +176,50 @@ func (this *Meta) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Meta function SELF(). It makes the 
+result into a valid json value after removing the object 
+mapper. It is a type struct that implements 
+NullaryFunctionBase. 
+*/
 type Self struct {
 	NullaryFunctionBase
 }
 
+/*
+The function NewSelf returns a pointer to the 
+NewNullaryFunctionBase to create a function SELF. It has
+no input arguments.
+*/
 func NewSelf() Function {
 	return &Self{
 		*NewNullaryFunctionBase("self"),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Self) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a JSON value.
+*/
 func (this *Self) Type() value.Type { return value.JSON }
 
+/*
+Returns the input item.
+*/
 func (this *Self) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return item, nil
 }
 
+/*
+Return the receiver as FunctionConstructor.
+*/
 func (this *Self) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return this }
 }

@@ -66,11 +66,16 @@ func (this *Element) Set(item, val value.Value, context Context) bool {
 		return false
 	}
 
+	first, er := this.First().Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
 	switch second.Type() {
 	case value.NUMBER:
 		s := second.Actual().(float64)
 		if s == math.Trunc(s) {
-			er := item.SetIndex(int(s), val)
+			er := first.SetIndex(int(s), val)
 			return er == nil
 		}
 	}

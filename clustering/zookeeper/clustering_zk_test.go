@@ -13,10 +13,12 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/couchbaselabs/query/accounting/stub"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore/mock"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 func TestZKClustering(t *testing.T) {
@@ -29,6 +31,10 @@ func TestZKClustering(t *testing.T) {
 	stdCfg2 := clustering.NewStandalone(version2, cs, ds, as)
 	stdOpts := clustering.NewOptions(ds.URL(), cs.URL(), as.URL(), "default", false, false, true,
 		runtime.NumCPU()<<16, runtime.NumCPU()<<6, 0, 0, ":8093", ":8094", "", false, "cluster1", "", "")
+
+	if !zookeeper_running() {
+		t.Skip("Zookeeper not running - skipping test")
+	}
 
 	if err != nil {
 		t.Errorf("Error creating configstore: ", err)
@@ -122,4 +128,10 @@ func TestZKClustering(t *testing.T) {
 		fmt.Printf("Successfully removed cluster \n\n", cluster1)
 	}
 
+}
+
+func zookeeper_running() bool {
+	c, _, err1 := zk.Connect([]string{"127.0.0.1"}, time.Second) //*10)
+	_, _, _, err2 := c.ChildrenW("/")
+	return err1 == nil && err2 == nil
 }
