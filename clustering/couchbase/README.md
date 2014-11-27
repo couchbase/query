@@ -9,12 +9,12 @@ Install and start Couchbase:
 
 + [Install and build instructions](https://github.com/couchbase/tlm/)
 
-Note: build the master branch, because this has support for managing the query engine (cbq-engine).
+Note: Get and build the sherlock branch*, because this has support for managing the query engine (cbq-engine).
+
+* repo init -u git://github.com/couchbase/manifest -m sherlock.xml
 
 After Couchbase has been built, take the following steps:
-1. Define the environment variable ENABLE_QUERY to be something (e.g. ENABLE_QUERY=Y)
-2. Copy the cbq-engine binary to the install/bin directory of your Couchbase source
-3. Start Couchbase: cd to the root directory of your Couchbase source and run ./install/bin/couchbase-server start
+1. Start Couchbase: cd to the root directory of your Couchbase source and run ./install/bin/couchbase-server start
 
 ### Unit-tests
 

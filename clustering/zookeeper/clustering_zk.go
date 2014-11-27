@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
@@ -359,7 +358,7 @@ type zkQueryNodeConfig struct {
 func NewQueryNode(query_addr string,
 	stndln *clustering.StdStandalone,
 	opts *clustering.ClOptions) (clustering.QueryNode, errors.Error) {
-	ip_addr, err := externalIP()
+	ip_addr, err := clustering.ExternalIP()
 	if err != nil {
 		ip_addr = "127.0.0.1"
 	}
@@ -417,45 +416,6 @@ func (z *zkQueryNodeConfig) Standalone() clustering.Standalone {
 
 func (z *zkQueryNodeConfig) Options() clustering.QueryNodeOptions {
 	return z.OptionsCL
-}
-
-// helper function to determine the external IP address of a query node -
-// used to create a name for the query node in NewQueryNode function.
-func externalIP() (string, errors.Error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", errors.NewError(err, "")
-	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", errors.NewError(err, "")
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue // not an ipv4 address
-			}
-			return ip.String(), nil
-		}
-	}
-	return "", errors.NewError(nil, "Not connected to the network")
 }
 
 func getJsonString(i interface{}) string {
