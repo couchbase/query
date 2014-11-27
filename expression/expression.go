@@ -74,12 +74,6 @@ type Expression interface {
         */
         EquivalentTo(other Expression) bool
 
-	/*
-        This method returns a boolean indicating if one expression 
-        is the subset of the other. For eg, a<5 is a subset of a<10. 
-        */
-        SubsetOf(other Expression) bool
-
         /*
         It is a utility function that returns the children of the 
         expression. For expression a+b, a and b are the children

@@ -152,7 +152,3 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 		return false
 	}
 }
-
-func (this *FieldName) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
-}

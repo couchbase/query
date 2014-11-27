@@ -104,10 +104,6 @@ func (this *SimpleCase) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
 
-func (this *SimpleCase) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}
-
 func (this *SimpleCase) Children() Expressions {
 	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
 	rv = append(rv, this.searchTerm)

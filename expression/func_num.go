@@ -808,6 +808,10 @@ func (this *Random) Indexable() bool {
 	return false
 }
 
+func (this *Random) EquivalentTo(other Expression) bool {
+	return false
+}
+
 func (this *Random) MinArgs() int { return 0 }
 
 func (this *Random) MaxArgs() int { return 1 }

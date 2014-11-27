@@ -112,7 +112,3 @@ func (this *Array) Indexable() bool {
 func (this *Array) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
-
-func (this *Array) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}

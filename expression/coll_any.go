@@ -99,7 +99,3 @@ func (this *Any) Indexable() bool {
 func (this *Any) EquivalentTo(other Expression) bool {
 	return this.equivalentTo(this, other)
 }
-
-func (this *Any) SubsetOf(other Expression) bool {
-	return this.subsetOf(this, other)
-}

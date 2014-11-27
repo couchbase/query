@@ -84,10 +84,6 @@ func (this *FunctionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *FunctionBase) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
-}
-
 func (this *FunctionBase) Children() Expressions {
 	return this.operands
 }
@@ -287,10 +283,6 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 	}
 
 	return true
-}
-
-func (this *CommutativeFunctionBase) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
 }
 
 func (this *CommutativeFunctionBase) MinArgs() int { return 2 }

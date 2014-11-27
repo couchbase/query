@@ -88,13 +88,6 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 }
 
 /*
-Not implemented yet and hence calls EquivalentTo.
-*/
-func (this *Constant) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
-}
-
-/*
 Constant expressions do not have children. Hence return nil.
 */
 func (this *Constant) Children() Expressions {

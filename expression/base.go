@@ -75,10 +75,3 @@ func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 
 	return true
 }
-
-/*
-This has not been implemented and calls EquivalentTo.
-*/
-func (this *ExpressionBase) subsetOf(expr, other Expression) bool {
-	return expr.EquivalentTo(other)
-}

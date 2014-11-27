@@ -77,10 +77,6 @@ func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *ObjectConstruct) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
-}
-
 func (this *ObjectConstruct) Children() Expressions {
 	rv := make(Expressions, 0, len(this.bindings))
 	for _, expr := range this.bindings {

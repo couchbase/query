@@ -74,6 +74,10 @@ func (this *ClockMillis) Indexable() bool {
 	return false
 }
 
+func (this *ClockMillis) EquivalentTo(other Expression) bool {
+	return false
+}
+
 /*
 The constructor returns a FunctionConstructor by casting the receiver to a
 Function as the FunctionConstructor.
@@ -160,6 +164,10 @@ func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, 
 It is not indexable and hence returns false.
 */
 func (this *ClockStr) Indexable() bool {
+	return false
+}
+
+func (this *ClockStr) EquivalentTo(other Expression) bool {
 	return false
 }
 

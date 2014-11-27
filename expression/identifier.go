@@ -88,13 +88,6 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 }
 
 /*
-This method calls EquivalentTo. It is yet to be implemented.
-*/
-func (this *Identifier) SubsetOf(other Expression) bool {
-	return this.EquivalentTo(other)
-}
-
-/*
 Since identifiers dont have children this returns nil.
 */
 func (this *Identifier) Children() Expressions {

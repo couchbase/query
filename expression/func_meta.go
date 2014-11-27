@@ -287,6 +287,10 @@ func (this *Uuid) Indexable() bool {
 	return false
 }
 
+func (this *Uuid) EquivalentTo(other Expression) bool {
+	return false
+}
+
 /*
 The constructor returns a NewUuid by casting the receiver to a
 Function as the FunctionConstructor.
