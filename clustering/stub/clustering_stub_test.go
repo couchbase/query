@@ -20,41 +20,41 @@ func TestStub(t *testing.T) {
 
 	c, _ := cs.ClusterByName("cluster_id")
 	if c != nil {
-		t.Errorf("Expected nil cluster")
+		t.Fatalf("Expected nil cluster")
 	}
 
 	cnames, _ := cs.ClusterNames()
 	if len(cnames) != 1 {
-		t.Errorf("Expected length of cluster names to be one")
+		t.Fatalf("Expected length of cluster names to be one")
 	}
 
 	c, _ = cs.ClusterByName(cnames[0])
 	if c == nil {
-		t.Errorf("Expected to retrieve cluster using name from ClusterNames()")
+		t.Fatalf("Expected to retrieve cluster using name from ClusterNames()")
 	}
 
 	if c.ConfigurationStoreId() != cs.Id() {
-		t.Errorf("Cluster does not have expected configuration store ID")
+		t.Fatalf("Cluster does not have expected configuration store ID")
 	}
 
 	qnames, _ := c.QueryNodeNames()
 	if len(qnames) != 1 {
-		t.Errorf("Expected length of Query Node names to be one")
+		t.Fatalf("Expected length of Query Node names to be one")
 	}
 
 	q, _ := c.QueryNodeByName(qnames[0])
 	if q == nil {
-		t.Errorf("Expected to retrieve Query Node using name from QueryNodeNames()")
+		t.Fatalf("Expected to retrieve Query Node using name from QueryNodeNames()")
 	}
 
 	if q.Cluster().Name() != c.Name() {
-		t.Errorf("Unexpected cluster name in Query Node: %v", q.Cluster().Name())
+		t.Fatalf("Unexpected cluster name in Query Node: %v", q.Cluster().Name())
 	}
 
 	as := q.Cluster().AccountingStore()
 
 	if as.Id() != c.AccountingStore().Id() {
-		t.Errorf("Unexpected Accounting store id in Query Node: %v", as.Id())
+		t.Fatalf("Unexpected Accounting store id in Query Node: %v", as.Id())
 	}
 
 	mr := as.MetricRegistry()
@@ -63,12 +63,12 @@ func TestStub(t *testing.T) {
 
 	g := mr.Get("metric1")
 	if g != nil {
-		t.Errorf("MetricsRegsitryStub should not have any state")
+		t.Fatalf("MetricsRegsitryStub should not have any state")
 	}
 
 	gauges := mr.Gauges()
 
 	for k, v := range gauges {
-		t.Errorf("Gauges map should be empty, found values: %v, %v", k, v)
+		t.Fatalf("Gauges map should be empty, found values: %v, %v", k, v)
 	}
 }

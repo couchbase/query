@@ -28,7 +28,7 @@ func TestCBClustering(t *testing.T) {
 	as, err := accounting_stub.NewAccountingStore("stub:")
 	cs, err := NewConfigstore("http://127.0.0.1:8091")
 	if err != nil {
-		t.Errorf("Error creating configstore: ", err)
+		t.Fatalf("Error creating configstore: ", err)
 	}
 	version := clustering.NewVersion("0.7.0")
 
@@ -43,13 +43,13 @@ func TestCBClustering(t *testing.T) {
 	cluster1, err = cfm.AddCluster(cluster1)
 
 	if err != nil {
-		t.Errorf("Error adding cluster: ", err)
+		t.Fatalf("Error adding cluster: ", err)
 	}
 
 	// There should be a cluster called "default" in the Couchbase installation:
 	cluster1check, errCheck := cs.ClusterByName("default")
 	if errCheck != nil {
-		t.Errorf("Unexpected Error retrieving cluster by name: ", errCheck)
+		t.Fatalf("Unexpected Error retrieving cluster by name: ", errCheck)
 	}
 
 	fmt.Printf("Retrieved cluster: %v\n\n", cluster1check)
@@ -59,7 +59,7 @@ func TestCBClustering(t *testing.T) {
 	// Get all clusters. There should be at least one ("default")
 	clusters, errCheck := cm.GetClusters()
 	if errCheck != nil {
-		t.Errorf("Unexpected Error retrieving all cluster configs: ", errCheck)
+		t.Fatalf("Unexpected Error retrieving all cluster configs: ", errCheck)
 	}
 	iterateClusters(clusters, t)
 }
@@ -69,20 +69,20 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 		fmt.Printf("Retrieved cluster: %v\n\n", c)
 		queryNodeNames, errCheck := c.QueryNodeNames()
 		if errCheck != nil {
-			t.Errorf("Unexpected Error retrieving query node names: ", errCheck)
+			t.Fatalf("Unexpected Error retrieving query node names: ", errCheck)
 		}
 		for _, qn := range queryNodeNames {
 			fmt.Printf("QueryNodeName=%s\n", qn)
 			qryNode, errCheck := c.QueryNodeByName(qn)
 			if errCheck != nil {
-				t.Errorf("Unexpected Error retrieving query node by name: ", errCheck)
+				t.Fatalf("Unexpected Error retrieving query node by name: ", errCheck)
 			}
 			fmt.Printf("QueryNode=%v\n", qryNode)
 		}
 		clm := c.ClusterManager()
 		queryNodes, errCheck := clm.GetQueryNodes()
 		if errCheck != nil {
-			t.Errorf("Unexpected Error retrieving query nodes: ", errCheck)
+			t.Fatalf("Unexpected Error retrieving query nodes: ", errCheck)
 		}
 		for _, qryNode := range queryNodes {
 			fmt.Printf("QueryNode=%v\n", qryNode)

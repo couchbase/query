@@ -17,7 +17,7 @@ func TestGoMetrics(t *testing.T) {
 	acctstore := NewAccountingStore()
 
 	if acctstore == nil {
-		t.Errorf("Expected to create AccountingStore")
+		t.Fatalf("Expected to create AccountingStore")
 	}
 
 	mr := acctstore.MetricRegistry()
@@ -25,7 +25,7 @@ func TestGoMetrics(t *testing.T) {
 	c := mr.Counter("my_counter")
 
 	if c == nil {
-		t.Errorf("Expected to create Counter")
+		t.Fatalf("Expected to create Counter")
 	}
 
 	c.Inc(10)
@@ -33,14 +33,14 @@ func TestGoMetrics(t *testing.T) {
 	c2 := mr.Counter("my_counter")
 
 	if c2.Count() != 10 {
-		t.Errorf("Expected counter value to be 10")
+		t.Fatalf("Expected counter value to be 10")
 	}
 
 	acctstore.MetricRegistry().Histogram("my_histogram")
 
 	h := acctstore.MetricRegistry().Histogram("my_histogram")
 	if h == nil {
-		t.Errorf("Expected to create a histogram")
+		t.Fatalf("Expected to create a histogram")
 	}
 
 	h.Update(1)

@@ -23,44 +23,32 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/value"
 )
 
 const TEST_URL = "http://localhost:9000/"
 
 func TestServer(t *testing.T) {
-
-	logger, _ := resolver.NewLogger("golog")
-	if logger == nil {
-		fmt.Printf("Invalid logger: %s\n", "logger")
-		return
-	}
-
-	logging.SetLogger(logger)
-
 	site, err := NewDatastore(TEST_URL)
-
 	if err != nil {
-		t.Errorf("Failed to create new datastore. %v", err)
+		t.Skipf("SKIPPING TEST: %v", err)
 	}
 
 	namespaceNames, err := site.NamespaceNames()
 	if err != nil {
-		t.Errorf("Failed to get Namespace names . error %v", err)
+		t.Fatalf("Failed to get Namespace names . error %v", err)
 	}
 
 	fmt.Printf("Namespaces in this instance %v", namespaceNames)
 
 	namespace, err := site.NamespaceByName("default")
 	if err != nil {
-		t.Errorf("Namespace default not found, error %v", err)
+		t.Fatalf("Namespace default not found, error %v", err)
 	}
 
 	keyspaceNames, err := namespace.KeyspaceNames()
 	if err != nil {
-		t.Errorf(" Cannot fetch keyspaces names. error %v", err)
+		t.Fatalf(" Cannot fetch keyspaces names. error %v", err)
 	}
 
 	fmt.Printf("Keyspaces in this namespace %v", keyspaceNames)
@@ -68,7 +56,7 @@ func TestServer(t *testing.T) {
 	//connect to beer-sample
 	ks, err := namespace.KeyspaceByName("beer-sample")
 	if err != nil {
-		t.Errorf(" Cannot connect to beer-sample. Error %v", err)
+		t.Fatalf(" Cannot connect to beer-sample. Error %v", err)
 		return
 	}
 
@@ -84,7 +72,7 @@ func TestServer(t *testing.T) {
 
 	pair, err := ks.Fetch([]string{"357", "aass_brewery"})
 	if err != nil {
-		t.Errorf(" Cannot fetch keys error %v", err)
+		t.Fatalf(" Cannot fetch keys error %v", err)
 
 	}
 
@@ -93,12 +81,12 @@ func TestServer(t *testing.T) {
 
 	_, err = ks.Insert([]datastore.Pair{insertKey})
 	if err != nil {
-		t.Errorf("Cannot insert key %v", insertKey)
+		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
 	err = ks.Delete([]string{insertKey.Key})
 	if err != nil {
-		t.Errorf("Failed to delete %v", err)
+		t.Fatalf("Failed to delete %v", err)
 	}
 
 	pi, err := ks.IndexByPrimary()
