@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/accounting/stub"
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore/mock"
@@ -20,6 +21,9 @@ import (
 )
 
 func TestCBClustering(t *testing.T) {
+	if !couchbase_running() {
+		t.Skip("Couchbase not running - skipping test")
+	}
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
 	cs, err := NewConfigstore("http://127.0.0.1:8091")
@@ -84,4 +88,9 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 			fmt.Printf("QueryNode=%v\n", qryNode)
 		}
 	}
+}
+
+func couchbase_running() bool {
+	_, err := couchbase.Connect("http://localhost:8091/")
+	return err == nil
 }
