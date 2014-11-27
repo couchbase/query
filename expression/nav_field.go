@@ -100,9 +100,14 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 		return false
 	}
 
+	first, er := this.First().Evaluate(item, context)
+	if er != nil {
+		return false
+	}
+
 	switch second.Type() {
 	case value.STRING:
-		er := item.UnsetField(second.Actual().(string))
+		er := first.UnsetField(second.Actual().(string))
 		return er == nil
 	default:
 		return false
