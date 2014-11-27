@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/accounting"
@@ -137,6 +138,7 @@ func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 
 // cbCluster implements clustering.Cluster
 type cbCluster struct {
+	sync.Mutex
 	configStore    clustering.ConfigurationStore `json:"-"`
 	dataStore      datastore.Datastore           `json:"-"`
 	acctStore      accounting.AccountingStore    `json:"-"`
@@ -211,14 +213,27 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return c.queryNodeNames, nil
 	}
 	// If the rev numbers do not match, update the cluster's rev and query node names:
-	c.queryNodeNames = []string{}
-	c.poolSrvRev = poolServices.Rev
 	for _, ns := range poolServices.NodesExt {
 		n1qlPort := ns.Services["n1ql"]
-		if n1qlPort != 0 {
-			c.queryNodeNames = append(c.queryNodeNames, ns.Hostname+":"+strconv.Itoa(n1qlPort))
+		hostname := ns.Hostname
+
+		if n1qlPort == 0 { // no n1ql service in this node
+			continue
 		}
+
+		// TODO: check ns.ThisNode also
+		if hostname == "" {
+			hostname, _ = getHostnameFromURI(c.configStore.URL())
+		}
+
+		queryNodeNames = append(queryNodeNames, hostname+":"+strconv.Itoa(n1qlPort))
 	}
+
+	c.Lock()
+	defer c.Unlock()
+	c.queryNodeNames = queryNodeNames
+	c.poolSrvRev = poolServices.Rev
+
 	return c.queryNodeNames, nil
 }
 
@@ -240,7 +255,7 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 	var queryNode cbQueryNodeConfig
 	queryNode.ClusterName = c.Name()
 	queryNode.QueryNodeName = qryNodeName
-	queryNode.QueryEndpointURL = "http://" + qryNodeName + "/query"
+	queryNode.QueryEndpointURL = "http://" + qryNodeName + "/service/query"
 	queryNode.AdminEndpointURL = "http://" + qryNodeName + "/admin"
 	queryNode.ClusterRef = c
 	return &queryNode, nil
@@ -344,6 +359,18 @@ func (c *cbQueryNodeConfig) Standalone() clustering.Standalone {
 
 func (c *cbQueryNodeConfig) Options() clustering.QueryNodeOptions {
 	return c.OptionsCL
+}
+
+func getHostnameFromURI(uri string) (hostname string, err error) {
+	tokens := strings.Split(uri, ":")
+	name := strings.Split(tokens[1], "//")
+	switch strings.ToLower(name[1]) {
+	case "localhost", "127.0.0.1":
+		hostname, err = clustering.ExternalIP()
+	default:
+		hostname, err = name[1], nil
+	}
+	return
 }
 
 func getJsonString(i interface{}) string {
