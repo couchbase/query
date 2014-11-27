@@ -221,7 +221,8 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 			continue
 		}
 
-		if ns.ThisNode && hostname == "" {
+		// TODO: check ns.ThisNode also
+		if hostname == "" {
 			hostname, _ = getHostnameFromURI(c.configStore.URL())
 		}
 
