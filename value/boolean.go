@@ -17,16 +17,16 @@ BoolValue is defined as a bool type.
 type boolValue bool
 
 /*
-FALSE_VALUE/ TRUE_VALUE are assigned a false and true value 
-(NewValue() is called to ensure that it is a value), and 
-_FALSE _BYTES / _TRUE _BYTES that are slices of bytes 
+FALSE_VALUE/ TRUE_VALUE are assigned a false and true value
+(NewValue() is called to ensure that it is a value), and
+_FALSE _BYTES / _TRUE _BYTES that are slices of bytes
 representing false and true.
 */
 var FALSE_VALUE = NewValue(false)
 var TRUE_VALUE = NewValue(true)
 
 /*
-_FALSE _BYTES / _TRUE _BYTES that are slices of bytes 
+_FALSE _BYTES / _TRUE _BYTES that are slices of bytes
 representing false and true.
 */
 var _FALSE_BYTES = []byte("false")
@@ -76,10 +76,10 @@ func (this boolValue) Equals(other Value) bool {
 }
 
 /*
-If other is type boolValue, return 0 if equal, -1 if receiver 
-is false and 1 otherwise. For value of type parsedValue and 
-annotated value call collate again with the value. The default 
-behavior is to return the position wrt others type. 
+If other is type boolValue, return 0 if equal, -1 if receiver
+is false and 1 otherwise. For value of type parsedValue and
+annotated value call collate again with the value. The default
+behavior is to return the position wrt others type.
 */
 func (this boolValue) Collate(other Value) int {
 	switch other := other.(type) {

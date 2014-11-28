@@ -10,11 +10,11 @@
 package expression
 
 /*
-A type Mapper is of type interface that inherits 
-from Visitor. It has two methods Map that takes 
-as input an Expression and returns an Expression 
-and an error. The method MapBindings returns a 
-boolean. 
+A type Mapper is of type interface that inherits
+from Visitor. It has two methods Map that takes
+as input an Expression and returns an Expression
+and an error. The method MapBindings returns a
+boolean.
 */
 type Mapper interface {
 	Visitor

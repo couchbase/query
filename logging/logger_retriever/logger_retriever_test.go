@@ -13,41 +13,40 @@ import (
 	"testing"
 
 	/*
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/querylog"
-*/
-)
+		"github.com/couchbaselabs/query/logging"
+		"github.com/couchbaselabs/query/querylog"
+	*/)
 
 func TestRetrieverLogger(t *testing.T) {
-/*
-	rl := NewRetrieverLogger(nil)
+	/*
+		rl := NewRetrieverLogger(nil)
 
-	if rl == nil {
-		t.Errorf("Could not create Retriever Logger")
-	}
+		if rl == nil {
+			t.Errorf("Could not create Retriever Logger")
+		}
 
-	var logApi logging.Logger = rl
+		var logApi logging.Logger = rl
 
-	traceId := "0x007"
+		traceId := "0x007"
 
-	// This will be logged:
-	logApi.Info(traceId, querylog.PARSER, "Info message. Hello from %s", runtime.GOOS)
+		// This will be logged:
+		logApi.Info(traceId, querylog.PARSER, "Info message. Hello from %s", runtime.GOOS)
 
-	// This will be logged with no trace id and default key:
-	logApi.Info("Info message")
+		// This will be logged with no trace id and default key:
+		logApi.Info("Info message")
 
-	// This will be logged with no trace id and default key:
-	logApi.Info("Info message. Hello from %s", runtime.GOOS)
+		// This will be logged with no trace id and default key:
+		logApi.Info("Info message. Hello from %s", runtime.GOOS)
 
-	// This will not:
-	logApi.Info(traceId, "testKey", "this will not be logged")
+		// This will not:
+		logApi.Info(traceId, "testKey", "this will not be logged")
 
-	rl.logWriter.EnableTraceLogging()
+		rl.logWriter.EnableTraceLogging()
 
-	logApi.Error(traceId, querylog.DATASTORE, "this will go to traceaction log")
+		logApi.Error(traceId, querylog.DATASTORE, "this will go to traceaction log")
 
-	rl.logWriter.DisableTraceLogging()
+		rl.logWriter.DisableTraceLogging()
 
-	logApi.Error(traceId, querylog.DATASTORE, "this will go to the file")
-*/
+		logApi.Error(traceId, querylog.DATASTORE, "this will go to the file")
+	*/
 }

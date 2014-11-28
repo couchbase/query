@@ -16,10 +16,10 @@ import (
 
 /*
 Set implements a hash set of values. It is defined as
-a struct containing different values. _nills_ which 
-is a bool type, missings and nulls which are Value's, 
+a struct containing different values. _nills_ which
+is a bool type, missings and nulls which are Value's,
 booleans, numbers, strings, arrays, objects and blobs
-which are maps from bool,float64,and string to Value 
+which are maps from bool,float64,and string to Value
 respectively.
 */
 type Set struct {
@@ -41,7 +41,7 @@ var _MAP_CAP = 64
 
 /*
 Initialize the different elements in the struct. The input
-integer decides the capacity of the objects map. 
+integer decides the capacity of the objects map.
 */
 func NewSet(objectCap int) *Set {
 	return &Set{
@@ -62,18 +62,18 @@ func (this *Set) Add(item Value) {
 }
 
 /*
-It adds an item of key and value to the Set. If the key is 
-nil then the nills attribute is set to true for the struct 
-and return from the function. We check for the keys type. 
-If it is an object then call MarshalJSON and set the object 
-value in the struct to this item. Similarly for array. If the 
-type is null then set the nulls attribute for the receiver 
-to item. For missing, the missings attribute is set.If the type 
-is Boolean, number or string call actual for the key to 
-convert it into native golag and then cast it to bool, float64 
-or string before setting the value for that key to item. For 
-the type binary, append the item to the blobs after 
-converting from binary to string using base64. The default 
+It adds an item of key and value to the Set. If the key is
+nil then the nills attribute is set to true for the struct
+and return from the function. We check for the keys type.
+If it is an object then call MarshalJSON and set the object
+value in the struct to this item. Similarly for array. If the
+type is null then set the nulls attribute for the receiver
+to item. For missing, the missings attribute is set.If the type
+is Boolean, number or string call actual for the key to
+convert it into native golag and then cast it to bool, float64
+or string before setting the value for that key to item. For
+the type binary, append the item to the blobs after
+converting from binary to string using base64. The default
 case throws an error since the value type is unsupported.
 */
 func (this *Set) Put(key, item Value) {
@@ -108,8 +108,8 @@ func (this *Set) Put(key, item Value) {
 }
 
 /*
-Deletes input key entry from the Set. If key is nil then set 
-this.nills to false and return. Else depending on the key 
+Deletes input key entry from the Set. If key is nil then set
+this.nills to false and return. Else depending on the key
 type, delete.
 */
 func (this *Set) Remove(key Value) {
@@ -145,8 +145,8 @@ func (this *Set) Remove(key Value) {
 
 /*
 Checks if the Set has a key, and returns that corresponding value.
-Has sets a variable ok to depict true if that particular field is 
-set. Finally return that boolean value. 
+Has sets a variable ok to depict true if that particular field is
+set. Finally return that boolean value.
 */
 func (this *Set) Has(key Value) bool {
 	if key == nil {
@@ -182,10 +182,10 @@ func (this *Set) Has(key Value) bool {
 }
 
 /*
-Returns the length of the set by adding the length of each 
-element. For missings and nulls it increments by one only 
-if they arent nil, and if nills are true then it increments 
-the length by one. The length is then returned. 
+Returns the length of the set by adding the length of each
+element. For missings and nulls it increments by one only
+if they arent nil, and if nills are true then it increments
+the length by one. The length is then returned.
 */
 func (this *Set) Len() int {
 	rv := len(this.booleans) + len(this.numbers) + len(this.strings) +
@@ -207,8 +207,8 @@ func (this *Set) Len() int {
 }
 
 /*
-Returns a slice of Value that contains all the values in 
-the Set. It creates a variable that is a slice of Values 
+Returns a slice of Value that contains all the values in
+the Set. It creates a variable that is a slice of Values
 and appends all the existing elements in the set to it.
 */
 func (this *Set) Values() []Value {

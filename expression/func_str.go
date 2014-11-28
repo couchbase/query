@@ -68,8 +68,8 @@ This method takes in two values and returns new value that returns a boolean
 value that depicts if the second value is contained within the first. If
 either of the input values are missing, return a missing value, and if they
 arent strings then return a null value. Use the Contains method from the
-string package to return a boolean value that is true if substring (second) 
-is within the string(first).  
+string package to return a boolean value that is true if substring (second)
+is within the string(first).
 */
 func (this *Contains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -99,7 +99,7 @@ func (this *Contains) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the String function LENGTH(expr). It 
+This represents the String function LENGTH(expr). It
 returns the length of the string value. Type Length
 is a struct that implements UnaryFunctionBase.
 */
@@ -107,9 +107,9 @@ type Length struct {
 	UnaryFunctionBase
 }
 
-/*       
+/*
 The function NewLength calls NewUnaryFunctionBase to
-create a function named LENGTH with an expression as 
+create a function named LENGTH with an expression as
 input.
 */
 func NewLength(operand Expression) Function {
@@ -121,7 +121,7 @@ func NewLength(operand Expression) Function {
 /*
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
-*/  
+*/
 func (this *Length) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -140,9 +140,9 @@ func (this *Length) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
-This method takes in an argument value and returns its length 
+This method takes in an argument value and returns its length
 as value. If the input type is missing return missing, and if
-it isnt string then return null value. Use the len method to 
+it isnt string then return null value. Use the len method to
 return the length of the input string. Convert it into valid
 N1QL value and return.
 */
@@ -174,8 +174,8 @@ func (this *Length) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the String function LOWER(expr). It returns 
-the lowercase of the string value. Type Lower is a struct 
+This represents the String function LOWER(expr). It returns
+the lowercase of the string value. Type Lower is a struct
 that implements UnaryFunctionBase.
 */
 type Lower struct {
@@ -215,13 +215,13 @@ func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 /*
-This method takes in an argument value and returns a 
-lowercase string as value. If the input type is 
-missing return missing, and if it isnt string then 
-return null value. Use the ToLower method to 
+This method takes in an argument value and returns a
+lowercase string as value. If the input type is
+missing return missing, and if it isnt string then
+return null value. Use the ToLower method to
 convert the string to lower case on a valid Go type
 from the Actual method on the argument value. Return
-this lower case string as Value. 
+this lower case string as Value.
 */
 func (this *Lower) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -252,8 +252,8 @@ func (this *Lower) Constructor() FunctionConstructor {
 
 /*
 This represents the String function LTRIM(expr [, chars ]).
-It returns a string with all leading chars removed 
-(whitespace by default). Type NewLTrim is a struct that 
+It returns a string with all leading chars removed
+(whitespace by default). Type NewLTrim is a struct that
 implements FunctionBase.
 */
 type LTrim struct {
@@ -294,11 +294,11 @@ func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, err
 
 /*
 This method takes in input arguments and returns a value that
-is a string with the leading chars removed. Range over the 
+is a string with the leading chars removed. Range over the
 args, if its type is missing, return missing. If the argument
 type is not a string, set boolean null as true. If null is
 true it indicates that one of the args is not a string and
-hence return a null value. If not, all input arguments are 
+hence return a null value. If not, all input arguments are
 strings. If there is more than 1 input arg, use that value
 to call TrimLeft method from the strings method and trim that
 value from the input string. Return this trimmed value.
@@ -345,7 +345,7 @@ Return NewLTrim as FunctionConstructor.
 func (this *LTrim) Constructor() FunctionConstructor { return NewLTrim }
 
 /*
-Define variable whitespace that constructs a value from 
+Define variable whitespace that constructs a value from
 ' ','\t','\n','\f' and '\r'.
 */
 var _WHITESPACE = value.NewValue(" \t\n\f\r")
@@ -357,9 +357,9 @@ var _WHITESPACE = value.NewValue(" \t\n\f\r")
 ///////////////////////////////////////////////////
 
 /*
-This represents the String function POSITION(expr, substr). 
-It returns the first position of the substring within the 
-string, or -1. The position is 0-based. Type Position is a 
+This represents the String function POSITION(expr, substr).
+It returns the first position of the substring within the
+string, or -1. The position is 0-based. Type Position is a
 struct that implements BinaryFunctionBase.
 */
 type Position struct {
@@ -399,9 +399,9 @@ func (this *Position) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-This method takes in two values and returns a value that 
-corresponds to the second expressions position in the 
-first.  If the input type is missing return missing, and 
+This method takes in two values and returns a value that
+corresponds to the second expressions position in the
+first.  If the input type is missing return missing, and
 if it isnt string then return null value. Use the Index
 method defined by the strings package to calculate the
 offset position of the second string. Return that value.
@@ -442,7 +442,7 @@ type Repeat struct {
 	BinaryFunctionBase
 }
 
-/*       
+/*
 The function NewRepeat calls NewBinaryFunctionBase to
 create a function named REPEAT with the two
 expressions as input.
@@ -476,12 +476,12 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 
 /*
 This method returns a string value that repeats the first value
-second number of times. If either of the input values are 
-missing, return a missing value, and if the first isnt a string 
+second number of times. If either of the input values are
+missing, return a missing value, and if the first isnt a string
 and the second isnt a number then return a null value. Check if the
 number n is less than 0 and if it isnt an integer, then return null
-value. Call the Repeat method from the strings package with the 
-string and number and return that stringvalue. 
+value. Call the Repeat method from the strings package with the
+string and number and return that stringvalue.
 */
 func (this *Repeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -516,8 +516,8 @@ func (this *Repeat) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the String function REPLACE(expr, substr, repl [, n ]). 
-It returns a string with all occurences of substr replaced with repl. 
+This represents the String function REPLACE(expr, substr, repl [, n ]).
+It returns a string with all occurences of substr replaced with repl.
 If n is given, at most n replacements are performed. Replace is a type
 struct that implements FunctionBase.
 */
@@ -559,12 +559,12 @@ func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, e
 
 /*
 This method has input args that depict the string, what to replace it with
-and the number of allowable replacements n. Loop over the arguments. If its 
-type is missing, return missing. If the argument type is not a string, 
-set boolean null as true. If any of the first 3 arguments are not a 
+and the number of allowable replacements n. Loop over the arguments. If its
+type is missing, return missing. If the argument type is not a string,
+set boolean null as true. If any of the first 3 arguments are not a
 string then return null. If there are 4 input values, and the 4th is not
 a number return a null value. Make sure it is an absolute number, and if not
-return a null value. If n is not present initialize it to -1 and use the 
+return a null value. If n is not present initialize it to -1 and use the
 Replace method defined by the strings package. Return the final string value
 after creating a valid N!QL value out of the string.
 */
@@ -630,7 +630,7 @@ func (this *Replace) Constructor() FunctionConstructor { return NewReplace }
 
 /*
 This represents the String function RTRIM(expr, [, chars ]).
-It returns a string with all trailing chars removed (whitespace 
+It returns a string with all trailing chars removed (whitespace
 by default). RTrim is a type struct that implements FunctionBase.
 */
 type RTrim struct {

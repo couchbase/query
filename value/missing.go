@@ -63,23 +63,23 @@ func (this missingValue) Actual() interface{} {
 }
 
 /*
-Returns true if other is MISSING. As per N1QL specs. 
+Returns true if other is MISSING. As per N1QL specs.
 */
 func (this missingValue) Equals(other Value) bool {
 	return other.Type() == MISSING
 }
 
 /*
-Returns an integer representing the position of Missing with 
-respect to the other values type by subtracting them and 
-casting the result to an integer. 
+Returns an integer representing the position of Missing with
+respect to the other values type by subtracting them and
+casting the result to an integer.
 */
 func (this missingValue) Collate(other Value) int {
 	return int(MISSING - other.Type())
 }
 
 /*
-As per the N1ql specs the truth-value of a missing evaluates 
+As per the N1ql specs the truth-value of a missing evaluates
 to a false, and hence the Truth method returns a false.
 */
 func (this missingValue) Truth() bool {

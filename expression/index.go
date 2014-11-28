@@ -23,7 +23,7 @@ type IndexContext struct {
 }
 
 /*
-This method returns a pointer to the IndecContext 
+This method returns a pointer to the IndecContext
 structure, after assigning its value now with the
 current local time using the time package's Now
 function.

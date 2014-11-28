@@ -14,9 +14,9 @@ import (
 )
 
 /*
-Type identifier is a struct that implements ExpressionBase. 
-It contains a variable identifier of type string that 
-represents identifiers. 
+Type identifier is a struct that implements ExpressionBase.
+It contains a variable identifier of type string that
+represents identifiers.
 */
 type Identifier struct {
 	ExpressionBase
@@ -24,7 +24,7 @@ type Identifier struct {
 }
 
 /*
-This method returns a pointer to an Identifier structure 
+This method returns a pointer to an Identifier structure
 that has its identifier fied populated by the input argument.
 */
 func NewIdentifier(identifier string) Path {
@@ -35,7 +35,7 @@ func NewIdentifier(identifier string) Path {
 
 /*
 It calls the VisitIdentifier method by passing in the receiver to
-process identifier expressions, and returns the interface. It is 
+process identifier expressions, and returns the interface. It is
 a visitor pattern.
 */
 func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
@@ -43,16 +43,16 @@ func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
 }
 
 /*
-It returns JSON value that is all-encompassing. 
+It returns JSON value that is all-encompassing.
 */
 func (this *Identifier) Type() value.Type { return value.JSON }
 
 /*
-Call the Field method using the item value input argument on the 
-receiver. This returns a value. To evaluate an identifier, look 
-into the current item, find a field whose name is the 
-identifier, and return the value of that field within the current 
-item. 
+Call the Field method using the item value input argument on the
+receiver. This returns a value. To evaluate an identifier, look
+into the current item, find a field whose name is the
+identifier, and return the value of that field within the current
+item.
 */
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, _ := item.Field(this.identifier)
@@ -75,7 +75,7 @@ func (this *Identifier) Indexable() bool {
 
 /*
 This method checks if the input expression is an Identifier type.
-It it is return true if the identifiers are equal. If not return 
+It it is return true if the identifiers are equal. If not return
 false.
 */
 func (this *Identifier) EquivalentTo(other Expression) bool {
@@ -102,10 +102,10 @@ func (this *Identifier) MapChildren(mapper Mapper) error {
 }
 
 /*
-Call SetField using item value and set the identifier 
-string to the value. The SetField method returns a 
+Call SetField using item value and set the identifier
+string to the value. The SetField method returns a
 boolean value. If it is nil return true since no error
-was encountered while setting the field. 
+was encountered while setting the field.
 */
 func (this *Identifier) Set(item, val value.Value, context Context) bool {
 	er := item.SetField(this.identifier, val)
@@ -114,9 +114,9 @@ func (this *Identifier) Set(item, val value.Value, context Context) bool {
 
 /*
 Call UnsetFiled using item value and unset the identifier.
-(delete it). The UnsetField returns a boolean value. If it 
-is nil return true since no error was encountered while 
-setting the field. 
+(delete it). The UnsetField returns a boolean value. If it
+is nil return true since no error was encountered while
+setting the field.
 */
 func (this *Identifier) Unset(item value.Value, context Context) bool {
 	er := item.UnsetField(this.identifier)
@@ -124,7 +124,7 @@ func (this *Identifier) Unset(item value.Value, context Context) bool {
 }
 
 /*
-This method is used to access the identifier string 
+This method is used to access the identifier string
 using the receiver.
 */
 func (this *Identifier) Identifier() string {

@@ -11,7 +11,7 @@ package value
 
 /*
 ScopeValue provides alias scoping for subqueries, ranging, LETs,
-projections, etc. It is a type struct that inherits Value and 
+projections, etc. It is a type struct that inherits Value and
 has a parent Value.
 */
 type ScopeValue struct {
@@ -21,7 +21,7 @@ type ScopeValue struct {
 
 /*
 Return a pointer to a new ScopeValue populated using the input
-arguments value and parent. 
+arguments value and parent.
 */
 func NewScopeValue(val interface{}, parent Value) *ScopeValue {
 	return &ScopeValue{
@@ -51,7 +51,7 @@ func (this *ScopeValue) Copy() Value {
 
 /*
 Return a pointer to the ScopeValue, where the Value field
-calls the CopyForUpdate the receivers value, and the parent 
+calls the CopyForUpdate the receivers value, and the parent
 is assigned to the parent field in the receiver.
 */
 func (this *ScopeValue) CopyForUpdate() Value {
@@ -62,10 +62,10 @@ func (this *ScopeValue) CopyForUpdate() Value {
 }
 
 /*
-Implements scoping. Checks field of the value in the receiver 
-into result, and if valid returns the result.  If the parent 
-is not nil call Field on the parent and return that. Else a 
-missingField is returned. It searches itself and then the 
+Implements scoping. Checks field of the value in the receiver
+into result, and if valid returns the result.  If the parent
+is not nil call Field on the parent and return that. Else a
+missingField is returned. It searches itself and then the
 parent for the input parameter field.
 */
 func (this *ScopeValue) Field(field string) (Value, bool) {
@@ -83,8 +83,8 @@ func (this *ScopeValue) Field(field string) (Value, bool) {
 
 /*
 Flattens out the fields from the parent and value into a map
-and returns it. If the parent in scopeValue is nil then, 
-return the fields in the value. If not, create a map that 
+and returns it. If the parent in scopeValue is nil then,
+return the fields in the value. If not, create a map that
 contains both the parents’ fields and the values fields and return that map.
 */
 func (this *ScopeValue) Fields() map[string]interface{} {

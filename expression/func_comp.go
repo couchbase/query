@@ -23,7 +23,7 @@ import (
 
 /*
 This represents the comparison function GREATEST(expr1, expr2..).
-It is the largest non-NULL, non-MISSING value if the values are 
+It is the largest non-NULL, non-MISSING value if the values are
 of the same type, otherwise NULL. Type Greatest is a struct that
 implements FunctionBase.
 */
@@ -33,8 +33,8 @@ type Greatest struct {
 
 /*
 The function NewGreatest takes as input expressions and returns
-a pointer to the Greatest struct that calls NewFunctionBase to 
-create a function named GREATEST with input operands as the 
+a pointer to the Greatest struct that calls NewFunctionBase to
+create a function named GREATEST with input operands as the
 expressions.
 */
 func NewGreatest(operands ...Expression) Function {
@@ -65,11 +65,11 @@ func (this *Greatest) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-This method takes in a set of values args and context and returns a value. 
+This method takes in a set of values args and context and returns a value.
 Range over the args values, check the type. If it is less that or equal to
-a NULL then continue, If it is a NULL_VALUE then set the greatest to that argument. 
-This is exercised only once. The final check is to see if Collate returns a 
-positive value then set the greatest to that value and return it.  
+a NULL then continue, If it is a NULL_VALUE then set the greatest to that argument.
+This is exercised only once. The final check is to see if Collate returns a
+positive value then set the greatest to that value and return it.
 */
 func (this *Greatest) Apply(context Context, args ...value.Value) (value.Value, error) {
 	rv := value.NULL_VALUE
@@ -87,7 +87,7 @@ func (this *Greatest) Apply(context Context, args ...value.Value) (value.Value, 
 }
 
 /*
-Minimum input arguments required for the defined function 
+Minimum input arguments required for the defined function
 GREATEST is 2.
 */
 func (this *Greatest) MinArgs() int { return 2 }
@@ -112,8 +112,8 @@ func (this *Greatest) Constructor() FunctionConstructor { return NewGreatest }
 
 /*
 This represents the comparison function LEAST(expr1, expr2..). It is
-the smallest non-NULL, non-MISSING value if the values are of the 
-same type, otherwise NULL. Type Least is a struct that implements 
+the smallest non-NULL, non-MISSING value if the values are of the
+same type, otherwise NULL. Type Least is a struct that implements
 FunctionBase.
 */
 type Least struct {
@@ -123,7 +123,7 @@ type Least struct {
 /*
 The function NewLeast takes as input expressions and returns
 a pointer to the Least struct that calls NewFunctionBase to
-create a function named LEAST with input operands as the 
+create a function named LEAST with input operands as the
 expressions.
 */
 func NewLeast(operands ...Expression) Function {
@@ -156,8 +156,8 @@ func (this *Least) Evaluate(item value.Value, context Context) (value.Value, err
 /*
 This method takes in a set of values args and context and returns a value.
 Range over the args values, check the type. If it is less that or equal to
-a NULL then continue, If it is a NULL_VALUE then set the least as that 
-argument. This is exercised only once. The final check is to see if Collate 
+a NULL then continue, If it is a NULL_VALUE then set the least as that
+argument. This is exercised only once. The final check is to see if Collate
 returns a negative value then set the least to that value and return it.
 */
 func (this *Least) Apply(context Context, args ...value.Value) (value.Value, error) {

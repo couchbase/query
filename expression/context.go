@@ -14,10 +14,10 @@ import (
 )
 
 /*
-It imports the time package that provides the functionality 
-to measure and display the time. The type Context is an 
-interface that has a method Now that returns the Time that 
-returns the instant it time with a nanosecond precision. 
+It imports the time package that provides the functionality
+to measure and display the time. The type Context is an
+interface that has a method Now that returns the Time that
+returns the instant it time with a nanosecond precision.
 */
 type Context interface {
 	Now() time.Time

@@ -24,7 +24,7 @@ The logical hierarchy is as follows:
 package clustering
 
 import (
-	"net" 
+	"net"
 
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/datastore"

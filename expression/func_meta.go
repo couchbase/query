@@ -177,17 +177,17 @@ func (this *Meta) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Meta function SELF(). It makes the 
-result into a valid json value after removing the object 
-mapper. It is a type struct that implements 
-NullaryFunctionBase. 
+This represents the Meta function SELF(). It makes the
+result into a valid json value after removing the object
+mapper. It is a type struct that implements
+NullaryFunctionBase.
 */
 type Self struct {
 	NullaryFunctionBase
 }
 
 /*
-The function NewSelf returns a pointer to the 
+The function NewSelf returns a pointer to the
 NewNullaryFunctionBase to create a function SELF. It has
 no input arguments.
 */

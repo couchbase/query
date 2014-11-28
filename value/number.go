@@ -20,17 +20,17 @@ Number, represented by floatValue is defined as type float64.
 type floatValue float64
 
 /*
-The variables ZERO_VALUE and ONE_VALUE are initialized to 
+The variables ZERO_VALUE and ONE_VALUE are initialized to
 0.0 and 1.0 respectively.
 */
 var ZERO_VALUE = NewValue(0.0)
 var ONE_VALUE = NewValue(1.0)
 
 /*
-MarshalJSON casts the method receiver to float64, and uses 
-the math package functions to check if its NaN, +infinity 
-or –infinity, in which case it returns a slice of byte 
-representing that value, else it calls jsons marshal 
+MarshalJSON casts the method receiver to float64, and uses
+the math package functions to check if its NaN, +infinity
+or –infinity, in which case it returns a slice of byte
+representing that value, else it calls jsons marshal
 function on the cast value.
 */
 func (this floatValue) MarshalJSON() ([]byte, error) {
@@ -82,7 +82,7 @@ func (this floatValue) Equals(other Value) bool {
 If other is a floatValue, subtract it from the receiver.
 If it is less thatn 0.0 return -1, if greater return 1
 and otherwise return 0. For value of type parsedValue and
-annotated value call collate again with the value. The 
+annotated value call collate again with the value. The
 default behavior is to return the position wrt others type.
 */
 func (this floatValue) Collate(other Value) int {
@@ -107,7 +107,7 @@ func (this floatValue) Collate(other Value) int {
 }
 
 /*
-Returns true in the event the receiver is not 0 and it isn’t 
+Returns true in the event the receiver is not 0 and it isn’t
 a NaN value
 */
 func (this floatValue) Truth() bool {

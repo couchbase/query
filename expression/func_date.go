@@ -26,8 +26,8 @@ import (
 
 /*
 This represents the Date function CLOCK_MILLIS(). It
-returns the system clock at function evaluation time, 
-as UNIX milliseconds and varies during a query. Type 
+returns the system clock at function evaluation time,
+as UNIX milliseconds and varies during a query. Type
 ClockMillis is a struct that implements NullaryFuncitonBase.
 */
 type ClockMillis struct {
@@ -58,7 +58,7 @@ It returns a value type NUMBER.
 func (this *ClockMillis) Type() value.Type { return value.NUMBER }
 
 /*
-Get the current local time in Unix Nanoseconds. In 
+Get the current local time in Unix Nanoseconds. In
 order to convert it to milliseconds, divide it by
 10^6.
 */
@@ -92,19 +92,19 @@ func (this *ClockMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 /*
-This represents the Date function CLOCK_STR([ fmt ]). It returns 
-the system clock at function evaluation time, as a string in a 
-supported format and varies during a query. There are a set of  
-supported formats. Type ClockStr is a struct that implements 
+This represents the Date function CLOCK_STR([ fmt ]). It returns
+the system clock at function evaluation time, as a string in a
+supported format and varies during a query. There are a set of
+supported formats. Type ClockStr is a struct that implements
 FuncitonBase.
 */
 type ClockStr struct {
 	FunctionBase
 }
 
-/*       
+/*
 The function NewClockStr calls NewFunctionBase to
-create a function named CLOCK_STR with input 
+create a function named CLOCK_STR with input
 arguments as the operands from the input expression.
 */
 func NewClockStr(operands ...Expression) Function {
@@ -135,9 +135,9 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-Initialize format to default format. This is in the event the 
+Initialize format to default format. This is in the event the
 function is called without input arguments. Then it uses the
-default time format. If it has input args, and if it is a 
+default time format. If it has input args, and if it is a
 missing type return a missing value. It the type is not a string
 then return null value. In the event it is a string, convert the
 format to a valid Go type, cast it to a string, and call timeToStr
@@ -184,7 +184,7 @@ CLOCK_STR is 1.
 func (this *ClockStr) MaxArgs() int { return 1 }
 
 /*
-Returns receiver as FunctionConstructor. 
+Returns receiver as FunctionConstructor.
 */
 func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
 
@@ -195,11 +195,11 @@ func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_ADD_MILLIS(expr,n,part). 
-It performs date arithmetic. n and part are used to define an 
-interval or duration, which is then added (or subtracted) to 
-the UNIX timestamp, returning the result. Type DateAddMillis 
-is a struct that implements TernaryFuncitonBase since it has 
+This represents the Date function DATE_ADD_MILLIS(expr,n,part).
+It performs date arithmetic. n and part are used to define an
+interval or duration, which is then added (or subtracted) to
+the UNIX timestamp, returning the result. Type DateAddMillis
+is a struct that implements TernaryFuncitonBase since it has
 3 input arguments.
 */
 type DateAddMillis struct {
@@ -208,7 +208,7 @@ type DateAddMillis struct {
 
 /*
 The function NewDateAddMillis calls NewTernaryFunctionBase to
-create a function named DATE_ADD_MILLIS with the three 
+create a function named DATE_ADD_MILLIS with the three
 expressions as input.
 */
 func NewDateAddMillis(first, second, third Expression) Function {
@@ -241,13 +241,13 @@ func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Va
 /*
 This method takes inputs date, n and part as values and returns a value.
 If any of these are missing then return a missing value. If date and n
-arent numbers or if part isnt a string then return a null value. Call 
-Actual for these values to convert into valid Go type and cast date,n to 
-float64(N1QL valid number type) and part to string. If n is a floating 
-point value return null value. Call the dateAdd method to a add n to 
-the time obtained by converting the date to time using the millisToTime 
+arent numbers or if part isnt a string then return a null value. Call
+Actual for these values to convert into valid Go type and cast date,n to
+float64(N1QL valid number type) and part to string. If n is a floating
+point value return null value. Call the dateAdd method to a add n to
+the time obtained by converting the date to time using the millisToTime
 method. Convert the result back using timeToMillis and then return it in
-value format. 
+value format.
 */
 func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (value.Value, error) {
 	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
@@ -272,7 +272,7 @@ func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (va
 }
 
 /*
-The constructor returns a NewDateAddMillis with the three operands 
+The constructor returns a NewDateAddMillis with the three operands
 cast to a Function as the FunctionConstructor.
 */
 func (this *DateAddMillis) Constructor() FunctionConstructor {
@@ -289,8 +289,8 @@ func (this *DateAddMillis) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function DATE_ADD_STR(expr,n,part).
-It performs date arithmetic. n and part are used to define an 
-interval or duration, which is then added to the date string 
+It performs date arithmetic. n and part are used to define an
+interval or duration, which is then added to the date string
 in a supported format, returning the result. Type DateAddStr
 is a struct that implements TernaryFuncitonBase since it has
 3 input arguments.
@@ -384,7 +384,7 @@ func (this *DateAddStr) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 /*
 This represents the Date function DATE_DIFF_MILLIS(expr1,expr2,part).
-It performs date arithmetic. It returns the elapsed time between two 
+It performs date arithmetic. It returns the elapsed time between two
 UNIX timestamps, as an integer whose unit is part. Type DateDiffMillis
 is a struct that implements TernaryFuncitonBase since it has
 3 input arguments.
@@ -430,7 +430,7 @@ This method takes two dates and part as input values and returns a value.
 If any of these are missing then return a missing value. If the dates
 arent numbers or if part isnt a string then return a null value. Call
 Actual for these values to convert into valid Go type and cast the dates to
-float64(N1QL valid number type) and part to string. Call the dateDiff 
+float64(N1QL valid number type) and part to string. Call the dateDiff
 method with the two dates converted to time format using method
 millisToTime and return the difference as a value.
 */
@@ -469,9 +469,9 @@ func (this *DateDiffMillis) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 /*
 This represents the Date function DATE_DIFF_STR(expr1,expr2,part).
-It performs date arithmetic and returns the elapsed time between two 
-date strings in a supported format, as an integer whose unit is 
-part.Type. DateAddStr is a struct that implements TernaryFuncitonBase 
+It performs date arithmetic and returns the elapsed time between two
+date strings in a supported format, as an integer whose unit is
+part.Type. DateAddStr is a struct that implements TernaryFuncitonBase
 since it has 3 input arguments.
 */
 type DateDiffStr struct {
@@ -563,12 +563,12 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function DATE_PART_MILLIS(expr, part). 
-It returns the date part as an integer. The date expr is a 
-number representing UNIX milliseconds, and part is one of the 
-date part strings. DatePartMillis is a struct that implements 
+This represents the Date function DATE_PART_MILLIS(expr, part).
+It returns the date part as an integer. The date expr is a
+number representing UNIX milliseconds, and part is one of the
+date part strings. DatePartMillis is a struct that implements
 BinaryFuncitonBase.
-*/ 
+*/
 type DatePartMillis struct {
 	BinaryFunctionBase
 }
@@ -587,7 +587,7 @@ func NewDatePartMillis(first, second Expression) Function {
 /*
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
-*/ 
+*/
 func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -607,7 +607,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 
 /*
 This method takes inputs date and part as values and returns a value.
-If either of these are missing then return a missing value. If date 
+If either of these are missing then return a missing value. If date
 isnt number or if part isnt a string then return a null value. Call
 Actual for these values to convert into valid Go type and cast date to
 float64(N1QL valid number type) and part to string. Call datePart function
@@ -648,8 +648,8 @@ func (this *DatePartMillis) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function DATE_PART_STR(expr, part).
-It returns the date part as an integer. The date expr is a 
-string in a supported format, and part is one of the supported 
+It returns the date part as an integer. The date expr is a
+string in a supported format, and part is one of the supported
 date part strings. DatePartStr is a struct that implements
 BinaryFuncitonBase.
 */
@@ -737,8 +737,8 @@ func (this *DatePartStr) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function DATE_TRUNC_MILLIS(expr, part).
-It truncates UNIX timestamp so that the given date part string 
-is the least significant. DateTruncMillis is a struct that 
+It truncates UNIX timestamp so that the given date part string
+is the least significant. DateTruncMillis is a struct that
 implements BinaryFuncitonBase.
 */
 type DateTruncMillis struct {
@@ -824,7 +824,7 @@ func (this *DateTruncMillis) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function DATE_TRUNC_STR(expr, part).
-It truncates ISO 8601 timestamp so that the given date part 
+It truncates ISO 8601 timestamp so that the given date part
 string is the least significant. DateTruncStr is a struct that
 implements BinaryFuncitonBase.
 */
@@ -868,9 +868,9 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 This method takes inputs date and part as values and returns a value.
 If either of these are missing then return a missing value. If date
 and part arent strings then return a null value. Call
-Actual for these values to convert into valid Go type and cast both 
-date and expr into string. Use method strToTime to convert date to 
-Time format and call the dateTrunc method. Convert it back to a 
+Actual for these values to convert into valid Go type and cast both
+date and expr into string. Use method strToTime to convert date to
+Time format and call the dateTrunc method. Convert it back to a
 string and return it in value format.
 */
 func (this *DateTruncStr) Apply(context Context, first, second value.Value) (value.Value, error) {
@@ -913,8 +913,8 @@ func (this *DateTruncStr) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function MILLIS_TO_STR(expr[,fmt]).
-The date part as an integer. The date expr is a string in 
-a supported format, and part is one of the supported date 
+The date part as an integer. The date expr is a string in
+a supported format, and part is one of the supported date
 part strings. Type MillisToStr is a struct that implements
 FuncitonBase.
 */
@@ -923,8 +923,8 @@ type MillisToStr struct {
 }
 
 /*
-The function MillisToStr calls NewFunctionBase to create a 
-function named MILLIS_TO_STR with input arguments as the 
+The function MillisToStr calls NewFunctionBase to create a
+function named MILLIS_TO_STR with input arguments as the
 operands from the input expression.
 */
 func NewMillisToStr(operands ...Expression) Function {
@@ -955,14 +955,14 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 }
 
 /*
-Initialize format to default format value. If there is 
+Initialize format to default format value. If there is
 more than 1 argument then, that is the format. Either the
 input argument or the format are missing then return missing.
-If the expression is not a number and the format is not a 
-string then return a null value. Call Actual for these values 
-to convert into valid Go type and cast the expr to floar64 
-and the format to string. Convert it to Time format and return 
-a new stringvalue. 
+If the expression is not a number and the format is not a
+string then return a null value. Call Actual for these values
+to convert into valid Go type and cast the expr to floar64
+and the format to string. Convert it to Time format and return
+a new stringvalue.
 */
 func (this *MillisToStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
@@ -1055,7 +1055,7 @@ input argument or the format are missing then return missing.
 If the expression is not a number and the format is not a
 string then return a null value. Call Actual for these values
 to convert into valid Go type and cast the expr to floar64
-and the format to string. Convert it to Time format, cast to UTC 
+and the format to string. Convert it to Time format, cast to UTC
 and reconvert to string, return a new stringvalue.
 */
 func (this *MillisToUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
@@ -1102,9 +1102,9 @@ func (this *MillisToUTC) Constructor() FunctionConstructor { return NewMillisToU
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function 
-MILLIS_TO_ZONE_NAME(expr, tz_name [, fmt ]). It converts 
-the UNIX timestamp to a string in the named time zone. 
+This represents the Date function
+MILLIS_TO_ZONE_NAME(expr, tz_name [, fmt ]). It converts
+the UNIX timestamp to a string in the named time zone.
 Type MillisToZoneName is a struct that implements
 FuncitonBase.
 */
@@ -1151,8 +1151,8 @@ input arguments or the format are missing then return missing.
 If the expression is not a number and the zone and format are not
 strings then return a null value. Call Actual for these values
 to convert into valid Go type and cast the expr to floar64
-and the zone name to string. Use the zone to call LoadLocation 
-method in the time package that returns the location. Convert it 
+and the zone name to string. Use the zone to call LoadLocation
+method in the time package that returns the location. Convert it
 to Time format in that location and return a new stringvalue by
 reconverting it to a string.
 */
@@ -1208,7 +1208,7 @@ func (this *MillisToZoneName) Constructor() FunctionConstructor { return NewMill
 /*
 This represents the Date function NOW_MILLIS(). It
 returns a statement timestamp as UNIX milliseconds
-and does not vary during a query. It is of type 
+and does not vary during a query. It is of type
 struct and implements a NullaryFunctionBase.
 */
 type NowMillis struct {
@@ -1240,7 +1240,7 @@ func (this *NowMillis) Type() value.Type { return value.NUMBER }
 
 /*
 This method returns a value that represents the current timestamp
-in milliseconds. It gets the current time in nanoseconds using 
+in milliseconds. It gets the current time in nanoseconds using
 Now().UnixNano() and then divides it by 10^6 to convert it to
 milliseconds. It then calls Newvalue to create a value and returns
 it.
@@ -1271,8 +1271,8 @@ func (this *NowMillis) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Date function NOW_STR([fmt]). 
-It returns a statement timestamp as a string in 
+This represents the Date function NOW_STR([fmt]).
+It returns a statement timestamp as a string in
 a supported format and does not vary during a query.
 Type NowStr is a struct that implements FuncitonBase.
 */
@@ -1290,7 +1290,6 @@ func NewNowStr(operands ...Expression) Function {
 		*NewFunctionBase("now_str", operands...),
 	}
 }
-
 
 /*
 It calls the VisitFunction method by passing in the receiver to
@@ -1315,7 +1314,7 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 
 /*
 Initialize format to default format. If there is an agrs then
-assign that to the format. If the format is missing, return a 
+assign that to the format. If the format is missing, return a
 missing value and if it isnt a string then return a null value.
 Convert it into valid Go representation and cast to a string.
 Get the current timestamp and convert it into the format string
@@ -1415,7 +1414,7 @@ This method takes in an input argument of type value, and returns a value that i
 a timestamp.  If the input argument type is missing, then return missing, and
 if it is not a string then return null value. Convert the value to a valid Go type
 using Actual and cast it to string. Convert it into a valid time format using
-strToTime. Use function timeToMillis to convert to milliseconds and then 
+strToTime. Use function timeToMillis to convert to milliseconds and then
 return that value.
 */
 func (this *StrToMillis) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -1452,8 +1451,8 @@ func (this *StrToMillis) Constructor() FunctionConstructor {
 
 /*
 This represents the Date function STR_TO_UTC(expr). It
-converts the input expression in the ISO 8601 timestamp 
-to UTC. It is of type struct that implements a 
+converts the input expression in the ISO 8601 timestamp
+to UTC. It is of type struct that implements a
 UnaryFunctionBase.
 */
 type StrToUTC struct {
@@ -1493,11 +1492,11 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-This method takes in an input argument of type value, and returns a value that is 
-a timestamp in UTC. If the input argument type is missing, then return missing, and 
-if it is not a string then return null value. Convert the value to a valid Go type 
-using Actual and cast it to string. Convert it into a valid time format using 
-strToTime. Use function UTC() from the time package to set location to UTC, 
+This method takes in an input argument of type value, and returns a value that is
+a timestamp in UTC. If the input argument type is missing, then return missing, and
+if it is not a string then return null value. Convert the value to a valid Go type
+using Actual and cast it to string. Convert it into a valid time format using
+strToTime. Use function UTC() from the time package to set location to UTC,
 convert it back to a string and return its N1QL value.
 */
 func (this *StrToUTC) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -1544,7 +1543,7 @@ type StrToZoneName struct {
 
 /*
 The function NewStrToZoneName calls NewBinaryFunctionBase to
-create a function named STR_TO_ZONE_NAME with the two 
+create a function named STR_TO_ZONE_NAME with the two
 expressions as input.
 */
 func NewStrToZoneName(first, second Expression) Function {
@@ -1576,7 +1575,7 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 
 /*
 This method takes inputs date and part as string and timezone and returns a value.
-If either of these are missing then return a missing value and if they are not string 
+If either of these are missing then return a missing value and if they are not string
 then return a null value. After converting the string and time zone to valid Go type
 convert the string to valid Time using the strToTime function. Use the LoadLocation
 method from the time package to return the location with the given name. Convert
@@ -1616,7 +1615,7 @@ func (this *StrToZoneName) Constructor() FunctionConstructor {
 
 /*
 Parse the input string using the defined formats for Date
-and return the time value it represents, and error. The 
+and return the time value it represents, and error. The
 Parse method is defined by the time package.
 */
 func strToTime(s string) (time.Time, error) {
@@ -1651,16 +1650,16 @@ func strToTimeFormat(s string) (time.Time, string, error) {
 }
 
 /*
-It returns a textual representation of the time value formatted 
-according to the Format string. 
+It returns a textual representation of the time value formatted
+according to the Format string.
 */
 func timeToStr(t time.Time, format string) string {
 	return t.Format(format)
 }
 
 /*
-Convert input milliseconds to time format by multiplying 
-with 10^6 and using the Unix method from the time package. 
+Convert input milliseconds to time format by multiplying
+with 10^6 and using the Unix method from the time package.
 */
 func millisToTime(millis float64) time.Time {
 	return time.Unix(0, int64(millis*1000000.0))
@@ -1704,7 +1703,7 @@ Represents a value of the default format.
 var _DEFAULT_FMT_VALUE = value.NewValue(_DEFAULT_FORMAT)
 
 /*
-This function returns the part of the time string that is 
+This function returns the part of the time string that is
 depicted by part (for eg. the day, current quarter etc).
 */
 func datePart(t time.Time, part string) (int, error) {
@@ -1768,7 +1767,7 @@ func datePart(t time.Time, part string) (int, error) {
 }
 
 /*
-Add part to the input time string using AddDate method from the 
+Add part to the input time string using AddDate method from the
 time package. n and part are used to define the interval or duration.
 */
 func dateAdd(t time.Time, n int, part string) (time.Time, error) {
@@ -1843,10 +1842,10 @@ func yearTrunc(t time.Time) time.Time {
 }
 
 /*
-This method returns the time t with the day part truncated out. First 
-get Time part as day. Subtract that from the days and then Add the 
+This method returns the time t with the day part truncated out. First
+get Time part as day. Subtract that from the days and then Add the
 given number of years, months and days to t using the AddDate method
-from the time package and return. 
+from the time package and return.
 */
 func monthTrunc(t time.Time) time.Time {
 	t, _ = timeTrunc(t, "day")
@@ -1855,7 +1854,7 @@ func monthTrunc(t time.Time) time.Time {
 
 /*
 Truncate the time string based on the value of the part string.
-If type day convert to hours. 
+If type day convert to hours.
 */
 func timeTrunc(t time.Time, part string) (time.Time, error) {
 	switch part {
@@ -1897,10 +1896,10 @@ func dateDiff(t1, t2 time.Time, part string) (int64, error) {
 }
 
 /*
-This method returns a value specifying a part of the dates specified 
-by part string. For each type of part (enumerated in the specs) it 
-computes the value in the type part(for eg. seconds) recursively and 
-returning it in format (int64) as per the part string.  
+This method returns a value specifying a part of the dates specified
+by part string. For each type of part (enumerated in the specs) it
+computes the value in the type part(for eg. seconds) recursively and
+returning it in format (int64) as per the part string.
 */
 func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 	p := strings.ToLower(part)
@@ -1956,9 +1955,9 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 }
 
 /*
-This method returns the difference between two dates. The input 
+This method returns the difference between two dates. The input
 arguments to this function are of type Time. We use the setDate
-to extract the dates from the time and then compute and return 
+to extract the dates from the time and then compute and return
 the difference between the two dates.
 */
 func diffDates(t1, t2 time.Time) *date {
@@ -1990,10 +1989,10 @@ type date struct {
 }
 
 /*
-This method extracts a date from the input time and sets the 
-year (as t.year), Day (as t.YearDay), and time (hour, minute, 
-second using t.Clock, and millisecond as Nanosecond/10^6) 
-using the input time which is of type Time (defined in package 
+This method extracts a date from the input time and sets the
+year (as t.year), Day (as t.YearDay), and time (hour, minute,
+second using t.Clock, and millisecond as Nanosecond/10^6)
+using the input time which is of type Time (defined in package
 time).
 */
 func setDate(d *date, t time.Time) {
@@ -2004,7 +2003,7 @@ func setDate(d *date, t time.Time) {
 }
 
 /*
-This method computes the number of leap years in 
+This method computes the number of leap years in
 between start and end year, using the method
 leapYearsWithin.
 */
@@ -2014,8 +2013,8 @@ func leapYearsBetween(end, start int) int {
 
 /*
 This method returns the number of leap years up until the
-input year. This is done using the computation 
-(year/4) - (year/100) + (year/400). 
+input year. This is done using the computation
+(year/4) - (year/100) + (year/400).
 */
 func leapYearsWithin(year int) int {
 	if year > 0 {

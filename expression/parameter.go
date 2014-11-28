@@ -10,11 +10,11 @@
 package expression
 
 /*
-Type NamedParameter is an interface that inherits from 
-Expression, and has a method Name() that returns a 
+Type NamedParameter is an interface that inherits from
+Expression, and has a method Name() that returns a
 string. It defines a Named Parameter, that is specified
-using formal param names in a query. The main advantage 
-of a named parameter is that we dont have to remember 
+using formal param names in a query. The main advantage
+of a named parameter is that we dont have to remember
 the position of the parameter.
 */
 type NamedParameter interface {
@@ -25,8 +25,8 @@ type NamedParameter interface {
 /*
 Type PositionalParameter is an interface that inherits
 from Expression, and has a method position that returns
-an integer representing the position of the parameter 
-in the query. 
+an integer representing the position of the parameter
+in the query.
 */
 type PositionalParameter interface {
 	Expression

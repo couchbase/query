@@ -15,7 +15,7 @@ import (
 
 /*
 ExpressionBase is a base class for all expressions.
-Type ExpressionBase is defined as an empty struct. 
+Type ExpressionBase is defined as an empty struct.
 */
 type ExpressionBase struct {
 }
@@ -31,7 +31,7 @@ func (this *ExpressionBase) Alias() string {
 /*
 Range over the children of the expression, and check if each
 child is indexable. If not then return false as the expression
-is not indexable. If all children are indexable, then return 
+is not indexable. If all children are indexable, then return
 true.
 */
 func (this *ExpressionBase) indexable(expr Expression) bool {
@@ -46,12 +46,12 @@ func (this *ExpressionBase) indexable(expr Expression) bool {
 
 /*
 Check if two expressions are equivalent. First compare the dynamic
-type information of the two expressions, using reflect.TypeOf. If 
-it is not the same, then return false. Compare the length of the 
+type information of the two expressions, using reflect.TypeOf. If
+it is not the same, then return false. Compare the length of the
 two expressions. If they are not the same, then not equal, hence
-return false. If the lengths are equal, range through the children 
+return false. If the lengths are equal, range through the children
 and check if they are equivalent by calling the EquivalentTo method
-for each set of children and return false if not equal. If the 
+for each set of children and return false if not equal. If the
 method hasnt returned till this point, then the expressions are
 equal and return true.
 */

@@ -15,7 +15,7 @@ import (
 
 /*
 The Constant type is a struct that comtains fields ExpressionBase
-and a value. 
+and a value.
 */
 type Constant struct {
 	ExpressionBase
@@ -23,7 +23,7 @@ type Constant struct {
 }
 
 /*
-Define a set of constant expressions created from values for null, 
+Define a set of constant expressions created from values for null,
 missing, true, false, zero and one.
 */
 var NULL_EXPR = NewConstant(value.NULL_VALUE)
@@ -35,7 +35,7 @@ var ONE_EXPR = NewConstant(value.ONE_VALUE)
 
 /*
 Create a new Constant out of an input value interface by
-calling NewValue and setting the value component of the 
+calling NewValue and setting the value component of the
 struct to it. Return a pointer to the Constant structure.
 */
 func NewConstant(val interface{}) Expression {
@@ -102,7 +102,7 @@ func (this *Constant) MapChildren(mapper Mapper) error {
 }
 
 /*
-This method is defined to access the value of the Constant 
+This method is defined to access the value of the Constant
 expression. It returns the receivers value.
 */
 func (this *Constant) Value() value.Value {

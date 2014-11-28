@@ -18,86 +18,86 @@ import (
 )
 
 /*
-The type Expressions is defined as a slice of Expression. The 
-type CompositeExpressions is defined as a slice of Expressions. 
+The type Expressions is defined as a slice of Expression. The
+type CompositeExpressions is defined as a slice of Expressions.
 */
 type Expressions []Expression
 type CompositeExpressions []Expressions
 
 /*
-The expression interface helps us represent expressions. 
+The expression interface helps us represent expressions.
 */
 type Expression interface {
-	
-        /* 
-        It takes as input a Visitor type and returns an interface 
-        and error. It represents a visitor pattern.
-        */  
+
+	/*
+	   It takes as input a Visitor type and returns an interface
+	   and error. It represents a visitor pattern.
+	*/
 	Accept(visitor Visitor) (interface{}, error)
 
-	/* 
-        It returns the value type. This represents a Data Type, 
-        in addition to which the expression can also evaluate to 
-        null or missing. Adding the expression type() allows you 
-        to know the schema or shape of the query without actually 
-        evaluating the query.
-        */
+	/*
+	   It returns the value type. This represents a Data Type,
+	   in addition to which the expression can also evaluate to
+	   null or missing. Adding the expression type() allows you
+	   to know the schema or shape of the query without actually
+	   evaluating the query.
+	*/
 	Type() value.Type
 
 	/*
-        It is used to evaluate the expression for a given value 
-        and a particular context. It has input parameters Value 
-        and Context and returns a Value and an error. 
-        */
-        Evaluate(item value.Value, context Context) (value.Value, error)
+	   It is used to evaluate the expression for a given value
+	   and a particular context. It has input parameters Value
+	   and Context and returns a Value and an error.
+	*/
+	Evaluate(item value.Value, context Context) (value.Value, error)
 
 	/*
-        As per the N1QL specs this function returns the terminal 
-        identifier in the case the expression is a path. It can 
-        be thought of an expression alias. For example if for the 
-        following select statement, b is the Alias. Select a.b. 
-        */
-        Alias() string
+	   As per the N1QL specs this function returns the terminal
+	   identifier in the case the expression is a path. It can
+	   be thought of an expression alias. For example if for the
+	   following select statement, b is the Alias. Select a.b.
+	*/
+	Alias() string
 
 	/*
-        This method indicates if the expression can be used as a 
-        secondary index key.
-        */
-        Indexable() bool
+	   This method indicates if the expression can be used as a
+	   secondary index key.
+	*/
+	Indexable() bool
 
 	/*
-        This method returns a boolean which indicates if this 
-        expression is equivalent to the input other expression. 
-        For this function it is important to note that false 
-        negatives are fine but false positives are not, and this 
-        needs to be enforced.
-        */
-        EquivalentTo(other Expression) bool
+	   This method returns a boolean which indicates if this
+	   expression is equivalent to the input other expression.
+	   For this function it is important to note that false
+	   negatives are fine but false positives are not, and this
+	   needs to be enforced.
+	*/
+	EquivalentTo(other Expression) bool
 
-        /*
-        It is a utility function that returns the children of the 
-        expression. For expression a+b, a and b are the children
-        of +. 
-        */
+	/*
+	   It is a utility function that returns the children of the
+	   expression. For expression a+b, a and b are the children
+	   of +.
+	*/
 	Children() Expressions
-  
-        /*
-        It is a utility function that takes in as input parameter 
-        a mapper and maps the involved expressions to an expression. 
-        If there is an error during the mapping, an error is 
-        returned. 
-        */
+
+	/*
+	   It is a utility function that takes in as input parameter
+	   a mapper and maps the involved expressions to an expression.
+	   If there is an error during the mapping, an error is
+	   returned.
+	*/
 	MapChildren(mapper Mapper) error
 }
 
 /*
-This function is used to map one expression to another. It takes as 
-input a Mapper(defined later in expression/map.go) and returns an 
-error. The method receiver is of type Expressions. Range over the 
-receiver. It returns an index and an expression. Call Map using the 
-mapper to map expression e to expr. If there is an error while 
-mapping we return it, otherwise we set the ith value in this to the 
-expr (reset to new expr) and return. 
+This function is used to map one expression to another. It takes as
+input a Mapper(defined later in expression/map.go) and returns an
+error. The method receiver is of type Expressions. Range over the
+receiver. It returns an index and an expression. Call Map using the
+mapper to map expression e to expr. If there is an error while
+mapping we return it, otherwise we set the ith value in this to the
+expr (reset to new expr) and return.
 */
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
 	for i, e := range this {

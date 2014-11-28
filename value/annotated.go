@@ -14,7 +14,7 @@ import (
 )
 
 /*
-Type AnnotatedChannel is a channel of AnnotatedValue. 
+Type AnnotatedChannel is a channel of AnnotatedValue.
 */
 type AnnotatedChannel chan AnnotatedValue
 
@@ -25,7 +25,7 @@ type AnnotatedValues []AnnotatedValue
 
 /*
 It is used to handle any extra information about the value.
-The interface inherits from Value and extends it. It has 
+The interface inherits from Value and extends it. It has
 additional methods pertaining to the attachments.
 */
 type AnnotatedValue interface {
@@ -40,12 +40,12 @@ type AnnotatedValue interface {
 
 /*
 Create an AnnotatedValue to hold attachments.
-If the type of the value interface is AnnotatedValue, 
+If the type of the value interface is AnnotatedValue,
 then, return the value itself. If the type is Value,
-set the Value to the value variable for struct 
-annotatedValue and attacher as a nil. A pointer to 
-the structure is returned. For the default behavior, 
-have it call itself again by creating a value from 
+set the Value to the value variable for struct
+annotatedValue and attacher as a nil. A pointer to
+the structure is returned. For the default behavior,
+have it call itself again by creating a value from
 the input interface and passing it into the function.
 */
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -64,8 +64,8 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 }
 
 /*
-AnnotatedValue is defined as a structure with Value 
-and an attacher. It is used to represent JSON object 
+AnnotatedValue is defined as a structure with Value
+and an attacher. It is used to represent JSON object
 with additional metadata.
 */
 type annotatedValue struct {
@@ -74,7 +74,7 @@ type annotatedValue struct {
 }
 
 /*
-Call json.Marshal to encode the input value. 
+Call json.Marshal to encode the input value.
 */
 func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.Value)
@@ -82,10 +82,10 @@ func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 
 /*
 Return a pointer to the structure annotatedValue with the
-value attribute being the return value of the Copy call. 
-For the second variable defined in the struct, namely 
+value attribute being the return value of the Copy call.
+For the second variable defined in the struct, namely
 attacher call the copyMap function with the receivers
-attachments and self, to copy the attachments. 
+attachments and self, to copy the attachments.
 */
 func (this *annotatedValue) Copy() Value {
 	return &annotatedValue{
@@ -97,7 +97,7 @@ func (this *annotatedValue) Copy() Value {
 /*
 Return a pointer to the structure annotatedValue with the
 value attribute being the return value of the CopyForUpdate
-call. The attachments field is populated by the receivers 
+call. The attachments field is populated by the receivers
 attachments.
 */
 func (this *annotatedValue) CopyForUpdate() Value {
@@ -109,7 +109,7 @@ func (this *annotatedValue) CopyForUpdate() Value {
 
 /*
 Return the value component of the receiver
-annotatedValue. 
+annotatedValue.
 */
 func (this *annotatedValue) GetValue() Value {
 	return this.Value
@@ -132,7 +132,7 @@ func (this *attacher) SetAttachments(atmts map[string]interface{}) {
 }
 
 /*
-Used to access the attachments, by returning the attachments 
+Used to access the attachments, by returning the attachments
 from the receiver this.
 */
 func (this *attacher) Attachments() map[string]interface{} {
@@ -161,7 +161,7 @@ func (this *attacher) SetAttachment(key string, val interface{}) {
 	this.attachments[key] = val
 }
 
-/* 
+/*
 Remove an object attached to this Value with this key.  If there
 had been an object attached to this Value with this key it is
 returned, otherwise nil.
