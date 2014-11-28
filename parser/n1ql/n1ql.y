@@ -1494,18 +1494,6 @@ path DOT IDENTIFIER_ICASE
     $$ = field
 }
 |
-path DOT LBRACKET expr RBRACKET
-{
-    $$ = expression.NewField($1, $4)
-}
-|
-path DOT LBRACKET expr RBRACKET_ICASE
-{
-    field := expression.NewField($1, $4)
-    field.SetCaseInsensitive(true)
-    $$ = field
-}
-|
 path LBRACKET expr RBRACKET
 {
     $$ = expression.NewElement($1, $3)

@@ -79,7 +79,7 @@ comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' 
 arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | '-' expr
 concatenation-term ::= expr '||' expr
 nested-expr ::= field-expr | element-expr | slice-expr
-field-expr ::= expr '.' (identifier | ((escaped-identifier | '[' expr ']') 'i'?))
+field-expr ::= expr '.' (identifier | (escaped-identifier 'i'?))
 element-expr ::= expr '[' expr ']'
 slice-expr ::= expr '[' expr ':' expr? ']'
 subquery-expr ::= '(' select ')'
