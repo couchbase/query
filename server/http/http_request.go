@@ -450,7 +450,8 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, error) {
 		if namedArgs == nil {
 			namedArgs = make(map[string]value.Value)
 		}
-		namedArgs[namedArg] = argValue
+		// NB the '$' is trimmed from the argument name when put in the Value map:
+		namedArgs[strings.TrimPrefix(namedArg, "$")] = argValue
 	}
 
 	return namedArgs, nil
