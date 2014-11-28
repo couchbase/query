@@ -201,11 +201,13 @@ func (this *DummyScan) MarshalJSON() ([]byte, error) {
 type CountScan struct {
 	readonly
 	keyspace datastore.Keyspace
+	term     *algebra.KeyspaceTerm
 }
 
-func NewCountScan(keyspace datastore.Keyspace) *CountScan {
+func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *CountScan {
 	return &CountScan{
 		keyspace: keyspace,
+		term:     term,
 	}
 }
 
@@ -217,9 +219,14 @@ func (this *CountScan) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *CountScan) Term() *algebra.KeyspaceTerm {
+	return this.term
+}
+
 func (this *CountScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CountScan"}
-	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.term.Namespace()
+	r["keyspace"] = this.term.Keyspace()
 	return json.Marshal(r)
 }
 

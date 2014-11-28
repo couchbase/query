@@ -459,6 +459,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		return false, nil
 	}
 
+	from.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getTermKeyspace(from)
 	if err != nil {
 		return false, err
@@ -471,7 +472,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		}
 	}
 
-	scan := NewCountScan(keyspace)
+	scan := NewCountScan(keyspace, from)
 	this.children = append(this.children, scan)
 	return true, nil
 }
