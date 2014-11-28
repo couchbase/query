@@ -459,7 +459,7 @@
    {
         "description": "query with only COUNT(*) should perform fast count",
         "statements": "EXPLAIN SELECT COUNT(*) as c FROM default:game ORDER BY c",
-          "results": [
+        "results": [
         {
             "#operator": "Sequence",
             "~children": [
@@ -468,7 +468,8 @@
                     "~children": [
                         {
                             "#operator": "CountScan",
-                            "keyspace": "game"
+                            "keyspace": "game",
+                            "namespace": "default"
                         },
                         {
                             "#operator": "Parallel",
@@ -541,7 +542,7 @@
                 }
             ]
         }
-    ]
+    ]   
    },
    {
         "description": "query with COUNT(*) and anything else should perform scan",

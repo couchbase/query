@@ -1,14 +1,26 @@
 [
     {
         "statements" : "SELECT * from default:orders3 INNER JOIN default:contacts ON KEYS orders3.customers ORDER BY orders3.id",
-        "results": [
+         "results": [
         {
             "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
                 "hobbies": [
                     "golf",
                     "surfing"
                 ],
-                "name": "fred",
+                "name": "dave",
                 "type": "contact"
             },
             "orders3": {
@@ -32,23 +44,11 @@
         },
         {
             "contacts": {
-                "children": [
-                    {
-                        "age": 17,
-                        "gender": "m",
-                        "name": "aiden"
-                    },
-                    {
-                        "age": 2,
-                        "gender": "f",
-                        "name": "bill"
-                    }
-                ],
                 "hobbies": [
                     "golf",
                     "surfing"
                 ],
-                "name": "dave",
+                "name": "fred",
                 "type": "contact"
             },
             "orders3": {
@@ -140,38 +140,6 @@
         },
         {
             "contacts": {
-                "contacts": [
-                    {
-                        "name": "fred"
-                    },
-                    {
-                        "name": "sheela"
-                    }
-                ],
-                "name": "jane",
-                "type": "contact"
-            },
-            "orders3": {
-                "customers": [
-                    "jane",
-                    "earl"
-                ],
-                "id": "1235",
-                "orderlines": [
-                    {
-                        "productId": "tea111",
-                        "qty": 1
-                    },
-                    {
-                        "productId": "sugar22",
-                        "qty": 1
-                    }
-                ],
-                "type": "order"
-            }
-        },
-        {
-            "contacts": {
                 "children": [
                     {
                         "age": 17,
@@ -208,8 +176,192 @@
                 ],
                 "type": "order"
             }
+        },
+        {
+            "contacts": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "jane",
+                    "earl"
+                ],
+                "id": "1235",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "contacts": [
+                    {
+                        "name": "fred"
+                    },
+                    {
+                        "name": "sheela"
+                    }
+                ],
+                "name": "jane",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
         }
-        ]
+    ]       
     },
     {
         "statements": "SELECT * FROM default:orders2 INNER JOIN default:contacts AS cont ON  KEYS orders2.custId ORDER BY orders2.id",
@@ -745,7 +897,20 @@
     },
     {
         "statements" : "SELECT DISTINCT customer_name, orders3.orderlines FROM default:orders3 INNER JOIN default:contacts.name customer_name  ON KEYS orders3.customers ORDER BY customer_name,orders3.orderlines",
-        "results": [
+         "results": [
+        {
+            "customer_name": "dave",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
         {
             "customer_name": "dave",
             "orderlines": [
@@ -764,6 +929,19 @@
             "orderlines": [
                 {
                     "productId": "tea111",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "fred",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
                     "qty": 1
                 },
                 {
@@ -803,10 +981,36 @@
             "orderlines": [
                 {
                     "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "ian",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
                     "qty": 2
                 },
                 {
                     "productId": "tea111",
+                    "qty": 1
+                }
+            ]
+        },
+        {
+            "customer_name": "jane",
+            "orderlines": [
+                {
+                    "productId": "coffee01",
+                    "qty": 1
+                },
+                {
+                    "productId": "sugar22",
                     "qty": 1
                 }
             ]
@@ -824,7 +1028,7 @@
                 }
             ]
         }
-   ]
- }
+    ]   
+    }
 
 ]
