@@ -208,7 +208,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 						// close this bucket
 						vi.keyspace.Release()
 						// ask the pool to refresh
-						vi.keyspace.namespace.refresh()
+						vi.keyspace.namespace.refresh(true)
 						// bucket doesnt exist any more
 						conn.Error(errors.NewError(nil, "bucket "+vi.keyspace.Name()+" not found"))
 						return

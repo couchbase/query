@@ -19,6 +19,7 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -40,6 +41,12 @@ const (
 type site struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
+}
+
+// Admin credentials
+type credentials struct {
+	user     string // username,i.e. Administrator
+	password string //  Administrator password
 }
 
 func (s *site) Id() string {
@@ -123,11 +130,33 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 		}
 	}
 
+	url, err := url.Parse(s.URL())
+	if err != nil {
+		logging.Warnf("Unable to parse url %s. Error %v", s.URL(), err)
+	}
+
+	var username string
+	var password string
+
+	if url.User != nil {
+		// extract admin username and password
+		username = url.User.Username()
+		pw, set := url.User.Password()
+		if set == true {
+			password = pw
+		}
+	}
+
+	if username != "" && password != "" {
+		logging.Infof("Started with username %s and password %s", username, password)
+	}
+
 	rv := namespace{
-		site:          s,
-		name:          name,
-		cbNamespace:   cbpool,
-		keyspaceCache: make(map[string]datastore.Keyspace),
+		site:             s,
+		name:             name,
+		cbNamespace:      cbpool,
+		keyspaceCache:    make(map[string]datastore.Keyspace),
+		adminCredentials: &credentials{user: username, password: password},
 	}
 	go keepPoolFresh(&rv)
 	return &rv, nil
@@ -135,12 +164,13 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 
 // a namespace represents a couchbase pool
 type namespace struct {
-	site          *site
-	name          string
-	cbNamespace   cb.Pool
-	keyspaceCache map[string]datastore.Keyspace
-	lock          sync.Mutex   // lock to guard the keyspaceCache
-	nslock        sync.RWMutex // lock for this structure
+	site             *site
+	name             string
+	cbNamespace      cb.Pool
+	keyspaceCache    map[string]datastore.Keyspace
+	lock             sync.Mutex   // lock to guard the keyspaceCache
+	nslock           sync.RWMutex // lock for this structure
+	adminCredentials *credentials
 }
 
 func (p *namespace) DatastoreId() string {
@@ -199,7 +229,7 @@ func (p *namespace) getPool() cb.Pool {
 	return p.cbNamespace
 }
 
-func (p *namespace) refresh() {
+func (p *namespace) refresh(changed bool) {
 	// trigger refresh of this pool
 	logging.Infof("Refreshing pool %s", p.name)
 
@@ -226,8 +256,9 @@ func (p *namespace) refresh() {
 	defer p.lock.Unlock()
 	for name, keySpace := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
-		_, err := p.cbNamespace.GetBucket(name)
+		_, err := newpool.GetBucketWithAuth(name, keySpace.(*keyspace).saslPassword)
 		if err != nil {
+			changed = true
 			keySpace.(*keyspace).deleted = true
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
@@ -235,7 +266,9 @@ func (p *namespace) refresh() {
 		}
 	}
 
-	p.setPool(newpool)
+	if changed == true {
+		p.setPool(newpool)
+	}
 }
 
 func keepPoolFresh(p *namespace) {
@@ -243,7 +276,7 @@ func keepPoolFresh(p *namespace) {
 	tickChan := time.Tick(1 * time.Minute)
 
 	for _ = range tickChan {
-		p.refresh()
+		p.refresh(false)
 	}
 }
 
@@ -255,6 +288,7 @@ type keyspace struct {
 	cbbucket         *cb.Bucket
 	deleted          bool
 	nonUsableIndexes []string // indexes that cannot be used
+	saslPassword     string   // SASL password
 }
 
 func (b *keyspace) refresh() {
@@ -293,19 +327,43 @@ func keepIndexesFresh(b *keyspace) {
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
+	var saslPassword string
+	var cbbucket *cb.Bucket
+
 	cbNamespace := p.getPool()
-	cbbucket, err := cbNamespace.GetBucket(name)
+
+	// get the bucket password if one exists
+	binfo, err := cb.GetBucketList(p.site.Id())
+	if err != nil {
+		logging.Warnf("Unable to retrieve bucket passwords. Error %v", err)
+	}
+
+	for bname, bpass := range binfo {
+		if bname == name {
+			if bpass != "" {
+				saslPassword = bpass
+				logging.Infof("SASL password for bucket %s", bpass)
+			}
+			break
+		}
+	}
+
+	cbbucket, err = cbNamespace.GetBucketWithAuth(name, saslPassword)
+
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
 		// go-couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
-		p.refresh()
+		p.refresh(true)
+		cbNamespace = p.getPool()
+
 		// and then check one more time
-		cbbucket, err = cbNamespace.GetBucket(name)
+		logging.Infof(" Retrying bucket %s", name)
+		cbbucket, err = cbNamespace.GetBucketWithAuth(name, saslPassword)
 		if err != nil {
 			// really no such bucket exists
-			return nil, errors.NewError(nil, fmt.Sprintf("Bucket %v not found.", name))
+			return nil, errors.NewError(err, fmt.Sprintf("Bucket %v not found.", name))
 		}
 	}
 
@@ -315,6 +373,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		cbbucket:         cbbucket,
 		indexes:          make(map[string]datastore.Index),
 		nonUsableIndexes: make([]string, 0),
+		saslPassword:     saslPassword,
 	}
 
 	logging.Infof("Created New Bucket %s", name)
