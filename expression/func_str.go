@@ -727,26 +727,63 @@ func (this *RTrim) Constructor() FunctionConstructor { return NewRTrim }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function SPLIT(expr [, sep ]).
+It splits the string into an array of substrings separated
+by sep. If sep is not given, any combination of whitespace
+characters is used. Type Split is a struct that implements
+FunctionBase.
+*/
 type Split struct {
 	FunctionBase
 }
 
+/*
+The function NewSplit calls NewFunctionBase to create a
+function named SPLIT with input arguments as the
+operands from the input expression.
+*/
 func NewSplit(operands ...Expression) Function {
 	return &Split{
 		*NewFunctionBase("split", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Split) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Split) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *Split) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+In order to split the strings, range over the input arguments,
+if its type is missing, return missing. If the argument
+type is not a string, set boolean null as true. If null is
+true it indicates that one of the args is not a string and
+hence return a null value. If not, all input arguments are
+strings. If there is more than 1 input arg, use the separator
+and the string to call the split function from the strings
+package. In the event there is no input then call the
+Fields method which splits the string using whitespace
+characters as defined by unicode. This returns a slice
+of strings. We map it to an interface, convert it to a
+valid N1QL value and return.
+*/
 func (this *Split) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -779,10 +816,21 @@ func (this *Split) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required for the SPLIT function
+is 1.
+*/
 func (this *Split) MinArgs() int { return 1 }
 
+/*
+Maximum input arguments required for the SPLIT function
+is 2.
+*/
 func (this *Split) MaxArgs() int { return 2 }
 
+/*
+Return NewSplit as FunctionConstructor.
+*/
 func (this *Split) Constructor() FunctionConstructor { return NewSplit }
 
 ///////////////////////////////////////////////////
@@ -791,26 +839,61 @@ func (this *Split) Constructor() FunctionConstructor { return NewSplit }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function SUBSTR(expr, position [, length ]).
+It returns a substring from the integer position of the given length,
+or to the end of the string. The position is 0-based, i.e. the first
+position is 0. If position is negative, it is counted from the end
+of the string; -1 is the last position in the string. Type Substr is a
+struct that implements FunctionBase.
+*/
 type Substr struct {
 	FunctionBase
 }
 
+/*
+The function Substr calls NewFunctionBase to create a
+function named SUBSTR with input arguments as the
+operands from the input expression.
+*/
 func NewSubstr(operands ...Expression) Function {
 	return &Substr{
 		*NewFunctionBase("substr", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Substr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Substr) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *Substr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns a string from a start position to the end. It is a substring.
+If the input argument value type is missing, then return a missing value, and if null
+return a null value. Loop through all the input values, and check the types. If it is
+a number type, then check if it is an absolute non floating point number. If not
+return null value. If any value other than a number or missing, return a null.
+If the position is negative calculate the actual offset by adding it to the length
+of the string. If the length of input arguments is 2 or more, it means that the
+start and end positions are given, hence return a value which is the
+slice starting from that position until the end if specified.
+*/
 func (this *Substr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -861,10 +944,21 @@ func (this *Substr) Apply(context Context, args ...value.Value) (value.Value, er
 	return value.NewValue(str[pos : pos+length]), nil
 }
 
+/*
+Minimum input arguments required for the SUBSTR function
+is 2.
+*/
 func (this *Substr) MinArgs() int { return 2 }
 
+/*
+Maximum input arguments required for the SUBSTR function
+is 3.
+*/
 func (this *Substr) MaxArgs() int { return 3 }
 
+/*
+Return NewSubstr as FunctionConstructor.
+*/
 func (this *Substr) Constructor() FunctionConstructor { return NewSubstr }
 
 ///////////////////////////////////////////////////
@@ -873,26 +967,55 @@ func (this *Substr) Constructor() FunctionConstructor { return NewSubstr }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function TITLE(expr). It converts
+the string so that the first letter of each word is uppercase
+and every other letter is lowercase. Type Title is a struct
+that implements UnaryFunctionBase.
+*/
 type Title struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewTitle calls NewUnaryFunctionBase to
+create a function named TITLE with an expression as
+input.
+*/
 func NewTitle(operand Expression) Function {
 	return &Title{
 		*NewUnaryFunctionBase("title", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Title) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Title) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Title) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an argument value and returns a string that has
+the first letter of input words mapped to upper case. If the input
+type is missing return missing, and if it isnt string then return
+null value. Use the Title method from the strings package and
+return it after conversion to a valid N1QL type.
+*/
 func (this *Title) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -904,6 +1027,10 @@ func (this *Title) Apply(context Context, arg value.Value) (value.Value, error) 
 	return value.NewValue(rv), nil
 }
 
+/*
+The constructor returns a NewTitle with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Title) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewTitle(operands[0])
@@ -916,26 +1043,60 @@ func (this *Title) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the String function TRIM(expr [, chars ]).
+It returns a string with all leading and trailing chars
+removed (whitespace by default). Type NewTrim is a struct
+that implements FunctionBase.
+*/
 type Trim struct {
 	FunctionBase
 }
 
+/*
+The function NewTrim calls NewFunctionBase to create a
+function named TRIM with input arguments as the
+operands from the input expression.
+*/
 func NewTrim(operands ...Expression) Function {
 	return &Trim{
 		*NewFunctionBase("trim", operands...),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Trim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Trim) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method takes in input arguments and returns a value that
+is a string with the leading and trailing chars removed.
+Range over the args, if its type is missing, return missing.
+If the argument type is not a string, set boolean null as
+true. If null is true it indicates that one of the args is
+not a string and hence return a null value. If not, all
+input arguments are strings. If there is more than 1
+input arg, use that value to call Trim method from the
+strings method and trim that value from the input string.
+Return this trimmed value.
+*/
 func (this *Trim) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -960,10 +1121,21 @@ func (this *Trim) Apply(context Context, args ...value.Value) (value.Value, erro
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required for the TRIM function
+is 1.
+*/
 func (this *Trim) MinArgs() int { return 1 }
 
+/*
+Maximum input arguments required for the TRIM function
+is 2.
+*/
 func (this *Trim) MaxArgs() int { return 2 }
 
+/*
+Return NewTrim as FunctionConstructor.
+*/
 func (this *Trim) Constructor() FunctionConstructor { return NewTrim }
 
 ///////////////////////////////////////////////////
@@ -973,28 +1145,55 @@ func (this *Trim) Constructor() FunctionConstructor { return NewTrim }
 ///////////////////////////////////////////////////
 
 /*
-
+This represents the String function UPPER(expr). It returns
+the uppercase of the string value. Type Upper is a struct
+that implements UnaryFunctionBase.
 */
 type Upper struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewUpper calls NewUnaryFunctionBase to
+create a function named UPPER with an expression as
+input.
+*/
 func NewUpper(operand Expression) Function {
 	return &Upper{
 		*NewUnaryFunctionBase("upper", operand),
 	}
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Upper) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type STRING.
+*/
 func (this *Upper) Type() value.Type { return value.STRING }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method takes in an argument value and returns a
+uppercase string as value. If the input type is
+missing return missing, and if it isnt string then
+return null value. Use the ToUpper method to
+convert the string to upper case on a valid Go type
+from the Actual method on the argument value. Return
+this Upper case string as Value.
+*/
 func (this *Upper) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1006,6 +1205,10 @@ func (this *Upper) Apply(context Context, arg value.Value) (value.Value, error) 
 	return value.NewValue(rv), nil
 }
 
+/*
+The constructor returns a NewUpper with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Upper) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUpper(operands[0])
