@@ -18,9 +18,12 @@ type Or struct {
 }
 
 func NewOr(operands ...Expression) Function {
-	return &Or{
+	rv := &Or{
 		*NewCommutativeFunctionBase("or", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Or) Accept(visitor Visitor) (interface{}, error) {
@@ -57,6 +60,16 @@ func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error)
 	} else {
 		return value.FALSE_VALUE, nil
 	}
+}
+
+func (this *Or) SubsetOf(other Expression) bool {
+	for _, child := range this.Children() {
+		if !child.SubsetOf(other) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (this *Or) Constructor() FunctionConstructor {

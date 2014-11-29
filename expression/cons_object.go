@@ -27,6 +27,7 @@ func NewObjectConstruct(bindings Bindings) Expression {
 		rv.bindings[b.Variable()] = b.Expression()
 	}
 
+	rv.expr = rv
 	return rv
 }
 
@@ -51,10 +52,6 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 	}
 
 	return value.NewValue(m), nil
-}
-
-func (this *ObjectConstruct) Indexable() bool {
-	return this.indexable(this)
 }
 
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {

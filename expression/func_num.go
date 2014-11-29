@@ -27,9 +27,12 @@ type Abs struct {
 }
 
 func NewAbs(operand Expression) Function {
-	return &Abs{
+	rv := &Abs{
 		*NewUnaryFunctionBase("abs", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Abs) Accept(visitor Visitor) (interface{}, error) {
@@ -69,9 +72,12 @@ type Acos struct {
 }
 
 func NewAcos(operand Expression) Function {
-	return &Acos{
+	rv := &Acos{
 		*NewUnaryFunctionBase("acos", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Acos) Accept(visitor Visitor) (interface{}, error) {
@@ -111,9 +117,12 @@ type Asin struct {
 }
 
 func NewAsin(operand Expression) Function {
-	return &Asin{
+	rv := &Asin{
 		*NewUnaryFunctionBase("asin", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Asin) Accept(visitor Visitor) (interface{}, error) {
@@ -153,9 +162,12 @@ type Atan struct {
 }
 
 func NewAtan(operand Expression) Function {
-	return &Atan{
+	rv := &Atan{
 		*NewUnaryFunctionBase("atan", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Atan) Accept(visitor Visitor) (interface{}, error) {
@@ -195,9 +207,12 @@ type Atan2 struct {
 }
 
 func NewAtan2(first, second Expression) Function {
-	return &Atan2{
+	rv := &Atan2{
 		*NewBinaryFunctionBase("atan2", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Atan2) Accept(visitor Visitor) (interface{}, error) {
@@ -239,9 +254,12 @@ type Ceil struct {
 }
 
 func NewCeil(operand Expression) Function {
-	return &Ceil{
+	rv := &Ceil{
 		*NewUnaryFunctionBase("ceil", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Ceil) Accept(visitor Visitor) (interface{}, error) {
@@ -281,9 +299,12 @@ type Cos struct {
 }
 
 func NewCos(operand Expression) Function {
-	return &Cos{
+	rv := &Cos{
 		*NewUnaryFunctionBase("cos", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Cos) Accept(visitor Visitor) (interface{}, error) {
@@ -323,9 +344,12 @@ type Degrees struct {
 }
 
 func NewDegrees(operand Expression) Function {
-	return &Degrees{
+	rv := &Degrees{
 		*NewUnaryFunctionBase("degrees", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Degrees) Accept(visitor Visitor) (interface{}, error) {
@@ -365,9 +389,12 @@ type Exp struct {
 }
 
 func NewExp(operand Expression) Function {
-	return &Exp{
+	rv := &Exp{
 		*NewUnaryFunctionBase("exp", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Exp) Accept(visitor Visitor) (interface{}, error) {
@@ -407,9 +434,12 @@ type Ln struct {
 }
 
 func NewLn(operand Expression) Function {
-	return &Ln{
+	rv := &Ln{
 		*NewUnaryFunctionBase("ln", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Ln) Accept(visitor Visitor) (interface{}, error) {
@@ -449,9 +479,12 @@ type Log struct {
 }
 
 func NewLog(operand Expression) Function {
-	return &Log{
+	rv := &Log{
 		*NewUnaryFunctionBase("log", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Log) Accept(visitor Visitor) (interface{}, error) {
@@ -491,9 +524,12 @@ type Floor struct {
 }
 
 func NewFloor(operand Expression) Function {
-	return &Floor{
+	rv := &Floor{
 		*NewUnaryFunctionBase("floor", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Floor) Accept(visitor Visitor) (interface{}, error) {
@@ -533,9 +569,12 @@ type NaN struct {
 }
 
 func NewNaN() Function {
-	return &NaN{
+	rv := &NaN{
 		*NewNullaryFunctionBase("nan"),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *NaN) Accept(visitor Visitor) (interface{}, error) {
@@ -565,9 +604,12 @@ type NegInf struct {
 }
 
 func NewNegInf() Function {
-	return &NegInf{
+	rv := &NegInf{
 		*NewNullaryFunctionBase("neginf"),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *NegInf) Accept(visitor Visitor) (interface{}, error) {
@@ -597,9 +639,12 @@ type PI struct {
 }
 
 func NewPI() Function {
-	return &PI{
+	rv := &PI{
 		*NewNullaryFunctionBase("pi"),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *PI) Accept(visitor Visitor) (interface{}, error) {
@@ -629,9 +674,12 @@ type PosInf struct {
 }
 
 func NewPosInf() Function {
-	return &PosInf{
+	rv := &PosInf{
 		*NewNullaryFunctionBase("neginf"),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *PosInf) Accept(visitor Visitor) (interface{}, error) {
@@ -661,9 +709,12 @@ type Power struct {
 }
 
 func NewPower(first, second Expression) Function {
-	return &Power{
+	rv := &Power{
 		*NewBinaryFunctionBase("power", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Power) Accept(visitor Visitor) (interface{}, error) {
@@ -705,9 +756,12 @@ type Radians struct {
 }
 
 func NewRadians(operand Expression) Function {
-	return &Radians{
+	rv := &Radians{
 		*NewUnaryFunctionBase("radians", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Radians) Accept(visitor Visitor) (interface{}, error) {
@@ -752,6 +806,9 @@ func NewRandom(operands ...Expression) Function {
 		*NewFunctionBase("random", operands...),
 		nil,
 	}
+
+	rv.expr = rv
+	rv.volatile = true
 
 	if len(operands) < 1 {
 		return rv
@@ -804,14 +861,6 @@ func (this *Random) Apply(context Context, args ...value.Value) (value.Value, er
 	return value.NewValue(gen.Float64()), nil
 }
 
-func (this *Random) Indexable() bool {
-	return false
-}
-
-func (this *Random) EquivalentTo(other Expression) bool {
-	return false
-}
-
 func (this *Random) MinArgs() int { return 0 }
 
 func (this *Random) MaxArgs() int { return 1 }
@@ -829,9 +878,12 @@ type Round struct {
 }
 
 func NewRound(operands ...Expression) Function {
-	return &Round{
+	rv := &Round{
 		*NewFunctionBase("round", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Round) Accept(visitor Visitor) (interface{}, error) {
@@ -892,9 +944,12 @@ type Sign struct {
 }
 
 func NewSign(operand Expression) Function {
-	return &Sign{
+	rv := &Sign{
 		*NewUnaryFunctionBase("sign", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Sign) Accept(visitor Visitor) (interface{}, error) {
@@ -942,9 +997,12 @@ type Sin struct {
 }
 
 func NewSin(operand Expression) Function {
-	return &Sin{
+	rv := &Sin{
 		*NewUnaryFunctionBase("sin", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Sin) Accept(visitor Visitor) (interface{}, error) {
@@ -984,9 +1042,12 @@ type Sqrt struct {
 }
 
 func NewSqrt(operand Expression) Function {
-	return &Sqrt{
+	rv := &Sqrt{
 		*NewUnaryFunctionBase("sqrt", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Sqrt) Accept(visitor Visitor) (interface{}, error) {
@@ -1026,9 +1087,12 @@ type Tan struct {
 }
 
 func NewTan(operand Expression) Function {
-	return &Tan{
+	rv := &Tan{
 		*NewUnaryFunctionBase("tan", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Tan) Accept(visitor Visitor) (interface{}, error) {
@@ -1068,9 +1132,12 @@ type Trunc struct {
 }
 
 func NewTrunc(operands ...Expression) Function {
-	return &Trunc{
+	rv := &Trunc{
 		*NewFunctionBase("trunc", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Trunc) Accept(visitor Visitor) (interface{}, error) {

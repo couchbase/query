@@ -26,9 +26,12 @@ type IfMissing struct {
 }
 
 func NewIfMissing(operands ...Expression) Function {
-	return &IfMissing{
+	rv := &IfMissing{
 		*NewFunctionBase("ifmissing", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
@@ -68,9 +71,12 @@ type IfMissingOrNull struct {
 }
 
 func NewIfMissingOrNull(operands ...Expression) Function {
-	return &IfMissingOrNull{
+	rv := &IfMissingOrNull{
 		*NewFunctionBase("ifmissingornull", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
@@ -110,9 +116,12 @@ type IfNull struct {
 }
 
 func NewIfNull(operands ...Expression) Function {
-	return &IfNull{
+	rv := &IfNull{
 		*NewFunctionBase("ifnull", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
@@ -152,9 +161,12 @@ type FirstVal struct {
 }
 
 func NewFirstVal(operands ...Expression) Function {
-	return &FirstVal{
+	rv := &FirstVal{
 		*NewFunctionBase("firstval", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *FirstVal) Accept(visitor Visitor) (interface{}, error) {
@@ -194,9 +206,12 @@ type MissingIf struct {
 }
 
 func NewMissingIf(first, second Expression) Function {
-	return &MissingIf{
+	rv := &MissingIf{
 		*NewBinaryFunctionBase("missingif", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
@@ -234,9 +249,12 @@ type NullIf struct {
 }
 
 func NewNullIf(first, second Expression) Function {
-	return &NullIf{
+	rv := &NullIf{
 		*NewBinaryFunctionBase("nullif", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {

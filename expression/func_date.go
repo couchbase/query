@@ -39,9 +39,13 @@ The function NewClockMillis calls NewNullaryFunctionBase to
 create a function named CLOCK_MILLIS.
 */
 func NewClockMillis() Function {
-	return &ClockMillis{
+	rv := &ClockMillis{
 		*NewNullaryFunctionBase("clock_millis"),
 	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -65,17 +69,6 @@ order to convert it to milliseconds, divide it by
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := time.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
-}
-
-/*
-It is not indexable and hence returns false.
-*/
-func (this *ClockMillis) Indexable() bool {
-	return false
-}
-
-func (this *ClockMillis) EquivalentTo(other Expression) bool {
-	return false
 }
 
 /*
@@ -108,9 +101,13 @@ create a function named CLOCK_STR with input
 arguments as the operands from the input expression.
 */
 func NewClockStr(operands ...Expression) Function {
-	return &ClockStr{
+	rv := &ClockStr{
 		*NewFunctionBase("clock_str", operands...),
 	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -161,17 +158,6 @@ func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, 
 }
 
 /*
-It is not indexable and hence returns false.
-*/
-func (this *ClockStr) Indexable() bool {
-	return false
-}
-
-func (this *ClockStr) EquivalentTo(other Expression) bool {
-	return false
-}
-
-/*
 Minimum input arguments required for the defined function
 CLOCK_STR is 0.
 */
@@ -212,9 +198,12 @@ create a function named DATE_ADD_MILLIS with the three
 expressions as input.
 */
 func NewDateAddMillis(first, second, third Expression) Function {
-	return &DateAddMillis{
+	rv := &DateAddMillis{
 		*NewTernaryFunctionBase("date_add_millis", first, second, third),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -305,9 +294,12 @@ create a function named DATE_ADD_STR with the three
 expressions as input.
 */
 func NewDateAddStr(first, second, third Expression) Function {
-	return &DateAddStr{
+	rv := &DateAddStr{
 		*NewTernaryFunctionBase("date_add_str", first, second, third),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -399,9 +391,12 @@ create a function named DATE_DIFF_MILLIS with the three
 expressions as input.
 */
 func NewDateDiffMillis(first, second, third Expression) Function {
-	return &DateDiffMillis{
+	rv := &DateDiffMillis{
 		*NewTernaryFunctionBase("date_diff_millis", first, second, third),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -484,9 +479,12 @@ create a function named DATE_DIFF_STR with the three
 expressions as input.
 */
 func NewDateDiffStr(first, second, third Expression) Function {
-	return &DateDiffStr{
+	rv := &DateDiffStr{
 		*NewTernaryFunctionBase("date_diff_str", first, second, third),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -579,9 +577,12 @@ create a function named DATE_PART_MILLIS with the two
 expressions as input.
 */
 func NewDatePartMillis(first, second Expression) Function {
-	return &DatePartMillis{
+	rv := &DatePartMillis{
 		*NewBinaryFunctionBase("date_part_millis", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -663,9 +664,12 @@ create a function named DATE_PART_STR with the two
 expressions as input.
 */
 func NewDatePartStr(first, second Expression) Function {
-	return &DatePartStr{
+	rv := &DatePartStr{
 		*NewBinaryFunctionBase("date_part_str", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -751,9 +755,12 @@ create a function named DATE_TRUNC_MILLIS with the two
 expressions as input.
 */
 func NewDateTruncMillis(first, second Expression) Function {
-	return &DateTruncMillis{
+	rv := &DateTruncMillis{
 		*NewBinaryFunctionBase("date_trunc_millis", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -838,9 +845,12 @@ create a function named DATE_TRUNC_STR with the two
 expressions as input.
 */
 func NewDateTruncStr(first, second Expression) Function {
-	return &DateTruncStr{
+	rv := &DateTruncStr{
 		*NewBinaryFunctionBase("date_trunc_str", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -928,9 +938,12 @@ function named MILLIS_TO_STR with input arguments as the
 operands from the input expression.
 */
 func NewMillisToStr(operands ...Expression) Function {
-	return &MillisToStr{
+	rv := &MillisToStr{
 		*NewFunctionBase("millis_to_str", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1022,9 +1035,12 @@ function named MILLIS_TO_UTC with input arguments as the
 operands from the input expression.
 */
 func NewMillisToUTC(operands ...Expression) Function {
-	return &MillisToUTC{
+	rv := &MillisToUTC{
 		*NewFunctionBase("millis_to_utc", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1118,9 +1134,12 @@ function named MILLIS_TO_ZONE_NAME with input arguments as the
 operands from the input expression.
 */
 func NewMillisToZoneName(operands ...Expression) Function {
-	return &MillisToZoneName{
+	rv := &MillisToZoneName{
 		*NewFunctionBase("millis_to_zone_name", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1220,9 +1239,13 @@ The function NewNowMillis() calls NewNullaryFunctionBase
 to create a function named NOW_MILLIS.
 */
 func NewNowMillis() Function {
-	return &NowMillis{
+	rv := &NowMillis{
 		*NewNullaryFunctionBase("now_millis"),
 	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1248,13 +1271,6 @@ it.
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := context.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
-}
-
-/*
-It is not indexable.
-*/
-func (this *NowMillis) Indexable() bool {
-	return false
 }
 
 /*
@@ -1286,9 +1302,13 @@ function named NOW_STR with input arguments as the
 operands from the input expression.
 */
 func NewNowStr(operands ...Expression) Function {
-	return &NowStr{
+	rv := &NowStr{
 		*NewFunctionBase("now_str", operands...),
 	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1339,13 +1359,6 @@ func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, er
 }
 
 /*
-It is not indexable.
-*/
-func (this *NowStr) Indexable() bool {
-	return false
-}
-
-/*
 Minimum input arguments required for the defined function
 is 0.
 */
@@ -1383,9 +1396,12 @@ create a function named STR_TO_MILLIS with the an
 expression as input.
 */
 func NewStrToMillis(operand Expression) Function {
-	return &StrToMillis{
+	rv := &StrToMillis{
 		*NewUnaryFunctionBase("str_to_millis", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1465,9 +1481,12 @@ create a function named STR_TO_UTC with the an
 expression as input.
 */
 func NewStrToUTC(operand Expression) Function {
-	return &StrToUTC{
+	rv := &StrToUTC{
 		*NewUnaryFunctionBase("str_to_utc", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1547,9 +1566,12 @@ create a function named STR_TO_ZONE_NAME with the two
 expressions as input.
 */
 func NewStrToZoneName(first, second Expression) Function {
-	return &StrToZoneName{
+	rv := &StrToZoneName{
 		*NewBinaryFunctionBase("str_to_zone_name", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

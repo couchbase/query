@@ -24,9 +24,12 @@ type IsArray struct {
 }
 
 func NewIsArray(operand Expression) Function {
-	return &IsArray{
-		*NewUnaryFunctionBase("isarray", operand),
+	rv := &IsArray{
+		*NewUnaryFunctionBase("is_array", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsArray) Accept(visitor Visitor) (interface{}, error) {
@@ -60,9 +63,12 @@ type IsAtom struct {
 }
 
 func NewIsAtom(operand Expression) Function {
-	return &IsAtom{
-		*NewUnaryFunctionBase("isatom", operand),
+	rv := &IsAtom{
+		*NewUnaryFunctionBase("is_atom", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsAtom) Accept(visitor Visitor) (interface{}, error) {
@@ -101,9 +107,12 @@ type IsBool struct {
 }
 
 func NewIsBool(operand Expression) Function {
-	return &IsBool{
-		*NewUnaryFunctionBase("isbool", operand),
+	rv := &IsBool{
+		*NewUnaryFunctionBase("is_bool", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsBool) Accept(visitor Visitor) (interface{}, error) {
@@ -137,9 +146,12 @@ type IsNum struct {
 }
 
 func NewIsNum(operand Expression) Function {
-	return &IsNum{
-		*NewUnaryFunctionBase("isnum", operand),
+	rv := &IsNum{
+		*NewUnaryFunctionBase("is_num", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsNum) Accept(visitor Visitor) (interface{}, error) {
@@ -173,9 +185,12 @@ type IsObj struct {
 }
 
 func NewIsObj(operand Expression) Function {
-	return &IsObj{
-		*NewUnaryFunctionBase("isobj", operand),
+	rv := &IsObj{
+		*NewUnaryFunctionBase("is_obj", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsObj) Accept(visitor Visitor) (interface{}, error) {
@@ -209,9 +224,12 @@ type IsStr struct {
 }
 
 func NewIsStr(operand Expression) Function {
-	return &IsStr{
-		*NewUnaryFunctionBase("isstr", operand),
+	rv := &IsStr{
+		*NewUnaryFunctionBase("is_str", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsStr) Accept(visitor Visitor) (interface{}, error) {
@@ -245,9 +263,12 @@ type TypeName struct {
 }
 
 func NewTypeName(operand Expression) Function {
-	return &TypeName{
-		*NewUnaryFunctionBase("typename", operand),
+	rv := &TypeName{
+		*NewUnaryFunctionBase("type_name", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *TypeName) Accept(visitor Visitor) (interface{}, error) {

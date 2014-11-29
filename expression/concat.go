@@ -21,9 +21,12 @@ type Concat struct {
 }
 
 func NewConcat(operands ...Expression) Function {
-	return &Concat{
+	rv := &Concat{
 		*NewFunctionBase("concat", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Concat) Accept(visitor Visitor) (interface{}, error) {

@@ -39,9 +39,12 @@ calling NewValue and setting the value component of the
 struct to it. Return a pointer to the Constant structure.
 */
 func NewConstant(val interface{}) Expression {
-	return &Constant{
+	rv := &Constant{
 		value: value.NewValue(val),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -65,8 +68,7 @@ func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-A constant expression is indexable and hence this method
-returns true.
+A constant expression is indexable as part of another expression.
 */
 func (this *Constant) Indexable() bool {
 	return true

@@ -39,9 +39,12 @@ create a function named BASE64 with an input operand as the
 expression.
 */
 func NewBase64(operand Expression) Function {
-	return &Base64{
+	rv := &Base64{
 		*NewUnaryFunctionBase("base64", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -114,9 +117,12 @@ create a function named META with an input operand as the
 expression.
 */
 func NewMeta(operand Expression) Function {
-	return &Meta{
+	rv := &Meta{
 		*NewUnaryFunctionBase("meta", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -192,9 +198,12 @@ NewNullaryFunctionBase to create a function SELF. It has
 no input arguments.
 */
 func NewSelf() Function {
-	return &Self{
+	rv := &Self{
 		*NewNullaryFunctionBase("self"),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -252,9 +261,13 @@ The function NewUuid returns a pointer to the NewNullaryFunctionBase
 to create a function named UUID. It has no input arguments.
 */
 func NewUuid() Function {
-	return &Uuid{
+	rv := &Uuid{
 		*NewNullaryFunctionBase("uuid"),
 	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -278,17 +291,6 @@ a string. Call newValue and return it.
 func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, error) {
 	u := uuid.NewV4()
 	return value.NewValue(u.String()), nil
-}
-
-/*
-It is not indexable.
-*/
-func (this *Uuid) Indexable() bool {
-	return false
-}
-
-func (this *Uuid) EquivalentTo(other Expression) bool {
-	return false
 }
 
 /*

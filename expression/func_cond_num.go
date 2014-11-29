@@ -26,9 +26,12 @@ type IfInf struct {
 }
 
 func NewIfInf(operands ...Expression) Function {
-	return &IfInf{
+	rv := &IfInf{
 		*NewFunctionBase("ifinf", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfInf) Accept(visitor Visitor) (interface{}, error) {
@@ -75,9 +78,12 @@ type IfNaN struct {
 }
 
 func NewIfNaN(operands ...Expression) Function {
-	return &IfNaN{
+	rv := &IfNaN{
 		*NewFunctionBase("ifnan", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
@@ -124,9 +130,12 @@ type IfNaNOrInf struct {
 }
 
 func NewIfNaNOrInf(operands ...Expression) Function {
-	return &IfNaNOrInf{
+	rv := &IfNaNOrInf{
 		*NewFunctionBase("ifnanorinf", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
@@ -173,9 +182,12 @@ type IfNegInf struct {
 }
 
 func NewIfNegInf(operands ...Expression) Function {
-	return &IfNegInf{
+	rv := &IfNegInf{
 		*NewFunctionBase("ifneginf", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfNegInf) Accept(visitor Visitor) (interface{}, error) {
@@ -222,9 +234,12 @@ type IfPosInf struct {
 }
 
 func NewIfPosInf(operands ...Expression) Function {
-	return &IfPosInf{
+	rv := &IfPosInf{
 		*NewFunctionBase("ifposinf", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IfPosInf) Accept(visitor Visitor) (interface{}, error) {
@@ -271,9 +286,12 @@ type FirstNum struct {
 }
 
 func NewFirstNum(operands ...Expression) Function {
-	return &FirstNum{
+	rv := &FirstNum{
 		*NewFunctionBase("firstnum", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *FirstNum) Accept(visitor Visitor) (interface{}, error) {
@@ -320,9 +338,12 @@ type NaNIf struct {
 }
 
 func NewNaNIf(first, second Expression) Function {
-	return &NaNIf{
+	rv := &NaNIf{
 		*NewBinaryFunctionBase("nanif", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
@@ -360,9 +381,12 @@ type NegInfIf struct {
 }
 
 func NewNegInfIf(first, second Expression) Function {
-	return &NegInfIf{
+	rv := &NegInfIf{
 		*NewBinaryFunctionBase("neginfif", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
@@ -400,9 +424,12 @@ type PosInfIf struct {
 }
 
 func NewPosInfIf(first, second Expression) Function {
-	return &PosInfIf{
+	rv := &PosInfIf{
 		*NewBinaryFunctionBase("posinfif", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {

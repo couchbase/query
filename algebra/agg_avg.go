@@ -21,9 +21,12 @@ type Avg struct {
 }
 
 func NewAvg(operand expression.Expression) Aggregate {
-	return &Avg{
+	rv := &Avg{
 		*NewAggregateBase("avg", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Avg) String() string {

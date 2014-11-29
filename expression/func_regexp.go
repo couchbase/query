@@ -34,6 +34,7 @@ func NewRegexpContains(first, second Expression) Function {
 	}
 
 	rv.re, _ = precompileRegexp(second)
+	rv.expr = rv
 	return rv
 }
 
@@ -93,6 +94,7 @@ func NewRegexpLike(first, second Expression) Function {
 	}
 
 	rv.re, _ = precompileRegexp(second)
+	rv.expr = rv
 	return rv
 }
 
@@ -152,6 +154,7 @@ func NewRegexpPosition(first, second Expression) Function {
 	}
 
 	rv.re, _ = precompileRegexp(second)
+	rv.expr = rv
 	return rv
 }
 
@@ -216,6 +219,7 @@ func NewRegexpReplace(operands ...Expression) Function {
 	}
 
 	rv.re, _ = precompileRegexp(operands[1])
+	rv.expr = rv
 	return rv
 }
 

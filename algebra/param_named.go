@@ -22,9 +22,12 @@ type NamedParameter struct {
 }
 
 func NewNamedParameter(name string) expression.Expression {
-	return &NamedParameter{
+	rv := &NamedParameter{
 		name: name,
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *NamedParameter) Accept(visitor expression.Visitor) (interface{}, error) {

@@ -28,11 +28,14 @@ type SimpleCase struct {
 }
 
 func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expression) Expression {
-	return &SimpleCase{
+	rv := &SimpleCase{
 		searchTerm: searchTerm,
 		whenTerms:  whenTerms,
 		elseTerm:   elseTerm,
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
@@ -94,14 +97,6 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	return ev, nil
-}
-
-func (this *SimpleCase) Indexable() bool {
-	return this.indexable(this)
-}
-
-func (this *SimpleCase) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
 }
 
 func (this *SimpleCase) Children() Expressions {

@@ -21,9 +21,12 @@ type SumDistinct struct {
 }
 
 func NewSumDistinct(operand expression.Expression) Aggregate {
-	return &SumDistinct{
+	rv := &SumDistinct{
 		*NewDistinctAggregateBase("sum", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *SumDistinct) String() string {

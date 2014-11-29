@@ -21,9 +21,12 @@ type AvgDistinct struct {
 }
 
 func NewAvgDistinct(operand expression.Expression) Aggregate {
-	return &AvgDistinct{
+	rv := &AvgDistinct{
 		*NewDistinctAggregateBase("avg", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *AvgDistinct) String() string {

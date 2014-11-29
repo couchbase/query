@@ -18,9 +18,12 @@ type Exists struct {
 }
 
 func NewExists(operand Expression) *Exists {
-	return &Exists{
+	rv := &Exists{
 		*NewUnaryFunctionBase("exists", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Exists) Accept(visitor Visitor) (interface{}, error) {

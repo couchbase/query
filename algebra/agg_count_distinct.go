@@ -19,9 +19,12 @@ type CountDistinct struct {
 }
 
 func NewCountDistinct(operand expression.Expression) Aggregate {
-	return &CountDistinct{
+	rv := &CountDistinct{
 		*NewDistinctAggregateBase("count", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *CountDistinct) String() string {

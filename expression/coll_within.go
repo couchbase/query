@@ -18,9 +18,12 @@ type Within struct {
 }
 
 func NewWithin(first, second Expression) Function {
-	return &Within{
+	rv := &Within{
 		*NewBinaryFunctionBase("within", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Within) Accept(visitor Visitor) (interface{}, error) {

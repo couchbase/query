@@ -22,9 +22,12 @@ type PositionalParameter struct {
 }
 
 func NewPositionalParameter(position int) expression.Expression {
-	return &PositionalParameter{
+	rv := &PositionalParameter{
 		position: position,
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *PositionalParameter) Accept(visitor expression.Visitor) (interface{}, error) {

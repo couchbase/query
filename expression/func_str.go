@@ -37,9 +37,12 @@ create a function named CONTAINS with the two
 expressions as input.
 */
 func NewContains(first, second Expression) Function {
-	return &Contains{
+	rv := &Contains{
 		*NewBinaryFunctionBase("contains", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -113,9 +116,12 @@ create a function named LENGTH with an expression as
 input.
 */
 func NewLength(operand Expression) Function {
-	return &Length{
+	rv := &Length{
 		*NewUnaryFunctionBase("length", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -188,9 +194,12 @@ create a function named LOWER with an expression as
 input.
 */
 func NewLower(operand Expression) Function {
-	return &Lower{
+	rv := &Lower{
 		*NewUnaryFunctionBase("lower", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -266,9 +275,12 @@ function named LTRIM with input arguments as the
 operands from the input expression.
 */
 func NewLTrim(operands ...Expression) Function {
-	return &LTrim{
+	rv := &LTrim{
 		*NewFunctionBase("ltrim", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -372,9 +384,12 @@ create a function named POSITION with two expressions as
 input.
 */
 func NewPosition(first, second Expression) Function {
-	return &Position{
+	rv := &Position{
 		*NewBinaryFunctionBase("position", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -448,9 +463,12 @@ create a function named REPEAT with the two
 expressions as input.
 */
 func NewRepeat(first, second Expression) Function {
-	return &Repeat{
+	rv := &Repeat{
 		*NewBinaryFunctionBase("repeat", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -531,9 +549,12 @@ function named REPLACE with input arguments as the
 operands from the input expression.
 */
 func NewReplace(operands ...Expression) Function {
-	return &Replace{
+	rv := &Replace{
 		*NewFunctionBase("replace", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -643,9 +664,12 @@ function named RTRIM with input arguments as the
 operands from the input expression.
 */
 func NewRTrim(operands ...Expression) Function {
-	return &RTrim{
+	rv := &RTrim{
 		*NewFunctionBase("rtrim", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -744,9 +768,12 @@ function named SPLIT with input arguments as the
 operands from the input expression.
 */
 func NewSplit(operands ...Expression) Function {
-	return &Split{
+	rv := &Split{
 		*NewFunctionBase("split", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -857,9 +884,12 @@ function named SUBSTR with input arguments as the
 operands from the input expression.
 */
 func NewSubstr(operands ...Expression) Function {
-	return &Substr{
+	rv := &Substr{
 		*NewFunctionBase("substr", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -983,9 +1013,12 @@ create a function named TITLE with an expression as
 input.
 */
 func NewTitle(operand Expression) Function {
-	return &Title{
+	rv := &Title{
 		*NewUnaryFunctionBase("title", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1059,9 +1092,12 @@ function named TRIM with input arguments as the
 operands from the input expression.
 */
 func NewTrim(operands ...Expression) Function {
-	return &Trim{
+	rv := &Trim{
 		*NewFunctionBase("trim", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -1159,9 +1195,12 @@ create a function named UPPER with an expression as
 input.
 */
 func NewUpper(operand Expression) Function {
-	return &Upper{
+	rv := &Upper{
 		*NewUnaryFunctionBase("upper", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

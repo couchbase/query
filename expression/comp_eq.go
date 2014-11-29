@@ -14,13 +14,16 @@ import (
 )
 
 type Eq struct {
-	BinaryFunctionBase
+	CommutativeBinaryFunctionBase
 }
 
 func NewEq(first, second Expression) Function {
-	return &Eq{
-		*NewBinaryFunctionBase("eq", first, second),
+	rv := &Eq{
+		*NewCommutativeBinaryFunctionBase("eq", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Eq) Accept(visitor Visitor) (interface{}, error) {

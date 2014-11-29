@@ -32,9 +32,12 @@ NewFunctionBase using the input operands with function name
 array.
 */
 func NewArrayConstruct(operands ...Expression) Function {
-	return &ArrayConstruct{
+	rv := &ArrayConstruct{
 		*NewFunctionBase("array", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

@@ -28,9 +28,12 @@ type ToArray struct {
 }
 
 func NewToArray(operand Expression) Function {
-	return &ToArray{
-		*NewUnaryFunctionBase("toarray", operand),
+	rv := &ToArray{
+		*NewUnaryFunctionBase("to_array", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
@@ -70,9 +73,12 @@ type ToAtom struct {
 }
 
 func NewToAtom(operand Expression) Function {
-	return &ToAtom{
-		*NewUnaryFunctionBase("toatom", operand),
+	rv := &ToAtom{
+		*NewUnaryFunctionBase("to_atom", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
@@ -130,9 +136,12 @@ type ToBool struct {
 }
 
 func NewToBool(operand Expression) Function {
-	return &ToBool{
-		*NewUnaryFunctionBase("tobool", operand),
+	rv := &ToBool{
+		*NewUnaryFunctionBase("to_bool", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ToBool) Accept(visitor Visitor) (interface{}, error) {
@@ -182,9 +191,12 @@ type ToNum struct {
 }
 
 func NewToNum(operand Expression) Function {
-	return &ToNum{
-		*NewUnaryFunctionBase("tonum", operand),
+	rv := &ToNum{
+		*NewUnaryFunctionBase("to_num", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ToNum) Accept(visitor Visitor) (interface{}, error) {
@@ -228,6 +240,52 @@ func (this *ToNum) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ToObj
+//
+///////////////////////////////////////////////////
+
+type ToObj struct {
+	UnaryFunctionBase
+}
+
+func NewToObj(operand Expression) Function {
+	rv := &ToObj{
+		*NewUnaryFunctionBase("to_obj", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ToObj) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ToObj) Type() value.Type { return value.OBJECT }
+
+func (this *ToObj) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+var _EMPTY_OBJECT = value.NewValue(map[string]interface{}{})
+
+func (this *ToObj) Apply(context Context, arg value.Value) (value.Value, error) {
+	switch arg.Type() {
+	case value.MISSING, value.NULL, value.OBJECT:
+		return arg, nil
+	}
+
+	return _EMPTY_OBJECT, nil
+}
+
+func (this *ToObj) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewToObj(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ToStr
 //
 ///////////////////////////////////////////////////
@@ -237,9 +295,12 @@ type ToStr struct {
 }
 
 func NewToStr(operand Expression) Function {
-	return &ToStr{
-		*NewUnaryFunctionBase("tostr", operand),
+	rv := &ToStr{
+		*NewUnaryFunctionBase("to_str", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ToStr) Accept(visitor Visitor) (interface{}, error) {

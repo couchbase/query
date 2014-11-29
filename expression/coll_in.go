@@ -18,9 +18,12 @@ type In struct {
 }
 
 func NewIn(first, second Expression) Function {
-	return &In{
+	rv := &In{
 		*NewBinaryFunctionBase("in", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *In) Accept(visitor Visitor) (interface{}, error) {

@@ -18,13 +18,16 @@ type First struct {
 }
 
 func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression {
-	return &First{
+	rv := &First{
 		collMap: collMap{
 			mapping:  mapping,
 			bindings: bindings,
 			when:     when,
 		},
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *First) Accept(visitor Visitor) (interface{}, error) {
@@ -100,12 +103,4 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	return value.MISSING_VALUE, nil
-}
-
-func (this *First) Indexable() bool {
-	return this.indexable(this)
-}
-
-func (this *First) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
 }

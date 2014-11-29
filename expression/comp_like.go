@@ -27,6 +27,7 @@ func NewLike(first, second Expression) Function {
 	}
 
 	rv.Precompile()
+	rv.expr = rv
 	return rv
 }
 

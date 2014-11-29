@@ -20,9 +20,12 @@ type Subquery struct {
 }
 
 func NewSubquery(query *Select) expression.Expression {
-	return &Subquery{
+	rv := &Subquery{
 		query: query,
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Subquery) String() string {

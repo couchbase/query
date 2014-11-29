@@ -18,9 +18,12 @@ type Neg struct {
 }
 
 func NewNeg(operand Expression) Function {
-	return &Neg{
+	rv := &Neg{
 		*NewUnaryFunctionBase("neg", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Neg) Accept(visitor Visitor) (interface{}, error) {

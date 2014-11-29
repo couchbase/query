@@ -18,9 +18,12 @@ type Between struct {
 }
 
 func NewBetween(item, low, high Expression) Function {
-	return &Between{
+	rv := &Between{
 		*NewTernaryFunctionBase("between", item, low, high),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Between) Accept(visitor Visitor) (interface{}, error) {

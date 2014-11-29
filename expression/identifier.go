@@ -28,9 +28,12 @@ This method returns a pointer to an Identifier structure
 that has its identifier fied populated by the input argument.
 */
 func NewIdentifier(identifier string) Path {
-	return &Identifier{
+	rv := &Identifier{
 		identifier: identifier,
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

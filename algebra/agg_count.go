@@ -21,9 +21,12 @@ type Count struct {
 }
 
 func NewCount(operand expression.Expression) Aggregate {
-	return &Count{
+	rv := &Count{
 		*NewAggregateBase("count", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Count) String() string {

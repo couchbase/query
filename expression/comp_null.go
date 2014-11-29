@@ -18,9 +18,12 @@ type IsNull struct {
 }
 
 func NewIsNull(operand Expression) Function {
-	return &IsNull{
+	rv := &IsNull{
 		*NewUnaryFunctionBase("isnull", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {

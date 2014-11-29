@@ -18,9 +18,12 @@ type LT struct {
 }
 
 func NewLT(first, second Expression) Function {
-	return &LT{
+	rv := &LT{
 		*NewBinaryFunctionBase("lt", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *LT) Accept(visitor Visitor) (interface{}, error) {

@@ -18,9 +18,12 @@ type IsValued struct {
 }
 
 func NewIsValued(operand Expression) Function {
-	return &IsValued{
+	rv := &IsValued{
 		*NewUnaryFunctionBase("isvalued", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {

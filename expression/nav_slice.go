@@ -20,9 +20,12 @@ type Slice struct {
 }
 
 func NewSlice(operands ...Expression) Function {
-	return &Slice{
+	rv := &Slice{
 		*NewFunctionBase("slice", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Slice) Accept(visitor Visitor) (interface{}, error) {

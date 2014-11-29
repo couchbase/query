@@ -37,9 +37,12 @@ create a function named DECODE_JSON with an expression as
 input.
 */
 func NewDecodeJSON(operand Expression) Function {
-	return &DecodeJSON{
+	rv := &DecodeJSON{
 		*NewUnaryFunctionBase("decode_json", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -125,9 +128,12 @@ create a function named ENCODE_JSON with an expression as
 input.
 */
 func NewEncodeJSON(operand Expression) Function {
-	return &EncodeJSON{
+	rv := &EncodeJSON{
 		*NewUnaryFunctionBase("encode_json", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -193,9 +199,12 @@ create a function named ENCODED_SIZE with an expression as
 input.
 */
 func NewEncodedSize(operand Expression) Function {
-	return &EncodedSize{
+	rv := &EncodedSize{
 		*NewUnaryFunctionBase("encoded_size", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -266,9 +275,12 @@ create a function named POLY_LENGTH with an expression as
 input.
 */
 func NewPolyLength(operand Expression) Function {
-	return &PolyLength{
+	rv := &PolyLength{
 		*NewUnaryFunctionBase("poly_length", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

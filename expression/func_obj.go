@@ -26,9 +26,12 @@ type ObjectLength struct {
 }
 
 func NewObjectLength(operand Expression) Function {
-	return &ObjectLength{
+	rv := &ObjectLength{
 		*NewUnaryFunctionBase("object_length", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ObjectLength) Accept(visitor Visitor) (interface{}, error) {
@@ -69,9 +72,12 @@ type ObjectNames struct {
 }
 
 func NewObjectNames(operand Expression) Function {
-	return &ObjectNames{
+	rv := &ObjectNames{
 		*NewUnaryFunctionBase("object_names", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ObjectNames) Accept(visitor Visitor) (interface{}, error) {
@@ -123,9 +129,12 @@ type ObjectPairs struct {
 }
 
 func NewObjectPairs(operand Expression) Function {
-	return &ObjectPairs{
+	rv := &ObjectPairs{
 		*NewUnaryFunctionBase("object_pairs", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ObjectPairs) Accept(visitor Visitor) (interface{}, error) {
@@ -177,9 +186,12 @@ type ObjectValues struct {
 }
 
 func NewObjectValues(operand Expression) Function {
-	return &ObjectValues{
+	rv := &ObjectValues{
 		*NewUnaryFunctionBase("object_values", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {

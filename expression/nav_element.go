@@ -20,9 +20,12 @@ type Element struct {
 }
 
 func NewElement(first, second Expression) *Element {
-	return &Element{
+	rv := &Element{
 		*NewBinaryFunctionBase("element", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Element) Accept(visitor Visitor) (interface{}, error) {

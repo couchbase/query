@@ -18,12 +18,15 @@ type Every struct {
 }
 
 func NewEvery(bindings Bindings, satisfies Expression) Expression {
-	return &Every{
+	rv := &Every{
 		collPred: collPred{
 			bindings:  bindings,
 			satisfies: satisfies,
 		},
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Every) Accept(visitor Visitor) (interface{}, error) {
@@ -90,12 +93,4 @@ func (this *Every) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	return value.NewValue(true), nil
-}
-
-func (this *Every) Indexable() bool {
-	return this.indexable(this)
-}
-
-func (this *Every) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
 }

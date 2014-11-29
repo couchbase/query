@@ -21,9 +21,12 @@ type ArrayAggDistinct struct {
 }
 
 func NewArrayAggDistinct(operand expression.Expression) Aggregate {
-	return &ArrayAggDistinct{
+	rv := &ArrayAggDistinct{
 		*NewDistinctAggregateBase("array_agg", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *ArrayAggDistinct) String() string {

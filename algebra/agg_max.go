@@ -19,9 +19,12 @@ type Max struct {
 }
 
 func NewMax(operand expression.Expression) Aggregate {
-	return &Max{
+	rv := &Max{
 		*NewAggregateBase("max", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Max) String() string {

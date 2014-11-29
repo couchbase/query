@@ -18,9 +18,12 @@ type Sub struct {
 }
 
 func NewSub(first, second Expression) Function {
-	return &Sub{
+	rv := &Sub{
 		*NewBinaryFunctionBase("sub", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Sub) Accept(visitor Visitor) (interface{}, error) {

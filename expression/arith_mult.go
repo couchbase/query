@@ -18,9 +18,12 @@ type Mult struct {
 }
 
 func NewMult(operands ...Expression) Function {
-	return &Mult{
+	rv := &Mult{
 		*NewCommutativeFunctionBase("mult", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Mult) Accept(visitor Visitor) (interface{}, error) {

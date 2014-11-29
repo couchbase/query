@@ -15,9 +15,9 @@ import (
 
 /*
 ExpressionBase is a base class for all expressions.
-Type ExpressionBase is defined as an empty struct.
 */
 type ExpressionBase struct {
+	expr Expression
 }
 
 /*
@@ -34,8 +34,8 @@ child is indexable. If not then return false as the expression
 is not indexable. If all children are indexable, then return
 true.
 */
-func (this *ExpressionBase) indexable(expr Expression) bool {
-	for _, child := range expr.Children() {
+func (this *ExpressionBase) Indexable() bool {
+	for _, child := range this.expr.Children() {
 		if !child.Indexable() {
 			return false
 		}
@@ -55,12 +55,12 @@ for each set of children and return false if not equal. If the
 method hasnt returned till this point, then the expressions are
 equal and return true.
 */
-func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
-	if reflect.TypeOf(expr) != reflect.TypeOf(other) {
+func (this *ExpressionBase) EquivalentTo(other Expression) bool {
+	if reflect.TypeOf(this.expr) != reflect.TypeOf(other) {
 		return false
 	}
 
-	ours := expr.Children()
+	ours := this.expr.Children()
 	theirs := other.Children()
 
 	if len(ours) != len(theirs) {
@@ -74,4 +74,23 @@ func (this *ExpressionBase) equivalentTo(expr, other Expression) bool {
 	}
 
 	return true
+}
+
+func (this *ExpressionBase) SubsetOf(other Expression) bool {
+	switch other := other.(type) {
+	case *Or:
+		for _, child := range other.Children() {
+			if this.expr.SubsetOf(child) {
+				return true
+			}
+		}
+	}
+
+	return this.expr.EquivalentTo(other)
+}
+
+func (this *ExpressionBase) SetExpr(expr Expression) {
+	if this.expr == nil {
+		this.expr = expr
+	}
 }

@@ -21,9 +21,12 @@ type Sum struct {
 }
 
 func NewSum(operand expression.Expression) Aggregate {
-	return &Sum{
+	rv := &Sum{
 		*NewAggregateBase("sum", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Sum) String() string {

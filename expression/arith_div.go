@@ -18,9 +18,12 @@ type Div struct {
 }
 
 func NewDiv(first, second Expression) Function {
-	return &Div{
+	rv := &Div{
 		*NewBinaryFunctionBase("div", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Div) Accept(visitor Visitor) (interface{}, error) {

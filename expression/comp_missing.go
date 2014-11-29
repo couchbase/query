@@ -18,9 +18,12 @@ type IsMissing struct {
 }
 
 func NewIsMissing(operand Expression) Function {
-	return &IsMissing{
+	rv := &IsMissing{
 		*NewUnaryFunctionBase("ismissing", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {

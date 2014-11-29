@@ -18,9 +18,12 @@ type And struct {
 }
 
 func NewAnd(operands ...Expression) Function {
-	return &And{
+	rv := &And{
 		*NewCommutativeFunctionBase("and", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *And) Accept(visitor Visitor) (interface{}, error) {
@@ -57,6 +60,16 @@ func (this *And) Apply(context Context, args ...value.Value) (value.Value, error
 	} else {
 		return value.TRUE_VALUE, nil
 	}
+}
+
+func (this *And) SubsetOf(other Expression) bool {
+	for _, child := range this.Children() {
+		if child.SubsetOf(other) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (this *And) Constructor() FunctionConstructor {

@@ -20,9 +20,12 @@ type Mod struct {
 }
 
 func NewMod(first, second Expression) Function {
-	return &Mod{
+	rv := &Mod{
 		*NewBinaryFunctionBase("mod", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Mod) Accept(visitor Visitor) (interface{}, error) {

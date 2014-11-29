@@ -18,9 +18,12 @@ type Not struct {
 }
 
 func NewNot(operand Expression) Function {
-	return &Not{
+	rv := &Not{
 		*NewUnaryFunctionBase("not", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Not) Accept(visitor Visitor) (interface{}, error) {

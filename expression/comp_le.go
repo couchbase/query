@@ -18,9 +18,12 @@ type LE struct {
 }
 
 func NewLE(first, second Expression) Function {
-	return &LE{
+	rv := &LE{
 		*NewBinaryFunctionBase("le", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *LE) Accept(visitor Visitor) (interface{}, error) {

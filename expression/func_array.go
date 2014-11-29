@@ -27,9 +27,12 @@ type ArrayAppend struct {
 }
 
 func NewArrayAppend(first, second Expression) Function {
-	return &ArrayAppend{
+	rv := &ArrayAppend{
 		*NewBinaryFunctionBase("array_append", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
@@ -71,9 +74,12 @@ type ArrayAvg struct {
 }
 
 func NewArrayAvg(operand Expression) Function {
-	return &ArrayAvg{
+	rv := &ArrayAvg{
 		*NewUnaryFunctionBase("array_avg", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
@@ -128,9 +134,12 @@ type ArrayConcat struct {
 }
 
 func NewArrayConcat(first, second Expression) Function {
-	return &ArrayConcat{
+	rv := &ArrayConcat{
 		*NewBinaryFunctionBase("array_concat", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
@@ -173,9 +182,12 @@ type ArrayContains struct {
 }
 
 func NewArrayContains(first, second Expression) Function {
-	return &ArrayContains{
+	rv := &ArrayContains{
 		*NewBinaryFunctionBase("array_contains", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
@@ -222,9 +234,12 @@ type ArrayCount struct {
 }
 
 func NewArrayCount(operand Expression) Function {
-	return &ArrayCount{
+	rv := &ArrayCount{
 		*NewUnaryFunctionBase("array_count", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
@@ -273,9 +288,12 @@ type ArrayDistinct struct {
 }
 
 func NewArrayDistinct(operand Expression) Function {
-	return &ArrayDistinct{
+	rv := &ArrayDistinct{
 		*NewUnaryFunctionBase("array_distinct", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
@@ -321,9 +339,12 @@ type ArrayIfNull struct {
 }
 
 func NewArrayIfNull(operand Expression) Function {
-	return &ArrayIfNull{
+	rv := &ArrayIfNull{
 		*NewUnaryFunctionBase("array_ifnull", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
@@ -371,9 +392,12 @@ type ArrayLength struct {
 }
 
 func NewArrayLength(operand Expression) Function {
-	return &ArrayLength{
+	rv := &ArrayLength{
 		*NewUnaryFunctionBase("array_length", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
@@ -414,9 +438,12 @@ type ArrayMax struct {
 }
 
 func NewArrayMax(operand Expression) Function {
-	return &ArrayMax{
+	rv := &ArrayMax{
 		*NewUnaryFunctionBase("array_max", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
@@ -465,9 +492,12 @@ type ArrayMin struct {
 }
 
 func NewArrayMin(operand Expression) Function {
-	return &ArrayMin{
+	rv := &ArrayMin{
 		*NewUnaryFunctionBase("array_min", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
@@ -517,9 +547,12 @@ type ArrayPosition struct {
 }
 
 func NewArrayPosition(first, second Expression) Function {
-	return &ArrayPosition{
+	rv := &ArrayPosition{
 		*NewBinaryFunctionBase("array_position", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
@@ -566,9 +599,12 @@ type ArrayPrepend struct {
 }
 
 func NewArrayPrepend(first, second Expression) Function {
-	return &ArrayPrepend{
+	rv := &ArrayPrepend{
 		*NewBinaryFunctionBase("array_prepend", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
@@ -614,9 +650,12 @@ type ArrayPut struct {
 }
 
 func NewArrayPut(first, second Expression) Function {
-	return &ArrayPut{
+	rv := &ArrayPut{
 		*NewBinaryFunctionBase("array_put", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
@@ -667,9 +706,12 @@ type ArrayRange struct {
 }
 
 func NewArrayRange(operands ...Expression) Function {
-	return &ArrayRange{
+	rv := &ArrayRange{
 		*NewFunctionBase("array_range", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
@@ -738,9 +780,12 @@ type ArrayRemove struct {
 }
 
 func NewArrayRemove(first, second Expression) Function {
-	return &ArrayRemove{
+	rv := &ArrayRemove{
 		*NewBinaryFunctionBase("array_remove", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
@@ -790,9 +835,12 @@ type ArrayRepeat struct {
 }
 
 func NewArrayRepeat(first, second Expression) Function {
-	return &ArrayRepeat{
+	rv := &ArrayRepeat{
 		*NewBinaryFunctionBase("array_repeat", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
@@ -843,9 +891,12 @@ type ArrayReplace struct {
 }
 
 func NewArrayReplace(operands ...Expression) Function {
-	return &ArrayReplace{
+	rv := &ArrayReplace{
 		*NewFunctionBase("array_replace", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
@@ -904,9 +955,12 @@ type ArrayReverse struct {
 }
 
 func NewArrayReverse(operand Expression) Function {
-	return &ArrayReverse{
+	rv := &ArrayReverse{
 		*NewUnaryFunctionBase("array_reverse", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
@@ -954,9 +1008,12 @@ type ArraySort struct {
 }
 
 func NewArraySort(operand Expression) Function {
-	return &ArraySort{
+	rv := &ArraySort{
 		*NewUnaryFunctionBase("array_sort", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
@@ -999,9 +1056,12 @@ type ArraySum struct {
 }
 
 func NewArraySum(operand Expression) Function {
-	return &ArraySum{
+	rv := &ArraySum{
 		*NewUnaryFunctionBase("array_sum", operand),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {

@@ -21,9 +21,12 @@ type Field struct {
 }
 
 func NewField(first, second Expression) *Field {
-	return &Field{
+	rv := &Field{
 		BinaryFunctionBase: *NewBinaryFunctionBase("field", first, second),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Field) Accept(visitor Visitor) (interface{}, error) {
@@ -128,12 +131,15 @@ type FieldName struct {
 }
 
 func NewFieldName(name string) Expression {
-	return &FieldName{
+	rv := &FieldName{
 		Constant: Constant{
 			value: value.NewValue(name),
 		},
 		name: name,
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *FieldName) Accept(visitor Visitor) (interface{}, error) {

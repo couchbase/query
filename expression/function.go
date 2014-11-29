@@ -19,6 +19,7 @@ type Function interface {
 	Expression
 	Name() string
 	Distinct() bool
+	Volatile() bool
 	Operands() Expressions
 	MinArgs() int
 	MaxArgs() int
@@ -30,6 +31,7 @@ type FunctionConstructor func(operands ...Expression) Function
 type FunctionBase struct {
 	ExpressionBase
 	name     string
+	volatile bool
 	operands Expressions
 }
 
@@ -55,6 +57,10 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 }
 
 func (this *FunctionBase) Indexable() bool {
+	if this.volatile {
+		return false
+	}
+
 	for _, operand := range this.operands {
 		if !operand.Indexable() {
 			return false
@@ -65,23 +71,7 @@ func (this *FunctionBase) Indexable() bool {
 }
 
 func (this *FunctionBase) EquivalentTo(other Expression) bool {
-	that, ok := other.(Function)
-	if !ok {
-		return false
-	}
-
-	if this.name != that.Name() ||
-		len(this.operands) != len(that.Operands()) {
-		return false
-	}
-
-	for i, op := range that.Operands() {
-		if !this.operands[i].EquivalentTo(op) {
-			return false
-		}
-	}
-
-	return true
+	return !this.volatile && this.ExpressionBase.EquivalentTo(other)
 }
 
 func (this *FunctionBase) Children() Expressions {
@@ -104,6 +94,8 @@ func (this *FunctionBase) MapChildren(mapper Mapper) error {
 func (this *FunctionBase) Name() string { return this.name }
 
 func (this *FunctionBase) Distinct() bool { return false }
+
+func (this *FunctionBase) Volatile() bool { return this.volatile }
 
 func (this *FunctionBase) Operands() Expressions { return this.operands }
 
@@ -196,6 +188,31 @@ func (this *BinaryFunctionBase) First() Expression {
 
 func (this *BinaryFunctionBase) Second() Expression {
 	return this.operands[1]
+}
+
+type CommutativeBinaryFunctionBase struct {
+	BinaryFunctionBase
+}
+
+func NewCommutativeBinaryFunctionBase(name string, first, second Expression) *CommutativeBinaryFunctionBase {
+	return &CommutativeBinaryFunctionBase{
+		BinaryFunctionBase: *NewBinaryFunctionBase(name, first, second),
+	}
+}
+
+func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
+	that, ok := other.(Function)
+	if !ok {
+		return false
+	}
+
+	if this.name != that.Name() ||
+		len(this.operands) != len(that.Operands()) {
+		return false
+	}
+
+	return (this.operands[0].EquivalentTo(that.Operands()[0]) && this.operands[1].EquivalentTo(that.Operands()[1])) ||
+		(this.operands[0].EquivalentTo(that.Operands()[1]) && this.operands[1].EquivalentTo(that.Operands()[0]))
 }
 
 type TernaryFunctionBase struct {

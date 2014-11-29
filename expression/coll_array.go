@@ -18,13 +18,16 @@ type Array struct {
 }
 
 func NewArray(mapping Expression, bindings Bindings, when Expression) Expression {
-	return &Array{
+	rv := &Array{
 		collMap: collMap{
 			mapping:  mapping,
 			bindings: bindings,
 			when:     when,
 		},
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Array) Accept(visitor Visitor) (interface{}, error) {
@@ -103,12 +106,4 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	return value.NewValue(rv), nil
-}
-
-func (this *Array) Indexable() bool {
-	return this.indexable(this)
-}
-
-func (this *Array) EquivalentTo(other Expression) bool {
-	return this.equivalentTo(this, other)
 }

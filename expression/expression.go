@@ -66,13 +66,16 @@ type Expression interface {
 	Indexable() bool
 
 	/*
-	   This method returns a boolean which indicates if this
-	   expression is equivalent to the input other expression.
-	   For this function it is important to note that false
-	   negatives are fine but false positives are not, and this
-	   needs to be enforced.
+	   Indicates if this expression is equivalent to the other
+	   expression.  False negatives are allowed.
 	*/
 	EquivalentTo(other Expression) bool
+
+	/*
+	   Indicates whether this expression is always true if the other
+	   expression is true. False negatives are allowed.
+	*/
+	SubsetOf(other Expression) bool
 
 	/*
 	   It is a utility function that returns the children of the

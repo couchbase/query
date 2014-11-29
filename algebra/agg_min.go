@@ -19,9 +19,12 @@ type Min struct {
 }
 
 func NewMin(operand expression.Expression) Aggregate {
-	return &Min{
+	rv := &Min{
 		*NewAggregateBase("min", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *Min) String() string {

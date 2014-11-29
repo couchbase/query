@@ -18,9 +18,12 @@ type Add struct {
 }
 
 func NewAdd(operands ...Expression) Function {
-	return &Add{
+	rv := &Add{
 		*NewCommutativeFunctionBase("add", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 func (this *Add) Accept(visitor Visitor) (interface{}, error) {

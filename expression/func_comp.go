@@ -38,9 +38,12 @@ create a function named GREATEST with input operands as the
 expressions.
 */
 func NewGreatest(operands ...Expression) Function {
-	return &Greatest{
+	rv := &Greatest{
 		*NewFunctionBase("greatest", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*
@@ -127,9 +130,12 @@ create a function named LEAST with input operands as the
 expressions.
 */
 func NewLeast(operands ...Expression) Function {
-	return &Least{
+	rv := &Least{
 		*NewFunctionBase("least", operands...),
 	}
+
+	rv.expr = rv
+	return rv
 }
 
 /*

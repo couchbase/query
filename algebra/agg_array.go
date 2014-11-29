@@ -22,9 +22,12 @@ type ArrayAgg struct {
 }
 
 func NewArrayAgg(operand expression.Expression) Aggregate {
-	return &ArrayAgg{
+	rv := &ArrayAgg{
 		*NewAggregateBase("array_agg", operand),
 	}
+
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *ArrayAgg) String() string {
