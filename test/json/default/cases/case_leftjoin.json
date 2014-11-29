@@ -1,0 +1,289 @@
+[
+    {
+        "statements" : "SELECT * from default:orders3 LEFT JOIN default:contacts ON KEYS orders3.customers ORDER BY name LIMIT 4",
+        "results": [
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "dave"
+                ],
+                "id": "1222",
+                "orderlines": [
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "abama"
+                    },
+                    {
+                        "age": 21,
+                        "gender": "m",
+                        "name": "bebama"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "ian",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "fred",
+                    "ian"
+                ],
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    },
+                    {
+                        "productId": "tea111",
+                        "qty": 1
+                    }
+                ],
+                "type": "order"
+            }
+        }
+    ] 
+   },
+   {
+        "description": "SELECT META(o).id oid FROM users_with_orders u KEY \"Aide_48687583\" JOIN users_with_orders o KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END",
+        "statements": "SELECT o.order_details.order_id AS oid FROM default:users_with_orders u USE KEYS \"Aide_48687583\" LEFT JOIN default:users_with_orders o ON KEYS ARRAY s.order_id FOR s IN u.shipped_order_history END ORDER BY oid",
+          "results": [
+        {
+            "oid": "T183428307793"
+        },
+        {
+            "oid": "T638751835595"
+        },
+        {
+            "oid": "T703068425987"
+        },
+        {
+            "oid": "T769348087819"
+        },
+        {
+            "oid": "T870351974549"
+        }
+    ] 
+
+    },
+    {
+        "statements" : "SELECT  o.order_details.order_id as oid FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.shipped_order_history s LEFT JOIN default:users_with_orders o ON KEYS s.order_id ORDER BY oid",
+        "results": [
+        {
+            "oid": "T183428307793"
+        },
+        {
+            "oid": "T638751835595"
+        },
+        {
+            "oid": "T703068425987"
+        },
+        {
+            "oid": "T769348087819"
+        },
+        {
+            "oid": "T870351974549"
+        }
+    ] 
+  
+    },
+    {
+        "statements": "SELECT META(o).id oid, META(u2).id uid, search.category cat FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.shipped_order_history s LEFT JOIN default:users_with_orders o ON KEYS s.order_id LEFT JOIN default:users_with_orders u2 ON KEYS META(u).id UNNEST u.search_history search ORDER BY oid, cat, uid",
+    "results": [
+        {
+            "cat": "Books",
+            "oid": "T183428307793",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T183428307793",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T638751835595",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T638751835595",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T703068425987",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T703068425987",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T769348087819",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T769348087819",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Books",
+            "oid": "T870351974549",
+            "uid": "Aide_48687583"
+        },
+        {
+            "cat": "Films",
+            "oid": "T870351974549",
+            "uid": "Aide_48687583"
+        }
+    ]   },
+     {
+        "statements" : "SELECT DISTINCT customer_name, orders3.id  FROM default:orders3 LEFT JOIN default:contacts.name customer_name ON KEYS orders3.customers ORDER BY orders3.id,customer_name",
+       "results": [
+        {
+            "customer_name": "dave",
+            "id": "1222"
+        },
+        {
+            "customer_name": "fred",
+            "id": "1222"
+        },
+        {
+            "customer_name": "fred",
+            "id": "1234"
+        },
+        {
+            "customer_name": "ian",
+            "id": "1234"
+        },
+        {
+            "customer_name": "earl",
+            "id": "1235"
+        },
+        {
+            "customer_name": "jane",
+            "id": "1235"
+        },
+        {
+            "customer_name": "dave",
+            "id": "1236"
+        },
+        {
+            "customer_name": "fred",
+            "id": "1236"
+        },
+        {
+            "customer_name": "ian",
+            "id": "1236"
+        },
+        {
+            "customer_name": "jane",
+            "id": "1236"
+        },
+        {
+            "id": "1373"
+        }
+    ]    }
+
+]
+
