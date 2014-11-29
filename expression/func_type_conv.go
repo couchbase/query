@@ -70,9 +70,9 @@ func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, e
 }
 
 /*
-It returns the argument itself if type of the input value is Null, 
+It returns the argument itself if type of the input value is Null,
 a value below this (N!QL order) or an Array. Otherwise convert the
-argument to a valid Go type ang cast it to a slice of interface. 
+argument to a valid Go type ang cast it to a slice of interface.
 */
 func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() <= value.NULL {
@@ -102,11 +102,11 @@ func (this *ToArray) Constructor() FunctionConstructor {
 
 /*
 This represents the type conversion function TO_ATOM(expr).
-It returns atomic values where, missing, null, boolean, 
-numbers and strings, are themselves, arrays of length 1 
+It returns atomic values where, missing, null, boolean,
+numbers and strings, are themselves, arrays of length 1
 are the result of TO_ATOM() on their single element and
-objects of length 1 are the result of TO_ATOM() on their 
-single value. All other values return null. ToAtom is a 
+objects of length 1 are the result of TO_ATOM() on their
+single value. All other values return null. ToAtom is a
 struct that implements UnaryFuncitonBase.
 */
 type ToAtom struct {
@@ -137,7 +137,7 @@ func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
 }
 
 /*
-It returns the type of the operand. If its type is lower than 
+It returns the type of the operand. If its type is lower than
 that of the ARRAY as per type ordering defined by N!QL specs
 return that type, else return a JSON value.
 */
@@ -163,7 +163,7 @@ This method returns value based on input argument type. If
 the type is lower than the array in N1QL defined ordering,
 then we return the argument itself. If it is an array value
 and it has only one element the result of the Apply method
-on this single element is returned. It it is an object 
+on this single element is returned. It it is an object
 and has only one element, then the result of the Apply
 method on this single value is returned. For all other cases
 we return a NULL.
@@ -209,14 +209,14 @@ func (this *ToAtom) Constructor() FunctionConstructor {
 This represents the type conversion function TO_BOOL(expr).
 It returns boolean values where missing, null, false map to
 themselves. Numbers +0, -0 and NaN, empty strings, arrays
-and objects as expr map to false. All other values are 
+and objects as expr map to false. All other values are
 true. ToBool is a struct that implements UnaryFuncitonBase.
 */
 type ToBool struct {
 	UnaryFunctionBase
 }
 
-/*       
+/*
 The function NewToBool takes as input an expression and returns
 a pointer to the ToBool struct that calls NewUnaryFunctionBase to
 create a function named TO_BOOL with an input operand as the
@@ -253,12 +253,12 @@ func (this *ToBool) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
-If the input argument type is a missing, null or boolean value, it returns 
-itself. Check to see the Go type of the input. If it is float64, then 
-use the isNaN(returns if input is not a number) method defined in the math 
-package and make sure that it returns false and the number is not 0, return 
-true. If type is string, slice of interface or map which are are not empty, 
-return true. All other input types return NULLs. 
+If the input argument type is a missing, null or boolean value, it returns
+itself. Check to see the Go type of the input. If it is float64, then
+use the isNaN(returns if input is not a number) method defined in the math
+package and make sure that it returns false and the number is not 0, return
+true. If type is string, slice of interface or map which are are not empty,
+return true. All other input types return NULLs.
 */
 func (this *ToBool) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
@@ -299,8 +299,8 @@ func (this *ToBool) Constructor() FunctionConstructor {
 /*
 This represents the type conversion function TO_NUM(expr).
 It returns number values where missing, null, and numbers
-map to themselves. False is 0, true is 1, strings that 
-parse as numbers are those numbers and all other values 
+map to themselves. False is 0, true is 1, strings that
+parse as numbers are those numbers and all other values
 are null (For e.g. "123" is 123 but "a12" will be NULL).
 ToNum is a struct that implements UnaryFuncitonBase.
 */
@@ -346,11 +346,11 @@ func (this *ToNum) Evaluate(item value.Value, context Context) (value.Value, err
 
 /*
 It returns number values where missing, null, and numbers
-return themselves. If the input Go type (obtained by calling 
-the Actual method) is bool then, if value is false return 0, 
+return themselves. If the input Go type (obtained by calling
+the Actual method) is bool then, if value is false return 0,
 and if true return 1. For strings use the ParseFloat method
-defined in strconv to determine if the parsed string is a 
-valid number and return that number. For all other types 
+defined in strconv to determine if the parsed string is a
+valid number and return that number. For all other types
 return a Null value.
 */
 func (this *ToNum) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -393,10 +393,10 @@ func (this *ToNum) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the type conversion function TOOBJ(expr). 
-It returns an object value. The input of types missing, 
+This represents the type conversion function TOOBJ(expr).
+It returns an object value. The input of types missing,
 null and object return themselves. For all other values,
-return an _EMPTY_OBJECT value. ToObj is a struct that 
+return an _EMPTY_OBJECT value. ToObj is a struct that
 implements UnaryFuncitonBase.
 */
 type ToObj struct {
@@ -446,9 +446,9 @@ string to interface. It is an OBJECT that has no entries.
 var _EMPTY_OBJECT = value.NewValue(map[string]interface{}{})
 
 /*
-This method returns an object value. The input of types 
+This method returns an object value. The input of types
 missing, null and object return themselves. For all other
-values, return an _EMPTY_OBJECT value. 
+values, return an _EMPTY_OBJECT value.
 */
 func (this *ToObj) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
@@ -478,10 +478,10 @@ func (this *ToObj) Constructor() FunctionConstructor {
 /*
 This represents the type conversion function TOSTR(expr).
 It returns a string based on the input expr value. Values
-missing, null and strings return themselves. False, true 
+missing, null and strings return themselves. False, true
 (boolean) and numbers return their string representation.
-All other values map to null. ToStr is a struct that 
-implements UnaryFuncitonBase. 
+All other values map to null. ToStr is a struct that
+implements UnaryFuncitonBase.
 */
 type ToStr struct {
 	UnaryFunctionBase
@@ -525,7 +525,7 @@ func (this *ToStr) Evaluate(item value.Value, context Context) (value.Value, err
 
 /*
 It returns a string based on the input expr value. Values
-missing, null and strings return themselves. False, true 
+missing, null and strings return themselves. False, true
 (boolean) and numbers return their string representation.
 This is done using the Sprint method defined in fmt for Go.
 All other values map to null.

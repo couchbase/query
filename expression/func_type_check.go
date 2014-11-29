@@ -89,8 +89,8 @@ func (this *IsArray) Constructor() FunctionConstructor {
 
 /*
 This represents the type checking function ISATOM(expr).
-Returns true if expr is a boolean, number, or string; 
-else false. IsAtom is a struct that implements 
+Returns true if expr is a boolean, number, or string;
+else false. IsAtom is a struct that implements
 UnaryFuncitonBase.
 */
 type IsAtom struct {
@@ -134,7 +134,7 @@ func (this *IsAtom) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
-Checks the type of input argument and returns true for boolean, 
+Checks the type of input argument and returns true for boolean,
 number and string and false for all other values.
 */
 func (this *IsAtom) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -164,7 +164,7 @@ func (this *IsAtom) Constructor() FunctionConstructor {
 
 /*
 This represents the type checking function ISBOOL(expr).
-Returns true if expr is a boolean; else false. IsBool is 
+Returns true if expr is a boolean; else false. IsBool is
 a struct that implements UnaryFuncitonBase.
 */
 type IsBool struct {
@@ -299,7 +299,7 @@ func (this *IsNum) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the type checking function ISOBJ(expr). 
+This represents the type checking function ISOBJ(expr).
 Returns true if expr is an object; else false. IsObj
 is a struct that implements UnaryFuncitonBase.
 */
@@ -321,7 +321,6 @@ func NewIsObj(operand Expression) Function {
 	rv.expr = rv
 	return rv
 }
-
 
 /*
 It calls the VisitFunction method by passing in the receiver to

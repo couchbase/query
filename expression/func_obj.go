@@ -22,9 +22,9 @@ import (
 ///////////////////////////////////////////////////
 
 /*
-This represents the object function OBJECT_LENGTH(expr). 
+This represents the object function OBJECT_LENGTH(expr).
 It returns the number of name-value pairs in the object.
-Type ObjectLength is a struct that implements 
+Type ObjectLength is a struct that implements
 UnaryFunctionBase.
 */
 type ObjectLength struct {
@@ -70,7 +70,7 @@ func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Val
 This method returns the length of the object. If the type of
 input is missing then return a missing value, and if not an
 object return a null value. Convert it to a valid Go type.
-Cast it to a map from string to interface and return its 
+Cast it to a map from string to interface and return its
 length by using the len function by casting it to float64.
 */
 func (this *ObjectLength) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -102,7 +102,7 @@ func (this *ObjectLength) Constructor() FunctionConstructor {
 
 /*
 This represents the object function OBJECT_NAMES(expr).
-It returns an array containing the attribute names of 
+It returns an array containing the attribute names of
 the object, in N1QL collation order. Type ObjectNames
 is a struct that implements UnaryFunctionBase.
 */
@@ -146,14 +146,14 @@ func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Valu
 }
 
 /*
-This method takes in an object and returns a slice of values 
-that contains the attribute names. If the type of input is 
+This method takes in an object and returns a slice of values
+that contains the attribute names. If the type of input is
 missing then return a missing value, and if not an
 object return a null value. Convert it to a valid Go type.
-Cast it to a map from string to interface. Range over this 
+Cast it to a map from string to interface. Range over this
 map and retrieve the keys. Sort it and then use it to save
 the corresponding values into a slice of interfaces. Return
-the slice. 
+the slice.
 */
 func (this *ObjectNames) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -195,8 +195,8 @@ func (this *ObjectNames) Constructor() FunctionConstructor {
 
 /*
 This represents the object function OBJECT_PAIRS(expr).
-It returns an array containing the attribute name and 
-value pairs of the object, in N1QL collation order of 
+It returns an array containing the attribute name and
+value pairs of the object, in N1QL collation order of
 the names. Type ObjectPairs is a struct that implements
 UnaryFunctionBase.
 */
@@ -204,10 +204,10 @@ type ObjectPairs struct {
 	UnaryFunctionBase
 }
 
-/*       
+/*
 The function NewObjectPairs calls NewUnaryFunctionBase to
 create a function named OBJECT_PAIRS with an expression as
-input.  
+input.
 */
 func NewObjectPairs(operand Expression) Function {
 	rv := &ObjectPairs{
@@ -240,13 +240,13 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 }
 
 /*
-This method takes in an object and returns a map of name 
-value pairs. If the type of input is missing then return 
-a missing value, and if not an object return a null value. 
-Convert it to a valid Go type. Cast it to a map from 
+This method takes in an object and returns a map of name
+value pairs. If the type of input is missing then return
+a missing value, and if not an object return a null value.
+Convert it to a valid Go type. Cast it to a map from
 string to interface. Range over this map and save the keys.
-Sort the keys and range over the keys to create name and value 
-pairs. Return this object. 
+Sort the keys and range over the keys to create name and value
+pairs. Return this object.
 */
 func (this *ObjectPairs) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -288,8 +288,8 @@ func (this *ObjectPairs) Constructor() FunctionConstructor {
 
 /*
 This represents the object function OBJECT_VALUES(expr).
-It returns an array containing the attribute values of 
-the object, in N1QL collation order of the corresponding 
+It returns an array containing the attribute values of
+the object, in N1QL collation order of the corresponding
 names. Type ObjectValues is a struct that implements
 UnaryFunctionBase.
 */
@@ -334,12 +334,12 @@ func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Val
 
 /*
 This method takes in an object and returns a slice
-that contains the attribute values. If the type of 
-input is missing then return a missing value, and 
-if not an object return a null value. Convert it to 
-a valid Go type. Cast it to a map from string to 
-interface. Range over this map and retrieve the keys. 
-Sort it and then use it to save the corresponding 
+that contains the attribute values. If the type of
+input is missing then return a missing value, and
+if not an object return a null value. Convert it to
+a valid Go type. Cast it to a map from string to
+interface. Range over this map and retrieve the keys.
+Sort it and then use it to save the corresponding
 values into a slice of interfaces. Return the slice.
 */
 func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, error) {
