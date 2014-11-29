@@ -31,9 +31,8 @@ func (this *Stringer) Visit(expr Expression) string {
 	switch s := s.(type) {
 	case []byte:
 		return string(s)
-	default:
-		return s.(string)
 	}
+
 	return s.(string)
 }
 

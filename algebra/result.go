@@ -78,10 +78,9 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 		aliases[term.alias] = true
 	}
 
-	f = &expression.Formalizer{
-		Allowed:  in.Allowed.Copy(),
-		Keyspace: in.Keyspace,
-	}
+	f = expression.NewFormalizer()
+	f.Allowed = in.Allowed.Copy()
+	f.Keyspace = in.Keyspace
 
 	err = this.MapExpressions(f)
 	if err != nil {
