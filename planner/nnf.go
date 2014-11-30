@@ -7,70 +7,74 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package expression
+package planner
+
+import (
+	"github.com/couchbaselabs/query/expression"
+)
 
 type NNF struct {
-	MapperBase
+	expression.MapperBase
 }
 
 func NewNNF() *NNF {
 	rv := &NNF{}
-	rv.mapper = rv
+	rv.SetMapper(rv)
 	return rv
 }
 
 func (this *NNF) MapBindings() bool { return false }
 
-func (this *NNF) VisitIn(expr *In) (interface{}, error) {
+func (this *NNF) VisitIn(expr *expression.In) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
 	}
 
-	a, ok := expr.Second().(*ArrayConstruct)
+	a, ok := expr.Second().(*expression.ArrayConstruct)
 	if !ok {
 		return expr, nil
 	}
 
 	first := expr.First()
-	operands := make(Expressions, len(a.Operands()))
+	operands := make(expression.Expressions, len(a.Operands()))
 	for i, op := range a.Operands() {
-		operands[i] = NewEq(first, op)
+		operands[i] = expression.NewEq(first, op)
 	}
 
-	return NewOr(operands...), nil
+	return expression.NewOr(operands...), nil
 }
 
-func (this *NNF) VisitBetween(expr *Between) (interface{}, error) {
+func (this *NNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewAnd(NewGE(expr.First(), expr.Second()),
-		NewLE(expr.First(), expr.Third())), nil
+	return expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
+		expression.NewLE(expr.First(), expr.Third())), nil
 }
 
-func (this *NNF) VisitNot(expr *Not) (interface{}, error) {
-	var exp Expression = expr
+func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
+	var exp expression.Expression = expr
 
 	switch operand := expr.Operand().(type) {
-	case *Not:
+	case *expression.Not:
 		exp = operand.Operand()
-	case *And:
-		operands := make(Expressions, len(operand.Operands()))
+	case *expression.And:
+		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
-			operands[i] = NewNot(op)
+			operands[i] = expression.NewNot(op)
 		}
 
-		exp = NewOr(operands...)
-	case *Or:
-		operands := make(Expressions, len(operand.Operands()))
+		exp = expression.NewOr(operands...)
+	case *expression.Or:
+		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
-			operands[i] = NewNot(op)
+			operands[i] = expression.NewNot(op)
 		}
 
-		exp = NewAnd(operands...)
+		exp = expression.NewAnd(operands...)
 	}
 
 	return exp, exp.MapChildren(this)
