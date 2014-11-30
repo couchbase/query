@@ -20,6 +20,13 @@ type WhenTerm struct {
 	Then Expression
 }
 
+/*
+Simple case expressions allow for conditional matching within an expression.
+It contains search expression, when/then terms and an optional else 
+expression. Type SimpleCase is a struct that implements ExpressionBase,
+and has fields searchTerm which is an expression, whenterms type slice of 
+WhenTerm and elseTerm as an expression.
+*/
 type SimpleCase struct {
 	ExpressionBase
 	searchTerm Expression
@@ -27,6 +34,11 @@ type SimpleCase struct {
 	elseTerm   Expression
 }
 
+/*
+This method returns a pointer to a SimpleCase structure
+that has its fields populated by the input search terms,
+WhenTerms and elseTerm expression.
+*/
 func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expression) Expression {
 	rv := &SimpleCase{
 		searchTerm: searchTerm,
@@ -38,10 +50,23 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 	return rv
 }
 
+/*
+It calls the VisitSimpleCase method by passing in the receiver to
+process case expressions and returns an interface. It is a visitor
+pattern.
+*/
 func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSimpleCase(this)
 }
 
+/*
+If the else term is not nil then set the type to the type of the
+else expression. Range over the when terms. Set the type to be
+the when terms type only if it is greater (N1QL collation order)
+than the previously set type. Return the final set type.
+If Both the set type and the current when terms are greater than
+NULL and arent equal, then return a JSON value.
+*/
 func (this *SimpleCase) Type() value.Type {
 	t := value.NULL
 
@@ -61,7 +86,16 @@ func (this *SimpleCase) Type() value.Type {
 	return t
 }
 
-func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
+/*
+The first WHEN expression is evaluated. If it is equal to the 
+search expression, the result of this expression is the THEN 
+expression. If not, subsequent WHEN clauses are evaluated in 
+the same manner. If none of the WHEN expressions is equal to 
+the search expression, then the result of the CASE expression 
+is the ELSE expression. If no ELSE expression was provided, 
+the result is NULL.
+*/
+func (thss *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	s, err := this.searchTerm.Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -99,6 +133,13 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 	return ev, nil
 }
 
+/*
+Create a slice of expression with length equal to twice the number of
+when terms+2. Append the search term. Range over the when terms and 
+append the when and then terms to the slice. If an Else term is 
+present, append it to the slice as well. Return the Expressions. 
+These represent the children of the case expression.
+*/
 func (this *SimpleCase) Children() Expressions {
 	rv := make(Expressions, 0, 2+(len(this.whenTerms)<<1))
 	rv = append(rv, this.searchTerm)
@@ -115,6 +156,14 @@ func (this *SimpleCase) Children() Expressions {
 	return rv
 }
 
+/*
+This method maps the search, when and else terms to an expression.
+If there is an error during the mapping it is returned. Map the
+search term first. Range over the when terms and map them along 
+with the then terms. If an error is encountered at either mapping 
+return it. If an else term is pressent map it. Return the error 
+encountered. 
+*/
 func (this *SimpleCase) MapChildren(mapper Mapper) (err error) {
 	this.searchTerm, err = mapper.Map(this.searchTerm)
 	if err != nil {
