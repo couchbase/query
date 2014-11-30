@@ -216,3 +216,10 @@ func (this *MapperBase) VisitNamedParameter(expr NamedParameter) (interface{}, e
 func (this *MapperBase) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
 	return expr, expr.MapChildren(this.mapper)
 }
+
+// Init
+func (this *MapperBase) SetMapper(mapper Mapper) {
+	if this.mapper == nil {
+		this.mapper = mapper
+	}
+}
