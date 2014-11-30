@@ -13,8 +13,15 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents a slice of when terms
+*/
 type WhenTerms []*WhenTerm
 
+/*
+Type WhenTerm is a struct that has two fields representing the When and
+then expressions for a case statement.
+*/
 type WhenTerm struct {
 	When Expression
 	Then Expression

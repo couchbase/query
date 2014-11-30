@@ -25,7 +25,7 @@ type Identifier struct {
 
 /*
 This method returns a pointer to an Identifier structure
-that has its identifier fied populated by the input argument.
+that has its identifier field populated by the input argument.
 */
 func NewIdentifier(identifier string) Path {
 	rv := &Identifier{
