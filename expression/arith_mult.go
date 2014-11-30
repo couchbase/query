@@ -13,10 +13,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents Mult for arithmetic expressions. Type Mult
+is a struct that implements CommutativeFunctionBase.
+*/
 type Mult struct {
 	CommutativeFunctionBase
 }
 
+/*
+The function NewMult calls NewCommutativeFunctionBase to define
+mult with input operand expressions as input.
+*/
 func NewMult(operands ...Expression) Function {
 	rv := &Mult{
 		*NewCommutativeFunctionBase("mult", operands...),
@@ -26,16 +34,32 @@ func NewMult(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitMult method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMult(this)
 }
 
+/*
+It returns a value type Number.
+*/
 func (this *Mult) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method and passes in the
+receiver, current item and current context.
+*/
 func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+Range over input arguments, if the type is a number multiply it to 
+the product. If the value is missing, return a missing value. For 
+all other types return a null value. Return the final product.
+*/
 func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 	prod := 1.0
@@ -57,4 +81,7 @@ func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, erro
 	return value.NewValue(prod), nil
 }
 
+/*
+Returns NewAdd.
+*/
 func (this *Mult) Constructor() FunctionConstructor { return NewMult }

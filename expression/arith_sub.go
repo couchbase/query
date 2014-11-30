@@ -13,10 +13,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents Sub for arithmetic expressions. Type Sub is a struct
+that implements BinaryFunctionBase.
+*/
 type Sub struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewSub calls NewBinaryFunctionBase to define Sub
+with input operand expressions as input.
+*/
 func NewSub(first, second Expression) Function {
 	rv := &Sub{
 		*NewBinaryFunctionBase("sub", first, second),
@@ -26,16 +34,34 @@ func NewSub(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitSub method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Sub) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSub(this)
 }
 
+/*
+It returns a value type Number.
+*/
 func (this *Sub) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for Binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Sub) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+Evaluate the difference for the first and second input
+values to return a value. If both values are numbers, calculate 
+the difference and return it. If either of the expressions are
+missing then return a missing value. For all other cases return
+a null value.
+*/
 func (this *Sub) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
 		diff := first.Actual().(float64) - second.Actual().(float64)
@@ -47,6 +73,10 @@ func (this *Sub) Apply(context Context, first, second value.Value) (value.Value,
 	}
 }
 
+/*
+The constructor returns a NewSub with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Sub) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewSub(operands[0], operands[1])

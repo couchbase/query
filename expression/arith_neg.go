@@ -13,10 +13,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents Neg for arithmetic expressions. Type Neg is a struct
+that implements UnaryFunctionBase.
+*/
 type Neg struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewNeg calls NewUnaryFunctionBase to define negation
+with input operand expression as the input.
+*/ 
 func NewNeg(operand Expression) Function {
 	rv := &Neg{
 		*NewUnaryFunctionBase("neg", operand),
@@ -26,16 +34,32 @@ func NewNeg(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitNeg method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Neg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNeg(this)
 }
 
+/*
+It returns a value type Number.
+*/
 func (this *Neg) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for Unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Neg) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+Return the neagation of the input value, if the type of input is a number.
+For missing return a missing value, and for all other input types return a
+null.
+*/
 func (this *Neg) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.NUMBER {
 		return value.NewValue(-arg.Actual().(float64)), nil
@@ -46,6 +70,10 @@ func (this *Neg) Apply(context Context, arg value.Value) (value.Value, error) {
 	}
 }
 
+/*
+The constructor returns a NewNeg with the an operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Neg) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewNeg(operands[0])
