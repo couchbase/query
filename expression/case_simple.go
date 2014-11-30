@@ -95,7 +95,7 @@ the search expression, then the result of the CASE expression
 is the ELSE expression. If no ELSE expression was provided, 
 the result is NULL.
 */
-func (thss *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
 	s, err := this.searchTerm.Evaluate(item, context)
 	if err != nil {
 		return nil, err
