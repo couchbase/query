@@ -13,10 +13,19 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Logical terms allow for combining other expressions using boolean logic.
+Standard OR operators are supported. Type Or is a struct that
+implements CommutativeFunctionBase.
+*/
 type Or struct {
 	CommutativeFunctionBase
 }
 
+/*
+The function NewOr calls NewCommutativeFunctionBase to define OR
+with input operand expressions as input.
+*/
 func NewOr(operands ...Expression) Function {
 	rv := &Or{
 		*NewCommutativeFunctionBase("or", operands...),
@@ -26,16 +35,34 @@ func NewOr(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitOr method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Or) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOr(this)
 }
 
+/*
+It returns a value type Boolean.
+*/
 func (this *Or) Type() value.Type { return value.BOOLEAN }
 
+/*
+Calls the Eval method and passes in the receiver, current item
+and current context.
+*/
 func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+Range over input arguments, for all types other than missing and null,
+if the truth value of the argument is true, then return true. If
+the type is missing, return missing, and if null return null. If all
+inputs are false then return false. For null and missing, it returns
+null.
+*/
 func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error) {
 	missing := false
 	null := false
@@ -62,6 +89,9 @@ func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error)
 	}
 }
 
+/*
+Returns NewOr as FunctionConstructor.
+*/
 func (this *Or) Constructor() FunctionConstructor {
 	return NewOr
 }
