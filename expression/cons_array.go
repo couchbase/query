@@ -16,10 +16,11 @@ import (
 )
 
 /*
+Represents Construction expressions. 
 Type ArrayConstruct is a struct that implements FunctionBase.
 Arrays can be constructed with arbitrary structure, nesting,
 and embedded expressions, as represented by the construction
-expressions as per the N1QL specs.
+expressions in the N1QL specs.
 */
 type ArrayConstruct struct {
 	FunctionBase
@@ -49,7 +50,7 @@ func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 /*
-Type ARRAY value. Returns value.ARRAY.
+Returns ARRAY value.
 */
 func (this *ArrayConstruct) Type() value.Type { return value.ARRAY }
 

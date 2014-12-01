@@ -13,11 +13,25 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents Construction expressions. 
+Objects can be constructed with arbitrary structure, nesting,
+and embedded expressions, as represented by the construction
+expressions in the N1QL specs. Type ObjectConstruct is a 
+struct that implements ExpressionBase and has field bindings
+that is a map from string to Expression.
+*/
 type ObjectConstruct struct {
 	ExpressionBase
 	bindings map[string]Expression
 }
 
+/*
+Create and return a new ObjectConstruct. Set its bindings field 
+as a new map from string to expressions with length of
+input argument bindings. It ranges over these bindings and sets
+the value to Expression() for the key Variable() for the map. 
+*/
 func NewObjectConstruct(bindings Bindings) Expression {
 	rv := &ObjectConstruct{
 		bindings: make(map[string]Expression, len(bindings)),
@@ -31,12 +45,26 @@ func NewObjectConstruct(bindings Bindings) Expression {
 	return rv
 }
 
+/*
+It calls the VisitObjectConstruct method by passing in the receiver,
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitObjectConstruct(this)
 }
 
+/*
+Returns OBJECT value.
+*/
 func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
 
+
+/*
+Range over the bindings and evaluate each expression individually
+using the Evaluate method. For all returned values excpt missing, 
+set the map[key] to the return value of the Evaluate method. 
+Return the map.
+*/
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	m := make(map[string]interface{}, len(this.bindings))
 
@@ -54,6 +82,17 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 	return value.NewValue(m), nil
 }
 
+
+/*
+Check if the input expression other is equivalent to the receiver 
+expressions. Cast the other expr to a pointer to ObjectConstruct.
+If the length of the receivers bindings and other's bindings are
+not equal return false. Range over the receivers bindings and
+compare the expression values for each objectconstructs bindings
+by calling equivalent to for those expressions. If not equal 
+return false. If all child expressions in the bindings are 
+equal, return true.
+*/
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	ol, ok := other.(*ObjectConstruct)
 	if !ok {
@@ -74,6 +113,11 @@ func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	return true
 }
 
+/*
+Range over the bindings and append each value to a slice of
+expressions. Return this slice. (Expressions is a slice of
+expression).
+*/
 func (this *ObjectConstruct) Children() Expressions {
 	rv := make(Expressions, 0, len(this.bindings))
 	for _, expr := range this.bindings {
@@ -83,6 +127,11 @@ func (this *ObjectConstruct) Children() Expressions {
 	return rv
 }
 
+/*
+Range over the bindings and map the expressions to another expression.
+Reset the expression to be the new expression at its corresponding key.
+If mapping is successful return nil error.
+*/
 func (this *ObjectConstruct) MapChildren(mapper Mapper) (err error) {
 	for key, expr := range this.bindings {
 		vexpr, err := mapper.Map(expr)
