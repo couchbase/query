@@ -75,6 +75,13 @@ func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
 		}
 
 		exp = expression.NewAnd(operands...)
+	case *expression.Eq:
+		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
+			expression.NewLT(operand.Second(), operand.First()))
+	case *expression.LT:
+		exp = expression.NewLE(operand.Second(), operand.First())
+	case *expression.LE:
+		exp = expression.NewLT(operand.Second(), operand.First())
 	}
 
 	return exp, exp.MapChildren(this)

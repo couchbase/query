@@ -33,12 +33,12 @@ func (this *subsetEq) VisitLE(expr *expression.LE) (interface{}, error) {
 		return LessThanOrEquals(this.eq.Second(), expr.Second()), nil
 	}
 
-	if this.eq.First().EquivalentTo(expr.Second()) {
-		return LessThanOrEquals(expr.First(), this.eq.Second()), nil
-	}
-
 	if this.eq.Second().EquivalentTo(expr.First()) {
 		return LessThanOrEquals(this.eq.First(), expr.Second()), nil
+	}
+
+	if this.eq.First().EquivalentTo(expr.Second()) {
+		return LessThanOrEquals(expr.First(), this.eq.Second()), nil
 	}
 
 	if this.eq.Second().EquivalentTo(expr.Second()) {
@@ -53,12 +53,12 @@ func (this *subsetEq) VisitLT(expr *expression.LT) (interface{}, error) {
 		return LessThan(this.eq.Second(), expr.Second()), nil
 	}
 
-	if this.eq.First().EquivalentTo(expr.Second()) {
-		return LessThan(expr.First(), this.eq.Second()), nil
-	}
-
 	if this.eq.Second().EquivalentTo(expr.First()) {
 		return LessThan(this.eq.First(), expr.Second()), nil
+	}
+
+	if this.eq.First().EquivalentTo(expr.Second()) {
+		return LessThan(expr.First(), this.eq.Second()), nil
 	}
 
 	if this.eq.Second().EquivalentTo(expr.Second()) {

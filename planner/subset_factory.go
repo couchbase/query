@@ -95,7 +95,7 @@ func (this *subsetFactory) VisitEq(expr *expression.Eq) (interface{}, error) {
 }
 
 func (this *subsetFactory) VisitLE(expr *expression.LE) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetLE(expr), nil
 }
 
 func (this *subsetFactory) VisitLike(expr *expression.Like) (interface{}, error) {
@@ -103,7 +103,7 @@ func (this *subsetFactory) VisitLike(expr *expression.Like) (interface{}, error)
 }
 
 func (this *subsetFactory) VisitLT(expr *expression.LT) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetLT(expr), nil
 }
 
 func (this *subsetFactory) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
