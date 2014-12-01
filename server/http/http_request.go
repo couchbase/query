@@ -32,6 +32,7 @@ type httpRequest struct {
 	server.BaseRequest
 	resp         http.ResponseWriter
 	req          *http.Request
+	writer       responseDataManager
 	httpRespCode int
 	resultCount  int
 	resultSize   int
@@ -39,7 +40,7 @@ type httpRequest struct {
 	warningCount int
 }
 
-func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
+func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) *httpRequest {
 	var httpArgs httpRequestArgs
 
 	err := req.ParseForm()
@@ -163,6 +164,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request) *httpRequest {
 	}
 
 	rv.SetTimeout(rv, timeout)
+
+	rv.writer = NewBufferedWriter(rv, bp)
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)

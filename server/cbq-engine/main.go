@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -46,6 +47,7 @@ var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
+var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
 
 func main() {
 	flag.Parse()
@@ -91,9 +93,26 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
+	keep_alive_length, e := server.ParseQuantity(*KEEP_ALIVE_LENGTH)
+
+	if e != nil {
+		logging.Errorp("Error parsing keep alive length; reverting to default",
+			logging.Pair{"keep alive length", *KEEP_ALIVE_LENGTH},
+			logging.Pair{"error", e},
+			logging.Pair{"default", server.KEEP_ALIVE_DEFAULT},
+		)
+	}
+
+	if e == nil && keep_alive_length < 1 {
+		logging.Infop("Negative or zero keep alive length; reverting to default",
+			logging.Pair{"keep alive length", *KEEP_ALIVE_LENGTH},
+			logging.Pair{"default", server.KEEP_ALIVE_DEFAULT},
+		)
+	}
+
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS)
+		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

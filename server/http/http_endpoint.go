@@ -21,12 +21,14 @@ type HttpEndpoint struct {
 	server  *server.Server
 	metrics bool
 	httpsrv http.Server
+	bufpool BufferPool
 }
 
 func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:  server,
 		metrics: metrics,
+		bufpool: NewSyncPool(server.KeepAlive()),
 	}
 
 	rv.httpsrv.Addr = addr
@@ -48,7 +50,7 @@ func (this *HttpEndpoint) ListenAndServe() error {
 // If the server channel is full and we are unable to queue a request,
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	request := newHttpRequest(resp, req)
+	request := newHttpRequest(resp, req, this.bufpool)
 
 	defer this.doStats(request)
 

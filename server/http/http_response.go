@@ -10,10 +10,12 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -48,7 +50,6 @@ func mapErrorToHttpResponse(err errors.Error) int {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
-	this.resp.WriteHeader(this.httpRespCode)
 	this.writeString("{\n")
 	this.writeRequestID()
 	this.writeClientContextID()
@@ -57,6 +58,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeState("")
 	this.writeMetrics(srvr.Metrics())
 	this.writeString("\n}\n")
+	this.writer.noMoreData()
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
@@ -64,16 +66,19 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.NotifyStop(stopNotify)
 
-	this.resp.WriteHeader(http.StatusOK)
+	//this.resp.WriteHeader(http.StatusOK)
+	this.httpRespCode = http.StatusOK
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&
 		this.writeSuffix(srvr.Metrics(), "")
+	this.writer.noMoreData()
 }
 
 func (this *httpRequest) Expire() {
 	defer this.Stop(server.TIMEOUT)
 
 	this.writeSuffix(true, server.TIMEOUT)
+	this.writer.noMoreData()
 }
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
@@ -178,9 +183,7 @@ func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
 }
 
 func (this *httpRequest) writeString(s string) bool {
-	_, err := io.WriteString(this.resp, s)
-	this.Flush()
-	return err == nil
+	return this.writer.writeString(s)
 }
 
 func (this *httpRequest) writeState(state server.State) bool {
@@ -291,6 +294,79 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 	return rv && this.writeString("\n    }")
 }
 
-func (this *httpRequest) Flush() {
-	this.resp.(http.Flusher).Flush()
+// responseDataManager is an interface for managing response data. It is used by httpRequest to take care of
+// the data in a response.
+type responseDataManager interface {
+	writeString(string) bool // write the given string for the response
+	noMoreData()             // action to take when there is no more data for the response
+}
+
+// bufferedWriter is an implementation of responseDataManager that writes response data to a buffer,
+// up to a threshold:
+type bufferedWriter struct {
+	req         *httpRequest  // the request for the response we are writing
+	buffer      *bytes.Buffer // buffer for writing response data to
+	buffer_pool BufferPool    // buffer manager for our buffer
+}
+
+func NewBufferedWriter(r *httpRequest, bp BufferPool) *bufferedWriter {
+	return &bufferedWriter{
+		req:         r,
+		buffer:      bp.GetBuffer(),
+		buffer_pool: bp,
+	}
+}
+
+func (this *bufferedWriter) writeString(s string) bool {
+	if len(s)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() { // threshold exceeded
+		w := this.req.resp // our request's response writer
+		// write response header and data buffered so far using request's response writer:
+		w.WriteHeader(this.req.httpRespCode)
+		io.Copy(w, this.buffer)
+		// switch to non-buffered mode; change our request's responseDataManager to be a directWriter:
+		this.req.writer = NewDirectWriter(this.req)
+		// return buffer to pool, because response data will be directly written from now:
+		this.buffer_pool.PutBuffer(this.buffer)
+		// write out the string - using just-created directWriter:
+		return this.req.writer.writeString(s)
+	}
+	// under threshold - write the string to our buffer
+	_, err := this.buffer.Write([]byte(s))
+	return err == nil
+}
+
+func (this *bufferedWriter) noMoreData() {
+	w := this.req.resp // our request's response writer
+	// calculate and set the Content-Length header:
+	content_len := strconv.Itoa(len(this.buffer.Bytes()))
+	w.Header().Set("Content-Length", content_len)
+	// write response header and data buffered so far:
+	w.WriteHeader(this.req.httpRespCode)
+	io.Copy(w, this.buffer)
+	// no more data in the response => return buffer to pool:
+	this.buffer_pool.PutBuffer(this.buffer)
+}
+
+// directWriter is an implementation of responseDataManager that uses the request's
+// response writer to write out the data for a response
+type directWriter struct {
+	req *httpRequest // the request for the response we are writing
+}
+
+func NewDirectWriter(r *httpRequest) *directWriter {
+	return &directWriter{
+		req: r,
+	}
+}
+
+// write and flush the given string using our request's response writer:
+func (this *directWriter) writeString(s string) bool {
+	w := this.req.resp
+	_, err := io.WriteString(w, s)
+	w.(http.Flusher).Flush()
+	return err == nil
+}
+
+func (this *directWriter) noMoreData() {
+	// nop
 }

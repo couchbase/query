@@ -12,6 +12,8 @@ package server
 import (
 	"os"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,13 +40,14 @@ type Server struct {
 	timeout     time.Duration
 	signature   bool
 	metrics     bool
+	keepAlive   int
 	once        sync.Once
 }
 
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
-	acctng accounting.AccountingStore,
-	namespace string, readonly bool, channel RequestChannel, threadCount int,
-	timeout time.Duration, signature, metrics bool) (*Server, errors.Error) {
+	acctng accounting.AccountingStore, namespace string, readonly bool,
+	channel RequestChannel, threadCount int, timeout time.Duration,
+	signature, metrics bool, keepAlive int) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		configstore: config,
@@ -56,6 +59,7 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 		timeout:     timeout,
 		signature:   signature,
 		metrics:     metrics,
+		keepAlive:   keepAlive,
 	}
 
 	sys, err := system.NewDatastore(store)
@@ -89,6 +93,10 @@ func (this *Server) Signature() bool {
 
 func (this *Server) Metrics() bool {
 	return this.metrics
+}
+
+func (this *Server) KeepAlive() int {
+	return this.keepAlive
 }
 
 func (this *Server) Serve() {
@@ -182,4 +190,33 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 	}
 
 	return prepared, nil
+}
+
+// Default Keep Alive Length
+
+const KEEP_ALIVE_DEFAULT = 1024 * 16
+
+// parse a string denotating a memory quantity into the number of bytes it denotes.
+// e.g. given the string "10K", return 10240
+//	given the string "512B", return 512
+// Return an error if the number part of the string cannot be converted to an integer
+func ParseQuantity(s string) (int, error) {
+	quantityTypes := []string{"mb", "kb", "k", "m", "b"}
+	l, n, m := len(s), 1, 1
+
+	s = strings.ToLower(s)
+	if s[l-1] == 'b' {
+		n = 2
+	}
+	switch rune(s[l-n]) {
+	case 'm':
+		m = 1024 * 1024
+	case 'k':
+		m = 1024
+	}
+	for _, suf := range quantityTypes {
+		s = strings.TrimSuffix(s, suf)
+	}
+	n, err := strconv.Atoi(s)
+	return n * m, err
 }
