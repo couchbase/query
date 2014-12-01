@@ -63,6 +63,15 @@ func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value
 }
 
 /*
+Value() returns the static / constant value of this Expression, or
+nil. Expressions that depend on data, clocks, or random numbers must
+return nil.
+*/
+func (this *Identifier) Value() value.Value {
+	return nil
+}
+
+/*
 Return the identifier string field of the receiver.
 */
 func (this *Identifier) Alias() string {
