@@ -68,6 +68,14 @@ func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+This method is defined to access the value of the Constant
+expression. It returns the receivers value.
+*/
+func (this *Constant) Value() value.Value {
+	return this.value
+}
+
+/*
 A constant expression is indexable as part of another expression.
 */
 func (this *Constant) Indexable() bool {
@@ -101,12 +109,4 @@ Return nil.
 */
 func (this *Constant) MapChildren(mapper Mapper) error {
 	return nil
-}
-
-/*
-This method is defined to access the value of the Constant
-expression. It returns the receivers value.
-*/
-func (this *Constant) Value() value.Value {
-	return this.value
 }

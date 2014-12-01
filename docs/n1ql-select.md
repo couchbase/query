@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-11-27
+* Modified: 2014-12-01
 
 ## Introduction
 
@@ -1603,6 +1603,8 @@ __COS(expr)__ - cosine.
 
 __DEGREES(expr)__ - radians to degrees.
 
+__E()__ - base of natural logarithms.
+
 __EXP(expr)__ - _e_\*\*expr.
 
 __LN(expr)__ - log base _e_.
@@ -2452,7 +2454,9 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2014-11-25 - SELF()
     * Add SELF() function.
 * 2014-11-27 - Nested expr
-    * Removed .[] syntax for now
+    * Remove .[] syntax for now
+* 2014-12-01 - E()
+    * Add E()
 
 ### Open issues
 

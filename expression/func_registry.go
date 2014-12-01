@@ -129,6 +129,7 @@ var _FUNCTIONS = map[string]Function{
 	"cos":     &Cos{},
 	"deg":     &Degrees{},
 	"degrees": &Degrees{},
+	"e":       &E{},
 	"exp":     &Exp{},
 	"ln":      &Ln{},
 	"log":     &Log{},

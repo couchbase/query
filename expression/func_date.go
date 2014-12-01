@@ -132,6 +132,15 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+Value() returns the static / constant value of this Expression, or
+nil. Expressions that depend on data, clocks, or random numbers must
+return nil.
+*/
+func (this *ClockStr) Value() value.Value {
+	return nil
+}
+
+/*
 Initialize format to default format. This is in the event the
 function is called without input arguments. Then it uses the
 default time format. If it has input args, and if it is a
@@ -1330,6 +1339,15 @@ receiver, current item and current context.
 */
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+/*
+Value() returns the static / constant value of this Expression, or
+nil. Expressions that depend on data, clocks, or random numbers must
+return nil.
+*/
+func (this *NowStr) Value() value.Value {
+	return nil
 }
 
 /*

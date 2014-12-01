@@ -111,6 +111,15 @@ func NewNullaryFunctionBase(name string) *NullaryFunctionBase {
 	}
 }
 
+/*
+Value() returns the static / constant value of this Expression, or
+nil. Expressions that depend on data, clocks, or random numbers must
+return nil.
+*/
+func (this *NullaryFunctionBase) Value() value.Value {
+	return nil
+}
+
 func (this *NullaryFunctionBase) Indexable() bool {
 	return false
 }

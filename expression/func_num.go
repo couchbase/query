@@ -380,6 +380,45 @@ func (this *Degrees) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// E
+//
+///////////////////////////////////////////////////
+
+type E struct {
+	NullaryFunctionBase
+}
+
+func NewE() Function {
+	rv := &E{
+		*NewNullaryFunctionBase("e"),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *E) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *E) Type() value.Type { return value.NUMBER }
+
+func (this *E) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return _E_VALUE, nil
+}
+
+func (this *E) Value() value.Value {
+	return _E_VALUE
+}
+
+func (this *E) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return this }
+}
+
+var _E_VALUE = value.NewValue(math.E)
+
+///////////////////////////////////////////////////
+//
 // Exp
 //
 ///////////////////////////////////////////////////
@@ -587,6 +626,10 @@ func (this *NaN) Evaluate(item value.Value, context Context) (value.Value, error
 	return _NAN_VALUE, nil
 }
 
+func (this *NaN) Value() value.Value {
+	return _NAN_VALUE
+}
+
 func (this *NaN) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return this }
 }
@@ -620,6 +663,10 @@ func (this *NegInf) Type() value.Type { return value.NUMBER }
 
 func (this *NegInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return _NEGINF_VALUE, nil
+}
+
+func (this *NegInf) Value() value.Value {
+	return _NEGINF_VALUE
 }
 
 func (this *NegInf) Constructor() FunctionConstructor {
@@ -657,6 +704,10 @@ func (this *PI) Evaluate(item value.Value, context Context) (value.Value, error)
 	return _PI_VALUE, nil
 }
 
+func (this *PI) Value() value.Value {
+	return _PI_VALUE
+}
+
 func (this *PI) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return this }
 }
@@ -690,6 +741,10 @@ func (this *PosInf) Type() value.Type { return value.NUMBER }
 
 func (this *PosInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return _POSINF_VALUE, nil
+}
+
+func (this *PosInf) Value() value.Value {
+	return _POSINF_VALUE
 }
 
 func (this *PosInf) Constructor() FunctionConstructor {

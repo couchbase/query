@@ -25,10 +25,9 @@ type Expressions []Expression
 type CompositeExpressions []Expressions
 
 /*
-The expression interface helps us represent expressions.
+The Expression interface represents N1QL expressions.
 */
 type Expression interface {
-
 	/*
 	   It takes as input a Visitor type and returns an interface
 	   and error. It represents a visitor pattern.
@@ -36,11 +35,9 @@ type Expression interface {
 	Accept(visitor Visitor) (interface{}, error)
 
 	/*
-	   It returns the value type. This represents a Data Type,
-	   in addition to which the expression can also evaluate to
-	   null or missing. Adding the expression type() allows you
-	   to know the schema or shape of the query without actually
-	   evaluating the query.
+	   Type() returns the N1QL data type of the result of this
+	   Expression. Type() allows you to infer the schema or shape
+	   of query results before actually evaluating the query.
 	*/
 	Type() value.Type
 
@@ -50,6 +47,13 @@ type Expression interface {
 	   and Context and returns a Value and an error.
 	*/
 	Evaluate(item value.Value, context Context) (value.Value, error)
+
+	/*
+	   Value() returns the static / constant value of this
+	   Expression, or nil. Expressions that depend on data,
+	   clocks, or random numbers must return nil.
+	*/
+	Value() value.Value
 
 	/*
 	   As per the N1QL specs this function returns the terminal
