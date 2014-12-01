@@ -62,16 +62,6 @@ func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error)
 	}
 }
 
-func (this *Or) SubsetOf(other Expression) bool {
-	for _, child := range this.Children() {
-		if !child.SubsetOf(other) {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (this *Or) Constructor() FunctionConstructor {
 	return NewOr
 }

@@ -76,19 +76,6 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
-func (this *ExpressionBase) SubsetOf(other Expression) bool {
-	switch other := other.(type) {
-	case *Or:
-		for _, child := range other.Children() {
-			if this.expr.SubsetOf(child) {
-				return true
-			}
-		}
-	}
-
-	return this.expr.EquivalentTo(other)
-}
-
 func (this *ExpressionBase) SetExpr(expr Expression) {
 	if this.expr == nil {
 		this.expr = expr

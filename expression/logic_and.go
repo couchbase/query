@@ -62,16 +62,6 @@ func (this *And) Apply(context Context, args ...value.Value) (value.Value, error
 	}
 }
 
-func (this *And) SubsetOf(other Expression) bool {
-	for _, child := range this.Children() {
-		if child.SubsetOf(other) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (this *And) Constructor() FunctionConstructor {
 	return NewAnd
 }

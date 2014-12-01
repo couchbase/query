@@ -72,12 +72,6 @@ type Expression interface {
 	EquivalentTo(other Expression) bool
 
 	/*
-	   Indicates whether this expression is always true if the other
-	   expression is true. False negatives are allowed.
-	*/
-	SubsetOf(other Expression) bool
-
-	/*
 	   It is a utility function that returns the children of the
 	   expression. For expression a+b, a and b are the children
 	   of +.
