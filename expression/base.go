@@ -76,6 +76,9 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
+/*
+Set the receiver expression to the input expression.
+*/
 func (this *ExpressionBase) SetExpr(expr Expression) {
 	if this.expr == nil {
 		this.expr = expr
