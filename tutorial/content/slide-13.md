@@ -9,5 +9,5 @@ Try changing AND to OR.
 <pre id="example">
 SELECT fname, email, children
     FROM tutorial 
-        WHERE LENGTH(children) > 0 AND email LIKE '%@gmail.com'
+        WHERE ARRAY_LENGTH(children) > 0 AND email LIKE '%@gmail.com'
 </pre>
