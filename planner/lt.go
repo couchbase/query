@@ -13,13 +13,10 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func SubsetOf(expr1, expr2 expression.Expression) bool {
-	s := newSubset(expr1)
-	result, _ := expr2.Accept(s)
-	return result.(bool)
+func LessThan(expr1, expr2 expression.Expression) bool {
+	return false
 }
 
-func newSubset(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SUBSET_FACTORY)
-	return s.(expression.Visitor)
+func LessThanOrEquals(expr1, expr2 expression.Expression) bool {
+	return LessThan(expr1, expr2) || expr1.EquivalentTo(expr2)
 }

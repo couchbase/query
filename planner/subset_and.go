@@ -13,13 +13,21 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func SubsetOf(expr1, expr2 expression.Expression) bool {
-	s := newSubset(expr1)
-	result, _ := expr2.Accept(s)
-	return result.(bool)
+type subsetAnd struct {
+	predicate
 }
 
-func newSubset(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SUBSET_FACTORY)
-	return s.(expression.Visitor)
+func newSubsetAnd(expr *expression.And) *subsetAnd {
+	rv := &subsetAnd{}
+	rv.test = func(expr2 expression.Expression) (bool, error) {
+		for _, child := range expr.Operands() {
+			if SubsetOf(child, expr2) {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}
+
+	return rv
 }
