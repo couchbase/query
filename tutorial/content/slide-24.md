@@ -14,6 +14,6 @@ The example on the right combines a users profile document referenced by the key
     SELECT user.personal_details, orders
         FROM users_with_orders user 
             KEY "Elinor_33313792" 
-                JOIN users_with_orders orders 
+                JOIN orders_with_users orders 
                     KEYS ARRAY s.order_id FOR s IN user.shipped_order_history END
 </pre> 

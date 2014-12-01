@@ -2,7 +2,7 @@
 
 Array comprehensions allow you to build new arrays from existing ones.
 
-In the example on the right we build a new array containing just the childrens names for all people that have children.
+In the example on the right we build a new array containing just the children's names for all people that have children.
 
 <pre id="example">
 	SELECT 
