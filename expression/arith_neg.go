@@ -24,7 +24,7 @@ type Neg struct {
 /*
 The function NewNeg calls NewUnaryFunctionBase to define negation
 with input operand expression as the input.
-*/ 
+*/
 func NewNeg(operand Expression) Function {
 	rv := &Neg{
 		*NewUnaryFunctionBase("neg", operand),

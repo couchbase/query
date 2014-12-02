@@ -14,7 +14,7 @@ import (
 )
 
 /*
-Searched case expressions allow for conditional logic within 
+Searched case expressions allow for conditional logic within
 an expression. It contains When and Else terms.
 Type SearchedCase is a struct that implements ExpressionBase,
 and has fields whenterms type slice of WhenTerm and elseTerm as
@@ -30,7 +30,7 @@ type SearchedCase struct {
 This method returns a pointer to a SearchedCase structure
 that has its fields populated by the input WhenTerms and
 elseTerm expression.
-*/ 
+*/
 func NewSearchedCase(whenTerms WhenTerms, elseTerm Expression) Expression {
 	rv := &SearchedCase{
 		whenTerms: whenTerms,
@@ -55,7 +55,7 @@ If the else term is not nil then set the type to the type of the
 else expression. Range over the when terms. Set the type to be
 the when terms type only if it is greater (N1QL collation order)
 than the previously set type. Return the final set type.
-If Both the set type and the current when terms are greater than 
+If Both the set type and the current when terms are greater than
 NULL and arent equal, then return a JSON value.
 */
 func (this *SearchedCase) Type() value.Type {
@@ -78,10 +78,10 @@ func (this *SearchedCase) Type() value.Type {
 }
 
 /*
-The first WHEN expression is evaluated. If TRUE, the result of this 
-expression is the THEN expression. If not, subsequent WHEN clauses 
-are evaluated in the same manner. If none of the WHEN clauses 
-evaluate to TRUE, then the result of the expression is the ELSE 
+The first WHEN expression is evaluated. If TRUE, the result of this
+expression is the THEN expression. If not, subsequent WHEN clauses
+are evaluated in the same manner. If none of the WHEN clauses
+evaluate to TRUE, then the result of the expression is the ELSE
 expression. If no ELSE expression was provided, the result is NULL.
 */
 func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -116,7 +116,7 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 /*
 Create a slice of expression with length equal to twice the number of
 when terms+1. Range over the when terms and append the when and then
-terms to the slice. If an Else term is present, append it to the slice 
+terms to the slice. If an Else term is present, append it to the slice
 as well. Return the Expressions. These represent the children of the
 case expression.
 */
@@ -136,9 +136,9 @@ func (this *SearchedCase) Children() Expressions {
 }
 
 /*
-This method maps the when and else terms to an expression. If 
-there is an error during the mapping it is returned. Range over 
-the when terms and map them along with the then terms. If an 
+This method maps the when and else terms to an expression. If
+there is an error during the mapping it is returned. Range over
+the when terms and map them along with the then terms. If an
 error is encountered at either mapping return it. If an else
 term is pressent map it. Return the error encountered.
 */

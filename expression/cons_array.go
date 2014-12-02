@@ -16,7 +16,7 @@ import (
 )
 
 /*
-Represents Construction expressions. 
+Represents Construction expressions.
 Type ArrayConstruct is a struct that implements FunctionBase.
 Arrays can be constructed with arbitrary structure, nesting,
 and embedded expressions, as represented by the construction

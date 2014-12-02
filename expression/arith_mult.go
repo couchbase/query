@@ -56,8 +56,8 @@ func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, erro
 }
 
 /*
-Range over input arguments, if the type is a number multiply it to 
-the product. If the value is missing, return a missing value. For 
+Range over input arguments, if the type is a number multiply it to
+the product. If the value is missing, return a missing value. For
 all other types return a null value. Return the final product.
 */
 func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {

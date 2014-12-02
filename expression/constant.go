@@ -83,18 +83,11 @@ func (this *Constant) Indexable() bool {
 }
 
 /*
-Check the type of the input expression. If it is a constant expression
-call the Equals method for values over the receivers value and the
-other expressions value. If not a constant then return false since
-the expressions are not Equivalent.
+Indicates if this expression is equivalent to the other expression.
+False negatives are allowed.
 */
 func (this *Constant) EquivalentTo(other Expression) bool {
-	switch other := other.(type) {
-	case *Constant:
-		return this.value.Equals(other.value)
-	default:
-		return false
-	}
+	return this.ValueEquals(other)
 }
 
 /*

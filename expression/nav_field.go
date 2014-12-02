@@ -149,12 +149,3 @@ func (this *FieldName) Accept(visitor Visitor) (interface{}, error) {
 func (this *FieldName) Alias() string {
 	return this.name
 }
-
-func (this *FieldName) EquivalentTo(other Expression) bool {
-	switch other := other.(type) {
-	case *FieldName:
-		return this.value.Equals(other.value)
-	default:
-		return false
-	}
-}

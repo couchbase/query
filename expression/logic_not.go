@@ -16,7 +16,7 @@ import (
 /*
 Logical terms allow for combining other expressions using boolean logic.
 Standard NOT operators are supported. Type Not is a struct that
-implements UnaryFunctionBase. 
+implements UnaryFunctionBase.
 */
 type Not struct {
 	UnaryFunctionBase
@@ -55,9 +55,10 @@ receiver, current item and current context.
 func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
+
 /*
-If the input argument type is greater than NULL, we return the complement 
-of its Truth() method's return type. If Null or missing return the argument 
+If the input argument type is greater than NULL, we return the complement
+of its Truth() method's return type. If Null or missing return the argument
 itself.
 */
 func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {

@@ -30,8 +30,8 @@ type Binding struct {
 }
 
 /*
-This method returns a pointer to the Binding struct with 
-input variable and expression used to set the fields of 
+This method returns a pointer to the Binding struct with
+input variable and expression used to set the fields of
 the structure. The descend boolean field is set to false.
 */
 func NewBinding(variable string, expr Expression) *Binding {
@@ -47,7 +47,7 @@ func NewDescendantBinding(variable string, expr Expression) *Binding {
 }
 
 /*
-This method is used to access the variable field 
+This method is used to access the variable field
 of the receiver which is of type Binding.
 */
 func (this *Binding) Variable() string {
@@ -55,7 +55,7 @@ func (this *Binding) Variable() string {
 }
 
 /*
-This method is used to access the expression field 
+This method is used to access the expression field
 of the receiver which is of type Binding.
 */
 func (this *Binding) Expression() Expression {
@@ -63,14 +63,15 @@ func (this *Binding) Expression() Expression {
 }
 
 /*
-This method is used to set the expression field 
+This method is used to set the expression field
 of the receiver which is of type Binding.
 */
 func (this *Binding) SetExpression(expr Expression) {
 	this.expr = expr
 }
+
 /*
-This method is used to access the descend field 
+This method is used to access the descend field
 of the receiver which is of type Binding.
 */
 func (this *Binding) Descend() bool {
@@ -99,8 +100,8 @@ The receiver for this method is of type Binding. It returns a
 byte array and an error. Create a map deom string to interface
 with a single field with name and value set as type and binding.
 For the name variable, set the receivers variable as the value.
-For expression call the Visit method over the expression and use 
-its return value to set the value of the map. Set the field 
+For expression call the Visit method over the expression and use
+its return value to set the value of the map. Set the field
 descend to the receivers descend value. Call Marshal over this
 map and return it.
 */

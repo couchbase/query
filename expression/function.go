@@ -210,6 +210,10 @@ func NewCommutativeBinaryFunctionBase(name string, first, second Expression) *Co
 }
 
 func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
+	if this.ValueEquals(other) {
+		return true
+	}
+
 	that, ok := other.(Function)
 	if !ok {
 		return false
@@ -281,6 +285,10 @@ func NewCommutativeFunctionBase(name string, operands ...Expression) *Commutativ
 }
 
 func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
+	if this.ValueEquals(other) {
+		return true
+	}
+
 	that, ok := other.(Function)
 	if !ok {
 		return false

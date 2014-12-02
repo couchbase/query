@@ -57,7 +57,7 @@ func (this *Sub) Evaluate(item value.Value, context Context) (value.Value, error
 
 /*
 Evaluate the difference for the first and second input
-values to return a value. If both values are numbers, calculate 
+values to return a value. If both values are numbers, calculate
 the difference and return it. If either of the expressions are
 missing then return a missing value. For all other cases return
 a null value.

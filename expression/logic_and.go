@@ -14,8 +14,8 @@ import (
 )
 
 /*
-Logical terms allow for combining other expressions using boolean logic. 
-Standard AND operators are supported. Type And is a struct that 
+Logical terms allow for combining other expressions using boolean logic.
+Standard AND operators are supported. Type And is a struct that
 implements CommutativeFunctionBase.
 */
 type And struct {
@@ -49,7 +49,7 @@ It returns a value type Boolean.
 func (this *And) Type() value.Type { return value.BOOLEAN }
 
 /*
-Calls the Eval method and passes in the receiver, current item 
+Calls the Eval method and passes in the receiver, current item
 and current context.
 */
 func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -58,8 +58,8 @@ func (this *And) Evaluate(item value.Value, context Context) (value.Value, error
 
 /*
 Range over input arguments, for all types other than missing and null,
-if the truth value of the argument is false, then return false. If 
-the type is missing, return missing, and if null return null. If all 
+if the truth value of the argument is false, then return false. If
+the type is missing, return missing, and if null return null. If all
 inputs are true, return true. For null and missing, it returns missing.
 */
 func (this *And) Apply(context Context, args ...value.Value) (value.Value, error) {

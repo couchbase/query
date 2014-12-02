@@ -14,10 +14,10 @@ import (
 )
 
 /*
-Represents Construction expressions. 
+Represents Construction expressions.
 Objects can be constructed with arbitrary structure, nesting,
 and embedded expressions, as represented by the construction
-expressions in the N1QL specs. Type ObjectConstruct is a 
+expressions in the N1QL specs. Type ObjectConstruct is a
 struct that implements ExpressionBase and has field bindings
 that is a map from string to Expression.
 */
@@ -27,10 +27,10 @@ type ObjectConstruct struct {
 }
 
 /*
-Create and return a new ObjectConstruct. Set its bindings field 
+Create and return a new ObjectConstruct. Set its bindings field
 as a new map from string to expressions with length of
 input argument bindings. It ranges over these bindings and sets
-the value to Expression() for the key Variable() for the map. 
+the value to Expression() for the key Variable() for the map.
 */
 func NewObjectConstruct(bindings Bindings) Expression {
 	rv := &ObjectConstruct{
@@ -58,11 +58,10 @@ Returns OBJECT value.
 */
 func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
 
-
 /*
 Range over the bindings and evaluate each expression individually
-using the Evaluate method. For all returned values excpt missing, 
-set the map[key] to the return value of the Evaluate method. 
+using the Evaluate method. For all returned values excpt missing,
+set the map[key] to the return value of the Evaluate method.
 Return the map.
 */
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -82,18 +81,21 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 	return value.NewValue(m), nil
 }
 
-
 /*
-Check if the input expression other is equivalent to the receiver 
+Check if the input expression other is equivalent to the receiver
 expressions. Cast the other expr to a pointer to ObjectConstruct.
 If the length of the receivers bindings and other's bindings are
 not equal return false. Range over the receivers bindings and
 compare the expression values for each objectconstructs bindings
-by calling equivalent to for those expressions. If not equal 
-return false. If all child expressions in the bindings are 
+by calling equivalent to for those expressions. If not equal
+return false. If all child expressions in the bindings are
 equal, return true.
 */
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
+	if this.ValueEquals(other) {
+		return true
+	}
+
 	ol, ok := other.(*ObjectConstruct)
 	if !ok {
 		return false

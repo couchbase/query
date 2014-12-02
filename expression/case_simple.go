@@ -29,9 +29,9 @@ type WhenTerm struct {
 
 /*
 Simple case expressions allow for conditional matching within an expression.
-It contains search expression, when/then terms and an optional else 
+It contains search expression, when/then terms and an optional else
 expression. Type SimpleCase is a struct that implements ExpressionBase,
-and has fields searchTerm which is an expression, whenterms type slice of 
+and has fields searchTerm which is an expression, whenterms type slice of
 WhenTerm and elseTerm as an expression.
 */
 type SimpleCase struct {
@@ -94,12 +94,12 @@ func (this *SimpleCase) Type() value.Type {
 }
 
 /*
-The first WHEN expression is evaluated. If it is equal to the 
-search expression, the result of this expression is the THEN 
-expression. If not, subsequent WHEN clauses are evaluated in 
-the same manner. If none of the WHEN expressions is equal to 
-the search expression, then the result of the CASE expression 
-is the ELSE expression. If no ELSE expression was provided, 
+The first WHEN expression is evaluated. If it is equal to the
+search expression, the result of this expression is the THEN
+expression. If not, subsequent WHEN clauses are evaluated in
+the same manner. If none of the WHEN expressions is equal to
+the search expression, then the result of the CASE expression
+is the ELSE expression. If no ELSE expression was provided,
 the result is NULL.
 */
 func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -142,9 +142,9 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 
 /*
 Create a slice of expression with length equal to twice the number of
-when terms+2. Append the search term. Range over the when terms and 
-append the when and then terms to the slice. If an Else term is 
-present, append it to the slice as well. Return the Expressions. 
+when terms+2. Append the search term. Range over the when terms and
+append the when and then terms to the slice. If an Else term is
+present, append it to the slice as well. Return the Expressions.
 These represent the children of the case expression.
 */
 func (this *SimpleCase) Children() Expressions {
@@ -166,10 +166,10 @@ func (this *SimpleCase) Children() Expressions {
 /*
 This method maps the search, when and else terms to an expression.
 If there is an error during the mapping it is returned. Map the
-search term first. Range over the when terms and map them along 
-with the then terms. If an error is encountered at either mapping 
-return it. If an else term is pressent map it. Return the error 
-encountered. 
+search term first. Range over the when terms and map them along
+with the then terms. If an error is encountered at either mapping
+return it. If an else term is pressent map it. Return the error
+encountered.
 */
 func (this *SimpleCase) MapChildren(mapper Mapper) (err error) {
 	this.searchTerm, err = mapper.Map(this.searchTerm)

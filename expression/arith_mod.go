@@ -62,7 +62,7 @@ This method evaluates the mod for the first and second input
 values to return a value. If the second value type is a number,
 convert to a valid Go type. Check for divide by 0. If true return
 a Null value. If the first value is a Number, calculate the mod
-and return it. If either of the two values are missing return a     
+and return it. If either of the two values are missing return a
 missing value. If not a number and not missing return a NULL value.
 */
 func (this *Mod) Apply(context Context, first, second value.Value) (value.Value, error) {

@@ -99,6 +99,10 @@ method hasnt returned till this point, then the expressions are
 equal and return true.
 */
 func (this *ExpressionBase) EquivalentTo(other Expression) bool {
+	if this.ValueEquals(other) {
+		return true
+	}
+
 	if reflect.TypeOf(this.expr) != reflect.TypeOf(other) {
 		return false
 	}
@@ -117,6 +121,14 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	}
 
 	return true
+}
+
+func (this *ExpressionBase) ValueEquals(other Expression) bool {
+	thisValue := this.expr.Value()
+	otherValue := other.Value()
+
+	return thisValue != nil && otherValue != nil &&
+		thisValue.Equals(otherValue)
 }
 
 /*

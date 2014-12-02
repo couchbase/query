@@ -57,7 +57,7 @@ func (this *Add) Evaluate(item value.Value, context Context) (value.Value, error
 
 /*
 Range over input arguments, if the type is a number add it to the sum.
-If the value is missing, return a missing value. For all other types 
+If the value is missing, return a missing value. For all other types
 return a null value. Return the final sum.
 */
 func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error) {

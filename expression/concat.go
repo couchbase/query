@@ -60,15 +60,15 @@ func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
-This method takes in a set of values args and context, calculates the 
+This method takes in a set of values args and context, calculates the
 concatenation and then returns that string value. Range over the input
-arguments and check their type. If it is a string and there have been 
-no nulls as of yet, write the string to a temporary buffer. In the case 
+arguments and check their type. If it is a string and there have been
+no nulls as of yet, write the string to a temporary buffer. In the case
 of a missing return a missing. For any other values set null as true
-(it needs to return a null). All the strings will be appended to the 
-buffer. Check if at any time we encountered a null, and if yes return 
+(it needs to return a null). All the strings will be appended to the
+buffer. Check if at any time we encountered a null, and if yes return
 a null value. Create a N1QL compatible value out of the string buffer
-and return it. 
+and return it.
 */
 func (this *Concat) Apply(context Context, args ...value.Value) (value.Value, error) {
 	var buf bytes.Buffer
@@ -101,7 +101,7 @@ is 2.
 func (this *Concat) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined for the concat is 
+Maximum number of input arguments defined for the concat is
 MaxInt16  = 1<<15 - 1. This is defined using the math package.
 */
 func (this *Concat) MaxArgs() int { return math.MaxInt16 }

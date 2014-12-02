@@ -862,8 +862,8 @@ func NewRandom(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.expr = rv
 	rv.volatile = true
+	rv.expr = rv
 
 	if len(operands) < 1 {
 		return rv

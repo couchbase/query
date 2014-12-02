@@ -56,12 +56,12 @@ func (this *Div) Evaluate(item value.Value, context Context) (value.Value, error
 }
 
 /*
-This method evaluates the division for the first and second input 
+This method evaluates the division for the first and second input
 values to return a value. If the second value type is a number,
 convert to a valid Go type. Check for divide by 0. If true return
 a Null value. If the first value is a Number, divide the two values
- and return it. If either of the two values are missing return a 
-missing value. If not a number and not missing return a NULL value. 
+ and return it. If either of the two values are missing return a
+missing value. If not a number and not missing return a NULL value.
 */
 func (this *Div) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if second.Type() == value.NUMBER {
