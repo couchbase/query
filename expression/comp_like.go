@@ -115,8 +115,7 @@ func (this *Like) Regexp() *regexp.Regexp { return this.re }
 
 /*
 This method sets the regexp field in the Like struct.
-It checks if the second operand of the receiver is
-a Constant. If it is it checks if its value is a String,
+It checks if its value is a String,
 and if not returns. Compile the string and set the regular
 expression field in the struct for the receiver to this
 compiled value.
