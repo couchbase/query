@@ -295,13 +295,11 @@ func (this *RegexpReplace) MaxArgs() int { return 4 }
 func (this *RegexpReplace) Constructor() FunctionConstructor { return NewRegexpReplace }
 
 func precompileRegexp(rexpr Expression) (re *regexp.Regexp, err error) {
-	switch s := rexpr.(type) {
-	case *Constant:
-		sv := s.Value()
-		if sv.Type() == value.STRING {
-			re, err = regexp.Compile(sv.Actual().(string))
-		}
+	rv := rexpr.Value()
+	if rv == nil || rv.Type() != value.STRING {
+		return
 	}
 
+	re, err = regexp.Compile(rv.Actual().(string))
 	return
 }

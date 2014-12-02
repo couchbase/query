@@ -28,6 +28,12 @@ type Function interface {
 
 type FunctionConstructor func(operands ...Expression) Function
 
+type BinaryFunction interface {
+	Function
+	First() Expression
+	Second() Expression
+}
+
 type FunctionBase struct {
 	ExpressionBase
 	name     string

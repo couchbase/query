@@ -72,20 +72,17 @@ func (this *Like) Constructor() FunctionConstructor {
 func (this *Like) Regexp() *regexp.Regexp { return this.re }
 
 func (this *Like) Precompile() {
-	switch s := this.Second().(type) {
-	case *Constant:
-		sv := s.Value()
-		if sv.Type() != value.STRING {
-			return
-		}
-
-		re, err := this.Compile(sv.Actual().(string))
-		if err != nil {
-			return
-		}
-
-		this.re = re
+	sv := this.Second().Value()
+	if sv == nil || sv.Type() != value.STRING {
+		return
 	}
+
+	re, err := this.Compile(sv.Actual().(string))
+	if err != nil {
+		return
+	}
+
+	this.re = re
 }
 
 func (this *Like) Compile(s string) (*regexp.Regexp, error) {
