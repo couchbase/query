@@ -338,11 +338,11 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		logging.Warnf("Unable to retrieve bucket passwords. Error %v", err)
 	}
 
-	for bname, bpass := range binfo {
-		if bname == name {
-			if bpass != "" {
-				saslPassword = bpass
-				logging.Infof("SASL password for bucket %s", bpass)
+	for _, bi := range binfo {
+		if bi.Name == name {
+			if bi.Password != "" {
+				saslPassword = bi.Password
+				logging.Infof("SASL password for bucket %s", bi.Password)
 			}
 			break
 		}
