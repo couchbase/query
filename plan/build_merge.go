@@ -60,11 +60,13 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if actions.Update() != nil {
 		act := actions.Update()
-		ops := make([]Operator, 0, 4)
+		ops := make([]Operator, 0, 5)
 
 		if act.Where() != nil {
 			ops = append(ops, NewFilter(act.Where()))
 		}
+
+		ops = append(ops, NewClone())
 
 		if act.Set() != nil {
 			ops = append(ops, NewSet(act.Set()))

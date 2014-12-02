@@ -88,9 +88,13 @@ func (this *Field) Set(item, val value.Value, context Context) bool {
 		return false
 	}
 
+	target := first
+	if first.Type() == value.MISSING {
+		target = item
+	}
 	switch second.Type() {
 	case value.STRING:
-		er := first.SetField(second.Actual().(string), val)
+		er := target.SetField(second.Actual().(string), val)
 		return er == nil
 	default:
 		return false
@@ -108,9 +112,13 @@ func (this *Field) Unset(item value.Value, context Context) bool {
 		return false
 	}
 
+	target := first
+	if first.Type() == value.MISSING {
+		target = item
+	}
 	switch second.Type() {
 	case value.STRING:
-		er := first.UnsetField(second.Actual().(string))
+		er := target.UnsetField(second.Actual().(string))
 		return er == nil
 	default:
 		return false
