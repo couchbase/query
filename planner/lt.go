@@ -14,7 +14,11 @@ import (
 )
 
 func LessThan(expr1, expr2 expression.Expression) bool {
-	return false
+	value1 := expr1.Value()
+	value2 := expr2.Value()
+
+	return value1 != nil && value2 != nil &&
+		value1.Collate(value2) < 0
 }
 
 func LessThanOrEquals(expr1, expr2 expression.Expression) bool {
