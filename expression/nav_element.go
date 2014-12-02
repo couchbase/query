@@ -18,7 +18,7 @@ import (
 /*
 Nested expressions are used to access elements inside of arrays.
 They support using the bracket notation ([position]) to access
-elements inside an array. Type Element is a struct that inherits from
+elements inside an array. Type Element is a struct that implements
 BinaryFunctionBase.
 */
 type Element struct {

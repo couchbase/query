@@ -15,10 +15,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Nested expressions are used to access slices inside of arrays.
+Type Slice is a struct that implements FunctionBase.
+*/
 type Slice struct {
 	FunctionBase
 }
 
+/*
+The function NewSlice calls NewFunctionBase to define the
+slice with input operands of type expression as input.
+*/
 func NewSlice(operands ...Expression) Function {
 	rv := &Slice{
 		*NewFunctionBase("slice", operands...),
@@ -28,16 +36,42 @@ func NewSlice(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitSlice method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSlice(this)
 }
 
+/*
+It returns a value type ARRAY.
+*/
 func (this *Slice) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method and passes in the
+receiver, current item and current context.
+*/
 func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method Evaluates the slive using the input args depending on the
+number of args. The form source-expr [ start : end ] is called array
+slicing. It returns a new array containing a subset of the source,
+containing the elements from position start to end-1. The element at
+start is included, while the element at end is not. If end is omitted,
+all elements from start to the end of the source array are included.
+The source is the first argument. If it is missing return a missing
+value. The first argument represents start. If missing return missing.
+If there are more than 2 arguments, then an end is specified. Check
+its type, and if missing return missing value. Since start and end
+represent indices, make sure they are integer values and if not return
+null value. Call Slice or Slice tail on the source (depending on whether
+end is specified) to return the specified slice.
+*/
 func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, re error) {
 	source := args[0]
 	if source.Type() == value.MISSING {
@@ -83,10 +117,19 @@ func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, 
 	return
 }
 
+/*
+Minimum input arguments required for Slices is 2.
+*/
 func (this *Slice) MinArgs() int { return 2 }
 
+/*
+Minimum input arguments allowed for Slices is 3.
+*/
 func (this *Slice) MaxArgs() int { return 3 }
 
+/*
+Return NewSlice as FunctionConstructor.
+*/
 func (this *Slice) Constructor() FunctionConstructor {
 	return NewSlice
 }

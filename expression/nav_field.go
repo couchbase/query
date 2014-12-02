@@ -18,7 +18,7 @@ import (
 /*
 Nested expressions are used to access fields inside of objects.
 This is done using the dot operator. By default the field names
-are case sensitive. Type Field is a struct that inherits from
+are case sensitive. Type Field is a struct that implements
 BinaryFunctionBase and has a boolean value caseInsensitive to
 determine the case of the field name.
 */
