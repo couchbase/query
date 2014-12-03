@@ -99,6 +99,8 @@ spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md).
 
 + EXPLAIN
 
++ PREPARE
+
 + CREATE INDEX
 
 + CREATE PRIMARY INDEX
@@ -158,6 +160,13 @@ used.
 EXPLAIN is implemented, but the output format is still being
 fine-tuned. It is ready for manual testing, but automated tests may
 break if the format changes.
+
+### PREPARE
+
+PREPARE is implemented, but the output format is possibly subject 
+to change. It is ready for manual testing, but automated tests may 
+break if the format changes. PREPARE returns the query plan and
+signature of the given statement.
 
 ### CREATE INDEX
 
