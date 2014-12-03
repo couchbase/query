@@ -26,6 +26,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
+	"net/url"
 )
 
 // log channel for the datastore lifecycle
@@ -88,7 +89,10 @@ type Keyspace interface {
 	Upsert(upserts []Pair) ([]Pair, errors.Error)     // Bulk key-value upserts into this keyspace
 	Delete(deletes []string) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
 
-	Release() // Release any resources held by this object
+	// Bucket Authentication
+	Authenticate(credentials Credentials, requested Privileges) errors.Error
+
+	Release() // Release any query engine resources held by this object
 }
 
 // Key-value pair
@@ -124,3 +128,16 @@ func GetKeyspace(namespace, keyspace string) (Keyspace, error) {
 
 	return ns.KeyspaceByName(keyspace)
 }
+
+// Credentials
+type Credentials []*url.Userinfo
+
+type Privileges int
+
+const (
+	CAN_READ  Privileges = 1
+	CAN_WRITE Privileges = 2
+	CAN_DDL   Privileges = 4
+)
+
+type PrivilegesMap map[string]Privileges

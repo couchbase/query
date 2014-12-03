@@ -88,6 +88,10 @@ func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expressi
 	return b.indexer.CreateIndex(name, equalKey, rangeKey, where)
 }
 
+func (b *namespaceKeyspace) Authenticate(credentials datastore.Credentials, requested datastore.Privileges) errors.Error {
+	return nil
+}
+
 func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {

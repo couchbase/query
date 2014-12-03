@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	lsm "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
@@ -85,11 +86,27 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 }
 
 // NewSite creates a new Couchbase site for the given url.
-func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
+func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 
-	client, err := cb.Connect(url)
+	up, err := url.Parse(u)
 	if err != nil {
-		return nil, errors.NewError(err, "Cannot connect to url "+url)
+		return nil, errors.NewError(nil, fmt.Sprintf("Failed to parse url %s", u))
+	}
+	hostport := up.Host
+
+	if hostport == "" {
+		return nil, errors.NewError(nil, fmt.Sprintf("Invalid url %s", u))
+	}
+
+	logging.Infof("Connecting to %s", hostport)
+	httpUser, httpPassword, err := cbauth.GetHTTPServiceAuth(hostport)
+	if err != nil {
+		return nil, errors.NewError(err, "")
+	}
+
+	client, err := cb.ConnectWithAuthCreds(u, httpUser, httpPassword)
+	if err != nil {
+		return nil, errors.NewError(err, "Cannot connect to url "+u)
 	}
 
 	site := &site{
@@ -107,7 +124,7 @@ func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 	}
 
 	site.namespaceCache["default"] = defaultPool
-	logging.Infof("New site created with url %s", url)
+	logging.Infof("New site created with url %s", u)
 
 	return site, nil
 }
@@ -117,9 +134,18 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 	cbpool, err := s.client.GetPool(name)
 	if err != nil {
 		if name == "default" {
+
+			u := s.URL()
+			up, _ := url.Parse(u)
+			hostport := up.Host
+			// get http service user-name & password
+			httpUser, httpPassword, err := cbauth.GetHTTPServiceAuth(hostport)
+			if err != nil {
+				return nil, errors.NewError(err, "")
+			}
+
 			// if default pool is not available, try reconnecting to the server
-			url := s.URL()
-			client, err := cb.Connect(url)
+			client, err := cb.ConnectWithAuthCreds(u, httpUser, httpPassword)
 			if err != nil {
 				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
 			}
@@ -132,33 +158,11 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 		}
 	}
 
-	url, err := url.Parse(s.URL())
-	if err != nil {
-		logging.Warnf("Unable to parse url %s. Error %v", s.URL(), err)
-	}
-
-	var username string
-	var password string
-
-	if url.User != nil {
-		// extract admin username and password
-		username = url.User.Username()
-		pw, set := url.User.Password()
-		if set == true {
-			password = pw
-		}
-	}
-
-	if username != "" && password != "" {
-		logging.Infof("Started with username %s and password %s", username, password)
-	}
-
 	rv := namespace{
-		site:             s,
-		name:             name,
-		cbNamespace:      cbpool,
-		keyspaceCache:    make(map[string]datastore.Keyspace),
-		adminCredentials: &credentials{user: username, password: password},
+		site:          s,
+		name:          name,
+		cbNamespace:   cbpool,
+		keyspaceCache: make(map[string]datastore.Keyspace),
 	}
 	go keepPoolFresh(&rv)
 	return &rv, nil
@@ -232,16 +236,27 @@ func (p *namespace) getPool() cb.Pool {
 }
 
 func (p *namespace) refresh(changed bool) {
+
+	var hostport string
 	// trigger refresh of this pool
 	logging.Infof("Refreshing pool %s", p.name)
+	u := p.site.URL()
+	up, _ := url.Parse(u)
+	hostport = up.Host
 
 	newpool, err := p.site.client.GetPool(p.name)
 	if err != nil {
 		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
-		url := p.site.URL()
-		client, err := cb.Connect(url)
+
+		httpUser, httpPassword, err := cbauth.GetHTTPServiceAuth(hostport)
 		if err != nil {
-			logging.Errorf("Error connecting to URL %s", url)
+			logging.Errorf("Failed to get Service credentials %v", err)
+			return
+		}
+
+		client, err := cb.ConnectWithAuthCreds(u, httpUser, httpPassword)
+		if err != nil {
+			logging.Errorf("Error connecting to URL %s", u)
 			return
 		}
 		// check if the default pool exists
@@ -254,11 +269,17 @@ func (p *namespace) refresh(changed bool) {
 
 	}
 
+	mUser, mPassword, err := cbauth.GetMemcachedServiceAuth(hostport)
+	if err != nil {
+		logging.Errorf("Failed to get Memcached Service credentials %v", err)
+		return
+	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	for name, keySpace := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
-		_, err := newpool.GetBucketWithAuth(name, name, keySpace.(*keyspace).saslPassword)
+		_, err := newpool.GetBucketWithAuth(name, mUser, mPassword)
 		if err != nil {
 			changed = true
 			keySpace.(*keyspace).deleted = true
@@ -275,7 +296,7 @@ func (p *namespace) refresh(changed bool) {
 
 func keepPoolFresh(p *namespace) {
 
-	tickChan := time.Tick(1 * time.Minute)
+	tickChan := time.Tick(15 * time.Second)
 
 	for _ = range tickChan {
 		p.refresh(false)
@@ -283,13 +304,51 @@ func keepPoolFresh(p *namespace) {
 }
 
 type keyspace struct {
-	namespace    *namespace
-	name         string
-	cbbucket     *cb.Bucket
-	deleted      bool
-	saslPassword string            // SASL password
-	viewIndexer  datastore.Indexer // View index provider
-	lsmIndexer   datastore.Indexer // LSM index provider
+	namespace        *namespace
+	name             string
+	indexes          map[string]datastore.Index
+	primary          datastore.PrimaryIndex
+	cbbucket         *cb.Bucket
+	deleted          bool
+	nonUsableIndexes []string          // indexes that cannot be used
+	saslPassword     string            // SASL password
+	viewIndexer      datastore.Indexer // View index provider
+	lsmIndexer       datastore.Indexer // LSM index provider
+
+}
+
+func (b *keyspace) refresh() {
+	// trigger refresh of this pool
+	logging.Infof("Refreshing Indexes in keyspace %s", b.name)
+
+	indexes, err := loadViewIndexes(b)
+	if err != nil {
+		logging.Errorf(" Error loading indexes for bucket %s", b.name)
+		return
+	}
+
+	if len(indexes) == 0 {
+		return
+	}
+
+	for _, index := range indexes {
+		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), b.name)
+		name := (*index).Name()
+		b.indexes[name] = *index
+	}
+
+}
+
+func keepIndexesFresh(b *keyspace) {
+
+	tickChan := time.Tick(15 * time.Second)
+
+	for _ = range tickChan {
+		if b.deleted == true {
+			return
+		}
+		b.refresh()
+	}
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -299,23 +358,16 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()
 
-	// get the bucket password if one exists
-	binfo, err := cb.GetBucketList(p.site.Id())
+	u := p.site.URL()
+	up, _ := url.Parse(u)
+	hostport := up.Host
+
+	mUser, mPassword, err := cbauth.GetMemcachedServiceAuth(hostport)
 	if err != nil {
-		logging.Warnf("Unable to retrieve bucket passwords. Error %v", err)
+		return nil, errors.NewError(nil, fmt.Sprintf("Failed to get Memcached Service credentials %v", err))
 	}
 
-	for _, bi := range binfo {
-		if bi.Name == name {
-			if bi.Password != "" {
-				saslPassword = bi.Password
-				logging.Infof("SASL password for bucket %s", bi.Password)
-			}
-			break
-		}
-	}
-
-	cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
+	cbbucket, err = cbNamespace.GetBucketWithAuth(name, mUser, mPassword)
 
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
@@ -327,7 +379,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 		// and then check one more time
 		logging.Infof(" Retrying bucket %s", name)
-		cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
+		cbbucket, err = cbNamespace.GetBucketWithAuth(name, mUser, mPassword)
 		if err != nil {
 			// really no such bucket exists
 			return nil, errors.NewError(err, fmt.Sprintf("Bucket %v not found.", name))
@@ -477,6 +529,91 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 	}
 	indexes = append(indexes, lsmIndexes...)
 	return indexes, err
+}
+
+func doAuth(username, password, bucket string, requested datastore.Privileges) (bool, error) {
+
+	logging.Infof(" Authenticating for bucket %s username %s password %s", bucket, username, password)
+	creds, err := cbauth.Auth(username, password)
+	if err != nil {
+		return false, err
+	}
+
+	if (requested & datastore.CAN_DDL) != 0 {
+		authResult, err := creds.CanDDLBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else if (requested & datastore.CAN_WRITE) != 0 {
+		authResult, err := creds.CanAccessBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else if (requested & datastore.CAN_READ) != 0 {
+		authResult, err := creds.CanReadBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else {
+		return false, fmt.Errorf("Invalid Privileges")
+	}
+
+	return true, nil
+
+}
+
+func (b *keyspace) Authenticate(credentials datastore.Credentials, requested datastore.Privileges) errors.Error {
+
+	var authResult bool
+	var err error
+
+	// No auth required for default bucket
+	if b.Name() == "default" {
+		return nil
+	}
+
+	logging.Infof("Authenticating for bucket %s", b.Name())
+
+	for _, cred := range credentials {
+		username := cred.Username()
+		password, _ := cred.Password()
+
+		userCreds := strings.Split(username, ":")
+
+		if strings.EqualFold(userCreds[0], "admin") {
+			authResult, err = doAuth(userCreds[1], password, b.Name(), requested)
+		} else if len(userCreds) > 1 && userCreds[1] == b.Name() {
+			authResult, err = doAuth(userCreds[1], password, b.Name(), requested)
+		} else {
+			//try with empty password
+			authResult, err = doAuth(b.Name(), "", b.Name(), requested)
+		}
+
+		if err != nil {
+			return errors.NewError(err, "Authentication Failed")
+		}
+
+		// Auth succeeded
+		if authResult == true {
+			return nil
+		}
+		continue
+
+	}
+
+	// no credentials specified
+	if len(credentials) == 0 {
+		authResult, err = doAuth(b.Name(), "", b.Name(), requested)
+	}
+
+	if authResult == false {
+		return errors.NewError(nil, "Authentication Failed for bucket "+b.Name())
+	}
+
+	return nil
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {

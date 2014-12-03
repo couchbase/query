@@ -18,8 +18,8 @@ import (
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (Operator, error) {
-	builder := newBuilder(datastore, systemstore, namespace, subquery)
+	creds datastore.Credentials, namespace string, subquery bool) (Operator, error) {
+	builder := newBuilder(datastore, systemstore, creds, namespace, subquery)
 	o, err := stmt.Accept(builder)
 
 	if err != nil {
@@ -38,6 +38,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 type builder struct {
 	datastore       datastore.Datastore
 	systemstore     datastore.Datastore
+	credentials     datastore.Credentials
 	namespace       string
 	subquery        bool
 	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
@@ -48,10 +49,11 @@ type builder struct {
 	subChildren     []Operator
 }
 
-func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
+func newBuilder(datastore, systemstore datastore.Datastore, creds datastore.Credentials, namespace string, subquery bool) *builder {
 	return &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
+		credentials:     creds,
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
@@ -78,4 +80,8 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	}
 
 	return keyspace, nil
+}
+
+func (this *builder) Credentials() datastore.Credentials {
+	return this.credentials
 }

@@ -342,3 +342,8 @@ func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
 	return NewExplain(plan.Operator()), nil
 }
+
+// Authenticate
+func (this *builder) VisitAuthenticate(plan *plan.Authenticate) (interface{}, error) {
+	return NewAuthenticate(plan), nil
+}

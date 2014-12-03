@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
@@ -145,8 +146,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	}
 
+	var creds datastore.Credentials
 	if err == nil {
-		_, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
+		creds, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
 	}
 
 	client_id := ""
@@ -155,7 +157,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
-		namespace, readonly, metrics, signature, consistency, client_id)
+		namespace, readonly, metrics, signature, consistency, client_id, creds)
 
 	rv := &httpRequest{
 		BaseRequest: *base,

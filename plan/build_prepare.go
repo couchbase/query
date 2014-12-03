@@ -15,7 +15,8 @@ import (
 )
 
 func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
-	plan, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false)
+	//FIXME Add authentication creds
+	plan, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, nil, this.namespace, false)
 	if err != nil {
 		return nil, err
 	}
