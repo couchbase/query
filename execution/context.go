@@ -30,6 +30,8 @@ type Output interface {
 	Fatal(err errors.Error)
 	Error(err errors.Error)
 	Warning(wrn errors.Error)
+	AddMutationCount(uint64)
+	MutationCount() uint64
 }
 
 type Context struct {
@@ -95,6 +97,14 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	} else {
 		return nil, false
 	}
+}
+
+func (this *Context) AddMutationCount(i uint64) {
+	this.output.AddMutationCount(i)
+}
+
+func (this *Context) MutationCount() uint64 {
+	return this.output.MutationCount()
 }
 
 func (this *Context) Result(item value.Value) bool {

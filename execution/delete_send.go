@@ -70,6 +70,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		this.batch = nil
 		return false
 	}
+	// Update mutation count with number of deleted docs:
+	context.AddMutationCount(uint64(len(keys)))
 
 	for _, av := range this.batch {
 		if !this.sendItem(av) {

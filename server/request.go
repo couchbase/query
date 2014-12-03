@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -102,6 +103,7 @@ type BaseRequest struct {
 	signature      bool
 	metrics        value.Tristate
 	consistency    ScanConfiguration
+	mutationCount  uint64
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -292,6 +294,14 @@ func (this *BaseRequest) Warning(wrn errors.Error) {
 	case this.warnings <- wrn:
 	default:
 	}
+}
+
+func (this *BaseRequest) AddMutationCount(i uint64) {
+	atomic.AddUint64(&this.mutationCount, i)
+}
+
+func (this *BaseRequest) MutationCount() uint64 {
+	return atomic.LoadUint64(&this.mutationCount)
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {

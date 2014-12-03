@@ -86,6 +86,9 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		return false
 	}
 
+	// Update mutation count with number of updated docs
+	context.AddMutationCount(uint64(len(pairs)))
+
 	for _, p := range pairs {
 		if !this.sendItem(p.Value.(value.AnnotatedValue)) {
 			break

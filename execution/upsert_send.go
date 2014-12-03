@@ -98,6 +98,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		return false
 	}
 
+	// Update mutation count with number of upserted docs
+	context.AddMutationCount(uint64(len(pairs)))
+
 	// Capture the upserted keys in case there's a RETURNING clause
 	for i, k := range keys {
 		av := pairs[i].Value.(value.AnnotatedValue)
