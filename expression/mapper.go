@@ -128,6 +128,14 @@ func (this *MapperBase) VisitIsMissing(expr *IsMissing) (interface{}, error) {
 	return expr, expr.MapChildren(this.mapper)
 }
 
+func (this *MapperBase) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+	return expr, expr.MapChildren(this.mapper)
+}
+
+func (this *MapperBase) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+	return expr, expr.MapChildren(this.mapper)
+}
+
 func (this *MapperBase) VisitIsNull(expr *IsNull) (interface{}, error) {
 	return expr, expr.MapChildren(this.mapper)
 }

@@ -117,6 +117,14 @@ func (this *predicate) VisitIsMissing(expr *expression.IsMissing) (interface{}, 
 	return this.test(expr)
 }
 
+func (this *predicate) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+	return this.test(expr)
+}
+
+func (this *predicate) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+	return this.test(expr)
+}
+
 func (this *predicate) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return this.test(expr)
 }

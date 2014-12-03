@@ -110,6 +110,14 @@ func (this *sargableFactory) VisitIsMissing(expr *expression.IsMissing) (interfa
 	return newSargableDefault(expr), nil
 }
 
+func (this *sargableFactory) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+	return newSargableDefault(expr), nil
+}
+
+func (this *sargableFactory) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+	return newSargableDefault(expr), nil
+}
+
 func (this *sargableFactory) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return newSargableDefault(expr), nil
 }

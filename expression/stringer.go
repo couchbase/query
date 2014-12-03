@@ -295,6 +295,22 @@ func (this *Stringer) VisitIsMissing(expr *IsMissing) (interface{}, error) {
 	return buf.String(), nil
 }
 
+func (this *Stringer) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(" is not missing)")
+	return buf.String(), nil
+}
+
+func (this *Stringer) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(" is not null)")
+	return buf.String(), nil
+}
+
 func (this *Stringer) VisitIsNull(expr *IsNull) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")

@@ -250,9 +250,25 @@ func (this *JSConverter) VisitLT(expr *expression.LT) (interface{}, error) {
 
 func (this *JSConverter) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
 	var buf bytes.Buffer
+	buf.WriteString("typeof(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(") == 'undefined')")
+	return buf.String(), nil
+}
+
+func (this *JSConverter) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("typeof(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(") != 'undefined')")
+	return buf.String(), nil
+}
+
+func (this *JSConverter) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+	var buf bytes.Buffer
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" == null)")
+	buf.WriteString(" != null)")
 	return buf.String(), nil
 }
 

@@ -76,12 +76,35 @@ func (this *IsMissing) Constructor() FunctionConstructor {
 	}
 }
 
-/*
-This function implements the is not missing comparison operation.
-It calls the NewNot over the NewIsMissing to return an expression that
-is a complement of its return type (boolean).
-(NewNot represents the Not logical operation)
-*/
-func NewIsNotMissing(operand Expression) Expression {
-	return NewNot(NewIsMissing(operand))
+type IsNotMissing struct {
+	UnaryFunctionBase
+}
+
+func NewIsNotMissing(operand Expression) Function {
+	rv := &IsNotMissing{
+		*NewUnaryFunctionBase("isnotmissing", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *IsNotMissing) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsNotMissing(this)
+}
+
+func (this *IsNotMissing) Type() value.Type { return value.BOOLEAN }
+
+func (this *IsNotMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *IsNotMissing) Apply(context Context, arg value.Value) (value.Value, error) {
+	return value.NewValue(arg.Type() != value.MISSING), nil
+}
+
+func (this *IsNotMissing) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsNotMissing(operands[0])
+	}
 }

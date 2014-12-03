@@ -423,7 +423,7 @@
                                     },
                                     {
                                         "#operator": "Filter",
-                                        "condition": "any `id` in [\"damien\", \"dustin\", \"does_not_exist\"] satisfies (((meta(`game`).`id`) = `id`) or (not (`id` is null))) end"
+                                        "condition": "any `id` in [\"damien\", \"dustin\", \"does_not_exist\"] satisfies (((meta(`game`).`id`) = `id`) or (`id` is not null)) end"
                                     },
                                     {
                                         "#operator": "InitialProject",

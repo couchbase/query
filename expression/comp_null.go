@@ -84,12 +84,42 @@ func (this *IsNull) Constructor() FunctionConstructor {
 	}
 }
 
-/*
-This function implements the is not null comparison operation.
-It calls the NewNot over the NewIsNull to return an expression that
-is a complement of its return type (boolean).
-(NewNot represents the Not logical operation)
-*/
-func NewIsNotNull(operand Expression) Expression {
-	return NewNot(NewIsNull(operand))
+type IsNotNull struct {
+	UnaryFunctionBase
+}
+
+func NewIsNotNull(operand Expression) Function {
+	rv := &IsNotNull{
+		*NewUnaryFunctionBase("isnotnull", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *IsNotNull) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsNotNull(this)
+}
+
+func (this *IsNotNull) Type() value.Type { return value.BOOLEAN }
+
+func (this *IsNotNull) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *IsNotNull) Apply(context Context, arg value.Value) (value.Value, error) {
+	switch arg.Type() {
+	case value.NULL:
+		return value.FALSE_VALUE, nil
+	case value.MISSING:
+		return value.MISSING_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
+}
+
+func (this *IsNotNull) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsNotNull(operands[0])
+	}
 }
