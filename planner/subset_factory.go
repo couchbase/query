@@ -99,7 +99,7 @@ func (this *subsetFactory) VisitLE(expr *expression.LE) (interface{}, error) {
 }
 
 func (this *subsetFactory) VisitLike(expr *expression.Like) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetLike(expr, expr.Regexp()), nil
 }
 
 func (this *subsetFactory) VisitLT(expr *expression.LT) (interface{}, error) {
@@ -177,6 +177,11 @@ func (this *subsetFactory) VisitSlice(expr *expression.Slice) (interface{}, erro
 
 // Function
 func (this *subsetFactory) VisitFunction(expr expression.Function) (interface{}, error) {
+	switch expr := expr.(type) {
+	case *expression.RegexpLike:
+		return newSubsetLike(expr, expr.Regexp()), nil
+	}
+
 	return newSubsetDefault(expr), nil
 }
 

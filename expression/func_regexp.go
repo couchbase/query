@@ -136,6 +136,8 @@ func (this *RegexpLike) Constructor() FunctionConstructor {
 	}
 }
 
+func (this *RegexpLike) Regexp() *regexp.Regexp { return this.re }
+
 ///////////////////////////////////////////////////
 //
 // RegexpPosition

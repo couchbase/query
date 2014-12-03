@@ -99,7 +99,7 @@ func (this *sargableFactory) VisitLE(expr *expression.LE) (interface{}, error) {
 }
 
 func (this *sargableFactory) VisitLike(expr *expression.Like) (interface{}, error) {
-	return newSargableLike(expr), nil
+	return newSargableLike(expr, expr.Regexp()), nil
 }
 
 func (this *sargableFactory) VisitLT(expr *expression.LT) (interface{}, error) {
@@ -177,6 +177,11 @@ func (this *sargableFactory) VisitSlice(expr *expression.Slice) (interface{}, er
 
 // Function
 func (this *sargableFactory) VisitFunction(expr expression.Function) (interface{}, error) {
+	switch expr := expr.(type) {
+	case *expression.RegexpLike:
+		return newSargableLike(expr, expr.Regexp()), nil
+	}
+
 	return newSargableDefault(expr), nil
 }
 
