@@ -9,6 +9,16 @@
 
 package expression
 
+/*
+This function returns a Function that represents the
+greater than equal to comparison expression. It is
+implemented using the NewLE function with its input
+operand expressions switched. (The first greater than
+equal to the second operand is the same as the second
+less than equal to the first operand.). NewLE implements
+a function thatn represents the less than equal to
+comparison expression.
+*/
 func NewGE(first, second Expression) Function {
 	return NewLE(second, first)
 }

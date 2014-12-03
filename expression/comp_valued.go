@@ -13,10 +13,20 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Comparison terms allow for comparing two expressions.
+Type IsValued is a a struct that implements
+UnaryFuncitonBase.
+*/
 type IsValued struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewIsValued calls NewUnaryFunctionBase
+to define isvalued comparison expression with input operand
+expression as input.
+*/
 func NewIsValued(operand Expression) Function {
 	rv := &IsValued{
 		*NewUnaryFunctionBase("isvalued", operand),
@@ -26,26 +36,52 @@ func NewIsValued(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitIsValued method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsValued(this)
 }
 
+/*
+It returns a value type BOOLEAN.
+*/
 func (this *IsValued) Type() value.Type { return value.BOOLEAN }
 
+/*
+Calls the Eval method for Unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+Evaluates the Is Valued comparison operation for expressions.
+Return true if the input argument value is greater than a null
+value, as per N1QL collation order, else return false.
+*/
 func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type() > value.NULL), nil
 }
 
+/*
+The constructor returns a NewIsValued with the operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *IsValued) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIsValued(operands[0])
 	}
 }
 
+/*
+This function implements the is not valued comparison operation.
+It calls the NewNot over the NewIsValued to return an expression that
+is a complement of its return type (boolean).
+(NewNot represents the Not logical operation)
+*/
 func NewIsNotValued(operand Expression) Expression {
 	return NewNot(NewIsValued(operand))
 }
