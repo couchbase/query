@@ -14,6 +14,7 @@ import (
 	"sort"
 
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 )
@@ -219,6 +220,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
+	creds := this.Credentials()
+	auth := NewAuthenticate(keyspace, creds, datastore.CAN_READ)
+	this.subChildren = append(this.subChildren, auth)
+
 	if node.Keys() != nil {
 		scan := NewKeyScan(node.Keys())
 		this.children = append(this.children, scan)
@@ -260,6 +265,10 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
+	creds := this.Credentials()
+	auth := NewAuthenticate(keyspace, creds, datastore.CAN_READ)
+	this.subChildren = append(this.subChildren, auth)
+
 	join := NewJoin(keyspace, node)
 	this.subChildren = append(this.subChildren, join)
 
@@ -283,6 +292,10 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	creds := this.Credentials()
+	auth := NewAuthenticate(keyspace, creds, datastore.CAN_READ)
+	this.subChildren = append(this.subChildren, auth)
 
 	nest := NewNest(keyspace, node)
 	this.subChildren = append(this.subChildren, nest)
@@ -464,13 +477,16 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	for _, term := range node.Projection().Terms() {
 		count, ok := term.Expression().(*algebra.Count)
 		if !ok || count.Operand() != nil {
 			return false, nil
 		}
 	}
+
+	creds := this.Credentials()
+	auth := NewAuthenticate(keyspace, creds, datastore.CAN_READ)
+	this.children = append(this.children, auth)
 
 	scan := NewCountScan(keyspace, from)
 	this.children = append(this.children, scan)

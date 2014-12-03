@@ -107,6 +107,10 @@ func (b *keyspaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
 	return rv, nil
 }
 
+func (b *keyspaceKeyspace) Authenticate(credentials datastore.Credentials, requested datastore.Privileges) errors.Error {
+	return nil
+}
+
 func (b *keyspaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
 	if b.primary != nil {
 		return b.primary, nil

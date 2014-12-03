@@ -96,4 +96,7 @@ type Visitor interface {
 
 	// Prepare
 	VisitPrepare(op *Prepare) (interface{}, error)
+
+	// Authenticate
+	VisitAuthenticate(op *Authenticate) (interface{}, error)
 }

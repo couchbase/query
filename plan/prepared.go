@@ -18,8 +18,8 @@ import (
 )
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (*Prepared, error) {
-	operator, err := Build(stmt, datastore, systemstore, namespace, subquery)
+	creds datastore.Credentials, namespace string, subquery bool) (*Prepared, error) {
+	operator, err := Build(stmt, datastore, systemstore, creds, namespace, subquery)
 	if err != nil {
 		return nil, err
 	}

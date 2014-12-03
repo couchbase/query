@@ -17,6 +17,12 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 )
 
+func (this *builder) BuildAuthPlan(keyspace datastore.Keyspace) interface{} {
+	creds := this.Credentials()
+	children := make([]Operator, 0, 2)
+	return append(children, NewAuthenticate(keyspace, creds, datastore.CAN_DDL))
+}
+
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
@@ -24,7 +30,10 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 		return nil, err
 	}
 
-	return NewCreatePrimaryIndex(keyspace, stmt), nil
+	children := this.BuildAuthPlan(keyspace).([]Operator)
+	children = append(children, NewCreatePrimaryIndex(keyspace, stmt))
+
+	return NewSequence(children...), nil
 }
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
@@ -34,7 +43,11 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		return nil, err
 	}
 
-	return NewCreateIndex(keyspace, stmt), nil
+	children := this.BuildAuthPlan(keyspace).([]Operator)
+	children = append(children, NewCreateIndex(keyspace, stmt))
+
+	return NewSequence(children...), nil
+
 }
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
@@ -49,7 +62,11 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, er
 	}
 
-	return NewDropIndex(index, stmt), nil
+	children := this.BuildAuthPlan(keyspace).([]Operator)
+	children = append(children, NewDropIndex(index, stmt))
+
+	return NewSequence(children...), nil
+
 }
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
@@ -64,7 +81,10 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	return NewAlterIndex(index, stmt), nil
+	children := this.BuildAuthPlan(keyspace).([]Operator)
+	children = append(children, NewAlterIndex(index, stmt))
+
+	return NewSequence(children...), nil
 }
 
 func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {
