@@ -15,23 +15,33 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Most Expressions are Functions, except for Constants, Identifiers, and
+a few syntactic elements.
+*/
 type Function interface {
 	Expression
-	Name() string
-	Distinct() bool
-	Volatile() bool
-	Operands() Expressions
-	MinArgs() int
-	MaxArgs() int
-	Constructor() FunctionConstructor
+	Name() string                     // Unique name of this function
+	Distinct() bool                   // True iff this is a DISTINCT aggregate, e.g. COUNT(DISTINCT)
+	Volatile() bool                   // True if this function depends on non-arguments, e.g. randomness or clock
+	Operands() Expressions            // Operands for this invocation
+	MinArgs() int                     // Minimum number of arguments
+	MaxArgs() int                     // Maximum number of arguments
+	Constructor() FunctionConstructor // Dynamic constructor
 }
 
+/*
+FunctionConstructor enables dynamic construction of functions.
+*/
 type FunctionConstructor func(operands ...Expression) Function
 
+/*
+BinaryFunctions always have two operands.
+*/
 type BinaryFunction interface {
 	Function
-	First() Expression
-	Second() Expression
+	First() Expression  // First operand for this invocation
+	Second() Expression // Second operand for this invocation
 }
 
 type FunctionBase struct {
