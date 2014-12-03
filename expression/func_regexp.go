@@ -213,6 +213,9 @@ func (this *RegexpLike) Constructor() FunctionConstructor {
 	}
 }
 
+/*
+Return the regular expression field in the receiver.
+*/
 func (this *RegexpLike) Regexp() *regexp.Regexp { return this.re }
 
 ///////////////////////////////////////////////////
