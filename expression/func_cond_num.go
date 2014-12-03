@@ -21,10 +21,20 @@ import (
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function IFINF(expr1, expr2, ...)
+for numbers. It returns the first non-MISSING, non-Inf number or
+NULL. Type IfInf is a struct that implements FunctionBase.
+*/
 type IfInf struct {
 	FunctionBase
 }
 
+/*
+The function NewIfnf calls NewFunctionBase to create a function
+named IFINF with input arguments as the operands from the input
+expression.
+*/
 func NewIfInf(operands ...Expression) Function {
 	rv := &IfInf{
 		*NewFunctionBase("ifinf", operands...),
@@ -34,16 +44,38 @@ func NewIfInf(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IfInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *IfInf) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first non missing, non infinity
+number in the input argument values. Range over the args
+and check its type. If missing, skip that value, and if
+that value is not a number, then return a NULL. In the
+event a number is first encountered, check whether f is
+an infinity according to the second argument (since it
+is 0 IsInf reports whether f is either infinity as per
+the math package in the Go Docs). If none of the above
+cases are satisfied return a Null value.
+*/
 func (this *IfInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -61,10 +93,21 @@ func (this *IfInf) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 2
+*/
 func (this *IfInf) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined for the IfInf
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *IfInf) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewIfInf as FunctionConstructor.
+*/
 func (this *IfInf) Constructor() FunctionConstructor { return NewIfInf }
 
 ///////////////////////////////////////////////////
@@ -73,10 +116,20 @@ func (this *IfInf) Constructor() FunctionConstructor { return NewIfInf }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function IFNAN(expr1, expr2, ...).
+It returns the first non-MISSING, non-NaN number or NULL. Type IfNaN
+is a struct that implements FunctionBase.
+*/
 type IfNaN struct {
 	FunctionBase
 }
 
+/*
+The function NewIfNaN calls NewFunctionBase to create a function
+named IFNAN with input arguments as the operands from the input
+expression.
+*/
 func NewIfNaN(operands ...Expression) Function {
 	rv := &IfNaN{
 		*NewFunctionBase("ifnan", operands...),
@@ -86,16 +139,37 @@ func NewIfNaN(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *IfNaN) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first non missing, non infinity
+number in the input argument values. Range over the args
+and check its type. If missing, skip that value, and if
+that value is not a number, then return a NULL. In the
+event a number is first encountered, check whether f is
+an IEEE 754 "not a number" value. If false then return
+that number. If none of the above cases are satisfied
+return a Null value.
+*/
 func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -113,10 +187,21 @@ func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, err
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 2
+*/
 func (this *IfNaN) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined for the IfNaN
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *IfNaN) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewIfNaN as FunctionConstructor.
+*/
 func (this *IfNaN) Constructor() FunctionConstructor { return NewIfNaN }
 
 ///////////////////////////////////////////////////
@@ -125,10 +210,20 @@ func (this *IfNaN) Constructor() FunctionConstructor { return NewIfNaN }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function IFNANORINF(expr1, expr2, ...).
+It returns the first non-MISSING, non-Inf, non-NaN number or NULL. Type
+IfNaNOrInf is a struct that implements FunctionBase.
+*/
 type IfNaNOrInf struct {
 	FunctionBase
 }
 
+/*
+The function NewIfNaNOrInf calls NewFunctionBase to create a function
+named IFNANORINF with input arguments as the operands from the input
+expression.
+*/
 func NewIfNaNOrInf(operands ...Expression) Function {
 	rv := &IfNaNOrInf{
 		*NewFunctionBase("ifnanorinf", operands...),
@@ -138,16 +233,41 @@ func NewIfNaNOrInf(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *IfNaNOrInf) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first non-MISSING, non-Inf, non-NaN
+number or NULL in the input argument values. Range over the args
+and check its type. If missing, skip that value, and if
+that value is not a number, then return a NULL. In the
+event a number is first encountered, check whether f is
+an infinity according to the second argument (since it
+is 0 IsInf reports whether f is either infinity as per
+the math package in the Go Docs). Also check if f is
+an IEEE 754 "not a number" value using the IfNaN method
+defined in the math package. If false then return that
+number. If none of the above cases are satisfied return a
+Null value.
+*/
 func (this *IfNaNOrInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -165,10 +285,21 @@ func (this *IfNaNOrInf) Apply(context Context, args ...value.Value) (value.Value
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 2
+*/
 func (this *IfNaNOrInf) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined for the
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *IfNaNOrInf) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewIfNaNOrInf as FunctionConstructor.
+*/
 func (this *IfNaNOrInf) Constructor() FunctionConstructor { return NewIfNaNOrInf }
 
 ///////////////////////////////////////////////////
@@ -177,10 +308,20 @@ func (this *IfNaNOrInf) Constructor() FunctionConstructor { return NewIfNaNOrInf
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function IFNEGINF(expr1, expr2, ...).
+It returns the first non-MISSING, non-NegInf number or NULL. Type
+IfNegInf is a struct that implements FunctionBase.
+*/
 type IfNegInf struct {
 	FunctionBase
 }
 
+/*
+The function NewIfNegInf calls NewFunctionBase to create a function
+named IFNEGINF with input arguments as the operands from the input
+expression.
+*/
 func NewIfNegInf(operands ...Expression) Function {
 	rv := &IfNegInf{
 		*NewFunctionBase("ifneginf", operands...),
@@ -190,16 +331,38 @@ func NewIfNegInf(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IfNegInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *IfNegInf) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *IfNegInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first first non-MISSING, non-NegInf number
+or NULL in the input argument values. Range over the args
+and check its type. If missing, skip that value, and if
+that value is not a number, then return a NULL. In the
+event a number is first encountered, check whether f is
+an infinity according to the second argument (since it
+is -1 IsInf reports whether f is negative infinity as per
+the math package in the Go Docs). If none of the above
+cases are satisfied return a Null value.
+*/
 func (this *IfNegInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -217,10 +380,21 @@ func (this *IfNegInf) Apply(context Context, args ...value.Value) (value.Value, 
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 2
+*/
 func (this *IfNegInf) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined for the IfNegInf
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *IfNegInf) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewIfNegInf as FunctionConstructor.
+*/
 func (this *IfNegInf) Constructor() FunctionConstructor { return NewIfNegInf }
 
 ///////////////////////////////////////////////////
@@ -229,10 +403,20 @@ func (this *IfNegInf) Constructor() FunctionConstructor { return NewIfNegInf }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function IFPOSINF(expr1, expr2, ...).
+It returns the first non-MISSING, non-PosInf number or NULL. Type
+IfPosInf is a struct that implements FunctionBase.
+*/
 type IfPosInf struct {
 	FunctionBase
 }
 
+/*
+The function NewIfPosInf calls NewFunctionBase to create a function
+named IFPOSINF with input arguments as the operands from the input
+expression.
+*/
 func NewIfPosInf(operands ...Expression) Function {
 	rv := &IfPosInf{
 		*NewFunctionBase("ifposinf", operands...),
@@ -242,16 +426,38 @@ func NewIfPosInf(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *IfPosInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *IfPosInf) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *IfPosInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first first non-MISSING, non-PosInf number
+or NULL in the input argument values. Range over the args
+and check its type. If missing, skip that value, and if
+that value is not a number, then return a NULL. In the
+event a number is first encountered, check whether f is
+an infinity according to the second argument (since it
+is 1 IsInf reports whether f is positive infinity as per
+the math package in the Go Docs). If none of the above
+cases are satisfied return a Null value.
+*/
 func (this *IfPosInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -269,10 +475,21 @@ func (this *IfPosInf) Apply(context Context, args ...value.Value) (value.Value, 
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 2
+*/
 func (this *IfPosInf) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined for the IfPosInf
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *IfPosInf) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewIfPosInf as FunctionConstructor.
+*/
 func (this *IfPosInf) Constructor() FunctionConstructor { return NewIfPosInf }
 
 ///////////////////////////////////////////////////
@@ -281,10 +498,20 @@ func (this *IfPosInf) Constructor() FunctionConstructor { return NewIfPosInf }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function FIRSTNUM(expr1, expr2, ...).
+It returns the first finite number. Type FirstNum is a struct that
+implements FunctionBase.
+*/
 type FirstNum struct {
 	FunctionBase
 }
 
+/*
+The function NewFirstNum calls NewFunctionBase to create a function
+named FIRSTNUM with input arguments as the operands from the input
+expression.
+*/
 func NewFirstNum(operands ...Expression) Function {
 	rv := &FirstNum{
 		*NewFunctionBase("firstnum", operands...),
@@ -294,16 +521,36 @@ func NewFirstNum(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *FirstNum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type NUMBER.
+*/
 func (this *FirstNum) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for the receiver and passes in the
+receiver, current item and current context.
+*/
 func (this *FirstNum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the first finite number. Range over the args
+and check its type. If it is less than or equal to null (either
+missing or null), skip this value. If that value is not a number,
+then return a NULL. In the event a number is first encountered,
+check whether f is an infinity according to the second argument
+and then check if it is NaN (not a number). and return the value.
+If none of the above cases are satisfied return a Null value.
+*/
 func (this *FirstNum) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() <= value.NULL {
@@ -321,10 +568,21 @@ func (this *FirstNum) Apply(context Context, args ...value.Value) (value.Value, 
 	return value.NULL_VALUE, nil
 }
 
+/*
+Minimum input arguments required is 1.
+*/
 func (this *FirstNum) MinArgs() int { return 1 }
 
+/*
+Maximum number of input arguments defined for the FirstNum
+function is MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *FirstNum) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Return NewFirstNum as FunctionConstructor.
+*/
 func (this *FirstNum) Constructor() FunctionConstructor { return NewFirstNum }
 
 ///////////////////////////////////////////////////
@@ -333,10 +591,20 @@ func (this *FirstNum) Constructor() FunctionConstructor { return NewFirstNum }
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function NANIF(expr1, expr2).
+It returns a NaN if expr1 = expr2; else expr1. Type NaNIf
+is a struct that implements BinaryFunctionBase.
+*/
 type NaNIf struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewNaNIf calls NewBinaryFunctionBase to
+create a function named NANIF with the two
+expressions as input.
+*/
 func NewNaNIf(first, second Expression) Function {
 	rv := &NaNIf{
 		*NewBinaryFunctionBase("nanif", first, second),
@@ -346,16 +614,34 @@ func NewNaNIf(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type JSON.
+*/
 func (this *NaNIf) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method checks to see if the values of the two input
+expressions are equal, and if true then returns a NaN
+using the math package method NaN(). If not it returns
+the first input value. Use the Equals method for the
+two values to determine equality.
+*/
 func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.NaN()), nil
@@ -364,6 +650,10 @@ func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Valu
 	}
 }
 
+/*
+The constructor returns a NewNaNIf with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *NaNIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewNaNIf(operands[0], operands[1])
@@ -376,10 +666,20 @@ func (this *NaNIf) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function NEGINFIF(expr1, expr2).
+It returns NegInf if expr1 = expr2; else expr1. Type NegInfIf
+is a struct that implements BinaryFunctionBase.
+*/
 type NegInfIf struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewNegInfIf calls NewBinaryFunctionBase to
+create a function named NEGINFIF with the two
+expressions as input.
+*/
 func NewNegInfIf(first, second Expression) Function {
 	rv := &NegInfIf{
 		*NewBinaryFunctionBase("neginfif", first, second),
@@ -389,16 +689,34 @@ func NewNegInfIf(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type JSON.
+*/
 func (this *NegInfIf) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method checks to see if the values of the two input
+expressions are equal, and if true then returns a negative
+infinity using the math package method Inf(-1). If not it
+returns the first input value. Use the Equals method for the
+two values to determine equality.
+*/
 func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(-1)), nil
@@ -407,6 +725,10 @@ func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.V
 	}
 }
 
+/*
+The constructor returns a NewNegInfIf with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *NegInfIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewNegInfIf(operands[0], operands[1])
@@ -419,10 +741,20 @@ func (this *NegInfIf) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the Conditional function POSINFIF(expr1, expr2).
+It returns PosInf if expr1 = expr2; else expr1. Type PosInfIf
+is a struct that implements BinaryFunctionBase.
+*/
 type PosInfIf struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewPOSInfIf calls NewBinaryFunctionBase to
+create a function named POSINFIF with the two
+expressions as input.
+*/
 func NewPosInfIf(first, second Expression) Function {
 	rv := &PosInfIf{
 		*NewBinaryFunctionBase("posinfif", first, second),
@@ -432,16 +764,34 @@ func NewPosInfIf(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value type JSON.
+*/
 func (this *PosInfIf) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method checks to see if the values of the two input
+expressions are equal, and if true then returns a positive
+infinity using the math package method Inf(1). If not it
+returns the first input value. Use the Equals method for the
+two values to determine equality.
+*/
 func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(1)), nil
@@ -450,6 +800,10 @@ func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.V
 	}
 }
 
+/*
+The constructor returns a NewPosInfIf with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *PosInfIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewPosInfIf(operands[0], operands[1])
