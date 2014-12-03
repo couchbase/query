@@ -25,6 +25,7 @@ import (
 	log_resolver "github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/server"
 	"github.com/couchbaselabs/query/server/http"
+	"github.com/couchbaselabs/query/util"
 )
 
 var VERSION = "0.7.0" // Build-time overriddable.
@@ -93,7 +94,7 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
-	keep_alive_length, e := server.ParseQuantity(*KEEP_ALIVE_LENGTH)
+	keep_alive_length, e := util.ParseQuantity(*KEEP_ALIVE_LENGTH)
 
 	if e != nil {
 		logging.Errorp("Error parsing keep alive length; reverting to default",
