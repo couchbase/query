@@ -305,7 +305,7 @@ indexType        datastore.IndexType
 %type <expr>             offset opt_offset
 %type <b>                dir opt_dir
 
-%type <statement>        stmt explain select_stmt dml_stmt ddl_stmt
+%type <statement>        stmt explain prepare select_stmt dml_stmt ddl_stmt
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index
 
@@ -357,6 +357,8 @@ expr
 stmt:
 explain
 |
+prepare
+|
 select_stmt
 |
 dml_stmt
@@ -368,6 +370,13 @@ explain:
 EXPLAIN stmt
 {
     $$ = algebra.NewExplain($2)
+}
+;
+
+prepare:
+PREPARE stmt
+{
+    $$ = algebra.NewPrepare($2)
 }
 ;
 

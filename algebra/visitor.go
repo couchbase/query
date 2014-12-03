@@ -28,6 +28,9 @@ type Visitor interface {
 
 	// EXPLAIN
 	VisitExplain(stmt *Explain) (interface{}, error)
+
+	// PREPARE
+	VisitPrepare(stmt *Prepare) (interface{}, error)
 }
 
 type NodeVisitor interface {

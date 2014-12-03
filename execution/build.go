@@ -318,6 +318,11 @@ func (this *builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error)
 	return NewAlterIndex(plan), nil
 }
 
+// Prepare
+func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
+	return NewPrepare(plan.Operator()), nil
+}
+
 // Explain
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
 	return NewExplain(plan.Operator()), nil
