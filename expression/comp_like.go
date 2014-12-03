@@ -18,7 +18,10 @@ import (
 /*
 Comparison terms allow for comparing two expressions.
 Like and not like are used to to search for a specified
-pattern in an expression. Type Like is a struct that
+pattern in an expression. The LIKE operator allows for
+wildcard matching of string values. The right-hand side
+of the operator is a pattern, optionally containg '%'
+and '_' wildcard characters. Type Like is a struct that
 implements BinaryFunctionBase. It has a field that
 represents a regular expression. Regexp is the
 representation of a compiled regular expression.
@@ -161,6 +164,12 @@ func (this *Like) Compile(s string) (*regexp.Regexp, error) {
 The function replaces the input strings with
 strings and returns the new string. It is a
 regular expression replacer.
+Percent (%) matches any string of zero or more
+characters; underscore (_) matches any single
+character. The wildcards can be escaped by preceding
+them with a backslash (\). Backslash itself can also
+be escaped by preceding it with another backslash.
+All these characters need to be replaced correctly.
 */
 func replacer(s string) string {
 	switch s {
