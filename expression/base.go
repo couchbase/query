@@ -158,6 +158,10 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
+/*
+Return true if the receiver Expression value and the input
+expression value are equal and not nil; else false.
+*/
 func (this *ExpressionBase) ValueEquals(other Expression) bool {
 	thisValue := this.expr.Value()
 	otherValue := other.Value()

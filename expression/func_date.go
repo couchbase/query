@@ -28,7 +28,7 @@ import (
 This represents the Date function CLOCK_MILLIS(). It
 returns the system clock at function evaluation time,
 as UNIX milliseconds and varies during a query. Type
-ClockMillis is a struct that implements NullaryFuncitonBase.
+ClockMillis is a struct that implements NullaryFunctionBase.
 */
 type ClockMillis struct {
 	NullaryFunctionBase
@@ -89,7 +89,7 @@ This represents the Date function CLOCK_STR([ fmt ]). It returns
 the system clock at function evaluation time, as a string in a
 supported format and varies during a query. There are a set of
 supported formats. Type ClockStr is a struct that implements
-FuncitonBase.
+FunctionBase.
 */
 type ClockStr struct {
 	FunctionBase
@@ -194,7 +194,7 @@ This represents the Date function DATE_ADD_MILLIS(expr,n,part).
 It performs date arithmetic. n and part are used to define an
 interval or duration, which is then added (or subtracted) to
 the UNIX timestamp, returning the result. Type DateAddMillis
-is a struct that implements TernaryFuncitonBase since it has
+is a struct that implements TernaryFunctionBase since it has
 3 input arguments.
 */
 type DateAddMillis struct {
@@ -290,7 +290,7 @@ This represents the Date function DATE_ADD_STR(expr,n,part).
 It performs date arithmetic. n and part are used to define an
 interval or duration, which is then added to the date string
 in a supported format, returning the result. Type DateAddStr
-is a struct that implements TernaryFuncitonBase since it has
+is a struct that implements TernaryFunctionBase since it has
 3 input arguments.
 */
 type DateAddStr struct {
@@ -387,7 +387,7 @@ func (this *DateAddStr) Constructor() FunctionConstructor {
 This represents the Date function DATE_DIFF_MILLIS(expr1,expr2,part).
 It performs date arithmetic. It returns the elapsed time between two
 UNIX timestamps, as an integer whose unit is part. Type DateDiffMillis
-is a struct that implements TernaryFuncitonBase since it has
+is a struct that implements TernaryFunctionBase since it has
 3 input arguments.
 */
 type DateDiffMillis struct {
@@ -475,7 +475,7 @@ func (this *DateDiffMillis) Constructor() FunctionConstructor {
 This represents the Date function DATE_DIFF_STR(expr1,expr2,part).
 It performs date arithmetic and returns the elapsed time between two
 date strings in a supported format, as an integer whose unit is
-part.Type. DateAddStr is a struct that implements TernaryFuncitonBase
+part.Type. DateAddStr is a struct that implements TernaryFunctionBase
 since it has 3 input arguments.
 */
 type DateDiffStr struct {
@@ -574,7 +574,7 @@ This represents the Date function DATE_PART_MILLIS(expr, part).
 It returns the date part as an integer. The date expr is a
 number representing UNIX milliseconds, and part is one of the
 date part strings. DatePartMillis is a struct that implements
-BinaryFuncitonBase.
+BinaryFunctionBase.
 */
 type DatePartMillis struct {
 	BinaryFunctionBase
@@ -661,7 +661,7 @@ This represents the Date function DATE_PART_STR(expr, part).
 It returns the date part as an integer. The date expr is a
 string in a supported format, and part is one of the supported
 date part strings. DatePartStr is a struct that implements
-BinaryFuncitonBase.
+BinaryFunctionBase.
 */
 type DatePartStr struct {
 	BinaryFunctionBase
@@ -752,7 +752,7 @@ func (this *DatePartStr) Constructor() FunctionConstructor {
 This represents the Date function DATE_TRUNC_MILLIS(expr, part).
 It truncates UNIX timestamp so that the given date part string
 is the least significant. DateTruncMillis is a struct that
-implements BinaryFuncitonBase.
+implements BinaryFunctionBase.
 */
 type DateTruncMillis struct {
 	BinaryFunctionBase
@@ -842,7 +842,7 @@ func (this *DateTruncMillis) Constructor() FunctionConstructor {
 This represents the Date function DATE_TRUNC_STR(expr, part).
 It truncates ISO 8601 timestamp so that the given date part
 string is the least significant. DateTruncStr is a struct that
-implements BinaryFuncitonBase.
+implements BinaryFunctionBase.
 */
 type DateTruncStr struct {
 	BinaryFunctionBase
@@ -935,7 +935,7 @@ This represents the Date function MILLIS_TO_STR(expr[,fmt]).
 The date part as an integer. The date expr is a string in
 a supported format, and part is one of the supported date
 part strings. Type MillisToStr is a struct that implements
-FuncitonBase.
+FunctionBase.
 */
 type MillisToStr struct {
 	FunctionBase
@@ -1032,7 +1032,7 @@ func (this *MillisToStr) Constructor() FunctionConstructor { return NewMillisToS
 /*
 This represents the Date function MILLIS_TO_UTC(expr [, fmt ]).
 It converts the UNIX timestamp to a UTC string in a supported format.
-The type MillisToUTC is a struct that implements FuncitonBase.
+The type MillisToUTC is a struct that implements FunctionBase.
 */
 type MillisToUTC struct {
 	FunctionBase
@@ -1131,7 +1131,7 @@ This represents the Date function
 MILLIS_TO_ZONE_NAME(expr, tz_name [, fmt ]). It converts
 the UNIX timestamp to a string in the named time zone.
 Type MillisToZoneName is a struct that implements
-FuncitonBase.
+FunctionBase.
 */
 type MillisToZoneName struct {
 	FunctionBase
@@ -1299,7 +1299,7 @@ func (this *NowMillis) Constructor() FunctionConstructor {
 This represents the Date function NOW_STR([fmt]).
 It returns a statement timestamp as a string in
 a supported format and does not vary during a query.
-Type NowStr is a struct that implements FuncitonBase.
+Type NowStr is a struct that implements FunctionBase.
 */
 type NowStr struct {
 	FunctionBase
@@ -1572,7 +1572,7 @@ func (this *StrToUTC) Constructor() FunctionConstructor {
 /*
 This represents the Date function STR_TO_ZONE_NAME(expr, tz_name).
 It converts the supported timestamp string to the named time zone.
-StrToZoneName is a struct that implements BinaryFuncitonBase.
+StrToZoneName is a struct that implements BinaryFunctionBase.
 */
 type StrToZoneName struct {
 	BinaryFunctionBase

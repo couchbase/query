@@ -27,7 +27,7 @@ import (
 This represents the type conversion function TO_ARRAY(expr).
 It returns an array where a missing, null and arrays map
 to themselves and all other values are wrapped in an array.
-ToArray is a struct that implements UnaryFuncitonBase.
+ToArray is a struct that implements UnaryFunctionBase.
 */
 type ToArray struct {
 	UnaryFunctionBase
@@ -107,7 +107,7 @@ numbers and strings, are themselves, arrays of length 1
 are the result of TO_ATOM() on their single element and
 objects of length 1 are the result of TO_ATOM() on their
 single value. All other values return null. ToAtom is a
-struct that implements UnaryFuncitonBase.
+struct that implements UnaryFunctionBase.
 */
 type ToAtom struct {
 	UnaryFunctionBase
@@ -210,7 +210,7 @@ This represents the type conversion function TO_BOOL(expr).
 It returns boolean values where missing, null, false map to
 themselves. Numbers +0, -0 and NaN, empty strings, arrays
 and objects as expr map to false. All other values are
-true. ToBool is a struct that implements UnaryFuncitonBase.
+true. ToBool is a struct that implements UnaryFunctionBase.
 */
 type ToBool struct {
 	UnaryFunctionBase
@@ -302,7 +302,7 @@ It returns number values where missing, null, and numbers
 map to themselves. False is 0, true is 1, strings that
 parse as numbers are those numbers and all other values
 are null (For e.g. "123" is 123 but "a12" will be NULL).
-ToNum is a struct that implements UnaryFuncitonBase.
+ToNum is a struct that implements UnaryFunctionBase.
 */
 type ToNum struct {
 	UnaryFunctionBase
@@ -397,7 +397,7 @@ This represents the type conversion function TOOBJ(expr).
 It returns an object value. The input of types missing,
 null and object return themselves. For all other values,
 return an _EMPTY_OBJECT value. ToObj is a struct that
-implements UnaryFuncitonBase.
+implements UnaryFunctionBase.
 */
 type ToObj struct {
 	UnaryFunctionBase
@@ -481,7 +481,7 @@ It returns a string based on the input expr value. Values
 missing, null and strings return themselves. False, true
 (boolean) and numbers return their string representation.
 All other values map to null. ToStr is a struct that
-implements UnaryFuncitonBase.
+implements UnaryFunctionBase.
 */
 type ToStr struct {
 	UnaryFunctionBase

@@ -26,7 +26,7 @@ import (
 /*
 This represents the Meta function BASE64(expr). It returns
 the base64-encoding of expr. Type Base64 is a struct that
-implements UnaryFuncitonBase.
+implements UnaryFunctionBase.
 */
 type Base64 struct {
 	UnaryFunctionBase
@@ -104,7 +104,7 @@ func (this *Base64) Constructor() FunctionConstructor {
 /*
 This represents the Meta function META(expr). It returns
 the meta data for the document expr. Type Meta is a struct
-that implements UnaryFuncitonBase.
+that implements UnaryFunctionBase.
 */
 type Meta struct {
 	UnaryFunctionBase
@@ -242,7 +242,7 @@ func (this *Self) Constructor() FunctionConstructor {
 /*
 This represents the Meta function UUID(). It returns
 a version 4 Universally Unique Identifier. Type Uuid
-is a struct that implements NullaryFuncitonBase.
+is a struct that implements NullaryFunctionBase.
 */
 type Uuid struct {
 	NullaryFunctionBase
