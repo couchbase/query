@@ -45,6 +45,14 @@ func (b *storeKeyspace) Count() (int64, errors.Error) {
 	return 1, nil
 }
 
+func (b *storeKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+	return nil, errors.NewError(nil, "Not yet implemented.")
+}
+
+func (b *storeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+	return nil, errors.NewError(nil, "Not yet implemented.")
+}
+
 func (b *storeKeyspace) IndexIds() ([]string, errors.Error) {
 	return b.IndexNames()
 }

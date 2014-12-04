@@ -435,6 +435,14 @@ func (b *keyspace) Count() (int64, errors.Error) {
 	return totalCount, nil
 }
 
+func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+	return nil, errors.NewError(nil, "Not yet implemented.")
+}
+
+func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+	return nil, errors.NewError(nil, "Not yet implemented.")
+}
+
 func (b *keyspace) IndexIds() ([]string, errors.Error) {
 	rv := make([]string, 0, len(b.indexes))
 	for name, _ := range b.indexes {
