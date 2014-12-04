@@ -272,6 +272,14 @@ func (this *JSConverter) VisitIsNotNull(expr *expression.IsNotNull) (interface{}
 	return buf.String(), nil
 }
 
+func (this *JSConverter) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("!(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(" != null)")
+	return buf.String(), nil
+}
+
 func (this *JSConverter) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")
