@@ -22,7 +22,7 @@ import (
 /*
 This represents the type checking function ISARRAY(expr).
 It returns true if expr is an array; else false. IsArray
-is a struct that implements UnaryFuncitonBase.
+is a struct that implements UnaryFunctionBase.
 */
 type IsArray struct {
 	UnaryFunctionBase
@@ -91,7 +91,7 @@ func (this *IsArray) Constructor() FunctionConstructor {
 This represents the type checking function ISATOM(expr).
 Returns true if expr is a boolean, number, or string;
 else false. IsAtom is a struct that implements
-UnaryFuncitonBase.
+UnaryFunctionBase.
 */
 type IsAtom struct {
 	UnaryFunctionBase
@@ -165,7 +165,7 @@ func (this *IsAtom) Constructor() FunctionConstructor {
 /*
 This represents the type checking function ISBOOL(expr).
 Returns true if expr is a boolean; else false. IsBool is
-a struct that implements UnaryFuncitonBase.
+a struct that implements UnaryFunctionBase.
 */
 type IsBool struct {
 	UnaryFunctionBase
@@ -233,7 +233,7 @@ func (this *IsBool) Constructor() FunctionConstructor {
 /*
 This represents the type checking function ISNUM(expr).
 Returns true if expr is a number; else false. IsNum is
-a struct that implements UnaryFuncitonBase.
+a struct that implements UnaryFunctionBase.
 */
 type IsNum struct {
 	UnaryFunctionBase
@@ -301,7 +301,7 @@ func (this *IsNum) Constructor() FunctionConstructor {
 /*
 This represents the type checking function ISOBJ(expr).
 Returns true if expr is an object; else false. IsObj
-is a struct that implements UnaryFuncitonBase.
+is a struct that implements UnaryFunctionBase.
 */
 type IsObj struct {
 	UnaryFunctionBase
@@ -369,7 +369,7 @@ func (this *IsObj) Constructor() FunctionConstructor {
 /*
 This represents the Type checking function ISSTR(expr).
 Returns true if expr is a string; else false. Type IsStr
-is a struct that implements UnaryFuncitonBase.
+is a struct that implements UnaryFunctionBase.
 */
 type IsStr struct {
 	UnaryFunctionBase
@@ -437,7 +437,7 @@ func (this *IsStr) Constructor() FunctionConstructor {
 /*
 This represents the type checking function TYPENAME(expr).
 Returns the type based on the value of the expr as a string.
-TypeName is a struct that implements UnaryFuncitonBase.
+TypeName is a struct that implements UnaryFunctionBase.
 */
 type TypeName struct {
 	UnaryFunctionBase

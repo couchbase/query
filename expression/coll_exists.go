@@ -15,7 +15,7 @@ import (
 
 /*
 Represents the Collection expression Exists. Type Exists
-is a struct that implements UnaryFuncitonBase.
+is a struct that implements UnaryFunctionBase.
 */
 type Exists struct {
 	UnaryFunctionBase

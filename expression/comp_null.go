@@ -16,7 +16,7 @@ import (
 /*
 Comparison terms allow for comparing two expressions.
 Type IsNull is a a struct that implements
-UnaryFuncitonBase.
+UnaryFunctionBase.
 */
 type IsNull struct {
 	UnaryFunctionBase
