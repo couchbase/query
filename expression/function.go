@@ -16,34 +16,92 @@ import (
 )
 
 /*
-Most Expressions are Functions, except for Constants, Identifiers, and
-a few syntactic elements.
+Type Function is an interface that inherits from Expression.
+It contains additional methods that help define a function
+and its constraints. Most Expressions are Functions, except
+for Constants, Identifiers, and a few syntactic elements.
 */
 type Function interface {
+	/*
+	   Inherits from Expression.
+	*/
 	Expression
-	Name() string                     // Unique name of this function
-	Distinct() bool                   // True iff this is a DISTINCT aggregate, e.g. COUNT(DISTINCT)
-	Volatile() bool                   // True if this function depends on non-arguments, e.g. randomness or clock
-	Operands() Expressions            // Operands for this invocation
-	MinArgs() int                     // Minimum number of arguments
-	MaxArgs() int                     // Maximum number of arguments
-	Constructor() FunctionConstructor // Dynamic constructor
+
+	/*
+	   Unique name of the Function.
+	*/
+	Name() string
+
+	/*
+	   True if this is a distinct aggregate. For e.g.
+	   COUNT(DISTINCT)
+	*/
+	Distinct() bool
+
+	/*
+	   True if this function depends on non-arguments. For
+	   e.g. randomness or clock
+	*/
+	Volatile() bool
+
+	/*
+	   Returns the operands of the function.
+	*/
+	Operands() Expressions
+
+	/*
+	   Returns the Minimum number of input arguments required
+	   by the function.
+	*/
+	MinArgs() int
+
+	/*
+	   Returns the Maximum number of input arguments allowed
+	   by the function.
+	*/
+	MaxArgs() int
+
+	/*
+	   Dynamic Function Constructor.
+	*/
+	Constructor() FunctionConstructor
 }
 
 /*
 FunctionConstructor enables dynamic construction of functions.
+It represents a function that takes input expressions as
+operands and returns a Function interface.
 */
 type FunctionConstructor func(operands ...Expression) Function
 
 /*
-BinaryFunctions always have two operands.
+A binary function is one that has two operands. It inherits
+from Function and contains two additional methods to return
+the first and second operand as expressions.
 */
 type BinaryFunction interface {
+	/*
+	   Inherits from Function.
+	*/
 	Function
-	First() Expression  // First operand for this invocation
-	Second() Expression // Second operand for this invocation
+
+	/*
+	   Returns the first input operand to a Binary Function.
+	*/
+	First() Expression
+
+	/*
+	   Returns the second input operand to a Binary Function.
+	*/
+	Second() Expression
 }
 
+/*
+Base class for functions. Type FunctionBase is a struct that
+implements ExpressionBase and contains additional defined
+parameters such as function name, if it is volatile and the
+operands of the functions which are of type expressions.
+*/
 type FunctionBase struct {
 	ExpressionBase
 	name     string
@@ -51,6 +109,11 @@ type FunctionBase struct {
 	operands Expressions
 }
 
+/*
+The method NewFunctionBase returns a pointer to a
+FunctionBase struct, initializing the name and operand
+field to the input name and operand expressions.
+*/
 func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	return &FunctionBase{
 		name:     name,
@@ -58,6 +121,12 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	}
 }
 
+/*
+The method Eval evaluates the function. Create a set of values with
+length as the number of operands called arguments. Populate this
+slice by ranging over the operands and evaluating each operand using
+the input item and context. Return the result.
+*/
 func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
 	result value.Value, err error) {
 	args := make(value.Values, len(this.operands))
@@ -69,9 +138,15 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 		}
 	}
 
-	return applied.Apply(context, args...)
 }
 
+/*
+Returns a boolean value that represents if the given value is
+indexable or not. If the method receiver is volatile, then
+return false. Range over the operands of the function and
+check if the operands are indexable. If any one of them is
+not then return false; else true.
+*/
 func (this *FunctionBase) Indexable() bool {
 	if this.volatile {
 		return false
@@ -86,10 +161,18 @@ func (this *FunctionBase) Indexable() bool {
 	return true
 }
 
+/*
+Returns a boolean value representing if the function
+expressions are equivalent to the input other expression
+and if its value is changeable.
+*/
 func (this *FunctionBase) EquivalentTo(other Expression) bool {
 	return !this.volatile && this.ExpressionBase.EquivalentTo(other)
 }
 
+/*
+Return the operands of the function.
+*/
 func (this *FunctionBase) Children() Expressions {
 	return this.operands
 }
@@ -107,18 +190,39 @@ func (this *FunctionBase) MapChildren(mapper Mapper) error {
 	return nil
 }
 
+/*
+Return name of the function.
+*/
 func (this *FunctionBase) Name() string { return this.name }
 
+/*
+Default return value is false.
+*/
 func (this *FunctionBase) Distinct() bool { return false }
 
+/*
+Return the volatile setting of the function.
+*/
 func (this *FunctionBase) Volatile() bool { return this.volatile }
 
+/*
+Return the operands of the function.
+*/
 func (this *FunctionBase) Operands() Expressions { return this.operands }
 
+/*
+A Nullary function doesnt have any input operands. Type
+NullaryFunctionBase is a struct that implements FunctionBase.
+*/
 type NullaryFunctionBase struct {
 	FunctionBase
 }
 
+/*
+The method NewNullaryFunctionBase returns a pointer to a
+NullaryFunctionBase struct, initializing the name field to the
+input name.
+*/
 func NewNullaryFunctionBase(name string) *NullaryFunctionBase {
 	return &NullaryFunctionBase{
 		FunctionBase{
@@ -136,18 +240,36 @@ func (this *NullaryFunctionBase) Value() value.Value {
 	return nil
 }
 
+/*
+Return false (not indexable).
+*/
 func (this *NullaryFunctionBase) Indexable() bool {
 	return false
 }
 
+/*
+Minimum input arguments required is 0.
+*/
 func (this *NullaryFunctionBase) MinArgs() int { return 0 }
 
+/*
+Maximum number of input arguments allowed is 0.
+*/
 func (this *NullaryFunctionBase) MaxArgs() int { return 0 }
 
+/*
+A Unary function has one input operand. Type UnaryFunctionBase
+is a struct that implements FunctionBase.
+*/
 type UnaryFunctionBase struct {
 	FunctionBase
 }
 
+/*
+The method NewUnaryFunctionBase returns a pointer to a
+UnaryFunctionBase struct, initializing the name and operand
+field to the input name and input operand expression.
+*/
 func NewUnaryFunctionBase(name string, operand Expression) *UnaryFunctionBase {
 	return &UnaryFunctionBase{
 		FunctionBase{
@@ -157,6 +279,12 @@ func NewUnaryFunctionBase(name string, operand Expression) *UnaryFunctionBase {
 	}
 }
 
+/*
+This method Evaluates the unary function. It evaluates the
+operand using the input item and context, and Evaluates
+this using the Apply method defined for UnaryApplied interfaces
+for each defined Unary function. Return Apply's return value.
+*/
 func (this *UnaryFunctionBase) UnaryEval(applied UnaryApplied, item value.Value, context Context) (
 	value.Value, error) {
 	op := this.operands[0]
@@ -168,18 +296,36 @@ func (this *UnaryFunctionBase) UnaryEval(applied UnaryApplied, item value.Value,
 	return applied.Apply(context, arg)
 }
 
+/*
+Minimum input arguments required is 1.
+*/
 func (this *UnaryFunctionBase) MinArgs() int { return 1 }
 
+/*
+Maximum number of input arguments allowed is 1.
+*/
 func (this *UnaryFunctionBase) MaxArgs() int { return 1 }
 
+/*
+Return the operand of the Unary Function.
+*/
 func (this *UnaryFunctionBase) Operand() Expression {
 	return this.operands[0]
 }
 
+/*
+A Binary function has two input operands. Type BinaryFunctionBase
+is a struct that implements FunctionBase.
+*/
 type BinaryFunctionBase struct {
 	FunctionBase
 }
 
+/*
+The method NewBinaryFunctionBase returns a pointer to a
+BinaryFunctionBase struct, initializing the name and operand
+field to the input name and both input operand expressions.
+*/
 func NewBinaryFunctionBase(name string, first, second Expression) *BinaryFunctionBase {
 	return &BinaryFunctionBase{
 		FunctionBase{
@@ -189,6 +335,13 @@ func NewBinaryFunctionBase(name string, first, second Expression) *BinaryFunctio
 	}
 }
 
+/*
+This method Evaluates the binary function. It evaluates both
+the operands using the input item and context, and Evaluates
+this using the Apply method (by passing both arguments )
+defined for BinaryApplied interfaces for each defined Binary
+function. Return Apply's return value.
+*/
 func (this *BinaryFunctionBase) BinaryEval(applied BinaryApplied, item value.Value, context Context) (
 	result value.Value, err error) {
 	args := make(value.Values, len(this.operands))
@@ -203,28 +356,59 @@ func (this *BinaryFunctionBase) BinaryEval(applied BinaryApplied, item value.Val
 	return applied.Apply(context, args[0], args[1])
 }
 
+/*
+Minimum input arguments required is 2.
+*/
 func (this *BinaryFunctionBase) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments allowed is 2.
+*/
 func (this *BinaryFunctionBase) MaxArgs() int { return 2 }
 
+/*
+Return the first operand of the Binary Function.
+*/
 func (this *BinaryFunctionBase) First() Expression {
 	return this.operands[0]
 }
 
+/*
+Return the second operand of the Binary Function.
+*/
 func (this *BinaryFunctionBase) Second() Expression {
 	return this.operands[1]
 }
 
+/*
+Represents binary functions that are commutative in
+nature. Type CommutativeBinaryFunctionBase is a struct
+that implements BinaryFunctionBase.
+*/
 type CommutativeBinaryFunctionBase struct {
 	BinaryFunctionBase
 }
 
+/*
+Returns a pointer to a CommutativeBinaryFunctionBase
+that calls the NewBinaryFunctionBase method to set
+the name and the operands.
+*/
 func NewCommutativeBinaryFunctionBase(name string, first, second Expression) *CommutativeBinaryFunctionBase {
 	return &CommutativeBinaryFunctionBase{
 		BinaryFunctionBase: *NewBinaryFunctionBase(name, first, second),
 	}
 }
 
+/*
+Returns a boolean value representing if the function expressions are
+equivalent to the input other expression. First compare receiver and
+input expressions using ValueEquals method defined in base.go. If true
+then return true. Compare the name of the two functions, and then length
+of their operands. If either of these are not the same return false.
+Compare the operands with each other to see if any of the combinations
+are equal to each other and if so return true; else false.
+*/
 func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true
@@ -244,10 +428,19 @@ func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
 		(this.operands[0].EquivalentTo(that.Operands()[1]) && this.operands[1].EquivalentTo(that.Operands()[0]))
 }
 
+/*
+A Ternary function has three input operands. Type TernaryFunctionBase
+is a struct that implements FunctionBase.
+*/
 type TernaryFunctionBase struct {
 	FunctionBase
 }
 
+/*
+The method NewTernaryFunctionBase returns a pointer to a
+TernaryFunctionBase struct, initializing the name and operand
+field to the input name and three input operand expressions.
+*/
 func NewTernaryFunctionBase(name string, first, second, third Expression) *TernaryFunctionBase {
 	return &TernaryFunctionBase{
 		FunctionBase{
@@ -271,26 +464,51 @@ func (this *TernaryFunctionBase) TernaryEval(applied TernaryApplied, item value.
 	return applied.Apply(context, args[0], args[1], args[2])
 }
 
+/*
+Minimum input arguments required is 3.
+*/
 func (this *TernaryFunctionBase) MinArgs() int { return 3 }
 
+/*
+Maximum number of input arguments allowed is 3.
+*/
 func (this *TernaryFunctionBase) MaxArgs() int { return 3 }
 
+/*
+Return the first operand of the Ternary Function.
+*/
 func (this *TernaryFunctionBase) First() Expression {
 	return this.operands[0]
 }
 
+/*
+Return the second operand of the Ternary Function.
+*/
 func (this *TernaryFunctionBase) Second() Expression {
 	return this.operands[1]
 }
 
+/*
+Return the third operand of the Ternary Function.
+*/
 func (this *TernaryFunctionBase) Third() Expression {
 	return this.operands[2]
 }
 
+/*
+Represents functions that are commutative in
+nature. Type CommutativeFunctionBase is a struct
+that implements FunctionBase.
+*/
 type CommutativeFunctionBase struct {
 	FunctionBase
 }
 
+/*
+Returns a pointer to a CommutativeFunctionBase
+that uses the FunctionBase struct to set
+the name and the operands.
+*/
 func NewCommutativeFunctionBase(name string, operands ...Expression) *CommutativeFunctionBase {
 	return &CommutativeFunctionBase{
 		FunctionBase{
@@ -300,6 +518,15 @@ func NewCommutativeFunctionBase(name string, operands ...Expression) *Commutativ
 	}
 }
 
+/*
+Returns a boolean value representing if the function expressions are
+equivalent to the input other expression. First compare receiver and
+input expressions using ValueEquals method defined in base.go. If true
+then return true. Compare the name of the two functions, and then length
+of their operands. If either of these are not the same return false.
+Compare the operands with each other to see if any of the combinations
+are equal to each other and if so return true; else false.
+*/
 func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true
@@ -335,22 +562,44 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
+/*
+Minimum input arguments required is 3.
+*/
 func (this *CommutativeFunctionBase) MinArgs() int { return 2 }
 
+/*
+Maximum number of input arguments defined is
+MaxInt16  = 1<<15 - 1. This is defined using the
+math package.
+*/
 func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
 
+/*
+Used to define Apply methods for general functions. The
+Apply method is used to evaluate the functions, based on
+its type and rules.
+*/
 type Applied interface {
 	Apply(context Context, args ...value.Value) (value.Value, error)
 }
 
+/*
+Define Apply methods to evaluate Unary functions.
+*/
 type UnaryApplied interface {
 	Apply(context Context, arg value.Value) (value.Value, error)
 }
 
+/*
+Define Apply methods to evaluate Binary functions.
+*/
 type BinaryApplied interface {
 	Apply(context Context, first, second value.Value) (value.Value, error)
 }
 
+/*
+Define Apply methods to evaluate Ternary functions.
+*/
 type TernaryApplied interface {
 	Apply(context Context, first, second, third value.Value) (value.Value, error)
 }
