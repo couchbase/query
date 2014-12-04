@@ -118,6 +118,10 @@ func (this *subsetFactory) VisitIsNotNull(expr *expression.IsNotNull) (interface
 	return newSubsetDefault(expr), nil
 }
 
+func (this *subsetFactory) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+	return newSubsetDefault(expr), nil
+}
+
 func (this *subsetFactory) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return newSubsetDefault(expr), nil
 }

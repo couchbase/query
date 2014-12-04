@@ -118,6 +118,10 @@ func (this *sargableFactory) VisitIsNotNull(expr *expression.IsNotNull) (interfa
 	return newSargableDefault(expr), nil
 }
 
+func (this *sargableFactory) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+	return newSargableDefault(expr), nil
+}
+
 func (this *sargableFactory) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return newSargableDefault(expr), nil
 }

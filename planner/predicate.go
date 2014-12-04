@@ -125,6 +125,10 @@ func (this *predicate) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, 
 	return this.test(expr)
 }
 
+func (this *predicate) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+	return this.test(expr)
+}
+
 func (this *predicate) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return this.test(expr)
 }
