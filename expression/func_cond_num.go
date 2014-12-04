@@ -40,6 +40,7 @@ func NewIfInf(operands ...Expression) Function {
 		*NewFunctionBase("ifinf", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -79,7 +80,7 @@ cases are satisfied return a Null value.
 func (this *IfInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
-			continue
+			return value.MISSING_VALUE, nil
 		} else if a.Type() != value.NUMBER {
 			return value.NULL_VALUE, nil
 		}
@@ -135,6 +136,7 @@ func NewIfNaN(operands ...Expression) Function {
 		*NewFunctionBase("ifnan", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -229,6 +231,7 @@ func NewIfNaNOrInf(operands ...Expression) Function {
 		*NewFunctionBase("ifnanorinf", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -327,6 +330,7 @@ func NewIfNegInf(operands ...Expression) Function {
 		*NewFunctionBase("ifneginf", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -422,6 +426,7 @@ func NewIfPosInf(operands ...Expression) Function {
 		*NewFunctionBase("ifposinf", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -517,6 +522,7 @@ func NewFirstNum(operands ...Expression) Function {
 		*NewFunctionBase("firstnum", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -643,6 +649,12 @@ the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
 	if first.Equals(second) {
 		return value.NewValue(math.NaN()), nil
 	} else {
@@ -718,6 +730,12 @@ returns the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(-1)), nil
 	} else {
@@ -793,6 +811,12 @@ returns the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
 	if first.Equals(second) {
 		return value.NewValue(math.Inf(1)), nil
 	} else {

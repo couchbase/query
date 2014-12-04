@@ -51,7 +51,8 @@ type Expression interface {
 	/*
 	   Value() returns the static / constant value of this
 	   Expression, or nil. Expressions that depend on data,
-	   clocks, or random numbers must return nil.
+	   clocks, or random numbers must return nil. Used in index
+	   selection.
 	*/
 	Value() value.Value
 
@@ -70,8 +71,25 @@ type Expression interface {
 	Indexable() bool
 
 	/*
+	   True iff this Expression always returns MISSING if any of
+	   its inputs are MISSING. This test is used in index
+	   selection when an index contains the clause WHERE expr IS
+	   NOT MISSING. False negatives are allowed.
+	*/
+	PropagatesMissing() bool
+
+	/*
+	   True iff this Expression always returns NULL if any of its
+	   inputs is NULL. This test is used in index selection when
+	   an index contains the clause WHERE expr IS NOT NULL or the
+	   clause WHERE expr IS VALUED. False negatives are allowed.
+	*/
+	PropagatesNull() bool
+
+	/*
 	   Indicates if this expression is equivalent to the other
-	   expression.  False negatives are allowed.
+	   expression.  False negatives are allowed. Used in index
+	   selection.
 	*/
 	EquivalentTo(other Expression) bool
 

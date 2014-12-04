@@ -136,6 +136,10 @@ func (this *MapperBase) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
 	return expr, expr.MapChildren(this.mapper)
 }
 
+func (this *MapperBase) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+	return expr, expr.MapChildren(this.mapper)
+}
+
 func (this *MapperBase) VisitIsNull(expr *IsNull) (interface{}, error) {
 	return expr, expr.MapChildren(this.mapper)
 }

@@ -58,11 +58,13 @@ var _FUNCTIONS = map[string]Function{
 	"is_missing":     &IsMissing{},
 	"is_not_missing": &IsNotMissing{},
 	"is_not_null":    &IsNotNull{},
+	"is_not_valued":  &IsNotValued{},
 	"is_null":        &IsNull{},
 	"is_valued":      &IsValued{},
 	"ismissing":      &IsMissing{},
 	"isnotmissing":   &IsNotMissing{},
 	"isnotnull":      &IsNotNull{},
+	"isnotvalued":    &IsNotValued{},
 	"isnull":         &IsNull{},
 	"isvalued":       &IsValued{},
 

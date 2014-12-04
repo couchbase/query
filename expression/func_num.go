@@ -726,7 +726,7 @@ type PosInf struct {
 
 func NewPosInf() Function {
 	rv := &PosInf{
-		*NewNullaryFunctionBase("neginf"),
+		*NewNullaryFunctionBase("posinf"),
 	}
 
 	rv.expr = rv

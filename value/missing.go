@@ -63,10 +63,10 @@ func (this missingValue) Actual() interface{} {
 }
 
 /*
-Returns true if other is MISSING. As per N1QL specs.
+Returns false.
 */
 func (this missingValue) Equals(other Value) bool {
-	return other.Type() == MISSING
+	return false
 }
 
 /*

@@ -52,10 +52,10 @@ func (this *nullValue) Actual() interface{} {
 }
 
 /*
-Returns true if other is NULL. As per N1QL specs.
+Returns false.
 */
 func (this *nullValue) Equals(other Value) bool {
-	return other.Type() == NULL
+	return false
 }
 
 /*

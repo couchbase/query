@@ -40,6 +40,7 @@ func NewIfMissing(operands ...Expression) Function {
 		*NewFunctionBase("ifmissing", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -124,6 +125,7 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 		*NewFunctionBase("ifmissingornull", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -207,6 +209,7 @@ func NewIfNull(operands ...Expression) Function {
 		*NewFunctionBase("ifnull", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -280,6 +283,7 @@ func NewFirstVal(operands ...Expression) Function {
 		*NewFunctionBase("firstval", operands...),
 	}
 
+	rv.conditional = true
 	rv.expr = rv
 	return rv
 }
@@ -303,6 +307,10 @@ receiver, current item and current context.
 */
 func (this *FirstVal) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *FirstVal) PropagatesMissing() bool {
+	return false
 }
 
 /*
@@ -395,6 +403,12 @@ value. If not it returns the first input value. Use the
 Equals method for the two values to determine equality.
 */
 func (this *MissingIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
 	if first.Equals(second) {
 		return value.MISSING_VALUE, nil
 	} else {
@@ -469,6 +483,12 @@ value. If not it returns the first input value. Use the
 Equals method for the two values to determine equality.
 */
 func (this *NullIf) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return value.NULL_VALUE, nil
+	}
+
 	if first.Equals(second) {
 		return value.NULL_VALUE, nil
 	} else {

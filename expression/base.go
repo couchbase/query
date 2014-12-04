@@ -19,8 +19,9 @@ import (
 ExpressionBase is a base class for all expressions.
 */
 type ExpressionBase struct {
-	expr  Expression
-	value value.Value
+	expr        Expression
+	value       value.Value
+	conditional bool
 }
 
 var _NIL_VALUE = value.NewValue(make([]interface{}, 0))
@@ -80,6 +81,40 @@ true.
 func (this *ExpressionBase) Indexable() bool {
 	for _, child := range this.expr.Children() {
 		if !child.Indexable() {
+			return false
+		}
+	}
+
+	return true
+}
+
+/*
+Returns false if any child's PropagatesMissing() returns false.
+*/
+func (this *ExpressionBase) PropagatesMissing() bool {
+	if this.conditional {
+		return false
+	}
+
+	for _, child := range this.expr.Children() {
+		if !child.PropagatesMissing() {
+			return false
+		}
+	}
+
+	return true
+}
+
+/*
+Returns false if any child's PropagatesNull() returns false.
+*/
+func (this *ExpressionBase) PropagatesNull() bool {
+	if this.conditional {
+		return false
+	}
+
+	for _, child := range this.expr.Children() {
+		if !child.PropagatesNull() {
 			return false
 		}
 	}

@@ -76,12 +76,35 @@ func (this *IsValued) Constructor() FunctionConstructor {
 	}
 }
 
-/*
-This function implements the is not valued comparison operation.
-It calls the NewNot over the NewIsValued to return an expression that
-is a complement of its return type (boolean).
-(NewNot represents the Not logical operation)
-*/
-func NewIsNotValued(operand Expression) Expression {
-	return NewNot(NewIsValued(operand))
+type IsNotValued struct {
+	UnaryFunctionBase
+}
+
+func NewIsNotValued(operand Expression) Function {
+	rv := &IsNotValued{
+		*NewUnaryFunctionBase("isnotvalued", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *IsNotValued) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIsNotValued(this)
+}
+
+func (this *IsNotValued) Type() value.Type { return value.BOOLEAN }
+
+func (this *IsNotValued) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, error) {
+	return value.NewValue(arg.Type() <= value.NULL), nil
+}
+
+func (this *IsNotValued) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsNotValued(operands[0])
+	}
 }

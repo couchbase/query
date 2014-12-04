@@ -311,6 +311,14 @@ func (this *Stringer) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
 	return buf.String(), nil
 }
 
+func (this *Stringer) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("(")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(" is not valued)")
+	return buf.String(), nil
+}
+
 func (this *Stringer) VisitIsNull(expr *IsNull) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")

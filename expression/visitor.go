@@ -61,6 +61,7 @@ type Visitor interface {
 	VisitIsMissing(expr *IsMissing) (interface{}, error)
 	VisitIsNotMissing(expr *IsNotMissing) (interface{}, error)
 	VisitIsNotNull(expr *IsNotNull) (interface{}, error)
+	VisitIsNotValued(expr *IsNotValued) (interface{}, error)
 	VisitIsNull(expr *IsNull) (interface{}, error)
 	VisitIsValued(expr *IsValued) (interface{}, error)
 
