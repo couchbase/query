@@ -138,6 +138,7 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 		}
 	}
 
+return applied.Apply(context, args...)
 }
 
 /*
