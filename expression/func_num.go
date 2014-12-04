@@ -1465,6 +1465,18 @@ type Random struct {
 	gen *rand.Rand
 }
 
+/*
+The method NewRandom calls NewFunctionBase to
+create a function named RANDOM with input
+arguments as the operands from the input expression.
+For this set volatile to true. If there are no
+input args, then return. If not, check the the
+type of the first operand. If it is a constant,
+check the operand value type. For float64 (N1QL
+valid numbers) create and seed the field gen
+(random number), using the rand package methods
+with the seed value cast to int64. Return.
+*/
 func NewRandom(operands ...Expression) Function {
 	rv := &Random{
 		*NewFunctionBase("random", operands...),
@@ -1510,6 +1522,15 @@ func (this *Random) Evaluate(item value.Value, context Context) (value.Value, er
 	return this.Eval(this, item, context)
 }
 
+/*
+This method evaluates the Random function. If the seed exists, then
+return it as a value. If there are no input arguments, return
+a random number. If the input argument type is Missing, return a
+missing value, and if it is not a number then return a null value.
+For numbers, check if it is an integer value and if not return
+null. Generate a new random number using this integer value as a
+seed, and return it.
+*/
 func (this *Random) Apply(context Context, args ...value.Value) (value.Value, error) {
 	if this.gen != nil {
 		return value.NewValue(this.gen.Float64()), nil
@@ -1603,6 +1624,17 @@ func (this *Round) Evaluate(item value.Value, context Context) (value.Value, err
 	return this.Eval(this, item, context)
 }
 
+/*
+This method takes in operand values and a context and rounds it of
+to the given number of digits to the right or left of the decimal
+point. If the input arg is missing or not a number, return a
+missing value or a null value respectively. Round the value of
+the input value using the method roundFloat. If it has more
+than one arg then check the type. Again if missing or not a
+number return a missing value/null value respectively. Make
+sure this precision value is an absolute integer value. Call
+the roundFloat method using the precision and return.
+*/
 func (this *Round) Apply(context Context, args ...value.Value) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
@@ -2019,6 +2051,14 @@ func (this *Trunc) Evaluate(item value.Value, context Context) (value.Value, err
 	return this.Eval(this, item, context)
 }
 
+/*
+This method evaluates the trunc function to truncate the given
+number of integer digits to the right or left of the decimal.
+If the input args (precision if given) is missing or not a
+number, return a missing value or a null value respectively.
+Use the truncFloat method with either 0 or input value
+precision(if given) and return the value.
+*/
 func (this *Trunc) Apply(context Context, args ...value.Value) (value.Value, error) {
 	arg := args[0]
 	if arg.Type() == value.MISSING {
@@ -2065,6 +2105,12 @@ Return NewTrunc as FunctionConstructor.
 */
 func (this *Trunc) Constructor() FunctionConstructor { return NewTrunc }
 
+/*
+This method is used to truncate input number to either
+side of the decimal point using the integer precision.
+A negative precision allows truncate to the left of
+the decimal point.
+*/
 func truncateFloat(x float64, prec int) float64 {
 	pow := math.Pow(10, float64(prec))
 	intermed := x * pow
@@ -2072,6 +2118,13 @@ func truncateFloat(x float64, prec int) float64 {
 	return rounder / pow
 }
 
+/*
+This method is used to round the input number to the
+given number of precision digits to the right or left
+of the decimal point depending on whether it is
+positive or negative. For the fraction 0.5
+round towards the even value.
+*/
 func roundFloat(x float64, prec int) float64 {
 	if math.IsNaN(x) || math.IsInf(x, 0) {
 		return x
