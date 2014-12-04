@@ -31,6 +31,9 @@ type Visitor interface {
 
 	// PREPARE
 	VisitPrepare(stmt *Prepare) (interface{}, error)
+
+	// EXECUTE
+	VisitExecute(stmt *Execute) (interface{}, error)
 }
 
 type NodeVisitor interface {
