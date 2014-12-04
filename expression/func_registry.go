@@ -197,7 +197,6 @@ var _FUNCTIONS = map[string]Function{
 	"ifmissing":       &IfMissing{},
 	"ifmissingornull": &IfMissingOrNull{},
 	"ifnull":          &IfNull{},
-	"firstval":        &FirstVal{},
 	"missingif":       &MissingIf{},
 	"nullif":          &NullIf{},
 
@@ -205,9 +204,6 @@ var _FUNCTIONS = map[string]Function{
 	"ifinf":      &IfInf{},
 	"ifnan":      &IfNaN{},
 	"ifnanorinf": &IfNaNOrInf{},
-	"ifneginf":   &IfNegInf{},
-	"ifposinf":   &IfPosInf{},
-	"firstnum":   &FirstNum{},
 	"nanif":      &NaNIf{},
 	"neginfif":   &NegInfIf{},
 	"posinfif":   &PosInfIf{},

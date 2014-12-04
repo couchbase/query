@@ -1770,14 +1770,6 @@ NULL.
 __IFNANORINF(expr1, expr2, ...)__ - first non-MISSING, non-Inf,
 non-NaN number or NULL.
 
-__IFNEGINF(expr1, expr2, ...)__ - first non-MISSING, non-NegInf number
-or NULL.
-
-__IFPOSINF(expr1, expr2, ...)__ - first non-MISSING, non-PosInf number
-or NULL.
-
-__FIRSTNUM(expr1, expr2, ...)__ - first finite number.
-
 __NANIF(expr1, expr2)__ - NaN if expr1 = expr2; else expr1.
 
 __NEGINFIF(expr1, expr2)__ - NegInf if expr1 = expr2; else expr1.
