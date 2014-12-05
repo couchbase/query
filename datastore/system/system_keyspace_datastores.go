@@ -178,7 +178,7 @@ func (pi *storeIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *storeIndex) EqualKey() expression.Expressions {
+func (pi *storeIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

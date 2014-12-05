@@ -69,7 +69,7 @@ func (idx *viewIndex) ViewName() string {
 	return idx.ddoc.viewname
 }
 
-func (vi *viewIndex) EqualKey() expression.Expressions {
+func (vi *viewIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

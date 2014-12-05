@@ -162,7 +162,7 @@ func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 					"keyspace_id":  keyspace.Id(),
 					"namespace_id": namespace.Id(),
 					"store_id":     b.namespace.store.actualStore.Id(),
-					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.EqualKey())),
+					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.SeekKey())),
 					"index_type":   datastoreObjectToJSONSafe(index.Type()),
 				})
 				return doc, nil
@@ -242,7 +242,7 @@ func (pi *indexIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *indexIndex) EqualKey() expression.Expressions {
+func (pi *indexIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

@@ -495,7 +495,7 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *primaryIndex) EqualKey() expression.Expressions {
+func (pi *primaryIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

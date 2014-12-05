@@ -167,7 +167,7 @@ func (pi *dualIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *dualIndex) EqualKey() expression.Expressions {
+func (pi *dualIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

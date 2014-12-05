@@ -183,7 +183,7 @@ func (pi *namespaceIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *namespaceIndex) EqualKey() expression.Expressions {
+func (pi *namespaceIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

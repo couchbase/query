@@ -90,12 +90,12 @@ func Test2iType(t *testing.T) {
 	}
 }
 
-func Test2iEqualKey(t *testing.T) {
-	equalKey := index.EqualKey()
+func Test2iSeekKey(t *testing.T) {
+	equalKey := index.SeekKey()
 	if len(equalKey) != 1 {
-		t.Fatalf("failed EqualKey() - %v, expected 1", len(equalKey))
+		t.Fatalf("failed SeekKey() - %v, expected 1", len(equalKey))
 	} else if v := expression.NewStringer().Visit(equalKey[0]); v != "`gender`" {
-		t.Fatalf("failed EqualKey() - %v, expected `gender`", v)
+		t.Fatalf("failed SeekKey() - %v, expected `gender`", v)
 	}
 }
 

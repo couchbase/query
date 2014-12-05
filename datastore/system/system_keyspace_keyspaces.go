@@ -204,7 +204,7 @@ func (pi *keyspaceIndex) Type() datastore.IndexType {
 	return datastore.UNSPECIFIED
 }
 
-func (pi *keyspaceIndex) EqualKey() expression.Expressions {
+func (pi *keyspaceIndex) SeekKey() expression.Expressions {
 	return nil
 }
 

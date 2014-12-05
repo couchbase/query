@@ -763,7 +763,7 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 	return pi.viewIndex.Type()
 }
 
-func (pi *primaryIndex) EqualKey() expression.Expressions {
+func (pi *primaryIndex) SeekKey() expression.Expressions {
 	return nil
 }
 
