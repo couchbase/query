@@ -14,9 +14,10 @@ import (
 )
 
 /*
-Type identifier is a struct that implements ExpressionBase.
-It contains a variable identifier of type string that
-represents identifiers.
+An identifier is a symbolic reference to a particular value
+in the current context. Type identifier is a struct that
+implements ExpressionBase. It contains a variable identifier
+of type string that represents identifiers.
 */
 type Identifier struct {
 	ExpressionBase
