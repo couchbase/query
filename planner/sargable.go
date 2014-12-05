@@ -14,6 +14,10 @@ import (
 )
 
 func SargableFor(expr1, expr2 expression.Expression) bool {
+	if expr2.Value() != nil {
+		return false
+	}
+
 	s := newSargable(expr1)
 	result, _ := expr2.Accept(s)
 	return result.(bool)

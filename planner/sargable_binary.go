@@ -10,29 +10,26 @@
 package planner
 
 import (
-	"regexp"
-
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/value"
 )
 
-type sargableLike struct {
+type sargableBinary struct {
 	predicate
 }
 
-func newSargableLike(expr expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
-	rv := &sargableLike{}
+func newSargableBinary(expr expression.BinaryFunction) *sargableBinary {
+	rv := &sargableBinary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if !expr.First().EquivalentTo(expr2) {
-			return false, nil
+		var cv value.Value
+
+		if expr.First().EquivalentTo(expr2) {
+			cv = expr.Second().Value()
+		} else if expr.Second().EquivalentTo(expr2) {
+			cv = expr.First().Value()
 		}
 
-		if re == nil {
-			// Pattern is not a constant
-			return false, nil
-		}
-
-		prefix, complete := re.LiteralPrefix()
-		return complete || prefix != "", nil
+		return cv != nil && cv.Type() > value.NULL, nil
 	}
 
 	return rv

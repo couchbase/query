@@ -20,7 +20,7 @@ type sargableDefault struct {
 func newSargableDefault(expr expression.Expression) *sargableDefault {
 	rv := &sargableDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.Value() == nil && expr.EquivalentTo(expr2), nil
+		return expr.EquivalentTo(expr2), nil
 	}
 
 	return rv

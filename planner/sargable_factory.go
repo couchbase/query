@@ -91,11 +91,11 @@ func (this *sargableFactory) VisitBetween(expr *expression.Between) (interface{}
 }
 
 func (this *sargableFactory) VisitEq(expr *expression.Eq) (interface{}, error) {
-	return newSargableComp(expr), nil
+	return newSargableBinary(expr), nil
 }
 
 func (this *sargableFactory) VisitLE(expr *expression.LE) (interface{}, error) {
-	return newSargableComp(expr), nil
+	return newSargableBinary(expr), nil
 }
 
 func (this *sargableFactory) VisitLike(expr *expression.Like) (interface{}, error) {
@@ -103,7 +103,7 @@ func (this *sargableFactory) VisitLike(expr *expression.Like) (interface{}, erro
 }
 
 func (this *sargableFactory) VisitLT(expr *expression.LT) (interface{}, error) {
-	return newSargableComp(expr), nil
+	return newSargableBinary(expr), nil
 }
 
 func (this *sargableFactory) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
@@ -111,11 +111,11 @@ func (this *sargableFactory) VisitIsMissing(expr *expression.IsMissing) (interfa
 }
 
 func (this *sargableFactory) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableUnary(expr), nil
 }
 
 func (this *sargableFactory) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableUnary(expr), nil
 }
 
 func (this *sargableFactory) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
@@ -123,11 +123,11 @@ func (this *sargableFactory) VisitIsNotValued(expr *expression.IsNotValued) (int
 }
 
 func (this *sargableFactory) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableUnary(expr), nil
 }
 
 func (this *sargableFactory) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableUnary(expr), nil
 }
 
 // Concat

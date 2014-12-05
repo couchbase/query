@@ -75,6 +75,23 @@ operands and returns a Function interface.
 type FunctionConstructor func(operands ...Expression) Function
 
 /*
+A unary function is one that has on operand. It inherits
+from Function and contains one additional method to return
+the operand.
+*/
+type UnaryFunction interface {
+	/*
+	   Inherits from Function.
+	*/
+	Function
+
+	/*
+	   Returns the input operand.
+	*/
+	Operand() Expression
+}
+
+/*
 A binary function is one that has two operands. It inherits
 from Function and contains two additional methods to return
 the first and second operand as expressions.

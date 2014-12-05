@@ -11,25 +11,16 @@ package planner
 
 import (
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
-type sargableComp struct {
+type sargableUnary struct {
 	predicate
 }
 
-func newSargableComp(expr expression.BinaryFunction) *sargableComp {
-	rv := &sargableComp{}
+func newSargableUnary(expr expression.UnaryFunction) *sargableUnary {
+	rv := &sargableUnary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		var cv value.Value
-
-		if expr.First().EquivalentTo(expr2) {
-			cv = expr.Second().Value()
-		} else if expr.Second().EquivalentTo(expr2) {
-			cv = expr.First().Value()
-		}
-
-		return cv != nil && cv.Type() > value.NULL, nil
+		return expr.Operand().EquivalentTo(expr2), nil
 	}
 
 	return rv
