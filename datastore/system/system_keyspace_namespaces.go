@@ -95,7 +95,7 @@ func (b *namespaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
 func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
-		item, e := b.FetchOne(k)
+		item, e := b.fetchOne(k)
 		if e != nil {
 			return nil, e
 		}
@@ -106,7 +106,7 @@ func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, err
 	return rv, nil
 }
 
-func (b *namespaceKeyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *namespaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	namespace, excp := b.namespace.store.actualStore.NamespaceById(key)
 	if namespace != nil {
 		doc := value.NewAnnotatedValue(map[string]interface{}{

@@ -129,13 +129,15 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
-	bv, err := this.plan.Keyspace().FetchOne(k)
+	bvs, err := this.plan.Keyspace().Fetch([]string{k})
 	if err != nil {
 		context.Error(err)
 		return false
 	}
 
-	if bv != nil {
+	if len(bvs) > 0 {
+		bv := bvs[0].Value
+
 		// Matched; join source and target
 		if update != nil {
 			item.SetAttachment("target", bv)

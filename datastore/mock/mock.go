@@ -197,7 +197,7 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
-		item, e := b.FetchOne(k)
+		item, e := b.fetchOne(k)
 		if e != nil {
 			return nil, e
 		}
@@ -209,7 +209,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	i, e := strconv.Atoi(key)
 	if e != nil {
 		return nil, errors.NewError(e, fmt.Sprintf("no mock item: %v", key))
@@ -218,7 +218,7 @@ func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	}
 }
 
-// generate a mock document - used by FetchOne to mock a document in the keyspace
+// generate a mock document - used by fetchOne to mock a document in the keyspace
 func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	if i < 0 || i >= nitems {
 		return nil, errors.NewError(nil,

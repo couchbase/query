@@ -71,15 +71,15 @@ type Keyspace interface {
 		where expression.Expression, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
 
 	// These methods have been moved to Indexer and will be removed from here
-	IndexIds() ([]string, errors.Error)                        // Ids of the indexes defined on this keyspace
-	IndexNames() ([]string, errors.Error)                      // Names of the indexes defined on this keyspace
-	IndexById(id string) (Index, errors.Error)                 // Find an index on this keyspace using the index's id
-	IndexByName(name string) (Index, errors.Error)             // Find an index on this keyspace using the index's name
-	Indexes() ([]Index, errors.Error)                          // Returns all the indexes defined on this keyspace
+	IndexIds() ([]string, errors.Error)            // Ids of the indexes defined on this keyspace
+	IndexNames() ([]string, errors.Error)          // Names of the indexes defined on this keyspace
+	IndexById(id string) (Index, errors.Error)     // Find an index on this keyspace using the index's id
+	IndexByName(name string) (Index, errors.Error) // Find an index on this keyspace using the index's name
+	Indexes() ([]Index, errors.Error)              // Returns all the indexes defined on this keyspace
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]AnnotatedPair, errors.Error)      // Bulk key-value fetch from this keyspace
-	FetchOne(key string) (value.AnnotatedValue, errors.Error) // Single key-value fetch from this keyspace
+	Fetch(keys []string) ([]AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
+	//Fetch(keys []string, projection, filter expression.Expression) ([]AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys

@@ -289,7 +289,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	nils_count := 0
 	for i, k := range keys {
-		item, e := b.FetchOne(k)
+		item, e := b.fetchOne(k)
 		if item == nil {
 			// Keep track of nils - they will be removed from slice
 			nils_count++
@@ -318,7 +318,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	path := filepath.Join(b.path(), key+".json")
 	item, e := fetch(path)
 	if e != nil {

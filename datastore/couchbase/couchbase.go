@@ -620,20 +620,6 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	return rv, nil
 }
 
-func (b *keyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
-
-	item, e := b.Fetch([]string{key})
-	if e != nil {
-		return nil, e
-	}
-	// not found
-	if len(item) == 0 {
-		return nil, nil
-	}
-
-	return item[0].Value, e
-}
-
 const (
 	INSERT = 0x01
 	UPDATE = 0x02

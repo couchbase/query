@@ -130,12 +130,12 @@ func TestMock(t *testing.T) {
 		t.Fatalf("expected not-a-valid-path to err")
 	}
 
-	v, err = b.FetchOne("not-an-item")
+	v, err = b.fetchOne("not-an-item")
 	if err == nil || v != nil {
 		t.Fatalf("expected not-an-item")
 	}
 
-	v, err = b.FetchOne(strconv.Itoa(DEFAULT_NUM_ITEMS))
+	v, err = b.fetchOne(strconv.Itoa(DEFAULT_NUM_ITEMS))
 	if err == nil || v != nil {
 		t.Fatalf("expected not-an-item")
 	}

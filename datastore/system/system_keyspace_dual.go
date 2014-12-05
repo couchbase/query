@@ -105,7 +105,7 @@ func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Ex
 func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
-		item, e := b.FetchOne(k)
+		item, e := b.fetchOne(k)
 		if e != nil {
 			return nil, e
 		}
@@ -116,7 +116,7 @@ func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.E
 	return rv, nil
 }
 
-func (b *dualKeyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *dualKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	return value.NewAnnotatedValue(nil), nil
 }
 

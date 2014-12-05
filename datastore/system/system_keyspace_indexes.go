@@ -136,7 +136,7 @@ func (b *indexKeyspace) CreateIndex(name string, equalKey, rangeKey expression.E
 func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
-		item, e := b.FetchOne(k)
+		item, e := b.fetchOne(k)
 		if e != nil {
 			return nil, e
 		}
@@ -147,7 +147,7 @@ func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.
 	return rv, nil
 }
 
-func (b *indexKeyspace) FetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	ids := strings.SplitN(key, "/", 3)
 
 	namespace, err := b.namespace.store.actualStore.NamespaceById(ids[0])

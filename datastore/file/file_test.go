@@ -105,7 +105,7 @@ func TestFile(t *testing.T) {
 		}
 	}
 
-	fred, err := keyspace.FetchOne("fred")
+	fred, err := keyspace.fetchOne("fred")
 	if err != nil {
 		t.Errorf("failed to fetch fred: %v", err)
 	}
