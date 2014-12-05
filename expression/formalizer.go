@@ -15,6 +15,11 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Convert expressions to its full equivalent form. 
+Type Formalizer inherits from MapperBase. It has fields
+Allowed and keyspace of type value and string.
+*/ 
 type Formalizer struct {
 	MapperBase
 
@@ -22,6 +27,10 @@ type Formalizer struct {
 	Keyspace string
 }
 
+/*
+This method returns a pointer to a Formalizer struct
+with Allowed set to a new map of type string to interface.
+*/
 func NewFormalizer() *Formalizer {
 	rv := &Formalizer{
 		Allowed: value.NewValue(make(map[string]interface{})),
@@ -31,8 +40,15 @@ func NewFormalizer() *Formalizer {
 	return rv
 }
 
+/*
+Returns false for MapBindings.
+*/
 func (this *Formalizer) MapBindings() bool { return false }
 
+/*
+Visitor method for an Any Range Predicate that maps the
+children of the input ANY expression. 
+*/
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -49,6 +65,10 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	return expr, nil
 }
 
+/*
+Visitor method for an Every Range Predicate that maps the
+children of the input EVERY expression.
+*/
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -65,6 +85,10 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	return expr, nil
 }
 
+/*
+Visitor method for an Array Range Transform that maps the
+children of the input ARRAY expression.
+*/
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -81,6 +105,10 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 	return expr, nil
 }
 
+/*
+Visitor method for an First Range Transform that maps the
+children of the input FIRST expression.
+*/
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 	sv, err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -97,8 +125,15 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 	return expr, nil
 }
 
-// Identifier
-
+/*
+Visitor method for an Identifier expressions. Check if the
+expression Identifier is a field (in an object). If it is
+return the expression. If the Keyspace string is empty 
+for the receiver, there is an ambiguous reference to 
+the field identifier. Hence throw an error. Return a new
+Field with an identifier with the name Keyspace and Field
+name set to the Identifier() return value.
+*/
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	_, ok := this.Allowed.Field(expr.Identifier())
 	if ok {
@@ -115,7 +150,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		nil
 }
 
-// Subquery
+/*
+Visitor method for Subqueries. Call formalize.
+*/
 func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 	err := expr.Formalize(this)
 	if err != nil {
@@ -125,7 +162,12 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 	return expr, nil
 }
 
-// Bindings
+/*
+Visitor method for Bindings. Value is a new map from string 
+to interface which is populated using the bindings in the 
+scope of the parent which is listed by the value Allowed.
+Bring the bindings that have parrent Allowed into scope.
+*/
 func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, err error) {
 	sv = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.Allowed)
 
@@ -149,6 +191,9 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 	return sv, nil
 }
 
+/*
+Set scope as parents scope.
+*/
 func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
 	this.Allowed = sv.Parent()
 }
