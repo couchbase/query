@@ -61,6 +61,10 @@ func (this *IsMissing) PropagatesMissing() bool {
 	return false
 }
 
+func (this *IsMissing) PropagatesNull() bool {
+	return false
+}
+
 /*
 Evaluates the Is Missing comparison operation for expressions.
 Return true if the input argument value is a missing value,
@@ -104,6 +108,10 @@ func (this *IsNotMissing) Evaluate(item value.Value, context Context) (value.Val
 }
 
 func (this *IsNotMissing) PropagatesMissing() bool {
+	return false
+}
+
+func (this *IsNotMissing) PropagatesNull() bool {
 	return false
 }
 

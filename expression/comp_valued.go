@@ -57,6 +57,14 @@ func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.UnaryEval(this, item, context)
 }
 
+func (this *IsValued) PropagatesMissing() bool {
+	return false
+}
+
+func (this *IsValued) PropagatesNull() bool {
+	return false
+}
+
 /*
 Evaluates the Is Valued comparison operation for expressions.
 Return true if the input argument value is greater than a null
@@ -97,6 +105,14 @@ func (this *IsNotValued) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNotValued) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
+}
+
+func (this *IsNotValued) PropagatesMissing() bool {
+	return false
+}
+
+func (this *IsNotValued) PropagatesNull() bool {
+	return false
 }
 
 func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, error) {

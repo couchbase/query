@@ -57,6 +57,10 @@ func (this *IsNull) Evaluate(item value.Value, context Context) (value.Value, er
 	return this.UnaryEval(this, item, context)
 }
 
+func (this *IsNull) PropagatesNull() bool {
+	return false
+}
+
 /*
 Evaluates the Is Null comparison operation for expressions.
 If the type of input argument is a null value, return true,
@@ -105,6 +109,10 @@ func (this *IsNotNull) Type() value.Type { return value.BOOLEAN }
 
 func (this *IsNotNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
+}
+
+func (this *IsNotNull) PropagatesNull() bool {
+	return false
 }
 
 func (this *IsNotNull) Apply(context Context, arg value.Value) (value.Value, error) {
