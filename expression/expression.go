@@ -94,6 +94,13 @@ type Expression interface {
 	EquivalentTo(other Expression) bool
 
 	/*
+	   Indicates if this expression depends on the other
+	   expression.  False negatives are allowed. Used in index
+	   selection.
+	*/
+	DependsOn(other Expression) bool
+
+	/*
 	   It is a utility function that returns the children of the
 	   expression. For expression a+b, a and b are the children
 	   of +.

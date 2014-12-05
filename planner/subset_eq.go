@@ -15,7 +15,6 @@ import (
 
 type subsetEq struct {
 	subsetDefault
-
 	eq *expression.Eq
 }
 

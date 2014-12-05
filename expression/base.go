@@ -158,6 +158,24 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
+func (this *ExpressionBase) DependsOn(other Expression) bool {
+	if this.conditional || other.Value() != nil {
+		return false
+	}
+
+	if this.expr.EquivalentTo(other) {
+		return true
+	}
+
+	for _, child := range this.expr.Children() {
+		if child.DependsOn(other) {
+			return true
+		}
+	}
+
+	return false
+}
+
 /*
 Return true if the receiver Expression value and the input
 expression value are equal and not nil; else false.

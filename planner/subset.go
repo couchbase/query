@@ -14,6 +14,11 @@ import (
 )
 
 func SubsetOf(expr1, expr2 expression.Expression) bool {
+	v2 := expr2.Value()
+	if v2 != nil {
+		return v2.Truth()
+	}
+
 	s := newSubset(expr1)
 	result, _ := expr2.Accept(s)
 	return result.(bool)

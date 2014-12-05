@@ -17,34 +17,42 @@ type subsetDefault struct {
 	predicate
 }
 
-func (this *subsetDefault) subsetOf(expr expression.Expression) bool {
-	rv, _ := this.test(expr)
-	return rv
-}
-
 func newSubsetDefault(expr expression.Expression) *subsetDefault {
 	rv := &subsetDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
+		if expr.EquivalentTo(expr2) {
+			return true, nil
+		}
+
 		switch expr2 := expr2.(type) {
 		case *expression.And:
-			for _, child := range expr2.Operands() {
-				if !rv.subsetOf(child) {
+			for _, op := range expr2.Operands() {
+				if !SubsetOf(expr, op) {
 					return false, nil
 				}
 			}
 
 			return true, nil
 		case *expression.Or:
-			for _, child := range expr2.Operands() {
-				if rv.subsetOf(child) {
+			for _, op := range expr2.Operands() {
+				if SubsetOf(expr, op) {
 					return true, nil
 				}
 			}
 
 			return false, nil
+		case *expression.IsNotMissing:
+			return expr.PropagatesMissing() &&
+				expr.DependsOn(expr2.Operand()), nil
+		case *expression.IsNotNull:
+			return expr.PropagatesNull() &&
+				expr.DependsOn(expr2.Operand()), nil
+		case *expression.IsValued:
+			return expr.PropagatesNull() &&
+				expr.DependsOn(expr2.Operand()), nil
 		}
 
-		return expr.EquivalentTo(expr2), nil
+		return false, nil
 	}
 
 	return rv

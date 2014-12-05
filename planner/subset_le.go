@@ -15,7 +15,6 @@ import (
 
 type subsetLE struct {
 	subsetDefault
-
 	le *expression.LE
 }
 
