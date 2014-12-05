@@ -105,13 +105,14 @@ func TestFile(t *testing.T) {
 		}
 	}
 
-	fred, err := keyspace.fetchOne("fred")
-	if err != nil {
+	freds, err := keyspace.Fetch([]string{"fred"})
+	if err != nil || len(freds) == 0 {
 		t.Errorf("failed to fetch fred: %v", err)
 	}
 
 	// DML test cases
 
+	fred := freds[0].Value
 	var dmlKey datastore.Pair
 	dmlKey.Key = "fred2"
 	dmlKey.Value = fred
