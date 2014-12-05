@@ -124,7 +124,7 @@ func (this objectValue) Collate(other Value) int {
 	case *parsedValue:
 		return this.Collate(other.parse())
 	default:
-		return 1
+		return int(OBJECT - other.Type())
 	}
 }
 

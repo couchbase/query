@@ -67,13 +67,13 @@ N1ql values.
 const (
 	MISSING = Type(iota) // Missing field
 	NULL                 // Explicit null
-	BINARY               // non-JSON
 	BOOLEAN              // JSON boolean
 	NUMBER               // JSON number
 	STRING               // JSON string
 	ARRAY                // JSON array
 	OBJECT               // JSON object
 	JSON                 // Non-specific JSON; used in result sets
+	BINARY               // non-JSON
 )
 
 /*
