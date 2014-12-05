@@ -32,6 +32,7 @@ var FALSE_EXPR = NewConstant(value.FALSE_VALUE)
 var TRUE_EXPR = NewConstant(value.TRUE_VALUE)
 var ZERO_EXPR = NewConstant(value.ZERO_VALUE)
 var ONE_EXPR = NewConstant(value.ONE_VALUE)
+var EMPTY_ARRAY_EXPR = NewConstant(value.EMPTY_ARRAY_VALUE)
 
 /*
 Create a new Constant out of an input value interface by
