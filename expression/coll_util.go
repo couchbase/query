@@ -9,6 +9,12 @@
 
 package expression
 
+/*
+Type collMap represents a struct that implements ExpressionBase.
+It refers to the fields or attributes of a collection or map
+used for Range transforms. Contains fields mapping and
+bindings, and a when expression.
+*/
 type collMap struct {
 	ExpressionBase
 	mapping  Expression
@@ -16,6 +22,11 @@ type collMap struct {
 	when     Expression
 }
 
+/*
+Returns the children as expressions of the collMap.
+Append the mapping, binding expressions and the
+when condition if present.
+*/
 func (this *collMap) Children() Expressions {
 	d := make(Expressions, 0, 2+len(this.bindings))
 	d = append(d, this.mapping)
@@ -31,6 +42,11 @@ func (this *collMap) Children() Expressions {
 	return d
 }
 
+/*
+Map one set of expressions to another expression.
+(Map Expresions associated with bindings and
+the when expression if it exists. ).
+*/
 func (this *collMap) MapChildren(mapper Mapper) (err error) {
 	this.mapping, err = mapper.Map(this.mapping)
 	if err != nil {
@@ -54,10 +70,19 @@ func (this *collMap) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
+/*
+Return receiver bindings.
+*/
 func (this *collMap) Bindings() Bindings {
 	return this.bindings
 }
 
+/*
+Type collPred represents a struct that implements ExpressionBase.
+It refers to the fields or attributes of a collection or map
+used for Range predicates. Contains fields bindings, and satisfies
+of type expression.
+*/
 type collPred struct {
 	ExpressionBase
 	bindings  Bindings
@@ -75,6 +100,11 @@ func (this *collPred) Children() Expressions {
 	return d
 }
 
+/*
+Map one set of expressions to another expression.
+(Map Expresions associated with bindings and
+the satisfies expression if it exists ).
+*/
 func (this *collPred) MapChildren(mapper Mapper) (err error) {
 	if mapper.MapBindings() {
 		err = this.bindings.MapExpressions(mapper)
@@ -91,6 +121,9 @@ func (this *collPred) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
+/*
+Return receiver bindings.
+*/
 func (this *collPred) Bindings() Bindings {
 	return this.bindings
 }

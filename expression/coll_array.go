@@ -13,10 +13,21 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents range transform Array, that allow you to map and
+filter the elements or attributes of a collection or object(s).
+ARRAY evaluates to an array of the operand expression. Type
+Array is a struct that implements collMap.
+*/
 type Array struct {
 	collMap
 }
 
+/*
+This method returns a pointer to the Array struct that has the
+bindings,mapping and when fields populated by the input args
+bindings and expression when/mapping.
+*/
 func NewArray(mapping Expression, bindings Bindings, when Expression) Expression {
 	rv := &Array{
 		collMap: collMap{
@@ -30,12 +41,32 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 	return rv
 }
 
+/*
+It calls the VisitArray method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitArray(this)
 }
 
+/*
+It returns an ARRAY value.
+*/
 func (this *Array) Type() value.Type { return value.ARRAY }
 
+/*
+This method evaluates the Array range transform and returns an array
+based on the operand expression after mapping/filtering the
+elements/attributes of a collection or objects. The first step is to
+accumulate the elements or attributes of a collection/object. This
+is done by ranging over the bindings, evaluating the expressions and
+populating a slice of descendants if present. If any of these binding
+values are missing or null then, return a missing/null. The next step is to get
+the number of elements/attributes by ranging over the bindings slice.
+In order to evaluate the any clause, evaluate the when condition
+with respect to the collection until it is true and return that
+element (after evaluation) as an array.
+*/
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false

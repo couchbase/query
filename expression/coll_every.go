@@ -13,10 +13,20 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents range predicate Every, that allow testing of a bool
+condition over the elements or attributes of a collection or
+object. Type Every is a struct that implements collPred.
+*/
 type Every struct {
 	collPred
 }
 
+/*
+This method returns a pointer to the Every struct that has the
+bindings and satisfies fields populated by the input args
+bindings and expression satisfies.
+*/
 func NewEvery(bindings Bindings, satisfies Expression) Expression {
 	rv := &Every{
 		collPred: collPred{
@@ -29,12 +39,33 @@ func NewEvery(bindings Bindings, satisfies Expression) Expression {
 	return rv
 }
 
+/*
+It calls the VisitEvery method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Every) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitEvery(this)
 }
 
+/*
+It returns a Boolean value.
+*/
 func (this *Every) Type() value.Type { return value.BOOLEAN }
 
+/*
+This method evaluates the EVERY range predicate and returns a boolean
+value representing the result. The first step is to accumulate the
+elements or attributes of a collection/object. This is done by
+ranging over the bindings, evaluating the expressions and populating
+a slice of descendants if present. If any of these binding values are
+mising or null then, return a missing/null. The next step is to get
+the number of elements/attributes by ranging over the bindings slice.
+In order to evaluate the every clause, evaluate the satisfies
+condition with respect to the collection. If this returns false for
+any condition, then return false (as every condition needs to evaluate
+to true). If the condition over all elements/attributes have been
+satisfied, return true.
+*/
 func (this *Every) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
