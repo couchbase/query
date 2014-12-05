@@ -90,6 +90,8 @@
 /[aA][sS][cC]/					 { logToken("ASC"); return ASC }
 /[bB][eE][gG][iI][nN]/				 { logToken("BEGIN"); return BEGIN }
 /[bB][eE][tT][wW][eE][eE][nN]/			 { logToken("BETWEEN"); return BETWEEN }
+/[bB][iI][nN][aA][rR][yY]/			 { logToken("BINARY"); return BINARY }
+/[bB][oO][oO][lL][eE][aA][nN]/			 { logToken("BOOLEAN"); return BOOLEAN }
 /[bB][rR][eE][aA][kK]/				 { logToken("BREAK"); return BREAK }
 /[bB][uU][cC][kK][eE][tT]/			 { logToken("BUCKET"); return BUCKET }
 /[bB][yY]/					 { logToken("BY"); return BY }
@@ -167,6 +169,7 @@
 /[nN][eE][sS][tT]/				 { logToken("NEST"); return NEST }
 /[nN][oO][tT]/					 { logToken("NOT"); return NOT }
 /[nN][uU][lL][lL]/				 { logToken("NULL"); return NULL }
+/[nN][uN][mM][bB][eE][rR]/			 { logToken("NUMBER"); return NUMBER }
 /[oO][bB][jJ][eE][cC][tT]/			 { logToken("OBJECT"); return OBJECT }
 /[oO][fF][fF][sS][eE][tT]/			 { logToken("OFFSET"); return OFFSET }
 /[oO][nN]/					 { logToken("ON"); return ON }
@@ -204,6 +207,7 @@
 /[sS][oO][mM][eE]/				 { logToken("SOME"); return SOME }
 /[sS][tT][aA][rR][tT]/				 { logToken("START"); return START }
 /[sS][tT][aA][tT][iI][sS][tT][iI][cC][sS]/	 { logToken("STATISTICS"); return STATISTICS }
+/[sS][tT][rR][iI][nN][gG]/			 { logToken("STRING"); return STRING }
 /[sS][yY][sS][tT][eE][mM]/			 { logToken("SYSTEM"); return SYSTEM }
 /[tT][hH][eE][nN]/				 { logToken("THEN"); return THEN }
 /[tT][oO]/					 { logToken("TO"); return TO }

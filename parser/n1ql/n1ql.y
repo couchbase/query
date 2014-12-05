@@ -73,6 +73,8 @@ indexType        datastore.IndexType
 %token ASC
 %token BEGIN
 %token BETWEEN
+%token BINARY
+%token BOOLEAN
 %token BREAK
 %token BUCKET
 %token BY
@@ -150,6 +152,7 @@ indexType        datastore.IndexType
 %token NEST
 %token NOT
 %token NULL
+%token NUMBER
 %token OBJECT
 %token OFFSET
 %token ON
@@ -187,6 +190,7 @@ indexType        datastore.IndexType
 %token SOME
 %token START
 %token STATISTICS
+%token STRING
 %token SYSTEM
 %token THEN
 %token TO

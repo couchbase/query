@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-12-01
+* Modified: 2014-12-05
 
 ## Introduction
 
@@ -1926,6 +1926,8 @@ for future use.
 * __ASC__
 * __BEGIN__
 * __BETWEEN__
+* __BINARY__
+* __BOOLEAN__
 * __BREAK__
 * __BUCKET__
 * __BY__
@@ -2000,6 +2002,7 @@ for future use.
 * __NEST__
 * __NOT__
 * __NULL__
+* __NUMBER__
 * __OBJECT__
 * __OFFSET__
 * __ON__
@@ -2037,6 +2040,7 @@ for future use.
 * __SOME__
 * __START__
 * __STATISTICS__
+* __STRING__
 * __SYSTEM__
 * __THEN__
 * __TO__
@@ -2449,6 +2453,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Remove .[] syntax for now
 * 2014-12-01 - E()
     * Add E()
+* 2014-12-05 - Reserved words
+    * Add reserved words BINARY, BOOLEAN, NUMBER, and STRING
 
 ### Open issues
 
