@@ -145,7 +145,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 	var low, high value.Value
 	var inclusion datastore.Inclusion
 
-	if span != nil && span.Range != nil {
+	if span != nil {
 		if len(span.Range.Low) == 0 {
 			low = value.NewValue("")
 		} else {

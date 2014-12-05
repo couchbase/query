@@ -59,14 +59,14 @@ type Namespace interface {
 // also key-counter, key-blob, etc.). Keys are unique within a
 // keyspace.
 type Keyspace interface {
-	NamespaceId() string                                       // Id of the namespace that contains this keyspace
-	Id() string                                                // Id of this keyspace
-	Name() string                                              // Name of this keyspace
-	Count() (int64, errors.Error)                              // Number of key-value entries in this keyspace
-	Indexer(name IndexType) (Indexer, errors.Error)            // Index provider by name, e.g. VIEW or LSM
-	Indexers() ([]Indexer, errors.Error)                       // List of index providers
-	IndexByPrimary() (PrimaryIndex, errors.Error)              // Returns the server-recommended primary index
-	CreatePrimaryIndex(IndexType) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
+	NamespaceId() string                                             // Id of the namespace that contains this keyspace
+	Id() string                                                      // Id of this keyspace
+	Name() string                                                    // Name of this keyspace
+	Count() (int64, errors.Error)                                    // Number of key-value entries in this keyspace
+	Indexer(name IndexType) (Indexer, errors.Error)                  // Index provider by name, e.g. VIEW or LSM
+	Indexers() ([]Indexer, errors.Error)                             // List of index providers
+	IndexByPrimary() (PrimaryIndex, errors.Error)                    // Returns the server-recommended primary index
+	CreatePrimaryIndex(using IndexType) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
 	CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 		where expression.Expression, using IndexType) (Index, errors.Error) // Create a secondary index on this keyspace
 
@@ -88,7 +88,7 @@ type Keyspace interface {
 	Upsert(upserts []Pair) ([]Pair, errors.Error) // Bulk key-value upserts into this keyspace
 	Delete(deletes []string) errors.Error         // Bulk key-value deletes from this keyspace
 
-	Release() // Release any query engine resources held by this object
+	Release() // Release any resources held by this object
 }
 
 // Key-value pair

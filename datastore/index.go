@@ -94,7 +94,7 @@ const (
 
 type Span struct {
 	Equal value.Values
-	Range *Range
+	Range Range
 }
 
 type Spans []*Span
