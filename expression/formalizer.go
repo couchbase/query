@@ -16,10 +16,10 @@ import (
 )
 
 /*
-Convert expressions to its full equivalent form. 
+Convert expressions to its full equivalent form.
 Type Formalizer inherits from MapperBase. It has fields
 Allowed and keyspace of type value and string.
-*/ 
+*/
 type Formalizer struct {
 	MapperBase
 
@@ -47,7 +47,7 @@ func (this *Formalizer) MapBindings() bool { return false }
 
 /*
 Visitor method for an Any Range Predicate that maps the
-children of the input ANY expression. 
+children of the input ANY expression.
 */
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	sv, err := this.PushBindings(expr.Bindings())
@@ -128,8 +128,8 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 /*
 Visitor method for an Identifier expressions. Check if the
 expression Identifier is a field (in an object). If it is
-return the expression. If the Keyspace string is empty 
-for the receiver, there is an ambiguous reference to 
+return the expression. If the Keyspace string is empty
+for the receiver, there is an ambiguous reference to
 the field identifier. Hence throw an error. Return a new
 Field with an identifier with the name Keyspace and Field
 name set to the Identifier() return value.
@@ -163,8 +163,8 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 }
 
 /*
-Visitor method for Bindings. Value is a new map from string 
-to interface which is populated using the bindings in the 
+Visitor method for Bindings. Value is a new map from string
+to interface which is populated using the bindings in the
 scope of the parent which is listed by the value Allowed.
 Bring the bindings that have parrent Allowed into scope.
 */
