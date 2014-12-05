@@ -207,12 +207,12 @@ func (pi *storeIndex) Scan(span *datastore.Span, distinct bool, limit int64, con
 
 	val := ""
 
-	a := span.Equal[0].Actual()
+	a := span.Seek[0].Actual()
 	switch a := a.(type) {
 	case string:
 		val = a
 	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid equality value %v of type %T.", a, a)))
+		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
 		return
 	}
 

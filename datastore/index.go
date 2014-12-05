@@ -93,7 +93,7 @@ const (
 )
 
 type Span struct {
-	Equal value.Values
+	Seek  value.Values
 	Range Range
 }
 
