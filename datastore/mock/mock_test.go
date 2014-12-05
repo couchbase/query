@@ -161,7 +161,7 @@ func TestMockIndex(t *testing.T) {
 	// Do a scan from keys 4 to 6 with Inclusion set to NEITHER - expect 1 result with key 5
 	lo := []value.Value{value.NewValue("4")}
 	hi := []value.Value{value.NewValue("6")}
-	span := &datastore.Span{Range: &datastore.Range{Inclusion: datastore.NEITHER, Low: lo, High: hi}}
+	span := &datastore.Span{Range: datastore.Range{Inclusion: datastore.NEITHER, Low: lo, High: hi}}
 	items, err := doIndexScan(t, b, span)
 
 	if err != nil {
