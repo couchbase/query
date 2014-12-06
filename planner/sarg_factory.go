@@ -111,11 +111,11 @@ func (this *sargFactory) VisitIsMissing(expr *expression.IsMissing) (interface{}
 }
 
 func (this *sargFactory) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargNotMissing(expr), nil
 }
 
 func (this *sargFactory) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargValued(expr), nil
 }
 
 func (this *sargFactory) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
@@ -123,11 +123,11 @@ func (this *sargFactory) VisitIsNotValued(expr *expression.IsNotValued) (interfa
 }
 
 func (this *sargFactory) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargNull(expr), nil
 }
 
 func (this *sargFactory) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargValued(expr), nil
 }
 
 // Concat

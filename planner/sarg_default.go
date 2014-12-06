@@ -15,10 +15,6 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type sargDefault struct {
-	sargBase
-}
-
 var _SELF_SPANS datastore.Spans
 var _FULL_SPANS datastore.Spans
 var _VALUED_SPANS datastore.Spans
@@ -35,9 +31,13 @@ func init() {
 	_FULL_SPANS = datastore.Spans{fspan}
 
 	vspan := &datastore.Span{}
-	vspan.Range.Low = value.Values{value.FALSE_VALUE}
-	vspan.Range.Inclusion = datastore.LOW
+	vspan.Range.Low = value.Values{value.NULL_VALUE}
+	vspan.Range.Inclusion = datastore.NEITHER
 	_VALUED_SPANS = datastore.Spans{vspan}
+}
+
+type sargDefault struct {
+	sargBase
 }
 
 func newSargDefault(expr expression.Expression) *sargDefault {
