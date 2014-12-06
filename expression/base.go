@@ -40,19 +40,40 @@ func (this *ExpressionBase) Value() value.Value {
 		return this.value
 	}
 
+	propMissing := this.expr.PropagatesMissing()
+	propNull := this.expr.PropagatesNull()
+
+	for _, child := range this.expr.Children() {
+		cv := child.Value()
+
+		if propMissing && cv.Type() == value.MISSING {
+			this.value = cv
+			return this.value
+		}
+
+		if propNull && cv.Type() == value.NULL {
+			this.value = cv
+		}
+
+		if cv == nil && this.value == nil {
+			this.value = _NIL_VALUE
+		}
+	}
+
+	if this.value == _NIL_VALUE {
+		return nil
+	}
+
+	if this.value != nil {
+		return this.value
+	}
+
 	defer func() {
 		err := recover()
 		if err != nil {
 			this.value = _NIL_VALUE
 		}
 	}()
-
-	for _, child := range this.expr.Children() {
-		if child.Value() == nil {
-			this.value = _NIL_VALUE
-			return nil
-		}
-	}
 
 	var err error
 	this.value, err = this.expr.Evaluate(nil, nil)

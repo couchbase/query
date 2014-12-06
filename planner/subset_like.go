@@ -18,6 +18,7 @@ import (
 
 func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
 	if re == nil {
+		// Pattern is not a constant
 		return newSubsetDefault(expr)
 	}
 
@@ -31,16 +32,20 @@ func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression
 		return newSubsetDefault(expr)
 	}
 
+	var and expression.Expression
 	le := expression.NewLE(expression.NewConstant(prefix), expr.First())
 	last := len(prefix) - 1
-	if prefix[last] == math.MaxUint8 {
-		return newSubsetLE(le.(*expression.LE))
+	if prefix[last] < math.MaxUint8 {
+		bytes := []byte(prefix)
+		bytes[last]++
+		and = expression.NewAnd(le, expression.NewLT(
+			expr.First(),
+			expression.NewConstant(string(bytes))))
+	} else {
+		and = expression.NewAnd(le, expression.NewLT(
+			expr.First(),
+			expression.EMPTY_ARRAY_EXPR))
 	}
 
-	bytes := []byte(prefix)
-	bytes[last]++
-	and := expression.NewAnd(le, expression.NewLT(
-		expr.First(),
-		expression.NewConstant(string(bytes))))
 	return newSubsetAnd(and.(*expression.And))
 }

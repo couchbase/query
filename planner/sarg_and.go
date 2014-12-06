@@ -10,18 +10,22 @@
 package planner
 
 import (
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
-type sargableBinary struct {
-	predicate
+type sargAnd struct {
+	sargBase
 }
 
-func newSargableBinary(expr expression.BinaryFunction) *sargableBinary {
-	rv := &sargableBinary{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.First().EquivalentTo(expr2) ||
-			expr.Second().EquivalentTo(expr2), nil
+func newSargAnd(expr *expression.And) *sargAnd {
+	rv := &sargAnd{}
+	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+		if expr.EquivalentTo(expr2) {
+			return _SELF_SPANS, nil
+		}
+
+		return nil, nil
 	}
 
 	return rv
