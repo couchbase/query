@@ -75,6 +75,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 }
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+	this.where = node.Where()
 	this.children = make([]Operator, 0, 8)     // top-level children, executed sequentially
 	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
 
@@ -228,12 +229,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				node.Keyspace()))
 		}
 
-		index, err := keyspace.IndexByPrimary()
+		scan, err := this.selectScan(keyspace, node)
 		if err != nil {
 			return nil, err
 		}
 
-		scan := NewPrimaryScan(index, node)
 		this.children = append(this.children, scan)
 	}
 

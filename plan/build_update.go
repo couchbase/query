@@ -14,6 +14,8 @@ import (
 )
 
 func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
+	this.where = stmt.Where()
+
 	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {

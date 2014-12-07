@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
@@ -38,8 +39,9 @@ type builder struct {
 	systemstore     datastore.Datastore
 	namespace       string
 	subquery        bool
-	delayProjection bool           // Used to allow ORDER BY non-projected expressions
-	order           *algebra.Order // Used to collect aggregates from ORDER BY
+	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
+	where           expression.Expression // Used for index selection
+	order           *algebra.Order        // Used to collect aggregates from ORDER BY
 	distinct        bool
 	children        []Operator
 	subChildren     []Operator

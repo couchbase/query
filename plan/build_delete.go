@@ -11,11 +11,11 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
 )
 
 func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
+	this.where = stmt.Where()
+
 	ksref := stmt.KeyspaceRef()
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
@@ -46,35 +46,4 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	}
 
 	return NewSequence(this.children...), nil
-}
-
-func (this *builder) beginMutate(keyspace datastore.Keyspace,
-	ksref *algebra.KeyspaceRef, keys, where expression.Expression) error {
-	ksref.SetDefaultNamespace(this.namespace)
-	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil)
-
-	this.children = make([]Operator, 0, 8)
-	this.subChildren = make([]Operator, 0, 8)
-
-	if keys != nil {
-		scan := NewKeyScan(keys)
-		this.children = append(this.children, scan)
-	} else {
-		index, err := keyspace.IndexByPrimary()
-		if err != nil {
-			return err
-		}
-
-		scan := NewPrimaryScan(index, term)
-		this.children = append(this.children, scan)
-	}
-
-	fetch := NewFetch(keyspace, term)
-	this.subChildren = append(this.subChildren, fetch)
-
-	if where != nil {
-		this.subChildren = append(this.subChildren, NewFilter(where))
-	}
-
-	return nil
 }
