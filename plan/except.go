@@ -30,6 +30,10 @@ func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExceptAll(this)
 }
 
+func (this *ExceptAll) New() Operator {
+	return &ExceptAll{}
+}
+
 func (this *ExceptAll) First() Operator {
 	return this.first
 }

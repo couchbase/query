@@ -42,6 +42,10 @@ func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialProject(this)
 }
 
+func (this *InitialProject) New() Operator {
+	return &InitialProject{}
+}
+
 func (this *InitialProject) Projection() *algebra.Projection {
 	return this.projection
 }
@@ -94,6 +98,10 @@ func NewFinalProject() *FinalProject {
 
 func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalProject(this)
+}
+
+func (this *FinalProject) New() Operator {
+	return &FinalProject{}
 }
 
 func (this *FinalProject) MarshalJSON() ([]byte, error) {

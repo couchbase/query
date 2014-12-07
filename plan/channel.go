@@ -21,3 +21,7 @@ func NewChannel() *Channel {
 func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitChannel(this)
 }
+
+func (this *Channel) New() Operator {
+	return &Channel{}
+}

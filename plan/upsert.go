@@ -33,6 +33,10 @@ func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpsert(this)
 }
 
+func (this *SendUpsert) New() Operator {
+	return &SendUpsert{}
+}
+
 func (this *SendUpsert) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }

@@ -31,6 +31,10 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOrder(this)
 }
 
+func (this *Order) New() Operator {
+	return &Order{}
+}
+
 func (this *Order) Terms() algebra.SortTerms {
 	return this.terms
 }

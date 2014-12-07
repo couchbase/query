@@ -24,6 +24,10 @@ func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExplain(this)
 }
 
+func (this *Explain) New() Operator {
+	return &Explain{}
+}
+
 func (this *Explain) Operator() Operator {
 	return this.op
 }

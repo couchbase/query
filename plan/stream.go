@@ -20,3 +20,7 @@ func NewStream() *Stream {
 func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitStream(this)
 }
+
+func (this *Stream) New() Operator {
+	return &Stream{}
+}

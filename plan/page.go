@@ -30,6 +30,10 @@ func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOffset(this)
 }
 
+func (this *Offset) New() Operator {
+	return &Offset{}
+}
+
 func (this *Offset) Expression() expression.Expression {
 	return this.expr
 }
@@ -53,6 +57,10 @@ func NewLimit(expr expression.Expression) *Limit {
 
 func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLimit(this)
+}
+
+func (this *Limit) New() Operator {
+	return &Limit{}
 }
 
 func (this *Limit) Expression() expression.Expression {

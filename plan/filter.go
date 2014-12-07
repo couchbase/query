@@ -30,6 +30,10 @@ func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFilter(this)
 }
 
+func (this *Filter) New() Operator {
+	return &Filter{}
+}
+
 func (this *Filter) Condition() expression.Expression {
 	return this.cond
 }

@@ -29,3 +29,7 @@ func (this *Discard) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Discard"}
 	return json.Marshal(r)
 }
+
+func (this *Discard) New() Operator {
+	return &Discard{}
+}

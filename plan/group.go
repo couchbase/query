@@ -34,6 +34,10 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
+func (this *InitialGroup) New() Operator {
+	return &InitialGroup{}
+}
+
 func (this *InitialGroup) Keys() expression.Expressions {
 	return this.keys
 }
@@ -75,6 +79,10 @@ func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
+func (this *IntermediateGroup) New() Operator {
+	return &IntermediateGroup{}
+}
+
 func (this *IntermediateGroup) Keys() expression.Expressions {
 	return this.keys
 }
@@ -114,6 +122,10 @@ func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates) *
 
 func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFinalGroup(this)
+}
+
+func (this *FinalGroup) New() Operator {
+	return &FinalGroup{}
 }
 
 func (this *FinalGroup) Keys() expression.Expressions {

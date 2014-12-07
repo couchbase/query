@@ -30,6 +30,10 @@ func (this *Let) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLet(this)
 }
 
+func (this *Let) New() Operator {
+	return &Let{}
+}
+
 func (this *Let) Bindings() expression.Bindings {
 	return this.bindings
 }

@@ -38,3 +38,7 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 	r["~child"] = this.child
 	return json.Marshal(r)
 }
+
+func (this *Parallel) New() Operator {
+	return &Parallel{}
+}

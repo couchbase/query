@@ -36,6 +36,10 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitJoin(this)
 }
 
+func (this *Join) New() Operator {
+	return &Join{}
+}
+
 func (this *Join) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
@@ -83,6 +87,10 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNest(this)
 }
 
+func (this *Nest) New() Operator {
+	return &Nest{}
+}
+
 func (this *Nest) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
@@ -126,6 +134,10 @@ func NewUnnest(term *algebra.Unnest) *Unnest {
 
 func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnnest(this)
+}
+
+func (this *Unnest) New() Operator {
+	return &Unnest{}
 }
 
 func (this *Unnest) Term() *algebra.Unnest {

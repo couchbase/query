@@ -34,6 +34,10 @@ func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCreatePrimaryIndex(this)
 }
 
+func (this *CreatePrimaryIndex) New() Operator {
+	return &CreatePrimaryIndex{}
+}
+
 func (this *CreatePrimaryIndex) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
@@ -65,6 +69,10 @@ func NewCreateIndex(keyspace datastore.Keyspace, node *algebra.CreateIndex) *Cre
 
 func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCreateIndex(this)
+}
+
+func (this *CreateIndex) New() Operator {
+	return &CreateIndex{}
 }
 
 func (this *CreateIndex) Keyspace() datastore.Keyspace {
@@ -100,6 +108,10 @@ func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDropIndex(this)
 }
 
+func (this *DropIndex) New() Operator {
+	return &DropIndex{}
+}
+
 func (this *DropIndex) Index() datastore.Index {
 	return this.index
 }
@@ -130,6 +142,10 @@ func NewAlterIndex(index datastore.Index, node *algebra.AlterIndex) *AlterIndex 
 
 func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAlterIndex(this)
+}
+
+func (this *AlterIndex) New() Operator {
+	return &AlterIndex{}
 }
 
 func (this *AlterIndex) Index() datastore.Index {

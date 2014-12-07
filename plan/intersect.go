@@ -30,6 +30,10 @@ func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntersectAll(this)
 }
 
+func (this *IntersectAll) New() Operator {
+	return &IntersectAll{}
+}
+
 func (this *IntersectAll) First() Operator {
 	return this.first
 }

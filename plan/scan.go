@@ -34,6 +34,10 @@ func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitPrimaryScan(this)
 }
 
+func (this *PrimaryScan) New() Operator {
+	return &PrimaryScan{}
+}
+
 func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 	return this.index
 }
@@ -72,6 +76,10 @@ func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
 
 func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIndexScan(this)
+}
+
+func (this *IndexScan) New() Operator {
+	return &IndexScan{}
 }
 
 func (this *IndexScan) Index() datastore.Index {
@@ -130,6 +138,10 @@ func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitKeyScan(this)
 }
 
+func (this *KeyScan) New() Operator {
+	return &KeyScan{}
+}
+
 func (this *KeyScan) Keys() expression.Expression {
 	return this.keys
 }
@@ -153,6 +165,10 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitParentScan(this)
 }
 
+func (this *ParentScan) New() Operator {
+	return &ParentScan{}
+}
+
 func (this *ParentScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "ParentScan"}
 	return json.Marshal(r)
@@ -172,6 +188,10 @@ func NewValueScan(values expression.Expression) *ValueScan {
 
 func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitValueScan(this)
+}
+
+func (this *ValueScan) New() Operator {
+	return &ValueScan{}
 }
 
 func (this *ValueScan) Values() expression.Expression {
@@ -197,6 +217,10 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDummyScan(this)
 }
 
+func (this *DummyScan) New() Operator {
+	return &DummyScan{}
+}
+
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{"#operator": "DummyScan"})
 }
@@ -217,6 +241,10 @@ func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *Coun
 
 func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCountScan(this)
+}
+
+func (this *CountScan) New() Operator {
+	return &CountScan{}
 }
 
 func (this *CountScan) Keyspace() datastore.Keyspace {
@@ -248,6 +276,10 @@ func NewIntersectScan(scans ...Operator) *IntersectScan {
 
 func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIntersectScan(this)
+}
+
+func (this *IntersectScan) New() Operator {
+	return &IntersectScan{}
 }
 
 func (this *IntersectScan) Scans() []Operator {

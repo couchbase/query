@@ -28,6 +28,10 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnionAll(this)
 }
 
+func (this *UnionAll) New() Operator {
+	return &UnionAll{}
+}
+
 func (this *UnionAll) Children() []Operator {
 	return this.children
 }

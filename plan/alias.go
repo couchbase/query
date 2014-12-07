@@ -28,6 +28,10 @@ func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAlias(this)
 }
 
+func (this *Alias) New() Operator {
+	return &Alias{}
+}
+
 func (this *Alias) Alias() string {
 	return this.alias
 }

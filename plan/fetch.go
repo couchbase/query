@@ -34,6 +34,10 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFetch(this)
 }
 
+func (this *Fetch) New() Operator {
+	return &Fetch{}
+}
+
 func (this *Fetch) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }

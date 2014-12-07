@@ -49,6 +49,10 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitClone(this)
 }
 
+func (this *Clone) New() Operator {
+	return &Clone{}
+}
+
 func (this *Clone) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Clone"}
 	return json.Marshal(r)
@@ -62,6 +66,10 @@ func NewSet(node *algebra.Set) *Set {
 
 func (this *Set) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSet(this)
+}
+
+func (this *Set) New() Operator {
+	return &Set{}
 }
 
 func (this *Set) Node() *algebra.Set {
@@ -89,6 +97,10 @@ func NewUnset(node *algebra.Unset) *Unset {
 
 func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUnset(this)
+}
+
+func (this *Unset) New() Operator {
+	return &Unset{}
 }
 
 func (this *Unset) Node() *algebra.Unset {
@@ -120,6 +132,10 @@ func NewSendUpdate(keyspace datastore.Keyspace, alias string) *SendUpdate {
 
 func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendUpdate(this)
+}
+
+func (this *SendUpdate) New() Operator {
+	return &SendUpdate{}
 }
 
 func (this *SendUpdate) Keyspace() datastore.Keyspace {

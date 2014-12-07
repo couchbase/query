@@ -20,3 +20,7 @@ func NewCollect() *Collect {
 func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCollect(this)
 }
+
+func (this *Collect) New() Operator {
+	return &Collect{}
+}

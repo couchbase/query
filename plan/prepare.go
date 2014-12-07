@@ -24,6 +24,10 @@ func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitPrepare(this)
 }
 
+func (this *Prepare) New() Operator {
+	return &Prepare{}
+}
+
 func (this *Prepare) Operator() Operator {
 	return this.prepared
 }

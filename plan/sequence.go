@@ -35,6 +35,10 @@ func (this *Sequence) Readonly() bool {
 	return true
 }
 
+func (this *Sequence) New() Operator {
+	return &Sequence{}
+}
+
 func (this *Sequence) Children() []Operator {
 	return this.children
 }

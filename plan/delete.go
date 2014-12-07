@@ -39,3 +39,7 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }
+
+func (this *SendDelete) New() Operator {
+	return &SendDelete{}
+}

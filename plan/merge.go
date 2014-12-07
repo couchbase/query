@@ -39,6 +39,10 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 	}
 }
 
+func (this *Merge) New() Operator {
+	return &Merge{}
+}
+
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
 }
