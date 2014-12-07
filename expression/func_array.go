@@ -22,10 +22,20 @@ import (
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_APPEND(expr, value).
+It returns a new array with value appended. Type ArrayAppend
+is a struct that implements BinaryFunctionBase.
+*/
 type ArrayAppend struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayAppend calls NewBinaryFunctionBase to
+create a function named ARRAY_APPEND with the two
+expressions as input.
+*/
 func NewArrayAppend(first, second Expression) Function {
 	rv := &ArrayAppend{
 		*NewBinaryFunctionBase("array_append", first, second),
@@ -35,16 +45,34 @@ func NewArrayAppend(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method evaluates the array append function. If either
+of the input argument types are missing, or not an array return
+a missing and null value respectively. Use the append method
+to append the second expression to the first expression. Return
+the new array.
+*/
 func (this *ArrayAppend) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -57,6 +85,10 @@ func (this *ArrayAppend) Apply(context Context, first, second value.Value) (valu
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayAppend with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayAppend) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayAppend(operands[0], operands[1])
@@ -69,10 +101,22 @@ func (this *ArrayAppend) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_AVG(expr). It returns
+the arithmetic mean (average) of all the non-NULL number values
+in the array, or NULL if there are no such values. Type ArrayAvg
+is a struct that implements UnaryFunctionBase.
+*/
 type ArrayAvg struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewArrayAvg takes as input an expression and returns
+a pointer to the ArrayAvg struct that calls NewUnaryFunctionBase to
+create a function named ARRAY_AVG with an input operand as the
+expression.
+*/
 func NewArrayAvg(operand Expression) Function {
 	rv := &ArrayAvg{
 		*NewUnaryFunctionBase("array_avg", operand),
@@ -82,12 +126,23 @@ func NewArrayAvg(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Number value.
+*/
 func (this *ArrayAvg) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -117,6 +172,10 @@ func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, erro
 	}
 }
 
+/*
+The constructor returns a NewArrayAvg with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *ArrayAvg) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayAvg(operands[0])
@@ -129,10 +188,21 @@ func (this *ArrayAvg) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_CONCAT(expr1, expr2).
+It returns a new array with the concatenation of the input
+arrays. Type ArrayConcat is a struct that implements
+BinaryFunctionBase.
+*/
 type ArrayConcat struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayConcat calls NewBinaryFunctionBase to
+create a function named ARRAY_CONCAT with the two
+expressions as input.
+*/
 func NewArrayConcat(first, second Expression) Function {
 	rv := &ArrayConcat{
 		*NewBinaryFunctionBase("array_concat", first, second),
@@ -142,12 +212,23 @@ func NewArrayConcat(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -190,12 +271,23 @@ func NewArrayContains(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Boolean value.
+*/
 func (this *ArrayContains) Type() value.Type { return value.BOOLEAN }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -242,12 +334,23 @@ func NewArrayCount(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Number value.
+*/
 func (this *ArrayCount) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -296,12 +399,23 @@ func NewArrayDistinct(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayDistinct) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -347,12 +461,23 @@ func NewArrayIfNull(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a JSON value.
+*/
 func (this *ArrayIfNull) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -400,12 +525,23 @@ func NewArrayLength(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Number value.
+*/
 func (this *ArrayLength) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -446,12 +582,23 @@ func NewArrayMax(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a JSON value.
+*/
 func (this *ArrayMax) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -500,12 +647,23 @@ func NewArrayMin(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a JSON value.
+*/
 func (this *ArrayMin) Type() value.Type { return value.JSON }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -555,12 +713,23 @@ func NewArrayPosition(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Number value.
+*/
 func (this *ArrayPosition) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -607,12 +776,23 @@ func NewArrayPrepend(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayPrepend) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -658,12 +838,23 @@ func NewArrayPut(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayPut) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -714,12 +905,23 @@ func NewArrayRange(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayRange) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -788,12 +990,23 @@ func NewArrayRemove(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayRemove) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -843,12 +1056,23 @@ func NewArrayRepeat(first, second Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayRepeat) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -899,12 +1123,23 @@ func NewArrayReplace(operands ...Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayReplace) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -963,12 +1198,23 @@ func NewArrayReverse(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArrayReverse) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -1016,12 +1262,23 @@ func NewArraySort(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns an Array value.
+*/
 func (this *ArraySort) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -1064,12 +1321,23 @@ func NewArraySum(operand Expression) Function {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a Number value.
+*/
 func (this *ArraySum) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
