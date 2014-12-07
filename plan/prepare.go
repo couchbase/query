@@ -9,6 +9,8 @@
 
 package plan
 
+import "encoding/json"
+
 type Prepare struct {
 	readonly
 	prepared Operator
@@ -30,4 +32,15 @@ func (this *Prepare) New() Operator {
 
 func (this *Prepare) Operator() Operator {
 	return this.prepared
+}
+
+func (this *Prepare) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "SendUpsert"}
+	r["prepared"] = this.prepared
+	return json.Marshal(r)
+}
+
+func (this *Prepare) UnmarshalJSON([]byte) error {
+	// TODO: implement
+	return nil
 }

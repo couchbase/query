@@ -81,3 +81,8 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	r["insert"] = this.insert
 	return json.Marshal(r)
 }
+
+func (this *Merge) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

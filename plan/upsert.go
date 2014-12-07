@@ -51,3 +51,8 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }
+
+func (this *SendUpsert) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

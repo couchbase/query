@@ -53,6 +53,11 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *CreatePrimaryIndex) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // Create index
 type CreateIndex struct {
 	readwrite
@@ -88,6 +93,11 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["name"] = this.node
 	return json.Marshal(r)
+}
+
+func (this *CreateIndex) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }
 
 // Drop index
@@ -126,6 +136,11 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *DropIndex) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // Alter index
 type AlterIndex struct {
 	readwrite
@@ -161,4 +176,9 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	r["index"] = this.index.Name()
 	r["name"] = this.node
 	return json.Marshal(r)
+}
+
+func (this *AlterIndex) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

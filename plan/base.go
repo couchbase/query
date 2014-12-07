@@ -24,6 +24,11 @@ func (this *readonly) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{"readonly": true})
 }
 
+func (this *readonly) UnmarshalJSON([]byte) error {
+	// TODO: implement
+	return nil
+}
+
 type readwrite struct {
 }
 
@@ -33,4 +38,9 @@ func (this *readwrite) Readonly() bool {
 
 func (this *readwrite) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{"readonly": false})
+}
+
+func (this *readwrite) UnmarshalJSON([]byte) error {
+	// TODO: implement
+	return nil
 }

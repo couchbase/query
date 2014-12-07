@@ -54,6 +54,11 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *PrimaryScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 type IndexScan struct {
 	readonly
 	index    datastore.Index
@@ -122,6 +127,11 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *IndexScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).
 type KeyScan struct {
 	readonly
@@ -152,6 +162,11 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *KeyScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // ParentScan is used for UNNEST subqueries.
 type ParentScan struct {
 	readonly
@@ -172,6 +187,11 @@ func (this *ParentScan) New() Operator {
 func (this *ParentScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "ParentScan"}
 	return json.Marshal(r)
+}
+
+func (this *ParentScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }
 
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
@@ -204,6 +224,11 @@ func (this *ValueScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *ValueScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // DummyScan is used for SELECTs with no FROM clause.
 type DummyScan struct {
 	readonly
@@ -223,6 +248,11 @@ func (this *DummyScan) New() Operator {
 
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{"#operator": "DummyScan"})
+}
+
+func (this *DummyScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }
 
 // CountScan is used for SELECT COUNT(*) with no WHERE clause.
@@ -262,6 +292,11 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *CountScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
 	readonly
@@ -293,4 +328,9 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	r["scans"] = this.scans
 
 	return json.Marshal(r)
+}
+
+func (this *IntersectScan) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

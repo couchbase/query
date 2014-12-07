@@ -25,6 +25,10 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitParallel(this)
 }
 
+func (this *Parallel) New() Operator {
+	return &Parallel{}
+}
+
 func (this *Parallel) Readonly() bool {
 	return this.child.Readonly()
 }
@@ -39,6 +43,7 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Parallel) New() Operator {
-	return &Parallel{}
+func (this *Parallel) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

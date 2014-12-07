@@ -43,3 +43,8 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 	r["condition"] = expression.NewStringer().Visit(this.cond)
 	return json.Marshal(r)
 }
+
+func (this *Filter) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

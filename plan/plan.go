@@ -19,7 +19,8 @@ import (
 type Operators []Operator
 
 type Operator interface {
-	json.Marshaler // JSON encoding; used by EXPLAIN and PREPARE
+	json.Marshaler   // JSON encoding; used by EXPLAIN and PREPARE
+	json.Unmarshaler // JSON decoding: used by EXECUTE
 
 	Accept(visitor Visitor) (interface{}, error) // Visitor pattern
 	Readonly() bool                              // Used to determine read-only compliance

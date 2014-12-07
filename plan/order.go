@@ -57,3 +57,8 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	r["sort_terms"] = s
 	return json.Marshal(r)
 }
+
+func (this *Order) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

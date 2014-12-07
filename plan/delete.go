@@ -43,3 +43,8 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 func (this *SendDelete) New() Operator {
 	return &SendDelete{}
 }
+
+func (this *SendDelete) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

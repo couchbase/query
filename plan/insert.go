@@ -51,3 +51,8 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	r["key"] = expression.NewStringer().Visit(this.key)
 	return json.Marshal(r)
 }
+
+func (this *SendInsert) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

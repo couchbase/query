@@ -41,3 +41,8 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 	r["children"] = this.children
 	return json.Marshal(r)
 }
+
+func (this *UnionAll) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

@@ -44,6 +44,11 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Offset) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 type Limit struct {
 	readonly
 	expr expression.Expression
@@ -71,4 +76,9 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Limit"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
 	return json.Marshal(r)
+}
+
+func (this *Limit) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

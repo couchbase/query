@@ -61,6 +61,11 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *InitialGroup) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // Grouping of groups. Recursable and parallelizable.
 type IntermediateGroup struct {
 	readonly
@@ -106,6 +111,11 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *IntermediateGroup) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 // Final grouping and aggregation.
 type FinalGroup struct {
 	readonly
@@ -149,4 +159,9 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	}
 	r["aggregates"] = s
 	return json.Marshal(r)
+}
+
+func (this *FinalGroup) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

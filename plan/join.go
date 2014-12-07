@@ -68,6 +68,11 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Join) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 type Nest struct {
 	readonly
 	keyspace datastore.Keyspace
@@ -119,6 +124,11 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Nest) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 type Unnest struct {
 	readonly
 	term  *algebra.Unnest
@@ -160,4 +170,9 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 		r["as"] = this.alias
 	}
 	return json.Marshal(r)
+}
+
+func (this *Unnest) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }

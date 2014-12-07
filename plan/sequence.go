@@ -48,3 +48,8 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 	r["~children"] = this.children
 	return json.Marshal(r)
 }
+
+func (this *Sequence) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

@@ -48,3 +48,8 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	r["second"] = this.second
 	return json.Marshal(r)
 }
+
+func (this *ExceptAll) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

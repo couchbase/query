@@ -88,6 +88,11 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *InitialProject) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 type FinalProject struct {
 	readonly
 }
@@ -107,6 +112,11 @@ func (this *FinalProject) New() Operator {
 func (this *FinalProject) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "FinalProject"}
 	return json.Marshal(r)
+}
+
+func (this *FinalProject) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
 }
 
 type ProjectTerms []*ProjectTerm

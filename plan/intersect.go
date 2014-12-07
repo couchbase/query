@@ -48,3 +48,8 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	r["second"] = this.second
 	return json.Marshal(r)
 }
+
+func (this *IntersectAll) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

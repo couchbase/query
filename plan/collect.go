@@ -24,3 +24,8 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) New() Operator {
 	return &Collect{}
 }
+
+func (this *Collect) UnmarshalJSON([]byte) error {
+	// NOP: Collect has no data structure
+	return nil
+}

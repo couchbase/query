@@ -25,3 +25,8 @@ func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
 func (this *Channel) New() Operator {
 	return &Channel{}
 }
+
+func (this *Channel) UnmarshalJSON([]byte) error {
+	// NOP: Channel has no data structure
+	return nil
+}

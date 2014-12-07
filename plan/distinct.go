@@ -33,3 +33,8 @@ func (this *Distinct) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Distinct"}
 	return json.Marshal(r)
 }
+
+func (this *Distinct) UnmarshalJSON([]byte) error {
+	// NOP: Distinct has no data structure
+	return nil
+}

@@ -32,6 +32,11 @@ func (this *Alias) New() Operator {
 	return &Alias{}
 }
 
+func (this *Alias) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}
+
 func (this *Alias) Alias() string {
 	return this.alias
 }

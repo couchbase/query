@@ -43,3 +43,8 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 	r["bindings"] = this.bindings
 	return json.Marshal(r)
 }
+
+func (this *Let) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

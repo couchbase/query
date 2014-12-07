@@ -58,3 +58,8 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(r)
 }
+
+func (this *Fetch) UnmarshalJSON([]byte) error {
+	// TODO: Implement
+	return nil
+}

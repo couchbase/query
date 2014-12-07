@@ -33,3 +33,8 @@ func (this *Discard) MarshalJSON() ([]byte, error) {
 func (this *Discard) New() Operator {
 	return &Discard{}
 }
+
+func (this *Discard) UnmarshalJSON([]byte) error {
+	// NOP: Discard has no data structure
+	return nil
+}

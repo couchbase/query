@@ -58,6 +58,11 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Clone) UnmarshalJSON([]byte) error {
+	// TODO: Implement. Verify #operator is Clone, otherwise error
+	return nil
+}
+
 func NewSet(node *algebra.Set) *Set {
 	return &Set{
 		node: node,
@@ -87,6 +92,11 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 	}
 	r["set_terms"] = s
 	return json.Marshal(r)
+}
+
+func (this *Set) UnmarshalJSON([]byte) error {
+	// TODO: Implement.
+	return nil
 }
 
 func NewUnset(node *algebra.Unset) *Unset {
@@ -123,6 +133,11 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Unset) UnmarshalJSON([]byte) error {
+	// TODO: Implement.
+	return nil
+}
+
 func NewSendUpdate(keyspace datastore.Keyspace, alias string) *SendUpdate {
 	return &SendUpdate{
 		keyspace: keyspace,
@@ -151,4 +166,9 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["alias"] = this.alias
 	return json.Marshal(r)
+}
+
+func (this *SendUpdate) UnmarshalJSON([]byte) error {
+	// TODO: Implement.
+	return nil
 }
