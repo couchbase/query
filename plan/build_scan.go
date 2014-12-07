@@ -10,17 +10,99 @@
 package plan
 
 import (
+	"math"
+
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/planner"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace,
 	node *algebra.KeyspaceTerm) (Operator, error) {
-	index, err := keyspace.IndexByPrimary()
+	if this.where == nil {
+		return this.selectPrimaryScan(keyspace, node)
+	}
+
+	nnf := planner.NewNNF()
+	where, err := nnf.Map(this.where)
 	if err != nil {
 		return nil, err
 	}
 
-	scan := NewPrimaryScan(index, node)
+	indexes, err := keyspace.Indexes()
+	if err != nil {
+		return nil, err
+	}
+
+	unfiltered := make(map[datastore.Index]expression.Expression, len(indexes))
+	filtered := make(map[datastore.Index]expression.Expression, len(indexes))
+
+	for _, index := range indexes {
+		rangeKey := index.RangeKey()
+		if len(rangeKey) == 0 || rangeKey[0] == nil {
+			// Index not rangeable
+			continue
+		}
+
+		key, err := nnf.Map(rangeKey[0])
+		if err != nil {
+			return nil, err
+		}
+
+		if !planner.SargableFor(where, key) {
+			// Index not applicable
+			continue
+		}
+
+		indexCond := index.Condition()
+		if indexCond == nil {
+			unfiltered[index] = key
+			continue
+		}
+
+		indexCond, err = nnf.Map(indexCond)
+		if err != nil {
+			return nil, err
+		}
+
+		if planner.SubsetOf(where, indexCond) {
+			filtered[index] = key
+			break
+		}
+	}
+
+	var indexMap map[datastore.Index]expression.Expression
+	if len(filtered) > 0 {
+		indexMap = filtered
+	} else if len(unfiltered) > 0 {
+		indexMap = unfiltered
+	}
+
+	if indexMap != nil {
+		for index, key := range indexMap {
+			spans := planner.SargFor(where, key)
+			scan := NewIndexScan(index, node, spans, false, math.MaxInt64)
+			return scan, err
+		}
+	}
+
+	primary, err := keyspace.IndexByPrimary()
+	if err != nil {
+		return nil, err
+	}
+
+	scan := NewPrimaryScan(primary, node)
+	return scan, nil
+}
+
+func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
+	node *algebra.KeyspaceTerm) (Operator, error) {
+	primary, err := keyspace.IndexByPrimary()
+	if err != nil {
+		return nil, err
+	}
+
+	scan := NewPrimaryScan(primary, node)
 	return scan, nil
 }

@@ -70,6 +70,10 @@ func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
 	}
 }
 
+func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIndexScan(this)
+}
+
 func (this *IndexScan) Index() datastore.Index {
 	return this.index
 }

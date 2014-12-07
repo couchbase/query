@@ -48,6 +48,8 @@ const (
 
 type IndexKey expression.Expressions
 
+type Indexes []Index
+
 /*
 Index is the base type for indexes, which may be distributed.
 */
