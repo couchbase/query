@@ -87,13 +87,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		}
 	}
 
-	primary, err := keyspace.IndexByPrimary()
-	if err != nil {
-		return nil, err
-	}
-
-	scan := NewPrimaryScan(primary, node)
-	return scan, nil
+	return this.selectPrimaryScan(keyspace, node)
 }
 
 func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
