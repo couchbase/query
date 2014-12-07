@@ -8,15 +8,19 @@
 //  and limitations under the License.
 
 /*
-
 Package plan provides query plans.
-
 */
 package plan
+
+import (
+	"encoding/json"
+)
 
 type Operators []Operator
 
 type Operator interface {
+	json.Marshaler
+
 	Accept(visitor Visitor) (interface{}, error)
 	Readonly() bool
 }
