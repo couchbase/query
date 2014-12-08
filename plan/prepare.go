@@ -35,7 +35,7 @@ func (this *Prepare) Operator() Operator {
 }
 
 func (this *Prepare) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"#operator": "SendUpsert"}
+	r := map[string]interface{}{"#operator": "Prepare"}
 	r["prepared"] = this.prepared
 	return json.Marshal(r)
 }
