@@ -114,6 +114,8 @@ type Expression interface {
 	   returned.
 	*/
 	MapChildren(mapper Mapper) error
+
+	Copy() Expression // Deep copy
 }
 
 /*
@@ -136,4 +138,12 @@ func (this Expressions) MapExpressions(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+func Copy(expr Expression) Expression {
+	if expr == nil {
+		return nil
+	}
+
+	return expr.Copy()
 }

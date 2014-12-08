@@ -125,3 +125,7 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 
 	return value.NewValue(false), nil
 }
+
+func (this *Any) Copy() Expression {
+	return NewAny(this.bindings.Copy(), Copy(this.satisfies))
+}

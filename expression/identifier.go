@@ -114,6 +114,10 @@ func (this *Identifier) MapChildren(mapper Mapper) error {
 	return nil
 }
 
+func (this *Identifier) Copy() Expression {
+	return this
+}
+
 /*
 Call SetField using item value and set the identifier
 string to the value. The SetField method returns a

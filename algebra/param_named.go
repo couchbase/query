@@ -72,6 +72,10 @@ func (this *NamedParameter) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+func (this *NamedParameter) Copy() expression.Expression {
+	return this
+}
+
 func (this *NamedParameter) Name() string {
 	return this.name
 }

@@ -104,3 +104,10 @@ Return nil.
 func (this *Constant) MapChildren(mapper Mapper) error {
 	return nil
 }
+
+/*
+Constants are not transformed, so no need to copy.
+*/
+func (this *Constant) Copy() Expression {
+	return this
+}

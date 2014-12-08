@@ -165,3 +165,7 @@ func (this *SearchedCase) MapChildren(mapper Mapper) (err error) {
 
 	return
 }
+
+func (this *SearchedCase) Copy() Expression {
+	return NewSearchedCase(this.whenTerms.Copy(), Copy(this.elseTerm))
+}

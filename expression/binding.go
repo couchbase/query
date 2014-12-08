@@ -46,6 +46,14 @@ func NewDescendantBinding(variable string, expr Expression) *Binding {
 	return &Binding{variable, expr, true}
 }
 
+func (this *Binding) Copy() *Binding {
+	return &Binding{
+		variable: this.variable,
+		expr:     this.expr.Copy(),
+		descend:  this.descend,
+	}
+}
+
 /*
 This method is used to access the variable field
 of the receiver which is of type Binding.
@@ -79,6 +87,24 @@ func (this *Binding) Descend() bool {
 }
 
 /*
+The receiver for this method is of type Binding. It returns a
+byte array and an error. Create a map deom string to interface
+with a single field with name and value set as type and binding.
+For the name variable, set the receivers variable as the value.
+For expression call the Visit method over the expression and use
+its return value to set the value of the map. Set the field
+descend to the receivers descend value. Call Marshal over this
+map and return it.
+*/
+func (this Binding) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"type": "binding"}
+	r["variable"] = this.variable
+	r["expr"] = NewStringer().Visit(this.expr)
+	r["descend"] = this.descend
+	return json.Marshal(r)
+}
+
+/*
 This method ranges over the bindings (receiver) and maps
 each expression to another.
 */
@@ -95,20 +121,11 @@ func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	return
 }
 
-/*
-The receiver for this method is of type Binding. It returns a
-byte array and an error. Create a map deom string to interface
-with a single field with name and value set as type and binding.
-For the name variable, set the receivers variable as the value.
-For expression call the Visit method over the expression and use
-its return value to set the value of the map. Set the field
-descend to the receivers descend value. Call Marshal over this
-map and return it.
-*/
-func (this Binding) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "binding"}
-	r["variable"] = this.variable
-	r["expr"] = NewStringer().Visit(this.expr)
-	r["descend"] = this.descend
-	return json.Marshal(r)
+func (this Bindings) Copy() Bindings {
+	copies := make(Bindings, len(this))
+	for i, b := range this {
+		copies[i] = b.Copy()
+	}
+
+	return copies
 }

@@ -25,10 +25,13 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 
 	nnf := planner.NewNNF()
-	where, err := nnf.Map(this.where)
+	where, err := nnf.Map(this.where.Copy())
 	if err != nil {
 		return nil, err
 	}
+
+	formalizer := expression.NewFormalizer()
+	formalizer.Keyspace = node.Alias()
 
 	indexes, err := keyspace.Indexes()
 	if err != nil {
@@ -45,7 +48,14 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			continue
 		}
 
-		key, err := nnf.Map(rangeKey[0])
+		key := rangeKey[0].Copy()
+
+		key, err = formalizer.Map(key)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err = nnf.Map(key)
 		if err != nil {
 			return nil, err
 		}
@@ -61,12 +71,20 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			continue
 		}
 
+		indexCond = indexCond.Copy()
+
+		indexCond, err = formalizer.Map(indexCond)
+		if err != nil {
+			return nil, err
+		}
+
 		indexCond, err = nnf.Map(indexCond)
 		if err != nil {
 			return nil, err
 		}
 
 		if planner.SubsetOf(where, indexCond) {
+			// Index condition satisfies query condition
 			filtered[index] = key
 			break
 		}

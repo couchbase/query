@@ -146,3 +146,12 @@ func (this *ObjectConstruct) MapChildren(mapper Mapper) (err error) {
 
 	return nil
 }
+
+func (this *ObjectConstruct) Copy() Expression {
+	copies := make(Bindings, 0, len(this.bindings))
+	for key, expr := range this.bindings {
+		copies = append(copies, NewBinding(key, expr.Copy()))
+	}
+
+	return NewObjectConstruct(copies)
+}

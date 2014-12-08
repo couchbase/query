@@ -138,3 +138,7 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 
 	return value.MISSING_VALUE, nil
 }
+
+func (this *First) Copy() Expression {
+	return NewFirst(this.mapping.Copy(), this.bindings.Copy(), Copy(this.when))
+}

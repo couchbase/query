@@ -209,6 +209,26 @@ func (this *FunctionBase) MapChildren(mapper Mapper) error {
 }
 
 /*
+Return the operands of the function.
+*/
+func (this *FunctionBase) Copy() Expression {
+	function := this.expr.(Function)
+	operands := function.Operands()
+	if len(operands) == 0 {
+		return function.Constructor()()
+	}
+
+	copies := make(Expressions, len(operands))
+	for i, op := range operands {
+		if op != nil {
+			copies[i] = op.Copy()
+		}
+	}
+
+	return function.Constructor()(copies...)
+}
+
+/*
 Return name of the function.
 */
 func (this *FunctionBase) Name() string { return this.name }

@@ -138,3 +138,7 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 
 	return value.NewValue(rv), nil
 }
+
+func (this *Array) Copy() Expression {
+	return NewArray(this.mapping.Copy(), this.bindings.Copy(), Copy(this.when))
+}

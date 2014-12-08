@@ -125,3 +125,7 @@ func (this *Every) Evaluate(item value.Value, context Context) (value.Value, err
 
 	return value.NewValue(true), nil
 }
+
+func (this *Every) Copy() Expression {
+	return NewEvery(this.bindings.Copy(), Copy(this.satisfies))
+}

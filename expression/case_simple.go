@@ -14,20 +14,6 @@ import (
 )
 
 /*
-Represents a slice of when terms
-*/
-type WhenTerms []*WhenTerm
-
-/*
-Type WhenTerm is a struct that has two fields representing the When and
-then expressions for a case statement.
-*/
-type WhenTerm struct {
-	When Expression
-	Then Expression
-}
-
-/*
 Simple case expressions allow for conditional matching within an expression.
 It contains search expression, when/then terms and an optional else
 expression. Type SimpleCase is a struct that implements ExpressionBase,
@@ -198,4 +184,8 @@ func (this *SimpleCase) MapChildren(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+func (this *SimpleCase) Copy() Expression {
+	return NewSimpleCase(this.searchTerm.Copy(), this.whenTerms.Copy(), Copy(this.elseTerm))
 }

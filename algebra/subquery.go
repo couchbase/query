@@ -63,6 +63,10 @@ func (this *Subquery) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+func (this *Subquery) Copy() expression.Expression {
+	return this
+}
+
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
 	return this.query.FormalizeSubquery(parent)
 }

@@ -72,6 +72,10 @@ func (this *PositionalParameter) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+func (this *PositionalParameter) Copy() expression.Expression {
+	return this
+}
+
 func (this *PositionalParameter) Position() int {
 	return this.position
 }
