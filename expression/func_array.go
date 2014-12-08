@@ -742,7 +742,9 @@ func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, 
 
 /*
 This method returns the largest value in the array based
-on N1QL's collation order.
+on N1QL's collation order. If the input value is of type
+missing return a missing value, and for all non array
+values return null.
 */
 func (this *ArrayMax) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -779,10 +781,22 @@ func (this *ArrayMax) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_MIN(expr). It returns
+the smallest non-NULL, non-MISSING array element, in N1QL
+collation order. Type ArrayMin is a struct that implements
+UnaryFunctionBase.
+*/
 type ArrayMin struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewArrayMin takes as input an expression
+and returns a pointer to the ArrayMin struct that calls
+NewUnaryFunctionBase to create a function named ARRAY_MIN
+with an input operand as the expression.
+*/
 func NewArrayMin(operand Expression) Function {
 	rv := &ArrayMin{
 		*NewUnaryFunctionBase("array_min", operand),
@@ -813,6 +827,12 @@ func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method returns the smallest value in the array based
+on N1QL's collation order. If the input value is of type
+missing return a missing value, and for all non array
+values return null.
+*/
 func (this *ArrayMin) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -833,6 +853,10 @@ func (this *ArrayMin) Apply(context Context, arg value.Value) (value.Value, erro
 	return rv, nil
 }
 
+/*
+The constructor returns a NewArrayMin with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *ArrayMin) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayMin(operands[0])
@@ -845,10 +869,22 @@ func (this *ArrayMin) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_POSITION(expr, value).
+It returns the first position of value within the array, or -1.
+The position is 0-based. Type ArrayPosition is a struct that
+implements UnaryFunctionBase.
+*/
 type ArrayPosition struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayPosition takes as input two expressions
+and returns a pointer to the ArrayPosition struct that calls
+NewBinaryFunctionBase to create a function named ARRAY_POSITION
+with an input operands as the expressions.
+*/
 func NewArrayPosition(first, second Expression) Function {
 	rv := &ArrayPosition{
 		*NewBinaryFunctionBase("array_position", first, second),
@@ -879,6 +915,12 @@ func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Va
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method ranges through the array and returns the position
+of the second value in the array (first value). If the input
+values are of type missing return a missing value, and for all
+non array values return null. If not found then return -1.
+*/
 func (this *ArrayPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -896,6 +938,10 @@ func (this *ArrayPosition) Apply(context Context, first, second value.Value) (va
 	return value.NewValue(float64(-1)), nil
 }
 
+/*
+The constructor returns a NewArrayPosition with the operands cast
+to a Function as the FunctionConstructor.
+*/
 func (this *ArrayPosition) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayPosition(operands[0], operands[1])
@@ -908,10 +954,20 @@ func (this *ArrayPosition) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_PREPEND(value, expr).
+It returns a new array with value prepended. Type ArrayPrepend
+is a struct that implements BinaryFunctionBase.
+*/
 type ArrayPrepend struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayPrepend calls NewBinaryFunctionBase to
+create a function named ARRAY_PREPEND with the two
+expressions as input.
+*/
 func NewArrayPrepend(first, second Expression) Function {
 	rv := &ArrayPrepend{
 		*NewBinaryFunctionBase("array_prepend", first, second),
@@ -942,6 +998,12 @@ func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Val
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method prepends the first value to the second value, by
+reversing the input to the append method. If either
+of the input argument types are missing, or not an array return
+a missing and null value respectively.
+*/
 func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -958,6 +1020,10 @@ func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (val
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayPrepend with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayPrepend) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayPrepend(operands[0], operands[1])
@@ -970,10 +1036,21 @@ func (this *ArrayPrepend) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_PUT(expr, value).
+It returns a new array with value appended, if value is not
+already present; else unmodified input array. Type ArrayPut
+is a struct that implements BinaryFunctionBase.
+*/
 type ArrayPut struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayPut calls NewBinaryFunctionBase to
+create a function named ARRAY_PUT with the two
+expressions as input.
+*/
 func NewArrayPut(first, second Expression) Function {
 	rv := &ArrayPut{
 		*NewBinaryFunctionBase("array_put", first, second),
@@ -1004,6 +1081,13 @@ func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method appends the value into the array if it isnt
+present. Range over the array and check if the value exists.
+If it does return the array as is. If either of the input
+argument types are missing, or not an array return a missing
+and null value respectively.
+*/
 func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1025,6 +1109,10 @@ func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.V
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayPut with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayPut) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayPut(operands[0], operands[1])
@@ -1122,6 +1210,9 @@ func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange
 //
 ///////////////////////////////////////////////////
 
+/*
+ARRAY_REMOVE(expr, value) - new array with all occurences of value removed.
+*/
 type ArrayRemove struct {
 	BinaryFunctionBase
 }
@@ -1188,10 +1279,20 @@ func (this *ArrayRemove) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_REPEAT(value, n).
+It returns a new array with value repeated n times. Type
+ArrayRepeat is a struct that implements BinaryFunctionBase.
+*/
 type ArrayRepeat struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayRepeat calls NewBinaryFunctionBase to
+create a function named ARRAY_REPEAT with the two
+expressions as input.
+*/
 func NewArrayRepeat(first, second Expression) Function {
 	rv := &ArrayRepeat{
 		*NewBinaryFunctionBase("array_repeat", first, second),
@@ -1222,6 +1323,13 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method creates a new slice and repeats the first value
+second value number of times. If either of the input values
+are missing, return a missing value. If the first value is
+less than 0, or not an absolute number then return a null
+value.
+*/
 func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1243,6 +1351,10 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayRepeat with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayRepeat) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayRepeat(operands[0], operands[1])
@@ -1330,10 +1442,22 @@ func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayRep
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_REVERSE(expr).
+It returns a new array with all elements in reverse order.
+Type ArrayReverse is a struct that implements
+UnaryFunctionBase.
+*/
 type ArrayReverse struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewArrayReverse takes as input an expression and returns
+a pointer to the ArrayReverse struct that calls NewUnaryFunctionBase to
+create a function named ARRAY_REVERSE with an input operand as the
+expression.
+*/
 func NewArrayReverse(operand Expression) Function {
 	rv := &ArrayReverse{
 		*NewUnaryFunctionBase("array_reverse", operand),
@@ -1364,6 +1488,12 @@ func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Val
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method reverses the input array value and returns it.
+If the input value is of type missing return a missing
+value, and for all non array values return null. Range
+through the array and add it to a new slice in reverse.
+*/
 func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1382,6 +1512,10 @@ func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, 
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayReverse with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *ArrayReverse) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayReverse(operands[0])
@@ -1394,10 +1528,22 @@ func (this *ArrayReverse) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_SORT(expr). It
+returns a new array with elements sorted in N1QL collation
+order. Type ArraySort is a struct that implements
+UnaryFunctionBase.
+*/
 type ArraySort struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewArraySort takes as input an expression and returns
+a pointer to the ArrayAvg struct that calls NewUnaryFunctionBase to
+create a function named ARRAY_SORT with an input operand as the
+expression.
+*/
 func NewArraySort(operand Expression) Function {
 	rv := &ArraySort{
 		*NewUnaryFunctionBase("array_sort", operand),
@@ -1428,6 +1574,12 @@ func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value,
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method sorts the input array value, in N1QL collation
+order. It uses the Sort method in the sort package. If the
+input value is of type missing return a missing value, and
+for all non array values return null.
+*/
 func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1441,6 +1593,10 @@ func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, err
 	return cv, nil
 }
 
+/*
+The constructor returns a NewArraySort with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *ArraySort) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArraySort(operands[0])
@@ -1453,10 +1609,23 @@ func (this *ArraySort) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_SUM(expr).
+It returns the sum of all the non-NULL number values
+in the array, or zero if there are no such values.
+Type ArraySum is a struct that implements
+UnaryFunctionBase.
+*/
 type ArraySum struct {
 	UnaryFunctionBase
 }
 
+/*
+The function NewArraySum takes as input an expression and returns
+a pointer to the ArraySum struct that calls NewUnaryFunctionBase to
+create a function named ARRAY_SUM with an input operand as the
+expression.
+*/
 func NewArraySum(operand Expression) Function {
 	rv := &ArraySum{
 		*NewUnaryFunctionBase("array_sum", operand),
@@ -1487,6 +1656,13 @@ func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+This method returns the sum of all the fields in the array.
+Range through the array and if the type of field is a number
+then add it to the sum. Return 0 if no number value exists.
+If the input value is of type missing return a missing value,
+and for all non array values return null.
+*/
 func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1506,6 +1682,10 @@ func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, erro
 	return value.NewValue(sum), nil
 }
 
+/*
+The constructor returns a NewArraySum with an operand cast to a
+Function as the FunctionConstructor.
+*/
 func (this *ArraySum) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArraySum(operands[0])
