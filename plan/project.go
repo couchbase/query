@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type InitialProject struct {
@@ -88,8 +89,51 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *InitialProject) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *InitialProject) UnmarshalJSON(body []byte) error {
+	var raw_initial_project struct {
+		Op_name  string            `json:"#operator"`
+		Terms    []json.RawMessage `json:"result_terms"`
+		Distinct bool              `json:"distinct"`
+		Raw      bool              `json:"raw"`
+	}
+
+	err := json.Unmarshal(body, &raw_initial_project)
+
+	if err != nil {
+		return err
+	}
+
+	num_terms := len(raw_initial_project.Terms)
+	terms := make(algebra.ResultTerms, num_terms)
+
+	for i, raw_term := range raw_initial_project.Terms {
+		var term_data struct {
+			Expr string `json:"expr"`
+			As   string `json:"as"`
+			Star bool   `json:"star"`
+		}
+		err := json.Unmarshal(raw_term, &term_data)
+
+		expr, err := parser.Parse(term_data.Expr)
+		if err != nil {
+			return err
+		}
+
+		terms[i] = algebra.NewResultTerm(expr, term_data.Star, term_data.As)
+	}
+	projection := algebra.NewProjection(raw_initial_project.Distinct, terms)
+	results := projection.Terms()
+	project_terms := make(ProjectTerms, len(results))
+
+	for i, res := range results {
+		project_terms[i] = &ProjectTerm{
+			result: res,
+		}
+	}
+
+	this.projection = projection
+	this.terms = project_terms
+
 	return nil
 }
 
@@ -115,7 +159,7 @@ func (this *FinalProject) MarshalJSON() ([]byte, error) {
 }
 
 func (this *FinalProject) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+	// NOP: FinalProject has no data structure
 	return nil
 }
 

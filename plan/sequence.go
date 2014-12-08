@@ -9,9 +9,7 @@
 
 package plan
 
-import (
-	"encoding/json"
-)
+import "encoding/json"
 
 type Sequence struct {
 	children []Operator `json:"children"`
@@ -49,7 +47,44 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Sequence) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Sequence) UnmarshalJSON(body []byte) error {
+	var raw_body struct {
+		Operator string            `json:"#operator"`
+		Children []json.RawMessage `json:"~children"`
+	}
+	err := json.Unmarshal(body, &raw_body)
+	if err != nil {
+		return err
+	}
+
+	this.children = []Operator{}
+
+	for _, raw_child := range raw_body.Children {
+		var child_type struct {
+			Op_name string `json:"#operator"`
+		}
+		var read_only struct {
+			Readonly bool `json:"readonly"`
+		}
+		err = json.Unmarshal(raw_child, &child_type)
+		if err != nil {
+			return err
+		}
+
+		if child_type.Op_name == "" {
+			err = json.Unmarshal(raw_child, &read_only)
+			if err != nil {
+				return err
+			} else {
+				// This should be a readonly object
+			}
+		} else {
+			child_op, err := MakeOperator(child_type.Op_name, raw_child)
+			if err != nil {
+				return err
+			}
+			this.children = append(this.children, child_op)
+		}
+	}
+	return err
 }

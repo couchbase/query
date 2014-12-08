@@ -20,6 +20,7 @@ import (
 	"github.com/couchbaselabs/query/accounting"
 	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
 	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
+	datastore_package "github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/datastore/resolver"
 	"github.com/couchbaselabs/query/logging"
 	log_resolver "github.com/couchbaselabs/query/logging/resolver"
@@ -75,6 +76,7 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	datastore_package.SetDatastore(datastore)
 
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {

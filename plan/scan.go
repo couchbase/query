@@ -15,6 +15,7 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type PrimaryScan struct {
@@ -54,9 +55,42 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *PrimaryScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
+	var _fields struct {
+		Op    string `json:"#operator"`
+		Index string `json:"index"`
+		Names string `json:"namespace"`
+		Keys  string `json:"keyspace"`
+	}
+
+	err := json.Unmarshal(body, &_fields)
+
+	if err != nil {
+		return err
+	}
+
+	n, err := datastore.GetDatastore().NamespaceByName(_fields.Names)
+	if err != nil {
+		return err
+	}
+
+	k, err := n.KeyspaceByName(_fields.Keys)
+	if err != nil {
+		return err
+	}
+
+	keys_expr, err := parser.Parse(_fields.Keys)
+	if err != nil {
+		return err
+	}
+
+	this.term = algebra.NewKeyspaceTerm(
+		_fields.Names, _fields.Keys,
+		nil, "", keys_expr)
+
+	this.index, err = k.IndexByPrimary()
+
+	return err
 }
 
 type IndexScan struct {
@@ -127,7 +161,7 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IndexScan) UnmarshalJSON([]byte) error {
+func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	// TODO: Implement
 	return nil
 }
@@ -162,9 +196,22 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *KeyScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *KeyScan) UnmarshalJSON(body []byte) error {
+	var _fields struct {
+		Op   string `json:"#operator"`
+		Keys string `json:"keys"`
+	}
+	err := json.Unmarshal(body, &_fields)
+
+	if err != nil {
+		return err
+	}
+
+	keys_expr, err := parser.Parse(_fields.Keys)
+
+	this.keys = keys_expr
+
+	return err
 }
 
 // ParentScan is used for UNNEST subqueries.
@@ -251,7 +298,7 @@ func (this *DummyScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *DummyScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+	// NOP: DummyScan has no data structure
 	return nil
 }
 

@@ -102,3 +102,14 @@ type AnnotatedPair struct {
 	Key   string
 	Value value.AnnotatedValue
 }
+
+// Globally accessible Datastore instance
+var _DATASTORE Datastore
+
+func SetDatastore(datastore Datastore) {
+	_DATASTORE = datastore
+}
+
+func GetDatastore() Datastore {
+	return _DATASTORE
+}

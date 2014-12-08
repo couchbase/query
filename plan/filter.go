@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type Filter struct {
@@ -44,7 +45,20 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Filter) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Filter) UnmarshalJSON(body []byte) error {
+	var filter_fields struct {
+		Operator  string `json:"#operator"`
+		Condition string `json:"condition"`
+	}
+	err := json.Unmarshal(body, &filter_fields)
+
+	if err != nil {
+		return err
+	}
+
+	cond, err := parser.Parse(filter_fields.Condition)
+
+	this.cond = cond
+
+	return err
 }

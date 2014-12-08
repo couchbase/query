@@ -9,64 +9,82 @@
 
 package plan
 
-import "github.com/couchbaselabs/query/algebra"
+import (
+	"fmt"
+	"strings"
+)
 
-// Operators is a global map of all plan.Operator implementations
+// Helper function to create a specific operator given its name
+// (used as a key by GetOperator) and body in raw bytes
+func MakeOperator(name string, body []byte) (Operator, error) {
+	which_op, has_op := GetOperator(name)
+
+	if !has_op {
+		return nil, fmt.Errorf("No operator for name %s", name)
+	}
+
+	new_op := which_op.New()
+	err := new_op.UnmarshalJSON(body)
+
+	return new_op, err
+}
+
+// GetOperator exposes the operators map to other packages
+func GetOperator(name string) (Operator, bool) {
+	rv, ok := _OPERATORS[strings.ToLower(name)]
+	return rv, ok
+}
+
+// _OPERATORS is a global map of all plan.Operator implementations
 // It is used by implementations of json.Unmarshal to access the
 // correct implementation given the name of an implementation via
 // the "#operator" key in a marshalled object.
-var Operators_map map[string]Operator
-
-func init() {
-	Operators_map = map[string]Operator{
-		"Alias":              NewAlias(""),
-		"Channel":            NewChannel(),
-		"Collect":            NewCollect(),
-		"Delete":             NewSendDelete(nil),
-		"Discard":            NewDiscard(),
-		"Distinct":           NewDistinct(),
-		"ExceptAll":          NewExceptAll(nil, nil),
-		"Explain":            NewExplain(nil),
-		"Fetch":              NewFetch(nil, nil),
-		"Filter":             NewFilter(nil),
-		"InitialGroup":       NewInitialGroup(nil, nil),
-		"IntermediateGroup":  NewIntermediateGroup(nil, nil),
-		"FinalGroup":         NewFinalGroup(nil, nil),
-		"CreatePrimaryIndex": NewCreatePrimaryIndex(nil, nil),
-		"CreateIndex":        NewCreateIndex(nil, nil),
-		"DropIndex":          NewDropIndex(nil, nil),
-		"AlterIndex":         NewAlterIndex(nil, nil),
-		"Insert":             NewSendInsert(nil, nil),
-		"IntersectAll":       NewIntersectAll(nil, nil),
-		"Join": NewJoin(nil, algebra.NewJoin(nil, false,
-			algebra.NewKeyspaceTerm("", "", nil, "", nil))),
-		"Nest": NewJoin(nil, algebra.NewJoin(nil, false,
-			algebra.NewKeyspaceTerm("", "", nil, "", nil))),
-		"Unnest":         NewUnnest(algebra.NewUnnest(nil, false, nil, "alias")),
-		"Let":            NewLet(nil),
-		"Merge":          NewMerge(nil, nil, nil, nil, nil, nil),
-		"Order":          NewOrder(algebra.NewOrder([]*algebra.SortTerm{})),
-		"Offset":         NewOffset(nil),
-		"Limit":          NewLimit(nil),
-		"Parallel":       NewParallel(nil),
-		"Prepare":        NewPrepare(nil),
-		"InitialProject": NewInitialProject(algebra.NewProjection(false, []*algebra.ResultTerm{})),
-		"FinalProject":   NewFinalProject(),
-		"PrimaryScan":    NewPrimaryScan(nil, nil),
-		"IndexScan":      NewIndexScan(nil, nil, nil, false, 0),
-		"KeyScan":        NewKeyScan(nil),
-		"ParentScan":     NewParentScan(),
-		"ValueScan":      NewValueScan(nil),
-		"CountScan":      NewCountScan(nil, nil),
-		"DummyScan":      NewDummyScan(),
-		"IntersectScan":  NewIntersectScan(),
-		"Sequence":       NewSequence(),
-		"Stream":         NewStream(),
-		"UnionAll":       NewUnionAll(),
-		"Clone":          NewClone(),
-		"Set":            NewSet(nil),
-		"Unset":          NewUnset(nil),
-		"SendUpdate":     NewSendUpdate(nil, ""),
-		"SendUpsert":     NewSendUpsert(nil, nil),
-	}
+var _OPERATORS = map[string]Operator{
+	"Alias":              &Alias{},
+	"Channel":            &Channel{},
+	"Collect":            &Collect{},
+	"Delete":             &SendDelete{},
+	"Discard":            &Discard{},
+	"Distinct":           &Distinct{},
+	"ExceptAll":          &ExceptAll{},
+	"Explain":            &Explain{},
+	"Fetch":              &Fetch{},
+	"Filter":             &Filter{},
+	"InitialGroup":       &InitialGroup{},
+	"IntermediateGroup":  &IntermediateGroup{},
+	"FinalGroup":         &FinalGroup{},
+	"CreatePrimaryIndex": &CreatePrimaryIndex{},
+	"CreateIndex":        &CreateIndex{},
+	"DropIndex":          &DropIndex{},
+	"AlterIndex":         &AlterIndex{},
+	"Insert":             &SendInsert{},
+	"IntersectAll":       &IntersectAll{},
+	"Join":               &Join{},
+	"Nest":               &Nest{},
+	"Unnest":             &Unnest{},
+	"Let":                &Let{},
+	"Merge":              &Merge{},
+	"Order":              &Order{},
+	"Offset":             &Offset{},
+	"Limit":              &Limit{},
+	"Parallel":           &Parallel{},
+	"Prepare":            &Prepare{},
+	"InitialProject":     &InitialProject{},
+	"FinalProject":       &FinalProject{},
+	"PrimaryScan":        &PrimaryScan{},
+	"IndexScan":          &IndexScan{},
+	"KeyScan":            &KeyScan{},
+	"ParentScan":         &ParentScan{},
+	"ValueScan":          &ValueScan{},
+	"CountScan":          &CountScan{},
+	"DummyScan":          &DummyScan{},
+	"IntersectScan":      &IntersectScan{},
+	"Sequence":           &Sequence{},
+	"Stream":             &Stream{},
+	"UnionAll":           &UnionAll{},
+	"Clone":              &Clone{},
+	"Set":                &Set{},
+	"Unset":              &Unset{},
+	"SendUpdate":         &SendUpdate{},
+	"SendUpsert":         &SendUpsert{},
 }

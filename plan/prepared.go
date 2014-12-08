@@ -48,6 +48,21 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Prepared) UnmarshalJSON(body []byte) error {
+	var op_type struct {
+		Op_name string `json:"#operator"`
+	}
+	err := json.Unmarshal(body, &op_type)
+
+	if err != nil {
+		return err
+	}
+
+	this.Operator, err = MakeOperator(op_type.Op_name, body)
+
+	return err
+}
+
 func (this *Prepared) Signature() value.Value {
 	return this.signature
 }
