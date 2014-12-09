@@ -11,7 +11,6 @@ package plan
 
 import (
 	"fmt"
-	"strings"
 )
 
 // Helper function to create a specific operator given its name
