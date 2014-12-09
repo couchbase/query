@@ -56,38 +56,31 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
-	var _fields struct {
-		Op    string `json:"#operator"`
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
 		Index string `json:"index"`
 		Names string `json:"namespace"`
 		Keys  string `json:"keyspace"`
 	}
 
-	err := json.Unmarshal(body, &_fields)
-
+	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	n, err := datastore.GetDatastore().NamespaceByName(_fields.Names)
+	k, err := datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
 		return err
 	}
 
-	k, err := n.KeyspaceByName(_fields.Keys)
-	if err != nil {
-		return err
-	}
-
-	keys_expr, err := parser.Parse(_fields.Keys)
+	keys_expr, err := parser.Parse(_unmarshalled.Keys)
 	if err != nil {
 		return err
 	}
 
 	this.term = algebra.NewKeyspaceTerm(
-		_fields.Names, _fields.Keys,
+		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", keys_expr)
-
 	this.index, err = k.IndexByPrimary()
 
 	return err
@@ -197,18 +190,17 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *KeyScan) UnmarshalJSON(body []byte) error {
-	var _fields struct {
-		Op   string `json:"#operator"`
+	var _unmarshalled struct {
+		_    string `json:"#operator"`
 		Keys string `json:"keys"`
 	}
-	err := json.Unmarshal(body, &_fields)
 
+	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	keys_expr, err := parser.Parse(_fields.Keys)
-
+	keys_expr, err := parser.Parse(_unmarshalled.Keys)
 	this.keys = keys_expr
 
 	return err
@@ -237,7 +229,7 @@ func (this *ParentScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *ParentScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+	// NOP: ParentScan has no data structure
 	return nil
 }
 
@@ -271,9 +263,20 @@ func (this *ValueScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *ValueScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *ValueScan) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_      string `json:"#operator"`
+		Values string `json:"values"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.values, err = parser.Parse(_unmarshalled.Values)
+
+	return err
 }
 
 // DummyScan is used for SELECTs with no FROM clause.
@@ -339,9 +342,21 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *CountScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *CountScan) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Names string `json:"namespace"`
+		Keys  string `json:"keyspace"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+
+	return err
 }
 
 // IntersectScan scans multiple indexes and intersects the results.
@@ -377,7 +392,46 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IntersectScan) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *IntersectScan) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string            `json:"#operator"`
+		Scans []json.RawMessage `json:"scans"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.scans = []Operator{}
+
+	for _, raw_scan := range _unmarshalled.Scans {
+		var scan_type struct {
+			Operator string `json:"#operator"`
+		}
+		var read_only struct {
+			Readonly bool `json:"readonly"`
+		}
+		err = json.Unmarshal(raw_scan, &scan_type)
+		if err != nil {
+			return err
+		}
+
+		if scan_type.Operator == "" {
+			err = json.Unmarshal(raw_scan, &read_only)
+			if err != nil {
+				return err
+			} else {
+				// This should be a readonly object
+			}
+		} else {
+			scan_op, err := MakeOperator(scan_type.Operator, raw_scan)
+			if err != nil {
+				return err
+			}
+
+			this.scans = append(this.scans, scan_op)
+		}
+	}
+
+	return err
 }

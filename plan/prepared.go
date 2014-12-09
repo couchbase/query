@@ -50,15 +50,15 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
 	var op_type struct {
-		Op_name string `json:"#operator"`
+		Operator string `json:"#operator"`
 	}
-	err := json.Unmarshal(body, &op_type)
 
+	err := json.Unmarshal(body, &op_type)
 	if err != nil {
 		return err
 	}
 
-	this.Operator, err = MakeOperator(op_type.Op_name, body)
+	this.Operator, err = MakeOperator(op_type.Operator, body)
 
 	return err
 }

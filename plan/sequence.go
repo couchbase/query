@@ -48,18 +48,18 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Sequence) UnmarshalJSON(body []byte) error {
-	var raw_body struct {
-		Operator string            `json:"#operator"`
+	var _unmarshalled struct {
+		_        string            `json:"#operator"`
 		Children []json.RawMessage `json:"~children"`
 	}
-	err := json.Unmarshal(body, &raw_body)
+	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
 	this.children = []Operator{}
 
-	for _, raw_child := range raw_body.Children {
+	for _, raw_child := range _unmarshalled.Children {
 		var child_type struct {
 			Op_name string `json:"#operator"`
 		}
@@ -86,5 +86,6 @@ func (this *Sequence) UnmarshalJSON(body []byte) error {
 			this.children = append(this.children, child_op)
 		}
 	}
+
 	return err
 }

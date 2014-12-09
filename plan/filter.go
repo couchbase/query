@@ -46,18 +46,17 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Filter) UnmarshalJSON(body []byte) error {
-	var filter_fields struct {
-		Operator  string `json:"#operator"`
+	var _unmarshalled struct {
+		_         string `json:"#operator"`
 		Condition string `json:"condition"`
 	}
-	err := json.Unmarshal(body, &filter_fields)
 
+	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	cond, err := parser.Parse(filter_fields.Condition)
-
+	cond, err := parser.Parse(_unmarshalled.Condition)
 	this.cond = cond
 
 	return err

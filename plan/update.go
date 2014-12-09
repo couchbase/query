@@ -11,10 +11,12 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 // Enable copy-before-write, so that all reads use old values
@@ -59,7 +61,7 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Clone) UnmarshalJSON([]byte) error {
-	// TODO: Implement. Verify #operator is Clone, otherwise error
+	// NOP: Clone has no data structure
 	return nil
 }
 
@@ -94,8 +96,40 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Set) UnmarshalJSON([]byte) error {
-	// TODO: Implement.
+func (this *Set) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_        string `json:"#operator"`
+		SetTerms []struct {
+			Path string `json:"path"`
+			Expr string `json:"expr"`
+		} `json:"set_terms"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	terms := make([]*algebra.SetTerm, len(_unmarshalled.SetTerms))
+	for i, SetTerm := range _unmarshalled.SetTerms {
+		path_expr, err := parser.Parse(SetTerm.Path)
+		if err != nil {
+			return err
+		}
+
+		path, is_path := path_expr.(expression.Path)
+		if !is_path {
+			return fmt.Errorf("Set.UnmarshalJSON: cannot resolve path expression from %s", SetTerm.Path)
+		}
+
+		expr, err := parser.Parse(SetTerm.Expr)
+		if err != nil {
+			return err
+		}
+
+		terms[i] = algebra.NewSetTerm(path, expr, nil)
+	}
+	this.node = algebra.NewSet(terms)
 	return nil
 }
 
@@ -133,8 +167,41 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Unset) UnmarshalJSON([]byte) error {
-	// TODO: Implement.
+func (this *Unset) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_          string `json:"#operator"`
+		UnsetTerms []struct {
+			Path string `json:"path"`
+			Expr string `json:"expr"`
+		} `json:"unset_terms"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	terms := make([]*algebra.UnsetTerm, len(_unmarshalled.UnsetTerms))
+	for i, UnsetTerm := range _unmarshalled.UnsetTerms {
+		path_expr, err := parser.Parse(UnsetTerm.Path)
+		if err != nil {
+			return err
+		}
+
+		path, is_path := path_expr.(expression.Path)
+		if !is_path {
+			return fmt.Errorf("Unset.UnmarshalJSON: cannot resolve path expression from %s", UnsetTerm.Path)
+		}
+
+		// is expr needed in Unset?
+		_, err = parser.Parse(UnsetTerm.Expr)
+		if err != nil {
+			return err
+		}
+
+		terms[i] = algebra.NewUnsetTerm(path, nil)
+	}
+	this.node = algebra.NewUnset(terms)
 	return nil
 }
 
@@ -164,11 +231,26 @@ func (this *SendUpdate) Alias() string {
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "SendUpdate"}
 	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.keyspace.NamespaceId()
 	r["alias"] = this.alias
 	return json.Marshal(r)
 }
 
-func (this *SendUpdate) UnmarshalJSON([]byte) error {
-	// TODO: Implement.
+func (this *SendUpdate) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Keys  string `json:"keyspace"`
+		Names string `json:"namespace"`
+		Alias string `json:"alias"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.alias = _unmarshalled.Alias
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+
 	return nil
 }

@@ -42,27 +42,25 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Parallel) UnmarshalJSON(body []byte) error {
-	var raw_body struct {
-		Operator string          `json:"#operator"`
-		Child    json.RawMessage `json:"~child"`
+	var _unmarshalled struct {
+		_     string          `json:"#operator"`
+		Child json.RawMessage `json:"~child"`
 	}
-	err := json.Unmarshal(body, &raw_body)
-
-	if err != nil {
-		return err
-	}
-
 	var child_type struct {
-		Op_name string `json:"#operator"`
+		Operator string `json:"#operator"`
 	}
 
-	err = json.Unmarshal(raw_body.Child, &child_type)
-
+	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	this.child, err = MakeOperator(child_type.Op_name, raw_body.Child)
+	err = json.Unmarshal(_unmarshalled.Child, &child_type)
+	if err != nil {
+		return err
+	}
+
+	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
 
 	return err
 }
