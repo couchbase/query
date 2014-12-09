@@ -100,7 +100,7 @@ function run() {
 
 	var url = '/query';
 	var ie = ace.edit('iedit');
-	var query = 'q=' + encodeURIComponent(ie.getValue());
+	var query = 'statement=' + encodeURIComponent(ie.getValue());
 	$.post(url, query, ran).fail(failed);
 }
 
@@ -118,7 +118,7 @@ function ran(data) {
 	{
 		var json = $.parseJSON(data);
 		for (var key in json) {
-			if (json.hasOwnProperty(key) && key != 'resultset' && key != 'error') {
+			if (json.hasOwnProperty(key) && key != 'results' && key != 'error') {
 				delete json[key];
 			}
 		}

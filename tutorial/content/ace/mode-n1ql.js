@@ -64,7 +64,7 @@ var SqlHighlightRules = function() {
         "select|insert|update|delete|from|where|and|or|not|group|by|order|limit|offset|having|as|case|" +
         "when|else|end|type|left|right|join|key|on|outer|desc|asc|distinct|" +
         "any|all|is|in|satisfies|like|keys|array|for|nest|unnest|" +
-        "create|index|on|using|view"
+        "create|index|on|using|view|set|unset|returning|upsert|merge|use|into|matched|then"
     );
 
     var builtinConstants = (
