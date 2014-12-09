@@ -31,7 +31,7 @@ func MakeOperator(name string, body []byte) (Operator, error) {
 
 // GetOperator exposes the operators map to other packages
 func GetOperator(name string) (Operator, bool) {
-	rv, ok := _OPERATORS[strings.ToLower(name)]
+	rv, ok := _OPERATORS[name]
 	return rv, ok
 }
 
