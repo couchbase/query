@@ -256,7 +256,7 @@ func (p *namespace) refresh(changed bool) {
 	defer p.lock.Unlock()
 	for name, keySpace := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
-		_, err := newpool.GetBucketWithAuth(name, keySpace.(*keyspace).saslPassword)
+		_, err := newpool.GetBucketWithAuth(name, name, keySpace.(*keyspace).saslPassword)
 		if err != nil {
 			changed = true
 			keySpace.(*keyspace).deleted = true
@@ -348,7 +348,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		}
 	}
 
-	cbbucket, err = cbNamespace.GetBucketWithAuth(name, saslPassword)
+	cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
 
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
@@ -360,7 +360,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 		// and then check one more time
 		logging.Infof(" Retrying bucket %s", name)
-		cbbucket, err = cbNamespace.GetBucketWithAuth(name, saslPassword)
+		cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
 		if err != nil {
 			// really no such bucket exists
 			return nil, errors.NewError(err, fmt.Sprintf("Bucket %v not found.", name))
