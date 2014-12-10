@@ -9,20 +9,14 @@
 
 package execution
 
-import (
-	"encoding/json"
-
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/value"
-)
+import "github.com/couchbaselabs/query/value"
 
 type Prepare struct {
 	base
-	plan plan.Operator
+	plan value.Value
 }
 
-func NewPrepare(plan plan.Operator) *Prepare {
+func NewPrepare(plan value.Value) *Prepare {
 	rv := &Prepare{
 		base: newBase(),
 		plan: plan,
@@ -45,14 +39,7 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-
-		bytes, err := json.Marshal(this.plan)
-		if err != nil {
-			context.Fatal(errors.NewError(err, "Failed to marshal JSON."))
-			return
-		}
-
-		value := value.NewAnnotatedValue(bytes)
+		value := value.NewAnnotatedValue(this.plan)
 		this.sendItem(value)
 
 	})

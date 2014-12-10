@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 // Grouping of input data. Parallelizable.
@@ -61,8 +62,36 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *InitialGroup) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *InitialGroup) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string   "#operator"
+		Keys []string "group_keys"
+		Aggs []string "aggregates"
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keys = make(expression.Expressions, len(_unmarshalled.Keys))
+	for i, key := range _unmarshalled.Keys {
+		key_expr, err := parser.Parse(key)
+		if err != nil {
+			return err
+		}
+		this.keys[i] = key_expr
+	}
+
+	this.aggregates = make(algebra.Aggregates, len(_unmarshalled.Aggs))
+	for i, agg := range _unmarshalled.Aggs {
+		agg_expr, err := parser.Parse(agg)
+		if err != nil {
+			return err
+		}
+		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
+	}
+
 	return nil
 }
 
@@ -111,8 +140,36 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IntermediateGroup) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string   "#operator"
+		Keys []string "group_keys"
+		Aggs []string "aggregates"
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keys = make(expression.Expressions, len(_unmarshalled.Keys))
+	for i, key := range _unmarshalled.Keys {
+		key_expr, err := parser.Parse(key)
+		if err != nil {
+			return err
+		}
+		this.keys[i] = key_expr
+	}
+
+	this.aggregates = make(algebra.Aggregates, len(_unmarshalled.Aggs))
+	for i, agg := range _unmarshalled.Aggs {
+		agg_expr, err := parser.Parse(agg)
+		if err != nil {
+			return err
+		}
+		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
+	}
+
 	return nil
 }
 
@@ -161,7 +218,35 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *FinalGroup) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *FinalGroup) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string   "#operator"
+		Keys []string "group_keys"
+		Aggs []string "aggregates"
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keys = make(expression.Expressions, len(_unmarshalled.Keys))
+	for i, key := range _unmarshalled.Keys {
+		key_expr, err := parser.Parse(key)
+		if err != nil {
+			return err
+		}
+		this.keys[i] = key_expr
+	}
+
+	this.aggregates = make(algebra.Aggregates, len(_unmarshalled.Aggs))
+	for i, agg := range _unmarshalled.Aggs {
+		agg_expr, err := parser.Parse(agg)
+		if err != nil {
+			return err
+		}
+		this.aggregates[i], _ = agg_expr.(algebra.Aggregate)
+	}
+
 	return nil
 }

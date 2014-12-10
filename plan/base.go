@@ -25,7 +25,7 @@ func (this *readonly) MarshalJSON() ([]byte, error) {
 }
 
 func (this *readonly) UnmarshalJSON([]byte) error {
-	// TODO: implement
+	// NOP: readonly has no data structure
 	return nil
 }
 
@@ -41,6 +41,6 @@ func (this *readwrite) MarshalJSON() ([]byte, error) {
 }
 
 func (this *readwrite) UnmarshalJSON([]byte) error {
-	// TODO: implement
+	// NOP: readonly has no data structure
 	return nil
 }

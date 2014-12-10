@@ -15,6 +15,7 @@ import (
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type Join struct {
@@ -68,9 +69,31 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Join) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Join) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Names string `json:"namespace"`
+		Keys  string `json:"keyspace"`
+		On    string `json:"on_keys"`
+		Outer bool   `json:"outer"`
+		As    string `json:"as"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	keys_expr, err := parser.Parse(_unmarshalled.On)
+	if err != nil {
+		return err
+	}
+
+	this.outer = _unmarshalled.Outer
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
+		nil, _unmarshalled.As, keys_expr)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }
 
 type Nest struct {
@@ -124,9 +147,32 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Nest) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Nest) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Names string `json:"namespace"`
+		Keys  string `json:"keyspace"`
+		On    string `json:"on_keys"`
+		Outer bool   `json:"outer"`
+		As    string `json:"as"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	keys_expr, err := parser.Parse(_unmarshalled.On)
+	if err != nil {
+		return err
+	}
+
+	this.outer = _unmarshalled.Outer
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
+		nil, _unmarshalled.As, keys_expr)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
+
 }
 
 type Unnest struct {
@@ -172,7 +218,25 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Unnest) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Unnest) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Outer bool   `json:"outer"`
+		Expr  string `json:"expr"`
+		As    string `json:"as"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	expr, err := parser.Parse(_unmarshalled.Expr)
+	if err != nil {
+		return err
+	}
+
+	this.term = algebra.NewUnnest(nil, _unmarshalled.Outer, expr, _unmarshalled.As)
+	this.alias = _unmarshalled.As
+	return err
 }

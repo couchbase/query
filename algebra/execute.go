@@ -16,11 +16,11 @@ import (
 
 type Execute struct {
 	// prepared is a json object that represents a plan.Prepared
-	prepared expression.Expression `json:"prepared"`
+	prepared value.Value `json:"prepared"`
 }
 
 func NewExecute(prepared expression.Expression) *Execute {
-	return &Execute{prepared}
+	return &Execute{prepared.Value()}
 }
 
 func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
@@ -28,7 +28,9 @@ func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Execute) Signature() value.Value {
-	return value.NewValue(value.JSON.String())
+	signature, _ :=
+		this.prepared.Field("signature")
+	return signature
 }
 
 func (this *Execute) Formalize() error {
@@ -39,6 +41,6 @@ func (this *Execute) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 
-func (this *Execute) Prepared() expression.Expression {
+func (this *Execute) Prepared() value.Value {
 	return this.prepared
 }

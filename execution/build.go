@@ -320,7 +320,7 @@ func (this *builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error)
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
-	return NewPrepare(plan.Operator()), nil
+	return NewPrepare(plan.Prepared()), nil
 }
 
 // Explain

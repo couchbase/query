@@ -9,14 +9,18 @@
 
 package plan
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/couchbaselabs/query/value"
+)
 
 type Prepare struct {
 	readonly
-	prepared Operator
+	prepared value.Value
 }
 
-func NewPrepare(prepared Operator) *Prepare {
+func NewPrepare(prepared value.Value) *Prepare {
 	return &Prepare{
 		prepared: prepared,
 	}
@@ -30,7 +34,7 @@ func (this *Prepare) New() Operator {
 	return &Prepare{}
 }
 
-func (this *Prepare) Operator() Operator {
+func (this *Prepare) Prepared() value.Value {
 	return this.prepared
 }
 

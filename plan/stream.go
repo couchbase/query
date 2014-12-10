@@ -9,6 +9,8 @@
 
 package plan
 
+import "encoding/json"
+
 type Stream struct {
 	readonly
 }
@@ -23,4 +25,14 @@ func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Stream) New() Operator {
 	return &Stream{}
+}
+
+func (this *Stream) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "Stream"}
+	return json.Marshal(r)
+}
+
+func (this *Stream) UnmarshalJSON([]byte) error {
+	// NOP. Stream has no data structure
+	return nil
 }

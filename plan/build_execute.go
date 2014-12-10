@@ -9,39 +9,33 @@
 
 package plan
 
-import (
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/errors"
-)
+import "github.com/couchbaselabs/query/algebra"
 
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 
 	// stmt contains a JSON representation of a plan.Prepared
-	prepared_object := stmt.Prepared().Value()
+	prepared_object := stmt.Prepared()
 
-	sig, ok := prepared_object.Field("signature")
-
-	if !ok {
-		return nil, errors.NewError(nil, "prepared is missing signature")
-	}
-
-	operator, ok := prepared_object.Field("operator")
-
-	if !ok {
-		return nil, errors.NewError(nil, "prepared is missing operator")
-	}
-
-	op_bytes, err := operator.MarshalJSON()
-
+	// check if there is a plan.Prepared already in the cache
+	prepared, err := PreparedCache().GetPrepared(prepared_object)
 	if err != nil {
 		return nil, err
 	}
+	if prepared != nil {
+		return prepared, nil
+	} else {
+		prepared = &Prepared{}
+	}
 
-	var prepared Prepared
-
+	// no cached plan.Prepared => create it
+	op_bytes, err := prepared_object.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
 	err = prepared.UnmarshalJSON(op_bytes)
+	if err == nil {
+		PreparedCache().AddPrepared(prepared)
+	}
 
-	prepared.signature = sig
-
-	return &prepared, err
+	return prepared, err
 }

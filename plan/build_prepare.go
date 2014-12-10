@@ -11,6 +11,7 @@ package plan
 
 import (
 	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbaselabs/query/value"
 )
 
 func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
@@ -19,5 +20,14 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		return nil, err
 	}
 
-	return NewPrepare(plan), nil
+	PreparedCache().AddPrepared(plan)
+
+	json_bytes, err := plan.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	value := value.NewValue(json_bytes)
+
+	return NewPrepare(value), nil
 }

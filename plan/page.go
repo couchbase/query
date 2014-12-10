@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type Offset struct {
@@ -44,9 +45,19 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Offset) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Offset) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string `json:"#operator"`
+		Expr string `json:"expr"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.expr, err = parser.Parse(_unmarshalled.Expr)
+	return err
 }
 
 type Limit struct {
@@ -78,7 +89,17 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Limit) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *Limit) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string `json:"#operator"`
+		Expr string `json:"expr"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.expr, err = parser.Parse(_unmarshalled.Expr)
+	return err
 }

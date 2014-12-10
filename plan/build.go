@@ -26,8 +26,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		return nil, err
 	}
 
+	_, is_prepared := o.(*Prepared)
 	op := o.(Operator)
-	if !subquery {
+	if !subquery && !is_prepared {
 		return NewSequence(op, NewStream()), nil
 	} else {
 		return op, nil

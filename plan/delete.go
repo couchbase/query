@@ -36,6 +36,7 @@ func (this *SendDelete) Keyspace() datastore.Keyspace {
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Delete"}
+	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
 }
@@ -44,7 +45,19 @@ func (this *SendDelete) New() Operator {
 	return &SendDelete{}
 }
 
-func (this *SendDelete) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *SendDelete) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Names string `json:"namespace"`
+		Keys  string `json:"keyspace"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+
+	return err
 }
