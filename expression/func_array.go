@@ -1125,10 +1125,23 @@ func (this *ArrayPut) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_RANGE(start, end [, step ]).
+It returns a new array of numbers, from start until the largest number
+less than end. Successive numbers are incremented by step. If step is
+omitted, it defaults to 1. If step is negative, decrements until the
+smallest number greater than end. Type ArrayRange is a struct that
+implements FunctionBase.
+*/
 type ArrayRange struct {
 	FunctionBase
 }
 
+/*
+The method NewArrayRange calls NewFunctionBase to
+create a function named ARRAY_RANGE with input
+arguments as the operands from the input expression.
+*/
 func NewArrayRange(operands ...Expression) Function {
 	rv := &ArrayRange{
 		*NewFunctionBase("array_range", operands...),
@@ -1159,6 +1172,13 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns the input arg array from start
+until the largest number less than end. Successive
+numbers are incremented by step value. If either
+of the input arguments are missing or not numbers
+then return a missing or null value.
+*/
 func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value, error) {
 	startv := args[0]
 	endv := args[1]
@@ -1198,10 +1218,19 @@ func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value
 	return value.NewValue(rv), nil
 }
 
+/*
+Minimum input arguments required is 2.
+*/
 func (this *ArrayRange) MinArgs() int { return 2 }
 
+/*
+Maximum input arguments allowed is 3.
+*/
 func (this *ArrayRange) MaxArgs() int { return 3 }
 
+/*
+Return NewArrayRange as FunctionConstructor.
+*/
 func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange }
 
 ///////////////////////////////////////////////////
@@ -1211,12 +1240,19 @@ func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange
 ///////////////////////////////////////////////////
 
 /*
-ARRAY_REMOVE(expr, value) - new array with all occurences of value removed.
+This represents the array function ARRAY_REMOVE(expr, value).
+It returns a new array with all occurences of value removed.
+Type ArrayRemove is a struct that implements BinaryFunctionBase.
 */
 type ArrayRemove struct {
 	BinaryFunctionBase
 }
 
+/*
+The function NewArrayRemove calls NewBinaryFunctionBase to
+create a function named ARRAY_REMOVE with the two
+expressions as input.
+*/
 func NewArrayRemove(first, second Expression) Function {
 	rv := &ArrayRemove{
 		*NewBinaryFunctionBase("array_remove", first, second),
@@ -1247,6 +1283,14 @@ func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Valu
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+This method removes all the occurences of the second value from the
+first array value. If the first value is MISSING or not an array,
+then return missing or a null value. If the second value is missing
+then return the first array value itself. Range through the array
+and and check for the value, append all unequal values. Return the
+final array.
+*/
 func (this *ArrayRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1267,6 +1311,10 @@ func (this *ArrayRemove) Apply(context Context, first, second value.Value) (valu
 	return value.NewValue(ra), nil
 }
 
+/*
+The constructor returns a NewArrayRemove with the two operands
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayRemove) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewArrayRemove(operands[0], operands[1])
@@ -1367,10 +1415,21 @@ func (this *ArrayRepeat) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
+/*
+This represents the array function ARRAY_REPLACE(expr, value1, value2 [, n ]).
+It returns a new array with all occurences of value1 replaced with value2.
+If n is given, at most n replacements are performed. Type ArrayReplace is a
+struct that implements FunctionBase.
+*/
 type ArrayReplace struct {
 	FunctionBase
 }
 
+/*
+The method NewArrayReplace calls NewFunctionBase to
+create a function named ARRAY_REPLACE with input
+arguments as the operands from the input expression.
+*/
 func NewArrayReplace(operands ...Expression) Function {
 	rv := &ArrayReplace{
 		*NewFunctionBase("array_replace", operands...),
@@ -1401,6 +1460,12 @@ func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Val
 	return this.Eval(this, item, context)
 }
 
+/*
+This method returns an array that contains the values
+as arg 1, replaced by the 2nd argument value. If a third
+input argument is given (n) then at most n replacements
+are performed. Return this value.
+*/
 func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	av := args[0]
 	v1 := args[1]
@@ -1430,10 +1495,19 @@ func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Val
 	return value.NewValue(ra), nil
 }
 
+/*
+Minimum input arguments required is 3.
+*/
 func (this *ArrayReplace) MinArgs() int { return 3 }
 
+/*
+Maximum input arguments allowed is 4.
+*/
 func (this *ArrayReplace) MaxArgs() int { return 4 }
 
+/*
+Return NewArrayReplace as FunctionConstructor.
+*/
 func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayReplace }
 
 ///////////////////////////////////////////////////
