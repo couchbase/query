@@ -23,12 +23,22 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/logging"
+	log_resolver "github.com/couchbaselabs/query/logging/resolver"
 	"github.com/couchbaselabs/query/value"
 )
 
 const TEST_URL = "http://localhost:9000/"
 
 func TestServer(t *testing.T) {
+
+	logger, _ := log_resolver.NewLogger("golog")
+	if logger == nil {
+		t.Fatalf("Invalid logger")
+	}
+
+	logging.SetLogger(logger)
+
 	site, err := NewDatastore(TEST_URL)
 	if err != nil {
 		t.Skipf("SKIPPING TEST: %v", err)

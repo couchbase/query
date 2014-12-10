@@ -12,6 +12,7 @@ package couchbase
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
@@ -21,6 +22,192 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+type viewIndexer struct {
+	keyspace         *keyspace
+	indexes          map[string]datastore.Index
+	primary          datastore.PrimaryIndex
+	nonUsableIndexes []string // indexes that cannot be used
+}
+
+func newViewIndexer(keyspace *keyspace) datastore.Indexer {
+	rv := &viewIndexer{
+		keyspace:         keyspace,
+		indexes:          make(map[string]datastore.Index),
+		nonUsableIndexes: make([]string, 0, 10),
+	}
+
+	go keepIndexesFresh(rv)
+
+	return rv
+}
+
+func (view *viewIndexer) KeyspaceId() string {
+	return view.keyspace.Name()
+}
+
+func (view *viewIndexer) Name() datastore.IndexType {
+	return datastore.VIEW
+}
+
+func (view *viewIndexer) IndexById(id string) (datastore.Index, errors.Error) {
+	return view.IndexByName(id)
+}
+
+func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
+	index, ok := view.indexes[name]
+	if !ok {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+	}
+	return index, nil
+}
+
+func (view *viewIndexer) IndexNames() ([]string, errors.Error) {
+	rv := make([]string, 0, len(view.indexes))
+	for name, _ := range view.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (view *viewIndexer) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
+
+	if view.primary == nil {
+
+		logging.Infof("Number of indexes %d", len(view.indexes))
+
+		if len(view.indexes) == 0 {
+			if err := view.loadViewIndexes(); err != nil {
+				return nil, errors.NewError(err, "No indexes found. Please create a primary index")
+
+			}
+
+		}
+		idx, ok := view.indexes[PRIMARY_INDEX]
+		if ok {
+			primary := idx.(datastore.PrimaryIndex)
+			return primary, nil
+		}
+		all, ok := view.indexes[ALLDOCS_INDEX]
+		if ok {
+			primary := all.(datastore.PrimaryIndex)
+			return primary, nil
+		}
+	}
+	return view.primary, nil
+}
+
+func (view *viewIndexer) IndexIds() ([]string, errors.Error) {
+	rv := make([]string, 0, len(view.indexes))
+	for name, _ := range view.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(view.indexes))
+	for _, index := range view.indexes {
+		rv = append(rv, index)
+	}
+	return rv, nil
+}
+
+func (view *viewIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+	if _, exists := view.indexes[PRIMARY_INDEX]; exists {
+		return nil, errors.NewError(nil, "Primary index already exists")
+	}
+	idx, err := newViewPrimaryIndex(view)
+	if err != nil {
+		return nil, errors.NewError(err, "Error creating primary index")
+	}
+	view.indexes[idx.Name()] = idx
+	return idx, nil
+
+}
+
+func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression) (datastore.Index, errors.Error) {
+
+	if _, exists := view.indexes[name]; exists {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+	}
+
+	// if the name matches any of the unusable indexes, return an error
+	for _, iname := range view.nonUsableIndexes {
+		if name == iname {
+			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+		}
+	}
+
+	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
+	if err != nil {
+		return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+	}
+	view.indexes[idx.Name()] = idx
+	return idx, nil
+}
+
+func (view *viewIndexer) loadViewIndexes() errors.Error {
+	// #alldocs implicitly exists
+
+	// and recreate remaining from ddocs
+	indexes, err := loadViewIndexes(view)
+	if err != nil {
+		return errors.NewError(err, "Error loading indexes")
+	}
+
+	if len(indexes) == 0 {
+		logging.Errorf("No view indexes found for bucket %s", view.keyspace.Name())
+		return errors.NewError(nil, "No primary view index found for bucket "+view.keyspace.Name()+". Create a primary index ")
+	}
+
+	for _, index := range indexes {
+		logging.Infof("Found index on keyspace %s", (*index).Name())
+		name := (*index).Name()
+		view.indexes[name] = *index
+	}
+
+	return nil
+}
+
+func (view *viewIndexer) refresh() {
+	// trigger refresh of this indexer
+	logging.Infof("Refreshing Indexes in keyspace %s", view.keyspace.Name())
+
+	indexes, err := loadViewIndexes(view)
+	if err != nil {
+		logging.Errorf(" Error loading indexes for bucket %s", view.keyspace.Name())
+		return
+	}
+
+	if len(indexes) == 0 {
+		return
+	}
+
+	indexMap := make(map[string]datastore.Index)
+	for _, index := range indexes {
+		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), view.keyspace.Name())
+		name := (*index).Name()
+		indexMap[name] = *index
+	}
+
+	//TODO need mutex here
+	view.indexes = indexMap
+
+}
+
+func keepIndexesFresh(view *viewIndexer) {
+
+	tickChan := time.Tick(1 * time.Minute)
+
+	for _ = range tickChan {
+		if view.keyspace.deleted == true {
+			return
+		}
+		view.refresh()
+	}
+}
+
 type viewIndex struct {
 	name     string
 	using    datastore.IndexType
@@ -28,6 +215,7 @@ type viewIndex struct {
 	where    expression.Expression
 	ddoc     *designdoc
 	keyspace *keyspace
+	view     *viewIndexer
 }
 
 type designdoc struct {
@@ -82,33 +270,6 @@ func (vi *viewIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (b *keyspace) loadViewIndexes() errors.Error {
-	// #alldocs implicitly exists
-	/*
-	   pi := newAllDocsIndex(b)
-	   b.indexes[pi.name] = pi
-	*/
-
-	// and recreate remaining from ddocs
-	indexes, err := loadViewIndexes(b)
-	if err != nil {
-		return errors.NewError(err, "Error loading indexes")
-	}
-
-	if len(indexes) == 0 {
-		logging.Errorf("No indexes found for bucket %s", b.Name())
-		return errors.NewError(nil, "No primary index found for bucket "+b.Name()+". Create a primary index ")
-	}
-
-	for _, index := range indexes {
-		logging.Infof("Found index on keyspace %s", (*index).Name())
-		name := (*index).Name()
-		b.indexes[name] = *index
-	}
-
-	return nil
-}
-
 func (vi *viewIndex) State() (datastore.IndexState, errors.Error) {
 	return datastore.ONLINE, nil
 }
@@ -122,18 +283,12 @@ func (vi *viewIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
 }
 
 func (vi *viewIndex) Drop() errors.Error {
-	bucket := vi.keyspace
-	// allow dropping of primary indexes. We may need to revisit MB-12505
-	/*
-		if vi.IsPrimary() {
-			return errors.NewError(nil, "Primary index cannot be dropped.")
-		}
-	*/
 	err := vi.DropViewIndex()
 	if err != nil {
 		return errors.NewError(err, fmt.Sprintf("Cannot drop index %s", vi.Name()))
 	}
-	delete(bucket.indexes, vi.name)
+	// TODO need mutex
+	delete(vi.view.indexes, vi.name)
 	return nil
 }
 
@@ -225,41 +380,3 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 	logging.Infof("Number of entries fetched from the index %d", numRows)
 
 }
-
-/*
-
-func (vi *viewIndex) ValueCount() (int64, errors.Error) {
-    indexItemChannel := make(catalog.EntryChannel)
-    indexWarnChannel := make(query.ErrorChannel)
-    indexErrorChannel := make(query.ErrorChannel)
-
-    go vi.ScanRange(catalog.LookupValue{dparval.NewValue(nil)}, catalog.LookupValue{dparval.NewValue(nil)}, catalog.Both, 0, indexItemChannel, indexWarnChannel, indexErrorChannel)
-
-    var err query.Error
-    nullCount := int64(0)
-    ok := true
-    for ok {
-        select {
-        case _, ok = <-indexItemChannel:
-            if ok {
-                nullCount += 1
-            }
-        case _, ok = <-indexWarnChannel:
-            // ignore warnings here
-        case err, ok = <-indexErrorChannel:
-            if err != nil {
-                return 0, err
-            }
-        }
-    }
-
-    totalCount, err := ViewTotalRows(vi.bucket.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
-    if err != nil {
-        return 0, err
-    }
-
-    return totalCount - nullCount, nil
-
-}
-
-*/

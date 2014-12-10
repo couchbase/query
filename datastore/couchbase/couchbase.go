@@ -281,48 +281,12 @@ func keepPoolFresh(p *namespace) {
 }
 
 type keyspace struct {
-	namespace        *namespace
-	name             string
-	indexes          map[string]datastore.Index
-	primary          datastore.PrimaryIndex
-	cbbucket         *cb.Bucket
-	deleted          bool
-	nonUsableIndexes []string // indexes that cannot be used
-	saslPassword     string   // SASL password
-}
-
-func (b *keyspace) refresh() {
-	// trigger refresh of this pool
-	logging.Infof("Refreshing Indexes in keyspace %s", b.name)
-
-	indexes, err := loadViewIndexes(b)
-	if err != nil {
-		logging.Errorf(" Error loading indexes for bucket %s", b.name)
-		return
-	}
-
-	if len(indexes) == 0 {
-		return
-	}
-
-	for _, index := range indexes {
-		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), b.name)
-		name := (*index).Name()
-		b.indexes[name] = *index
-	}
-
-}
-
-func keepIndexesFresh(b *keyspace) {
-
-	tickChan := time.Tick(1 * time.Minute)
-
-	for _ = range tickChan {
-		if b.deleted == true {
-			return
-		}
-		b.refresh()
-	}
+	namespace    *namespace
+	name         string
+	cbbucket     *cb.Bucket
+	deleted      bool
+	saslPassword string // SASL password
+	viewIndexer  datastore.Indexer
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -368,13 +332,13 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	}
 
 	rv := &keyspace{
-		namespace:        p,
-		name:             name,
-		cbbucket:         cbbucket,
-		indexes:          make(map[string]datastore.Index),
-		nonUsableIndexes: make([]string, 0),
-		saslPassword:     saslPassword,
+		namespace:    p,
+		name:         name,
+		cbbucket:     cbbucket,
+		saslPassword: saslPassword,
 	}
+
+	rv.viewIndexer = newViewIndexer(rv)
 
 	logging.Infof("Created New Bucket %s", name)
 
@@ -382,8 +346,6 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	if ierr := rv.loadIndexes(); ierr != nil {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
-
-	go keepIndexesFresh(rv)
 
 	return rv, nil
 }
@@ -436,27 +398,29 @@ func (b *keyspace) Count() (int64, errors.Error) {
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+
+	if name == datastore.VIEW {
+		return b.viewIndexer, nil
+	}
+
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	indexers := make([]datastore.Indexer, 0, 4)
+
+	// There will always be a VIEW indexer
+	indexers = append(indexers, b.viewIndexer)
+	return indexers, nil
 }
 
+// To be deprecated
 func (b *keyspace) IndexIds() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.viewIndexer.IndexIds()
 }
 
 func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.viewIndexer.IndexNames()
 }
 
 func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -464,71 +428,27 @@ func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := b.indexes[name]
-	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
-	}
-	return index, nil
+	return b.viewIndexer.IndexByName(name)
 }
+
+// End of to be deprecated block
 
 func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 
-	if b.primary == nil {
+	//TODO: Who gets priority. View Indexes or 2i ?
+	return b.viewIndexer.IndexByPrimary()
 
-		logging.Infof("Number of indexes %d", len(b.indexes))
-
-		if len(b.indexes) == 0 {
-			if err := b.loadIndexes(); err != nil {
-				return nil, errors.NewError(err, "No indexes found. Please create a primary index")
-
-			}
-
-		}
-		idx, ok := b.indexes[PRIMARY_INDEX]
-		if ok {
-			primary := idx.(datastore.PrimaryIndex)
-			return primary, nil
-		}
-		all, ok := b.indexes[ALLDOCS_INDEX]
-		if ok {
-			primary := all.(datastore.PrimaryIndex)
-			return primary, nil
-		}
-	}
-	return b.primary, nil
 }
 
 func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(b.indexes))
-	for _, index := range b.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return b.viewIndexer.Indexes()
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if _, exists := b.indexes[PRIMARY_INDEX]; exists {
-		return nil, errors.NewError(nil, "Primary index already exists")
-	}
 	switch using {
 	case datastore.VIEW:
-		idx, err := newViewPrimaryIndex(b)
-		if err != nil {
-			return nil, errors.NewError(err, "Error creating primary index")
-		}
-		b.indexes[idx.Name()] = idx
-		return idx, nil
+		return b.viewIndexer.CreatePrimaryIndex()
 
-		/*
-			case datastore.LSM:
-				idx, err := new2iPrimaryIndex(b, using)
-				if err != nil {
-					return nil, errors.NewError(err, "Error creating primary index")
-				}
-				logging.Debugf("Created Primary 2i index `%s`", idx.Name())
-				b.indexes[idx.Name()] = idx
-				return idx, nil
-		*/
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
@@ -537,41 +457,10 @@ func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.Prim
 func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
 
-	if using == "" {
-		// current default is VIEW
-		using = datastore.VIEW
-	}
-
-	if _, exists := b.indexes[name]; exists {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
-	}
-
-	// if the name matches any of the unusable indexes, return an error
-	for _, iname := range b.nonUsableIndexes {
-		if name == iname {
-			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
-		}
-	}
-
 	switch using {
 	case datastore.VIEW:
-		idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, b)
-		if err != nil {
-			return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
-		}
-		b.indexes[idx.Name()] = idx
-		return idx, nil
+		return b.viewIndexer.CreateIndex(name, equalKey, rangeKey, where)
 
-		/*
-			case datastore.LSM:
-				idx, err := new2iIndex(name, equalKey, rangeKey, where, using, b)
-				if err != nil {
-					return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
-				}
-				logging.Debugf("Created 2i index `%s`", idx.Name())
-				b.indexes[idx.Name()] = idx
-				return idx, nil
-		*/
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
@@ -731,14 +620,10 @@ func (b *keyspace) Release() {
 }
 
 func (b *keyspace) loadIndexes() (err errors.Error) {
-	if err1 := b.loadViewIndexes(); err1 != nil {
+	viewIndexer := b.viewIndexer.(*viewIndexer)
+	if err1 := viewIndexer.loadViewIndexes(); err1 != nil {
 		err = err1
 	}
-	/*
-		if err2 := b.load2iIndexes(); err2 != nil {
-			err = err2
-		}
-	*/
 	return
 }
 

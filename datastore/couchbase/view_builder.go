@@ -23,9 +23,9 @@ type ddocJSON struct {
 	IndexChecksum int      `json:"indexChecksum"`
 }
 
-func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, bkt *keyspace) (*viewIndex, error) {
+func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, view *viewIndexer) (*viewIndex, error) {
 
-	doc, err := newDesignDoc(name, bkt.name, on, where)
+	doc, err := newDesignDoc(name, view.keyspace.Name(), on, where)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,8 @@ func newViewIndex(name string, on datastore.IndexKey, where expression.Expressio
 		on:       on,
 		where:    where,
 		ddoc:     doc,
-		keyspace: bkt,
+		view:     view,
+		keyspace: view.keyspace,
 	}
 
 	err = inst.putDesignDoc()
@@ -82,8 +83,9 @@ func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, wher
 	return &doc, nil
 }
 
-func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
+func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
+	b := v.keyspace
 	rows, err := b.cbbucket.GetDDocs()
 	if err != nil {
 		return nil, err
@@ -101,7 +103,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 		} else if strings.HasPrefix(id, "_design/dev_") {
 			// append this to the list of non-usuable indexes
 			iname := strings.TrimPrefix(id, "_design/dev_")
-			for _, name := range b.nonUsableIndexes {
+			for _, name := range v.nonUsableIndexes {
 				if iname == name {
 					continue
 				}
@@ -110,7 +112,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 
 		} else if strings.HasPrefix(id, "_design/") {
 			iname := strings.TrimPrefix(id, "_design/")
-			for _, name := range b.nonUsableIndexes {
+			for _, name := range v.nonUsableIndexes {
 				if iname == name {
 					continue
 				}
@@ -168,6 +170,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 			index = &viewIndex{
 				name:     iname,
 				keyspace: b,
+				view:     v,
 				using:    datastore.VIEW,
 				ddoc:     &ddoc,
 				on:       exprlist,
@@ -177,6 +180,7 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 			index = &viewIndex{
 				name:     iname,
 				keyspace: b,
+				view:     v,
 				using:    datastore.VIEW,
 				ddoc:     &ddoc,
 				on:       exprlist,
@@ -184,14 +188,14 @@ func loadViewIndexes(b *keyspace) ([]*datastore.Index, error) {
 			indexes = append(indexes, &index)
 		}
 	}
-	b.nonUsableIndexes = nonUsableIndexes
+	v.nonUsableIndexes = nonUsableIndexes
 
 	return indexes, nil
 }
 
-func newViewPrimaryIndex(b *keyspace) (*primaryIndex, error) {
+func newViewPrimaryIndex(v *viewIndexer) (*primaryIndex, error) {
 	ddoc := newPrimaryDDoc()
-	doc := expression.NewIdentifier(b.Name())
+	doc := expression.NewIdentifier(v.keyspace.Name())
 	meta := expression.NewMeta(doc)
 	mdid := expression.NewField(meta, expression.NewFieldName("id"))
 
@@ -201,7 +205,7 @@ func newViewPrimaryIndex(b *keyspace) (*primaryIndex, error) {
 			using:    datastore.VIEW,
 			on:       datastore.IndexKey{mdid},
 			ddoc:     ddoc,
-			keyspace: b,
+			keyspace: v.keyspace,
 		},
 	}
 
