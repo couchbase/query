@@ -649,16 +649,15 @@ func (pi *primaryIndex) Type() datastore.IndexType {
 }
 
 func (pi *primaryIndex) SeekKey() expression.Expressions {
-	return nil
+	return pi.viewIndex.SeekKey()
 }
 
 func (pi *primaryIndex) RangeKey() expression.Expressions {
-	// FIXME
-	return nil
+	return pi.viewIndex.RangeKey()
 }
 
 func (pi *primaryIndex) Condition() expression.Expression {
-	return nil
+	return pi.viewIndex.Condition()
 }
 
 func (pi *primaryIndex) State() (datastore.IndexState, errors.Error) {

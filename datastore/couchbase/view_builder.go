@@ -2,7 +2,6 @@ package couchbase
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -15,6 +14,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/expression/parser"
+	"github.com/couchbaselabs/query/logging"
 )
 
 type ddocJSON struct {
@@ -39,6 +39,8 @@ func newViewIndex(name string, on datastore.IndexKey, where expression.Expressio
 		view:     view,
 		keyspace: view.keyspace,
 	}
+
+	logging.Infof("Created index %s on %s with key %v on where %v", name, view.keyspace.Name(), on, where)
 
 	err = inst.putDesignDoc()
 	if err != nil {
@@ -335,11 +337,7 @@ func (idx *viewIndex) putDesignDoc() error {
 
 	put.IndexOn = make([]string, len(idx.on))
 	for idx, expr := range idx.on {
-		ser, err := json.Marshal(expr)
-		if err != nil {
-			return err
-		}
-		put.IndexOn[idx] = string(ser)
+		put.IndexOn[idx] = expression.NewStringer().Visit(expr)
 	}
 
 	if err := idx.keyspace.cbbucket.PutDDoc(idx.DDocName(), &put); err != nil {

@@ -139,6 +139,8 @@ func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.
 		}
 	}
 
+	logging.Infof("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
+
 	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
 	if err != nil {
 		return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
@@ -262,12 +264,11 @@ func (vi *viewIndex) SeekKey() expression.Expressions {
 }
 
 func (vi *viewIndex) RangeKey() expression.Expressions {
-	// FIXME
-	return nil
+	return expression.Expressions(vi.on)
 }
 
 func (vi *viewIndex) Condition() expression.Expression {
-	return nil
+	return expression.Expression(vi.where)
 }
 
 func (vi *viewIndex) State() (datastore.IndexState, errors.Error) {

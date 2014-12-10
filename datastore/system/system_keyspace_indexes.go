@@ -162,7 +162,7 @@ func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 					"keyspace_id":  keyspace.Id(),
 					"namespace_id": namespace.Id(),
 					"store_id":     b.namespace.store.actualStore.Id(),
-					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.SeekKey())),
+					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
 					"index_type":   datastoreObjectToJSONSafe(index.Type()),
 				})
 				return doc, nil
@@ -175,9 +175,7 @@ func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 func indexKeyToIndexKeyStringArray(key expression.Expressions) []string {
 	rv := make([]string, len(key))
 	for i, kp := range key {
-		// TODO: Determine if Expression needs to implement fmt.Stringer per ast.Expression in dp3
-		// rv[i] = kp.String()
-		rv[i] = fmt.Sprintf("%v", kp)
+		rv[i] = expression.NewStringer().Visit(kp)
 	}
 	return rv
 }
@@ -243,15 +241,15 @@ func (pi *indexIndex) Type() datastore.IndexType {
 }
 
 func (pi *indexIndex) SeekKey() expression.Expressions {
-	return nil
+	return pi.SeekKey()
 }
 
 func (pi *indexIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.RangeKey()
 }
 
 func (pi *indexIndex) Condition() expression.Expression {
-	return nil
+	return pi.Condition()
 }
 
 func (pi *indexIndex) State() (datastore.IndexState, errors.Error) {
