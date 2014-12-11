@@ -24,18 +24,12 @@ type ExpressionBase struct {
 	conditional bool
 }
 
-var _NIL_VALUE = value.NewValue(make([]interface{}, 0))
-
 /*
 Value() returns the static / constant value of this Expression, or
 nil. Expressions that depend on data, clocks, or random numbers must
 return nil.
 */
 func (this *ExpressionBase) Value() value.Value {
-	if this.value == _NIL_VALUE {
-		return nil
-	}
-
 	if this.value != nil {
 		return this.value
 	}
@@ -45,6 +39,9 @@ func (this *ExpressionBase) Value() value.Value {
 
 	for _, child := range this.expr.Children() {
 		cv := child.Value()
+		if cv == nil {
+			continue
+		}
 
 		if propMissing && cv.Type() == value.MISSING {
 			this.value = cv
@@ -54,14 +51,6 @@ func (this *ExpressionBase) Value() value.Value {
 		if propNull && cv.Type() == value.NULL {
 			this.value = cv
 		}
-
-		if cv == nil && this.value == nil {
-			this.value = _NIL_VALUE
-		}
-	}
-
-	if this.value == _NIL_VALUE {
-		return nil
 	}
 
 	if this.value != nil {
@@ -71,14 +60,13 @@ func (this *ExpressionBase) Value() value.Value {
 	defer func() {
 		err := recover()
 		if err != nil {
-			this.value = _NIL_VALUE
+			this.value = nil
 		}
 	}()
 
 	var err error
 	this.value, err = this.expr.Evaluate(nil, nil)
 	if err != nil {
-		this.value = _NIL_VALUE
 		return nil
 	}
 
