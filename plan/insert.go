@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type SendInsert struct {
@@ -48,11 +49,29 @@ func (this *SendInsert) Key() expression.Expression {
 func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Insert"}
 	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.keyspace.NamespaceId()
 	r["key"] = expression.NewStringer().Visit(this.key)
 	return json.Marshal(r)
 }
 
-func (this *SendInsert) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *SendInsert) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_       string `json:"#operator"`
+		KeyExpr string `json:"key"`
+		Keys    string `json:"keyspace"`
+		Names   string `json:"namespace"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.key, err = parser.Parse(_unmarshalled.KeyExpr)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }

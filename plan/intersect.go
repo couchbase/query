@@ -49,7 +49,36 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IntersectAll) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *IntersectAll) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_      string          `json:"#operator"`
+		First  json.RawMessage `json:"first"`
+		Second json.RawMessage `json:"second"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	for i, child := range []json.RawMessage{_unmarshalled.First, _unmarshalled.Second} {
+		var op_type struct {
+			Operator string `json:"#operator"`
+		}
+
+		err = json.Unmarshal(child, &op_type)
+		if err != nil {
+			return err
+		}
+
+		if i == 0 {
+			this.first, err = MakeOperator(op_type.Operator, child)
+		} else {
+			this.second, err = MakeOperator(op_type.Operator, child)
+		}
+		return err
+	}
+
 	return nil
+
 }

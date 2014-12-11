@@ -32,11 +32,6 @@ func (this *Alias) New() Operator {
 	return &Alias{}
 }
 
-func (this *Alias) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
-}
-
 func (this *Alias) Alias() string {
 	return this.alias
 }
@@ -44,4 +39,14 @@ func (this *Alias) Alias() string {
 func (this *Alias) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"as": this.alias}
 	return json.Marshal(r)
+}
+
+func (this *Alias) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_  string `json:"#operator"`
+		As string `json:"alias"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	this.alias = _unmarshalled.As
+	return err
 }

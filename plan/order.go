@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/expression/parser"
 )
 
 type Order struct {
@@ -58,7 +59,27 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Order) UnmarshalJSON([]byte) error {
-	// TODO: Implement
+func (this *Order) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Terms []struct {
+			Expr string `json:"expr"`
+			Desc bool   `json:"desc"`
+		} `json:"sort_terms"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.terms = make(algebra.SortTerms, len(_unmarshalled.Terms))
+	for i, term := range _unmarshalled.Terms {
+		expr, err := parser.Parse(term.Expr)
+		if err != nil {
+			return err
+		}
+		this.terms[i] = algebra.NewSortTerm(expr, term.Desc)
+	}
 	return nil
 }

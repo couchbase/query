@@ -42,7 +42,45 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *UnionAll) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *UnionAll) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_        string            `json:"#operator"`
+		Children []json.RawMessage `json:"children"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.children = []Operator{}
+
+	for _, raw_child := range _unmarshalled.Children {
+		var child_type struct {
+			Op_name string `json:"#operator"`
+		}
+		var read_only struct {
+			Readonly bool `json:"readonly"`
+		}
+		err = json.Unmarshal(raw_child, &child_type)
+		if err != nil {
+			return err
+		}
+
+		if child_type.Op_name == "" {
+			err = json.Unmarshal(raw_child, &read_only)
+			if err != nil {
+				return err
+			} else {
+				// This should be a readonly object
+			}
+		} else {
+			child_op, err := MakeOperator(child_type.Op_name, raw_child)
+			if err != nil {
+				return err
+			}
+			this.children = append(this.children, child_op)
+		}
+	}
+
+	return err
 }
