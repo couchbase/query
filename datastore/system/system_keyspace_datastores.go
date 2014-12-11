@@ -142,9 +142,9 @@ func (b *storeKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, erro
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *storeKeyspace) Delete(deletes []string) errors.Error {
+func (b *storeKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {

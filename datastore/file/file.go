@@ -423,22 +423,27 @@ func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Er
 	return b.performOp(UPSERT, upserts)
 }
 
-func (b *keyspace) Delete(deletes []string) errors.Error {
+func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 	var fileError []string
+	var deleted []string
 	for _, key := range deletes {
 		filename := filepath.Join(b.path(), key+".json")
 		if err := os.Remove(filename); err != nil {
-			fileError = append(fileError, err.Error())
+			if !os.IsNotExist(err) {
+				fileError = append(fileError, err.Error())
+			}
+		} else {
+			deleted = append(deleted, key)
 		}
 	}
 
 	if len(fileError) > 0 {
 		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
-		return errors.NewError(nil, errLine)
+		return nil, errors.NewError(nil, errLine)
 	}
 
-	return nil
+	return deleted, nil
 }
 
 func (b *keyspace) Release() {

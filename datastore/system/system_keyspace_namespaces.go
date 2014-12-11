@@ -134,9 +134,9 @@ func (b *namespaceKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, 
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) Delete(deletes []string) errors.Error {
+func (b *namespaceKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func (b *namespaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {

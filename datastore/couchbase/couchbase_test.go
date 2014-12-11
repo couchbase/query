@@ -94,8 +94,8 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
-	err = ks.Delete([]string{insertKey.Key})
-	if err != nil {
+	deleted, err := ks.Delete([]string{insertKey.Key})
+	if err != nil || (len(deleted) != 1 && deleted[0] != insertKey.Key) {
 		t.Fatalf("Failed to delete %v", err)
 	}
 

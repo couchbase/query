@@ -168,9 +168,9 @@ func (b *keyspaceKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, e
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspaceKeyspace) Delete(deletes []string) errors.Error {
+func (b *keyspaceKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func newKeyspacesKeyspace(p *namespace) (*keyspaceKeyspace, errors.Error) {

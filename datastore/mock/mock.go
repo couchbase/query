@@ -245,9 +245,9 @@ func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Er
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *keyspace) Delete(deletes []string) errors.Error {
+func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func (b *keyspace) Release() {

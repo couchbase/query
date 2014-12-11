@@ -476,7 +476,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		// Ignore "Not found" keys
-		if !strings.HasSuffix(err.Error(), "msg: Not found}") {
+		if !isNotFoundError(err) {
 			return nil, errors.NewError(err, "Error doing bulk get")
 		}
 	}
@@ -531,6 +531,10 @@ func opToString(op int) string {
 	}
 
 	return "unknown operation"
+}
+
+func isNotFoundError(err error) bool {
+	return strings.HasSuffix(err.Error(), "msg: Not found}")
 }
 
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
@@ -600,22 +604,27 @@ func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Er
 	return b.performOp(UPSERT, upserts)
 }
 
-func (b *keyspace) Delete(deletes []string) errors.Error {
+func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 	failedDeletes := make([]string, 0)
+	actualDeletes := make([]string, 0)
 	var err error
 	for _, key := range deletes {
 		if err = b.cbbucket.Delete(key); err != nil {
-			logging.Infof("Failed to delete key %s", key)
-			failedDeletes = append(failedDeletes, key)
+			if !isNotFoundError(err) {
+				logging.Infof("Failed to delete key %s", key)
+				failedDeletes = append(failedDeletes, key)
+			}
+		} else {
+			actualDeletes = append(actualDeletes, key)
 		}
 	}
 
 	if len(failedDeletes) > 0 {
-		return errors.NewError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
+		return nil, errors.NewError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 	}
 
-	return nil
+	return actualDeletes, nil
 }
 
 func (b *keyspace) Release() {

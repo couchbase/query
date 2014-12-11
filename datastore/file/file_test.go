@@ -145,8 +145,8 @@ func TestFile(t *testing.T) {
 	}
 
 	// delete all the freds
-	err = keyspace.Delete([]string{"fred2", "fred3"})
-	if err != nil {
+	deleted, err := keyspace.Delete([]string{"fred2", "fred3"})
+	if err != nil && len(deleted) != 2 {
 		fmt.Printf("Warning: Failed to delete. Error %v", err)
 	}
 
@@ -162,9 +162,9 @@ func TestFile(t *testing.T) {
 	}
 
 	// some deletes should fail
-	err = keyspace.Delete([]string{"fred2", "fred3"})
-	if err != nil {
-		fmt.Println(err)
+	deleted, err = keyspace.Delete([]string{"fred2", "fred3"})
+	if len(deleted) != 1 && deleted[0] != "fred2" {
+		t.Errorf("failed to delete fred2: %v, #deleted=%d", deleted, len(deleted))
 	}
 
 }

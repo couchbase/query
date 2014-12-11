@@ -214,9 +214,9 @@ func (b *indexKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, erro
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *indexKeyspace) Delete(deletes []string) errors.Error {
+func (b *indexKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 type indexIndex struct {
