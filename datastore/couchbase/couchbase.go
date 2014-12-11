@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	lsm "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
@@ -286,8 +287,9 @@ type keyspace struct {
 	name         string
 	cbbucket     *cb.Bucket
 	deleted      bool
-	saslPassword string // SASL password
-	viewIndexer  datastore.Indexer
+	saslPassword string            // SASL password
+	viewIndexer  datastore.Indexer // View index provider
+	lsmIndexer   datastore.Indexer // LSM index provider
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -339,6 +341,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		saslPassword: saslPassword,
 	}
 
+	// Initialize index providers
 	rv.viewIndexer = newViewIndexer(rv)
 
 	logging.Infof("Created New Bucket %s", name)
@@ -347,6 +350,8 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	if ierr := rv.loadIndexes(); ierr != nil {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
+
+	rv.lsmIndexer = lsm.NewLSMIndexer(p.Name(), name)
 
 	return rv, nil
 }
@@ -400,11 +405,14 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
-	if name == datastore.VIEW {
+	switch name {
+	case datastore.VIEW:
 		return b.viewIndexer, nil
+	case datastore.LSM:
+		return b.lsmIndexer, nil
+	default:
+		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
-
-	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
@@ -412,16 +420,21 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 	// There will always be a VIEW indexer
 	indexers = append(indexers, b.viewIndexer)
+	indexers = append(indexers, b.lsmIndexer)
 	return indexers, nil
 }
 
 // To be deprecated
 func (b *keyspace) IndexIds() ([]string, errors.Error) {
-	return b.viewIndexer.IndexIds()
+	vi, _ := b.viewIndexer.IndexIds()
+	lsm, _ := b.lsmIndexer.IndexIds()
+	return append(vi, lsm...), nil
 }
 
 func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	return b.viewIndexer.IndexNames()
+	vi, _ := b.viewIndexer.IndexNames()
+	lsm, _ := b.lsmIndexer.IndexNames()
+	return append(vi, lsm...), nil
 }
 
 func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -429,7 +442,11 @@ func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	return b.viewIndexer.IndexByName(name)
+	idx, err := b.viewIndexer.IndexByName(name)
+	if err != nil {
+		return b.lsmIndexer.IndexByName(name)
+	}
+	return idx, nil
 }
 
 // End of to be deprecated block
@@ -437,18 +454,37 @@ func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 
 	//TODO: Who gets priority. View Indexes or 2i ?
-	return b.viewIndexer.IndexByPrimary()
+	pi, err := b.viewIndexer.IndexByPrimary()
 
+	if err != nil {
+		index, _ := b.lsmIndexer.IndexByPrimary()
+		logging.Infof("No view indexes found. Getting LSM index %v", index)
+		return b.lsmIndexer.IndexByPrimary()
+	}
+
+	return pi, nil
 }
 
 func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	return b.viewIndexer.Indexes()
+	indexes := make([]datastore.Index, 0, 1)
+	indexes, err := b.viewIndexer.Indexes()
+	if err != nil {
+		logging.Infof(" Failed to get View Indexes %v", err)
+	}
+	lsmIndexes, err := b.lsmIndexer.Indexes()
+	if err != nil {
+		logging.Infof(" Failed to get LSM Indexes %v", err)
+	}
+	indexes = append(indexes, lsmIndexes...)
+	return indexes, err
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
 	switch using {
 	case datastore.VIEW:
 		return b.viewIndexer.CreatePrimaryIndex()
+	case datastore.LSM:
+		return b.lsmIndexer.CreatePrimaryIndex()
 
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
@@ -461,6 +497,8 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 	switch using {
 	case datastore.VIEW:
 		return b.viewIndexer.CreateIndex(name, equalKey, rangeKey, where)
+	case datastore.LSM:
+		return b.lsmIndexer.CreateIndex(name, equalKey, rangeKey, where)
 
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
