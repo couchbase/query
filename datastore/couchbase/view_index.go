@@ -19,7 +19,6 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/value"
 )
 
 type viewIndexer struct {
@@ -298,26 +297,10 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
 
-	var low, high value.Value
-	var inclusion datastore.Inclusion
-
+	viewOptions := map[string]interface{}{}
 	if span != nil {
-		if len(span.Range.Low) == 0 {
-			low = value.NewValue("")
-		} else {
-			low = span.Range.Low[0]
-		}
-
-		if len(span.Range.High) == 0 {
-			high = value.NewValue("")
-		} else {
-			high = span.Range.High[0]
-		}
-
-		inclusion = span.Range.Inclusion
+		viewOptions = generateViewOptions(span.Range.Low, span.Range.High, span.Range.Inclusion)
 	}
-
-	viewOptions := generateViewOptions(low, high, inclusion)
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
 	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), viewOptions, 1000, limit)
@@ -335,11 +318,11 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 
 				// try to add the view row key as the entry key (unless this is _all_docs)
 				if vi.DDocName() != "" {
-					lookupValue, err := convertCouchbaseViewKeyEntryToValue(viewRow.Key)
+					lookupValue, err := convertCouchbaseViewKeyToLookupValue(viewRow.Key)
 					if err == nil {
-						entry.EntryKey = value.Values{lookupValue}
+						entry.EntryKey = lookupValue
 					} else {
-						logging.Errorf("unable to convert index key to lookup value:%v", err)
+						logging.Errorf("unable to convert index key to lookup value err:%v key %v", err, viewRow.Key)
 					}
 				}
 

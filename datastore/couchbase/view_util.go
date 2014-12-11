@@ -105,18 +105,18 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 	}
 }
 
-func generateViewOptions(low value.Value, high value.Value, inclusion datastore.Inclusion) map[string]interface{} {
+func generateViewOptions(low value.Values, high value.Values, inclusion datastore.Inclusion) map[string]interface{} {
 	viewOptions := map[string]interface{}{}
 
 	if low != nil {
-		viewOptions["startkey"] = encodeValue(low)
+		viewOptions["startkey"] = encodeValuesAsMapKey(low)
 		if inclusion == datastore.NEITHER || inclusion == datastore.HIGH {
 			viewOptions["startkey_docid"] = MAX_ID
 		}
 	}
 
 	if high != nil {
-		viewOptions["endkey"] = encodeValue(high)
+		viewOptions["endkey"] = encodeValuesAsMapKey(high)
 		if inclusion == datastore.NEITHER || inclusion == datastore.LOW {
 			viewOptions["endkey_docid"] = MIN_ID
 		}
@@ -125,7 +125,7 @@ func generateViewOptions(low value.Value, high value.Value, inclusion datastore.
 	return viewOptions
 }
 
-func encodeValueAsMapKey(keys value.Values) interface{} {
+func encodeValuesAsMapKey(keys value.Values) interface{} {
 	rv := make([]interface{}, len(keys))
 	for i, lv := range keys {
 		val := lv.Actual()
@@ -212,15 +212,14 @@ func decodeCompoundArrayAsObject(ca []interface{}) (map[string]interface{}, erro
 	return rv, nil
 }
 
-/*
-func convertCouchbaseViewKeyToLookupValue(key interface{}) (value.Value, error) {
+func convertCouchbaseViewKeyToLookupValue(key interface{}) (value.Values, error) {
 
 	switch key := key.(type) {
 	case []interface{}:
 		// top-level key MUST be an array
-		rv := make(value.Value, len(key))
+		rv := make(value.Values, len(key))
 		for i, keyEntry := range key {
-			val, err := convertCouchbaseViewKeyEntryToDparval(keyEntry)
+			val, err := convertCouchbaseViewKeyEntryToValue(keyEntry)
 			if err != nil {
 				return nil, err
 			}
@@ -230,14 +229,13 @@ func convertCouchbaseViewKeyToLookupValue(key interface{}) (value.Value, error) 
 	}
 	return nil, fmt.Errorf("Couchbase view key top-level MUST be an array")
 }
-*/
 
 func convertCouchbaseViewKeyEntryToValue(keyEntry interface{}) (value.Value, error) {
 	switch keyEntry := keyEntry.(type) {
 	case []interface{}:
 		// key-entries MUST also be arrays at the top-level
 		if len(keyEntry) != 2 {
-			return nil, fmt.Errorf("Key entries array must have length 2")
+			return nil, fmt.Errorf("Key entries array must have length 2. Current length %d", len(keyEntry))
 		}
 		keyEntryType, ok := keyEntry[0].(float64)
 		if !ok {
