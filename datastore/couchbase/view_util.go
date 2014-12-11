@@ -231,6 +231,7 @@ func convertCouchbaseViewKeyToLookupValue(key interface{}) (value.Values, error)
 }
 
 func convertCouchbaseViewKeyEntryToValue(keyEntry interface{}) (value.Value, error) {
+
 	switch keyEntry := keyEntry.(type) {
 	case []interface{}:
 		// key-entries MUST also be arrays at the top-level

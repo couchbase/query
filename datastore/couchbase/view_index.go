@@ -243,6 +243,9 @@ func (vi *viewIndex) Type() datastore.IndexType {
 }
 
 func (vi *viewIndex) IsPrimary() bool {
+	if vi.name == PRIMARY_INDEX {
+		return true
+	}
 	return false
 }
 
@@ -317,7 +320,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn
 				entry := datastore.IndexEntry{PrimaryKey: viewRow.ID}
 
 				// try to add the view row key as the entry key (unless this is _all_docs)
-				if vi.DDocName() != "" {
+				if vi.DDocName() != "" && vi.IsPrimary() == false {
 					lookupValue, err := convertCouchbaseViewKeyToLookupValue(viewRow.Key)
 					if err == nil {
 						entry.EntryKey = lookupValue
