@@ -32,16 +32,17 @@ func newSargLE(expr *expression.LE) *sargLE {
 		if expr.First().EquivalentTo(expr2) {
 			values = value.Values{expr.Second().Value()}
 			span.Range.High = values
+			span.Range.Inclusion = datastore.HIGH
 		} else if expr.Second().EquivalentTo(expr2) {
 			values = value.Values{expr.First().Value()}
 			span.Range.Low = values
+			span.Range.Inclusion = datastore.LOW
 		}
 
 		if len(values) == 0 {
 			return nil, nil
 		}
 
-		span.Range.Inclusion = datastore.BOTH
 		return datastore.Spans{span}, nil
 	}
 

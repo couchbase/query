@@ -20,13 +20,49 @@ type sargAnd struct {
 
 func newSargAnd(expr *expression.And) *sargAnd {
 	rv := &sargAnd{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (spans datastore.Spans, err error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		return nil, nil
+		for _, op := range expr.Operands() {
+			s := SargFor(op, expr2)
+			if s == nil {
+				continue
+			}
+
+			if spans == nil {
+				spans = s
+			} else {
+				spans = constrain(spans, s)
+			}
+		}
+
+		return
 	}
 
 	return rv
+}
+
+func constrain(spans1, spans2 datastore.Spans) datastore.Spans {
+	span1 := spans1[0]
+	span2 := spans2[0]
+
+	if span2.Range.Low != nil {
+		if span1.Range.Low == nil ||
+			span1.Range.Low[0].Collate(span2.Range.Low[0]) < 0 {
+			span1.Range.Low = span2.Range.Low
+			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) | span2.Range.Inclusion
+		}
+	}
+
+	if span2.Range.High != nil {
+		if span1.Range.High == nil ||
+			span1.Range.High[0].Collate(span2.Range.High[0]) > 0 {
+			span1.Range.High = span2.Range.High
+			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) | span2.Range.Inclusion
+		}
+	}
+
+	return spans1
 }

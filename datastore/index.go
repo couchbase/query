@@ -90,7 +90,7 @@ type Inclusion int
 const (
 	NEITHER Inclusion = 0x00
 	LOW               = 0x01
-	HIGH              = 0x10
+	HIGH              = 0x01 << 1
 	BOTH              = LOW | HIGH
 )
 
