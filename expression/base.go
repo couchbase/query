@@ -20,9 +20,11 @@ ExpressionBase is a base class for all expressions.
 */
 type ExpressionBase struct {
 	expr        Expression
-	value       value.Value
+	value       *value.Value
 	conditional bool
 }
+
+var _NIL_VALUE value.Value
 
 /*
 Value() returns the static / constant value of this Expression, or
@@ -31,7 +33,7 @@ return nil.
 */
 func (this *ExpressionBase) Value() value.Value {
 	if this.value != nil {
-		return this.value
+		return *this.value
 	}
 
 	propMissing := this.expr.PropagatesMissing()
@@ -40,37 +42,42 @@ func (this *ExpressionBase) Value() value.Value {
 	for _, child := range this.expr.Children() {
 		cv := child.Value()
 		if cv == nil {
+			if this.value == nil {
+				this.value = &_NIL_VALUE
+			}
+
 			continue
 		}
 
 		if propMissing && cv.Type() == value.MISSING {
-			this.value = cv
-			return this.value
+			this.value = &cv
+			return *this.value
 		}
 
 		if propNull && cv.Type() == value.NULL {
-			this.value = cv
+			this.value = &cv
 		}
 	}
 
 	if this.value != nil {
-		return this.value
+		return *this.value
 	}
 
 	defer func() {
 		err := recover()
 		if err != nil {
-			this.value = nil
+			this.value = &_NIL_VALUE
 		}
 	}()
 
-	var err error
-	this.value, err = this.expr.Evaluate(nil, nil)
+	val, err := this.expr.Evaluate(nil, nil)
 	if err != nil {
+		this.value = &_NIL_VALUE
 		return nil
 	}
 
-	return this.value
+	this.value = &val
+	return *this.value
 }
 
 /*
