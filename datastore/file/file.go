@@ -440,7 +440,7 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 	if len(fileError) > 0 {
 		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
-		return nil, errors.NewError(nil, errLine)
+		return deleted, errors.NewError(nil, errLine)
 	}
 
 	return deleted, nil

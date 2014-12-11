@@ -621,7 +621,7 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 	}
 
 	if len(failedDeletes) > 0 {
-		return nil, errors.NewError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
+		return actualDeletes, errors.NewError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 	}
 
 	return actualDeletes, nil
