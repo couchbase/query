@@ -89,8 +89,9 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 	// Update mutation count with number of updated docs
 	context.AddMutationCount(uint64(len(pairs)))
 
-	for _, p := range pairs {
-		if !this.sendItem(p.Value.(value.AnnotatedValue)) {
+	for _, av := range this.batch {
+		p := av.GetAttachment("clone")
+		if !this.sendItem(p.(value.AnnotatedValue)) {
 			break
 		}
 	}
