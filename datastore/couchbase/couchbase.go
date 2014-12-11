@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -474,7 +475,10 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
-		return nil, errors.NewError(err, "Error doing bulk get")
+		// Ignore "Not found" keys
+		if !strings.HasSuffix(err.Error(), "msg: Not found}") {
+			return nil, errors.NewError(err, "Error doing bulk get")
+		}
 	}
 
 	i := 0
