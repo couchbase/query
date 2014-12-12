@@ -55,7 +55,7 @@ func (view *viewIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := view.indexes[name]
 	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewError(nil, fmt.Sprintf("View Index %v not found.", name))
 	}
 	return index, nil
 }
