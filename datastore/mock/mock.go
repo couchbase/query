@@ -117,8 +117,7 @@ type keyspace struct {
 	namespace *namespace
 	name      string
 	nitems    int
-	indexes   map[string]datastore.Index
-	primary   datastore.PrimaryIndex
+	mi        datastore.Indexer
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -150,11 +149,7 @@ func (b *keyspace) IndexIds() ([]string, errors.Error) {
 }
 
 func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.mi.IndexNames()
 }
 
 func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -162,36 +157,24 @@ func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := b.indexes[name]
-	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
-	}
-	return index, nil
+	return b.mi.IndexByName(name)
 }
 
 func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.primary, nil
+	return b.mi.IndexByPrimary()
 }
 
 func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(b.indexes))
-	for _, index := range b.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return b.mi.Indexes()
 }
 
 func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if b.primary != nil {
-		return b.primary, nil
-	}
-
-	return nil, errors.NewError(nil, "Not supported.")
+	return b.mi.CreatePrimaryIndex()
 }
 
 func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Not supported.")
+	return b.mi.CreateIndex(name, equalKey, rangeKey, where)
 }
 
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
@@ -253,6 +236,85 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 func (b *keyspace) Release() {
 }
 
+type mockIndexer struct {
+	keyspace *keyspace
+	indexes  map[string]datastore.Index
+	primary  datastore.PrimaryIndex
+}
+
+func newMockIndexer(keyspace *keyspace) datastore.Indexer {
+
+	return &mockIndexer{
+		keyspace: keyspace,
+		indexes:  make(map[string]datastore.Index),
+	}
+}
+
+func (mi *mockIndexer) KeyspaceId() string {
+	return mi.keyspace.Id()
+}
+
+func (mi *mockIndexer) Name() datastore.IndexType {
+	return datastore.UNSPECIFIED
+}
+
+func (mi *mockIndexer) IndexIds() ([]string, errors.Error) {
+	rv := make([]string, 0, len(mi.indexes))
+	for name, _ := range mi.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (mi *mockIndexer) IndexNames() ([]string, errors.Error) {
+	rv := make([]string, 0, len(mi.indexes))
+	for name, _ := range mi.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (mi *mockIndexer) IndexById(id string) (datastore.Index, errors.Error) {
+	return mi.IndexByName(id)
+}
+
+func (mi *mockIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
+	index, ok := mi.indexes[name]
+	if !ok {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+	}
+	return index, nil
+}
+
+func (mi *mockIndexer) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
+	return mi.primary, nil
+}
+
+func (mi *mockIndexer) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(mi.indexes))
+	for _, index := range mi.indexes {
+		rv = append(rv, index)
+	}
+	return rv, nil
+}
+
+func (mi *mockIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+	if mi.primary == nil {
+		pi := new(primaryIndex)
+		mi.primary = pi
+		pi.keyspace = mi.keyspace
+		pi.name = "#primary"
+		mi.indexes[pi.name] = pi
+	}
+
+	return mi.primary, nil
+}
+
+func (mi *mockIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression) (datastore.Index, errors.Error) {
+	return nil, errors.NewError(nil, "Create index is not supported for file-based datastore.")
+}
+
 // NewDatastore creates a new mock store for the given "path".  The
 // path has prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:
@@ -286,11 +348,10 @@ func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 	for i := 0; i < nnamespaces; i++ {
 		p := &namespace{store: s, name: "p" + strconv.Itoa(i), keyspaces: map[string]*keyspace{}, keyspaceNames: []string{}}
 		for j := 0; j < nkeyspaces; j++ {
-			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems,
-				indexes: map[string]datastore.Index{}}
-			pi := &primaryIndex{name: "#primary", keyspace: b}
-			b.primary = pi
-			b.indexes["#primary"] = pi
+			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems}
+
+			b.mi = newMockIndexer(b)
+			b.mi.CreatePrimaryIndex()
 			p.keyspaces[b.name] = b
 			p.keyspaceNames = append(p.keyspaceNames, b.name)
 		}
