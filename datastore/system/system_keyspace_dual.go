@@ -22,8 +22,7 @@ import (
 type dualKeyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]datastore.Index
-	primary   datastore.PrimaryIndex
+	di        datastore.Indexer
 }
 
 func (b *dualKeyspace) Release() {
@@ -46,11 +45,11 @@ func (b *dualKeyspace) Count() (int64, errors.Error) {
 }
 
 func (b *dualKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return b.di, nil
 }
 
 func (b *dualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return []datastore.Indexer{b.di}, nil
 }
 
 func (b *dualKeyspace) IndexIds() ([]string, errors.Error) {
@@ -58,11 +57,7 @@ func (b *dualKeyspace) IndexIds() ([]string, errors.Error) {
 }
 
 func (b *dualKeyspace) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.di.IndexNames()
 }
 
 func (b *dualKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -70,31 +65,19 @@ func (b *dualKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *dualKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := b.indexes[name]
-	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
-	}
-	return index, nil
+	return b.di.IndexByName(name)
 }
 
 func (b *dualKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.primary, nil
+	return b.di.IndexByPrimary()
 }
 
 func (b *dualKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(b.indexes))
-	for _, index := range b.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return b.di.Indexes()
 }
 
 func (b *dualKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if b.primary != nil {
-		return b.primary, nil
-	}
-
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
+	return b.di.CreatePrimaryIndex()
 }
 
 func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
@@ -141,7 +124,8 @@ func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_DUAL
 
-	b.primary = &dualIndex{name: "#primary", keyspace: b}
+	primary := &dualIndex{name: "#primary", keyspace: b}
+	b.di = &systemIndexer{keyspace: b, indexes: make(map[string]datastore.Index), primary: primary}
 
 	return b, nil
 }

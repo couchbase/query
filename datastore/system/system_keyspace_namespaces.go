@@ -21,8 +21,7 @@ import (
 type namespaceKeyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]datastore.Index
-	primary   datastore.PrimaryIndex
+	indexer   datastore.Indexer
 }
 
 func (b *namespaceKeyspace) Release() {
@@ -49,11 +48,11 @@ func (b *namespaceKeyspace) Count() (int64, errors.Error) {
 }
 
 func (b *namespaceKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return b.indexer, nil
 }
 
 func (b *namespaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return []datastore.Indexer{b.indexer}, nil
 }
 
 func (b *namespaceKeyspace) IndexIds() ([]string, errors.Error) {
@@ -61,35 +60,32 @@ func (b *namespaceKeyspace) IndexIds() ([]string, errors.Error) {
 }
 
 func (b *namespaceKeyspace) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.indexer.IndexNames()
 }
 
 func (b *namespaceKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.IndexByName(id)
+	return b.indexer.IndexByName(id)
 }
 
 func (b *namespaceKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := b.indexes[name]
-	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
-	}
-	return index, nil
+	return b.indexer.IndexByName(name)
 }
 
 func (b *namespaceKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.primary, nil
+	return b.indexer.IndexByPrimary()
 }
 
 func (b *namespaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(b.indexes))
-	for _, index := range b.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return b.indexer.Indexes()
+}
+
+func (b *namespaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
+	return b.indexer.CreatePrimaryIndex()
+}
+
+func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
+	return b.indexer.CreateIndex(name, equalKey, rangeKey, where)
 }
 
 func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
@@ -139,25 +135,13 @@ func (b *namespaceKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
-func (b *namespaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if b.primary != nil {
-		return b.primary, nil
-	}
-
-	return nil, errors.NewError(nil, "Not supported.")
-}
-
-func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Not supported.")
-}
-
 func newNamespacesKeyspace(p *namespace) (*namespaceKeyspace, errors.Error) {
 	b := new(namespaceKeyspace)
 	b.namespace = p
 	b.name = KEYSPACE_NAME_NAMESPACES
 
-	b.primary = &namespaceIndex{name: "primary", keyspace: b}
+	primary := &namespaceIndex{name: "primary", keyspace: b}
+	b.indexer = &systemIndexer{keyspace: b, indexes: make(map[string]datastore.Index), primary: primary}
 
 	return b, nil
 }

@@ -22,8 +22,7 @@ import (
 type storeKeyspace struct {
 	namespace *namespace
 	name      string
-	indexes   map[string]datastore.Index
-	primary   datastore.PrimaryIndex
+	si        datastore.Indexer
 }
 
 func (b *storeKeyspace) Release() {
@@ -46,10 +45,11 @@ func (b *storeKeyspace) Count() (int64, errors.Error) {
 }
 
 func (b *storeKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return b.si, nil
 }
 
 func (b *storeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+	return []datastore.Indexer{b.si}, nil
 	return nil, errors.NewError(nil, "Not yet implemented.")
 }
 
@@ -58,11 +58,7 @@ func (b *storeKeyspace) IndexIds() ([]string, errors.Error) {
 }
 
 func (b *storeKeyspace) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(b.indexes))
-	for name, _ := range b.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return b.si.IndexNames()
 }
 
 func (b *storeKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -70,36 +66,24 @@ func (b *storeKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (b *storeKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := b.indexes[name]
-	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
-	}
-	return index, nil
+	return b.si.IndexByName(name)
 }
 
 func (b *storeKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.primary, nil
+	return b.si.IndexByPrimary()
 }
 
 func (b *storeKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(b.indexes))
-	for _, index := range b.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return b.si.Indexes()
 }
 
 func (b *storeKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	if b.primary != nil {
-		return b.primary, nil
-	}
-
-	return nil, errors.NewError(nil, "Not supported.")
+	return b.si.CreatePrimaryIndex()
 }
 
 func (b *storeKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Not supported.")
+	return b.si.CreateIndex(name, equalKey, rangeKey, where)
 }
 
 func (b *storeKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
@@ -152,9 +136,89 @@ func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_DATASTORES
 
-	b.primary = &storeIndex{name: "primary", keyspace: b}
+	b.si = newSystemIndexer(b)
+	b.si.CreatePrimaryIndex()
 
 	return b, nil
+}
+
+type systemIndexer struct {
+	keyspace datastore.Keyspace
+	indexes  map[string]datastore.Index
+	primary  datastore.PrimaryIndex
+}
+
+func newSystemIndexer(keyspace datastore.Keyspace) datastore.Indexer {
+
+	return &systemIndexer{
+		keyspace: keyspace,
+		indexes:  make(map[string]datastore.Index),
+	}
+}
+
+func (si *systemIndexer) KeyspaceId() string {
+	return si.keyspace.Id()
+}
+
+func (si *systemIndexer) Name() datastore.IndexType {
+	return datastore.UNSPECIFIED
+}
+
+func (si *systemIndexer) IndexIds() ([]string, errors.Error) {
+	rv := make([]string, 0, len(si.indexes))
+	for name, _ := range si.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (si *systemIndexer) IndexNames() ([]string, errors.Error) {
+	rv := make([]string, 0, len(si.indexes))
+	for name, _ := range si.indexes {
+		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (si *systemIndexer) IndexById(id string) (datastore.Index, errors.Error) {
+	return si.IndexByName(id)
+}
+
+func (si *systemIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
+	index, ok := si.indexes[name]
+	if !ok {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+	}
+	return index, nil
+}
+
+func (si *systemIndexer) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
+	return si.primary, nil
+}
+
+func (si *systemIndexer) Indexes() ([]datastore.Index, errors.Error) {
+	rv := make([]datastore.Index, 0, len(si.indexes))
+	for _, index := range si.indexes {
+		rv = append(rv, index)
+	}
+	return rv, nil
+}
+
+func (si *systemIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+	if si.primary == nil {
+		pi := new(storeIndex)
+		si.primary = pi
+		pi.keyspace = si.keyspace.(*storeKeyspace)
+		pi.name = "#primary"
+		si.indexes[pi.name] = pi
+	}
+
+	return si.primary, nil
+}
+
+func (mi *systemIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression) (datastore.Index, errors.Error) {
+	return nil, errors.NewError(nil, "Create index is not supported for file-based datastore.")
 }
 
 type storeIndex struct {
