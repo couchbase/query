@@ -41,6 +41,7 @@ type SendUpdate struct {
 	readwrite
 	keyspace datastore.Keyspace
 	alias    string
+	limit    expression.Expression
 }
 
 func NewClone() *Clone {
@@ -205,10 +206,11 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func NewSendUpdate(keyspace datastore.Keyspace, alias string) *SendUpdate {
+func NewSendUpdate(keyspace datastore.Keyspace, alias string, limit expression.Expression) *SendUpdate {
 	return &SendUpdate{
 		keyspace: keyspace,
 		alias:    alias,
+		limit:    limit,
 	}
 }
 
@@ -226,6 +228,10 @@ func (this *SendUpdate) Keyspace() datastore.Keyspace {
 
 func (this *SendUpdate) Alias() string {
 	return this.alias
+}
+
+func (this *SendUpdate) Limit() expression.Expression {
+	return this.limit
 }
 
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {

@@ -20,13 +20,15 @@ import (
 
 type SendInsert struct {
 	base
-	plan *plan.SendInsert
+	plan  *plan.SendInsert
+	limit int64
 }
 
 func NewSendInsert(plan *plan.SendInsert) *SendInsert {
 	rv := &SendInsert{
-		base: newBase(),
-		plan: plan,
+		base:  newBase(),
+		plan:  plan,
+		limit: -1,
 	}
 
 	rv.output = rv
@@ -38,7 +40,7 @@ func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendInsert) Copy() Operator {
-	return &SendInsert{this.base.copy(), this.plan}
+	return &SendInsert{this.base.copy(), this.plan, this.limit}
 }
 
 func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
@@ -46,7 +48,35 @@ func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	rv := this.limit != 0 && this.enbatch(item, this, context)
+
+	if this.limit > 0 {
+		this.limit--
+	}
+
+	return rv
+}
+
+func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
+	if this.plan.Limit() == nil {
+		return true
+	}
+
+	limit, err := this.plan.Limit().Evaluate(parent, context)
+	if err != nil {
+		context.Error(errors.NewError(err, ""))
+		return false
+	}
+
+	switch l := limit.Actual().(type) {
+	case float64:
+		this.limit = int64(l)
+	default:
+		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		return false
+	}
+
+	return true
 }
 
 func (this *SendInsert) afterItems(context *Context) {

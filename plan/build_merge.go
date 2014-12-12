@@ -76,7 +76,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewUnset(act.Unset()))
 		}
 
-		ops = append(ops, NewSendUpdate(keyspace, ksref.Alias()))
+		ops = append(ops, NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
 		update = NewSequence(ops...)
 	}
 
@@ -88,7 +88,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendDelete(keyspace))
+		ops = append(ops, NewSendDelete(keyspace, stmt.Limit()))
 		delete = NewSequence(ops...)
 	}
 
@@ -100,7 +100,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendInsert(keyspace, stmt.Key()))
+		ops = append(ops, NewSendInsert(keyspace, stmt.Key(), stmt.Limit()))
 		insert = NewSequence(ops...)
 	}
 

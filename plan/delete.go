@@ -13,16 +13,19 @@ import (
 	"encoding/json"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/expression"
 )
 
 type SendDelete struct {
 	readwrite
 	keyspace datastore.Keyspace
+	limit    expression.Expression
 }
 
-func NewSendDelete(keyspace datastore.Keyspace) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace, limit expression.Expression) *SendDelete {
 	return &SendDelete{
 		keyspace: keyspace,
+		limit:    limit,
 	}
 }
 
@@ -32,6 +35,10 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *SendDelete) Limit() expression.Expression {
+	return this.limit
 }
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {

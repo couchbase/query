@@ -40,7 +40,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	subChildren := make([]Operator, 0, 4)
-	subChildren = append(subChildren, NewSendInsert(keyspace, stmt.Key()))
+	subChildren = append(subChildren, NewSendInsert(keyspace, stmt.Key(), nil))
 
 	if stmt.Returning() != nil {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())

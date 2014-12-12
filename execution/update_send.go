@@ -21,13 +21,15 @@ import (
 // Send to keyspace
 type SendUpdate struct {
 	base
-	plan *plan.SendUpdate
+	plan  *plan.SendUpdate
+	limit int64
 }
 
 func NewSendUpdate(plan *plan.SendUpdate) *SendUpdate {
 	rv := &SendUpdate{
-		base: newBase(),
-		plan: plan,
+		base:  newBase(),
+		plan:  plan,
+		limit: -1,
 	}
 
 	rv.output = rv
@@ -39,7 +41,7 @@ func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendUpdate) Copy() Operator {
-	return &SendUpdate{this.base.copy(), this.plan}
+	return &SendUpdate{this.base.copy(), this.plan, this.limit}
 }
 
 func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
@@ -47,7 +49,35 @@ func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	rv := this.limit != 0 && this.enbatch(item, this, context)
+
+	if this.limit > 0 {
+		this.limit--
+	}
+
+	return rv
+}
+
+func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
+	if this.plan.Limit() == nil {
+		return true
+	}
+
+	limit, err := this.plan.Limit().Evaluate(parent, context)
+	if err != nil {
+		context.Error(errors.NewError(err, ""))
+		return false
+	}
+
+	switch l := limit.Actual().(type) {
+	case float64:
+		this.limit = int64(l)
+	default:
+		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		return false
+	}
+
+	return true
 }
 
 func (this *SendUpdate) afterItems(context *Context) {
@@ -80,14 +110,15 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 	}
 
 	pairs, e := this.plan.Keyspace().Update(pairs)
+
+	// Update mutation count with number of updated docs
+	context.AddMutationCount(uint64(len(pairs)))
+
 	if e != nil {
 		context.Error(e)
 		this.batch = nil
 		return false
 	}
-
-	// Update mutation count with number of updated docs
-	context.AddMutationCount(uint64(len(pairs)))
 
 	for _, av := range this.batch {
 		p := av.GetAttachment("clone")

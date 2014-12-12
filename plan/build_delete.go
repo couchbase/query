@@ -28,7 +28,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	}
 
 	subChildren := this.subChildren
-	subChildren = append(subChildren, NewSendDelete(keyspace))
+	subChildren = append(subChildren, NewSendDelete(keyspace, stmt.Limit()))
 
 	if stmt.Returning() != nil {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())

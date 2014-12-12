@@ -10,19 +10,24 @@
 package execution
 
 import (
+	"fmt"
+
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/value"
 )
 
 type SendDelete struct {
 	base
-	plan *plan.SendDelete
+	plan  *plan.SendDelete
+	limit int64
 }
 
 func NewSendDelete(plan *plan.SendDelete) *SendDelete {
 	rv := &SendDelete{
-		base: newBase(),
-		plan: plan,
+		base:  newBase(),
+		plan:  plan,
+		limit: -1,
 	}
 
 	rv.output = rv
@@ -34,7 +39,7 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *SendDelete) Copy() Operator {
-	return &SendDelete{this.base.copy(), this.plan}
+	return &SendDelete{this.base.copy(), this.plan, this.limit}
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
@@ -42,7 +47,35 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	rv := this.limit != 0 && this.enbatch(item, this, context)
+
+	if this.limit > 0 {
+		this.limit--
+	}
+
+	return rv
+}
+
+func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
+	if this.plan.Limit() == nil {
+		return true
+	}
+
+	limit, err := this.plan.Limit().Evaluate(parent, context)
+	if err != nil {
+		context.Error(errors.NewError(err, ""))
+		return false
+	}
+
+	switch l := limit.Actual().(type) {
+	case float64:
+		this.limit = int64(l)
+	default:
+		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		return false
+	}
+
+	return true
 }
 
 func (this *SendDelete) afterItems(context *Context) {

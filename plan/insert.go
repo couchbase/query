@@ -21,12 +21,14 @@ type SendInsert struct {
 	readwrite
 	keyspace datastore.Keyspace
 	key      expression.Expression
+	limit    expression.Expression
 }
 
-func NewSendInsert(keyspace datastore.Keyspace, key expression.Expression) *SendInsert {
+func NewSendInsert(keyspace datastore.Keyspace, key, limit expression.Expression) *SendInsert {
 	return &SendInsert{
 		keyspace: keyspace,
 		key:      key,
+		limit:    limit,
 	}
 }
 
@@ -44,6 +46,10 @@ func (this *SendInsert) Keyspace() datastore.Keyspace {
 
 func (this *SendInsert) Key() expression.Expression {
 	return this.key
+}
+
+func (this *SendInsert) Limit() expression.Expression {
+	return this.limit
 }
 
 func (this *SendInsert) MarshalJSON() ([]byte, error) {
