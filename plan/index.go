@@ -49,13 +49,26 @@ func (this *CreatePrimaryIndex) Node() *algebra.CreatePrimaryIndex {
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
 	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.keyspace.NamespaceId()
 	r["name"] = this.node
 	return json.Marshal(r)
 }
 
-func (this *CreatePrimaryIndex) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string                      `json:"#operator"`
+		Keys  string                      `json:"keyspace"`
+		Names string                      `json:"namespace"`
+		Node  *algebra.CreatePrimaryIndex `json:"name"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }
 
 // Create index
@@ -91,13 +104,26 @@ func (this *CreateIndex) Node() *algebra.CreateIndex {
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CreateIndex"}
 	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.keyspace.NamespaceId()
 	r["name"] = this.node
 	return json.Marshal(r)
 }
 
-func (this *CreateIndex) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *CreateIndex) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string               `json:"#operator"`
+		Keys  string               `json:"keyspace"`
+		Names string               `json:"namespace"`
+		Node  *algebra.CreateIndex `json:"name"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }
 
 // Drop index
@@ -136,9 +162,14 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *DropIndex) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *DropIndex) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_    string             `json:"#operator"`
+		Node *algebra.DropIndex `json:"name"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	return err
 }
 
 // Alter index
@@ -178,7 +209,14 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *AlterIndex) UnmarshalJSON([]byte) error {
-	// TODO: Implement
-	return nil
+func (this *AlterIndex) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string              `json:"#operator"`
+		Index string              `json:"index"`
+		Node  *algebra.AlterIndex `json:"name"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	return err
+	// TODO: recover index from index name
 }

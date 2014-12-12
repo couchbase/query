@@ -44,7 +44,11 @@ func (this *Prepare) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Prepare) UnmarshalJSON([]byte) error {
-	// TODO: implement
-	return nil
+func (this *Prepare) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_        string      `json:"#operator"`
+		Prepared value.Value `json:"prepared"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	return err
 }

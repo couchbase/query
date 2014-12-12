@@ -73,14 +73,9 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	keys_expr, err := parser.Parse(_unmarshalled.Keys)
-	if err != nil {
-		return err
-	}
-
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
-		nil, "", keys_expr)
+		nil, "", nil)
 	this.index, err = k.IndexByPrimary()
 
 	return err
@@ -155,8 +150,34 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
-	// TODO: Implement
-	return nil
+	var _unmarshalled struct {
+		_        string          `json:"#operator"`
+		Index    string          `json:"index"`
+		Names    string          `json:"namespace"`
+		Keys     string          `json:"keyspace"`
+		Spans    datastore.Spans `json:"spans"`
+		Distinct bool            `json:"distinct"`
+		Limit    int64           `json:"limit"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	k, err := datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	if err != nil {
+		return err
+	}
+
+	this.term = algebra.NewKeyspaceTerm(
+		_unmarshalled.Names, _unmarshalled.Keys,
+		nil, "", nil)
+	this.spans = _unmarshalled.Spans
+	this.distinct = _unmarshalled.Distinct
+	this.limit = _unmarshalled.Limit
+	this.index, err = k.IndexByName(_unmarshalled.Index)
+	return err
 }
 
 // KeyScan is used for KEYS clauses (except after JOIN / NEST).

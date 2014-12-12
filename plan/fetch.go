@@ -85,13 +85,8 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		return fmt.Errorf("Fetch.UnmarshalJSON: cannot resolve path expression from %s", _unmarshalled.Proj)
 	}
 
-	keys_expr, err := parser.Parse(_unmarshalled.Keys)
-	if err != nil {
-		return err
-	}
-
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		proj_expr, _unmarshalled.As, keys_expr)
+		proj_expr, _unmarshalled.As, nil)
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 
