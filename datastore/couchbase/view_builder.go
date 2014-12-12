@@ -208,6 +208,7 @@ func newViewPrimaryIndex(v *viewIndexer) (*primaryIndex, error) {
 			on:       datastore.IndexKey{mdid},
 			ddoc:     ddoc,
 			keyspace: v.keyspace,
+			view:     v,
 		},
 	}
 
