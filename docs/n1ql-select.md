@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-12-05
+* Modified: 2014-12-11
 
 ## Introduction
 
@@ -1752,29 +1752,34 @@ __IFMISSING(expr1, expr2, ...)__ - first non-MISSING value.
 __IFMISSINGORNULL(expr1, expr2, ...)__ - first non-NULL, non-MISSING
 value.
 
-__IFNULL(expr1, expr2, ...)__ - first non-NULL value. Note that this
-function may return MISSING.
+__IFNULL(expr1, expr2, ...)__ - first non-NULL value, or MISSING.
 
-__MISSINGIF(expr1, expr2)__ - MISSING if expr1 = expr2, else expr1.
+__MISSINGIF(expr1, expr2)__ - MISSING if expr1 = expr2, else
+expr1. Returns MISSING or NULL if either input is MISSING or NULL.
 
-__NULLIF(expr1, expr2)__ - NULL if expr1 = expr2; else expr1.
+__NULLIF(expr1, expr2)__ - NULL if expr1 = expr2; else expr1. Returns
+MISSING or NULL if either input is MISSING or NULL.
 
 ### Conditional functions for numbers
 
-__IFINF(expr1, expr2, ...)__ - first non-MISSING, non-Inf number or
-NULL.
+__IFINF(expr1, expr2, ...)__ - first non-Inf number. Returns MISSING
+or NULL if a non-number input is encountered first.
 
-__IFNAN(expr1, expr2, ...)__ - first non-MISSING, non-NaN number or
-NULL.
+__IFNAN(expr1, expr2, ...)__ - first non-NaN number. Returns MISSING
+or NULL if a non-number input is encountered first.
 
-__IFNANORINF(expr1, expr2, ...)__ - first non-MISSING, non-Inf,
-non-NaN number or NULL.
+__IFNANORINF(expr1, expr2, ...)__ - first non-Inf, non-NaN
+number. Returns MISSING or NULL if a non-number input is encountered
+first.
 
-__NANIF(expr1, expr2)__ - NaN if expr1 = expr2; else expr1.
+__NANIF(expr1, expr2)__ - NaN if expr1 = expr2; else expr1. Returns
+MISSING or NULL if either input is MISSING or NULL.
 
-__NEGINFIF(expr1, expr2)__ - NegInf if expr1 = expr2; else expr1.
+__NEGINFIF(expr1, expr2)__ - NegInf if expr1 = expr2; else
+expr1. Returns MISSING or NULL if either input is MISSING or NULL.
 
-__POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else expr1.
+__POSINFIF(expr1, expr2)__ - PosInf if expr1 = expr2; else
+expr1. Returns MISSING or NULL if either input is MISSING or NULL.
 
 ### Meta functions
 
@@ -2455,6 +2460,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add E()
 * 2014-12-05 - Reserved words
     * Add reserved words BINARY, BOOLEAN, NUMBER, and STRING
+* 2014-12-11 - Functions
+    * Revise descriptions of conditional functions
 
 ### Open issues
 
