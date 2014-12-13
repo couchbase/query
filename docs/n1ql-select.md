@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-12-11
+* Modified: 2014-12-12
 
 ## Introduction
 
@@ -1791,41 +1791,46 @@ __UUID()__ - a version 4 Universally Unique Identifier(UUID).
 
 ### Type checking functions
 
-__ISARRAY(expr)__ - true if expr is an array; else false.
+__IS\_ARRAY(expr)__ - true if expr is an array; else MISSING, NULL, or
+false.
 
-__ISATOM(expr)__ - true if expr is a boolean, number, or
-string; else false.
+__IS\_ATOM(expr)__ - true if expr is a boolean, number, or string;
+else MISSING, NULL, or false.
 
-__ISBOOL(expr)__ - true if expr is a boolean; else false.
+__IS\_BOOLEAN(expr)__ - true if expr is a boolean; else MISSING, NULL,
+orfalse.
 
-__ISNUM(expr)__ - true if expr is a number; else false.
+__IS\_NUMBER(expr)__ - true if expr is a number; else MISSING, NUMBER,
+or false.
 
-__ISOBJ(expr)__ - true if expr is an object; else false.
+__IS\_OBJECT(expr)__ - true if expr is an object; else MISSING, NULL,
+or false.
 
-__ISSTR(expr)__ - true if expr is a string; else false.
+__IS\_STRING(expr)__ - true if expr is a string; else MISSING, NULL,
+or false.
 
-__TYPENAME(expr)__ - one of the following strings, based on the value
+__TYPE(expr)__ - one of the following strings, based on the value
 of expr:
 
 * __"missing"__
 * __"null"__
-* __"not_json"__
 * __"boolean"__
 * __"number"__
 * __"string"__
 * __"array"__
 * __"object"__
+* __"binary"__
 
 ### Type conversion functions
 
-__TOARRAY(expr)__ - array as follows:
+__TO\_ARRAY(expr)__ - array as follows:
 
 * MISSING is MISSING
 * NULL is NULL
 * arrays are themselves
 * all other values are wrapped in an array
 
-__TOATOM(expr)__ - atomic value as follows:
+__TO\_ATOM(expr)__ - atomic value as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1834,7 +1839,7 @@ __TOATOM(expr)__ - atomic value as follows:
 * booleans, numbers, and strings are themselves
 * all other values are NULL
 
-__TOBOOL(expr)__ - boolean as follows:
+__TO\_BOOLEAN(expr)__ - boolean as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1843,7 +1848,7 @@ __TOBOOL(expr)__ - boolean as follows:
 * empty strings, arrays, and objects are false
 * all other values are true
 
-__TONUM(expr)__ - number as follows:
+__TO\_NUMBER(expr)__ - number as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -1853,14 +1858,14 @@ __TONUM(expr)__ - number as follows:
 * strings that parse as numbers are those numbers
 * all other values are NULL
 
-__TOOBJ(expr)__ - object as follows:
+__TO\_OBJECT(expr)__ - object as follows:
 
 * MISSING is MISSING
 * NULL is NULL
 * objects are themselves
 * all other values are the empty object
 
-__TOSTR(expr)__ - string as follows:
+__TO\_STRING(expr)__ - string as follows:
 
 * MISSING is MISSING
 * NULL is NULL
@@ -2460,8 +2465,10 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add E()
 * 2014-12-05 - Reserved words
     * Add reserved words BINARY, BOOLEAN, NUMBER, and STRING
-* 2014-12-11 - Functions
+* 2014-12-11 - Conditional functions
     * Revise descriptions of conditional functions
+* 2014-12-12 - Type functions
+    * Revise type checking functions
 
 ### Open issues
 

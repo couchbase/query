@@ -1428,12 +1428,12 @@ index_exprs COMMA index_expr
 index_expr:
 expr
 {
-    e := $1
-    if !e.Indexable() {
+    exp := $1
+    if !exp.Indexable() || exp.Value() != nil {
         yylex.Error(fmt.Sprintf("Expression not indexable."))
     }
 
-    $$ = e
+    $$ = exp
 }
 
 index_where:
@@ -1724,6 +1724,66 @@ expr IS VALUED
 expr IS NOT VALUED
 {
     $$ = expression.NewIsNotValued($1)
+}
+|
+expr IS BOOLEAN
+{
+    $$ = expression.NewIsBoolean($1)
+}
+|
+expr IS NOT BOOLEAN
+{
+    $$ = expression.NewNot(expression.NewIsBoolean($1))
+}
+|
+expr IS NUMBER
+{
+    $$ = expression.NewIsNumber($1)
+}
+|
+expr IS NOT NUMBER
+{
+    $$ = expression.NewNot(expression.NewIsNumber($1))
+}
+|
+expr IS STRING
+{
+    $$ = expression.NewIsString($1)
+}
+|
+expr IS NOT STRING
+{
+    $$ = expression.NewNot(expression.NewIsString($1))
+}
+|
+expr IS ARRAY
+{
+    $$ = expression.NewIsArray($1)
+}
+|
+expr IS NOT ARRAY
+{
+    $$ = expression.NewNot(expression.NewIsArray($1))
+}
+|
+expr IS OBJECT
+{
+    $$ = expression.NewIsObject($1)
+}
+|
+expr IS NOT OBJECT
+{
+    $$ = expression.NewNot(expression.NewIsObject($1))
+}
+|
+expr IS BINARY
+{
+    $$ = expression.NewIsBinary($1)
+}
+|
+expr IS NOT BINARY
+{
+    $$ = expression.NewNot(expression.NewIsBinary($1))
 }
 |
 EXISTS expr

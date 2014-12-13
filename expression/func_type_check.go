@@ -68,6 +68,10 @@ func (this *IsArray) Evaluate(item value.Value, context Context) (value.Value, e
 It returns true if type of the input value is an array value, else false.
 */
 func (this *IsArray) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
 	return value.NewValue(arg.Type() == value.ARRAY), nil
 }
 
@@ -138,11 +142,15 @@ Checks the type of input argument and returns true for boolean,
 number and string and false for all other values.
 */
 func (this *IsAtom) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
 	switch arg.Type() {
 	case value.BOOLEAN, value.NUMBER, value.STRING:
-		return value.NewValue(true), nil
+		return value.TRUE_VALUE, nil
 	default:
-		return value.NewValue(false), nil
+		return value.FALSE_VALUE, nil
 	}
 }
 
@@ -158,28 +166,28 @@ func (this *IsAtom) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// IsBool
+// IsBinary
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the type checking function ISBOOL(expr).
-Returns true if expr is a boolean; else false. IsBool is
+This represents the type checking function ISBOOLEAN(expr).
+Returns true if expr is a boolean; else false. IsBinary is
 a struct that implements UnaryFunctionBase.
 */
-type IsBool struct {
+type IsBinary struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewIsBool takes as input an expression and returns
-a pointer to the IsBool struct that calls NewUnaryFunctionBase to
+The function NewIsBinary takes as input an expression and returns
+a pointer to the IsBinary struct that calls NewUnaryFunctionBase to
 create a function named IS_BOOL with an input operand as the
 expression.
 */
-func NewIsBool(operand Expression) Function {
-	rv := &IsBool{
-		*NewUnaryFunctionBase("is_bool", operand),
+func NewIsBinary(operand Expression) Function {
+	rv := &IsBinary{
+		*NewUnaryFunctionBase("is_binary", operand),
 	}
 
 	rv.expr = rv
@@ -190,64 +198,68 @@ func NewIsBool(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *IsBool) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsBinary) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a Boolean value.
 */
-func (this *IsBool) Type() value.Type { return value.BOOLEAN }
+func (this *IsBinary) Type() value.Type { return value.BOOLEAN }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *IsBool) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *IsBinary) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
 It returns true if type of the input value is a boolean value, else false.
 */
-func (this *IsBool) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type() == value.BOOLEAN), nil
+func (this *IsBinary) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.BINARY), nil
 }
 
 /*
-The constructor returns a NewIsBool with an operand cast to a
+The constructor returns a NewIsBinary with an operand cast to a
 Function as the FunctionConstructor.
 */
-func (this *IsBool) Constructor() FunctionConstructor {
+func (this *IsBinary) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewIsBool(operands[0])
+		return NewIsBinary(operands[0])
 	}
 }
 
 ///////////////////////////////////////////////////
 //
-// IsNum
+// IsBoolean
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the type checking function ISNUM(expr).
-Returns true if expr is a number; else false. IsNum is
+This represents the type checking function ISBOOLEAN(expr).
+Returns true if expr is a boolean; else false. IsBoolean is
 a struct that implements UnaryFunctionBase.
 */
-type IsNum struct {
+type IsBoolean struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewIsNum takes as input an expression and returns
-a pointer to the IsNum struct that calls NewUnaryFunctionBase to
-create a function named IS_NUM with an input operand as the
+The function NewIsBoolean takes as input an expression and returns
+a pointer to the IsBoolean struct that calls NewUnaryFunctionBase to
+create a function named IS_BOOL with an input operand as the
 expression.
 */
-func NewIsNum(operand Expression) Function {
-	rv := &IsNum{
-		*NewUnaryFunctionBase("is_num", operand),
+func NewIsBoolean(operand Expression) Function {
+	rv := &IsBoolean{
+		*NewUnaryFunctionBase("is_boolean", operand),
 	}
 
 	rv.expr = rv
@@ -258,64 +270,140 @@ func NewIsNum(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *IsNum) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsBoolean) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a Boolean value.
 */
-func (this *IsNum) Type() value.Type { return value.BOOLEAN }
+func (this *IsBoolean) Type() value.Type { return value.BOOLEAN }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *IsNum) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *IsBoolean) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+It returns true if type of the input value is a boolean value, else false.
+*/
+func (this *IsBoolean) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
+	return value.NewValue(arg.Type() == value.BOOLEAN), nil
+}
+
+/*
+The constructor returns a NewIsBoolean with an operand cast to a
+Function as the FunctionConstructor.
+*/
+func (this *IsBoolean) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewIsBoolean(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// IsNumber
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the type checking function ISNUMBER(expr).
+Returns true if expr is a number; else false. IsNumber is
+a struct that implements UnaryFunctionBase.
+*/
+type IsNumber struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewIsNumber takes as input an expression and returns
+a pointer to the IsNumber struct that calls NewUnaryFunctionBase to
+create a function named IS_NUMBER with an input operand as the
+expression.
+*/
+func NewIsNumber(operand Expression) Function {
+	rv := &IsNumber{
+		*NewUnaryFunctionBase("is_number", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *IsNumber) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a Boolean value.
+*/
+func (this *IsNumber) Type() value.Type { return value.BOOLEAN }
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *IsNumber) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
 It returns true if type of the input value is an number value, else false.
 */
-func (this *IsNum) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *IsNumber) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
 	return value.NewValue(arg.Type() == value.NUMBER), nil
 }
 
 /*
-The constructor returns a NewIsNum with an operand cast to a
+The constructor returns a NewIsNumber with an operand cast to a
 Function as the FunctionConstructor.
 */
-func (this *IsNum) Constructor() FunctionConstructor {
+func (this *IsNumber) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewIsNum(operands[0])
+		return NewIsNumber(operands[0])
 	}
 }
 
 ///////////////////////////////////////////////////
 //
-// IsObj
+// IsObject
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the type checking function ISOBJ(expr).
-Returns true if expr is an object; else false. IsObj
+This represents the type checking function ISOBJECT(expr).
+Returns true if expr is an object; else false. IsObject
 is a struct that implements UnaryFunctionBase.
 */
-type IsObj struct {
+type IsObject struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewIsObj takes as input an expression and returns
-a pointer to the IsObj struct that calls NewUnaryFunctionBase to
-create a function named IS_OBJ with an input operand as the
+The function NewIsObject takes as input an expression and returns
+a pointer to the IsObject struct that calls NewUnaryFunctionBase to
+create a function named IS_OBJECT with an input operand as the
 expression.
 */
-func NewIsObj(operand Expression) Function {
-	rv := &IsObj{
-		*NewUnaryFunctionBase("is_obj", operand),
+func NewIsObject(operand Expression) Function {
+	rv := &IsObject{
+		*NewUnaryFunctionBase("is_object", operand),
 	}
 
 	rv.expr = rv
@@ -326,64 +414,68 @@ func NewIsObj(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *IsObj) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsObject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a Boolean value.
 */
-func (this *IsObj) Type() value.Type { return value.BOOLEAN }
+func (this *IsObject) Type() value.Type { return value.BOOLEAN }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *IsObj) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *IsObject) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
 It returns true if type of the input value is an object value, else false.
 */
-func (this *IsObj) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *IsObject) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
 	return value.NewValue(arg.Type() == value.OBJECT), nil
 }
 
 /*
-The constructor returns a NewIsObj with an operand cast to a
+The constructor returns a NewIsObject with an operand cast to a
 Function as the FunctionConstructor.
 */
-func (this *IsObj) Constructor() FunctionConstructor {
+func (this *IsObject) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewIsObj(operands[0])
+		return NewIsObject(operands[0])
 	}
 }
 
 ///////////////////////////////////////////////////
 //
-// IsStr
+// IsString
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the Type checking function ISSTR(expr).
-Returns true if expr is a string; else false. Type IsStr
+This represents the Type checking function ISSTRING(expr).
+Returns true if expr is a string; else false. Type IsString
 is a struct that implements UnaryFunctionBase.
 */
-type IsStr struct {
+type IsString struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewIsStr input an expression and returns
-a pointer to the IsStr struct that calls NewUnaryFunctionBase to
-create a function named IS_STR with an input operand as the
+The function NewIsString input an expression and returns
+a pointer to the IsString struct that calls NewUnaryFunctionBase to
+create a function named IS_STRING with an input operand as the
 expression.
 */
-func NewIsStr(operand Expression) Function {
-	rv := &IsStr{
-		*NewUnaryFunctionBase("is_str", operand),
+func NewIsString(operand Expression) Function {
+	rv := &IsString{
+		*NewUnaryFunctionBase("is_string", operand),
 	}
 
 	rv.expr = rv
@@ -394,64 +486,68 @@ func NewIsStr(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *IsStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsString) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a Boolean value.
 */
-func (this *IsStr) Type() value.Type { return value.BOOLEAN }
+func (this *IsString) Type() value.Type { return value.BOOLEAN }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *IsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *IsString) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
 It returns true if type of the input value is a string value, else false.
 */
-func (this *IsStr) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *IsString) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING || arg.Type() == value.NULL {
+		return arg, nil
+	}
+
 	return value.NewValue(arg.Type() == value.STRING), nil
 }
 
 /*
-The constructor returns a NewIsStr with an operand cast to a
+The constructor returns a NewIsString with an operand cast to a
 Function as the FunctionConstructor.
 */
-func (this *IsStr) Constructor() FunctionConstructor {
+func (this *IsString) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewIsStr(operands[0])
+		return NewIsString(operands[0])
 	}
 }
 
 ///////////////////////////////////////////////////
 //
-// TypeName
+// Type
 //
 ///////////////////////////////////////////////////
 
 /*
 This represents the type checking function TYPENAME(expr).
 Returns the type based on the value of the expr as a string.
-TypeName is a struct that implements UnaryFunctionBase.
+Type is a struct that implements UnaryFunctionBase.
 */
-type TypeName struct {
+type Type struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewTypeName takes as input an expression and returns
-a pointer to the TypeName struct that calls NewUnaryFunctionBase to
+The function NewType takes as input an expression and returns
+a pointer to the Type struct that calls NewUnaryFunctionBase to
 create a function named TYPE_NAME with an input operand as the
 expression.
 */
-func NewTypeName(operand Expression) Function {
-	rv := &TypeName{
-		*NewUnaryFunctionBase("type_name", operand),
+func NewType(operand Expression) Function {
+	rv := &Type{
+		*NewUnaryFunctionBase("type", operand),
 	}
 
 	rv.expr = rv
@@ -462,36 +558,36 @@ func NewTypeName(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *TypeName) Accept(visitor Visitor) (interface{}, error) {
+func (this *Type) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a String value.
 */
-func (this *TypeName) Type() value.Type { return value.STRING }
+func (this *Type) Type() value.Type { return value.STRING }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *TypeName) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Type) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
 It returns the type of the input value as a string value.
 */
-func (this *TypeName) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *Type) Apply(context Context, arg value.Value) (value.Value, error) {
 	return value.NewValue(arg.Type().String()), nil
 }
 
 /*
-The constructor returns a NewTypeName with an operand cast to a
+The constructor returns a NewType with an operand cast to a
 Function as the FunctionConstructor.
 */
-func (this *TypeName) Constructor() FunctionConstructor {
+func (this *Type) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewTypeName(operands[0])
+		return NewType(operands[0])
 	}
 }
