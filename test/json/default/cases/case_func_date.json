@@ -1,0 +1,65 @@
+[
+  {
+        "statements": "SELECT DATE_PART_STR(\"2004-07-09\", \"year\") AS year, DATE_PART_STR(\"2004-07-09\", \"month\") AS month, DATE_PART_STR( \"2004-07-09\",\"day\") AS day ORDER BY day",
+        "results": [
+        {
+            "day": 9,
+            "month": 7,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART_STR(\"11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"11:42:01Z\",\"minute\") AS minute, DATE_PART_STR(\"11:42:01Z\",\"second\") AS second ORDER BY hour",
+        "results": [
+        {
+            "hour": 11,
+            "minute": 42,
+            "second": 1
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"year\") AS year, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"month\") AS month, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"day\") AS day, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"minute\") AS minute, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"second\") AS second ORDER BY day",
+        "results": [
+        {
+            "day": 9,
+            "hour": 11,
+            "minute": 42,
+            "month": 7,
+            "second": 1,
+            "year": 2004
+        }
+    ]
+    },
+
+    {
+        "description": "test fraction seconds",
+        "statements": "SELECT DATE_PART_MILLIS(1.412243464575684768e+12, \"millisecond\")  AS ms ORDER BY ms",
+        "results": [
+        {
+            "ms": 575
+        }
+    ]
+    },
+
+   {
+        "description": "test now_str",
+        "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR() ORDER BY millennium",
+        "results": [
+        {
+            "millennium": 3
+        }
+    ]
+    },
+    {
+      "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"year\")",
+      "results": [
+        {
+            "$1": 2014
+        }
+     ]
+    }
+]

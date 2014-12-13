@@ -1,0 +1,67 @@
+[
+  {
+        "statements": "SELECT IFMISSING(`shipped-on`,\"MISSING\") as mis FROM default:orders ORDER BY mis",
+        "results": [
+      {
+            "mis": null
+        },
+        {
+            "mis": "2012/01/02"
+        },
+        {
+            "mis": "MISSING"
+        },
+        {
+            "mis": "MISSING"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT IFNULL(`shipped-on`,\"NULL\") as nu FROM default:orders ORDER BY nu",
+        "results": [
+          {},
+        {},
+        {
+            "nu": "2012/01/02"
+        },
+        {
+            "nu": "NULL"
+        }
+      ]
+    },
+
+    {
+        "statements": "SELECT IFMISSINGORNULL(`shipped-on`,\"NOT THERE\") as m_or_n FROM default:orders ORDER BY m_or_n",
+        "results": [
+      {
+            "m_or_n": "2012/01/02"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        }
+   ]
+    },
+
+ {
+        "statements": "SELECT NULLIF(score, 100) as n_if FROM default:game WHERE score > 50 ORDER BY n_if",
+        "results": [
+            {
+            "n_if": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT MISSINGIF(score, 100) FROM default:game WHERE score > 50",
+        "results": [
+        {}
+    ]
+    }
+]

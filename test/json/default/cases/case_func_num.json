@@ -1,0 +1,83 @@
+[
+  {
+        "statements": "SELECT CEIL(score+0.5) as sc FROM default:game ORDER BY sc",
+        "results": [
+           {
+            "sc": 2
+        },
+        {
+            "sc": 9
+        },
+        {
+            "sc": 11
+        },
+        {
+            "sc": 11
+        },
+        {
+            "sc": 101
+        }
+]
+    },
+
+    {
+        "statements": "SELECT FLOOR(score+0.5) as sc FROM default:game ORDER BY sc",
+        "results": [
+        {
+            "sc": 1
+        },
+        {
+            "sc": 8
+        },
+        {
+            "sc": 10
+        },
+        {
+            "sc": 10
+        },
+        {
+            "sc": 100
+        }
+   ]
+    },
+   {
+        "statements": "SELECT ROUND(score+0.5) as rnd FROM default:game ORDER BY rnd",
+        "results": [
+      {
+            "rnd": 2
+        },
+        {
+            "rnd": 8
+        },
+        {
+            "rnd": 10
+        },
+        {
+            "rnd": 10
+        },
+        {
+            "rnd": 100
+        }
+   ]
+    },
+  {
+        "statements": "SELECT TRUNC(score+0.5) as trun FROM default:game ORDER BY trun",
+        "results": [
+         {
+            "trun": 1
+        },
+        {
+            "trun": 8
+        },
+        {
+            "trun": 10
+        },
+        {
+            "trun": 10
+        },
+        {
+            "trun": 100
+        }
+ ]
+    }
+]

@@ -1,0 +1,15 @@
+[
+ {
+        "statements": "SELECT  ARRAY_LENGTH(ARRAY director FOR director IN details.director  END) AS D FROM default:catalog WHERE POLY_LENGTH(details.director) > 1 ORDER BY D",
+        "results": [
+        {
+            "D": null
+        },
+        {
+            "D": 2
+        }
+    ]
+    }
+]
+
+

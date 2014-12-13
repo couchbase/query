@@ -1,0 +1,67 @@
+[
+{
+
+        "statements": "SELECT  META(contacts) as meta_c FROM default:contacts ORDER BY meta_c",
+        "results": [
+       {
+            "meta_c": {
+                "id": "dave"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "earl"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "fred"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "harry"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "ian"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "jane"
+            }
+        }
+   ]
+    },
+   {
+
+        "statements": "SELECT  META()  FROM default:contacts AS contact UNNEST contact.children AS child",
+        "error": "the META() function requires exactly 1 argument"
+    },
+
+     {
+        "statements": "SELECT BASE64(contacts) AS b64 FROM default:contacts ORDER BY b64",
+        "results": [
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoiZiIsIm5hbWUiOiJ4ZW5hIn0seyJhZ2UiOjIsImdlbmRlciI6Im0iLCJuYW1lIjoieXVyaSJ9XSwiaG9iYmllcyI6WyJzdXJmaW5nIl0sIm5hbWUiOiJlYXJsIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoibSIsIm5hbWUiOiJhYmFtYSJ9LHsiYWdlIjoyMSwiZ2VuZGVyIjoibSIsIm5hbWUiOiJiZWJhbWEifV0sImhvYmJpZXMiOlsiZ29sZiIsInN1cmZpbmciXSwibmFtZSI6ImlhbiIsInR5cGUiOiJjb250YWN0In0="
+        },
+        {
+            "b64": "eyJjaGlsZHJlbiI6W3siYWdlIjoxNywiZ2VuZGVyIjoibSIsIm5hbWUiOiJhaWRlbiJ9LHsiYWdlIjoyLCJnZW5kZXIiOiJmIiwibmFtZSI6ImJpbGwifV0sImhvYmJpZXMiOlsiZ29sZiIsInN1cmZpbmciXSwibmFtZSI6ImRhdmUiLCJ0eXBlIjoiY29udGFjdCJ9"
+        },
+        {
+            "b64": "eyJjb250YWN0cyI6W3sibmFtZSI6ImZyZWQifSx7Im5hbWUiOiJzaGVlbGEifV0sIm5hbWUiOiJqYW5lIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJob2JiaWVzIjpbImdvbGYiLCJzdXJmaW5nIl0sIm5hbWUiOiJmcmVkIiwidHlwZSI6ImNvbnRhY3QifQ=="
+        },
+        {
+            "b64": "eyJuYW1lIjoiaGFycnkiLCJ0eXBlIjoiY29udGFjdCJ9"
+        }
+  ]
+    }
+]

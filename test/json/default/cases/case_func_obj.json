@@ -1,0 +1,16 @@
+[
+    {
+        "statements": "SELECT OBJECT_LENGTH(details) as objlen FROM default:catalog ORDER BY objlen",
+        "results": [
+          {
+            "objlen": 5
+        },
+        {
+            "objlen": 6
+        },
+        {
+            "objlen": 6
+        }
+]
+    }
+]

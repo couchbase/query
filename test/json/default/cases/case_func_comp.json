@@ -1,0 +1,43 @@
+[
+ {
+        "statements": "SELECT GREATEST(score, 75) as gr FROM default:game ORDER BY gr",
+        "results": [
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 75
+        },
+        {
+            "gr": 100
+        }
+]
+    },
+
+    {
+        "statements": "SELECT LEAST(score, 5) as le FROM default:game ORDER BY le",
+        "results": [
+      {
+            "le": 1
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        },
+        {
+            "le": 5
+        }
+   ]
+    }
+]
