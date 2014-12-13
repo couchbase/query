@@ -425,9 +425,19 @@ alter_index
 ;
 
 fullselect:
-subselects opt_order_by opt_limit opt_offset
+subselects opt_order_by
+{
+    $$ = algebra.NewSelect($1, $2, nil, nil) /* OFFSET precedes LIMIT */
+}
+|
+subselects opt_order_by limit opt_offset
 {
     $$ = algebra.NewSelect($1, $2, $4, $3) /* OFFSET precedes LIMIT */
+}
+|
+subselects opt_order_by offset opt_limit
+{
+    $$ = algebra.NewSelect($1, $2, $3, $4) /* OFFSET precedes LIMIT */
 }
 ;
 
