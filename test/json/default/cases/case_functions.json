@@ -708,7 +708,7 @@
     ]
     },
     {
-       "statements": "select LTRIM(\"       THIS Is a N1Ql QuErY\", \" T\") as ltr",
+       "statements":"select LTRIM(\"       THIS Is a N1Ql QuErY\", \" T\") as ltr",
        "results": [
         {
             "ltr": "HIS Is a N1Ql QuErY"
@@ -716,7 +716,7 @@
     ]
     },
     {
-       "statements": "select POSITION(\"       THIS Is a N1Ql QuErY\", \"N1Ql\") as pos",
+       "statements":"select POSITION(\"       THIS Is a N1Ql QuErY\", \"N1Ql\") as pos",
        "results": [
         {
             "pos": 17
@@ -744,6 +744,94 @@
        "results": [
         {
             "$1": 13
+        }
+    ]
+    },
+    {
+       "statements":"select UPPER(contacts.name) as name, TITLE(contacts.type) as type from default:contacts where LENGTH(contacts.name) < 5",
+       "results": [
+        {
+            "name": "DAVE",
+            "type": "Contact"
+        },
+        {
+            "name": "EARL",
+            "type": "Contact"
+        },
+        {
+            "name": "FRED",
+            "type": "Contact"
+        },
+        {
+            "name": "IAN",
+            "type": "Contact"
+        },
+        {
+            "name": "JANE",
+            "type": "Contact"
+        }
+    ]
+    },
+    {
+      "statements":"select REGEXP_REPLACE(\"Thisisaqueryisasubqandisnotisnull\",\"is\",\"IS\")",
+      "results": [
+        {
+            "$1": "ThISISaqueryISasubqandISnotISnull"
+        }
+    ]
+    },
+    {
+       "statements":"select REGEXP_REPLACE(\"Thisisaqueryisasubqandisnotisnull\",\"is\",\"IS\",4)",
+       "results": [
+        {
+            "$1": "ThISISaqueryISasubqandISnotisnull"
+        }
+    ]
+    },
+    {
+       "statements":"SELECT regexp_replace(\"esgFSdfa3rjs84tha5gref4\", '[a-z]','9' )",
+       "results": [
+        {
+            "$1": "999FS999399984999599994"
+        }
+    ]
+    },
+    {
+       "statements":"SELECT replace(\"esgFSdfa3rjs84tha5gref4  [a-z]\", '[a-z]','9' )",
+       "results": [
+        {
+            "$1": "esgFSdfa3rjs84tha5gref4  9"
+        }
+    ]
+    },
+    {
+      "statements":"select REPEAT(\"N1QL\",5)",
+      "results": [
+        {
+            "$1": "N1QLN1QLN1QLN1QLN1QL"
+        }
+    ]
+    },
+    {
+      "statements":"select SPLIT(\"Thisisaqueryisasubqandisnotisnull\",\"is\") ",
+          "results": [
+        {
+            "$1": [
+                "Th",
+                "",
+                "aquery",
+                "asubqand",
+                "not",
+                "null"
+            ]
+        }
+    ]
+    },
+    {
+       "statements":"select SUBSTR(\"Thisisasubquery\", 5, 10)",
+       "results": [
+        {
+            "$1": "sasubquery"
         }
     ]
     }
