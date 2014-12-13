@@ -646,6 +646,105 @@
             "millennium": 3
         }
     ]
+    },
+    {
+      "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"year\")", 
+      "results": [
+        {
+            "$1": 2014
+        }
+     ]
+    },
+    {
+      "statements": "select CONTAINS(\"Thisisaquery\", \"query\") as contains",
+      "results": [
+        {
+            "contains": true
+        }
+    ]
+    },
+    {
+      "statements": "select INITCAP(\"query for n1ql tests\")",
+      "results": [
+        {
+            "$1": "Query For N1ql Tests"
+        }
+    ]
+    },
+    {
+      "statements":"select TITLE(\"query for n1ql tests\") as title",
+      "results": [
+        {
+            "title": "Query For N1ql Tests"
+        }
+    ]
+    },
+    {
+      "statements":"select name from default:contacts where LENGTH(contacts.name) < 5",
+      "results": [
+        {
+            "name": "dave"
+        },
+        {
+            "name": "earl"
+        },
+        {
+            "name": "fred"
+        },
+        {
+            "name": "ian"
+        },
+        {
+            "name": "jane"
+        }
+    ]
+    },
+    {
+       "statements":"select LOWER(\"THIS Is a N1Ql QuErY\") as lower",
+       "results": [
+        {
+            "lower": "this is a n1ql query"
+        }
+    ]
+    },
+    {
+       "statements": "select LTRIM(\"       THIS Is a N1Ql QuErY\", \" T\") as ltr",
+       "results": [
+        {
+            "ltr": "HIS Is a N1Ql QuErY"
+        }
+    ]
+    },
+    {
+       "statements": "select POSITION(\"       THIS Is a N1Ql QuErY\", \"N1Ql\") as pos",
+       "results": [
+        {
+            "pos": 17
+        }
+    ]
+    },
+    {
+       "statements":"select REGEXP_CONTAINS(\"Thisisabigsubquery\",\"query\")",
+       "results": [
+        {
+            "$1": true
+        }
+    ]
+    },
+    {
+       "statements":"select REGEXP_LIKE(\"Thisisabigsubquery\",\"query\")",
+       "results": [
+        {
+            "$1": true
+        }
+    ]
+    },
+    {
+       "statements":"select REGEXP_POSITION(\"Thisisabigsubquery\",\"query\")",
+       "results": [
+        {
+            "$1": 13
+        }
+    ]
     }
-
 ]
