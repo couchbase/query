@@ -10,7 +10,6 @@
 package planner
 
 import (
-	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -20,7 +19,7 @@ type sargValued struct {
 
 func newSargValued(expr expression.UnaryFunction) *sargValued {
 	rv := &sargValued{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}

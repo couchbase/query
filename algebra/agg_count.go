@@ -29,10 +29,6 @@ func NewCount(operand expression.Expression) Aggregate {
 	return rv
 }
 
-func (this *Count) String() string {
-	return this.toString(this)
-}
-
 func (this *Count) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

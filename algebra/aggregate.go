@@ -19,7 +19,6 @@ import (
 type Aggregates []Aggregate
 
 type Aggregate interface {
-	fmt.Stringer
 	expression.Function
 
 	Default() value.Value
@@ -98,14 +97,6 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 	}
 
 	return nil
-}
-
-func (this *AggregateBase) toString(agg Aggregate) string {
-	if this.text == "" {
-		this.text = expression.NewStringer().Visit(agg)
-	}
-
-	return this.text
 }
 
 type DistinctAggregateBase struct {

@@ -47,6 +47,10 @@ func (this *PositionalParameter) Evaluate(item value.Value, context expression.C
 	}
 }
 
+func (this *PositionalParameter) Static() expression.Expression {
+	return this
+}
+
 func (this *PositionalParameter) Indexable() bool {
 	return false
 }

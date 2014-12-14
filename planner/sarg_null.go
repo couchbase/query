@@ -12,17 +12,16 @@ package planner
 import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
-var _NULL_SPANS datastore.Spans
+var _NULL_SPANS Spans
 
 func init() {
-	span := &datastore.Span{}
-	span.Range.Low = value.Values{value.NULL_VALUE}
+	span := &Span{}
+	span.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	span.Range.High = span.Range.Low
 	span.Range.Inclusion = datastore.BOTH
-	_NULL_SPANS = datastore.Spans{span}
+	_NULL_SPANS = Spans{span}
 }
 
 type sargNull struct {
@@ -31,7 +30,7 @@ type sargNull struct {
 
 func newSargNull(expr *expression.IsNull) *sargNull {
 	rv := &sargNull{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
@@ -52,7 +51,7 @@ type sargNotNull struct {
 
 func newSargNotNull(expr *expression.IsNotNull) *sargNotNull {
 	rv := &sargNotNull{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}

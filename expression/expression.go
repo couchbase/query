@@ -14,6 +14,9 @@ indexing.
 package expression
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -28,6 +31,9 @@ type CompositeExpressions []Expressions
 The Expression interface represents N1QL expressions.
 */
 type Expression interface {
+	fmt.Stringer
+	json.Marshaler
+
 	/*
 	   It takes as input a Visitor type and returns an interface
 	   and error. It represents a visitor pattern.
@@ -55,6 +61,14 @@ type Expression interface {
 	   selection.
 	*/
 	Value() value.Value
+
+	/*
+	   Static() returns the static / constant equivalent of this
+	   Expression, or nil. Expressions that depend on data,
+	   clocks, or random numbers must return nil. Used in index
+	   selection.
+	*/
+	Static() Expression
 
 	/*
 	   As per the N1QL specs this function returns the terminal

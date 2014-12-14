@@ -13,7 +13,10 @@ import (
 	"fmt"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/planner"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -86,10 +89,10 @@ func (this *IndexScan) ChildChannel() StopChannel {
 type spanScan struct {
 	base
 	plan *plan.IndexScan
-	span *datastore.Span
+	span *planner.Span
 }
 
-func newSpanScan(parent *IndexScan, span *datastore.Span) *spanScan {
+func newSpanScan(parent *IndexScan, span *planner.Span) *spanScan {
 	rv := &spanScan{
 		base: newRedirectBase(),
 		plan: parent.plan,
@@ -146,5 +149,58 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
-	this.plan.Index().Scan(this.span, this.plan.Distinct(), this.plan.Limit(), conn)
+
+	dspan, err := evalSpan(this.span, context)
+	if err != nil {
+		context.Error(errors.NewError(err, "Error evaluating span."))
+		close(conn.EntryChannel())
+		return
+	}
+
+	this.plan.Index().Scan(dspan, this.plan.Distinct(), this.plan.Limit(), conn)
+}
+
+func evalSpan(ps *planner.Span, context *Context) (*datastore.Span, error) {
+	var err error
+	ds := &datastore.Span{}
+
+	ds.Seek, err = evalExprs(ps.Seek, context)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.Range.Low, err = evalExprs(ps.Range.Low, context)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.Range.High, err = evalExprs(ps.Range.High, context)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.Range.Inclusion = ps.Range.Inclusion
+	return ds, nil
+}
+
+func evalExprs(exprs expression.Expressions, context *Context) (value.Values, error) {
+	if exprs == nil {
+		return nil, nil
+	}
+
+	values := make(value.Values, len(exprs))
+
+	var err error
+	for i, expr := range exprs {
+		if expr == nil {
+			continue
+		}
+
+		values[i], err = expr.Evaluate(nil, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return values, nil
 }

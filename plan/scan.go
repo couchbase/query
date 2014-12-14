@@ -16,6 +16,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/expression/parser"
+	"github.com/couchbaselabs/query/planner"
 )
 
 type PrimaryScan struct {
@@ -85,13 +86,13 @@ type IndexScan struct {
 	readonly
 	index    datastore.Index
 	term     *algebra.KeyspaceTerm
-	spans    datastore.Spans
+	spans    planner.Spans
 	distinct bool
 	limit    int64
 }
 
 func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
-	spans datastore.Spans, distinct bool, limit int64) *IndexScan {
+	spans planner.Spans, distinct bool, limit int64) *IndexScan {
 	return &IndexScan{
 		index:    index,
 		term:     term,
@@ -117,7 +118,7 @@ func (this *IndexScan) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *IndexScan) Spans() datastore.Spans {
+func (this *IndexScan) Spans() planner.Spans {
 	return this.spans
 }
 
@@ -151,13 +152,13 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string          `json:"#operator"`
-		Index    string          `json:"index"`
-		Names    string          `json:"namespace"`
-		Keys     string          `json:"keyspace"`
-		Spans    datastore.Spans `json:"spans"`
-		Distinct bool            `json:"distinct"`
-		Limit    int64           `json:"limit"`
+		_        string        `json:"#operator"`
+		Index    string        `json:"index"`
+		Names    string        `json:"namespace"`
+		Keys     string        `json:"keyspace"`
+		Spans    planner.Spans `json:"spans"`
+		Distinct bool          `json:"distinct"`
+		Limit    int64         `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

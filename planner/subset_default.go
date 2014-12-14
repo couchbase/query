@@ -20,6 +20,11 @@ type subsetDefault struct {
 func newSubsetDefault(expr expression.Expression) *subsetDefault {
 	rv := &subsetDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
+		value2 := expr2.Value()
+		if value2 != nil {
+			return value2.Truth(), nil
+		}
+
 		if expr.EquivalentTo(expr2) {
 			return true, nil
 		}

@@ -29,10 +29,6 @@ func NewAvg(operand expression.Expression) Aggregate {
 	return rv
 }
 
-func (this *Avg) String() string {
-	return this.toString(this)
-}
-
 func (this *Avg) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

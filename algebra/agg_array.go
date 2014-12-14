@@ -30,10 +30,6 @@ func NewArrayAgg(operand expression.Expression) Aggregate {
 	return rv
 }
 
-func (this *ArrayAgg) String() string {
-	return this.toString(this)
-}
-
 func (this *ArrayAgg) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

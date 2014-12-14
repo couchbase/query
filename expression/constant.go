@@ -19,7 +19,7 @@ and a value.
 */
 type Constant struct {
 	ExpressionBase
-	value value.Value
+	value value.Value // Overshadows ExpressionBase.value
 }
 
 /*
@@ -74,6 +74,13 @@ expression. It returns the receivers value.
 */
 func (this *Constant) Value() value.Value {
 	return this.value
+}
+
+/*
+Returns this constant expression.
+*/
+func (this *Constant) Static() Expression {
+	return this
 }
 
 /*

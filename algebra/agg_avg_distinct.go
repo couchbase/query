@@ -29,10 +29,6 @@ func NewAvgDistinct(operand expression.Expression) Aggregate {
 	return rv
 }
 
-func (this *AvgDistinct) String() string {
-	return this.toString(this)
-}
-
 func (this *AvgDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }

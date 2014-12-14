@@ -22,17 +22,7 @@ type sargableLike struct {
 func newSargableLike(expr expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
 	rv := &sargableLike{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if re == nil {
-			// Pattern is not a constant
-			return false, nil
-		}
-
-		if !expr.First().EquivalentTo(expr2) {
-			return false, nil
-		}
-
-		prefix, complete := re.LiteralPrefix()
-		return complete || prefix != "", nil
+		return expr.EquivalentTo(expr2) || expr.First().EquivalentTo(expr2), nil
 	}
 
 	return rv

@@ -10,7 +10,6 @@
 package planner
 
 import (
-	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 )
 
@@ -20,12 +19,12 @@ type sargOr struct {
 
 func newSargOr(expr *expression.Or) *sargOr {
 	rv := &sargOr{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		spans := make(datastore.Spans, 0, len(expr.Operands()))
+		spans := make(Spans, 0, len(expr.Operands()))
 		for _, child := range expr.Operands() {
 			cspans := SargFor(child, expr2)
 			if len(cspans) > 0 {

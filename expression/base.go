@@ -26,6 +26,19 @@ type ExpressionBase struct {
 
 var _NIL_VALUE value.Value
 
+func (this *ExpressionBase) String() string {
+	return NewStringer().Visit(this.expr)
+}
+
+func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
+	s, err := this.expr.Accept(NewStringer())
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(s.(string)), nil
+}
+
 /*
 Value() returns the static / constant value of this Expression, or
 nil. Expressions that depend on data, clocks, or random numbers must
@@ -81,7 +94,19 @@ func (this *ExpressionBase) Value() value.Value {
 }
 
 /*
-It returns an empty string for the terminal identifier of
+Returns a Constant or nil.
+*/
+func (this *ExpressionBase) Static() Expression {
+	v := this.expr.Value()
+	if v != nil {
+		return NewConstant(v)
+	}
+
+	return nil
+}
+
+/*
+It returns an empty string or the terminal identifier of
 the expression.
 */
 func (this *ExpressionBase) Alias() string {

@@ -14,7 +14,22 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-func SargFor(expr1, expr2 expression.Expression) datastore.Spans {
+type Range struct {
+	Low       expression.Expressions
+	High      expression.Expressions
+	Inclusion datastore.Inclusion
+}
+
+type Ranges []*Range
+
+type Span struct {
+	Seek  expression.Expressions
+	Range Range
+}
+
+type Spans []*Span
+
+func SargFor(expr1, expr2 expression.Expression) Spans {
 	if expr2.Value() != nil {
 		return nil
 	}
@@ -22,7 +37,7 @@ func SargFor(expr1, expr2 expression.Expression) datastore.Spans {
 	s := newSarg(expr1)
 	result, _ := expr2.Accept(s)
 	if result != nil {
-		return result.(datastore.Spans)
+		return result.(Spans)
 	}
 
 	return nil
@@ -37,7 +52,7 @@ type sargBase struct {
 	sarg sargFunc
 }
 
-type sargFunc func(expression.Expression) (datastore.Spans, error)
+type sargFunc func(expression.Expression) (Spans, error)
 
 // Arithmetic
 

@@ -15,34 +15,26 @@ import (
 
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
 type sargLike struct {
 	sargBase
 }
 
-var _EMPTY_ARRAY = value.Values{value.EMPTY_ARRAY_VALUE}
+var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
 
 func newSargLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
-	if re == nil {
-		// Pattern is not a constant
-		return newSargDefault(expr)
-	}
-
-	prefix, complete := re.LiteralPrefix()
-	if complete {
-		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
-		return newSargEq(eq.(*expression.Eq))
-	}
-
-	if prefix == "" {
-		// Pattern begins with wildcard
-		return newSargDefault(expr)
+	prefix := ""
+	if re != nil {
+		prefix, complete := re.LiteralPrefix()
+		if complete {
+			eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
+			return newSargEq(eq.(*expression.Eq))
+		}
 	}
 
 	rv := &sargLike{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
@@ -51,20 +43,20 @@ func newSargLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.V
 			return nil, nil
 		}
 
-		span := &datastore.Span{}
-		span.Range.Low = value.Values{value.NewValue(prefix)}
+		span := &Span{}
+		span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
 
 		last := len(prefix) - 1
-		if prefix[last] < math.MaxUint8 {
+		if last >= 0 && prefix[last] < math.MaxUint8 {
 			bytes := []byte(prefix)
 			bytes[last]++
-			span.Range.High = value.Values{value.NewValue(string(bytes))}
+			span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
 		} else {
 			span.Range.High = _EMPTY_ARRAY
 		}
 
 		span.Range.Inclusion = datastore.LOW
-		return datastore.Spans{span}, nil
+		return Spans{span}, nil
 	}
 
 	return rv

@@ -12,7 +12,6 @@ package planner
 import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
 type sargEq struct {
@@ -21,17 +20,17 @@ type sargEq struct {
 
 func newSargEq(expr *expression.Eq) *sargEq {
 	rv := &sargEq{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		span := &datastore.Span{}
+		span := &Span{}
 
 		if expr.First().EquivalentTo(expr2) {
-			span.Range.Low = value.Values{expr.Second().Value()}
+			span.Range.Low = expression.Expressions{expr.Second().Static()}
 		} else if expr.Second().EquivalentTo(expr2) {
-			span.Range.Low = value.Values{expr.First().Value()}
+			span.Range.Low = expression.Expressions{expr.First().Static()}
 		}
 
 		if len(span.Range.Low) == 0 {
@@ -40,7 +39,7 @@ func newSargEq(expr *expression.Eq) *sargEq {
 
 		span.Range.High = span.Range.Low
 		span.Range.Inclusion = datastore.BOTH
-		return datastore.Spans{span}, nil
+		return Spans{span}, nil
 	}
 
 	return rv

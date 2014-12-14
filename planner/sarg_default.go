@@ -12,28 +12,27 @@ package planner
 import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
 )
 
-var _SELF_SPANS datastore.Spans
-var _FULL_SPANS datastore.Spans
-var _VALUED_SPANS datastore.Spans
+var _SELF_SPANS Spans
+var _FULL_SPANS Spans
+var _VALUED_SPANS Spans
 
 func init() {
-	sspan := &datastore.Span{}
-	sspan.Range.Low = value.Values{value.TRUE_VALUE}
+	sspan := &Span{}
+	sspan.Range.Low = expression.Expressions{expression.TRUE_EXPR}
 	sspan.Range.Inclusion = datastore.LOW
-	_SELF_SPANS = datastore.Spans{sspan}
+	_SELF_SPANS = Spans{sspan}
 
-	fspan := &datastore.Span{}
-	fspan.Range.Low = value.Values{value.NULL_VALUE}
+	fspan := &Span{}
+	fspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	fspan.Range.Inclusion = datastore.LOW
-	_FULL_SPANS = datastore.Spans{fspan}
+	_FULL_SPANS = Spans{fspan}
 
-	vspan := &datastore.Span{}
-	vspan.Range.Low = value.Values{value.NULL_VALUE}
+	vspan := &Span{}
+	vspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	vspan.Range.Inclusion = datastore.NEITHER
-	_VALUED_SPANS = datastore.Spans{vspan}
+	_VALUED_SPANS = Spans{vspan}
 }
 
 type sargDefault struct {
@@ -41,7 +40,7 @@ type sargDefault struct {
 }
 
 func newSargDefault(expr expression.Expression) *sargDefault {
-	var spans datastore.Spans
+	var spans Spans
 	if expr.PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if expr.PropagatesMissing() {
@@ -49,7 +48,7 @@ func newSargDefault(expr expression.Expression) *sargDefault {
 	}
 
 	rv := &sargDefault{}
-	rv.sarg = func(expr2 expression.Expression) (datastore.Spans, error) {
+	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
 		if expr.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}

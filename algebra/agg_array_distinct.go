@@ -29,10 +29,6 @@ func NewArrayAggDistinct(operand expression.Expression) Aggregate {
 	return rv
 }
 
-func (this *ArrayAggDistinct) String() string {
-	return this.toString(this)
-}
-
 func (this *ArrayAggDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
