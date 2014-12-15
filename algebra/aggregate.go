@@ -18,15 +18,35 @@ import (
 
 type Aggregates []Aggregate
 
+/*
+The Aggregate interface represents aggregate functions such as SUM(),
+AVG(), COUNT, COUNT(DISTINCT), MIN(), and MAX().
+
+Aggregate functions are computed in parallel. Each aggregate function
+must supply the methods CumulateInitial(), CumulateIntermediate(), and
+CumulateFinal(). CumulateInitial() aggregates input values and
+produces an intermediate aggregate. CumulateIntermediate() aggregates
+intermediate aggregates and produces a further intermediate
+aggregate. CumulateFinal() takes a final aggregate and performs any
+post-processing. For example, Avg.CumulateFinal() divides the final
+sum by the final count.
+
+CumulateInitial() and CumulateIntermediate() can be run across
+parallel input streams. CumulateFinal() must be run in a single serial
+stream. CumulateIntermediate() must be chainable, to provide cascading
+aggregation.
+
+If no input data is received, the Default() value is returned.
+*/
 type Aggregate interface {
 	expression.Function
 
-	Default() value.Value
-	Operand() expression.Expression
+	Default() value.Value           // Returned if there is no input data.
+	Operand() expression.Expression // Single operand to this function.
 
-	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)
-	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
-	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)
+	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)      // Aggregates input data.
+	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) // Aggregates intermediate results.
+	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)               // Performs final post-processing, if any.
 }
 
 type AggregateBase struct {

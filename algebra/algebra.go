@@ -19,13 +19,22 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+The Statement interface represents a N1QL statement, e.g. a SELECT,
+UPDATE, or CREATE INDEX statement.
+*/
 type Statement interface {
-	Accept(visitor Visitor) (interface{}, error)
-	Signature() value.Value
-	Formalize() error
-	MapExpressions(mapper expression.Mapper) error
+	Accept(visitor Visitor) (interface{}, error)   // Visitor pattern
+	Signature() value.Value                        // The shape of this statement's return values
+	Formalize() error                              // Fully qualify all identifiers in this statement
+	MapExpressions(mapper expression.Mapper) error // Apply a Mapper to all the expressions in this statement
 }
 
+/*
+The Node interface represents a node in the algebra tree (AST). It is
+used internally within the algebra package for polymorphism and
+visitor pattern.
+*/
 type Node interface {
-	Accept(visitor NodeVisitor) (interface{}, error)
+	Accept(visitor NodeVisitor) (interface{}, error) // Visitor pattern
 }
