@@ -56,6 +56,11 @@ func (this *NNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 }
 
 func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
 	var exp expression.Expression = expr
 
 	switch operand := expr.Operand().(type) {
@@ -82,6 +87,38 @@ func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
 		exp = expression.NewLE(operand.Second(), operand.First())
 	case *expression.LE:
 		exp = expression.NewLT(operand.Second(), operand.First())
+	}
+
+	return exp, exp.MapChildren(this)
+}
+
+var _EMPTY_OBJECT_EXPR = expression.NewConstant(map[string]interface{}{})
+var _MIN_BINARY_EXPR = expression.NewConstant([]byte{})
+
+func (this *NNF) VisitFunction(expr expression.Function) (interface{}, error) {
+	var exp expression.Expression = expr
+
+	switch expr := expr.(type) {
+	case *expression.IsBoolean:
+		exp = expression.NewLE(expr.Operand(), expression.TRUE_EXPR)
+	case *expression.IsNumber:
+		exp = expression.NewAnd(
+			expression.NewGT(expr.Operand(), expression.TRUE_EXPR),
+			expression.NewLT(expr.Operand(), expression.EMPTY_STRING_EXPR))
+	case *expression.IsString:
+		exp = expression.NewAnd(
+			expression.NewGE(expr.Operand(), expression.EMPTY_STRING_EXPR),
+			expression.NewLT(expr.Operand(), expression.EMPTY_ARRAY_EXPR))
+	case *expression.IsArray:
+		exp = expression.NewAnd(
+			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
+			expression.NewLT(expr.Operand(), _EMPTY_OBJECT_EXPR))
+	case *expression.IsObject:
+		exp = expression.NewAnd(
+			expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR),
+			expression.NewLT(expr.Operand(), _MIN_BINARY_EXPR))
+	case *expression.IsBinary:
+		exp = expression.NewGE(expr.Operand(), _MIN_BINARY_EXPR)
 	}
 
 	return exp, exp.MapChildren(this)
