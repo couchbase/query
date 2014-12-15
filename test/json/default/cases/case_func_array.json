@@ -272,7 +272,277 @@
             "$1": 7
         }
     ]
-  }
+  },
+  {
+     "statements":"select array_max(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM default:orders ORDER BY A",
+     "results": [
+        {
+            "A": "sugar22"
+        },
+        {
+            "A": "sugar22"
+        },
+        {
+            "A": "tea111"
+        },
+        {
+            "A": "tea111"
+        }
+    ]
+  },
+ {
+    "statements":"select array_min(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM default:orders ORDER BY A",
+    "results": [
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "sugar22"
+        }
+    ]
+ },
+ {
+    "statements":"select array_position(array_agg(array_min(ARRAY ol.productId FOR ol IN orderlines END) ) , \"sugar22\" ) AS A FROM default:orders ORDER BY A ",
+    "results": [
+        {
+            "A": 3
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_PREPEND((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM default:orders ORDER BY A",
+     "results": [
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "sugar22"
+                ],
+                "1200"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "sugar22"
+                ],
+                "1236"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "tea111"
+                ],
+                "1234"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "tea111",
+                    "sugar22"
+                ],
+                "1235"
+            ]
+        }
+    ]    
+ },
+ {
+    "statements":"select ARRAY_PUT((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM default:orders ORDER BY A",
+    "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                [
+                    "1200"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                [
+                    "1236"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                [
+                    "1234"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                [
+                    "1235"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"])  AS A FROM default:orders ORDER BY A",
+    "results": [
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "tea111"
+                ],
+                [
+                    "tea111",
+                    "sugar22"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_REVERSE( ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"]))  AS A FROM default:orders ORDER BY A ",
+    "results": [
+        {
+            "A": [
+                [
+                    "tea111",
+                    "sugar22"
+                ],
+                [
+                    "coffee01",
+                    "tea111"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_range(-3,10,2) ",
+    "results": [
+        {
+            "$1": [
+                -3,
+                -1,
+                1,
+                3,
+                5,
+                7,
+                9
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_range(-3,10) ",
+    "results": [
+        {
+            "$1": [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",-1) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",0) ",
+    "results": [
+        {
+            "$1": []
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",3) ",
+     "results": [
+        {
+            "$1": [
+                "N1ql",
+                "N1ql",
+                "N1ql"
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat([\"N1ql\",4],3)",
+    "results": [
+        {
+            "$1": [
+                [
+                    "N1ql",
+                    4
+                ],
+                [
+                    "N1ql",
+                    4
+                ],
+                [
+                    "N1ql",
+                    4
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_replace([\"2010\",\"2011\",2012, 2013,\"2013\"], \"2013\", [2013, 2014] ) ",
+ "results": [
+        {
+            "$1": [
+                "2010",
+                "2011",
+                2012,
+                2013,
+                [
+                    2013,
+                    2014
+                ]
+            ]
+        }
+    ]
+},
+{
+   "statements":"select array_sum(array_range(-3,5)) as sum ",
+   "results": [
+        {
+            "sum": 4
+        }
+    ]
+}
 ]
 
 
