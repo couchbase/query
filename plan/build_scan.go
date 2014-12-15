@@ -10,6 +10,7 @@
 package plan
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/couchbaselabs/query/algebra"
@@ -42,6 +43,15 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	filtered := make(map[datastore.Index]expression.Expression, len(indexes))
 
 	for _, index := range indexes {
+		state, er := index.State()
+		if er != nil {
+			return nil, er
+		}
+
+		if state != datastore.ONLINE {
+			continue
+		}
+
 		rangeKey := index.RangeKey()
 		if len(rangeKey) == 0 || rangeKey[0] == nil {
 			// Index not rangeable
@@ -117,6 +127,15 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 	primary, err := keyspace.IndexByPrimary()
 	if err != nil {
 		return nil, err
+	}
+
+	state, err := primary.State()
+	if err != nil {
+		return nil, err
+	}
+
+	if state != datastore.ONLINE {
+		return nil, fmt.Errorf("Primary index not online.")
 	}
 
 	scan := NewPrimaryScan(primary, node)
