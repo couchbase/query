@@ -24,7 +24,7 @@ type HttpEndpoint struct {
 	bufpool BufferPool
 }
 
-func NewHttpEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
+func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:  server,
 		metrics: metrics,

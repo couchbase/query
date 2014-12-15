@@ -11,6 +11,7 @@ package clustering_cb
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/couchbaselabs/go-couchbase"
@@ -21,12 +22,12 @@ import (
 )
 
 func TestCBClustering(t *testing.T) {
-	if !couchbase_running() {
+	if !couchbase_running("localhost") {
 		t.Skip("Couchbase not running - skipping test")
 	}
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
-	cs, err := NewConfigstore("http://127.0.0.1:8091")
+	cs, err := NewConfigstore("http://localhost:8091")
 	if err != nil {
 		t.Fatalf("Error creating configstore: ", err)
 	}
@@ -90,7 +91,8 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 	}
 }
 
-func couchbase_running() bool {
-	_, err := couchbase.Connect("http://localhost:8091/")
+func couchbase_running(where string) bool {
+	url_parts := []string{"http://", where, ":8091/"}
+	_, err := couchbase.Connect(strings.Join(url_parts, ""))
 	return err == nil
 }

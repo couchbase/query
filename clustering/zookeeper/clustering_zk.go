@@ -11,6 +11,7 @@ import (
 	"github.com/couchbaselabs/query/clustering"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbaselabs/query/util"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -358,7 +359,7 @@ type zkQueryNodeConfig struct {
 func NewQueryNode(query_addr string,
 	stndln *clustering.StdStandalone,
 	opts *clustering.ClOptions) (clustering.QueryNode, errors.Error) {
-	ip_addr, err := clustering.ExternalIP()
+	ip_addr, err := util.ExternalIP()
 	if err != nil {
 		ip_addr = "127.0.0.1"
 	}

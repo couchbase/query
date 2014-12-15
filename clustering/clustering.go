@@ -24,8 +24,6 @@ The logical hierarchy is as follows:
 package clustering
 
 import (
-	"net"
-
 	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
@@ -341,43 +339,4 @@ func (st *StdStandalone) ConfigurationStore() ConfigurationStore {
 
 func (st *StdStandalone) Version() Version {
 	return st.Vers
-}
-
-// helper function to determine the external IP address of a query node -
-// used to create a name for the query node in NewQueryNode function.
-func ExternalIP() (string, errors.Error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", errors.NewError(err, "")
-	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", errors.NewError(err, "")
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue // not an ipv4 address
-			}
-			return ip.String(), nil
-		}
-	}
-	return "", errors.NewError(nil, "Not connected to the network")
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/util"
 )
 
 const _PREFIX = "couchbase:"
@@ -366,7 +367,7 @@ func getHostnameFromURI(uri string) (hostname string, err error) {
 	name := strings.Split(tokens[1], "//")
 	switch strings.ToLower(name[1]) {
 	case "localhost", "127.0.0.1":
-		hostname, err = clustering.ExternalIP()
+		hostname, err = util.ExternalIP()
 	default:
 		hostname, err = name[1], nil
 	}

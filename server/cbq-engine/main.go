@@ -128,7 +128,7 @@ func main() {
 		logging.Pair{"datastore", *DATASTORE},
 	)
 
-	endpoint := http.NewHttpEndpoint(server, *METRICS, *HTTP_ADDR)
+	endpoint := http.NewServiceEndpoint(server, *METRICS, *HTTP_ADDR)
 	er := endpoint.ListenAndServe()
 	if er != nil {
 		logging.Errorf("cbq-engine exiting with error: %v", er)
