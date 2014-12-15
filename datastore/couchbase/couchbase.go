@@ -304,16 +304,13 @@ func keepPoolFresh(p *namespace) {
 }
 
 type keyspace struct {
-	namespace        *namespace
-	name             string
-	indexes          map[string]datastore.Index
-	primary          datastore.PrimaryIndex
-	cbbucket         *cb.Bucket
-	deleted          bool
-	nonUsableIndexes []string          // indexes that cannot be used
-	saslPassword     string            // SASL password
-	viewIndexer      datastore.Indexer // View index provider
-	lsmIndexer       datastore.Indexer // LSM index provider
+	namespace    *namespace
+	name         string
+	cbbucket     *cb.Bucket
+	deleted      bool
+	saslPassword string            // SASL password
+	viewIndexer  datastore.Indexer // View index provider
+	lsmIndexer   datastore.Indexer // LSM index provider
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
