@@ -457,3 +457,80 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 
 	return err
 }
+
+// UnionScan scans multiple indexes and unions the results.
+type UnionScan struct {
+	readonly
+	scans []Operator
+}
+
+func NewUnionScan(scans ...Operator) *UnionScan {
+	return &UnionScan{
+		scans: scans,
+	}
+}
+
+func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitUnionScan(this)
+}
+
+func (this *UnionScan) New() Operator {
+	return &UnionScan{}
+}
+
+func (this *UnionScan) Scans() []Operator {
+	return this.scans
+}
+
+func (this *UnionScan) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "UnionScan"}
+
+	// FIXME
+	r["scans"] = this.scans
+
+	return json.Marshal(r)
+}
+
+func (this *UnionScan) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string            `json:"#operator"`
+		Scans []json.RawMessage `json:"scans"`
+	}
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.scans = []Operator{}
+
+	for _, raw_scan := range _unmarshalled.Scans {
+		var scan_type struct {
+			Operator string `json:"#operator"`
+		}
+		var read_only struct {
+			Readonly bool `json:"readonly"`
+		}
+		err = json.Unmarshal(raw_scan, &scan_type)
+		if err != nil {
+			return err
+		}
+
+		if scan_type.Operator == "" {
+			err = json.Unmarshal(raw_scan, &read_only)
+			if err != nil {
+				return err
+			} else {
+				// This should be a readonly object
+			}
+		} else {
+			scan_op, err := MakeOperator(scan_type.Operator, raw_scan)
+			if err != nil {
+				return err
+			}
+
+			this.scans = append(this.scans, scan_op)
+		}
+	}
+
+	return err
+}

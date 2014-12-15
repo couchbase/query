@@ -428,5 +428,5 @@ func identifyType(bytes []byte) Type {
 		}
 	}
 
-	panic("Unable to identify type of JSON data.")
+	return BINARY
 }

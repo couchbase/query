@@ -73,6 +73,21 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 	return NewIntersectScan(scans), nil
 }
 
+func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
+	scans := make([]Operator, len(plan.Scans()))
+
+	for i, p := range plan.Scans() {
+		s, e := p.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+
+		scans[i] = s.(Operator)
+	}
+
+	return NewUnionScan(scans), nil
+}
+
 // Fetch
 func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil

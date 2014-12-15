@@ -97,12 +97,16 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		indexMap = unfiltered
 	}
 
-	if indexMap != nil {
-		for index, key := range indexMap {
-			spans := planner.SargFor(where, key)
-			scan := NewIndexScan(index, node, spans, false, math.MaxInt64)
-			return scan, err
+	for index, key := range indexMap {
+		spans := planner.SargFor(where, key)
+		var scan Operator
+		scan = NewIndexScan(index, node, spans, false, math.MaxInt64)
+		if len(spans) > 1 {
+			// Use UnionScan to de-dup multiple spans
+			scan = NewUnionScan(scan)
 		}
+
+		return scan, err
 	}
 
 	return this.selectPrimaryScan(keyspace, node)
