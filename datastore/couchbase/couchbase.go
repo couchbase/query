@@ -317,40 +317,6 @@ type keyspace struct {
 
 }
 
-func (b *keyspace) refresh() {
-	// trigger refresh of this pool
-	logging.Infof("Refreshing Indexes in keyspace %s", b.name)
-
-	indexes, err := loadViewIndexes(b)
-	if err != nil {
-		logging.Errorf(" Error loading indexes for bucket %s", b.name)
-		return
-	}
-
-	if len(indexes) == 0 {
-		return
-	}
-
-	for _, index := range indexes {
-		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), b.name)
-		name := (*index).Name()
-		b.indexes[name] = *index
-	}
-
-}
-
-func keepIndexesFresh(b *keyspace) {
-
-	tickChan := time.Tick(15 * time.Second)
-
-	for _ = range tickChan {
-		if b.deleted == true {
-			return
-		}
-		b.refresh()
-	}
-}
-
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 	var saslPassword string
