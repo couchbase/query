@@ -314,7 +314,6 @@ type keyspace struct {
 	saslPassword     string            // SASL password
 	viewIndexer      datastore.Indexer // View index provider
 	lsmIndexer       datastore.Indexer // LSM index provider
-
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
