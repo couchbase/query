@@ -114,11 +114,8 @@ func (this *NNF) VisitFunction(expr expression.Function) (interface{}, error) {
 			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
 			expression.NewLT(expr.Operand(), _EMPTY_OBJECT_EXPR))
 	case *expression.IsObject:
-		exp = expression.NewAnd(
-			expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR),
-			expression.NewLT(expr.Operand(), _MIN_BINARY_EXPR))
-	case *expression.IsBinary:
-		exp = expression.NewGE(expr.Operand(), _MIN_BINARY_EXPR)
+		// Not equivalent to IS OBJECT. Includes BINARY values.
+		exp = expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR)
 	}
 
 	return exp, exp.MapChildren(this)
