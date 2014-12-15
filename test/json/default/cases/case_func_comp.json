@@ -1,5 +1,25 @@
 [
- {
+   {
+      "statements":"SELECT GREATEST(score,9) as gr FROM default:game ORDER BY gr",
+      "results": [
+        {
+            "gr": 9
+        },
+        {
+            "gr": 9
+        },
+        {
+            "gr": 10
+        },
+        {
+            "gr": 10
+        },
+        {
+            "gr": 100
+        }
+    ]
+   },
+   {
         "statements": "SELECT GREATEST(score, 75) as gr FROM default:game ORDER BY gr",
         "results": [
         {
@@ -17,9 +37,28 @@
         {
             "gr": 100
         }
-]
+      ]
     },
-
+    {
+        "statements":"SELECT LEAST(score,11) as gr FROM default:game ORDER BY gr",
+        "results": [
+        {
+            "gr": 1
+        },
+        {
+            "gr": 8
+        },
+        {
+            "gr": 10
+        },
+        {
+            "gr": 10
+        },
+        {
+            "gr": 11
+        }
+    ]
+    },
     {
         "statements": "SELECT LEAST(score, 5) as le FROM default:game ORDER BY le",
         "results": [
@@ -39,5 +78,61 @@
             "le": 5
         }
    ]
-    }
+    },
+   {
+      "statements":"select GREATEST(id,\"indigo\") from default:game ORDER by id ",
+      "results": [
+        {
+            "$1": "indigo"
+        },
+        {
+            "$1": "indigo"
+        },
+        {
+            "$1": "junyi"
+        },
+        {
+            "$1": "marty"
+        },
+        {
+            "$1": "steve"
+        }
+    ]
+   },
+   {
+     "statements":"select LEAST(id,\"indigo\") from default:game ORDER by id ",
+     "results": [
+        {
+            "$1": "damien"
+        },
+        {
+            "$1": "dustin"
+        },
+        {
+            "$1": "indigo"
+        },
+        {
+            "$1": "indigo"
+        },
+        {
+            "$1": "indigo"
+        }
+    ]
+   },
+   {
+      "statements":"select LEAST(\"Yes\" , 99) AS A ",
+      "results": [
+        {
+            "A": 99
+        }
+    ]
+   },
+   {
+      "statements":"select GREATEST (\"Yes\" , 99) AS A ",
+      "results": [
+        {
+            "A": "Yes"
+        }
+    ]
+   }
 ]
