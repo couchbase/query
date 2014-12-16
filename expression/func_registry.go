@@ -140,6 +140,7 @@ var _FUNCTIONS = map[string]Function{
 	"ln":      &Ln{},
 	"log":     &Log{},
 	"floor":   &Floor{},
+	"inf":     &PosInf{},
 	"nan":     &NaN{},
 	"neginf":  &NegInf{},
 	"pi":      &PI{},

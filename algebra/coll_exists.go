@@ -14,7 +14,7 @@ import (
 )
 
 /*
-Type Exists is a struct that inherits from expression.Exists to 
+Type Exists is a struct that inherits from expression.Exists to
 set LIMIT 1 on subqueries.
 */
 type Exists struct {
@@ -22,7 +22,7 @@ type Exists struct {
 }
 
 /*
-The function NewExists uses the NewExists method to 
+The function NewExists uses the NewExists method to
 create a new Exists function with one operand. If that
 operand is a subquery, that has no limit defined, set it
 to one expression (defined in expressions).

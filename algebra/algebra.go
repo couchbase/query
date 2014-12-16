@@ -24,25 +24,25 @@ The Statement interface represents a N1QL statement, e.g. a SELECT,
 UPDATE, or CREATE INDEX statement.
 */
 type Statement interface {
-        /*
-        Visitor pattern
-        */
-	Accept(visitor Visitor) (interface{}, error)  
-	
-        /*
-        The shape of this statement's return values.
-        */
-        Signature() value.Value                     
-	
-        /*
-        Fully qualify all identifiers in this statement
-        */
-        Formalize() error                           
-	
-        /*
-        Apply a Mapper to all the expressions in this statement
-        */
-        MapExpressions(mapper expression.Mapper) error 
+	/*
+	   Visitor pattern
+	*/
+	Accept(visitor Visitor) (interface{}, error)
+
+	/*
+	   The shape of this statement's return values.
+	*/
+	Signature() value.Value
+
+	/*
+	   Fully qualify all identifiers in this statement
+	*/
+	Formalize() error
+
+	/*
+	   Apply a Mapper to all the expressions in this statement
+	*/
+	MapExpressions(mapper expression.Mapper) error
 }
 
 /*
