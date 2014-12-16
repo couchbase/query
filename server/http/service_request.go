@@ -206,13 +206,28 @@ const ( // Request argument names
 
 func getPrepared(a httpRequestArgs) (*plan.Prepared, error) {
 	var prepared *plan.Prepared
-
-	prepared_field, err := a.getString(PREPARED, "")
-	if err == nil && prepared_field != "" {
-		// XXX TODO unmarshal
-		prepared = nil
+	prepared_field, err := a.getValue(PREPARED)
+	if err != nil || prepared_field == nil {
+		return nil, err
 	}
 
+	prepared, err = plan.PreparedCache().GetPrepared(prepared_field)
+	if err != nil || prepared != nil {
+		return prepared, err
+	}
+
+	prepared = &plan.Prepared{}
+	json_bytes, err := prepared_field.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	err = prepared.UnmarshalJSON(json_bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	err = plan.PreparedCache().AddPrepared(prepared)
 	return prepared, err
 }
 
@@ -375,6 +390,7 @@ func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (
 type httpRequestArgs interface {
 	getString(string, string) (string, error)
 	getBoolean(string, bool) (bool, error)
+	getValue(field string) (value.Value, error)
 	getTimeDuration(string) (time.Duration, error)
 	getNamedArgs() (map[string]value.Value, error)
 	getPositionalArgs() (value.Values, error)
@@ -550,6 +566,15 @@ func (this *urlArgs) getCredentials() ([]map[string]string, error) {
 		err = decoder.Decode(&creds_data)
 	}
 	return creds_data, err
+}
+
+func (this *urlArgs) getValue(field string) (value.Value, error) {
+	var val value.Value
+	value_field, err := this.getString(field, "")
+	if err == nil && value_field != "" {
+		val = value.NewValue([]byte(value_field))
+	}
+	return val, err
 }
 
 func (this *urlArgs) formValue(field string) (string, error) {
@@ -735,6 +760,17 @@ func (this *jsonArgs) getString(f string, dflt string) (string, error) {
 	value = s
 
 	return s, nil
+}
+
+func (this *jsonArgs) getValue(f string) (value.Value, error) {
+	var val value.Value
+	value_field, in_request := this.args[f]
+
+	if !in_request {
+		return val, nil
+	}
+	val = value.NewValue(value_field)
+	return val, nil
 }
 
 type Encoding int
