@@ -17,6 +17,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/expression/parser"
+	"github.com/couchbaselabs/query/logging"
 )
 
 type Fetch struct {
@@ -69,22 +70,30 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		Keys  string `json:"keyspace"`
 		As    string `json:"as"`
 	}
+	var proj_expr expression.Path
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	expr, err := parser.Parse(_unmarshalled.Proj)
-	if err != nil {
-		return err
-	}
+	if _unmarshalled.Proj != "" {
+		expr, err := parser.Parse(_unmarshalled.Proj)
 
-	proj_expr, is_path := expr.(expression.Path)
-	if !is_path {
-		return fmt.Errorf("Fetch.UnmarshalJSON: cannot resolve path expression from %s", _unmarshalled.Proj)
-	}
+		logging.Infop("Fetch", logging.Pair{"_unmarshalled.Proj", _unmarshalled.Proj},
+			logging.Pair{"err", err},
+			logging.Pair{"expr", expr},
+		)
+		if err != nil {
+			return err
+		}
 
+		_proj_expr, is_path := expr.(expression.Path)
+		if !is_path {
+			return fmt.Errorf("Fetch.UnmarshalJSON: cannot resolve path expression from %s", _unmarshalled.Proj)
+		}
+		proj_expr = _proj_expr
+	}
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
 		proj_expr, _unmarshalled.As, nil)
 

@@ -78,15 +78,18 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 		Outer bool   `json:"outer"`
 		As    string `json:"as"`
 	}
+	var keys_expr expression.Expression
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	keys_expr, err := parser.Parse(_unmarshalled.On)
-	if err != nil {
-		return err
+	if _unmarshalled.On != "" {
+		keys_expr, err = parser.Parse(_unmarshalled.On)
+		if err != nil {
+			return err
+		}
 	}
 
 	this.outer = _unmarshalled.Outer
@@ -156,15 +159,18 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 		Outer bool   `json:"outer"`
 		As    string `json:"as"`
 	}
+	var keys_expr expression.Expression
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	keys_expr, err := parser.Parse(_unmarshalled.On)
-	if err != nil {
-		return err
+	if _unmarshalled.On != "" {
+		keys_expr, err = parser.Parse(_unmarshalled.On)
+		if err != nil {
+			return err
+		}
 	}
 
 	this.outer = _unmarshalled.Outer
@@ -225,15 +231,18 @@ func (this *Unnest) UnmarshalJSON(body []byte) error {
 		Expr  string `json:"expr"`
 		As    string `json:"as"`
 	}
+	var expr expression.Expression
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	expr, err := parser.Parse(_unmarshalled.Expr)
-	if err != nil {
-		return err
+	if _unmarshalled.Expr != "" {
+		expr, err = parser.Parse(_unmarshalled.Expr)
+		if err != nil {
+			return err
+		}
 	}
 
 	this.term = algebra.NewUnnest(nil, _unmarshalled.Outer, expr, _unmarshalled.As)

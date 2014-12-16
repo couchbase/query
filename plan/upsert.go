@@ -67,9 +67,11 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.key, err = parser.Parse(_unmarshalled.KeyExpr)
-	if err != nil {
-		return err
+	if _unmarshalled.KeyExpr != "" {
+		this.key, err = parser.Parse(_unmarshalled.KeyExpr)
+		if err != nil {
+			return err
+		}
 	}
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)

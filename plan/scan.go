@@ -222,8 +222,9 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	keys_expr, err := parser.Parse(_unmarshalled.Keys)
-	this.keys = keys_expr
+	if _unmarshalled.Keys != "" {
+		this.keys, err = parser.Parse(_unmarshalled.Keys)
+	}
 
 	return err
 }
@@ -296,8 +297,9 @@ func (this *ValueScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.values, err = parser.Parse(_unmarshalled.Values)
-
+	if _unmarshalled.Values != "" {
+		this.values, err = parser.Parse(_unmarshalled.Values)
+	}
 	return err
 }
 

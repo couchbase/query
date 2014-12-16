@@ -106,9 +106,11 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.key, err = parser.Parse(_unmarshalled.Key)
-	if err != nil {
-		return err
+	if _unmarshalled.Key != "" {
+		this.key, err = parser.Parse(_unmarshalled.Key)
+		if err != nil {
+			return err
+		}
 	}
 
 	ops := []json.RawMessage{

@@ -56,8 +56,9 @@ func (this *Filter) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	cond, err := parser.Parse(_unmarshalled.Condition)
-	this.cond = cond
+	if _unmarshalled.Condition != "" {
+		this.cond, err = parser.Parse(_unmarshalled.Condition)
+	}
 
 	return err
 }
