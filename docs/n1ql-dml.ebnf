@@ -16,11 +16,11 @@ keyspace-ref ::= (namespace ':')? keyspace ('AS'? alias)?
 
 keyspace ::= identifier
 
-insert-values ::= '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' values-clause (',' values-clause)*
+insert-values ::= ( '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' )? values-clause (',' values-clause)*
 
 values-clause ::= 'VALUES' '(' expr ',' expr ')'
 
-insert-select ::= '(' 'PRIMARY'? 'KEY' expr ',' 'VALUE' expr ')' select
+insert-select ::= '(' 'PRIMARY'? 'KEY' expr ( ',' 'VALUE' ( expr | '*' ) )? ')' select
 
 returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
 

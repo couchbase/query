@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2014-10-19
++ Modified: 2014-12-15
 
 ## Introduction
 
@@ -283,6 +283,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Rename BUCKET to KEYSPACE
 * 2014-10-19 - INSERT / UPSERT syntax
     * Allow keys to exist outside of values
+* 2014-12-15 - INSERT / UPSERT syntax
+    * Refine INSERT / UPSERT syntax
 
 ### Open Issues
 
