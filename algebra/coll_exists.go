@@ -13,12 +13,20 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
-// Exists inherits from expression.Exists to set LIMIT 1 on
-// subqueries.
+/*
+Type Exists is a struct that inherits from expression.Exists to 
+set LIMIT 1 on subqueries.
+*/
 type Exists struct {
 	expression.Exists
 }
 
+/*
+The function NewExists uses the NewExists method to 
+create a new Exists function with one operand. If that
+operand is a subquery, that has no limit defined, set it
+to one expression (defined in expressions).
+*/
 func NewExists(operand expression.Expression) *Exists {
 	rv := &Exists{
 		*expression.NewExists(operand),

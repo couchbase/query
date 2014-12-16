@@ -39,14 +39,35 @@ aggregation.
 If no input data is received, the Default() value is returned.
 */
 type Aggregate interface {
+        /*
+        Represents the aggregate function.
+        */
 	expression.Function
+        
+        /*
+        Returned if there is no input data to the function.
+        */
+	Default() value.Value         
+ 
+        /*
+        Single operand to this function.
+        */
+	Operand() expression.Expression
 
-	Default() value.Value           // Returned if there is no input data.
-	Operand() expression.Expression // Single operand to this function.
+        /*
+        Aggregates input data.
+        */
+	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)  
 
-	CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error)      // Aggregates input data.
-	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) // Aggregates intermediate results.
-	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)               // Performs final post-processing, if any.
+        /*
+        Aggregates intermediate results.
+        */
+	CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error)
+ 
+        /*
+        Performs final post-processing, if any.
+        */
+	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)             
 }
 
 type AggregateBase struct {
