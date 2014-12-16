@@ -20,7 +20,7 @@ insert-values ::= ( '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' )? values-clause (',' v
 
 values-clause ::= 'VALUES' '(' expr ',' expr ')'
 
-insert-select ::= '(' 'PRIMARY'? 'KEY' expr ( ',' 'VALUE' ( expr | '*' ) )? ')' select
+insert-select ::= '(' 'PRIMARY'? 'KEY' expr ( ',' 'VALUE' expr )? ')' select
 
 returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
 
