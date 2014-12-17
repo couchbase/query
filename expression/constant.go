@@ -14,8 +14,8 @@ import (
 )
 
 /*
-The Constant type is a struct that contains fields ExpressionBase
-and a value.
+The Constant type is a struct that inherits from ExpressionBase
+and contains a value.
 */
 type Constant struct {
 	ExpressionBase
