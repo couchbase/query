@@ -144,9 +144,9 @@ type cbCluster struct {
 	dataStore      datastore.Datastore           `json:"-"`
 	acctStore      accounting.AccountingStore    `json:"-"`
 	ClusterName    string                        `json:"name"`
-	DatastoreURI   string                        `json:"datastore_uri"`
-	ConfigstoreURI string                        `json:"configstore_uri"`
-	AccountingURI  string                        `json:"accountstore_uri"`
+	DatastoreURI   string                        `json:"datastore"`
+	ConfigstoreURI string                        `json:"configstore"`
+	AccountingURI  string                        `json:"accountstore"`
 	version        clustering.Version            `json:"-"`
 	VersionString  string                        `json:"version"`
 	queryNodeNames []string                      `json:"-"`
