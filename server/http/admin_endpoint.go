@@ -28,26 +28,36 @@ const (
 
 type apiFunc func(clustering.ConfigurationStore, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
 
+type handlerFunc func(http.ResponseWriter, *http.Request)
+
 // admin_endpoint
 
 func registerAdminHandlers(server *server.Server) {
 	r := mux.NewRouter()
 
-	routeMap := map[string]apiFunc{
-		adminPrefix + "/ping":                      doPing,
-		adminPrefix + "/config":                    doConfig,
-		clustersPrefix:                             doClusters,
-		clustersPrefix + "/{cluster}":              doCluster,
-		clustersPrefix + "/{cluster}/nodes":        doNodes,
-		clustersPrefix + "/{cluster}/nodes/{node}": doNode,
+	routeMap := map[string]handlerFunc{
+		adminPrefix + "/ping": func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doPing)
+		},
+		adminPrefix + "/config": func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doConfig)
+		},
+		clustersPrefix: func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doClusters)
+		},
+		clustersPrefix + "/{cluster}": func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doCluster)
+		},
+		clustersPrefix + "/{cluster}/nodes": func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doNodes)
+		},
+		clustersPrefix + "/{cluster}/nodes/{node}": func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, doNode)
+		},
 	}
 
 	for route, f := range routeMap {
-		r.HandleFunc(route, func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, f)
-		}).
-			Methods("GET")
-
+		r.HandleFunc(route, f).Methods("GET")
 	}
 
 	http.Handle(adminPrefix+"/", r)
