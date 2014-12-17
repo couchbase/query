@@ -10,11 +10,14 @@
 package http
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/couchbaselabs/query/clustering"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/server"
+	"github.com/couchbaselabs/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -23,68 +26,143 @@ const (
 	clustersPrefix = "/admin/clusters"
 )
 
+type apiFunc func(clustering.ConfigurationStore, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
+
 // admin_endpoint
 
 func registerAdminHandlers(server *server.Server) {
 	r := mux.NewRouter()
-	r.HandleFunc(adminPrefix+"/ping", pingHandler).
-		Methods("GET")
 
-	r.HandleFunc(adminPrefix+"/config", func(w http.ResponseWriter, req *http.Request) {
-		doConfig(server.ConfigurationStore(), w, req)
-	}).
-		Methods("GET")
+	routeMap := map[string]apiFunc{
+		adminPrefix + "/ping":                      doPing,
+		adminPrefix + "/config":                    doConfig,
+		clustersPrefix:                             doClusters,
+		clustersPrefix + "/{cluster}":              doCluster,
+		clustersPrefix + "/{cluster}/nodes":        doNodes,
+		clustersPrefix + "/{cluster}/nodes/{node}": doNode,
+	}
 
-	r.HandleFunc(clustersPrefix, func(w http.ResponseWriter, req *http.Request) {
-		doClusters(server.ConfigurationStore(), w, req)
-	}).
-		Methods("GET")
+	for route, f := range routeMap {
+		r.HandleFunc(route, func(w http.ResponseWriter, req *http.Request) {
+			wrapAPI(server.ConfigurationStore(), w, req, f)
+		}).
+			Methods("GET")
 
-	r.HandleFunc(clustersPrefix+"/{cluster}", func(w http.ResponseWriter, req *http.Request) {
-		doCluster(server.ConfigurationStore(), w, req)
-	}).
-		Methods("GET")
-
-	r.HandleFunc(clustersPrefix+"/{cluster}/nodes", func(w http.ResponseWriter, req *http.Request) {
-		doNodes(server.ConfigurationStore(), w, req)
-	}).
-		Methods("GET")
-
-	r.HandleFunc(clustersPrefix+"/{cluster}/nodes/{node}", func(w http.ResponseWriter, req *http.Request) {
-		doNode(server.ConfigurationStore(), w, req)
-	}).
-		Methods("GET")
+	}
 
 	http.Handle(adminPrefix+"/", r)
 }
 
-func pingHandler(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "ok")
+func wrapAPI(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request, f apiFunc) {
+	obj, err := f(cfgStore, w, req)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	if obj == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	buf, json_err := json.Marshal(obj)
+	if json_err != nil {
+		writeError(w, errors.NewError(json_err, ""))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(buf)
 }
 
-func doConfig(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "/admin/config using %s\n", cfgStore.Id())
+func writeError(w http.ResponseWriter, err errors.Error) {
+	w.Header().Set("Content-Type", "application/json")
+	buf, er := json.Marshal(err)
+	if er != nil {
+		http.Error(w, er.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(buf)
 }
 
-func doClusters(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "/admin/clusters using %s\n", cfgStore.Id())
+func doPing(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	return &struct {
+		status string `json:"status"`
+	}{
+		"ok",
+	}, nil
 }
 
-func doCluster(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) {
+var localConfig struct {
+	sync.Mutex
+	myConfig clustering.QueryNode
+}
+
+func doConfig(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	if localConfig.myConfig != nil {
+		return localConfig.myConfig, nil
+	}
+	var self clustering.QueryNode
+	name, err := util.ExternalIP()
+	if err != nil {
+		return nil, err
+	}
+
+	cm := cfgStore.ConfigurationManager()
+	clusters, err := cm.GetClusters()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range clusters {
+		clm := c.ClusterManager()
+		queryNodes, err := clm.GetQueryNodes()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, qryNode := range queryNodes {
+			if qryNode.Name() == name {
+				self = qryNode
+				break
+			}
+		}
+	}
+	localConfig.Lock()
+	defer localConfig.Unlock()
+	localConfig.myConfig = self
+	return localConfig.myConfig, nil
+}
+
+func doClusters(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	cm := cfgStore.ConfigurationManager()
+	return cm.GetClusters()
+}
+
+func doCluster(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
-	cluster := vars["cluster"]
-	fmt.Fprintf(w, "/admin/clusters/%s using %s\n", cluster, cfgStore.Id())
+	name := vars["cluster"]
+	return cfgStore.ClusterByName(name)
 }
 
-func doNodes(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) {
+func doNodes(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
-	cluster := vars["cluster"]
-	fmt.Fprintf(w, "/admin/cluster/%s/nodes using %s\n", cluster, cfgStore.Id())
+	name := vars["cluster"]
+	cluster, err := cfgStore.ClusterByName(name)
+	if err != nil || cluster == nil {
+		return cluster, err
+	}
+	return cluster.ClusterManager().GetQueryNodes()
 }
 
-func doNode(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) {
+func doNode(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
-	cluster := vars["cluster"]
 	node := vars["node"]
-	fmt.Fprintf(w, "/admin/cluster/%s/nodes/%s using %s\n", cluster, node, cfgStore.Id())
+	name := vars["cluster"]
+	cluster, err := cfgStore.ClusterByName(name)
+	if err != nil || cluster == nil {
+		return cluster, err
+	}
+	return cluster.QueryNodeByName(node)
 }

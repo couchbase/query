@@ -150,6 +150,7 @@ type cbCluster struct {
 	version        clustering.Version            `json:"-"`
 	VersionString  string                        `json:"version"`
 	queryNodeNames []string                      `json:"-"`
+	queryNodes     map[string]int                `json:"-"`
 	poolSrvRev     int                           `json:"-"`
 }
 
@@ -213,8 +214,10 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	if poolServices.Rev == c.poolSrvRev {
 		return c.queryNodeNames, nil
 	}
-	// If the rev numbers do not match, update the cluster's rev and query node names:
-	for _, ns := range poolServices.NodesExt {
+	// If the rev numbers do not match, update the cluster's rev and query node data:
+	queryNodeNames = make([]string, len(poolServices.NodesExt))
+	queryNodes := make(map[string]int)
+	for i, ns := range poolServices.NodesExt {
 		n1qlPort := ns.Services["n1ql"]
 		hostname := ns.Hostname
 
@@ -227,14 +230,15 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 			hostname, _ = getHostnameFromURI(c.configStore.URL())
 		}
 
-		queryNodeNames = append(queryNodeNames, hostname+":"+strconv.Itoa(n1qlPort))
+		queryNodeNames[i] = hostname
+		queryNodes[hostname] = n1qlPort
 	}
 
 	c.Lock()
 	defer c.Unlock()
 	c.queryNodeNames = queryNodeNames
+	c.queryNodes = queryNodes
 	c.poolSrvRev = poolServices.Rev
-
 	return c.queryNodeNames, nil
 }
 
@@ -256,8 +260,8 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 	var queryNode cbQueryNodeConfig
 	queryNode.ClusterName = c.Name()
 	queryNode.QueryNodeName = qryNodeName
-	queryNode.QueryEndpointURL = "http://" + qryNodeName + "/service/query"
-	queryNode.AdminEndpointURL = "http://" + qryNodeName + "/admin"
+	queryNode.QueryEndpointURL = "http://" + qryNodeName + ":" + strconv.Itoa(c.queryNodes[qryNodeName]) + "/service/query"
+	queryNode.AdminEndpointURL = "http://" + qryNodeName + ":" + strconv.Itoa(c.queryNodes[qryNodeName]) + "/admin"
 	queryNode.ClusterRef = c
 	return &queryNode, nil
 }
@@ -323,10 +327,10 @@ func (c *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 
 // cbQueryNodeConfig implements clustering.QueryNode
 type cbQueryNodeConfig struct {
-	ClusterName      string                    `json:"cluster_name"`
+	ClusterName      string                    `json:"cluster"`
 	QueryNodeName    string                    `json:"name"`
-	QueryEndpointURL string                    `json:"query_endpoint"`
-	AdminEndpointURL string                    `json:"admin_endpoint"`
+	QueryEndpointURL string                    `json:"queryEndpoint"`
+	AdminEndpointURL string                    `json:"adminEndpoint"`
 	ClusterRef       *cbCluster                `json:"-"`
 	StandaloneRef    *clustering.StdStandalone `json:"-"`
 	OptionsCL        *clustering.ClOptions     `json:"options"`

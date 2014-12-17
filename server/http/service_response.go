@@ -66,7 +66,6 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.NotifyStop(stopNotify)
 
-	//this.resp.WriteHeader(http.StatusOK)
 	this.httpRespCode = http.StatusOK
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults() &&

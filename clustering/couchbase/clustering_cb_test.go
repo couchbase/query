@@ -10,6 +10,7 @@
 package clustering_cb
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -22,12 +23,12 @@ import (
 )
 
 func TestCBClustering(t *testing.T) {
-	if !couchbase_running("localhost") {
+	if !couchbase_running("192.168.50.178") {
 		t.Skip("Couchbase not running - skipping test")
 	}
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
-	cs, err := NewConfigstore("http://localhost:8091")
+	cs, err := NewConfigstore("http://192.168.50.178:8091")
 	if err != nil {
 		t.Fatalf("Error creating configstore: ", err)
 	}
@@ -59,6 +60,12 @@ func TestCBClustering(t *testing.T) {
 
 	// Get all clusters. There should be at least one ("default")
 	clusters, errCheck := cm.GetClusters()
+	clusters_json, json_err := json.Marshal(clusters)
+	if err != nil {
+		t.Fatalf("Unexpected Error marshalling GetClusters: ", json_err)
+	}
+
+	fmt.Printf("Retrieved clusters: %s\n", string(clusters_json))
 	if errCheck != nil {
 		t.Fatalf("Unexpected Error retrieving all cluster configs: ", errCheck)
 	}
@@ -67,18 +74,20 @@ func TestCBClustering(t *testing.T) {
 
 func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 	for _, c := range clusters {
-		fmt.Printf("Retrieved cluster: %v\n\n", c)
 		queryNodeNames, errCheck := c.QueryNodeNames()
 		if errCheck != nil {
 			t.Fatalf("Unexpected Error retrieving query node names: ", errCheck)
 		}
 		for _, qn := range queryNodeNames {
-			fmt.Printf("QueryNodeName=%s\n", qn)
 			qryNode, errCheck := c.QueryNodeByName(qn)
 			if errCheck != nil {
 				t.Fatalf("Unexpected Error retrieving query node by name: ", errCheck)
 			}
-			fmt.Printf("QueryNode=%v\n", qryNode)
+			json_node, json_err := json.Marshal(qryNode)
+			if json_err != nil {
+				t.Fatalf("Unexpected Error marshalling query node: ", json_err)
+			}
+			fmt.Printf("QueryNode=%s\n", string(json_node))
 		}
 		clm := c.ClusterManager()
 		queryNodes, errCheck := clm.GetQueryNodes()
@@ -86,7 +95,11 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 			t.Fatalf("Unexpected Error retrieving query nodes: ", errCheck)
 		}
 		for _, qryNode := range queryNodes {
-			fmt.Printf("QueryNode=%v\n", qryNode)
+			json_node, json_err := json.Marshal(qryNode)
+			if json_err != nil {
+				t.Fatalf("Unexpected Error marshalling query node: ", json_err)
+			}
+			fmt.Printf("QueryNode=%s\n", string(json_node))
 		}
 	}
 }
