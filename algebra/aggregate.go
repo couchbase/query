@@ -70,11 +70,21 @@ type Aggregate interface {
 	ComputeFinal(cumulative value.Value, context Context) (value.Value, error)
 }
 
+/*
+Base class for Aggregate functions. It inherits from
+expressions UnaryFunctionBase, and has field text
+which represents the function name.
+*/
 type AggregateBase struct {
 	expression.UnaryFunctionBase
 	text string
 }
 
+/*
+This method creates a new Unary function using the
+input expression name and operands, and returns it
+as a pointer to an AggregateBase struct.
+*/
 func NewAggregateBase(name string, operand expression.Expression) *AggregateBase {
 	return &AggregateBase{
 		*expression.NewUnaryFunctionBase(name, operand),
@@ -82,6 +92,13 @@ func NewAggregateBase(name string, operand expression.Expression) *AggregateBase
 	}
 }
 
+/*
+This method evaluates the input aggregate, by retrieving the
+aggregates map from the attachments and performing a lookup
+using the input agg string value. If a result value(name) is
+found, return it. If not throw an error stating that the
+aggregate string is not found.
+*/
 func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	context expression.Context) (result value.Value, err error) {
 	defer func() {
@@ -105,18 +122,30 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	return
 }
 
+/*
+Not indexable.
+*/
 func (this *AggregateBase) Indexable() bool {
 	return false
 }
 
+/*
+Return false.
+*/
 func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
 	return false
 }
 
+/*
+Return False.
+*/
 func (this *AggregateBase) SubsetOf(other expression.Expression) bool {
 	return false
 }
 
+/*
+Return the operands of the Aggregate function.
+*/
 func (this *AggregateBase) Children() expression.Expressions {
 	if this.Operands()[0] == nil {
 		return nil
@@ -125,6 +154,11 @@ func (this *AggregateBase) Children() expression.Expressions {
 	}
 }
 
+/*
+It is a utility function that takes in as input parameter
+a mapper and maps the involved expressions to an expression.
+If there is an error during the mapping, an error is returned.
+*/
 func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 	children := this.Children()
 
@@ -140,14 +174,28 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+/*
+Base class for queries that have the DISTINCT keyword for aggregate
+functions. Type DistinctAggregateBase is a struct that inherits
+AggregateBase.
+*/
 type DistinctAggregateBase struct {
 	AggregateBase
 }
 
+/*
+This method creates a NewAggregateBase function
+using the input expression name and operands, and returns it
+as a pointer to an DistinctAggregateBase struct.
+*/
 func NewDistinctAggregateBase(name string, operand expression.Expression) *DistinctAggregateBase {
 	return &DistinctAggregateBase{
 		*NewAggregateBase(name, operand),
 	}
 }
 
+/*
+For distinct functions that have DISTINCT keyword in the
+aggregate functions in the query, return true.
+*/
 func (this *DistinctAggregateBase) Distinct() bool { return true }
