@@ -16,10 +16,21 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+This represents the Aggregate function ARRAY_AGG(DISTINCT expr).
+It returns an array of the distinct non-MISSING values in the
+group, including NULLs. Type ArrayAggDistinct is a struct that
+inherits from DistinctAggregateBase.
+*/
 type ArrayAggDistinct struct {
 	DistinctAggregateBase
 }
 
+/*
+The function NewArrayAggDistinct calls NewDistinctAggregateBase to
+create an aggregate function named ARRAY_AGG with one expression
+as input.
+*/
 func NewArrayAggDistinct(operand expression.Expression) Aggregate {
 	rv := &ArrayAggDistinct{
 		*NewDistinctAggregateBase("array_agg", operand),
@@ -29,24 +40,49 @@ func NewArrayAggDistinct(operand expression.Expression) Aggregate {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *ArrayAggDistinct) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value of type ARRAY.
+*/
 func (this *ArrayAggDistinct) Type() value.Type { return value.ARRAY }
 
+/*
+Calls the evaluate method for aggregate functions and passes in the
+receiver, current item and current context.
+*/
 func (this *ArrayAggDistinct) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
+/*
+The constructor returns a NewArrayAggDistinct with the input operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *ArrayAggDistinct) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
 		return NewArrayAggDistinct(operands[0])
 	}
 }
 
+/*
+If no input to the ARRAY_AGG function with DISTINCT, then the default value
+returned is a null.
+*/
 func (this *ArrayAggDistinct) Default() value.Value { return value.NULL_VALUE }
 
+/*
+Aggregates input data by evaluating operands. For missing
+item values, return the input value itself. Call
+setAdd to compute the intermediate aggregate value
+and return it.
+*/
 func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
@@ -60,10 +96,18 @@ func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, cont
 	return setAdd(item, cumulative)
 }
 
+/*
+Aggregatesi distinct intermediate results and return them.
+*/
 func (this *ArrayAggDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateSets(part, cumulative)
 }
 
+/*
+Compute the Final result. If input cumulative value is null return
+it. Get the attachment, create a new value and add it to the set
+in a sorted manner. (The values in the set are distinct).
+*/
 func (this *ArrayAggDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
