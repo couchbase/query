@@ -40,6 +40,9 @@ func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpE
 	// TODO: Deprecate (remove) this binding after QE has migrated to /query/service
 	http.Handle("/query", rv)
 
+	// Enable /admin endpoint
+	registerAdminHandlers(server)
+
 	return rv
 }
 
