@@ -97,7 +97,7 @@ func (this *ArrayAggDistinct) CumulateInitial(item, cumulative value.Value, cont
 }
 
 /*
-Aggregatesi distinct intermediate results and return them.
+Aggregates distinct intermediate results and return them.
 */
 func (this *ArrayAggDistinct) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return cumulateSets(part, cumulative)
