@@ -22,13 +22,17 @@ import (
 	_ "github.com/couchbaselabs/query/logging/resolver"
 )
 
+const (
+	couchbase_location = "localhost"
+)
+
 func TestCBClustering(t *testing.T) {
-	if !couchbase_running("192.168.50.178") {
+	if !couchbase_running(couchbase_location) {
 		t.Skip("Couchbase not running - skipping test")
 	}
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
-	cs, err := NewConfigstore("http://192.168.50.178:8091")
+	cs, err := NewConfigstore("http://" + couchbase_location + ":8091")
 	if err != nil {
 		t.Fatalf("Error creating configstore: ", err)
 	}
