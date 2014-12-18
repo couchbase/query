@@ -651,6 +651,8 @@ type E struct {
 	NullaryFunctionBase
 }
 
+var _E = NewE()
+
 /*
 The function NewE returns a pointer to the
 NewNullaryFunctionBase to create a function E. It has
@@ -696,7 +698,7 @@ func (this *E) Value() value.Value {
 Return receiver as FunctionConstructor.
 */
 func (this *E) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _E }
 }
 
 /*
@@ -1030,6 +1032,8 @@ type NaN struct {
 	NullaryFunctionBase
 }
 
+var _NAN = NewNaN()
+
 /*
 The function NewNaN returns a pointer to the
 NewNullaryFunctionBase to create a function NAN. It has
@@ -1075,7 +1079,7 @@ func (this *NaN) Value() value.Value {
 Return method receiver as FunctionConstructor.
 */
 func (this *NaN) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _NAN }
 }
 
 /*
@@ -1098,6 +1102,8 @@ NegInf is a struct that implements NullaryFunctionBase.
 type NegInf struct {
 	NullaryFunctionBase
 }
+
+var _NEG_INF = NewNegInf()
 
 /*
 The function NewNegInf returns a pointer to the
@@ -1144,7 +1150,7 @@ func (this *NegInf) Value() value.Value {
 Return method receiver as FunctionConstructor.
 */
 func (this *NegInf) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _NEG_INF }
 }
 
 /*
@@ -1166,6 +1172,8 @@ PI. Type PI is a struct that implements NullaryFunctionBase.
 type PI struct {
 	NullaryFunctionBase
 }
+
+var _PI = NewPI()
 
 /*
 The function NewPI returns a pointer to the
@@ -1212,7 +1220,7 @@ func (this *PI) Value() value.Value {
 Return method receiver as FunctionConstructor.
 */
 func (this *PI) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _PI }
 }
 
 /*
@@ -1234,6 +1242,8 @@ PosInf is a struct that implements NullaryFunctionBase.
 type PosInf struct {
 	NullaryFunctionBase
 }
+
+var _POS_INF = NewPosInf()
 
 /*
 The function NewPosInf returns a pointer to the
@@ -1280,7 +1290,7 @@ func (this *PosInf) Value() value.Value {
 Return method receiver as FunctionConstructor.
 */
 func (this *PosInf) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _POS_INF }
 }
 
 /*

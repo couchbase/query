@@ -34,6 +34,8 @@ type ClockMillis struct {
 	NullaryFunctionBase
 }
 
+var _CLOCK_MILLIS = NewClockMillis()
+
 /*
 The function NewClockMillis calls NewNullaryFunctionBase to
 create a function named CLOCK_MILLIS.
@@ -76,7 +78,7 @@ The constructor returns a FunctionConstructor by casting the receiver to a
 Function as the FunctionConstructor.
 */
 func (this *ClockMillis) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _CLOCK_MILLIS }
 }
 
 ///////////////////////////////////////////////////
@@ -1243,6 +1245,8 @@ type NowMillis struct {
 	NullaryFunctionBase
 }
 
+var _NOW_MILLIS = NewNowMillis()
+
 /*
 The function NewNowMillis() calls NewNullaryFunctionBase
 to create a function named NOW_MILLIS.
@@ -1286,7 +1290,7 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 Returns the receiver cast to a function to return a FunctionConstructor.
 */
 func (this *NowMillis) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _NOW_MILLIS }
 }
 
 ///////////////////////////////////////////////////

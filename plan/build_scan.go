@@ -26,7 +26,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 
 	nnf := planner.NewNNF()
-	where, err := nnf.Map(this.where.Copy())
+	where := this.where.Copy()
+	where, err := nnf.Map(where)
 	if err != nil {
 		return nil, err
 	}

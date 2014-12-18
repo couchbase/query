@@ -192,6 +192,8 @@ type Self struct {
 	NullaryFunctionBase
 }
 
+var _SELF = NewSelf()
+
 /*
 The function NewSelf returns a pointer to the
 NewNullaryFunctionBase to create a function SELF. It has
@@ -230,7 +232,7 @@ func (this *Self) Evaluate(item value.Value, context Context) (value.Value, erro
 Return the receiver as FunctionConstructor.
 */
 func (this *Self) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return this }
+	return func(operands ...Expression) Function { return _SELF }
 }
 
 ///////////////////////////////////////////////////
