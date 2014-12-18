@@ -16,10 +16,20 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+This represents the Aggregate function AVG(expr). It returns
+the arithmetic mean (average) of all the number values in the
+group. Type Avg is a struct that inherits from AggregateBase.
+*/
 type Avg struct {
 	AggregateBase
 }
 
+/*
+The function NewAvg calls NewAggregateBase to
+create an aggregate function named AVG with
+one expression as input.
+*/
 func NewAvg(operand expression.Expression) Aggregate {
 	rv := &Avg{
 		*NewAggregateBase("avg", operand),
@@ -29,24 +39,49 @@ func NewAvg(operand expression.Expression) Aggregate {
 	return rv
 }
 
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Avg) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+It returns a value of type NUMBER.
+*/
 func (this *Avg) Type() value.Type { return value.NUMBER }
 
+/*
+Calls the evaluate method for aggregate functions and passes in the
+receiver, current item and current context.
+*/
 func (this *Avg) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
 	return this.evaluate(this, item, context)
 }
 
+/*
+The constructor returns a NewAvg with the input operand
+cast to a Function as the FunctionConstructor.
+*/
 func (this *Avg) Constructor() expression.FunctionConstructor {
 	return func(operands ...expression.Expression) expression.Function {
 		return NewAvg(operands[0])
 	}
 }
 
+/*
+If no input to the AVG function, then the default value
+returned is a null.
+*/
 func (this *Avg) Default() value.Value { return value.NULL_VALUE }
 
+/*
+Aggregates input data by evaluating operands. For all
+values other than Number, return the input value itself. Call
+cumulatePart to compute the intermediate aggregate value
+and return it.
+*/
 func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) (value.Value, error) {
 	item, e := this.Operand().Evaluate(item, context)
 	if e != nil {
@@ -61,10 +96,18 @@ func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) 
 	return this.cumulatePart(part, cumulative, context)
 }
 
+/*
+Aggregates intermediate results and return them.
+*/
 func (this *Avg) CumulateIntermediate(part, cumulative value.Value, context Context) (value.Value, error) {
 	return this.cumulatePart(part, cumulative, context)
 }
 
+/*
+Compute the Final. Compute the sum and the count. If these
+arent numbers throw an error. Compute the avg as sum/count.
+Check for divide by zero, and return a NULL value if true.
+*/
 func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
 	if cumulative == value.NULL_VALUE {
 		return cumulative, nil
@@ -85,6 +128,11 @@ func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Va
 	}
 }
 
+/*
+Aggregate input partial values into cumulative result number value
+for sum and count. If the partial results are not numbers, then
+return an error.
+*/
 func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
 	if part == value.NULL_VALUE {
 		return cumulative, nil
