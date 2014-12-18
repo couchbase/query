@@ -1,7 +1,7 @@
 
 ## Running clustering_cb unit tests
 
-In order to run the unit tests, it is necessary to install and start Couchbase.
+In order to run the unit tests, it is necessary to have a Couchbase instance running.
 
 ### Couchbase Installation and Start-up
 
@@ -9,20 +9,18 @@ Install and start Couchbase:
 
 + [Install and build instructions](https://github.com/couchbase/tlm/)
 
-Note: Get and build the sherlock branch, because this has support for managing the query engine (cbq-engine).
+Get and build the sherlock branch,  this has support for the query engine (cbq-engine).
 
     $ repo init -u git://github.com/couchbase/manifest -m sherlock.xml
     $ repo sync
     $ make
-
-After Couchbase has been built, take the following steps:
-
-1. Start Couchbase: cd to the root directory of your Couchbase source and run ./install/bin/couchbase-server start
+    $ ./install/bin/couchbase-server start
 
 ### Unit-tests
 
-With Couchbase installed and running locally, clustering_cb unit tests can be run:
+With Couchbase installed and running locally, run the unit test:
 
     $ cd $GOPATH/src/github.com/couchbaselabs/query/clustering/couchbase
     $ go test
 
+To test against a Couchbase instance running in a different location than localhost, edit the couchbase_location parameter in clustering_cb_test.go.
