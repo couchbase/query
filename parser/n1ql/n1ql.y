@@ -118,6 +118,7 @@ indexType        datastore.IndexType
 %token FUNCTION
 %token GRANT
 %token GROUP
+%token GSI
 %token HAVING
 %token IF
 %token IN
@@ -1420,6 +1421,11 @@ USING VIEW
 USING LSM
 {
     $$ = datastore.LSM
+}
+|
+USING GSI
+{
+    $$ = datastore.GSI
 }
 ;
 

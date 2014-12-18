@@ -1980,6 +1980,7 @@ for future use.
 * __FUNCTION__
 * __GRANT__
 * __GROUP__
+* __GSI__
 * __HAVING__
 * __IF__
 * __IN__
@@ -2001,6 +2002,7 @@ for future use.
 * __LETTING__
 * __LIKE__
 * __LIMIT__
+* __LSM__
 * __MAP__
 * __MAPPING__
 * __MATCHED__

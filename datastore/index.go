@@ -22,20 +22,21 @@ const (
 	UNSPECIFIED IndexType = "unspecified" // used by non-view primary_indexes
 	VIEW        IndexType = "view"
 	LSM         IndexType = "lsm"
+	GSI         IndexType = "gsi"
 )
 
 type Indexer interface {
-	KeyspaceId() string                               // Id of the keyspace to which this indexer belongs
-	Name() IndexType                                  // Unique within a Keyspace.
-	IndexIds() ([]string, errors.Error)               // Ids of the indexes defined on this keyspace
-	IndexNames() ([]string, errors.Error)             // Names of the indexes defined on this keyspace
-	IndexById(id string) (Index, errors.Error)        // Find an index on this keyspace using the index's id
-	IndexByName(name string) (Index, errors.Error)    // Find an index on this keyspace using the index's name
-	Indexes() ([]Index, errors.Error)                 // Returns all the indexes defined on this keyspace
-	IndexByPrimary() (PrimaryIndex, errors.Error)     // Returns the server-recommended primary index
-	CreatePrimaryIndex() (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
-	CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-		where expression.Expression) (Index, errors.Error) // Create a secondary index on this keyspace
+	KeyspaceId() string                                                 // Id of the keyspace to which this indexer belongs
+	Name() IndexType                                                    // Unique within a Keyspace.
+	IndexIds() ([]string, errors.Error)                                 // Ids of the indexes defined on this keyspace
+	IndexNames() ([]string, errors.Error)                               // Names of the indexes defined on this keyspace
+	IndexById(id string) (Index, errors.Error)                          // Find an index on this keyspace using the index's id
+	IndexByName(name string) (Index, errors.Error)                      // Find an index on this keyspace using the index's name
+	Indexes() ([]Index, errors.Error)                                   // Returns all the indexes defined on this keyspace
+	IndexByPrimary() (PrimaryIndex, errors.Error)                       // Returns the server-recommended primary index
+	CreatePrimaryIndex() (PrimaryIndex, errors.Error)                   // Create or return a primary index on this keyspace
+	CreateIndex(name string, equalKey, rangeKey expression.Expressions, // Create a secondary index on this keyspace
+		where expression.Expression) (Index, errors.Error)
 }
 
 type IndexState string

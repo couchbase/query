@@ -135,6 +135,7 @@
 /[fF][uU][nN][cC][tT][iI][oO][nN]/		 { logToken("FUNCTION"); return FUNCTION }
 /[gG][rR][aA][nN][tT]/				 { logToken("GRANT"); return GRANT }
 /[gG][rR][oO][uU][pP]/				 { logToken("GROUP"); return GROUP }
+/[gG][sS][iI]/					 { logToken("GSI"); return GSI }
 /[hH][aA][vV][iI][nN][gG]/			 { logToken("HAVING"); return HAVING }
 /[iI][fF]/					 { logToken("IF"); return IF }
 /[iI][nN]/					 { logToken("IN"); return IN }
