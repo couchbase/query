@@ -35,29 +35,38 @@ type handlerFunc func(http.ResponseWriter, *http.Request)
 func registerAdminHandlers(server *server.Server) {
 	r := mux.NewRouter()
 
-	routeMap := map[string]handlerFunc{
-		adminPrefix + "/ping": func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doPing)
-		},
-		adminPrefix + "/config": func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doConfig)
-		},
-		clustersPrefix: func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doClusters)
-		},
-		clustersPrefix + "/{cluster}": func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doCluster)
-		},
-		clustersPrefix + "/{cluster}/nodes": func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doNodes)
-		},
-		clustersPrefix + "/{cluster}/nodes/{node}": func(w http.ResponseWriter, req *http.Request) {
-			wrapAPI(server.ConfigurationStore(), w, req, doNode)
-		},
+	pingHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doPing)
+	}
+	configHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doConfig)
+	}
+	clustersHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doClusters)
+	}
+	clusterHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doCluster)
+	}
+	nodesHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doNodes)
+	}
+	nodeHandler := func(w http.ResponseWriter, req *http.Request) {
+		wrapAPI(server.ConfigurationStore(), w, req, doNode)
+	}
+	routeMap := map[string]struct {
+		handler handlerFunc
+		methods []string
+	}{
+		adminPrefix + "/ping":                      {handler: pingHandler, methods: []string{"GET"}},
+		adminPrefix + "/config":                    {handler: configHandler, methods: []string{"GET"}},
+		clustersPrefix:                             {handler: clustersHandler, methods: []string{"GET", "POST"}},
+		clustersPrefix + "/{cluster}":              {handler: clusterHandler, methods: []string{"GET", "PUT", "DELETE"}},
+		clustersPrefix + "/{cluster}/nodes":        {handler: nodesHandler, methods: []string{"GET", "POST"}},
+		clustersPrefix + "/{cluster}/nodes/{node}": {handler: nodeHandler, methods: []string{"GET", "PUT", "DELETE"}},
 	}
 
-	for route, f := range routeMap {
-		r.HandleFunc(route, f).Methods("GET")
+	for route, h := range routeMap {
+		r.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
 
 	http.Handle(adminPrefix+"/", r)
@@ -93,6 +102,9 @@ func writeError(w http.ResponseWriter, err errors.Error) {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
 		return
 	}
+	status := mapErrorToHttpStatus(err)
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(buf)
 }
 
@@ -147,13 +159,36 @@ func doConfig(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req
 
 func doClusters(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	cm := cfgStore.ConfigurationManager()
-	return cm.GetClusters()
+	switch req.Method {
+	case "GET":
+		return cm.GetClusters()
+	case "POST":
+		cluster, err := getClusterFromRequest(req)
+		if err != nil {
+			return nil, errors.NewError(err, "")
+		}
+		return cfgStore.ConfigurationManager().AddCluster(cluster)
+	default:
+		return nil, nil
+	}
 }
 
 func doCluster(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
-	return cfgStore.ClusterByName(name)
+	cluster, err := cfgStore.ClusterByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	switch req.Method {
+	case "GET":
+		return cluster, nil
+	case "DELETE":
+		return cfgStore.ConfigurationManager().RemoveCluster(cluster)
+	default:
+		return nil, nil
+	}
 }
 
 func doNodes(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -163,7 +198,18 @@ func doNodes(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req 
 	if err != nil || cluster == nil {
 		return cluster, err
 	}
-	return cluster.ClusterManager().GetQueryNodes()
+	switch req.Method {
+	case "GET":
+		return cluster.ClusterManager().GetQueryNodes()
+	case "POST":
+		node, err := getNodeFromRequest(req)
+		if err != nil {
+			return nil, errors.NewError(err, "")
+		}
+		return cluster.ClusterManager().AddQueryNode(node)
+	default:
+		return nil, nil
+	}
 }
 
 func doNode(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -174,5 +220,31 @@ func doNode(cfgStore clustering.ConfigurationStore, w http.ResponseWriter, req *
 	if err != nil || cluster == nil {
 		return cluster, err
 	}
-	return cluster.QueryNodeByName(node)
+
+	switch req.Method {
+	case "GET":
+		return cluster.QueryNodeByName(node)
+	case "DELETE":
+		return cluster.ClusterManager().RemoveQueryNodeByName(node)
+	default:
+		return nil, nil
+	}
+}
+
+func getClusterFromRequest(req *http.Request) (clustering.Cluster, error) {
+	var cluster clustering.Cluster
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&cluster)
+	return cluster, err
+}
+
+func getNodeFromRequest(req *http.Request) (clustering.QueryNode, error) {
+	var node clustering.QueryNode
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&node)
+	return node, err
+}
+
+func mapErrorToHttpStatus(err errors.Error) int {
+	return http.StatusInternalServerError
 }

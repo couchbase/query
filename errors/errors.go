@@ -162,6 +162,10 @@ func NewTotalElapsedTimeInfo(time string) Error {
 	return &err{level: INFO, ICode: 101, IKey: "total_elapsed_time", InternalMsg: fmt.Sprintf("%s", time), InternalCaller: CallerN(1)}
 }
 
+func NewNotImplemented(feature string) Error {
+	return &err{level: EXCEPTION, ICode: 1001, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
+}
+
 // Returns "FileName:LineNum" of caller.
 func Caller() string {
 	return CallerN(1)

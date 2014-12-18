@@ -21,7 +21,6 @@ import (
 )
 
 const _PREFIX = "couchbase:"
-const _RESERVED_NAME = "couchbase"
 
 ///////// Notes about Couchbase implementation of Clustering API
 //
