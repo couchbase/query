@@ -43,6 +43,10 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 	} else if math.IsInf(f, -1) {
 		return []byte("\"-Infinity\""), nil
 	} else {
+		if f == -0 {
+			f = 0
+		}
+
 		return json.Marshal(f)
 	}
 }
