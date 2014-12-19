@@ -15,8 +15,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Capacity for object sets.
+*/
 var _OBJECT_CAP = 64
 
+/*
+Add input item to the cumulative set. Get the set. If
+no errors enountered add the item to the set and return
+it. If set has not been initialized yet, create a new set
+with capacity _OBJECT_CAP and add the item. Return the
+set value.
+*/
 func setAdd(item, cumulative value.Value) (value.Value, error) {
 	set, e := getSet(cumulative)
 	if e == nil {
@@ -31,6 +41,13 @@ func setAdd(item, cumulative value.Value) (value.Value, error) {
 	return av, nil
 }
 
+/*
+Aggregate distinct intermediate results and return them.
+If no partial result exists(its value is a null) return the
+cumulative value. If the cumulative input value is null,
+return the partial value. Get the input partial and cumulative
+sets and add the smaller set to the bigger. Return this set.
+*/
 func cumulateSets(part, cumulative value.Value) (value.Value, error) {
 	if part.Type() == value.NULL {
 		return cumulative, nil
@@ -64,6 +81,11 @@ func cumulateSets(part, cumulative value.Value) (value.Value, error) {
 	return cumulative, nil
 }
 
+/*
+Retrieve the set for annotated values. If the attachment type
+is not a set, then throw an invalid distinct set error and
+return.
+*/
 func getSet(item value.Value) (*value.Set, error) {
 	switch item := item.(type) {
 	case value.AnnotatedValue:
