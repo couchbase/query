@@ -1,5 +1,221 @@
 [
   {
+     "statements":"select abs(-4.599) ",
+     "results": [
+        {
+            "$1": 4.599
+        }
+    ]
+  },
+  {
+     "statements":"select abs(0.0) ",
+     "results": [
+        {
+            "$1": 0
+        }
+    ]
+  },
+  {
+     "statements":"select acos(1.0) ",
+     "results": [
+        {
+            "$1": 0
+        }
+    ]
+  },
+  {
+     "statements":"select acos(-1.0) ",
+     "results": [
+        {
+            "$1": 3.141592653589793
+        }
+    ]
+  },
+  {
+     "statements":"select acos(3) ",
+     "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+  },
+  {
+     "statements":"SELECT asin(score/10) as sc FROM default:game ORDER BY sc ",
+      "results": [
+        {
+            "sc": 1.5707963267948966
+        },
+        {
+            "sc": 1.5707963267948966
+        },
+        {
+            "sc": "NaN"
+        },
+        {
+            "sc": 0.1001674211615598
+        },
+        {
+            "sc": 0.9272952180016123
+        }
+    ]
+  },
+  {
+     "statements":"SELECT atan(score/10) as sc FROM default:game ORDER BY sc  ",
+     "results": [
+        {
+            "sc": 0.09966865249116204
+        },
+        {
+            "sc": 0.6747409422235526
+        },
+        {
+            "sc": 0.7853981633974483
+        },
+        {
+            "sc": 0.7853981633974483
+        },
+        {
+            "sc": 1.4711276743037345
+        }
+    ]
+  },
+  {
+     "statements":"SELECT atan2(score,10) as sc FROM default:game ORDER BY sc ",
+     "results": [
+        {
+            "sc": 0.09966865249116204
+        },
+        {
+            "sc": 0.6747409422235526
+        },
+        {
+            "sc": 0.7853981633974483
+        },
+        {
+            "sc": 0.7853981633974483
+        },
+        {
+            "sc": 1.4711276743037345
+        }
+    ]
+  },
+  {
+     "statements":"select cos(PI()/2)",
+     "results": [
+        {
+            "$1": 6.123233995736757e-17
+        }
+    ]
+  },
+  {
+     "statements":"select cos(PI()) ",
+     "results": [
+        {
+            "$1": -1
+        }
+    ]
+  },
+  {
+     "statements":"select sin(PI()/2) ",
+     "results": [
+        {
+            "$1": 1
+        }
+    ]
+  },
+  {
+     "statements":"select sin(PI()) ",
+     "results": [
+        {
+            "$1": 1.2246467991473515e-16
+        }
+    ]
+  },
+  {
+     "statements":"select tan(PI()/2) ",
+     "results": [
+        {
+            "$1": 1.6331239353195392e+16
+        }
+    ]
+  },
+  {
+     "statements":"select tan(PI()) ",
+     "results": [
+        {
+            "$1": -1.2246467991473515e-16
+        }
+    ]
+  },
+  {
+     "statements":"SELECT tan(score) as sc FROM default:game ORDER BY sc ",
+     "results": [
+        {
+            "sc": -6.799711455220378
+        },
+        {
+            "sc": -0.587213915156929
+        },
+        {
+            "sc": 0.6483608274590867
+        },
+        {
+            "sc": 0.6483608274590867
+        },
+        {
+            "sc": 1.557407724654902
+        }
+    ]
+  },
+  {
+     "statements":"SELECT cos(score) as sc FROM default:game ORDER BY sc ",
+     "results": [
+        {
+            "sc": -0.8390715290764524
+        },
+        {
+            "sc": -0.8390715290764524
+        },
+        {
+            "sc": -0.14550003380861354
+        },
+        {
+            "sc": 0.5403023058681398
+        },
+        {
+            "sc": 0.8623188722876839
+        }
+    ]
+  },
+  {
+     "statements":"SELECT sin(score) as sc FROM default:game ORDER BY sc ",
+     "results": [
+        {
+            "sc": -0.5440211108893699
+        },
+        {
+            "sc": -0.5440211108893699
+        },
+        {
+            "sc": -0.5063656411097588
+        },
+        {
+            "sc": 0.8414709848078965
+        },
+        {
+            "sc": 0.9893582466233817
+        }
+    ]
+  },
+  {
+     "statements":"select ceil(1.4) ",
+     "results": [
+        {
+            "$1": 2
+        }
+    ]      
+  },
+  {
         "statements": "SELECT CEIL(score+0.5) as sc FROM default:game ORDER BY sc",
         "results": [
            {
@@ -19,7 +235,118 @@
         }
 ]
     },
-
+    {
+        "statements": "select PI() ",
+        "results": [
+        {
+            "$1": 3.141592653589793
+        }
+    ]     
+    },
+    {
+        "statements": "select E() ",
+        "results": [
+        {
+            "$1": 2.718281828459045
+        }
+    ]
+    },
+    {
+        "statements": "select POWER(E(),2) ", 
+        "results": [
+        {
+            "$1": 7.3890560989306495
+        }
+    ]
+    },
+    {
+        "statements": "select LN(POWER(E(),2)) ",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements": "select EXP(2) ", 
+        "results": [
+        {
+            "$1": 7.38905609893065
+        }
+    ]
+    },
+    {
+        "statements": "select LN(EXP(2)) ",
+        "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+        "statements": "select LOG(EXP(10)) ", 
+        "results": [
+        {
+            "$1": 4.342944819032518
+        }
+    ]
+    },
+    {
+        "statements": "select LOG(POWER(10,34)) ",
+        "results": [
+        {
+            "$1": 34
+        }
+    ]
+    },
+    {
+        "statements": "select DEGREES(PI()) ",
+        "results": [
+        {
+            "$1": 180
+        }
+    ] 
+    },
+    {
+        "statements": "select DEGREES(PI()/2)",
+        "results": [
+        {
+            "$1": 90
+        }
+    ]
+    },
+   {
+      "statements":"select DEGREES(-PI()/2)  ",
+      "results": [
+        {
+            "$1": -90
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(90) ",
+      "results": [
+        {
+            "$1": 1.5707963267948966
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(-180) ",
+      "results": [
+        {
+            "$1": -3.141592653589793
+        }
+    ]
+   },
+   {
+      "statements":"select RADIANS(PI()) ",
+      "results": [
+        {
+            "$1": 0.05483113556160754
+        }
+    ]
+   },
     {
         "statements": "SELECT FLOOR(score+0.5) as sc FROM default:game ORDER BY sc",
         "results": [
@@ -41,6 +368,90 @@
    ]
     },
    {
+       "statements":"select floor(1.7) ",
+       "results": [
+        {
+            "$1": 1
+        }
+    ]
+   },
+   {
+      "statements":"select POWER(12,2)",
+      "results": [
+        {
+            "$1": 144
+        }
+    ]
+   },
+   {
+      "statements":"SELECT power(score,2) as sc FROM default:game ORDER BY sc ",
+      "results": [
+        {
+            "sc": 1
+        },
+        {
+            "sc": 64
+        },
+        {
+            "sc": 100
+        },
+        {
+            "sc": 100
+        },
+        {
+            "sc": 10000
+        }
+    ]
+   },
+   {
+      "statements":"SELECT power(score,10) as sc FROM default:game ORDER BY sc ",
+      "results": [
+        {
+            "sc": 1
+        },
+        {
+            "sc": 1.073741824e+09
+        },
+        {
+            "sc": 1e+10
+        },
+        {
+            "sc": 1e+10
+        },
+        {
+            "sc": 1e+20
+        }
+    ]
+   },   
+   {
+      "statements":"select random(0.5) ",
+      "results": [
+        {
+            "$1": 0.9451961492941164
+        }
+    ]
+   },
+   {
+      "statements":"SELECT random(score) as sc FROM default:game ORDER BY sc ",
+      "results": [
+        {
+            "sc": 0.45015378304654147
+        },
+        {
+            "sc": 0.5660920659323543
+        },
+        {
+            "sc": 0.5660920659323543
+        },
+        {
+            "sc": 0.6046602879796196
+        },
+        {
+            "sc": 0.8165026937796166
+        }
+    ]
+   },
+   {
         "statements": "SELECT ROUND(score+0.5) as rnd FROM default:game ORDER BY rnd",
         "results": [
       {
@@ -60,7 +471,119 @@
         }
    ]
     },
-  {
+    {
+       "statements":"select round(1.2343534) ",
+       "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534) ",
+       "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,0) ",
+       "results": [
+        {
+            "$1": 2
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,3) ",
+       "results": [
+        {
+            "$1": 1.834
+        }
+    ]
+    },
+    {
+       "statements":"select round(8.8343534,-1) ",
+       "results": [
+        {
+            "$1": 10
+        }
+    ]
+    },
+    {
+       "statements":"select round(1.8343534,-1) ",
+       "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(-1034.992445) ",
+      "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(1034.992445) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.292445) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.0000111) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    },
+    {
+      "statements":"select sign(0.0) ",
+      "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(NaN()) ",
+      "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+      "statements":"select sign(PosInf()) ",
+      "results": [
+        {
+            "$1": 1
+        }
+    ]
+    }, 
+    {
+      "statements":"select sign(NegInf()) ",
+      "results": [
+        {
+            "$1": -1
+        }
+    ]
+    },
+    {
         "statements": "SELECT TRUNC(score+0.5) as trun FROM default:game ORDER BY trun",
         "results": [
          {
@@ -79,5 +602,57 @@
             "trun": 100
         }
  ]
+    },
+    {
+       "statements":"select sqrt(score) as sq FROM default:game ORDER BY sq ",
+       "results": [
+        {
+            "sq": 1
+        },
+        {
+            "sq": 2.8284271247461903
+        },
+        {
+            "sq": 3.1622776601683795
+        },
+        {
+            "sq": 3.1622776601683795
+        },
+        {
+            "sq": 10
+        }
+    ]
+    },
+    {
+       "statements":"select sqrt(0) ",
+       "results": [
+        {
+            "$1": 0
+        }
+    ]
+    },
+    {
+       "statements":"select sqrt(-1) ",
+       "results": [
+        {
+            "$1": "NaN"
+        }
+    ]
+    },
+    {
+       "statements":"select trunc(-2.2544,2) ",
+       "results": [
+        {
+            "$1": -2.25
+        }
+    ]
+    },
+    {
+       "statements":"select trunc(0.2544,3)",
+       "results": [
+        {
+            "$1": 0.254
+        }
+    ]
     }
-]
+ ]
