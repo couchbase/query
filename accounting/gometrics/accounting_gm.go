@@ -97,15 +97,65 @@ func (g *goMetricRegistry) Histogram(name string) accounting.Histogram {
 	return metrics.GetOrRegisterHistogram(name, metrics.DefaultRegistry, metrics.NewExpDecaySample(1028, 0.015))
 }
 
-func (g *goMetricRegistry) Counters() map[string]accounting.Counter { return nil }
+func (g *goMetricRegistry) Counters() map[string]accounting.Counter {
+	r := metrics.DefaultRegistry
+	var counters map[string]accounting.Counter
+	r.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Counter:
+			counters[name] = m
+		}
+	})
+	return counters
+}
 
-func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge { return nil }
+func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge {
+	r := metrics.DefaultRegistry
+	var gauges map[string]accounting.Gauge
+	r.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Gauge:
+			gauges[name] = m
+		}
+	})
+	return gauges
+}
 
-func (g *goMetricRegistry) Meters() map[string]accounting.Meter { return nil }
+func (g *goMetricRegistry) Meters() map[string]accounting.Meter {
+	r := metrics.DefaultRegistry
+	var meters map[string]accounting.Meter
+	r.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Meter:
+			meters[name] = m
+		}
+	})
+	return meters
+}
 
-func (g *goMetricRegistry) Timers() map[string]accounting.Timer { return nil }
+func (g *goMetricRegistry) Timers() map[string]accounting.Timer {
+	r := metrics.DefaultRegistry
+	var timers map[string]accounting.Timer
+	r.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Timer:
+			timers[name] = m
+		}
+	})
+	return timers
+}
 
-func (g *goMetricRegistry) Histograms() map[string]accounting.Histogram { return nil }
+func (g *goMetricRegistry) Histograms() map[string]accounting.Histogram {
+	r := metrics.DefaultRegistry
+	var histograms map[string]accounting.Histogram
+	r.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Histogram:
+			histograms[name] = m
+		}
+	})
+	return histograms
+}
 
 type goMetricReporter struct {
 }
@@ -142,6 +192,7 @@ func (g *goMetricReporter) RateUnit() time.Duration {
 // publish_expvars: expose each metric in the given registry to expvars
 func publish_expvars(r metrics.Registry) {
 	du := float64(time.Nanosecond)
+	percentiles := []float64{0.50, 0.75, 0.95, 0.99, 0.999}
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Counter:
@@ -180,21 +231,11 @@ func publish_expvars(r metrics.Registry) {
 			expvar.Publish(fmt.Sprintf("%s.Variance", name), expvar.Func(func() interface{} {
 				return m.Variance()
 			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.50", name), expvar.Func(func() interface{} {
-				return m.Percentile(0.50)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.75", name), expvar.Func(func() interface{} {
-				return m.Percentile(0.75)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.95", name), expvar.Func(func() interface{} {
-				return m.Percentile(0.95)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.99", name), expvar.Func(func() interface{} {
-				return m.Percentile(0.99)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.999", name), expvar.Func(func() interface{} {
-				return m.Percentile(0.999)
-			}))
+			for _, p := range percentiles {
+				expvar.Publish(fmt.Sprintf("%s.Percentile%2.3f", name, p), expvar.Func(func() interface{} {
+					return m.Percentile(p)
+				}))
+			}
 		case metrics.Timer:
 			expvar.Publish(fmt.Sprintf("%s.Rate1", name), expvar.Func(func() interface{} {
 				return m.Rate1()
@@ -223,21 +264,11 @@ func publish_expvars(r metrics.Registry) {
 			expvar.Publish(fmt.Sprintf("%s.Variance", name), expvar.Func(func() interface{} {
 				return du * m.Variance()
 			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.50", name), expvar.Func(func() interface{} {
-				return du * m.Percentile(0.50)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.75", name), expvar.Func(func() interface{} {
-				return du * m.Percentile(0.75)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.95", name), expvar.Func(func() interface{} {
-				return du * m.Percentile(0.95)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.99", name), expvar.Func(func() interface{} {
-				return du * m.Percentile(0.99)
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Percentile.999", name), expvar.Func(func() interface{} {
-				return du * m.Percentile(0.999)
-			}))
+			for _, p := range percentiles {
+				expvar.Publish(fmt.Sprintf("%s.Percentile%2.3f", name, p), expvar.Func(func() interface{} {
+					return m.Percentile(p)
+				}))
+			}
 		}
 	})
 	expvar.Publish("time", expvar.Func(now))
