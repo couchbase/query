@@ -19,9 +19,7 @@ import (
 )
 
 const (
-	adminPrefix      = "/admin"
-	clustersPrefix   = "/admin/clusters"
-	accountingPrefix = "/admin/stats"
+	adminPrefix = "/admin"
 )
 
 type apiFunc func(*server.Server, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
@@ -54,7 +52,6 @@ func wrapAPI(s *server.Server, w http.ResponseWriter, req *http.Request, f apiFu
 		writeError(w, errors.NewError(json_err, ""))
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(buf)

@@ -22,6 +22,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const (
+	clustersPrefix = adminPrefix + "/clusters"
+)
+
 func registerClusterHandlers(r *mux.Router, server *server.Server) {
 	pingHandler := func(w http.ResponseWriter, req *http.Request) {
 		wrapAPI(server, w, req, doPing)

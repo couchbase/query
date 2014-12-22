@@ -99,7 +99,7 @@ func (g *goMetricRegistry) Histogram(name string) accounting.Histogram {
 
 func (g *goMetricRegistry) Counters() map[string]accounting.Counter {
 	r := metrics.DefaultRegistry
-	var counters map[string]accounting.Counter
+	counters := make(map[string]accounting.Counter)
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Counter:
@@ -111,7 +111,7 @@ func (g *goMetricRegistry) Counters() map[string]accounting.Counter {
 
 func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge {
 	r := metrics.DefaultRegistry
-	var gauges map[string]accounting.Gauge
+	gauges := make(map[string]accounting.Gauge)
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Gauge:
@@ -123,7 +123,7 @@ func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge {
 
 func (g *goMetricRegistry) Meters() map[string]accounting.Meter {
 	r := metrics.DefaultRegistry
-	var meters map[string]accounting.Meter
+	meters := make(map[string]accounting.Meter)
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Meter:
@@ -135,7 +135,7 @@ func (g *goMetricRegistry) Meters() map[string]accounting.Meter {
 
 func (g *goMetricRegistry) Timers() map[string]accounting.Timer {
 	r := metrics.DefaultRegistry
-	var timers map[string]accounting.Timer
+	timers := make(map[string]accounting.Timer)
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Timer:
@@ -147,7 +147,7 @@ func (g *goMetricRegistry) Timers() map[string]accounting.Timer {
 
 func (g *goMetricRegistry) Histograms() map[string]accounting.Histogram {
 	r := metrics.DefaultRegistry
-	var histograms map[string]accounting.Histogram
+	histograms := make(map[string]accounting.Histogram)
 	r.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case metrics.Histogram:

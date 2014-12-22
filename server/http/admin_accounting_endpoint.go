@@ -12,9 +12,14 @@ package http
 import (
 	"net/http"
 
+	"github.com/couchbaselabs/query/accounting"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/server"
 	"github.com/gorilla/mux"
+)
+
+const (
+	accountingPrefix = adminPrefix + "/stats"
 )
 
 func registerAccountingHandlers(r *mux.Router, server *server.Server) {
@@ -45,12 +50,22 @@ func doStats(s *server.Server, w http.ResponseWriter, req *http.Request) (interf
 
 	switch req.Method {
 	case "GET":
-		var stats map[string]interface{}
-		stats["Counters"] = reg.Counters()
-		stats["Gauges"] = reg.Gauges()
-		stats["Timers"] = reg.Timers()
-		stats["Meters"] = reg.Meters()
-		stats["Histogram"] = reg.Histograms()
+		stats := make(map[string]interface{})
+		for name, metric := range reg.Counters() {
+			stats[name] = getMetricData(metric)
+		}
+		for name, metric := range reg.Gauges() {
+			stats[name] = getMetricData(metric)
+		}
+		for name, metric := range reg.Timers() {
+			stats[name] = getMetricData(metric)
+		}
+		for name, metric := range reg.Meters() {
+			stats[name] = getMetricData(metric)
+		}
+		for name, metric := range reg.Histograms() {
+			stats[name] = getMetricData(metric)
+		}
 		return stats, nil
 	default:
 		return nil, nil
@@ -65,10 +80,60 @@ func doStat(s *server.Server, w http.ResponseWriter, req *http.Request) (interfa
 
 	switch req.Method {
 	case "GET":
-		return reg.Get(name), nil
+		metric := reg.Get(name)
+		if metric != nil {
+			return getMetricData(metric), nil
+		} else {
+			return nil, nil
+		}
 	case "DELETE":
 		return nil, reg.Unregister(name)
 	default:
 		return nil, nil
 	}
+}
+
+func getMetricData(metric accounting.Metric) map[string]interface{} {
+	values := make(map[string]interface{})
+	switch metric := metric.(type) {
+	case accounting.Counter:
+		values["count"] = metric.Count()
+	case accounting.Gauge:
+		values["value"] = metric.Value()
+	case accounting.Meter:
+		values["count"] = metric.Count()
+		values["1m.rate"] = metric.Rate1()
+		values["5m.rate"] = metric.Rate5()
+		values["15m.rate"] = metric.Rate15()
+		values["mean.rate"] = metric.RateMean()
+	case accounting.Timer:
+		ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
+		values["count"] = metric.Count()
+		values["min"] = metric.Min()
+		values["max"] = metric.Max()
+		values["mean"] = metric.Mean()
+		values["stddev"] = metric.StdDev()
+		values["median"] = ps[0]
+		values["75%"] = ps[1]
+		values["95%"] = ps[2]
+		values["99%"] = ps[3]
+		values["99.9%"] = ps[4]
+		values["1m.rate"] = metric.Rate1()
+		values["5m.rate"] = metric.Rate5()
+		values["15m.rate"] = metric.Rate15()
+		values["mean.rate"] = metric.RateMean()
+	case accounting.Histogram:
+		ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
+		values["count"] = metric.Count()
+		values["min"] = metric.Min()
+		values["max"] = metric.Max()
+		values["mean"] = metric.Mean()
+		values["stddev"] = metric.StdDev()
+		values["median"] = ps[0]
+		values["75%"] = ps[1]
+		values["95%"] = ps[2]
+		values["99%"] = ps[3]
+		values["99.9%"] = ps[4]
+	}
+	return values
 }
