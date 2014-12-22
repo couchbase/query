@@ -17,27 +17,29 @@ import (
 type Upsert struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
-	values    expression.Expression `json:"values"`
+	value     expression.Expression `json:"value"`
+	values    Pairs                 `json:"values"`
 	query     *Select               `json:"select"`
 	returning *Projection           `json:"returning"`
 }
 
-func NewUpsertValues(keyspace *KeyspaceRef, key expression.Expression,
-	values expression.Expression, returning *Projection) *Upsert {
+func NewUpsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection) *Upsert {
 	return &Upsert{
 		keyspace:  keyspace,
-		key:       key,
+		key:       nil,
+		value:     nil,
 		values:    values,
 		query:     nil,
 		returning: returning,
 	}
 }
 
-func NewUpsertSelect(keyspace *KeyspaceRef, key expression.Expression,
+func NewUpsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	query *Select, returning *Projection) *Upsert {
 	return &Upsert{
 		keyspace:  keyspace,
 		key:       key,
+		value:     value,
 		values:    nil,
 		query:     query,
 		returning: returning,
@@ -64,8 +66,15 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 		}
 	}
 
+	if this.value != nil {
+		this.value, err = mapper.Map(this.value)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.values != nil {
-		this.values, err = mapper.Map(this.values)
+		err = this.values.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
@@ -87,7 +96,8 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 
 func (this *Upsert) Formalize() (err error) {
 	if this.values != nil {
-		this.values, err = expression.NewFormalizer().Map(this.values)
+		f := expression.NewFormalizer()
+		err = this.values.MapExpressions(f)
 		if err != nil {
 			return
 		}
@@ -120,7 +130,11 @@ func (this *Upsert) Key() expression.Expression {
 	return this.key
 }
 
-func (this *Upsert) Values() expression.Expression {
+func (this *Upsert) Value() expression.Expression {
+	return this.value
+}
+
+func (this *Upsert) Values() Pairs {
 	return this.values
 }
 

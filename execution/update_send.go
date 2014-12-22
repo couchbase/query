@@ -116,8 +116,6 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	if e != nil {
 		context.Error(e)
-		this.batch = nil
-		return false
 	}
 
 	for _, av := range this.batch {

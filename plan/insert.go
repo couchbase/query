@@ -21,13 +21,15 @@ type SendInsert struct {
 	readwrite
 	keyspace datastore.Keyspace
 	key      expression.Expression
+	value    expression.Expression
 	limit    expression.Expression
 }
 
-func NewSendInsert(keyspace datastore.Keyspace, key, limit expression.Expression) *SendInsert {
+func NewSendInsert(keyspace datastore.Keyspace, key, value, limit expression.Expression) *SendInsert {
 	return &SendInsert{
 		keyspace: keyspace,
 		key:      key,
+		value:    value,
 		limit:    limit,
 	}
 }
@@ -48,6 +50,10 @@ func (this *SendInsert) Key() expression.Expression {
 	return this.key
 }
 
+func (this *SendInsert) Value() expression.Expression {
+	return this.value
+}
+
 func (this *SendInsert) Limit() expression.Expression {
 	return this.limit
 }
@@ -56,16 +62,25 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Insert"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["key"] = expression.NewStringer().Visit(this.key)
+
+	if this.key != nil {
+		r["key"] = this.key.String()
+	}
+
+	if this.value != nil {
+		r["value"] = this.value.String()
+	}
+
 	return json.Marshal(r)
 }
 
 func (this *SendInsert) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_       string `json:"#operator"`
-		KeyExpr string `json:"key"`
-		Keys    string `json:"keyspace"`
-		Names   string `json:"namespace"`
+		_         string `json:"#operator"`
+		KeyExpr   string `json:"key"`
+		ValueExpr string `json:"value"`
+		Keys      string `json:"keyspace"`
+		Names     string `json:"namespace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -75,6 +90,13 @@ func (this *SendInsert) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.KeyExpr != "" {
 		this.key, err = parser.Parse(_unmarshalled.KeyExpr)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.ValueExpr != "" {
+		this.value, err = parser.Parse(_unmarshalled.ValueExpr)
 		if err != nil {
 			return err
 		}

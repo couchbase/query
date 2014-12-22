@@ -11,6 +11,7 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbaselabs/query/algebra"
 	"github.com/couchbaselabs/query/datastore"
@@ -259,10 +260,10 @@ func (this *ParentScan) UnmarshalJSON([]byte) error {
 // ValueScan is used for VALUES clauses, e.g. in INSERTs.
 type ValueScan struct {
 	readonly
-	values expression.Expression
+	values algebra.Pairs
 }
 
-func NewValueScan(values expression.Expression) *ValueScan {
+func NewValueScan(values algebra.Pairs) *ValueScan {
 	return &ValueScan{
 		values: values,
 	}
@@ -276,13 +277,13 @@ func (this *ValueScan) New() Operator {
 	return &ValueScan{}
 }
 
-func (this *ValueScan) Values() expression.Expression {
+func (this *ValueScan) Values() algebra.Pairs {
 	return this.values
 }
 
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "ValueScan"}
-	r["values"] = expression.NewStringer().Visit(this.values)
+	r["values"] = this.values.Expression().String()
 	return json.Marshal(r)
 }
 
@@ -297,9 +298,21 @@ func (this *ValueScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if _unmarshalled.Values != "" {
-		this.values, err = parser.Parse(_unmarshalled.Values)
+	if _unmarshalled.Values == "" {
+		return nil
 	}
+
+	expr, err := parser.Parse(_unmarshalled.Values)
+	if err != nil {
+		return err
+	}
+
+	array, ok := expr.(*expression.ArrayConstruct)
+	if !ok {
+		return fmt.Errorf("Invalid VALUES expression %s", _unmarshalled.Values)
+	}
+
+	this.values, err = algebra.NewPairs(array)
 	return err
 }
 

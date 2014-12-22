@@ -21,12 +21,14 @@ type SendUpsert struct {
 	readwrite
 	keyspace datastore.Keyspace
 	key      expression.Expression
+	value    expression.Expression
 }
 
-func NewSendUpsert(keyspace datastore.Keyspace, key expression.Expression) *SendUpsert {
+func NewSendUpsert(keyspace datastore.Keyspace, key, value expression.Expression) *SendUpsert {
 	return &SendUpsert{
 		keyspace: keyspace,
 		key:      key,
+		value:    value,
 	}
 }
 
@@ -46,20 +48,33 @@ func (this *SendUpsert) Key() expression.Expression {
 	return this.key
 }
 
+func (this *SendUpsert) Value() expression.Expression {
+	return this.value
+}
+
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "SendUpsert"}
-	r["key"] = expression.NewStringer().Visit(this.key)
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
+
+	if this.key != nil {
+		r["key"] = this.key.String()
+	}
+
+	if this.value != nil {
+		r["value"] = this.value.String()
+	}
+
 	return json.Marshal(r)
 }
 
 func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_       string `json:"#operator"`
-		KeyExpr string `json:"key"`
-		Keys    string `json:"keyspace"`
-		Names   string `json:"namespace"`
+		_         string `json:"#operator"`
+		KeyExpr   string `json:"key"`
+		ValueExpr string `json:"value"`
+		Keys      string `json:"keyspace"`
+		Names     string `json:"namespace"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -69,6 +84,13 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.KeyExpr != "" {
 		this.key, err = parser.Parse(_unmarshalled.KeyExpr)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.ValueExpr != "" {
+		this.value, err = parser.Parse(_unmarshalled.ValueExpr)
 		if err != nil {
 			return err
 		}

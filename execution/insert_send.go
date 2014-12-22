@@ -88,52 +88,80 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return true
 	}
 
-	key := this.plan.Key()
-	pairs := make([]datastore.Pair, len(this.batch))
+	keyExpr := this.plan.Key()
+	valExpr := this.plan.Value()
+	dpairs := make([]datastore.Pair, len(this.batch))
+	var key, val value.Value
+	var err error
+	var ok bool
 	i := 0
 
 	for _, av := range this.batch {
-		pair := &pairs[i]
+		dpair := &dpairs[i]
 
-		// Evaluate and set the key, if any
-		if key != nil {
-			k, e := key.Evaluate(av, context)
-			if e != nil {
-				context.Warning(errors.NewError(e,
-					fmt.Sprintf("Error evaluating INSERT key for value %v.", av.GetValue())))
+		if keyExpr != nil {
+			// INSERT ... SELECT
+			key, err = keyExpr.Evaluate(av, context)
+			if err != nil {
+				context.Error(errors.NewError(err,
+					fmt.Sprintf("Error evaluating INSERT key for %v", av.GetValue())))
 				continue
 			}
 
-			switch k := k.Actual().(type) {
-			case string:
-				pair.Key = k
-			default:
+			if valExpr != nil {
+				val, err = valExpr.Evaluate(av, context)
+				if err != nil {
+					context.Error(errors.NewError(err,
+						fmt.Sprintf("Error evaluating INSERT value for %v", av.GetValue())))
+					continue
+				}
+			} else {
+				val = av
+			}
+		} else {
+			// INSERT ... VALUES
+			key, ok = av.GetAttachment("key").(value.Value)
+			if !ok {
 				context.Error(errors.NewError(nil,
-					fmt.Sprintf("Unable to INSERT non-string key %v of type %T.", k, k)))
+					fmt.Sprintf("No INSERT key for %v", av.GetValue())))
+				continue
+			}
+
+			val, ok = av.GetAttachment("value").(value.Value)
+			if !ok {
+				context.Error(errors.NewError(nil,
+					fmt.Sprintf("No INSERT value for %v", av.GetValue())))
 				continue
 			}
 		}
 
-		pair.Value = av
+		dpair.Key, ok = key.Actual().(string)
+		if !ok {
+			context.Error(errors.NewError(nil,
+				fmt.Sprintf("Cannot INSERT non-string key %v of type %T.", key, key)))
+			continue
+		}
+
+		dpair.Value = val
 		i++
 	}
 
-	pairs = pairs[0:i]
+	dpairs = dpairs[0:i]
 	this.batch = nil
 
 	// Perform the actual INSERT
-	keys, e := this.plan.Keyspace().Insert(pairs)
-	if e != nil {
-		context.Error(e)
-		return false
-	}
+	keys, e := this.plan.Keyspace().Insert(dpairs)
 
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(keys)))
 
-	// Capture the inserted keys in case there's a RETURNING clause
+	if e != nil {
+		context.Error(e)
+	}
+
+	// Capture the inserted keys in case there is a RETURNING clause
 	for i, k := range keys {
-		av := pairs[i].Value.(value.AnnotatedValue)
+		av := dpairs[i].Value.(value.AnnotatedValue)
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
 		if !this.sendItem(av) {
 			return false

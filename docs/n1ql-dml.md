@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2014-12-15
++ Modified: 2014-12-21
 
 ## Introduction
 
@@ -117,6 +117,10 @@ _merge:_
 _merge-source:_
 
 ![](diagram/merge-source.png)
+
+_key-clause:_
+
+![](diagram/key-clause.png)
 
 _merge-actions:_
 
@@ -285,6 +289,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Allow keys to exist outside of values
 * 2014-12-15 - INSERT / UPSERT syntax
     * Refine INSERT / UPSERT syntax
+* 2014-12-21 - MERGE syntax
+    * Include key-clause in MERGE syntax diagrams
 
 ### Open Issues
 

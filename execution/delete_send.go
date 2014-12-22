@@ -98,13 +98,13 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	}
 
 	deleted_keys, e := this.plan.Keyspace().Delete(keys)
-	if e != nil {
-		context.Error(e)
-		this.batch = nil
-		return false
-	}
+
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(deleted_keys)))
+
+	if e != nil {
+		context.Error(e)
+	}
 
 	for _, av := range this.batch {
 		if !this.sendItem(av) {

@@ -52,6 +52,8 @@ merge ::= 'MERGE' 'INTO' keyspace-ref 'USING' merge-source 'ON' key-clause merge
 
 merge-source ::= from-path ('AS'? alias)? | '(' select ')' 'AS'? alias
 
+key-clause ::= PRIMARY? KEY expr
+
 merge-actions ::= merge-update? merge-delete? merge-insert?
 
 merge-update ::= 'WHEN' 'MATCHED' 'THEN' 'UPDATE' set-clause? unset-clause? where-clause?

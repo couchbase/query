@@ -47,22 +47,24 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		vals, e := this.plan.Values().Evaluate(parent, context)
-		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating VALUES."))
-			return
-		}
+		pairs := this.plan.Values()
+		for _, pair := range pairs {
+			key, err := pair.Key.Evaluate(parent, context)
+			if err != nil {
+				context.Error(errors.NewError(err, "Error evaluating VALUES."))
+				return
+			}
 
-		actuals := vals.Actual()
-		switch actuals.(type) {
-		case []interface{}:
-		default:
-			actuals = []interface{}{vals}
-		}
+			val, err := pair.Value.Evaluate(parent, context)
+			if err != nil {
+				context.Error(errors.NewError(err, "Error evaluating VALUES."))
+				return
+			}
 
-		acts := actuals.([]interface{})
-		for _, act := range acts {
-			av := value.NewAnnotatedValue(act)
+			av := value.NewAnnotatedValue(nil)
+			av.SetAttachment("key", key)
+			av.SetAttachment("value", val)
+
 			if !this.sendItem(av) {
 				return
 			}

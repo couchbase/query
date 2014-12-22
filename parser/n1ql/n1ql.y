@@ -45,6 +45,7 @@ sortTerms        algebra.SortTerms
 
 keyspaceRef      *algebra.KeyspaceRef
 
+pairs            algebra.Pairs
 set              *algebra.Set
 unset            *algebra.Unset
 setTerm          *algebra.SetTerm
@@ -315,8 +316,8 @@ indexType        datastore.IndexType
 %type <statement>        index_stmt create_index drop_index alter_index
 
 %type <keyspaceRef>      keyspace_ref
-%type <expr>             values
-%type <expr>             key opt_key
+%type <pairs>            values values_list
+%type <expr>             key_expr opt_value_expr
 %type <projection>       returns returning opt_returning
 %type <binding>          update_binding
 %type <bindings>         update_bindings
@@ -1011,14 +1012,14 @@ OFFSET expr
  *************************************************/
 
 insert:
-INSERT INTO keyspace_ref opt_key values opt_returning
+INSERT INTO keyspace_ref opt_values_header values_list opt_returning
 {
-    $$ = algebra.NewInsertValues($3, $4, $5, $6)
+    $$ = algebra.NewInsertValues($3, $5, $6)
 }
 |
-INSERT INTO keyspace_ref opt_key fullselect opt_returning
+INSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_returning
 {
-    $$ = algebra.NewInsertSelect($3, $4, $5, $6)
+    $$ = algebra.NewInsertSelect($3, $5, $6, $8, $9)
 }
 ;
 
@@ -1034,26 +1035,33 @@ keyspace_name opt_as_alias
 }
 ;
 
-opt_key:
+opt_values_header:
 /* empty */
-{
-    $$ = nil
-}
 |
-key
+LPAREN KEY COMMA VALUE RPAREN
+|
+LPAREN PRIMARY KEY COMMA VALUE RPAREN
 ;
 
 key:
-KEY expr
+KEY
+|
+PRIMARY KEY
+;
+
+values_list:
+values
+|
+values_list COMMA values
 {
-    $$ = $2
+    $$ = append($1, $3...)
 }
 ;
 
 values:
-VALUES expr
+VALUES LPAREN expr COMMA expr RPAREN
 {
-    $$ = $2
+    $$ = algebra.Pairs{&algebra.Pair{Key: $3, Value: $5}}
 }
 ;
 
@@ -1085,6 +1093,25 @@ raw expr
 }
 ;
 
+key_expr:
+key expr
+{
+    $$ = $2
+}
+;
+
+opt_value_expr:
+/* empty */
+{
+    $$ = nil
+}
+|
+COMMA VALUE expr
+{
+    $$ = $3
+}
+;
+
 
 /*************************************************
  *
@@ -1093,14 +1120,14 @@ raw expr
  *************************************************/
 
 upsert:
-UPSERT INTO keyspace_ref key values opt_returning
+UPSERT INTO keyspace_ref opt_values_header values_list opt_returning
 {
-    $$ = algebra.NewUpsertValues($3, $4, $5, $6)
+    $$ = algebra.NewUpsertValues($3, $5, $6)
 }
 |
-UPSERT INTO keyspace_ref key fullselect opt_returning
+UPSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_returning
 {
-    $$ = algebra.NewUpsertSelect($3, $4, $5, $6)
+    $$ = algebra.NewUpsertSelect($3, $5, $6, $8, $9)
 }
 ;
 
@@ -1265,13 +1292,13 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO keyspace_ref USING keyspace_term ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING keyspace_term ON key_expr merge_actions opt_limit opt_returning
 {
     source := algebra.NewMergeSourceFrom($5, "")
     $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
 }
 |
-MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key_expr merge_actions opt_limit opt_returning
 {
     source := algebra.NewMergeSourceSelect($6, $8)
     $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
