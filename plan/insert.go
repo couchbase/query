@@ -59,7 +59,7 @@ func (this *SendInsert) Limit() expression.Expression {
 }
 
 func (this *SendInsert) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"#operator": "Insert"}
+	r := map[string]interface{}{"#operator": "SendInsert"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 

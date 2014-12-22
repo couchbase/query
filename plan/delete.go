@@ -42,7 +42,7 @@ func (this *SendDelete) Limit() expression.Expression {
 }
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"#operator": "Delete"}
+	r := map[string]interface{}{"#operator": "SendDelete"}
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
 	return json.Marshal(r)
