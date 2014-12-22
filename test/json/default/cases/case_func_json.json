@@ -1,0 +1,144 @@
+[
+{
+  "statements":"select decode_json(\"2\")",
+  "results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+{
+  "statements":"select DECODE_JSON([1,2,3])",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select DECODE_JSON(\"\")",
+  "results": [
+        {}
+    ]
+},
+{
+  "statements":"select encode_json(details) as enc from default:catalog ORDER BY enc",
+  "results": [
+        {
+            "enc": "{\"actors\":[\"Benedict Cumberbatch\",\"Martin Freeman\"],\"director\":[\"Euros Lyn\",\"Paul Mcguigan\"],\"format\":\"Box Set\",\"genre\":[\"Crime\",\"Thriller\"],\"runtime\":\"266.0 mins\",\"title\":\"SHERLOCK: SERIES 1\"}"
+        },
+        {
+            "enc": "{\"actors\":[\"Jessica Chastain\",\"Mark Strong\"],\"director\":\"Kathryn Bigelow\",\"format\":\"DVD\",\"genre\":[\"Action\",\"Thriller\"],\"runtime\":\"157 mins\",\"title\":\"ZERO DARK THIRTY\"}"
+        },
+        {
+            "enc": "{\"author\":\"Dan Brown\",\"genre\":[\"Fiction\",\"Thriller\"],\"package\":\"Hardcover\",\"published\":\"05/14/2013\",\"title\":\"INFERNO\"}"
+        }
+    ]
+},
+{
+  "statements":"select ENCODE_JSON([1,2,3])",
+  "results": [
+        {
+            "$1": "[1,2,3]"
+        }
+    ]
+},
+{
+  "statements":"select ENCODE_JSON(\"\")",
+  "results": [
+        {
+            "$1": "\"\""
+        }
+    ]
+},
+{
+  "statements":"select ENCODED_SIZE(\"\")",
+  "results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+{
+  "statements":"select ENCODED_SIZE([1,2,3])",
+  "results": [
+        {
+            "$1": 7
+        }
+    ]
+},
+{
+  "statements":"select ENCODED_SIZE(details) as es from default:catalog ORDER BY es",
+  "results": [
+        {
+            "es": 118
+        },
+        {
+            "es": 167
+        },
+        {
+            "es": 193
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(\"\")",
+  "results": [
+        {
+            "$1": 0
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH([1,2,3])",
+  "results": [
+        {
+            "$1": 3
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(details) as pl from default:catalog ORDER BY pl",
+  "results": [
+        {
+            "pl": 5
+        },
+        {
+            "pl": 6
+        },
+        {
+            "pl": 6
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(missing)",
+  "results": [
+        {}
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(null)",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(decode_json(\"o\"))",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select POLY_LENGTH(NaN())",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+}
+]

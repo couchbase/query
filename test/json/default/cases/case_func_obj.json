@@ -12,5 +12,194 @@
             "objlen": 6
         }
 ]
-    }
+    },
+  {
+     "statements": "SELECT OBJECT_NAMES(details) as objname FROM default:catalog ORDER BY objname ",
+     "results": [
+        {
+            "objname": [
+                "actors",
+                "director",
+                "format",
+                "genre",
+                "runtime",
+                "title"
+            ]
+        },
+        {
+            "objname": [
+                "actors",
+                "director",
+                "format",
+                "genre",
+                "runtime",
+                "title"
+            ]
+        },
+        {
+            "objname": [
+                "author",
+                "genre",
+                "package",
+                "published",
+                "title"
+            ]
+        }
+    ]
+  },
+  {
+    "statements":"SELECT OBJECT_PAIRS(details) as objpairs FROM default:catalog ORDER BY objpairs",
+    "results": [
+        {
+            "objpairs": [
+                {
+                    "name": "actors",
+                    "value": [
+                        "Benedict Cumberbatch",
+                        "Martin Freeman"
+                    ]
+                },
+                {
+                    "name": "director",
+                    "value": [
+                        "Euros Lyn",
+                        "Paul Mcguigan"
+                    ]
+                },
+                {
+                    "name": "format",
+                    "value": "Box Set"
+                },
+                {
+                    "name": "genre",
+                    "value": [
+                        "Crime",
+                        "Thriller"
+                    ]
+                },
+                {
+                    "name": "runtime",
+                    "value": "266.0 mins"
+                },
+                {
+                    "name": "title",
+                    "value": "SHERLOCK: SERIES 1"
+                }
+            ]
+        },
+        {
+            "objpairs": [
+                {
+                    "name": "actors",
+                    "value": [
+                        "Jessica Chastain",
+                        "Mark Strong"
+                    ]
+                },
+                {
+                    "name": "director",
+                    "value": "Kathryn Bigelow"
+                },
+                {
+                    "name": "format",
+                    "value": "DVD"
+                },
+                {
+                    "name": "genre",
+                    "value": [
+                        "Action",
+                        "Thriller"
+                    ]
+                },
+                {
+                    "name": "runtime",
+                    "value": "157 mins"
+                },
+                {
+                    "name": "title",
+                    "value": "ZERO DARK THIRTY"
+                }
+            ]
+        },
+        {
+            "objpairs": [
+                {
+                    "name": "author",
+                    "value": "Dan Brown"
+                },
+                {
+                    "name": "genre",
+                    "value": [
+                        "Fiction",
+                        "Thriller"
+                    ]
+                },
+                {
+                    "name": "package",
+                    "value": "Hardcover"
+                },
+                {
+                    "name": "published",
+                    "value": "05/14/2013"
+                },
+                {
+                    "name": "title",
+                    "value": "INFERNO"
+                }
+            ]
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_VALUES(details) as objvalues FROM default:catalog ORDER BY objvalues ",
+     "results": [
+        {
+            "objvalues": [
+                "Dan Brown",
+                [
+                    "Fiction",
+                    "Thriller"
+                ],
+                "Hardcover",
+                "05/14/2013",
+                "INFERNO"
+            ]
+        },
+        {
+            "objvalues": [
+                [
+                    "Benedict Cumberbatch",
+                    "Martin Freeman"
+                ],
+                [
+                    "Euros Lyn",
+                    "Paul Mcguigan"
+                ],
+                "Box Set",
+                [
+                    "Crime",
+                    "Thriller"
+                ],
+                "266.0 mins",
+                "SHERLOCK: SERIES 1"
+            ]
+        },
+        {
+            "objvalues": [
+                [
+                    "Jessica Chastain",
+                    "Mark Strong"
+                ],
+                "Kathryn Bigelow",
+                "DVD",
+                [
+                    "Action",
+                    "Thriller"
+                ],
+                "157 mins",
+                "ZERO DARK THIRTY"
+            ]
+        }
+    ]
+  }
 ]
