@@ -161,7 +161,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Capture the inserted keys in case there is a RETURNING clause
 	for i, k := range keys {
-		av := dpairs[i].Value.(value.AnnotatedValue)
+		av := value.NewAnnotatedValue(dpairs[i].Value)
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
 		if !this.sendItem(av) {
 			return false
