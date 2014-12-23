@@ -214,9 +214,9 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return c.queryNodeNames, nil
 	}
 	// If the rev numbers do not match, update the cluster's rev and query node data:
-	queryNodeNames = make([]string, len(poolServices.NodesExt))
+	queryNodeNames = []string{}
 	queryNodes := make(map[string]int)
-	for i, ns := range poolServices.NodesExt {
+	for _, ns := range poolServices.NodesExt {
 		n1qlPort := ns.Services["n1ql"]
 		hostname := ns.Hostname
 
@@ -228,8 +228,7 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		if hostname == "" {
 			hostname, _ = getHostnameFromURI(c.configStore.URL())
 		}
-
-		queryNodeNames[i] = hostname
+		queryNodeNames = append(queryNodeNames, hostname)
 		queryNodes[hostname] = n1qlPort
 	}
 
