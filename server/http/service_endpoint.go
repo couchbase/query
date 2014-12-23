@@ -11,6 +11,8 @@ package http
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -24,6 +26,10 @@ type HttpEndpoint struct {
 	bufpool BufferPool
 }
 
+const (
+	servicePrefix = "/query/service"
+)
+
 func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:  server,
@@ -35,7 +41,7 @@ func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpE
 	rv.httpsrv.Handler = rv
 
 	// Bind HttpEndpoint object to /query/service endpoint; use default Server Mux
-	http.Handle("/query/service", rv)
+	http.Handle(servicePrefix, rv)
 
 	// TODO: Deprecate (remove) this binding after QE has migrated to /query/service
 	http.Handle("/query", rv)
@@ -81,4 +87,9 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	acctstore := this.server.AccountingStore()
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement())
+}
+
+func GetServiceURL(host string, port int) string {
+	urlParts := []string{"http://", host, ":", strconv.Itoa(port), servicePrefix}
+	return strings.Join(urlParts, "")
 }

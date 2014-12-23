@@ -12,6 +12,8 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/server"
@@ -72,4 +74,9 @@ func writeError(w http.ResponseWriter, err errors.Error) {
 
 func mapErrorToHttpStatus(err errors.Error) int {
 	return http.StatusInternalServerError
+}
+
+func GetAdminURL(host string, port int) string {
+	urlParts := []string{"http://", host, ":", strconv.Itoa(port), adminPrefix}
+	return strings.Join(urlParts, "")
 }

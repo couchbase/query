@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/server/http"
 	"github.com/couchbaselabs/query/util"
 )
 
@@ -259,8 +259,8 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 	var queryNode cbQueryNodeConfig
 	queryNode.ClusterName = c.Name()
 	queryNode.QueryNodeName = qryNodeName
-	queryNode.QueryEndpointURL = "http://" + qryNodeName + ":" + strconv.Itoa(c.queryNodes[qryNodeName]) + "/service/query"
-	queryNode.AdminEndpointURL = "http://" + qryNodeName + ":" + strconv.Itoa(c.queryNodes[qryNodeName]) + "/admin"
+	queryNode.QueryEndpointURL = http.GetServiceURL(qryNodeName, c.queryNodes[qryNodeName])
+	queryNode.AdminEndpointURL = http.GetAdminURL(qryNodeName, c.queryNodes[qryNodeName])
 	queryNode.ClusterRef = c
 	return &queryNode, nil
 }
