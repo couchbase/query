@@ -85,31 +85,28 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value)
 		this.writeRequestID() &&
 		this.writeClientContextID() &&
 		(!srvr.Signature() || this.writeSignature(signature)) &&
-		this.writeString("    \"results\": [")
+		this.writeString(",\n    \"results\": [")
 }
 
 func (this *httpRequest) writeRequestID() bool {
 	return this.writeString("    \"request_id\": \"") &&
-		this.writeString(this.Id().String()) &&
-		this.writeString("\",\n")
+		this.writeString(this.Id().String())
 }
 
 func (this *httpRequest) writeClientContextID() bool {
 	if !this.ClientID().IsValid() {
 		return true
 	}
-	return this.writeString("    \"client_context_id\": \"") &&
-		this.writeString(this.ClientID().String()) &&
-		this.writeString("\",\n")
+	return this.writeString(",\n    \"client_context_id\": \"") &&
+		this.writeString(this.ClientID().String())
 }
 
 func (this *httpRequest) writeSignature(signature value.Value) bool {
 	if !this.Signature() {
 		return true
 	}
-	return this.writeString("    \"signature\": ") &&
-		this.writeValue(signature) &&
-		this.writeString(",\n")
+	return this.writeString(",\n    \"signature\": ") &&
+		this.writeValue(signature)
 }
 
 func (this *httpRequest) writeResults() bool {
@@ -210,7 +207,7 @@ loop:
 		case err, ok = <-this.Errors():
 			if ok {
 				if this.errorCount == 0 {
-					this.writeString("\n    \"errors\": [")
+					this.writeString(",\n    \"errors\": [")
 				}
 				ok = this.writeError(err, this.errorCount)
 				this.errorCount++
@@ -232,7 +229,7 @@ loop:
 		case err, ok = <-this.Warnings():
 			if ok {
 				if this.warningCount == 0 {
-					this.writeString("\n    \"warnings\": [")
+					this.writeString(",\n    \"warnings\": [")
 				}
 				ok = this.writeError(err, this.warningCount)
 				this.warningCount++
