@@ -130,6 +130,12 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
+	if primary == nil {
+		return nil, fmt.Errorf(
+			"No primary index on keyspace %s. Use CREATE PRIMARY INDEX to create one.",
+			keyspace.Name())
+	}
+
 	state, err := primary.State()
 	if err != nil {
 		return nil, err
