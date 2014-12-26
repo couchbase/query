@@ -1447,7 +1447,7 @@ USING VIEW
 |
 USING LSM
 {
-    $$ = datastore.LSM
+    $$ = datastore.GSI
 }
 |
 USING GSI

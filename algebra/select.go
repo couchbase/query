@@ -16,13 +16,13 @@ import (
 
 /*
 This represents the select statement. Type select is a
-struct that contains fields mapping to each clause in 
-a select statement. The subresult field maps to the 
-intermediate result interface for the select clause. 
-The order field maps to the order by clause, the offset 
-is an expression that maps to the offset clause and 
-similarly limit is an expression that maps to the limit 
-clause. 
+struct that contains fields mapping to each clause in
+a select statement. The subresult field maps to the
+intermediate result interface for the select clause.
+The order field maps to the order by clause, the offset
+is an expression that maps to the offset clause and
+similarly limit is an expression that maps to the limit
+clause.
 */
 type Select struct {
 	subresult Subresult             `json:"subresult"`
@@ -97,7 +97,7 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-This method qualifies identifiers for all the constituent clauses, 
+This method qualifies identifiers for all the constituent clauses,
 namely the subresult, order, limit and offset within a subquery.
 For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
@@ -161,7 +161,7 @@ func (this *Select) Limit() expression.Expression {
 }
 
 /*
-This method sets the limit expression for the select 
+This method sets the limit expression for the select
 statement.
 */
 func (this *Select) SetLimit(limit expression.Expression) {
@@ -173,38 +173,38 @@ The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node and contains methods
 */
 type Subresult interface {
-        /*
-        Inherts Node. The Node interface represents a node in 
-        the algebra tree (AST).
-        */
+	/*
+	   Inherts Node. The Node interface represents a node in
+	   the algebra tree (AST).
+	*/
 	Node
-   
-        /*
-        The shape of this statement's return values.
-        */
+
+	/*
+	   The shape of this statement's return values.
+	*/
 	Signature() value.Value
 
-        /*
-        Fully qualify all identifiers in this statement.
-        */
+	/*
+	   Fully qualify all identifiers in this statement.
+	*/
 	Formalize(parent *expression.Formalizer) (formalizer *expression.Formalizer, err error)
-	
-        /*
-        Apply a Mapper to all the expressions in this statement
-        */
-        MapExpressions(mapper expression.Mapper) error
-	
-        /*
-        Checks if correlated subquery.
-        */
-        IsCorrelated() bool
+
+	/*
+	   Apply a Mapper to all the expressions in this statement
+	*/
+	MapExpressions(mapper expression.Mapper) error
+
+	/*
+	   Checks if correlated subquery.
+	*/
+	IsCorrelated() bool
 }
 
 /*
-SELECT statements can begin with either SELECT or FROM. The behavior 
-is the same in either case. The Subselect struct contains fields 
+SELECT statements can begin with either SELECT or FROM. The behavior
+is the same in either case. The Subselect struct contains fields
 mapping to each clause in the subselect statement. from, let, where,
-group and projection, map to the FromTerm, let clause, group by 
+group and projection, map to the FromTerm, let clause, group by
 and select clause respectively.
 */
 type Subselect struct {
@@ -215,10 +215,10 @@ type Subselect struct {
 	projection *Projection           `json:"projection"`
 }
 
-/*        
+/*
 The function NewSubSelect returns a pointer to the Subselect struct
 by assigning the input attributes to the fields of the struct.
-*/ 
+*/
 func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expression,
 	group *Group, projection *Projection) *Subselect {
 	return &Subselect{from, let, where, group, projection}
@@ -227,7 +227,7 @@ func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expre
 /*
 It calls the VisitSubselect method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
-*/  
+*/
 func (this *Subselect) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitSubselect(this)
 }
@@ -244,8 +244,8 @@ func (this *Subselect) Signature() value.Value {
 This method qualifies identifiers for all the contituent
 clauses namely the from, let, where, group and projection
 in a subselect statement.It calls Formalize for the from,
-group and projections, calls Map to map the where 
-expressions and calls PushBindings for the let clause. 
+group and projections, calls Map to map the where
+expressions and calls PushBindings for the let clause.
 */
 func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	if this.from != nil {
@@ -288,7 +288,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 
 /*
 This method maps all the constituent clauses, namely the from,
-let, where, group by and projection(select) within a Subselect 
+let, where, group by and projection(select) within a Subselect
 statement.
 */
 func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
@@ -324,7 +324,7 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-Returns bool value that depicts if query is correlated 
+Returns bool value that depicts if query is correlated
 or not.
 */
 func (this *Subselect) IsCorrelated() bool {
@@ -364,7 +364,7 @@ func (this *Subselect) Group() *Group {
 }
 
 /*
-Returns the projection (select clause) in the subselect 
+Returns the projection (select clause) in the subselect
 statement.
 */
 func (this *Subselect) Projection() *Projection {

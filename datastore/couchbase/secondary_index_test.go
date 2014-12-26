@@ -68,7 +68,7 @@ func init() {
 		log.Fatal(err)
 	}
 	index, _ = new2iIndex(
-		"testindex", equalKey, rangeKey, whereKey, "lsm", ks)
+		"testindex", equalKey, rangeKey, whereKey, "gsi", ks)
 	index.setHost([]string{"localhost:9998"})
 }
 
@@ -85,7 +85,7 @@ func Test2iId(t *testing.T) {
 }
 
 func Test2iType(t *testing.T) {
-	if index.Type() != "lsm" {
+	if index.Type() != "gsi" {
 		t.Fatal("failed Type()")
 	}
 }

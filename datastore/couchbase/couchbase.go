@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	lsm "github.com/couchbase/indexing/secondary/queryport/n1ql"
+	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
@@ -289,7 +289,7 @@ type keyspace struct {
 	deleted      bool
 	saslPassword string            // SASL password
 	viewIndexer  datastore.Indexer // View index provider
-	lsmIndexer   datastore.Indexer // LSM index provider
+	gsiIndexer   datastore.Indexer // GSI index provider
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
@@ -351,7 +351,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
 
-	rv.lsmIndexer = lsm.NewLSMIndexer(p.Name(), name)
+	rv.gsiIndexer = gsi.NewGSIIndexer(p.Name(), name)
 
 	return rv, nil
 }
@@ -408,8 +408,8 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 	switch name {
 	case datastore.VIEW:
 		return b.viewIndexer, nil
-	case datastore.LSM:
-		return b.lsmIndexer, nil
+	case datastore.GSI:
+		return b.gsiIndexer, nil
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
 	}
@@ -420,21 +420,21 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 	// There will always be a VIEW indexer
 	indexers = append(indexers, b.viewIndexer)
-	indexers = append(indexers, b.lsmIndexer)
+	indexers = append(indexers, b.gsiIndexer)
 	return indexers, nil
 }
 
 // To be deprecated
 func (b *keyspace) IndexIds() ([]string, errors.Error) {
 	vi, _ := b.viewIndexer.IndexIds()
-	lsm, _ := b.lsmIndexer.IndexIds()
-	return append(vi, lsm...), nil
+	gsi, _ := b.gsiIndexer.IndexIds()
+	return append(vi, gsi...), nil
 }
 
 func (b *keyspace) IndexNames() ([]string, errors.Error) {
 	vi, _ := b.viewIndexer.IndexNames()
-	lsm, _ := b.lsmIndexer.IndexNames()
-	return append(vi, lsm...), nil
+	gsi, _ := b.gsiIndexer.IndexNames()
+	return append(vi, gsi...), nil
 }
 
 func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
@@ -444,7 +444,7 @@ func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
 func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
 	idx, err := b.viewIndexer.IndexByName(name)
 	if err != nil {
-		return b.lsmIndexer.IndexByName(name)
+		return b.gsiIndexer.IndexByName(name)
 	}
 	return idx, nil
 }
@@ -457,9 +457,9 @@ func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	pi, err := b.viewIndexer.IndexByPrimary()
 
 	if err != nil {
-		index, _ := b.lsmIndexer.IndexByPrimary()
-		logging.Infof("No view indexes found. Getting LSM index %v", index)
-		pi, err = b.lsmIndexer.IndexByPrimary()
+		index, _ := b.gsiIndexer.IndexByPrimary()
+		logging.Infof("No view indexes found. Getting GSI index %v", index)
+		pi, err = b.gsiIndexer.IndexByPrimary()
 		if err != nil {
 			return nil, errors.NewError(nil, "No indexes found for bucket "+b.Name())
 		}
@@ -474,11 +474,11 @@ func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
 	if err != nil {
 		logging.Infof(" Failed to get View Indexes %v", err)
 	}
-	lsmIndexes, err := b.lsmIndexer.Indexes()
+	gsiIndexes, err := b.gsiIndexer.Indexes()
 	if err != nil {
-		logging.Infof(" Failed to get LSM Indexes %v", err)
+		logging.Infof(" Failed to get GSI Indexes %v", err)
 	}
-	indexes = append(indexes, lsmIndexes...)
+	indexes = append(indexes, gsiIndexes...)
 	return indexes, err
 }
 
@@ -486,8 +486,8 @@ func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.Prim
 	switch using {
 	case datastore.VIEW:
 		return b.viewIndexer.CreatePrimaryIndex()
-	case datastore.LSM:
-		return b.lsmIndexer.CreatePrimaryIndex()
+	case datastore.GSI:
+		return b.gsiIndexer.CreatePrimaryIndex()
 
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")
@@ -500,8 +500,8 @@ func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expres
 	switch using {
 	case datastore.VIEW:
 		return b.viewIndexer.CreateIndex(name, equalKey, rangeKey, where)
-	case datastore.LSM:
-		return b.lsmIndexer.CreateIndex(name, equalKey, rangeKey, where)
+	case datastore.GSI:
+		return b.gsiIndexer.CreateIndex(name, equalKey, rangeKey, where)
 
 	default:
 		return nil, errors.NewError(nil, "Not yet implemented.")

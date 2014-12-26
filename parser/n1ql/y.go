@@ -2199,7 +2199,7 @@ yydefault:
 	case 191:
 		//line n1ql.y:1446
 		{
-			yyVAL.indexType = datastore.LSM
+			yyVAL.indexType = datastore.GSI
 		}
 	case 192:
 		//line n1ql.y:1451
