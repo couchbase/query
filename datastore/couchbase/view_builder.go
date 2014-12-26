@@ -133,7 +133,9 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 		}
 		jview, ok := jdoc.Views[iname]
 		if !ok {
-			return nil, errors.New("Missing view for index " + iname)
+			nonUsableIndexes = append(nonUsableIndexes, iname)
+			logging.Errorf("Missing view for index %v ", iname)
+			continue
 		}
 
 		exprlist := make([]expression.Expression, 0, len(jdoc.IndexOn))
@@ -147,7 +149,9 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			} else {
 				expr, err := parser.Parse(ser)
 				if err != nil {
-					return nil, errors.New("Cannot unmarshal expression for index " + iname)
+					nonUsableIndexes = append(nonUsableIndexes, iname)
+					logging.Errorf("Cannot unmarshal expression for index  %v", iname)
+					continue
 				}
 				exprlist = append(exprlist, expr)
 			}
@@ -163,7 +167,9 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			reducefn: jview.Reduce,
 		}
 		if ddoc.checksum() != jdoc.IndexChecksum {
-			return nil, errors.New("Warning - checksum failed on index " + iname)
+			nonUsableIndexes = append(nonUsableIndexes, iname)
+			logging.Errorf("Warning - checksum failed on index  %v", iname)
+			continue
 		}
 
 		var index datastore.Index
@@ -191,6 +197,10 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 		}
 	}
 	v.nonUsableIndexes = nonUsableIndexes
+
+	if len(indexes) == 0 {
+		return nil, fmt.Errorf("No usuable indexes found for bucket " + b.Name())
+	}
 
 	return indexes, nil
 }

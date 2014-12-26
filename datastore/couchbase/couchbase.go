@@ -459,7 +459,10 @@ func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
 	if err != nil {
 		index, _ := b.lsmIndexer.IndexByPrimary()
 		logging.Infof("No view indexes found. Getting LSM index %v", index)
-		return b.lsmIndexer.IndexByPrimary()
+		pi, err = b.lsmIndexer.IndexByPrimary()
+		if err != nil {
+			return nil, errors.NewError(nil, "No indexes found for bucket "+b.Name())
+		}
 	}
 
 	return pi, nil
