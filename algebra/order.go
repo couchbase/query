@@ -13,31 +13,60 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
+/*
+This represents the Order by clause. Type Order is a
+struct that contains the ordering terms called sort
+terms.
+*/
 type Order struct {
 	terms SortTerms
 }
 
+/*
+The function NewOrder returns a pointer to the Order
+struct that has its field sort terms set to the input
+argument terms.
+*/
 func NewOrder(terms SortTerms) *Order {
 	return &Order{
 		terms: terms,
 	}
 }
 
+/*
+Map expressions for the terms by calling MapExpressions.
+*/
 func (this *Order) MapExpressions(mapper expression.Mapper) error {
 	return this.terms.MapExpressions(mapper)
 }
 
+/*
+Return the ordering terms (sort terms).
+*/
 func (this *Order) Terms() SortTerms {
 	return this.terms
 }
 
+/*
+It represents multiple orderby terms.
+Type SortTerms is a slice of SortTerm.
+*/
 type SortTerms []*SortTerm
 
+/*
+Represents the ordering term in an order by clause. Type
+SortTerm is a struct containing the expression and a bool
+value that decides the sort order (ASC or DESC).
+*/
 type SortTerm struct {
 	expr       expression.Expression `json:"expr"`
 	descending bool                  `json:"desc"`
 }
 
+/*
+The function NewSortTerm returns a pointer to the SortTerm
+struct that has its fields set to the input arguments.
+*/
 func NewSortTerm(expr expression.Expression, descending bool) *SortTerm {
 	return &SortTerm{
 		expr:       expr,
@@ -45,14 +74,24 @@ func NewSortTerm(expr expression.Expression, descending bool) *SortTerm {
 	}
 }
 
+/*
+Return the expression that is sorted in the order
+by clause.
+*/
 func (this *SortTerm) Expression() expression.Expression {
 	return this.expr
 }
 
+/*
+Return bool value representing ASC or DESC sort order.
+*/
 func (this *SortTerm) Descending() bool {
 	return this.descending
 }
 
+/*
+Map Expressions for all sort terms in the receiver.
+*/
 func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this {
 		term.expr, err = mapper.Map(term.expr)

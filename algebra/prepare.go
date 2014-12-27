@@ -14,30 +14,56 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents a prepared statement. Type Prepare is a
+struct that contains a statement (json statement).
+*/
 type Prepare struct {
 	stmt Statement `json:"stmt"`
 }
 
+/*
+The function NewPrepare returns a pointer to the
+Prepare struct with the input argument statement
+as a field.
+*/
 func NewPrepare(stmt Statement) *Prepare {
 	return &Prepare{stmt}
 }
 
+/*
+It calls the VisitPrepare method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitPrepare(this)
 }
 
+/*
+This method returns the shape of the result, which is
+a JSON string value.
+*/
 func (this *Prepare) Signature() value.Value {
 	return value.NewValue(value.JSON.String())
 }
 
+/*
+Call Formalize for the input statement.
+*/
 func (this *Prepare) Formalize() error {
 	return this.stmt.Formalize()
 }
 
+/*
+Map statement expressions by calling MapExpressions.
+*/
 func (this *Prepare) MapExpressions(mapper expression.Mapper) error {
 	return this.stmt.MapExpressions(mapper)
 }
 
+/*
+Return the prepared statement.
+*/
 func (this *Prepare) Statement() Statement {
 	return this.stmt
 }

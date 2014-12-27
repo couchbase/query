@@ -14,30 +14,55 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the explain text for a query. Type Explain is
+a struct that represents the explain json statement.
+*/
 type Explain struct {
 	stmt Statement `json:"stmt"`
 }
 
+/*
+The function NewExplain returns a pointer to the Explain
+struct that has its field stmt set to the input Statement.
+*/
 func NewExplain(stmt Statement) *Explain {
 	return &Explain{stmt}
 }
 
+/*
+It calls the VisitExplain method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExplain(this)
 }
 
+/*
+This method returns the shape of the result, which is
+a JSON string value.
+*/
 func (this *Explain) Signature() value.Value {
 	return value.NewValue(value.JSON.String())
 }
 
+/*
+Call Formalize for the input statement.
+*/
 func (this *Explain) Formalize() error {
 	return this.stmt.Formalize()
 }
 
+/*
+Map statement expressions by calling MapExpressions.
+*/
 func (this *Explain) MapExpressions(mapper expression.Mapper) error {
 	return this.stmt.MapExpressions(mapper)
 }
 
+/*
+Return the explain statement.
+*/
 func (this *Explain) Statement() Statement {
 	return this.stmt
 }

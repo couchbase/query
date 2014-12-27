@@ -62,7 +62,7 @@ func (this *Select) Signature() value.Value {
 
 /*
 This method calls FormalizeSubquery to qualify all the children
-of the subquery, and returns an error if any.
+of the query, and returns an error if any.
 */
 func (this *Select) Formalize() (err error) {
 	return this.FormalizeSubquery(expression.NewFormalizer())
@@ -170,7 +170,7 @@ func (this *Select) SetLimit(limit expression.Expression) {
 
 /*
 The Subresult interface represents the intermediate result of a
-select statement. It inherits from Node and contains methods
+select statement. It inherits from Node and contains methods.
 */
 type Subresult interface {
 	/*
