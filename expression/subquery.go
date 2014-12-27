@@ -11,8 +11,8 @@ package expression
 
 /*
 Used to implement subqueries. Type Subquery is
-an interface that inherits from Expression. It 
-also implements a method Formalize that takes 
+an interface that inherits from Expression. It
+also implements a method Formalize that takes
 as input a type Formalizer, and returns an error.
 */
 type Subquery interface {

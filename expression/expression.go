@@ -129,10 +129,10 @@ type Expression interface {
 	*/
 	MapChildren(mapper Mapper) error
 
-        /*
-        This function returns an expression that is a deep copy.
-        */
-	Copy() Expression 
+	/*
+	   This function returns an expression that is a deep copy.
+	*/
+	Copy() Expression
 }
 
 /*
