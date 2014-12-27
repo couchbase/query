@@ -14,11 +14,23 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents a subquery statement. It inherits from
+ExpressionBase since the result representation of
+the subquery is an expression and contains a field
+that refers to the select statement to represent
+the subquery.
+*/
 type Subquery struct {
 	expression.ExpressionBase
 	query *Select
 }
 
+/*
+The function NewSubquery returns a pointer to the
+Subquery struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewSubquery(query *Select) expression.Expression {
 	rv := &Subquery{
 		query: query,
@@ -33,44 +45,83 @@ func (this *Subquery) String() string {
 	return "(select 1)"
 }
 
+/*
+It calls the VisitSubquery method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitSubquery(this)
 }
 
+/*
+Return a value of type ARRAY. The result of the subquery
+is returned as an array.
+*/
 func (this *Subquery) Type() value.Type { return value.ARRAY }
 
+/*
+Call the evaluate method for subqueries and pass in the query and
+current item. Call the method using the current context.
+*/
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
 
+/*
+Return false. Subquery cannot be used as a secondary
+index key.
+*/
 func (this *Subquery) Indexable() bool {
 	return false
 }
 
+/*
+Return false.
+*/
 func (this *Subquery) EquivalentTo(other expression.Expression) bool {
 	return false
 }
 
+/*
+Return false.
+*/
 func (this *Subquery) SubsetOf(other expression.Expression) bool {
 	return false
 }
 
+/*
+Return nil.
+*/
 func (this *Subquery) Children() expression.Expressions {
 	return nil
 }
 
+/*
+Return nil.
+*/
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+/*
+Return the subquery (receiver) expression.
+*/
 func (this *Subquery) Copy() expression.Expression {
 	return this
 }
 
+/*
+This method calls FormalizeSubquery to qualify all the children
+of the query, and returns an error if any.
+*/
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
 	return this.query.FormalizeSubquery(parent)
 }
 
+/*
+Returns the subquery select statement, namely the input
+query.
+*/
 func (this *Subquery) Select() *Select {
 	return this.query
 }
