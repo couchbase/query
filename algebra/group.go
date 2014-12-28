@@ -13,12 +13,26 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
+/*
+This represents the Group by clause. Type Group is a
+struct that contains group by expression 'by', the
+letting clause and the having clause represented by
+expression bindings and expressions respectively.
+Aliases in the LETTING clause create new names that 
+may be referred to in the HAVING, SELECT, and ORDER 
+BY clauses. Having specifies a condition.
+*/
 type Group struct {
 	by      expression.Expressions `json:by`
 	letting expression.Bindings    `json:"letting"`
 	having  expression.Expression  `json:"having"`
 }
 
+/*
+The function NewGroup returns a pointer to the Group
+struct that has its field sort terms set to the input
+argument expressions.
+*/
 func NewGroup(by expression.Expressions, letting expression.Bindings, having expression.Expression) *Group {
 	return &Group{
 		by:      by,
@@ -27,6 +41,10 @@ func NewGroup(by expression.Expressions, letting expression.Bindings, having exp
 	}
 }
 
+/*
+This method qualifies identifiers for all the constituent clauses,
+namely the by, letting and having expressions by mapping them.
+*/
 func (this *Group) Formalize(f *expression.Formalizer) (*expression.Formalizer, error) {
 	var err error
 
@@ -56,6 +74,10 @@ func (this *Group) Formalize(f *expression.Formalizer) (*expression.Formalizer, 
 	return f, nil
 }
 
+/*
+This method maps all the constituent clauses, namely the
+by, letting and having within a group by clause.
+*/
 func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.by != nil {
 		err = this.by.MapExpressions(mapper)
@@ -78,14 +100,23 @@ func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Returns the Group by expression.
+*/
 func (this *Group) By() expression.Expressions {
 	return this.by
 }
 
+/*
+Returns the letting expression bindings.
+*/
 func (this *Group) Letting() expression.Bindings {
 	return this.letting
 }
 
+/*
+Returns the having condition expression.
+*/
 func (this *Group) Having() expression.Expression {
 	return this.having
 }
