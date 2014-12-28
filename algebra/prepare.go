@@ -32,7 +32,7 @@ func NewPrepare(stmt Statement) *Prepare {
 }
 
 /*
-It calls the VisitPrepare method by passing in the receiver to
+It calls the VisitPrepare method by passing in the receiver
 and returns the interface. It is a visitor pattern.
 */
 func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {

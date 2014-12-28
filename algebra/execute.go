@@ -14,33 +14,62 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the Execute command. The argument to EXECUTE must 
+evaluate to a prepared statement or a string. Type Execute 
+is a struct that contains a json object value that represents 
+a plan.Prepared.
+*/
 type Execute struct {
-	// prepared is a json object that represents a plan.Prepared
-	prepared value.Value `json:"prepared"`
+	/* 
+        Prepared is a json object that represents a plan.Prepared
+	*/
+        prepared value.Value `json:"prepared"`
 }
 
+/*
+The function NewExecute returns a pointer to the Execute 
+struct with the input argument expressions value as a field.
+*/
 func NewExecute(prepared expression.Expression) *Execute {
 	return &Execute{prepared.Value()}
 }
 
+/*
+It calls the VisitExecute method by passing in the receiver 
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitExecute(this)
 }
 
+/*
+This method returns the shape of the result, which is
+the signature of the input prepared statement.
+*/
 func (this *Execute) Signature() value.Value {
 	signature, _ :=
 		this.prepared.Field("signature")
 	return signature
 }
 
+/*
+Returns nil.
+*/
 func (this *Execute) Formalize() error {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *Execute) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
-
+/*
+Returns the input prepared value that represents the prepared
+statement.
+*/
 func (this *Execute) Prepared() value.Value {
 	return this.prepared
 }
