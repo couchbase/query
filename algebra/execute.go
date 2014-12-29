@@ -15,20 +15,20 @@ import (
 )
 
 /*
-Represents the Execute command. The argument to EXECUTE must 
-evaluate to a prepared statement or a string. Type Execute 
-is a struct that contains a json object value that represents 
+Represents the Execute command. The argument to EXECUTE must
+evaluate to a prepared statement or a string. Type Execute
+is a struct that contains a json object value that represents
 a plan.Prepared.
 */
 type Execute struct {
-	/* 
-        Prepared is a json object that represents a plan.Prepared
+	/*
+	   Prepared is a json object that represents a plan.Prepared
 	*/
-        prepared value.Value `json:"prepared"`
+	prepared value.Value `json:"prepared"`
 }
 
 /*
-The function NewExecute returns a pointer to the Execute 
+The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
 func NewExecute(prepared expression.Expression) *Execute {
@@ -36,7 +36,7 @@ func NewExecute(prepared expression.Expression) *Execute {
 }
 
 /*
-It calls the VisitExecute method by passing in the receiver 
+It calls the VisitExecute method by passing in the receiver
 and returns the interface. It is a visitor pattern.
 */
 func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
@@ -66,6 +66,7 @@ Returns nil.
 func (this *Execute) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
+
 /*
 Returns the input prepared value that represents the prepared
 statement.

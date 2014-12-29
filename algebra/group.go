@@ -18,8 +18,8 @@ This represents the Group by clause. Type Group is a
 struct that contains group by expression 'by', the
 letting clause and the having clause represented by
 expression bindings and expressions respectively.
-Aliases in the LETTING clause create new names that 
-may be referred to in the HAVING, SELECT, and ORDER 
+Aliases in the LETTING clause create new names that
+may be referred to in the HAVING, SELECT, and ORDER
 BY clauses. Having specifies a condition.
 */
 type Group struct {

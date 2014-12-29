@@ -11,15 +11,15 @@ package algebra
 
 type Visitor interface {
 	/*
-        Visitor for SELECT statement.
-        */
+	   Visitor for SELECT statement.
+	*/
 	VisitSelect(stmt *Select) (interface{}, error)
 
 	/*
-        Visitor for DML statements. N1QL provides several data 
-        modification statements such as Insert, Upsert, Delete,
-        Update and Merge.
-        */
+	   Visitor for DML statements. N1QL provides several data
+	   modification statements such as Insert, Upsert, Delete,
+	   Update and Merge.
+	*/
 	VisitInsert(stmt *Insert) (interface{}, error)
 	VisitUpsert(stmt *Upsert) (interface{}, error)
 	VisitDelete(stmt *Delete) (interface{}, error)
@@ -27,28 +27,28 @@ type Visitor interface {
 	VisitMerge(stmt *Merge) (interface{}, error)
 
 	/*
-        Visitor for DDL statements. N1QL provides index 
-        statements Create primary index, Create index, Drop 
-        index and Alter index as Data definition statements.
-        */
+	   Visitor for DDL statements. N1QL provides index
+	   statements Create primary index, Create index, Drop
+	   index and Alter index as Data definition statements.
+	*/
 	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (interface{}, error)
 	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
 	VisitDropIndex(stmt *DropIndex) (interface{}, error)
 	VisitAlterIndex(stmt *AlterIndex) (interface{}, error)
 
 	/*
-        Visitor for EXPLAIN statements.
-        */
+	   Visitor for EXPLAIN statements.
+	*/
 	VisitExplain(stmt *Explain) (interface{}, error)
 
 	/*
-        Visitor for PREPAREd statements.
-        */
+	   Visitor for PREPAREd statements.
+	*/
 	VisitPrepare(stmt *Prepare) (interface{}, error)
 
-	/* 
-        Visit for EXECUTE.
-        */
+	/*
+	   Visit for EXECUTE.
+	*/
 	VisitExecute(stmt *Execute) (interface{}, error)
 }
 

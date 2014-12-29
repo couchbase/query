@@ -88,7 +88,7 @@ func (this *Binding) Descend() bool {
 
 /*
 The receiver for this method is of type Binding. It returns a
-byte array and an error. Create a map deom string to interface
+byte array and an error. Create a map from string to interface
 with a single field with name and value set as type and binding.
 For the name variable, set the receivers variable as the value.
 For expression call the Visit method over the expression and use
