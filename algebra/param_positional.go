@@ -16,11 +16,22 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+A positional parameter uses a position of the parameter in
+the query. Type PositionalParameter is a struct that inherits
+from ExpressionBase and contains a field position representing
+the param position.
+*/
 type PositionalParameter struct {
 	expression.ExpressionBase
 	position int
 }
 
+/*
+The function NewPositionalParameter returns a pointer
+to the PositionalParameter struct with the input
+argument position as a field.
+*/
 func NewPositionalParameter(position int) expression.Expression {
 	rv := &PositionalParameter{
 		position: position,
@@ -30,12 +41,23 @@ func NewPositionalParameter(position int) expression.Expression {
 	return rv
 }
 
+/*
+It calls the VisitPositionalParameter method by passing in
+the receiver and returns the interface. It is a visitor pattern.
+*/
 func (this *PositionalParameter) Accept(visitor expression.Visitor) (interface{}, error) {
 	return visitor.VisitPositionalParameter(this)
 }
 
+/*
+Returns a JSON value.
+*/
 func (this *PositionalParameter) Type() value.Type { return value.JSON }
 
+/*
+Evaluate the input Positional Parameter and return the
+value.
+*/
 func (this *PositionalParameter) Evaluate(item value.Value, context expression.Context) (
 	value.Value, error) {
 	val, ok := context.(Context).PositionalArg(this.position)
@@ -47,14 +69,25 @@ func (this *PositionalParameter) Evaluate(item value.Value, context expression.C
 	}
 }
 
+/*
+Returns input receiver positional parameter.
+*/
 func (this *PositionalParameter) Static() expression.Expression {
 	return this
 }
 
+/*
+Returns false. Not indexable.
+*/
 func (this *PositionalParameter) Indexable() bool {
 	return false
 }
 
+/*
+Checks if receiver and input expression are equivalent. If the input
+expression is a positional parameter check if the two positions are
+equal.
+*/
 func (this *PositionalParameter) EquivalentTo(other expression.Expression) bool {
 	switch other := other.(type) {
 	case *PositionalParameter:
@@ -64,22 +97,37 @@ func (this *PositionalParameter) EquivalentTo(other expression.Expression) bool 
 	}
 }
 
+/*
+Calls the EquivalentTo method.
+*/
 func (this *PositionalParameter) SubsetOf(other expression.Expression) bool {
 	return this.EquivalentTo(other)
 }
 
+/*
+Returns nil.
+*/
 func (this *PositionalParameter) Children() expression.Expressions {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *PositionalParameter) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+/*
+Returns receiver.
+*/
 func (this *PositionalParameter) Copy() expression.Expression {
 	return this
 }
 
+/*
+Returns the position.
+*/
 func (this *PositionalParameter) Position() int {
 	return this.position
 }
