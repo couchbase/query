@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/couchbaselabs/query/errors"
@@ -76,6 +77,10 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 func (this *httpRequest) Expire() {
 	defer this.Stop(server.TIMEOUT)
 
+	if this.httpRespCode == 0 {
+		this.httpRespCode = http.StatusOK
+		this.writePrefix(&server.Server{}, nil)
+	}
 	this.writeSuffix(true, server.TIMEOUT)
 	this.writer.noMoreData()
 }
@@ -302,9 +307,11 @@ type responseDataManager interface {
 // bufferedWriter is an implementation of responseDataManager that writes response data to a buffer,
 // up to a threshold:
 type bufferedWriter struct {
+	sync.Mutex
 	req         *httpRequest  // the request for the response we are writing
 	buffer      *bytes.Buffer // buffer for writing response data to
 	buffer_pool BufferPool    // buffer manager for our buffer
+	closed      bool
 }
 
 func NewBufferedWriter(r *httpRequest, bp BufferPool) *bufferedWriter {
@@ -312,10 +319,18 @@ func NewBufferedWriter(r *httpRequest, bp BufferPool) *bufferedWriter {
 		req:         r,
 		buffer:      bp.GetBuffer(),
 		buffer_pool: bp,
+		closed:      false,
 	}
 }
 
 func (this *bufferedWriter) writeString(s string) bool {
+	this.Lock()
+	defer this.Unlock()
+
+	if this.closed {
+		return false
+	}
+
 	if len(s)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() { // threshold exceeded
 		w := this.req.resp // our request's response writer
 		// write response header and data buffered so far using request's response writer:
@@ -325,6 +340,7 @@ func (this *bufferedWriter) writeString(s string) bool {
 		this.req.writer = NewDirectWriter(this.req)
 		// return buffer to pool, because response data will be directly written from now:
 		this.buffer_pool.PutBuffer(this.buffer)
+		this.closed = true
 		// write out the string - using just-created directWriter:
 		return this.req.writer.writeString(s)
 	}
@@ -334,6 +350,13 @@ func (this *bufferedWriter) writeString(s string) bool {
 }
 
 func (this *bufferedWriter) noMoreData() {
+	this.Lock()
+	defer this.Unlock()
+
+	if this.closed {
+		return
+	}
+
 	w := this.req.resp // our request's response writer
 	// calculate and set the Content-Length header:
 	content_len := strconv.Itoa(len(this.buffer.Bytes()))
@@ -343,22 +366,32 @@ func (this *bufferedWriter) noMoreData() {
 	io.Copy(w, this.buffer)
 	// no more data in the response => return buffer to pool:
 	this.buffer_pool.PutBuffer(this.buffer)
+	this.closed = true
 }
 
 // directWriter is an implementation of responseDataManager that uses the request's
 // response writer to write out the data for a response
 type directWriter struct {
-	req *httpRequest // the request for the response we are writing
+	sync.Mutex
+	req    *httpRequest // the request for the response we are writing
+	closed bool
 }
 
 func NewDirectWriter(r *httpRequest) *directWriter {
 	return &directWriter{
-		req: r,
+		req:    r,
+		closed: false,
 	}
 }
 
 // write and flush the given string using our request's response writer:
 func (this *directWriter) writeString(s string) bool {
+	this.Lock()
+	defer this.Unlock()
+
+	if this.closed {
+		return false
+	}
 	w := this.req.resp
 	_, err := io.WriteString(w, s)
 	w.(http.Flusher).Flush()
@@ -366,5 +399,11 @@ func (this *directWriter) writeString(s string) bool {
 }
 
 func (this *directWriter) noMoreData() {
-	// nop
+	this.Lock()
+	defer this.Unlock()
+
+	if this.closed {
+		return
+	}
+	this.closed = true
 }
