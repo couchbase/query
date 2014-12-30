@@ -14,6 +14,17 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the insert DML statement. Type Insert is a 
+struct that contains fields mapping to each clause in
+an insert statement. Keyspace is the keyspace-ref for
+the insert stmt. Inserts can be performed using
+the insert select clause or the insert-values clause.
+key and value represent expressions and query represents
+the select statement in an insert-select clause. values 
+represents pairs for the insert values. Returning 
+represents the returning clause.
+clause, quer
 type Insert struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
@@ -23,6 +34,13 @@ type Insert struct {
 	returning *Projection           `json:"returning"`
 }
 
+
+/*
+The function NewInsertValues returns a pointer to the Insert
+struct by assigning the input attributes to the fields of the
+struct, and setting key, value and query to nil. This 
+represents the insert values clause.
+*/
 func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection) *Insert {
 	return &Insert{
 		keyspace:  keyspace,
@@ -34,6 +52,12 @@ func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection)
 	}
 }
 
+/*
+The function NewInsertSelect returns a pointer to the Insert
+struct by assigning the input attributes to the fields of the
+struct, and setting values to nil. This represents the insert
+select clause.
+*/
 func NewInsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	query *Select, returning *Projection) *Insert {
 	return &Insert{
@@ -46,10 +70,18 @@ func NewInsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	}
 }
 
+/*
+It calls the VisitInsert method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitInsert(this)
 }
 
+/*
+The shape of the insert statements is the signature of its
+returning clause. If not present return value is nil.
+*/
 func (this *Insert) Signature() value.Value {
 	if this.returning != nil {
 		return this.returning.Signature()
@@ -58,6 +90,9 @@ func (this *Insert) Signature() value.Value {
 	}
 }
 
+/*
+Applies mapper to all the expressions in the insert statement.
+*/
 func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.key != nil {
 		this.key, err = mapper.Map(this.key)
@@ -94,6 +129,10 @@ func (this *Insert) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent clauses
+in the insert statement.
+*/
 func (this *Insert) Formalize() (err error) {
 	if this.values != nil {
 		f := expression.NewFormalizer()
@@ -122,26 +161,49 @@ func (this *Insert) Formalize() (err error) {
 	return
 }
 
+/*
+Returns the keyspace-ref for the insert statement.
+*/
 func (this *Insert) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the key expression for the insert select
+clause.
+*/
 func (this *Insert) Key() expression.Expression {
 	return this.key
 }
 
+/*
+Returns the value expression for the insert select
+clause.
+*/
 func (this *Insert) Value() expression.Expression {
 	return this.value
 }
 
+/*
+Returns the value pairs for the insert values
+clause.
+*/
 func (this *Insert) Values() Pairs {
 	return this.values
 }
 
+/*
+Returns the select query for the insert select
+clause.
+*/
 func (this *Insert) Select() *Select {
 	return this.query
 }
 
+/*
+Returns the returning clause projection for the 
+insert statement.
+*/
 func (this *Insert) Returning() *Projection {
 	return this.returning
 }

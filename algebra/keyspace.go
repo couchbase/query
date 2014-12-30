@@ -17,16 +17,30 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the keyspace-ref used in DML statements. It 
+contains three fields namespace, keyspace (bucket) and
+an alias (as).
+*/
 type KeyspaceRef struct {
 	namespace string `json:"namespace"`
 	keyspace  string `json:"keyspace"`
 	as        string `json:"as"`
 }
 
+/*
+The function NewKeyspaceRef returns a pointer to the
+KeyspaceRef struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewKeyspaceRef(namespace, keyspace, as string) *KeyspaceRef {
 	return &KeyspaceRef{namespace, keyspace, as}
 }
 
+/*
+Qualify identifiers for the keyspace. It also makes sure that the
+keyspace term contains a name or alias.
+*/
 func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
@@ -43,24 +57,40 @@ func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 	return
 }
 
+/*
+Returns the namespace string.
+*/
 func (this *KeyspaceRef) Namespace() string {
 	return this.namespace
 }
 
+/*
+Set the default namespace.
+*/
 func (this *KeyspaceRef) SetDefaultNamespace(namespace string) {
 	if this.namespace == "" {
 		this.namespace = namespace
 	}
 }
 
+/*
+Returns the keyspace string.
+*/
 func (this *KeyspaceRef) Keyspace() string {
 	return this.keyspace
 }
 
+/*
+Returns the AS alias string.
+*/
 func (this *KeyspaceRef) As() string {
 	return this.as
 }
 
+/*
+Returns the alias as the keyspace or the as string
+based on if as is empty.
+*/
 func (this *KeyspaceRef) Alias() string {
 	if this.as != "" {
 		return this.as
@@ -69,6 +99,9 @@ func (this *KeyspaceRef) Alias() string {
 	}
 }
 
+/*
+Marshals input into byte array.
+*/
 func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "keyspaceRef"}
 	r["as"] = this.as
