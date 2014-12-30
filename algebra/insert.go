@@ -24,7 +24,7 @@ key and value represent expressions and query represents
 the select statement in an insert-select clause. values 
 represents pairs for the insert values. Returning 
 represents the returning clause.
-clause, quer
+*/
 type Insert struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
