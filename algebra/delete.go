@@ -14,6 +14,14 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the delete DML statement. Type Delete is a
+struct that contains fields mapping to each clause in
+the delete stmt.  Keyspace is the keyspace-ref, keys
+expression represents the use keys clause, the where
+and limit expression map to the where and limit clause
+and returning represents the returning clause.
+*/
 type Delete struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
@@ -22,15 +30,28 @@ type Delete struct {
 	returning *Projection           `json:"returning"`
 }
 
+/*
+The function NewDelete returns a pointer to the Delete
+struct by assigning the input attributes to the fields
+of the struct
+*/
 func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
 	returning *Projection) *Delete {
 	return &Delete{keyspace, keys, where, limit, returning}
 }
 
+/*
+It calls the VisitDelete method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDelete(this)
 }
 
+/*
+The shape of the insert statements is the signature of its
+returning clause. If not present return value is nil.
+*/
 func (this *Delete) Signature() value.Value {
 	if this.returning != nil {
 		return this.returning.Signature()
@@ -39,6 +60,9 @@ func (this *Delete) Signature() value.Value {
 	}
 }
 
+/*
+Applies mapper to all the expressions in the delete statement.
+*/
 func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.keys != nil {
 		this.keys, err = mapper.Map(this.keys)
@@ -68,6 +92,10 @@ func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent clauses
+in the delete statement.
+*/
 func (this *Delete) Formalize() (err error) {
 	f, err := this.keyspace.Formalize()
 	if err != nil {
@@ -103,22 +131,41 @@ func (this *Delete) Formalize() (err error) {
 	return
 }
 
+/*
+Returns the keyspace-ref for the delete statement.
+*/
 func (this *Delete) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the use keys expression for the delete
+statement.
+*/
 func (this *Delete) Keys() expression.Expression {
 	return this.keys
 }
 
+/*
+Returns the expression for the where clause in the
+delete statement.
+*/
 func (this *Delete) Where() expression.Expression {
 	return this.where
 }
 
+/*
+Returns the expression for the limit clause in the
+delete statement.
+*/
 func (this *Delete) Limit() expression.Expression {
 	return this.limit
 }
 
+/*
+Returns the returning clause projection for the
+delete statement.
+*/
 func (this *Delete) Returning() *Projection {
 	return this.returning
 }

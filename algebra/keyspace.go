@@ -18,7 +18,7 @@ import (
 )
 
 /*
-Represents the keyspace-ref used in DML statements. It 
+Represents the keyspace-ref used in DML statements. It
 contains three fields namespace, keyspace (bucket) and
 an alias (as).
 */

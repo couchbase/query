@@ -15,14 +15,14 @@ import (
 )
 
 /*
-Represents the insert DML statement. Type Insert is a 
+Represents the insert DML statement. Type Insert is a
 struct that contains fields mapping to each clause in
 an insert statement. Keyspace is the keyspace-ref for
 the insert stmt. Inserts can be performed using
 the insert select clause or the insert-values clause.
 key and value represent expressions and query represents
-the select statement in an insert-select clause. values 
-represents pairs for the insert values. Returning 
+the select statement in an insert-select clause. values
+represents pairs for the insert values. Returning
 represents the returning clause.
 */
 type Insert struct {
@@ -34,11 +34,10 @@ type Insert struct {
 	returning *Projection           `json:"returning"`
 }
 
-
 /*
 The function NewInsertValues returns a pointer to the Insert
 struct by assigning the input attributes to the fields of the
-struct, and setting key, value and query to nil. This 
+struct, and setting key, value and query to nil. This
 represents the insert values clause.
 */
 func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection) *Insert {
@@ -201,7 +200,7 @@ func (this *Insert) Select() *Select {
 }
 
 /*
-Returns the returning clause projection for the 
+Returns the returning clause projection for the
 insert statement.
 */
 func (this *Insert) Returning() *Projection {
