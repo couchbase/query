@@ -18,12 +18,26 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the select clause. Type Projection is a struct
+that contains fields mapping to each expression in the 
+select clause. Distinct and raw are boolean values that
+represent if the keywords DISTINCT and RAW are used in the
+query. Terms represent the result expression.
+*/
 type Projection struct {
 	distinct bool        `json:"distinct"`
 	raw      bool        `json:"raw"`
 	terms    ResultTerms `json:terms`
 }
 
+/*        
+The function NewProjection returns a pointer to the Projection 
+struct by assigning the input attributes to the fields of the 
+struct, and setting raw to false. This is for select clauses 
+without the RAW keyword specified. Call setAliases() to set 
+the alias string.
+*/  
 func NewProjection(distinct bool, terms ResultTerms) *Projection {
 	rv := &Projection{
 		distinct: distinct,
@@ -35,6 +49,13 @@ func NewProjection(distinct bool, terms ResultTerms) *Projection {
 	return rv
 }
 
+/*
+The function NewRawProjection returns a pointer to the Projection 
+struct by assigning the input attributes to the fields of the 
+struct, and setting raw to true. This is for select clauses with 
+the RAW keyword specified. Call setAliases() to set the alias 
+string.
+*/  
 func NewRawProjection(distinct bool, expr expression.Expression, as string) *Projection {
 	rv := &Projection{
 		distinct: distinct,
@@ -43,9 +64,16 @@ func NewRawProjection(distinct bool, expr expression.Expression, as string) *Pro
 	}
 
 	rv.setAliases()
-	return rv
+        return rv
 }
 
+/*
+Returns the shapeof the result expression. If raw is true
+return the first expression type as string value, as the
+signature. If raw is false, then create a map, range over 
+the result terms and check if star is set to true to set 
+the alias key to the the expression type. Return this map.
+*/
 func (this *Projection) Signature() value.Value {
 	if this.raw {
 		return value.NewValue(this.terms[0].expr.Type().String())
@@ -63,6 +91,11 @@ func (this *Projection) Signature() value.Value {
 	return rv
 }
 
+/*
+This method fully qualifies the identifiers for each term 
+in the result expression. It disallows duplicate alias and
+exempts explicit aliases from being formalized.
+*/
 func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Formalizer, err error) {
 	// Disallow duplicate aliases
 	aliases := make(map[string]bool, len(this.terms))
@@ -97,6 +130,9 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 	return
 }
 
+/*
+This method maps the result expressions.
+*/
 func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
 		err = term.MapExpression(mapper)
@@ -108,18 +144,33 @@ func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Return true if select clause in the query contains the 
+distinct keyword.
+*/
 func (this *Projection) Distinct() bool {
 	return this.distinct
 }
 
+/*
+Return true if select clause in the query contains the 
+raw keyword.
+*/
 func (this *Projection) Raw() bool {
 	return this.raw
 }
 
+/*
+Return the result expression terms.
+*/
 func (this *Projection) Terms() ResultTerms {
 	return this.terms
 }
 
+/*
+Set the result term alias by calling setAlias for
+each term.
+*/
 func (this *Projection) setAliases() {
 	a := 1
 	for _, term := range this.terms {
@@ -127,6 +178,9 @@ func (this *Projection) setAliases() {
 	}
 }
 
+/*
+Marshal input into byte array.
+*/
 func (this *Projection) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "projection"}
 	r["distinct"] = this.distinct
@@ -135,8 +189,24 @@ func (this *Projection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+/*
+Type ResultTerms represents multiple ResultTerm
+(result expressions).
+*/
 type ResultTerms []*ResultTerm
 
+/*
+This represents the result expression in a select clause.
+Type ResultTerm is a struct that contains fields mapping
+to the different expressions in the result-expr. The 
+expr maps to the input expression, star is a boolean 
+value that is true when * is used in the path. Both as 
+and alias represent the result expression alias. The 
+alias string is the path (a.b, alias = b) if no AS clause 
+is present, and if an alias is defined using the AS 
+clause in the result expr both alias and as are the 
+defined alias.
+*/
 type ResultTerm struct {
 	expr  expression.Expression `json:"expr"`
 	star  bool                  `json:"star"`
@@ -144,6 +214,12 @@ type ResultTerm struct {
 	alias string                `json:"_"`
 }
 
+/*        
+The function NewResultTerm returns a pointer to the 
+ResultTerm struct by assigning the input attributes 
+to the fields of the struct. The value of alias string 
+is not set here. 
+*/ 
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
 	return &ResultTerm{
 		expr: expr,
@@ -152,6 +228,9 @@ func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm
 	}
 }
 
+/*
+Map the input expression of the result expr.
+*/
 func (this *ResultTerm) MapExpression(mapper expression.Mapper) (err error) {
 	if this.expr != nil {
 		this.expr, err = mapper.Map(this.expr)
@@ -160,22 +239,44 @@ func (this *ResultTerm) MapExpression(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Return the input expression.
+*/
 func (this *ResultTerm) Expression() expression.Expression {
 	return this.expr
 }
 
+/*
+Return boolean value based on the presence
+of * in the result expr.
+*/
 func (this *ResultTerm) Star() bool {
 	return this.star
 }
 
+/*
+Return the alias string defined by AS if present.
+*/
 func (this *ResultTerm) As() string {
 	return this.as
 }
 
+/*
+Return the alias string.
+*/
 func (this *ResultTerm) Alias() string {
 	return this.alias
 }
 
+/*
+Set the terms alias string. If star is true then
+return the input integer as is. If the as string 
+is not empty set alias to that value, and if it 
+is then set it to the expr Alias (path). If the
+expression isnt nil and the alias string is empty
+then set the alias to "$a", where a represents
+the input integer.
+*/
 func (this *ResultTerm) setAlias(a int) int {
 	if this.star {
 		return a
@@ -192,9 +293,26 @@ func (this *ResultTerm) setAlias(a int) int {
 		a++
 	}
 
+        if this.alias != "" {
+           fmt.Println(this.alias)
+       } else {
+           fmt.Println("raw no alias")
+       }
+        fmt.Println("raw NO2")
+        if this.as != "" {
+          fmt.Println(this.as)
+        } else {
+           fmt.Println("raw as is nil") }
+
+
 	return a
+
+
 }
 
+/*
+Marshal input ResultTerm into byte array.
+*/
 func (this *ResultTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "resultTerm"}
 	r["alias"] = this.alias
