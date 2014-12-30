@@ -14,6 +14,17 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the upsert DML statement. Type Upsert is a
+struct that contains fields mapping to each clause in
+an upsert statement. Keyspace is the keyspace-ref for
+the upsert stmt. Upserts can be performed using
+the insert select clause or the insert-values clause.
+key and value represent expressions and query represents
+the select statement in an insert-select clause. values
+represents pairs for the insert values. Returning
+represents the returning clause. (Update and insert).
+*/
 type Upsert struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
@@ -23,6 +34,12 @@ type Upsert struct {
 	returning *Projection           `json:"returning"`
 }
 
+/*
+The function NewUpsertValues returns a pointer to the Upsert
+struct by assigning the input attributes to the fields of the
+struct, and setting key, value and query to nil. This
+represents the insert values clause in the upsert statement.
+*/
 func NewUpsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection) *Upsert {
 	return &Upsert{
 		keyspace:  keyspace,
@@ -34,6 +51,12 @@ func NewUpsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection)
 	}
 }
 
+/*
+The function NewUpsertSelect returns a pointer to the Upsert
+struct by assigning the input attributes to the fields of the
+struct, and setting values to nil. This represents the insert
+select clause in the upsert statement.
+*/
 func NewUpsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	query *Select, returning *Projection) *Upsert {
 	return &Upsert{
@@ -46,10 +69,18 @@ func NewUpsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	}
 }
 
+/*
+It calls the VisitUpsert method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Upsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpsert(this)
 }
 
+/*
+The shape of the upsert statements is the signature of its
+returning clause. If not present return value is nil.
+*/
 func (this *Upsert) Signature() value.Value {
 	if this.returning != nil {
 		return this.returning.Signature()
@@ -58,6 +89,9 @@ func (this *Upsert) Signature() value.Value {
 	}
 }
 
+/*
+Applies mapper to all the expressions in the upsert statement.
+*/
 func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.key != nil {
 		this.key, err = mapper.Map(this.key)
@@ -94,6 +128,10 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent clauses
+in the upsert statement.
+*/
 func (this *Upsert) Formalize() (err error) {
 	if this.values != nil {
 		f := expression.NewFormalizer()
@@ -122,26 +160,49 @@ func (this *Upsert) Formalize() (err error) {
 	return
 }
 
+/*
+Returns the keyspace-ref for the upsert statement.
+*/
 func (this *Upsert) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the key expression for the insert select
+clause in the upsert statement.
+*/
 func (this *Upsert) Key() expression.Expression {
 	return this.key
 }
 
+/*
+Returns the value expression for the insert select
+clause in the upsert statement.
+*/
 func (this *Upsert) Value() expression.Expression {
 	return this.value
 }
 
+/*
+Returns the value pairs for the insert values
+clause in the upsert statement.
+*/
 func (this *Upsert) Values() Pairs {
 	return this.values
 }
 
+/*
+Returns the select query for the insert select
+clause in the upsert statement.
+*/
 func (this *Upsert) Select() *Select {
 	return this.query
 }
 
+/*
+Returns the returning clause projection for the
+upsert statement.
+*/
 func (this *Upsert) Returning() *Projection {
 	return this.returning
 }
