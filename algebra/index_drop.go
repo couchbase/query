@@ -16,11 +16,20 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the Drop index ddl statement. Type DropIndex is
+a struct that contains fields mapping to each clause in the
+drop index statement, namely the keyspace and the index name.
+*/
 type DropIndex struct {
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
 }
 
+/*
+The function NewDropIndex returns a pointer to the
+DropIndex struct with the input argument values as fields.
+*/
 func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
 	return &DropIndex{
 		keyspace: keyspace,
@@ -28,30 +37,53 @@ func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
 	}
 }
 
+/*
+It calls the VisitDropIndex method by passing in the
+receiver and returns the interface. It is a visitor
+pattern.
+*/
 func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDropIndex(this)
 }
 
+/*
+Returns nil.
+*/
 func (this *DropIndex) Signature() value.Value {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *DropIndex) Formalize() error {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *DropIndex) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 
+/*
+Return the keyspace.
+*/
 func (this *DropIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Return the name of the index to be dropped.
+*/
 func (this *DropIndex) Name() string {
 	return this.name
 }
 
+/*
+Marshals input receiver into byte array.
+*/
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "dropIndex"}
 	r["keyspaceRef"] = this.keyspace

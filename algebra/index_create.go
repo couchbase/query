@@ -17,6 +17,19 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the Create index ddl statement. Type CreateIndex is
+a struct that contains fields mapping to each clause in the
+create index statement. The fields refer to the index name,
+keyspace ref, expression, partition, where clause and using clause
+(IndexType string).
+
+The partition expression is used to compute the hash value for
+partitioning the index across multiple nodes. When a document
+is indexed, the expression is evaluated for that document, and
+the resulting value determines which index node will contain an
+index value into the document.
+*/
 type CreateIndex struct {
 	name      string                 `json:"name"`
 	keyspace  *KeyspaceRef           `json:"keyspace"`
@@ -26,6 +39,10 @@ type CreateIndex struct {
 	using     datastore.IndexType    `json:"using"`
 }
 
+/*
+The function NewCreateIndex returns a pointer to the
+CreateIndex struct with the input argument values as fields.
+*/
 func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
 	partition, where expression.Expression, using datastore.IndexType) *CreateIndex {
 	return &CreateIndex{
@@ -38,18 +55,33 @@ func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Express
 	}
 }
 
+/*
+It calls the VisitCreateIndex method by passing
+in the receiver and returns the interface. It is a
+visitor pattern.
+*/
 func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCreateIndex(this)
 }
 
+/*
+Returns nil.
+*/
 func (this *CreateIndex) Signature() value.Value {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *CreateIndex) Formalize() error {
 	return nil
 }
 
+/*
+This method maps all the constituent clauses, namely the expression,
+partition and where clause within a create index statement.
+*/
 func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.exprs.MapExpressions(mapper)
 	if err != nil {
@@ -73,30 +105,51 @@ func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Returns the name of the index.
+*/
 func (this *CreateIndex) Name() string {
 	return this.name
 }
 
+/*
+Returns the bucket (keyspace) that the index is created on.
+*/
 func (this *CreateIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Return expr from the create index statement.
+*/
 func (this *CreateIndex) Expressions() expression.Expressions {
 	return this.exprs
 }
 
+/*
+Returns the Partition expression of the create index statement.
+*/
 func (this *CreateIndex) Partition() expression.Expression {
 	return this.partition
 }
 
+/*
+Returns the where condition in the create index statement.
+*/
 func (this *CreateIndex) Where() expression.Expression {
 	return this.where
 }
 
+/*
+Returns the index type string for the using clause.
+*/
 func (this *CreateIndex) Using() datastore.IndexType {
 	return this.using
 }
 
+/*
+Marshals input receiver into byte array.
+*/
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createIndex"}
 	r["keyspaceRef"] = this.keyspace

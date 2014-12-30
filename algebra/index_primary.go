@@ -17,11 +17,24 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the create primary index ddl statement.
+Indexes always use case-insensitive matching to
+match field names and paths. Index names are unique
+per bucket. Type CreatePrimaryIndex is a struct that
+contains fields keyspaceref and the using IndexType
+string.
+*/
 type CreatePrimaryIndex struct {
 	keyspace *KeyspaceRef        `json:"keyspace"`
 	using    datastore.IndexType `json:"using"`
 }
 
+/*
+The function NewCreatePrimaryIndex returns a pointer
+to the CreatePrimaryIndex struct with the input
+argument values as fields.
+*/
 func NewCreatePrimaryIndex(keyspace *KeyspaceRef, using datastore.IndexType) *CreatePrimaryIndex {
 	return &CreatePrimaryIndex{
 		keyspace: keyspace,
@@ -29,30 +42,53 @@ func NewCreatePrimaryIndex(keyspace *KeyspaceRef, using datastore.IndexType) *Cr
 	}
 }
 
+/*
+It calls the VisitCreatePrimaryIndex method by passing
+in the receiver and returns the interface. It is a
+visitor pattern.
+*/
 func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCreatePrimaryIndex(this)
 }
 
+/*
+Returns nil.
+*/
 func (this *CreatePrimaryIndex) Signature() value.Value {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *CreatePrimaryIndex) Formalize() error {
 	return nil
 }
 
+/*
+Returns nil.
+*/
 func (this *CreatePrimaryIndex) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 
+/*
+Returns the input keyspace.
+*/
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the index type string for the using clause.
+*/
 func (this *CreatePrimaryIndex) Using() datastore.IndexType {
 	return this.using
 }
 
+/*
+Marshals input receiver into byte array.
+*/
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createPrimaryIndex"}
 	r["keyspaceRef"] = this.keyspace
