@@ -1,0 +1,195 @@
+[
+{
+   "statements":"select IS_ARRAY(orders3.orderlines) as a from default:orders3 order by a",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(orders3.id) as a from default:orders3 order by a",
+   "results": [
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(null) ",
+   "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+   "statements":"select IS_ARRAY(missing) ",
+   "results": [
+        {}
+    ]
+},
+{
+   "statements":"select IS_ATOM(orders3.orderlines) as a from default:orders3 order by a ",
+   "results": [
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        },
+        {
+            "a": false
+        }
+    ]
+},
+{
+   "statements":"select IS_ATOM(orders3.id) as a from default:orders3 order by a ",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select IS_BOOLEAN(false) ",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+   "statements":"select IS_BOOLEAN(1) ",
+   "results": [
+        {
+            "$1": false
+        }
+    ] 
+},
+{
+   "statements":"select IS_NUM(0) ",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+   "statements":"select IS_NUM([1,2]) ",
+   "results": [
+        {
+            "$1": false
+        }
+    ]
+},
+{
+   "statements":"select IS_OBJ(orders3) as a from default:orders3 ",
+   "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+},
+{
+   "statements":"select is_string(\"\")",
+   "results": [
+        {
+            "$1": true
+        }
+    ]
+},
+{
+   "statements":"SELECT TYPE(ARRAY child FOR child IN children END) AS all_children FROM default:contacts ORDER BY all_children ",
+    "results": [
+        {
+            "all_children": "array"
+        },
+        {
+            "all_children": "array"
+        },
+        {
+            "all_children": "array"
+        },
+        {
+            "all_children": "missing"
+        },
+        {
+            "all_children": "missing"
+        },
+        {
+            "all_children": "missing"
+        }
+    ]
+},
+{
+   "statements":"select (ARRAY TYPE(c) for c in [ 1, \"yes\", true,[1,2], missing, null] END)  as ok ",
+   "results": [
+        {
+            "ok": [
+                "number",
+                "string",
+                "boolean",
+                "array",
+                "missing",
+                "null"
+            ]
+        }
+    ]
+}
+
+]
