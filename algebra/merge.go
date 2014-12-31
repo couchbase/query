@@ -16,6 +16,18 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the merge DML statement. Type Merge is a
+struct that contains fields mapping to each clause in
+the statement.  Keyspace is the keyspace-ref for
+the merge stmt. Merge source represents the path or a
+select statement with an alias, the key expression
+represents the keys clause. Merge actions can have
+three possible statements, the merge update, merge
+delete or the merge insert statement. Limit represents
+the limit clause and Returning represents the returning
+clause.
+*/
 type Merge struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	source    *MergeSource          `json:"source"`
@@ -25,6 +37,11 @@ type Merge struct {
 	returning *Projection           `json:"returning"`
 }
 
+/*
+The function NewMerge returns a pointer to the Merge
+struct by assigning the input attributes to the fields
+of the struct.
+*/
 func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Expression,
 	actions *MergeActions, limit expression.Expression, returning *Projection) *Merge {
 	return &Merge{
@@ -37,10 +54,18 @@ func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Express
 	}
 }
 
+/*
+It calls the VisitMerge method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
 }
 
+/*
+The shape of the merge statements is the signature of its
+returning clause. If not present return value is nil.
+*/
 func (this *Merge) Signature() value.Value {
 	if this.returning != nil {
 		return this.returning.Signature()
@@ -49,6 +74,9 @@ func (this *Merge) Signature() value.Value {
 	}
 }
 
+/*
+Applies mapper to all the expressions in the merge statement.
+*/
 func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.source.MapExpressions(mapper)
 	if err != nil {
@@ -79,6 +107,10 @@ func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent clauses
+in the merge statement.
+*/
 func (this *Merge) Formalize() (err error) {
 	kf, err := this.keyspace.Formalize()
 	if err != nil {
@@ -121,36 +153,68 @@ func (this *Merge) Formalize() (err error) {
 	return
 }
 
+/*
+Returns the keyspace-ref for the merge statement.
+*/
 func (this *Merge) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the merge source for the merge statement.
+*/
 func (this *Merge) Source() *MergeSource {
 	return this.source
 }
 
+/*
+Returns the key expression for the keys clause in
+the merge statement.
+*/
 func (this *Merge) Key() expression.Expression {
 	return this.key
 }
 
+/*
+Returns the merge actions for the merge statement.
+*/
 func (this *Merge) Actions() *MergeActions {
 	return this.actions
 }
 
+/*
+Returns the limit expression for the limit clause
+in the merge statement.
+*/
 func (this *Merge) Limit() expression.Expression {
 	return this.limit
 }
 
+/*
+Returns the returning clause projection for the
+merge statement.
+*/
 func (this *Merge) Returning() *Projection {
 	return this.returning
 }
 
+/*
+Represents the merge source. Type MergeSource is a
+struct containing three fields, the from keyspace
+term, the select query and the alias as string.
+*/
 type MergeSource struct {
 	from  *KeyspaceTerm `json:"from"`
 	query *Select       `json:"select"`
 	as    string        `json:"as"`
 }
 
+/*
+The function NewMergeSourceFrom returns a pointer
+to the MergeSource struct by assigning the input
+attributes to the fields of the struct, setting
+the from keyspace term and the alias.
+*/
 func NewMergeSourceFrom(from *KeyspaceTerm, as string) *MergeSource {
 	return &MergeSource{
 		from: from,
@@ -158,6 +222,12 @@ func NewMergeSourceFrom(from *KeyspaceTerm, as string) *MergeSource {
 	}
 }
 
+/*
+The function NewMergeSourceSelect returns a pointer
+to the MergeSource struct by assigning the input
+attributes to the fields of the struct, setting
+the query and the alias.
+*/
 func NewMergeSourceSelect(query *Select, as string) *MergeSource {
 	return &MergeSource{
 		query: query,
@@ -165,6 +235,9 @@ func NewMergeSourceSelect(query *Select, as string) *MergeSource {
 	}
 }
 
+/*
+Applies mapper to the query expressions.
+*/
 func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.query != nil {
 		err = this.query.MapExpressions(mapper)
@@ -176,6 +249,10 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent fields
+in the merge source statement.
+*/
 func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 	if this.from != nil {
 		_, err = this.from.Formalize(expression.NewFormalizer())
@@ -202,18 +279,31 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 	return
 }
 
+/*
+Return the from keyspace term for the merge source.
+*/
 func (this *MergeSource) From() *KeyspaceTerm {
 	return this.from
 }
 
+/*
+Return the select query for the merge source.
+*/
 func (this *MergeSource) Select() *Select {
 	return this.query
 }
 
+/*
+Return alias defined by as.
+*/
 func (this *MergeSource) As() string {
 	return this.as
 }
 
+/*
+Return the alias for the merge source. If AS
+is not specified return the from clause alias.
+*/
 func (this *MergeSource) Alias() string {
 	if this.as != "" {
 		return this.as
@@ -224,12 +314,21 @@ func (this *MergeSource) Alias() string {
 	}
 }
 
+/*
+Represents the merge actions in a merge statement. They
+can be merge update, merge delete and merge insert.
+*/
 type MergeActions struct {
 	update *MergeUpdate `json:"update"`
 	delete *MergeDelete `json:"delete"`
 	insert *MergeInsert `json:"insert"`
 }
 
+/*
+The function NewMergeActions returns a pointer to the
+MergeActions struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewMergeActions(update *MergeUpdate, delete *MergeDelete, insert *MergeInsert) *MergeActions {
 	return &MergeActions{
 		update: update,
@@ -238,6 +337,10 @@ func NewMergeActions(update *MergeUpdate, delete *MergeDelete, insert *MergeInse
 	}
 }
 
+/*
+Apply mapper to the expressions in the merge update,delete and insert
+statements.
+*/
 func (this *MergeActions) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.update != nil {
 		err = this.update.MapExpressions(mapper)
@@ -260,28 +363,51 @@ func (this *MergeActions) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Returns the merge update merge action statement.
+*/
 func (this *MergeActions) Update() *MergeUpdate {
 	return this.update
 }
 
+/*
+Returns the merge delete merge action statement.
+*/
 func (this *MergeActions) Delete() *MergeDelete {
 	return this.delete
 }
 
+/*
+Returns the merge insert merge action statement.
+*/
 func (this *MergeActions) Insert() *MergeInsert {
 	return this.insert
 }
 
+/*
+Represents the merge update merge-actions statement.
+Type MergeUpdate is a struct that contains the where
+condition expression along with the set and unset
+clause.
+*/
 type MergeUpdate struct {
 	set   *Set                  `json:"set"`
 	unset *Unset                `json:"unset"`
 	where expression.Expression `json:"where"`
 }
 
+/*
+The function NewMergeUpdate returns a pointer to the
+MergeUpdate struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewMergeUpdate(set *Set, unset *Unset, where expression.Expression) *MergeUpdate {
 	return &MergeUpdate{set, unset, where}
 }
 
+/*
+Applies mapper to the set, unset and where expressions.
+*/
 func (this *MergeUpdate) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.set != nil {
 		err = this.set.MapExpressions(mapper)
@@ -304,26 +430,50 @@ func (this *MergeUpdate) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Returns the set clause in a merge update merge-action
+statement.
+*/
 func (this *MergeUpdate) Set() *Set {
 	return this.set
 }
 
+/*
+Returns the unset clause in a merge update
+merge-action statement.
+*/
 func (this *MergeUpdate) Unset() *Unset {
 	return this.unset
 }
 
+/*
+Return the where clause exppression condition.
+*/
 func (this *MergeUpdate) Where() expression.Expression {
 	return this.where
 }
 
+/*
+Represents the merge delete merge actions statement.
+Type MergeDelete is a struct that contains the where
+condition expression.
+*/
 type MergeDelete struct {
 	where expression.Expression `json:"where"`
 }
 
+/*
+The function NewMergeDelete returns a pointer to the
+MergeDelete struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewMergeDelete(where expression.Expression) *MergeDelete {
 	return &MergeDelete{where}
 }
 
+/*
+Apply mapper to where condition expressions.
+*/
 func (this *MergeDelete) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.where != nil {
 		this.where, err = mapper.Map(this.where)
@@ -332,19 +482,35 @@ func (this *MergeDelete) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Return the where clause exppression condition.
+*/
 func (this *MergeDelete) Where() expression.Expression {
 	return this.where
 }
 
+/*
+Represents the merge insert merge actions statement.
+Type MergeInsert is a struct that contains the value
+and where condition expressions.
+*/
 type MergeInsert struct {
 	value expression.Expression `json:"value"`
 	where expression.Expression `json:"where"`
 }
 
+/*
+The function NewMergeInsert returns a pointer to the MergeInsert
+struct by assigning the input attributes to the fields of the
+struct.
+*/
 func NewMergeInsert(value, where expression.Expression) *MergeInsert {
 	return &MergeInsert{value, where}
 }
 
+/*
+Apply mapper to value and where expressions.
+*/
 func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.value != nil {
 		this.value, err = mapper.Map(this.value)
@@ -360,10 +526,16 @@ func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Return the merge insert value expression.
+*/
 func (this *MergeInsert) Value() expression.Expression {
 	return this.value
 }
 
+/*
+Return the where clause exppression condition.
+*/
 func (this *MergeInsert) Where() expression.Expression {
 	return this.where
 }
