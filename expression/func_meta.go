@@ -80,7 +80,11 @@ func (this *Base64) Apply(context Context, operand value.Value) (value.Value, er
 		return operand, nil
 	}
 
-	bytes, _ := operand.MarshalJSON()
+	bytes, err := operand.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
 	str := base64.StdEncoding.EncodeToString(bytes)
 	return value.NewValue(str), nil
 }
