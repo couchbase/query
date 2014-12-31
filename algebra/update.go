@@ -16,6 +16,15 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
+/*
+Represents the Update DML statement. Type Update is a
+struct that contains fields mapping to each clause in
+an update statement. Keyspace is the keyspace-ref for
+the update stmt. The keys expression represents the
+keys clause, set and unset represent the set and
+unset clause, the limit expression represents the
+limit clause and returning is the returning clause.
+*/
 type Update struct {
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
@@ -26,15 +35,28 @@ type Update struct {
 	returning *Projection           `json:"returning"`
 }
 
+/*
+The function NewUpdate returns a pointer to the Update
+struct by assigning the input attributes to the fields
+of the struct.
+*/
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, set *Set, unset *Unset,
 	where, limit expression.Expression, returning *Projection) *Update {
 	return &Update{keyspace, keys, set, unset, where, limit, returning}
 }
 
+/*
+It calls the VisitUpdate method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
 func (this *Update) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitUpdate(this)
 }
 
+/*
+The shape of the update statements is the signature of its
+returning clause. If not present return value is nil.
+*/
 func (this *Update) Signature() value.Value {
 	if this.returning != nil {
 		return this.returning.Signature()
@@ -43,6 +65,9 @@ func (this *Update) Signature() value.Value {
 	}
 }
 
+/*
+Applies mapper to all the expressions in the update statement.
+*/
 func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.keys != nil {
 		this.keys, err = mapper.Map(this.keys)
@@ -86,6 +111,10 @@ func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each of the constituent clauses
+in the Update statement.
+*/
 func (this *Update) Formalize() (err error) {
 	f, err := this.keyspace.Formalize()
 	if err != nil {
@@ -136,42 +165,82 @@ func (this *Update) Formalize() (err error) {
 	return
 }
 
+/*
+Returns the keyspace-ref for the update statement.
+*/
 func (this *Update) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the keys expression defined by the use keys
+clause.
+*/
 func (this *Update) Keys() expression.Expression {
 	return this.keys
 }
 
+/*
+Returns the terms from the set clause in an update
+statement.
+*/
 func (this *Update) Set() *Set {
 	return this.set
 }
 
+/*
+Returns the terms from the unset clause in an update
+statement.
+*/
 func (this *Update) Unset() *Unset {
 	return this.unset
 }
 
+/*
+Returns the where clause expression in an update
+statement.
+*/
 func (this *Update) Where() expression.Expression {
 	return this.where
 }
 
+/*
+Return the limit expression for the limit
+clause in an update statement.
+*/
 func (this *Update) Limit() expression.Expression {
 	return this.limit
 }
 
+/*
+Returns the returning clause projection for the
+update statement.
+*/
 func (this *Update) Returning() *Projection {
 	return this.returning
 }
 
+/*
+Represents the set clause in the update statement.
+Type Set is a struct that contains the terms field
+that represents setTerms.
+*/
 type Set struct {
 	terms SetTerms
 }
 
+/*
+The function NewSet returns a pointer to the Set
+struct by assigning the input attributes to the
+fields of the struct.
+*/
 func NewSet(terms SetTerms) *Set {
 	return &Set{terms}
 }
 
+/*
+Applies mapper to all the terms in the setTerms.
+*/
 func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
 		err = term.MapExpressions(mapper)
@@ -183,6 +252,9 @@ func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each term in the set terms.
+*/
 func (this *Set) Formalize(f *expression.Formalizer) (err error) {
 	for _, term := range this.terms {
 		err = term.Formalize(f)
@@ -194,18 +266,35 @@ func (this *Set) Formalize(f *expression.Formalizer) (err error) {
 	return
 }
 
+/*
+Returns rhe terms in the set clause defined by
+setTerms.
+*/
 func (this *Set) Terms() SetTerms {
 	return this.terms
 }
 
+/*
+Represents the Unset clause in the update statement.
+Type Unset is a struct that contains the terms field
+that represents UnsetTerms.
+*/
 type Unset struct {
 	terms UnsetTerms
 }
 
+/*
+The function NewUnset returns a pointer to the Unset
+struct by assigning the input attributes to the
+fields of the struct.
+*/
 func NewUnset(terms UnsetTerms) *Unset {
 	return &Unset{terms}
 }
 
+/*
+Applies mapper to all the terms in the UnsetTerms.
+*/
 func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this.terms {
 		err = term.MapExpressions(mapper)
@@ -217,6 +306,9 @@ func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for each term in the Unset terms.
+*/
 func (this *Unset) Formalize(f *expression.Formalizer) (err error) {
 	for _, term := range this.terms {
 		err = term.Formalize(f)
@@ -228,22 +320,46 @@ func (this *Unset) Formalize(f *expression.Formalizer) (err error) {
 	return
 }
 
+/*
+Returns rhe terms in the set clause defined by
+UnsetTerms.
+*/
 func (this *Unset) Terms() UnsetTerms {
 	return this.terms
 }
 
+/*
+Represents Set terms from the set clause. Type SetTerms
+is a slice containing SetTerm.
+*/
 type SetTerms []*SetTerm
 
+/*
+Represents the set clause. Type SetTerm is a struct
+that contains fields mapping to each expression and
+sub clause in the set clause. The path and value
+represent the expression path and value and updateFor
+is the update-for statement.
+*/
 type SetTerm struct {
 	path      expression.Path       `json:"path"`
 	value     expression.Expression `json:"value"`
 	updateFor *UpdateFor            `json:"path-for"`
 }
 
+/*
+The function NewSetTerm returns a pointer to the SetTerm
+struct by assigning the input attributes to the fields
+of the struct.
+*/
 func NewSetTerm(path expression.Path, value expression.Expression, updateFor *UpdateFor) *SetTerm {
 	return &SetTerm{path, value, updateFor}
 }
 
+/*
+Applies mapper to the path and value expressions, and updatefor
+in the set Term.
+*/
 func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	path, err := mapper.Map(this.path)
 	if err != nil {
@@ -264,6 +380,10 @@ func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for the update for stmt, the path
+and value expressions in the set clause.
+*/
 func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		sv, err := f.PushBindings(this.updateFor.bindings)
@@ -284,18 +404,30 @@ func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	return
 }
 
+/*
+Return the path expression in the set clause.
+*/
 func (this *SetTerm) Path() expression.Path {
 	return this.path
 }
 
+/*
+Return the value expression in the set clause.
+*/
 func (this *SetTerm) Value() expression.Expression {
 	return this.value
 }
 
+/*
+Return the update for statement in the set clause.
+*/
 func (this *SetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
 }
 
+/*
+Marshals input into byte array.
+*/
 func (this *SetTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "setTerm"}
 	r["path"] = expression.NewStringer().Visit(this.path)
@@ -304,17 +436,36 @@ func (this *SetTerm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+/*
+Represents Unset terms from the unset clause. Type UnsetTerms
+is a slice containing UnsetTerm.
+*/
 type UnsetTerms []*UnsetTerm
 
+/*
+Represents the unset clause. Type UnsetTerm is a struct
+that contains fields mapping to each expression and
+sub clause in the unset clause. path represents the
+expression path and updateFor is the update-for statement.
+*/
 type UnsetTerm struct {
 	path      expression.Path `json:"path"`
 	updateFor *UpdateFor      `json:"path-for"`
 }
 
+/*
+The function NewUnsetTerm returns a pointer to the UnsetTerm
+struct by assigning the input attributes to the fields
+of the struct.
+*/
 func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
 	return &UnsetTerm{path, updateFor}
 }
 
+/*
+Applies mapper to the path expressions and update for in
+the unset Term.
+*/
 func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	path, err := mapper.Map(this.path)
 	if err != nil {
@@ -330,6 +481,10 @@ func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Fully qualify identifiers for the update for stmt and the path
+expression in the unset clause.
+*/
 func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 	if this.updateFor != nil {
 		sv, err := f.PushBindings(this.updateFor.bindings)
@@ -349,14 +504,23 @@ func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 	return
 }
 
+/*
+Return the path expression in the unset clause.
+*/
 func (this *UnsetTerm) Path() expression.Path {
 	return this.path
 }
 
+/*
+Return the update for statement in the unset clause.
+*/
 func (this *UnsetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
 }
 
+/*
+Marshals input into byte array.
+*/
 func (this *UnsetTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "unsetTerm"}
 	r["path"] = expression.NewStringer().Visit(this.path)
@@ -364,15 +528,29 @@ func (this *UnsetTerm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+/*
+Represents the UpdateFor statement. Type UpdateFor is a
+struct that contains fields mapping to each expression
+in the statement. Bindings and when map to the expressions
+in the 'var in/within path' and when clause.
+*/
 type UpdateFor struct {
 	bindings expression.Bindings
 	when     expression.Expression
 }
 
+/*
+The function NewUpdateFor returns a pointer to the
+UpdateFor struct by assigning the input attributes
+to the fields of the struct.
+*/
 func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *UpdateFor {
 	return &UpdateFor{bindings, when}
 }
 
+/*
+Apply mapper to expressions in the when clause and bindings.
+*/
 func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.bindings.MapExpressions(mapper)
 	if err != nil {
@@ -389,14 +567,24 @@ func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Return the expression bindings for the update for statement.
+*/
 func (this *UpdateFor) Bindings() expression.Bindings {
 	return this.bindings
 }
 
+/*
+Return the when expression for the when clause in the
+update for statement.
+*/
 func (this *UpdateFor) When() expression.Expression {
 	return this.when
 }
 
+/*
+Marshals input into byte array.
+*/
 func (this *UpdateFor) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "updateFor"}
 	r["bindings"] = this.bindings

@@ -15,13 +15,25 @@ import (
 	"github.com/couchbaselabs/query/expression"
 )
 
+/*
+This represents the value pairs used in an insert
+values clause in an insert or upsert statement. It
+contains multiple key value Pairs.
+*/
 type Pairs []*Pair
 
+/*
+Type Pair is a struct that contains key and value
+expressions.
+*/
 type Pair struct {
 	Key   expression.Expression
 	Value expression.Expression
 }
 
+/*
+Applies mapper to the key and value expressions.
+*/
 func (this *Pair) MapExpressions(mapper expression.Mapper) (err error) {
 	this.Key, err = mapper.Map(this.Key)
 	if err != nil {
@@ -32,14 +44,24 @@ func (this *Pair) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Creates and returns a new array construct containing
+the key value pair.
+*/
 func (this *Pair) Expression() expression.Expression {
 	return expression.NewArrayConstruct(this.Key, this.Value)
 }
 
+/*
+Calls MarshalJSON on the expression returned by Expression().
+*/
 func (this *Pair) MarshalJSON() ([]byte, error) {
 	return this.Expression().MarshalJSON()
 }
 
+/*
+Applies mapper to multiple key-value pairs.
+*/
 func (this Pairs) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, pair := range this {
 		err = pair.MapExpressions(mapper)
@@ -51,6 +73,10 @@ func (this Pairs) MapExpressions(mapper expression.Mapper) (err error) {
 	return
 }
 
+/*
+Creates and returns a new array construct containing
+the all the key value rxpression pair's in Pairs.
+*/
 func (this Pairs) Expression() expression.Expression {
 	exprs := make(expression.Expressions, len(this))
 
@@ -61,10 +87,18 @@ func (this Pairs) Expression() expression.Expression {
 	return expression.NewArrayConstruct(exprs...)
 }
 
+/*
+Calls MarshalJSON on the expression returned by Expression().
+*/
 func (this Pairs) MarshalJSON() ([]byte, error) {
 	return this.Expression().MarshalJSON()
 }
 
+/*
+Range over the operands of the input array construct
+and create new key value pair's using the NewPair()
+method and add it to Pairs. Return.
+*/
 func NewPairs(array *expression.ArrayConstruct) (pairs Pairs, err error) {
 	operands := array.Operands()
 	pairs = make(Pairs, len(operands))
@@ -78,6 +112,10 @@ func NewPairs(array *expression.ArrayConstruct) (pairs Pairs, err error) {
 	return
 }
 
+/*
+Create a key value pair using the operands of the input
+expression Array construct and return.
+*/
 func NewPair(expr expression.Expression) (*Pair, error) {
 	array, ok := expr.(*expression.ArrayConstruct)
 	if !ok {
