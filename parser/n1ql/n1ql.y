@@ -2,6 +2,7 @@
 package n1ql
 
 import "fmt"
+import "strings"
 import "github.com/couchbaselabs/clog"
 import "github.com/couchbaselabs/query/algebra"
 import "github.com/couchbaselabs/query/datastore"
@@ -2186,11 +2187,15 @@ function_name LPAREN STAR RPAREN
     if !yylex.(*lexer).parsingStatement() {
         yylex.Error("Cannot use aggregate as an inline expression.");
     } else {
-        agg, ok := algebra.GetAggregate($1, false);
-        if ok {
-            $$ = agg.Constructor()(nil);
+        if strings.ToLower($1) != "count" {
+            yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1));
         } else {
-            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+            agg, ok := algebra.GetAggregate($1, false);
+            if ok {
+                $$ = agg.Constructor()(nil);
+            } else {
+                yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import __yyfmt__ "fmt"
 
 //line n1ql.y:2
 import "fmt"
+import "strings"
 import "github.com/couchbaselabs/clog"
 import "github.com/couchbaselabs/query/algebra"
 import "github.com/couchbaselabs/query/datastore"
@@ -15,7 +16,7 @@ func logDebugGrammar(format string, v ...interface{}) {
 	clog.To("PARSER", format, v...)
 }
 
-//line n1ql.y:16
+//line n1ql.y:17
 type yySymType struct {
 	yys int
 	s   string
@@ -1420,12 +1421,12 @@ yydefault:
 	switch yynt {
 
 	case 1:
-		//line n1ql.y:353
+		//line n1ql.y:354
 		{
 			yylex.(*lexer).setStatement(yyS[yypt-0].statement)
 		}
 	case 2:
-		//line n1ql.y:358
+		//line n1ql.y:359
 		{
 			yylex.(*lexer).setExpression(yyS[yypt-0].expr)
 		}
@@ -1442,22 +1443,22 @@ yydefault:
 	case 8:
 		yyVAL.statement = yyS[yypt-0].statement
 	case 9:
-		//line n1ql.y:379
+		//line n1ql.y:380
 		{
 			yyVAL.statement = algebra.NewExplain(yyS[yypt-0].statement)
 		}
 	case 10:
-		//line n1ql.y:386
+		//line n1ql.y:387
 		{
 			yyVAL.statement = algebra.NewPrepare(yyS[yypt-0].statement)
 		}
 	case 11:
-		//line n1ql.y:393
+		//line n1ql.y:394
 		{
 			yyVAL.statement = algebra.NewExecute(yyS[yypt-0].expr)
 		}
 	case 12:
-		//line n1ql.y:400
+		//line n1ql.y:401
 		{
 			yyVAL.statement = yyS[yypt-0].fullselect
 		}
@@ -1480,52 +1481,52 @@ yydefault:
 	case 21:
 		yyVAL.statement = yyS[yypt-0].statement
 	case 22:
-		//line n1ql.y:431
+		//line n1ql.y:432
 		{
 			yyVAL.fullselect = algebra.NewSelect(yyS[yypt-1].subresult, yyS[yypt-0].order, nil, nil) /* OFFSET precedes LIMIT */
 		}
 	case 23:
-		//line n1ql.y:435
+		//line n1ql.y:436
 		{
 			yyVAL.fullselect = algebra.NewSelect(yyS[yypt-3].subresult, yyS[yypt-2].order, yyS[yypt-0].expr, yyS[yypt-1].expr) /* OFFSET precedes LIMIT */
 		}
 	case 24:
-		//line n1ql.y:439
+		//line n1ql.y:440
 		{
 			yyVAL.fullselect = algebra.NewSelect(yyS[yypt-3].subresult, yyS[yypt-2].order, yyS[yypt-1].expr, yyS[yypt-0].expr) /* OFFSET precedes LIMIT */
 		}
 	case 25:
-		//line n1ql.y:445
+		//line n1ql.y:446
 		{
 			yyVAL.subresult = yyS[yypt-0].subselect
 		}
 	case 26:
-		//line n1ql.y:450
+		//line n1ql.y:451
 		{
 			yyVAL.subresult = algebra.NewUnion(yyS[yypt-2].subresult, yyS[yypt-0].subselect)
 		}
 	case 27:
-		//line n1ql.y:455
+		//line n1ql.y:456
 		{
 			yyVAL.subresult = algebra.NewUnionAll(yyS[yypt-3].subresult, yyS[yypt-0].subselect)
 		}
 	case 28:
-		//line n1ql.y:460
+		//line n1ql.y:461
 		{
 			yyVAL.subresult = algebra.NewIntersect(yyS[yypt-2].subresult, yyS[yypt-0].subselect)
 		}
 	case 29:
-		//line n1ql.y:465
+		//line n1ql.y:466
 		{
 			yyVAL.subresult = algebra.NewIntersectAll(yyS[yypt-3].subresult, yyS[yypt-0].subselect)
 		}
 	case 30:
-		//line n1ql.y:470
+		//line n1ql.y:471
 		{
 			yyVAL.subresult = algebra.NewExcept(yyS[yypt-2].subresult, yyS[yypt-0].subselect)
 		}
 	case 31:
-		//line n1ql.y:475
+		//line n1ql.y:476
 		{
 			yyVAL.subresult = algebra.NewExceptAll(yyS[yypt-3].subresult, yyS[yypt-0].subselect)
 		}
@@ -1534,72 +1535,72 @@ yydefault:
 	case 33:
 		yyVAL.subselect = yyS[yypt-0].subselect
 	case 34:
-		//line n1ql.y:488
+		//line n1ql.y:489
 		{
 			yyVAL.subselect = algebra.NewSubselect(yyS[yypt-4].fromTerm, yyS[yypt-3].bindings, yyS[yypt-2].expr, yyS[yypt-1].group, yyS[yypt-0].projection)
 		}
 	case 35:
-		//line n1ql.y:495
+		//line n1ql.y:496
 		{
 			yyVAL.subselect = algebra.NewSubselect(yyS[yypt-3].fromTerm, yyS[yypt-2].bindings, yyS[yypt-1].expr, yyS[yypt-0].group, yyS[yypt-4].projection)
 		}
 	case 36:
-		//line n1ql.y:510
+		//line n1ql.y:511
 		{
 			yyVAL.projection = yyS[yypt-0].projection
 		}
 	case 37:
-		//line n1ql.y:517
+		//line n1ql.y:518
 		{
 			yyVAL.projection = algebra.NewProjection(false, yyS[yypt-0].resultTerms)
 		}
 	case 38:
-		//line n1ql.y:522
+		//line n1ql.y:523
 		{
 			yyVAL.projection = algebra.NewProjection(true, yyS[yypt-0].resultTerms)
 		}
 	case 39:
-		//line n1ql.y:527
+		//line n1ql.y:528
 		{
 			yyVAL.projection = algebra.NewProjection(false, yyS[yypt-0].resultTerms)
 		}
 	case 40:
-		//line n1ql.y:532
+		//line n1ql.y:533
 		{
 			yyVAL.projection = algebra.NewRawProjection(false, yyS[yypt-1].expr, yyS[yypt-0].s)
 		}
 	case 41:
-		//line n1ql.y:537
+		//line n1ql.y:538
 		{
 			yyVAL.projection = algebra.NewRawProjection(true, yyS[yypt-1].expr, yyS[yypt-0].s)
 		}
 	case 44:
-		//line n1ql.y:550
+		//line n1ql.y:551
 		{
 			yyVAL.resultTerms = algebra.ResultTerms{yyS[yypt-0].resultTerm}
 		}
 	case 45:
-		//line n1ql.y:555
+		//line n1ql.y:556
 		{
 			yyVAL.resultTerms = append(yyS[yypt-2].resultTerms, yyS[yypt-0].resultTerm)
 		}
 	case 46:
-		//line n1ql.y:562
+		//line n1ql.y:563
 		{
 			yyVAL.resultTerm = algebra.NewResultTerm(nil, true, "")
 		}
 	case 47:
-		//line n1ql.y:567
+		//line n1ql.y:568
 		{
 			yyVAL.resultTerm = algebra.NewResultTerm(yyS[yypt-2].expr, true, "")
 		}
 	case 48:
-		//line n1ql.y:572
+		//line n1ql.y:573
 		{
 			yyVAL.resultTerm = algebra.NewResultTerm(yyS[yypt-1].expr, false, yyS[yypt-0].s)
 		}
 	case 49:
-		//line n1ql.y:579
+		//line n1ql.y:580
 		{
 			yyVAL.s = ""
 		}
@@ -1608,71 +1609,71 @@ yydefault:
 	case 51:
 		yyVAL.s = yyS[yypt-0].s
 	case 52:
-		//line n1ql.y:590
+		//line n1ql.y:591
 		{
 			yyVAL.s = yyS[yypt-0].s
 		}
 	case 53:
 		yyVAL.s = yyS[yypt-0].s
 	case 54:
-		//line n1ql.y:608
+		//line n1ql.y:609
 		{
 			yyVAL.fromTerm = nil
 		}
 	case 55:
 		yyVAL.fromTerm = yyS[yypt-0].fromTerm
 	case 56:
-		//line n1ql.y:617
+		//line n1ql.y:618
 		{
 			yyVAL.fromTerm = yyS[yypt-0].fromTerm
 		}
 	case 57:
-		//line n1ql.y:624
+		//line n1ql.y:625
 		{
 			yyVAL.fromTerm = yyS[yypt-0].keyspaceTerm
 		}
 	case 58:
-		//line n1ql.y:629
+		//line n1ql.y:630
 		{
 			yyVAL.fromTerm = algebra.NewJoin(yyS[yypt-3].fromTerm, yyS[yypt-2].b, yyS[yypt-0].keyspaceTerm)
 		}
 	case 59:
-		//line n1ql.y:634
+		//line n1ql.y:635
 		{
 			yyVAL.fromTerm = algebra.NewNest(yyS[yypt-3].fromTerm, yyS[yypt-2].b, yyS[yypt-0].keyspaceTerm)
 		}
 	case 60:
-		//line n1ql.y:639
+		//line n1ql.y:640
 		{
 			yyVAL.fromTerm = algebra.NewUnnest(yyS[yypt-4].fromTerm, yyS[yypt-3].b, yyS[yypt-1].expr, yyS[yypt-0].s)
 		}
 	case 63:
-		//line n1ql.y:652
+		//line n1ql.y:653
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 64:
-		//line n1ql.y:657
+		//line n1ql.y:658
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm(yyS[yypt-5].s, yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 65:
-		//line n1ql.y:662
+		//line n1ql.y:663
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("#system", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 66:
-		//line n1ql.y:669
+		//line n1ql.y:670
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 67:
-		//line n1ql.y:674
+		//line n1ql.y:675
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm(yyS[yypt-5].s, yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 68:
-		//line n1ql.y:679
+		//line n1ql.y:680
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("#system", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
@@ -1681,543 +1682,543 @@ yydefault:
 	case 70:
 		yyVAL.s = yyS[yypt-0].s
 	case 71:
-		//line n1ql.y:694
+		//line n1ql.y:695
 		{
 			yyVAL.path = nil
 		}
 	case 72:
-		//line n1ql.y:699
+		//line n1ql.y:700
 		{
 			yyVAL.path = yyS[yypt-0].path
 		}
 	case 73:
-		//line n1ql.y:706
+		//line n1ql.y:707
 		{
 			yyVAL.expr = nil
 		}
 	case 74:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 75:
-		//line n1ql.y:715
+		//line n1ql.y:716
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 76:
-		//line n1ql.y:722
+		//line n1ql.y:723
 		{
 		}
 	case 78:
-		//line n1ql.y:730
+		//line n1ql.y:731
 		{
 			yyVAL.b = false
 		}
 	case 79:
-		//line n1ql.y:735
+		//line n1ql.y:736
 		{
 			yyVAL.b = false
 		}
 	case 80:
-		//line n1ql.y:740
+		//line n1ql.y:741
 		{
 			yyVAL.b = true
 		}
 	case 83:
-		//line n1ql.y:753
+		//line n1ql.y:754
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 84:
-		//line n1ql.y:767
+		//line n1ql.y:768
 		{
 			yyVAL.bindings = nil
 		}
 	case 85:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 86:
-		//line n1ql.y:776
+		//line n1ql.y:777
 		{
 			yyVAL.bindings = yyS[yypt-0].bindings
 		}
 	case 87:
-		//line n1ql.y:783
+		//line n1ql.y:784
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 88:
-		//line n1ql.y:788
+		//line n1ql.y:789
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 89:
-		//line n1ql.y:795
+		//line n1ql.y:796
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 90:
-		//line n1ql.y:809
+		//line n1ql.y:810
 		{
 			yyVAL.expr = nil
 		}
 	case 91:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 92:
-		//line n1ql.y:818
+		//line n1ql.y:819
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 93:
-		//line n1ql.y:832
+		//line n1ql.y:833
 		{
 			yyVAL.group = nil
 		}
 	case 94:
 		yyVAL.group = yyS[yypt-0].group
 	case 95:
-		//line n1ql.y:841
+		//line n1ql.y:842
 		{
 			yyVAL.group = algebra.NewGroup(yyS[yypt-2].exprs, yyS[yypt-1].bindings, yyS[yypt-0].expr)
 		}
 	case 96:
-		//line n1ql.y:846
+		//line n1ql.y:847
 		{
 			yyVAL.group = algebra.NewGroup(nil, yyS[yypt-0].bindings, nil)
 		}
 	case 97:
-		//line n1ql.y:853
+		//line n1ql.y:854
 		{
 			yyVAL.exprs = expression.Expressions{yyS[yypt-0].expr}
 		}
 	case 98:
-		//line n1ql.y:858
+		//line n1ql.y:859
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 99:
-		//line n1ql.y:865
+		//line n1ql.y:866
 		{
 			yyVAL.bindings = nil
 		}
 	case 100:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 101:
-		//line n1ql.y:874
+		//line n1ql.y:875
 		{
 			yyVAL.bindings = yyS[yypt-0].bindings
 		}
 	case 102:
-		//line n1ql.y:881
+		//line n1ql.y:882
 		{
 			yyVAL.expr = nil
 		}
 	case 103:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 104:
-		//line n1ql.y:890
+		//line n1ql.y:891
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 105:
-		//line n1ql.y:904
+		//line n1ql.y:905
 		{
 			yyVAL.order = nil
 		}
 	case 106:
 		yyVAL.order = yyS[yypt-0].order
 	case 107:
-		//line n1ql.y:913
+		//line n1ql.y:914
 		{
 			yyVAL.order = algebra.NewOrder(yyS[yypt-0].sortTerms)
 		}
 	case 108:
-		//line n1ql.y:920
+		//line n1ql.y:921
 		{
 			yyVAL.sortTerms = algebra.SortTerms{yyS[yypt-0].sortTerm}
 		}
 	case 109:
-		//line n1ql.y:925
+		//line n1ql.y:926
 		{
 			yyVAL.sortTerms = append(yyS[yypt-2].sortTerms, yyS[yypt-0].sortTerm)
 		}
 	case 110:
-		//line n1ql.y:932
+		//line n1ql.y:933
 		{
 			yyVAL.sortTerm = algebra.NewSortTerm(yyS[yypt-1].expr, yyS[yypt-0].b)
 		}
 	case 111:
-		//line n1ql.y:939
+		//line n1ql.y:940
 		{
 			yyVAL.b = false
 		}
 	case 112:
 		yyVAL.b = yyS[yypt-0].b
 	case 113:
-		//line n1ql.y:948
+		//line n1ql.y:949
 		{
 			yyVAL.b = false
 		}
 	case 114:
-		//line n1ql.y:953
+		//line n1ql.y:954
 		{
 			yyVAL.b = true
 		}
 	case 115:
-		//line n1ql.y:967
+		//line n1ql.y:968
 		{
 			yyVAL.expr = nil
 		}
 	case 116:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 117:
-		//line n1ql.y:976
+		//line n1ql.y:977
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 118:
-		//line n1ql.y:990
+		//line n1ql.y:991
 		{
 			yyVAL.expr = nil
 		}
 	case 119:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 120:
-		//line n1ql.y:999
+		//line n1ql.y:1000
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 121:
-		//line n1ql.y:1013
+		//line n1ql.y:1014
 		{
 			yyVAL.statement = algebra.NewInsertValues(yyS[yypt-3].keyspaceRef, yyS[yypt-1].pairs, yyS[yypt-0].projection)
 		}
 	case 122:
-		//line n1ql.y:1018
+		//line n1ql.y:1019
 		{
 			yyVAL.statement = algebra.NewInsertSelect(yyS[yypt-6].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].expr, yyS[yypt-1].fullselect, yyS[yypt-0].projection)
 		}
 	case 123:
-		//line n1ql.y:1025
+		//line n1ql.y:1026
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef(yyS[yypt-3].s, yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 124:
-		//line n1ql.y:1030
+		//line n1ql.y:1031
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef("", yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 130:
 		yyVAL.pairs = yyS[yypt-0].pairs
 	case 131:
-		//line n1ql.y:1053
+		//line n1ql.y:1054
 		{
 			yyVAL.pairs = append(yyS[yypt-2].pairs, yyS[yypt-0].pairs...)
 		}
 	case 132:
-		//line n1ql.y:1060
+		//line n1ql.y:1061
 		{
 			yyVAL.pairs = algebra.Pairs{&algebra.Pair{Key: yyS[yypt-3].expr, Value: yyS[yypt-1].expr}}
 		}
 	case 133:
-		//line n1ql.y:1067
+		//line n1ql.y:1068
 		{
 			yyVAL.projection = nil
 		}
 	case 134:
 		yyVAL.projection = yyS[yypt-0].projection
 	case 135:
-		//line n1ql.y:1076
+		//line n1ql.y:1077
 		{
 			yyVAL.projection = yyS[yypt-0].projection
 		}
 	case 136:
-		//line n1ql.y:1083
+		//line n1ql.y:1084
 		{
 			yyVAL.projection = algebra.NewProjection(false, yyS[yypt-0].resultTerms)
 		}
 	case 137:
-		//line n1ql.y:1088
+		//line n1ql.y:1089
 		{
 			yyVAL.projection = algebra.NewRawProjection(false, yyS[yypt-0].expr, "")
 		}
 	case 138:
-		//line n1ql.y:1095
+		//line n1ql.y:1096
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 139:
-		//line n1ql.y:1102
+		//line n1ql.y:1103
 		{
 			yyVAL.expr = nil
 		}
 	case 140:
-		//line n1ql.y:1107
+		//line n1ql.y:1108
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 141:
-		//line n1ql.y:1121
+		//line n1ql.y:1122
 		{
 			yyVAL.statement = algebra.NewUpsertValues(yyS[yypt-3].keyspaceRef, yyS[yypt-1].pairs, yyS[yypt-0].projection)
 		}
 	case 142:
-		//line n1ql.y:1126
+		//line n1ql.y:1127
 		{
 			yyVAL.statement = algebra.NewUpsertSelect(yyS[yypt-6].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].expr, yyS[yypt-1].fullselect, yyS[yypt-0].projection)
 		}
 	case 143:
-		//line n1ql.y:1140
+		//line n1ql.y:1141
 		{
 			yyVAL.statement = algebra.NewDelete(yyS[yypt-4].keyspaceRef, yyS[yypt-3].expr, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 144:
-		//line n1ql.y:1154
+		//line n1ql.y:1155
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-6].keyspaceRef, yyS[yypt-5].expr, yyS[yypt-4].set, yyS[yypt-3].unset, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 145:
-		//line n1ql.y:1159
+		//line n1ql.y:1160
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-5].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].set, nil, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 146:
-		//line n1ql.y:1164
+		//line n1ql.y:1165
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-5].keyspaceRef, yyS[yypt-4].expr, nil, yyS[yypt-3].unset, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 147:
-		//line n1ql.y:1171
+		//line n1ql.y:1172
 		{
 			yyVAL.set = algebra.NewSet(yyS[yypt-0].setTerms)
 		}
 	case 148:
-		//line n1ql.y:1178
+		//line n1ql.y:1179
 		{
 			yyVAL.setTerms = algebra.SetTerms{yyS[yypt-0].setTerm}
 		}
 	case 149:
-		//line n1ql.y:1183
+		//line n1ql.y:1184
 		{
 			yyVAL.setTerms = append(yyS[yypt-2].setTerms, yyS[yypt-0].setTerm)
 		}
 	case 150:
-		//line n1ql.y:1190
+		//line n1ql.y:1191
 		{
 			yyVAL.setTerm = algebra.NewSetTerm(yyS[yypt-3].path, yyS[yypt-1].expr, yyS[yypt-0].updateFor)
 		}
 	case 151:
-		//line n1ql.y:1197
+		//line n1ql.y:1198
 		{
 			yyVAL.updateFor = nil
 		}
 	case 152:
 		yyVAL.updateFor = yyS[yypt-0].updateFor
 	case 153:
-		//line n1ql.y:1206
+		//line n1ql.y:1207
 		{
 			yyVAL.updateFor = algebra.NewUpdateFor(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 154:
-		//line n1ql.y:1213
+		//line n1ql.y:1214
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 155:
-		//line n1ql.y:1218
+		//line n1ql.y:1219
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 156:
-		//line n1ql.y:1225
+		//line n1ql.y:1226
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 157:
-		//line n1ql.y:1230
+		//line n1ql.y:1231
 		{
 			yyVAL.binding = expression.NewDescendantBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 158:
 		yyVAL.s = yyS[yypt-0].s
 	case 159:
-		//line n1ql.y:1241
+		//line n1ql.y:1242
 		{
 			yyVAL.expr = yyS[yypt-0].path
 		}
 	case 160:
-		//line n1ql.y:1248
+		//line n1ql.y:1249
 		{
 			yyVAL.expr = nil
 		}
 	case 161:
-		//line n1ql.y:1253
+		//line n1ql.y:1254
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 162:
-		//line n1ql.y:1260
+		//line n1ql.y:1261
 		{
 			yyVAL.unset = algebra.NewUnset(yyS[yypt-0].unsetTerms)
 		}
 	case 163:
-		//line n1ql.y:1267
+		//line n1ql.y:1268
 		{
 			yyVAL.unsetTerms = algebra.UnsetTerms{yyS[yypt-0].unsetTerm}
 		}
 	case 164:
-		//line n1ql.y:1272
+		//line n1ql.y:1273
 		{
 			yyVAL.unsetTerms = append(yyS[yypt-2].unsetTerms, yyS[yypt-0].unsetTerm)
 		}
 	case 165:
-		//line n1ql.y:1279
+		//line n1ql.y:1280
 		{
 			yyVAL.unsetTerm = algebra.NewUnsetTerm(yyS[yypt-1].path, yyS[yypt-0].updateFor)
 		}
 	case 166:
-		//line n1ql.y:1293
+		//line n1ql.y:1294
 		{
 			source := algebra.NewMergeSourceFrom(yyS[yypt-5].keyspaceTerm, "")
 			yyVAL.statement = algebra.NewMerge(yyS[yypt-7].keyspaceRef, source, yyS[yypt-3].expr, yyS[yypt-2].mergeActions, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 167:
-		//line n1ql.y:1299
+		//line n1ql.y:1300
 		{
 			source := algebra.NewMergeSourceSelect(yyS[yypt-7].fullselect, yyS[yypt-5].s)
 			yyVAL.statement = algebra.NewMerge(yyS[yypt-10].keyspaceRef, source, yyS[yypt-3].expr, yyS[yypt-2].mergeActions, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 168:
-		//line n1ql.y:1307
+		//line n1ql.y:1308
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, nil)
 		}
 	case 169:
-		//line n1ql.y:1312
+		//line n1ql.y:1313
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(yyS[yypt-1].mergeUpdate, yyS[yypt-0].mergeActions.Delete(), yyS[yypt-0].mergeActions.Insert())
 		}
 	case 170:
-		//line n1ql.y:1317
+		//line n1ql.y:1318
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, yyS[yypt-1].mergeDelete, yyS[yypt-0].mergeInsert)
 		}
 	case 171:
-		//line n1ql.y:1322
+		//line n1ql.y:1323
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, yyS[yypt-0].mergeInsert)
 		}
 	case 172:
-		//line n1ql.y:1329
+		//line n1ql.y:1330
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, nil)
 		}
 	case 173:
-		//line n1ql.y:1334
+		//line n1ql.y:1335
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, yyS[yypt-1].mergeDelete, yyS[yypt-0].mergeInsert)
 		}
 	case 174:
-		//line n1ql.y:1339
+		//line n1ql.y:1340
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, yyS[yypt-0].mergeInsert)
 		}
 	case 175:
-		//line n1ql.y:1346
+		//line n1ql.y:1347
 		{
 			yyVAL.mergeInsert = nil
 		}
 	case 176:
-		//line n1ql.y:1351
+		//line n1ql.y:1352
 		{
 			yyVAL.mergeInsert = yyS[yypt-0].mergeInsert
 		}
 	case 177:
-		//line n1ql.y:1358
+		//line n1ql.y:1359
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(yyS[yypt-1].set, nil, yyS[yypt-0].expr)
 		}
 	case 178:
-		//line n1ql.y:1363
+		//line n1ql.y:1364
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(yyS[yypt-2].set, yyS[yypt-1].unset, yyS[yypt-0].expr)
 		}
 	case 179:
-		//line n1ql.y:1368
+		//line n1ql.y:1369
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(nil, yyS[yypt-1].unset, yyS[yypt-0].expr)
 		}
 	case 180:
-		//line n1ql.y:1375
+		//line n1ql.y:1376
 		{
 			yyVAL.mergeDelete = algebra.NewMergeDelete(yyS[yypt-0].expr)
 		}
 	case 181:
-		//line n1ql.y:1382
+		//line n1ql.y:1383
 		{
 			yyVAL.mergeInsert = algebra.NewMergeInsert(yyS[yypt-1].expr, yyS[yypt-0].expr)
 		}
 	case 182:
-		//line n1ql.y:1396
+		//line n1ql.y:1397
 		{
 			yyVAL.statement = algebra.NewCreatePrimaryIndex(yyS[yypt-1].keyspaceRef, yyS[yypt-0].indexType)
 		}
 	case 183:
-		//line n1ql.y:1401
+		//line n1ql.y:1402
 		{
 			yyVAL.statement = algebra.NewCreateIndex(yyS[yypt-8].s, yyS[yypt-6].keyspaceRef, yyS[yypt-4].exprs, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].indexType)
 		}
 	case 184:
 		yyVAL.s = yyS[yypt-0].s
 	case 185:
-		//line n1ql.y:1412
+		//line n1ql.y:1413
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef("", yyS[yypt-0].s, "")
 		}
 	case 186:
-		//line n1ql.y:1417
+		//line n1ql.y:1418
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef(yyS[yypt-2].s, yyS[yypt-0].s, "")
 		}
 	case 187:
-		//line n1ql.y:1424
+		//line n1ql.y:1425
 		{
 			yyVAL.expr = nil
 		}
 	case 188:
-		//line n1ql.y:1429
+		//line n1ql.y:1430
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 189:
-		//line n1ql.y:1436
+		//line n1ql.y:1437
 		{
 			yyVAL.indexType = datastore.VIEW
 		}
 	case 190:
-		//line n1ql.y:1441
+		//line n1ql.y:1442
 		{
 			yyVAL.indexType = datastore.VIEW
 		}
 	case 191:
-		//line n1ql.y:1446
+		//line n1ql.y:1447
 		{
 			yyVAL.indexType = datastore.GSI
 		}
 	case 192:
-		//line n1ql.y:1451
+		//line n1ql.y:1452
 		{
 			yyVAL.indexType = datastore.GSI
 		}
 	case 193:
-		//line n1ql.y:1458
+		//line n1ql.y:1459
 		{
 			yyVAL.exprs = expression.Expressions{yyS[yypt-0].expr}
 		}
 	case 194:
-		//line n1ql.y:1463
+		//line n1ql.y:1464
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 195:
-		//line n1ql.y:1470
+		//line n1ql.y:1471
 		{
 			exp := yyS[yypt-0].expr
 			if !exp.Indexable() || exp.Value() != nil {
@@ -2227,315 +2228,315 @@ yydefault:
 			yyVAL.expr = exp
 		}
 	case 196:
-		//line n1ql.y:1481
+		//line n1ql.y:1482
 		{
 			yyVAL.expr = nil
 		}
 	case 197:
-		//line n1ql.y:1486
+		//line n1ql.y:1487
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 198:
-		//line n1ql.y:1500
+		//line n1ql.y:1501
 		{
 			yyVAL.statement = algebra.NewDropIndex(yyS[yypt-0].keyspaceRef, "#primary")
 		}
 	case 199:
-		//line n1ql.y:1505
+		//line n1ql.y:1506
 		{
 			yyVAL.statement = algebra.NewDropIndex(yyS[yypt-2].keyspaceRef, yyS[yypt-0].s)
 		}
 	case 200:
-		//line n1ql.y:1518
+		//line n1ql.y:1519
 		{
 			yyVAL.statement = algebra.NewAlterIndex(yyS[yypt-3].keyspaceRef, yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 201:
-		//line n1ql.y:1524
+		//line n1ql.y:1525
 		{
 			yyVAL.s = ""
 		}
 	case 202:
-		//line n1ql.y:1529
+		//line n1ql.y:1530
 		{
 			yyVAL.s = yyS[yypt-0].s
 		}
 	case 203:
-		//line n1ql.y:1543
+		//line n1ql.y:1544
 		{
 			yyVAL.path = expression.NewIdentifier(yyS[yypt-0].s)
 		}
 	case 204:
-		//line n1ql.y:1548
+		//line n1ql.y:1549
 		{
 			yyVAL.path = expression.NewField(yyS[yypt-2].path, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 205:
-		//line n1ql.y:1553
+		//line n1ql.y:1554
 		{
 			field := expression.NewField(yyS[yypt-2].path, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.path = field
 		}
 	case 206:
-		//line n1ql.y:1560
+		//line n1ql.y:1561
 		{
 			yyVAL.path = expression.NewElement(yyS[yypt-3].path, yyS[yypt-1].expr)
 		}
 	case 207:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 208:
-		//line n1ql.y:1577
+		//line n1ql.y:1578
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 209:
-		//line n1ql.y:1582
+		//line n1ql.y:1583
 		{
 			field := expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 210:
-		//line n1ql.y:1589
+		//line n1ql.y:1590
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 		}
 	case 211:
-		//line n1ql.y:1594
+		//line n1ql.y:1595
 		{
 			field := expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 212:
-		//line n1ql.y:1601
+		//line n1ql.y:1602
 		{
 			yyVAL.expr = expression.NewElement(yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 213:
-		//line n1ql.y:1606
+		//line n1ql.y:1607
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-4].expr, yyS[yypt-2].expr)
 		}
 	case 214:
-		//line n1ql.y:1611
+		//line n1ql.y:1612
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-5].expr, yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 215:
-		//line n1ql.y:1617
+		//line n1ql.y:1618
 		{
 			yyVAL.expr = expression.NewAdd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 216:
-		//line n1ql.y:1622
+		//line n1ql.y:1623
 		{
 			yyVAL.expr = expression.NewSub(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 217:
-		//line n1ql.y:1627
+		//line n1ql.y:1628
 		{
 			yyVAL.expr = expression.NewMult(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 218:
-		//line n1ql.y:1632
+		//line n1ql.y:1633
 		{
 			yyVAL.expr = expression.NewDiv(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 219:
-		//line n1ql.y:1637
+		//line n1ql.y:1638
 		{
 			yyVAL.expr = expression.NewMod(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 220:
-		//line n1ql.y:1643
+		//line n1ql.y:1644
 		{
 			yyVAL.expr = expression.NewConcat(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 221:
-		//line n1ql.y:1649
+		//line n1ql.y:1650
 		{
 			yyVAL.expr = expression.NewAnd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 222:
-		//line n1ql.y:1654
+		//line n1ql.y:1655
 		{
 			yyVAL.expr = expression.NewOr(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 223:
-		//line n1ql.y:1659
+		//line n1ql.y:1660
 		{
 			yyVAL.expr = expression.NewNot(yyS[yypt-0].expr)
 		}
 	case 224:
-		//line n1ql.y:1665
+		//line n1ql.y:1666
 		{
 			yyVAL.expr = expression.NewEq(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 225:
-		//line n1ql.y:1670
+		//line n1ql.y:1671
 		{
 			yyVAL.expr = expression.NewEq(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 226:
-		//line n1ql.y:1675
+		//line n1ql.y:1676
 		{
 			yyVAL.expr = expression.NewNE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 227:
-		//line n1ql.y:1680
+		//line n1ql.y:1681
 		{
 			yyVAL.expr = expression.NewLT(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 228:
-		//line n1ql.y:1685
+		//line n1ql.y:1686
 		{
 			yyVAL.expr = expression.NewGT(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 229:
-		//line n1ql.y:1690
+		//line n1ql.y:1691
 		{
 			yyVAL.expr = expression.NewLE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 230:
-		//line n1ql.y:1695
+		//line n1ql.y:1696
 		{
 			yyVAL.expr = expression.NewGE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 231:
-		//line n1ql.y:1700
+		//line n1ql.y:1701
 		{
 			yyVAL.expr = expression.NewBetween(yyS[yypt-4].expr, yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 232:
-		//line n1ql.y:1705
+		//line n1ql.y:1706
 		{
 			yyVAL.expr = expression.NewNotBetween(yyS[yypt-5].expr, yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 233:
-		//line n1ql.y:1710
+		//line n1ql.y:1711
 		{
 			yyVAL.expr = expression.NewLike(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 234:
-		//line n1ql.y:1715
+		//line n1ql.y:1716
 		{
 			yyVAL.expr = expression.NewNotLike(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 235:
-		//line n1ql.y:1720
+		//line n1ql.y:1721
 		{
 			yyVAL.expr = expression.NewIn(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 236:
-		//line n1ql.y:1725
+		//line n1ql.y:1726
 		{
 			yyVAL.expr = expression.NewNotIn(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 237:
-		//line n1ql.y:1730
+		//line n1ql.y:1731
 		{
 			yyVAL.expr = expression.NewWithin(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 238:
-		//line n1ql.y:1735
+		//line n1ql.y:1736
 		{
 			yyVAL.expr = expression.NewNotWithin(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 239:
-		//line n1ql.y:1740
+		//line n1ql.y:1741
 		{
 			yyVAL.expr = expression.NewIsNull(yyS[yypt-2].expr)
 		}
 	case 240:
-		//line n1ql.y:1745
+		//line n1ql.y:1746
 		{
 			yyVAL.expr = expression.NewIsNotNull(yyS[yypt-3].expr)
 		}
 	case 241:
-		//line n1ql.y:1750
+		//line n1ql.y:1751
 		{
 			yyVAL.expr = expression.NewIsMissing(yyS[yypt-2].expr)
 		}
 	case 242:
-		//line n1ql.y:1755
+		//line n1ql.y:1756
 		{
 			yyVAL.expr = expression.NewIsNotMissing(yyS[yypt-3].expr)
 		}
 	case 243:
-		//line n1ql.y:1760
+		//line n1ql.y:1761
 		{
 			yyVAL.expr = expression.NewIsValued(yyS[yypt-2].expr)
 		}
 	case 244:
-		//line n1ql.y:1765
+		//line n1ql.y:1766
 		{
 			yyVAL.expr = expression.NewIsNotValued(yyS[yypt-3].expr)
 		}
 	case 245:
-		//line n1ql.y:1770
+		//line n1ql.y:1771
 		{
 			yyVAL.expr = expression.NewIsBoolean(yyS[yypt-2].expr)
 		}
 	case 246:
-		//line n1ql.y:1775
+		//line n1ql.y:1776
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsBoolean(yyS[yypt-3].expr))
 		}
 	case 247:
-		//line n1ql.y:1780
+		//line n1ql.y:1781
 		{
 			yyVAL.expr = expression.NewIsNumber(yyS[yypt-2].expr)
 		}
 	case 248:
-		//line n1ql.y:1785
+		//line n1ql.y:1786
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsNumber(yyS[yypt-3].expr))
 		}
 	case 249:
-		//line n1ql.y:1790
+		//line n1ql.y:1791
 		{
 			yyVAL.expr = expression.NewIsString(yyS[yypt-2].expr)
 		}
 	case 250:
-		//line n1ql.y:1795
+		//line n1ql.y:1796
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsString(yyS[yypt-3].expr))
 		}
 	case 251:
-		//line n1ql.y:1800
+		//line n1ql.y:1801
 		{
 			yyVAL.expr = expression.NewIsArray(yyS[yypt-2].expr)
 		}
 	case 252:
-		//line n1ql.y:1805
+		//line n1ql.y:1806
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsArray(yyS[yypt-3].expr))
 		}
 	case 253:
-		//line n1ql.y:1810
+		//line n1ql.y:1811
 		{
 			yyVAL.expr = expression.NewIsObject(yyS[yypt-2].expr)
 		}
 	case 254:
-		//line n1ql.y:1815
+		//line n1ql.y:1816
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsObject(yyS[yypt-3].expr))
 		}
 	case 255:
-		//line n1ql.y:1820
+		//line n1ql.y:1821
 		{
 			yyVAL.expr = expression.NewIsBinary(yyS[yypt-2].expr)
 		}
 	case 256:
-		//line n1ql.y:1825
+		//line n1ql.y:1826
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsBinary(yyS[yypt-3].expr))
 		}
 	case 257:
-		//line n1ql.y:1830
+		//line n1ql.y:1831
 		{
 			yyVAL.expr = expression.NewExists(yyS[yypt-0].expr)
 		}
@@ -2544,12 +2545,12 @@ yydefault:
 	case 259:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 260:
-		//line n1ql.y:1844
+		//line n1ql.y:1845
 		{
 			yyVAL.expr = expression.NewIdentifier(yyS[yypt-0].s)
 		}
 	case 261:
-		//line n1ql.y:1850
+		//line n1ql.y:1851
 		{
 			yyVAL.expr = expression.NewSelf()
 		}
@@ -2558,7 +2559,7 @@ yydefault:
 	case 263:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 264:
-		//line n1ql.y:1862
+		//line n1ql.y:1863
 		{
 			yyVAL.expr = expression.NewNeg(yyS[yypt-0].expr)
 		}
@@ -2571,106 +2572,106 @@ yydefault:
 	case 268:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 269:
-		//line n1ql.y:1881
+		//line n1ql.y:1882
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 270:
-		//line n1ql.y:1886
+		//line n1ql.y:1887
 		{
 			field := expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 271:
-		//line n1ql.y:1893
+		//line n1ql.y:1894
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 		}
 	case 272:
-		//line n1ql.y:1898
+		//line n1ql.y:1899
 		{
 			field := expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 273:
-		//line n1ql.y:1905
+		//line n1ql.y:1906
 		{
 			yyVAL.expr = expression.NewElement(yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 274:
-		//line n1ql.y:1910
+		//line n1ql.y:1911
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-4].expr, yyS[yypt-2].expr)
 		}
 	case 275:
-		//line n1ql.y:1915
+		//line n1ql.y:1916
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-5].expr, yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 276:
-		//line n1ql.y:1921
+		//line n1ql.y:1922
 		{
 			yyVAL.expr = expression.NewAdd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 277:
-		//line n1ql.y:1926
+		//line n1ql.y:1927
 		{
 			yyVAL.expr = expression.NewSub(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 278:
-		//line n1ql.y:1931
+		//line n1ql.y:1932
 		{
 			yyVAL.expr = expression.NewMult(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 279:
-		//line n1ql.y:1936
+		//line n1ql.y:1937
 		{
 			yyVAL.expr = expression.NewDiv(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 280:
-		//line n1ql.y:1941
+		//line n1ql.y:1942
 		{
 			yyVAL.expr = expression.NewMod(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 281:
-		//line n1ql.y:1947
+		//line n1ql.y:1948
 		{
 			yyVAL.expr = expression.NewConcat(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 282:
-		//line n1ql.y:1961
+		//line n1ql.y:1962
 		{
 			yyVAL.expr = expression.NULL_EXPR
 		}
 	case 283:
-		//line n1ql.y:1966
+		//line n1ql.y:1967
 		{
 			yyVAL.expr = expression.MISSING_EXPR
 		}
 	case 284:
-		//line n1ql.y:1971
+		//line n1ql.y:1972
 		{
 			yyVAL.expr = expression.FALSE_EXPR
 		}
 	case 285:
-		//line n1ql.y:1976
+		//line n1ql.y:1977
 		{
 			yyVAL.expr = expression.TRUE_EXPR
 		}
 	case 286:
-		//line n1ql.y:1981
+		//line n1ql.y:1982
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].f))
 		}
 	case 287:
-		//line n1ql.y:1986
+		//line n1ql.y:1987
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].n))
 		}
 	case 288:
-		//line n1ql.y:1991
+		//line n1ql.y:1992
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].s))
 		}
@@ -2679,56 +2680,56 @@ yydefault:
 	case 290:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 291:
-		//line n1ql.y:2011
+		//line n1ql.y:2012
 		{
 			yyVAL.expr = expression.NewObjectConstruct(yyS[yypt-1].bindings)
 		}
 	case 292:
-		//line n1ql.y:2018
+		//line n1ql.y:2019
 		{
 			yyVAL.bindings = nil
 		}
 	case 293:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 294:
-		//line n1ql.y:2027
+		//line n1ql.y:2028
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 295:
-		//line n1ql.y:2032
+		//line n1ql.y:2033
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 296:
-		//line n1ql.y:2039
+		//line n1ql.y:2040
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 297:
-		//line n1ql.y:2046
+		//line n1ql.y:2047
 		{
 			yyVAL.expr = expression.NewArrayConstruct(yyS[yypt-1].exprs...)
 		}
 	case 298:
-		//line n1ql.y:2053
+		//line n1ql.y:2054
 		{
 			yyVAL.exprs = nil
 		}
 	case 299:
 		yyVAL.exprs = yyS[yypt-0].exprs
 	case 300:
-		//line n1ql.y:2069
+		//line n1ql.y:2070
 		{
 			yyVAL.expr = algebra.NewNamedParameter(yyS[yypt-0].s)
 		}
 	case 301:
-		//line n1ql.y:2074
+		//line n1ql.y:2075
 		{
 			yyVAL.expr = algebra.NewPositionalParameter(yyS[yypt-0].n)
 		}
 	case 302:
-		//line n1ql.y:2088
+		//line n1ql.y:2089
 		{
 			yyVAL.expr = yyS[yypt-1].expr
 		}
@@ -2737,37 +2738,37 @@ yydefault:
 	case 304:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 305:
-		//line n1ql.y:2101
+		//line n1ql.y:2102
 		{
 			yyVAL.expr = expression.NewSimpleCase(yyS[yypt-2].expr, yyS[yypt-1].whenTerms, yyS[yypt-0].expr)
 		}
 	case 306:
-		//line n1ql.y:2108
+		//line n1ql.y:2109
 		{
 			yyVAL.whenTerms = expression.WhenTerms{&expression.WhenTerm{yyS[yypt-2].expr, yyS[yypt-0].expr}}
 		}
 	case 307:
-		//line n1ql.y:2113
+		//line n1ql.y:2114
 		{
 			yyVAL.whenTerms = append(yyS[yypt-4].whenTerms, &expression.WhenTerm{yyS[yypt-2].expr, yyS[yypt-0].expr})
 		}
 	case 308:
-		//line n1ql.y:2121
+		//line n1ql.y:2122
 		{
 			yyVAL.expr = expression.NewSearchedCase(yyS[yypt-1].whenTerms, yyS[yypt-0].expr)
 		}
 	case 309:
-		//line n1ql.y:2128
+		//line n1ql.y:2129
 		{
 			yyVAL.expr = nil
 		}
 	case 310:
-		//line n1ql.y:2133
+		//line n1ql.y:2134
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 311:
-		//line n1ql.y:2147
+		//line n1ql.y:2148
 		{
 			yyVAL.expr = nil
 			f, ok := expression.GetFunction(yyS[yypt-3].s)
@@ -2786,7 +2787,7 @@ yydefault:
 			}
 		}
 	case 312:
-		//line n1ql.y:2166
+		//line n1ql.y:2167
 		{
 			yyVAL.expr = nil
 			if !yylex.(*lexer).parsingStatement() {
@@ -2801,17 +2802,21 @@ yydefault:
 			}
 		}
 	case 313:
-		//line n1ql.y:2181
+		//line n1ql.y:2182
 		{
 			yyVAL.expr = nil
 			if !yylex.(*lexer).parsingStatement() {
 				yylex.Error("Cannot use aggregate as an inline expression.")
 			} else {
-				agg, ok := algebra.GetAggregate(yyS[yypt-3].s, false)
-				if ok {
-					yyVAL.expr = agg.Constructor()(nil)
+				if strings.ToLower(yyS[yypt-3].s) != "count" {
+					yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", yyS[yypt-3].s))
 				} else {
-					yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", yyS[yypt-3].s))
+					agg, ok := algebra.GetAggregate(yyS[yypt-3].s, false)
+					if ok {
+						yyVAL.expr = agg.Constructor()(nil)
+					} else {
+						yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", yyS[yypt-3].s))
+					}
 				}
 			}
 		}
@@ -2822,64 +2827,64 @@ yydefault:
 	case 316:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 317:
-		//line n1ql.y:2215
-		{
-			yyVAL.expr = expression.NewAny(yyS[yypt-2].bindings, yyS[yypt-1].expr)
-		}
-	case 318:
 		//line n1ql.y:2220
 		{
 			yyVAL.expr = expression.NewAny(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
-	case 319:
+	case 318:
 		//line n1ql.y:2225
+		{
+			yyVAL.expr = expression.NewAny(yyS[yypt-2].bindings, yyS[yypt-1].expr)
+		}
+	case 319:
+		//line n1ql.y:2230
 		{
 			yyVAL.expr = expression.NewEvery(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 320:
-		//line n1ql.y:2232
+		//line n1ql.y:2237
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 321:
-		//line n1ql.y:2237
+		//line n1ql.y:2242
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 322:
-		//line n1ql.y:2244
+		//line n1ql.y:2249
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 323:
-		//line n1ql.y:2249
+		//line n1ql.y:2254
 		{
 			yyVAL.binding = expression.NewDescendantBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 324:
-		//line n1ql.y:2256
+		//line n1ql.y:2261
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 325:
-		//line n1ql.y:2263
+		//line n1ql.y:2268
 		{
 			yyVAL.expr = expression.NewArray(yyS[yypt-4].expr, yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 326:
-		//line n1ql.y:2268
+		//line n1ql.y:2273
 		{
 			yyVAL.expr = expression.NewFirst(yyS[yypt-4].expr, yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 327:
-		//line n1ql.y:2282
+		//line n1ql.y:2287
 		{
 			yyVAL.expr = yyS[yypt-1].expr
 		}
 	case 328:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 329:
-		//line n1ql.y:2291
+		//line n1ql.y:2296
 		{
 			yyVAL.expr = nil
 			if yylex.(*lexer).parsingStatement() {
