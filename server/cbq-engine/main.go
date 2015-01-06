@@ -13,7 +13,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"time"
 
@@ -51,8 +53,57 @@ var LOGGER = flag.String("logger", "", "Logger implementation")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
 
+//cpu and memory profiling flags
+var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
+var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
+
 func main() {
 	flag.Parse()
+
+	var f *os.File
+	if *MEM_PROFILE != "" {
+		var err error
+		f, err = os.Create(*MEM_PROFILE)
+		if err != nil {
+			fmt.Printf("Cannot start mem profiler %v\n", err)
+		} else {
+			defer func() {
+				pprof.WriteHeapProfile(f)
+				f.Close()
+			}()
+		}
+	}
+
+	if *CPU_PROFILE != "" {
+		f, err := os.Create(*CPU_PROFILE)
+		if err != nil {
+			fmt.Printf("Cannot start cpu profiler %v\n", err)
+		} else {
+
+			pprof.StartCPUProfile(f)
+			defer pprof.StopCPUProfile()
+
+		}
+	}
+
+	// install signal hanlders to write the profile on exit
+	if *CPU_PROFILE != "" || *MEM_PROFILE != "" {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			for sig := range c {
+				fmt.Printf("captured %v, stopping profiler and exiting..\n", sig)
+				if *CPU_PROFILE != "" {
+					pprof.StopCPUProfile()
+				}
+				if *MEM_PROFILE != "" {
+					pprof.WriteHeapProfile(f)
+					f.Close()
+				}
+				os.Exit(1)
+			}
+		}()
+	}
 
 	if *LOGGER != "" {
 		logger, _ := log_resolver.NewLogger(*LOGGER)
