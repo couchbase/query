@@ -7,6 +7,6 @@ echo.
 
 start "cbq" "http://localhost:8093/tutorial/"
 
-cbq-engine -couchbase dir:data
+cbq-engine -datastore=dir:data
 
 popd

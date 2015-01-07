@@ -52,6 +52,7 @@ var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
+var STATIC_PATH = flag.String("staticPath", "static", "Path to static content")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -179,7 +180,7 @@ func main() {
 		logging.Pair{"datastore", *DATASTORE},
 	)
 
-	endpoint := http.NewServiceEndpoint(server, *METRICS, *HTTP_ADDR)
+	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS, *HTTP_ADDR)
 	er := endpoint.ListenAndServe()
 	if er != nil {
 		logging.Errorf("cbq-engine exiting with error: %v", er)

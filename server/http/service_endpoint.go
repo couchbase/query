@@ -30,7 +30,7 @@ const (
 	servicePrefix = "/query/service"
 )
 
-func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpEndpoint {
+func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool, addr string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:  server,
 		metrics: metrics,
@@ -48,6 +48,9 @@ func NewServiceEndpoint(server *server.Server, metrics bool, addr string) *HttpE
 
 	// Enable /admin endpoint
 	registerAdminHandlers(server)
+
+	// Handle static endpoint
+	http.Handle("/", (http.FileServer(http.Dir(staticPath))))
 
 	return rv
 }
