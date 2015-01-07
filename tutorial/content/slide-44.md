@@ -1,15 +1,13 @@
-## Merchant - Generating the month-over-month sales report
+## Merchant - Reporting customers by region
 
-Sonia, the general manager of dimestore, has asked her sales staff to put together a month-on-month sales report.
-
-![ScreenShot](./images/salesmam.png)
-
-Rudy runs the N1QL query to generate the data needed for his report. Try it out.
+dimestore wants to launch a regional marketing campaign and management wants a report of the number of customers
+per region grouped by postal code
+ 
+![ScreenShot](./images/howzipworks.png)
 
 <pre id="example">
-SELECT substr(purchases.purchasedAt, 0, 7) as month, 
-	round(sum(product.unitPrice * items.count)/1000000, 3) revenueMillion
-FROM purchases unnest purchases.lineItems as items join product key items.product 
-GROUP BY substr(purchases.purchasedAt, 0, 7) 
-ORDER BY month 
+	SELECT count(customer) as customerCount, state
+	FROM customer 
+	GROUP BY state
+	ORDER BY customerCount DESC
 </pre>

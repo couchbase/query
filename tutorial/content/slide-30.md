@@ -1,18 +1,14 @@
-##  Shopper - Browsing products from page to page 
+## DELETE
 
-Don enjoys playing golf and he is looking for a driver that will bring a new swing to his game. 
+Keys can be deleted using the DELETE clause. The returning clause in the example query on the right will return the list of keys that were deleted from the bucket
 
-He selects the "golf" category and browses through the available golf gear. The webpage shows 10 items at a time, paging through the result set.   
+The example below will delete all documents where tutorial.title = "Mrs"
 
-![ScreenShot](./images/webpagination.png)
-
-Get a list of all the golfing products limit by 10, and skip the first 10
+<span style="color: red">
+EXPLAIN DELETE FROM tutorial t WHERE t.title = "Mrs"
+</span>
 
 <pre id="example">
-    SELECT *
-	FROM product 
-	unnest product.categories as cat
-		WHERE lower(cat) in ["golf"] LIMIT 10 OFFSET 10 
+    EXPLAIN DELETE FROM tutorial t 
+        USE KEYS "baldwin" RETURNING t
 </pre>
-
-

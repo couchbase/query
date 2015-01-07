@@ -1,15 +1,15 @@
-##  Listing messages sent by a user 
+## Merchant - Generating the month-over-month sales report
 
-In jungleville, players can send messages to other players. 
+Sonia, the general manager of dimestore, has asked her sales staff to put together a month-on-month sales report.
 
-How do you get a list of all the messages sent by a player zid-jungle-0001 to all other players? Run this N1QL query to find out all the messages sent by player zid-jungle-0001. 
+![ScreenShot](./images/salesmam.png)
+
+Rudy runs the N1QL query to generate the data needed for his report. Try it out.
 
 <pre id="example">
-SELECT player.name, inbox.messages
-FROM jungleville AS player 
-	KEY "zid-jungle-0001" 
-LEFT JOIN jungleville_inbox AS inbox 
-	KEY "zid-jungle-inbox-" || SUBSTR(player.uuid, 11)
+SELECT substr(purchases.purchasedAt, 0, 7) as month, 
+	round(sum(product.unitPrice * items.count)/1000000, 3) revenueMillion
+FROM purchases unnest purchases.lineItems as items join product key items.product 
+GROUP BY substr(purchases.purchasedAt, 0, 7) 
+ORDER BY month 
 </pre>
-
-

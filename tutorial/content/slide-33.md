@@ -1,13 +1,18 @@
-## Shopper - Listing products in a category 
+##  Shopper - Browsing products from page to page 
 
-Don also wants to browse through some appliances. Maybe, a dishwasher to wash his cup. What do you think?
+Don enjoys playing golf and he is looking for a driver that will bring a new swing to his game. 
 
-He clicks on the "Appliances" category on the site menu, and the website displays a list of appliances he can browse through.
+He selects the "golf" category and browses through the available golf gear. The webpage shows 10 items at a time, paging through the result set.   
+
+![ScreenShot](./images/webpagination.png)
+
+Get a list of all the golfing products limit by 10, and skip the first 10
 
 <pre id="example">
-    SELECT
-	product 
-	FROM product
-	UNNEST product.categories as categories
-	WHERE categories = "Appliances"
+    SELECT *
+	FROM product 
+	unnest product.categories as cat
+		WHERE lower(cat) in ["golf"] LIMIT 10 OFFSET 10 
 </pre>
+
+

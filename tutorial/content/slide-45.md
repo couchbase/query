@@ -1,31 +1,15 @@
-## <b>Case Study II . Social Game</b>
+## Merchant - Reporting the active monthly customers
 
-In this section we look at some typical queries that are needed for a social game applicaton. 
-Let's imagine that we are building a game called jungleville that uses the following three buckets: 
+In the e-commerce world, purchases define user activity and growth. The dimestore sales team wants to know the number of unique customers that purchased something on the site in the last month.  Dixon has been asked to produce a report. 
 
-<ul>
-<li>
-<b>jungleville:</b> this bucket contains the player profile data and game related data such as level, experience and various other gameplay information. Keys in this bucket are named in the following format: zid-jungle-{user_id}.
-</li>
-<li>
-<b>jungleville_stats:</b> this bucket contains the systems stats such as frame-rate, game loading 
-time, and player-vs-player stats. Keys in this bucket are named in the following format: zid-jungle-stats-{user_id}.
-</li>
-<li>
-<b>jungleville_inbox:</b> In jungleville, each player has an inbox. Messages sent to a player are appened 
-to the existing array of messages. When a message is consumed by a player those messages 
-are removed from the message array. Run the query on the right to see what a message in jungleville looks like.
-</li>
-</ul>
+He uses N1QL to query Couchbase and get the numbers he needs for his report.
+ 
+![ScreenShot](./images/activeshopper.png)
 
 <pre id="example">
-SELECT * FROM jungleville_inbox LIMIT 1
+	SELECT COUNT(DISTINCT purchases.customerId) 
+	FROM purchases
+	WHERE str_to_millis(purchases.purchasedAt) BETWEEN str_to_millis("2014-02-01") AND str_to_millis("2014-03-01")
 </pre>
 
-Try also running the following queries to examine the content of a user profile and stats blob:
-<br/><br/>
-<span style="color: red">
-SELECT * FROM jungleville LIMIT 1
-<br/>
-SELECT * FROM jungleville_stats LIMIT 1
-</span>
+Now, think about how you would change this query to get a 7-day trend or a 24-hr trend

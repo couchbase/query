@@ -1,17 +1,19 @@
-## Shopper - Listing the highest rated products
+## Shopper - Browsing products and sorting results 
 
-There are so many choices when it comes to finding the right products, and sometimes it gets overwhelming. To get an un-biased view, why not use product ratings?
+Don wants a list of new and popular items - i.e. items that are recently added to the product catalog and have many units sold.
 
-Don wants to know the top 5 highly rated products. 
-
-![ScreenShot](./images/reviews.png)
+![ScreenShot](./images/sortby.png)
 
 <pre id="example">
-	SELECT product.name, round(avg(reviews.rating),1) as avg_rating 
-	FROM reviews join product key reviews.productId 
-	GROUP BY product 
-	ORDER BY avg(reviews.rating) DESC LIMIT 5
+	SELECT product.name, product.dateAdded, sum(items.count) as unitsSold 
+		FROM purchases unnest purchases.lineItems as items 
+		JOIN product key items.product 
+		GROUP BY product 
+		ORDER BY product.dateAdded, unitsSold desc limit 10
 </pre>
 
-What you saw was just a handful of queries that were relevant to a shopper, but you can use N1QL for more advanced query scenarios in your applications. In the next few slides, we will go over queries from the merchant point of view. 
+How about sorting by price? - Copy, paste, and run the following query to sort by price (Low to high)
+
+<span style="color: red">
+select product from product order by unitPrice desc limit 100
 </span>

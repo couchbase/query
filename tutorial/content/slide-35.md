@@ -1,19 +1,13 @@
-## Shopper - Browsing products and sorting results 
+## Shopper - Browsing and searching for a product
+ 
+Because, there is no category called "cup", Don decides to search for product names that have the substring "cup".
 
-Don wants a list of new and popular items - i.e. items that are recently added to the product catalog and have many units sold.
-
-![ScreenShot](./images/sortby.png)
+<b>Did you know that ....</b><br/>
+when researching branded products, 44% of online shoppers begin by using a search?
 
 <pre id="example">
-	SELECT product.name, product.dateAdded, sum(items.count) as unitsSold 
-		FROM purchases unnest purchases.lineItems as items 
-		JOIN product key items.product 
-		GROUP BY product 
-		ORDER BY product.dateAdded, unitsSold desc limit 10
+    SELECT 
+	productId, name
+	FROM product
+	WHERE lower(name) like "%cup%"
 </pre>
-
-How about sorting by price? - Copy, paste, and run the following query to sort by price (Low to high)
-
-<span style="color: red">
-select product from product order by unitPrice desc limit 100
-</span>

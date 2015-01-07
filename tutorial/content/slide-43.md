@@ -1,13 +1,19 @@
-## Merchant - Identifying non-performing products
+## Merchant - Finding the most valued shoppers
 
-In order to maintain an assortment of products that reflect customer demand and inventory productivity, dimestore uses product reviews to get a list of low rated products to be removed.
+The marketing team at dimestore wants to e-mail special discount coupons to the top 10 loyal shoppers.
 
-Dillon, a category manager at dimestore has asked Judy to come up with a list of products that have average review score less than 1.
-
-Run the query to find out which products have an average rating below 1
+List the top 10 shoppers based on the total amount spent 
+ 
+![ScreenShot](./images/coupons.png)
 
 <pre id="example">
-	SELECT product, avg(reviews.rating) avgRating, count(reviews) numReviews 
-	FROM product join reviews keys product.reviewList 
-	GROUP BY product having avg(reviews.rating) < 1
+	SELECT 	customer.firstName, 
+		customer.lastName, 
+		customer.emailAddress,
+		sum(items.count) purchaseCount, 
+		round(sum(product.unitPrice * items.count))  totalSpent 
+	FROM purchases unnest purchases.lineItems as items 
+	JOIN product key items.product join customer key purchases.customerId 
+	GROUP BY customer 
+	ORDER BY totalSpent desc limit 10	
 </pre>

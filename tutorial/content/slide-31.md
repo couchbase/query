@@ -1,16 +1,13 @@
-## Shopper - Listing product categories 
+## UPDATE
 
-Don also wants to buy a new cup for his everyday coffee.
+UPDATE replaces a document that already exists with updated values
 
-He looks at the catalog of product categories to see if there is a category for cups.
-
-![ScreenShot](./images/coffeecup.png)
-
-Is there a "cup" category available? (HINT: Run the query to see if there is one) 
+The example on the right would have changed the type of the document "baldwin" from 
+"contact" to "actor"
 
 <pre id="example">
-    SELECT 
-	DISTINCT categories
-	FROM product
-	UNNEST product.categories as categories
+    EXPLAIN 
+        UPDATE tutorial 
+            USE KEYS "baldwin" 
+                SET type = "actor" RETURNING tutorial.type
 </pre>

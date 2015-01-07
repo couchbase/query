@@ -1,15 +1,14 @@
-## Merchant - Reporting the active monthly customers
+## Merchant - Preparing a purchase order 
 
-In the e-commerce world, purchases define user activity and growth. The dimestore sales team wants to know the number of unique customers that purchased something on the site in the last month.  Dixon has been asked to produce a report. 
+Merchants need to keep an eye on important customers, special promotions, popular products and ensure orders are processing as they should be. Let us cover some of these scenarios and learn how N1QL can be used to query relevant data in each case. 
 
-He uses N1QL to query Couchbase and get the numbers he needs for his report.
- 
-![ScreenShot](./images/activeshopper.png)
+The dispatch team has been notified that an order has been placed and would like to review the purchase order.
+
+![ScreenShot](./images/purchaseorder.png)
 
 <pre id="example">
-	SELECT COUNT(DISTINCT purchases.customerId) 
-	FROM purchases
-	WHERE str_to_millis(purchases.purchasedAt) BETWEEN str_to_millis("2014-02-01") AND str_to_millis("2014-03-01")
+	SELECT purchases, product, customer 
+	FROM purchases KEY "purchase0" UNNEST purchases.lineItems AS items 
+        JOIN product KEY items.product
+        JOIN customer KEY purchases.customerId
 </pre>
-
-Now, think about how you would change this query to get a 7-day trend or a 24-hr trend

@@ -1,13 +1,13 @@
-## Shopper - Shopping at a one-day sale
+## Shopper - Listing products in a category 
 
-dimestore announces a one-day super sale, with deals for many products.
- 
-Are there any appliances on sale below $6.99? 
+Don also wants to browse through some appliances. Maybe, a dishwasher to wash his cup. What do you think?
 
-![ScreenShot](./images/onedaysale.png)
+He clicks on the "Appliances" category on the site menu, and the website displays a list of appliances he can browse through.
 
 <pre id="example">
-	SELECT product.name, product.unitPrice, product.categories 
-	FROM product unnest product.categories as categories 
-	WHERE categories = "Appliances" and product.unitPrice < 6.99
+    SELECT
+	product 
+	FROM product
+	UNNEST product.categories as categories
+	WHERE categories = "Appliances"
 </pre>

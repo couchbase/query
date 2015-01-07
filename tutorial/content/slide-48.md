@@ -1,15 +1,13 @@
-## Generating scoreboards
+## Merchant - Big ticket orders
 
-In jungleville, head-to-head matchups are a regular affair. Scoreboards can be used to keep track of competition and who has won. 
-
-What does the scoreboard for user_id=0004 look like?
+Sonia now wants to find out which of the orders in the month of April exceeded the unit price of $500. The query on right uses subquery clause to get the desired results
 
 <pre id="example">
-SELECT stats.uuid AS player, hist.uuid AS opponent, 
-	SUM(CASE WHEN hist.result = "won" THEN 1 ELSE 0 END) AS wins, 
-	SUM(CASE WHEN hist.result = "lost" THEN 1 ELSE 0 END) AS losses
-FROM jungleville_stats AS stats 
-	KEY "zid-jungle-stats-0004" 
-UNNEST stats.pvp-hist AS hist
-GROUP BY stats.uuid, hist.uuid
+    SELECT purchases.purchaseId, l.product 
+        FROM purchases unnest purchases.lineItems l 
+            WHERE DATE_PART_STR(purchases.purchasedAt,"month") = 4
+            AND DATE_PART_STR(purchases.purchasedAt,"year") = 2014 
+            AND EXISTS (SELECT product.productId FROM product USE KEYS l.product 
+                WHERE product.unitPrice > 500);
 </pre>
+

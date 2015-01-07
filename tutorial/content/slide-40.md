@@ -1,19 +1,15 @@
-## Merchant - Finding the most valued shoppers
+## Shopper - Listing the top 10 best selling products
 
-The marketing team at dimestore wants to e-mail special discount coupons to the top 10 loyal shoppers.
+Don wants to know what are the top 10 best selling products on the dimestore website. 
 
-List the top 10 shoppers based on the total amount spent 
- 
-![ScreenShot](./images/coupons.png)
+Thanks to N1QL, we can now easily query the data in Couchbase to produce that list. 
+
+![ScreenShot](./images/top10.png)
 
 <pre id="example">
-	SELECT 	customer.firstName, 
-		customer.lastName, 
-		customer.emailAddress,
-		sum(items.count) purchaseCount, 
-		round(sum(product.unitPrice * items.count))  totalSpent 
+	SELECT product.name, sum(items.count) as unitsSold 
 	FROM purchases unnest purchases.lineItems as items 
-	JOIN product key items.product join customer key purchases.customerId 
-	GROUP BY customer 
-	ORDER BY totalSpent desc limit 10	
+	JOIN product key items.product 
+	GROUP BY product 
+	ORDER BY unitsSold desc limit 10	
 </pre>

@@ -1,12 +1,15 @@
-## Listing friends
+## Assembling and loading user profiles
 
-To compute local leaderboards, you might want to join a player's blob with their friends blob. This N1QL query shows you how to do that.
+When a player loads his gameworld the client application needs to load the data from all the buckets. 
+This can be accomplished by running a single N1QL query. The query on the right assembles 
+the blobs from all three buckets for a user with key "zid-jungle-0001".
 
 <pre id="example">
-SELECT jungleville.level, friends 
-FROM jungleville KEY "zid-jungle-0002" 
-JOIN jungleville.friends
-	KEYS jungleville.friends
+SELECT * 
+FROM jungleville AS game-data 
+JOIN  jungleville_stats AS stats
+	KEY "zid-jungle-stats-0001" 
+NEST  jungleville_inbox AS inbox 
+	KEY "zid-jungle-inbox-0001" 
+WHERE game-data.uuid="zid-jungle-0001"
 </pre>
-
-Thank you for exploring N1QL. Remember, this was just a quick tutorial. <a href="http://www.couchbase.com/communities/n1ql#n1qldownload">Download N1QL</a> today and try out more complex queries.

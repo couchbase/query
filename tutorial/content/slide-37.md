@@ -1,15 +1,22 @@
-## Shopper - Listing the top 10 best selling products
+## Shopper - Finding the most popular products in a category 
 
-Don wants to know what are the top 10 best selling products on the dimestore website. 
+With so many appliances to choose from, Don wants to know the top 3 appliances so that he can easily pick which one to buy. 
 
-Thanks to N1QL, we can now easily query the data in Couchbase to produce that list. 
+What are the top 3 highly rated appliances? Run the query to figure this out. 
 
-![ScreenShot](./images/top10.png)
+![ScreenShot](./images/top3.png)
 
 <pre id="example">
-	SELECT product.name, sum(items.count) as unitsSold 
-	FROM purchases unnest purchases.lineItems as items 
-	JOIN product key items.product 
-	GROUP BY product 
-	ORDER BY unitsSold desc limit 10	
+    SELECT
+	product.name, 
+	count(reviews) as reviewCount,
+	round(avg(reviews.rating),1) as AvgRating,
+	category from reviews
+	AS reviews
+	JOIN product as product key reviews.productId
+	UNNEST product.categories as category
+	where category = "Appliances"
+	GROUP by category, product
+	ORDER by AvgRating 
+	DESC LIMIT 3 
 </pre>
