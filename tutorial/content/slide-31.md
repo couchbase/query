@@ -1,4 +1,5 @@
 ## UPDATE
+This feature is currently experimental and not for use in production.
 
 UPDATE replaces a document that already exists with updated values
 

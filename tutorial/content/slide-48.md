@@ -4,10 +4,10 @@ Sonia now wants to find out which of the orders in the month of April exceeded t
 
 <pre id="example">
     SELECT purchases.purchaseId, l.product 
-        FROM purchases unnest purchases.lineItems l 
+        FROM purchases UNNEST purchases.lineItems l 
             WHERE DATE_PART_STR(purchases.purchasedAt,"month") = 4
             AND DATE_PART_STR(purchases.purchasedAt,"year") = 2014 
             AND EXISTS (SELECT product.productId FROM product USE KEYS l.product 
-                WHERE product.unitPrice > 500);
+                WHERE product.unitPrice > 500)
 </pre>
 

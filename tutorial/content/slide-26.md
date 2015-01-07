@@ -7,9 +7,9 @@ The query on the right nests a user's order descriptions in the result. Try repl
 Similar to the JOIN clause, the NEST clause also supports LEFT joins
 
 <pre id="example"> 
-SELECT user.personal_details, orders
-    FROM users_with_orders user 
-        KEY "Elinor_33313792" 
+SELECT usr.personal_details, orders
+    FROM users_with_orders usr 
+        USE KEYS "Elinor_33313792" 
             NEST orders_with_users orders 
-                KEYS ARRAY s.order_id FOR s IN user.shipped_order_history END
+               ON KEYS ARRAY s.order_id FOR s IN usr.shipped_order_history END
 </pre>

@@ -8,6 +8,6 @@ Are there any appliances on sale below $6.99?
 
 <pre id="example">
 	SELECT product.name, product.unitPrice, product.categories 
-	FROM product unnest product.categories as categories 
-	WHERE categories = "Appliances" and product.unitPrice < 6.99
+	FROM product UNNEST product.categories AS categories 
+	WHERE categories = "Appliances" AND product.unitPrice < 6.99
 </pre>

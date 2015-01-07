@@ -7,10 +7,10 @@ If LEFT or LEFT OUTER is specified, then a left outer join is performed. At leas
 Try the example on the right and also try removing the LEFT clause to see the difference in the output. In this query user "Tamekia_13483660" has no orders so running the query without the LEFT clause will produce an empty result
 
 <pre id="example">
-    SELECT user.personal_details, orders
-        FROM users_with_orders user 
-            KEY "Tamekia_13483660" 
+    SELECT usr.personal_details, orders
+        FROM users_with_orders usr 
+            USE KEYS "Tamekia_13483660" 
                 LEFT JOIN orders_with_users orders 
-                    KEYS ARRAY s.order_id FOR s IN user.shipped_order_history END
+                    ON KEYS ARRAY s.order_id FOR s IN usr.shipped_order_history END
 </pre> 
 

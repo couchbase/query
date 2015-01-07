@@ -12,5 +12,5 @@ Is there a "cup" category available? (HINT: Run the query to see if there is one
     SELECT 
 	DISTINCT categories
 	FROM product
-	UNNEST product.categories as categories
+	UNNEST product.categories AS categories
 </pre>

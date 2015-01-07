@@ -1,4 +1,5 @@
 ## DELETE
+This feature is currently experimental and not for use in production.
 
 Keys can be deleted using the DELETE clause. The returning clause in the example query on the right will return the list of keys that were deleted from the bucket
 

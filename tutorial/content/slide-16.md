@@ -4,7 +4,7 @@ Before we continue exploring N1QL further, let us take a look at a query that su
 
 Here we match people having a yahoo email address or having all of their children over the age of 10.  For each person satisfying these requirements, we display their full name, email address, and the full list of children.
 
-Try appending the expression KEYS ["dave", "ian"] after the FROM expression to restrict the scope of the query to primary keys "dave" and "ian"
+Try appending the expression USE KEYS ["dave", "ian"] after the FROM expression to restrict the scope of the query to primary keys "dave" and "ian"
 
 <pre id="example">
 SELECT fname || " " || lname AS full_name, email, children[0:2] AS offsprings

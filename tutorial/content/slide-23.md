@@ -14,12 +14,12 @@ The query on the right illustrates many of the previous concepts working togethe
 
 
 <pre id="example"> 
-SELECT t.relation, count(*) as count, avg(c.age) as avg_age
+SELECT t.relation, COUNT(*) AS count, AVG(c.age) AS avg_age
     FROM tutorial t
     UNNEST t.children c
     WHERE c.age > 10
     GROUP BY t.relation
-    HAVING count(*) > 1
+    HAVING COUNT(*) > 1
     ORDER BY avg_age DESC
     LIMIT 1 OFFSET 1
 </pre>

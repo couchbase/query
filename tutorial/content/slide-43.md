@@ -10,10 +10,10 @@ List the top 10 shoppers based on the total amount spent
 	SELECT 	customer.firstName, 
 		customer.lastName, 
 		customer.emailAddress,
-		sum(items.count) purchaseCount, 
-		round(sum(product.unitPrice * items.count))  totalSpent 
-	FROM purchases unnest purchases.lineItems as items 
-	JOIN product key items.product join customer key purchases.customerId 
+		SUM(items.count) purchaseCount, 
+		ROUND(SUM(product.unitPrice * items.count))  totalSpent 
+	FROM purchases UNNEST purchases.lineItems AS items 
+	JOIN product ON KEYS items.product JOIN customer ON KEYS purchases.customerId 
 	GROUP BY customer 
-	ORDER BY totalSpent desc limit 10	
+	ORDER BY totalSpent DESC LIMIT 10	
 </pre>

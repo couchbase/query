@@ -9,5 +9,5 @@ when researching branded products, 44% of online shoppers begin by using a searc
     SELECT 
 	productId, name
 	FROM product
-	WHERE lower(name) like "%cup%"
+	WHERE LOWER(name) LIKE "%cup%"
 </pre>

@@ -8,7 +8,7 @@ The dispatch team has been notified that an order has been placed and would like
 
 <pre id="example">
 	SELECT purchases, product, customer 
-	FROM purchases KEY "purchase0" UNNEST purchases.lineItems AS items 
-        JOIN product KEY items.product
-        JOIN customer KEY purchases.customerId
+	FROM purchases USE KEYS "purchase0" UNNEST purchases.lineItems AS items 
+        JOIN product ON KEYS items.product
+        JOIN customer ON KEYS purchases.customerId
 </pre>

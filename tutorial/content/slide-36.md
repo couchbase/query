@@ -8,6 +8,6 @@ He clicks on the "Appliances" category on the site menu, and the website display
     SELECT
 	product 
 	FROM product
-	UNNEST product.categories as categories
+	UNNEST product.categories AS categories
 	WHERE categories = "Appliances"
 </pre>

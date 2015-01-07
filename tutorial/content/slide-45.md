@@ -9,7 +9,7 @@ He uses N1QL to query Couchbase and get the numbers he needs for his report.
 <pre id="example">
 	SELECT COUNT(DISTINCT purchases.customerId) 
 	FROM purchases
-	WHERE str_to_millis(purchases.purchasedAt) BETWEEN str_to_millis("2014-02-01") AND str_to_millis("2014-03-01")
+	WHERE STR_TO_MILLIS(purchases.purchasedAt) BETWEEN STR_TO_MILLIS("2014-02-01") AND STR_TO_MILLIS("2014-03-01")
 </pre>
 
 Now, think about how you would change this query to get a 7-day trend or a 24-hr trend

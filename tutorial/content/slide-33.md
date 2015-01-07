@@ -11,8 +11,8 @@ Get a list of all the golfing products limit by 10, and skip the first 10
 <pre id="example">
     SELECT *
 	FROM product 
-	unnest product.categories as cat
-		WHERE lower(cat) in ["golf"] LIMIT 10 OFFSET 10 
+	UNNEST product.categories AS cat
+		WHERE LOWER(cat) in ["golf"] LIMIT 10 OFFSET 10 
 </pre>
 
 

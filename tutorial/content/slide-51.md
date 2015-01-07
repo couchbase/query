@@ -7,9 +7,9 @@ How do you get a list of all the messages sent by a player zid-jungle-0001 to al
 <pre id="example">
 SELECT player.name, inbox.messages
 FROM jungleville AS player 
-	KEY "zid-jungle-0001" 
+     USE KEYS "zid-jungle-0001" 
 LEFT JOIN jungleville_inbox AS inbox 
-	KEY "zid-jungle-inbox-" || SUBSTR(player.uuid, 11)
+     ON KEYS "zid-jungle-inbox-" || SUBSTR(player.uuid, 11)
 </pre>
 
 

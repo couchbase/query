@@ -7,9 +7,9 @@ Thanks to N1QL, we can now easily query the data in Couchbase to produce that li
 ![ScreenShot](./images/top10.png)
 
 <pre id="example">
-	SELECT product.name, sum(items.count) as unitsSold 
-	FROM purchases unnest purchases.lineItems as items 
-	JOIN product key items.product 
+	SELECT product.name, SUM(items.count) AS unitsSold 
+	FROM purchases UNNEST purchases.lineItems AS items 
+	JOIN product ON KEYS items.product 
 	GROUP BY product 
-	ORDER BY unitsSold desc limit 10	
+	ORDER BY unitsSold DESC LIMIT 10	
 </pre>

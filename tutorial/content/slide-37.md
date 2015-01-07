@@ -9,14 +9,15 @@ What are the top 3 highly rated appliances? Run the query to figure this out.
 <pre id="example">
     SELECT
 	product.name, 
-	count(reviews) as reviewCount,
-	round(avg(reviews.rating),1) as AvgRating,
-	category from reviews
-	AS reviews
-	JOIN product as product key reviews.productId
-	UNNEST product.categories as category
-	where category = "Appliances"
-	GROUP by category, product
-	ORDER by AvgRating 
+	COUNT(reviews) AS reviewCount,
+	ROUND(AVG(reviews.rating),1) AS AvgRating,
+	category 
+        FROM reviews AS reviews
+	JOIN product AS product 
+        ON KEYS reviews.productId
+	UNNEST product.categories AS category
+	WHERE category = "Appliances"
+	GROUP BY category, product
+	ORDER BY AvgRating 
 	DESC LIMIT 3 
 </pre>

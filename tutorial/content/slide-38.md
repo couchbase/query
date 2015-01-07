@@ -5,15 +5,15 @@ Don wants a list of new and popular items - i.e. items that are recently added t
 ![ScreenShot](./images/sortby.png)
 
 <pre id="example">
-	SELECT product.name, product.dateAdded, sum(items.count) as unitsSold 
-		FROM purchases unnest purchases.lineItems as items 
-		JOIN product key items.product 
+	SELECT product.name, product.dateAdded, SUM(items.count) AS unitsSold 
+		FROM purchases UNNEST purchases.lineItems AS items 
+		JOIN product ON KEYS items.product 
 		GROUP BY product 
-		ORDER BY product.dateAdded, unitsSold desc limit 10
+		ORDER BY product.dateAdded, unitsSold DESC LIMIT 10
 </pre>
 
 How about sorting by price? - Copy, paste, and run the following query to sort by price (Low to high)
 
 <span style="color: red">
-select product from product order by unitPrice desc limit 100
+SELECT product FROM product ORDER BY unitPrice DESC LIMIT 100
 </span>
