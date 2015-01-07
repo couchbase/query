@@ -58,7 +58,7 @@
       "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"year\")",
       "results": [
         {
-            "$1": 2014
+            "$1": 2015
         }
      ]
     }
