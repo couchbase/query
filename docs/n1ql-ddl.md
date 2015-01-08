@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2014-11-17
+* Modified: 2015-01-08
 
 ## Summary
 
@@ -66,6 +66,10 @@ _using:_
 
 ![](diagram/using.png)
 
+__drop-primary-index:__
+
+![](diagram/drop-primary-index.png)
+
 __drop-index:__
 
 ![](diagram/drop-index.png)
@@ -104,6 +108,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added DROP PRIMARY INDEX
 * 2014-11-17 - ALTER INDEX
     * Removed ALTER INDEX (not currently in scope)
+* 2014-01-08 - DROP PRIMARY INDEX
+    * Added diagram for DROP PRIMARY INDEX
 
 ### Open Issues
 
