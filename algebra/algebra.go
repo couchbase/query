@@ -25,7 +25,7 @@ UPDATE, or CREATE INDEX statement.
 */
 type Statement interface {
 	/*
-		Visitor pattern
+		Visitor pattern.
 	*/
 	Accept(visitor Visitor) (interface{}, error)
 
@@ -35,12 +35,12 @@ type Statement interface {
 	Signature() value.Value
 
 	/*
-		Fully qualify all identifiers in this statement
+		Fully qualify all identifiers in this statement.
 	*/
 	Formalize() error
 
 	/*
-		Apply a Mapper to all the expressions in this statement
+		Apply a Mapper to all the expressions in this statement.
 	*/
 	MapExpressions(mapper expression.Mapper) error
 }

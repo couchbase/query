@@ -114,6 +114,7 @@ func (this Unsettable) Error() string {
 	if string(this) != "" {
 		return fmt.Sprintf("Field or index %s is not settable.", string(this))
 	}
+
 	return "Not settable."
 }
 
