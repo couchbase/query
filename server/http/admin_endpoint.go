@@ -17,7 +17,6 @@ import (
 
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/server"
-	"github.com/gorilla/mux"
 )
 
 const (
@@ -27,15 +26,6 @@ const (
 type apiFunc func(*server.Server, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
 
 type handlerFunc func(http.ResponseWriter, *http.Request)
-
-// admin_endpoint
-
-func registerAdminHandlers(server *server.Server) {
-	r := mux.NewRouter()
-	registerClusterHandlers(r, server)
-	registerAccountingHandlers(r, server)
-	http.Handle(adminPrefix+"/", r)
-}
 
 func wrapAPI(s *server.Server, w http.ResponseWriter, req *http.Request, f apiFunc) {
 	obj, err := f(s, w, req)

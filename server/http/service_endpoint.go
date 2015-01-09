@@ -10,53 +10,70 @@
 package http
 
 import (
+	"crypto/tls"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
+	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/server"
+	"github.com/gorilla/mux"
 )
 
 type HttpEndpoint struct {
-	server  *server.Server
-	metrics bool
-	httpsrv http.Server
-	bufpool BufferPool
+	server      *server.Server
+	metrics     bool
+	bufpool     BufferPool
+	listener    net.Listener
+	listenerTLS net.Listener
+	mux         *mux.Router
 }
 
 const (
 	servicePrefix = "/query/service"
 )
 
-func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool, addr string) *HttpEndpoint {
+func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:  server,
 		metrics: metrics,
 		bufpool: NewSyncPool(server.KeepAlive()),
 	}
 
-	rv.httpsrv.Addr = addr
-	rv.httpsrv.Handler = rv
-
-	// Bind HttpEndpoint object to /query/service endpoint; use default Server Mux
-	http.Handle(servicePrefix, rv)
-
-	// TODO: Deprecate (remove) this binding after QE has migrated to /query/service
-	http.Handle("/query", rv)
-
-	// Enable /admin endpoint
-	registerAdminHandlers(server)
-
-	// Handle static endpoint
-	http.Handle("/", (http.FileServer(http.Dir(staticPath))))
-
+	rv.registerHandlers(staticPath)
 	return rv
 }
 
-func (this *HttpEndpoint) ListenAndServe() error {
-	return http.ListenAndServe(this.httpsrv.Addr, nil)
+func (this *HttpEndpoint) Listen(addr string) error {
+	ln, err := net.Listen("tcp", addr)
+	if err == nil {
+		this.listener = ln
+		go http.Serve(ln, this.mux)
+	}
+	return err
+}
+
+func (this *HttpEndpoint) ListenTLS(addr, certFile, keyFile string) error {
+	// create tls configuration
+	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return err
+	}
+
+	ln, err := net.Listen("tcp", addr)
+	if err == nil {
+		cfg := &tls.Config{
+			Certificates: []tls.Certificate{tlsCert},
+			ClientAuth:   tls.NoClientCert,
+		}
+		tls_ln := tls.NewListener(ln, cfg)
+		this.listener = tls_ln
+		go http.Serve(tls_ln, this.mux)
+	}
+	return err
 }
 
 // If the server channel is full and we are unable to queue a request,
@@ -81,6 +98,34 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		resp.WriteHeader(http.StatusServiceUnavailable)
 	}
 
+}
+
+func (this *HttpEndpoint) Close() {
+	if this.listener != nil {
+		this.listener.Close()
+		logging.Infop("HttpEndpoint.Close()", logging.Pair{"Address", this.listener.Addr()})
+	}
+	if this.listenerTLS != nil {
+		this.listenerTLS.Close()
+		logging.Infop("HttpEndpoint.Close()", logging.Pair{"Address", this.listener.Addr()})
+	}
+}
+
+func (this *HttpEndpoint) registerHandlers(staticPath string) {
+	this.mux = mux.NewRouter()
+
+	// Handle static endpoint
+	this.mux.Handle("/", (http.FileServer(http.Dir(staticPath))))
+
+	this.mux.Handle(servicePrefix, this).
+		Methods("GET", "POST")
+
+	// TODO: Deprecate (remove) this binding
+	this.mux.Handle("/query", this).
+		Methods("GET", "POST")
+
+	registerClusterHandlers(this.mux, this.server)
+	registerAccountingHandlers(this.mux, this.server)
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest) {

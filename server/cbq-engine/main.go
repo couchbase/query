@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -179,11 +180,47 @@ func main() {
 		logging.Pair{"version", VERSION},
 		logging.Pair{"datastore", *DATASTORE},
 	)
-
-	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS, *HTTP_ADDR)
-	er := endpoint.ListenAndServe()
+	// Create http endpoint
+	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS)
+	er := endpoint.Listen(*HTTP_ADDR)
 	if er != nil {
-		logging.Errorf("cbq-engine exiting with error: %v", er)
+		logging.Errorp("cbq-engine exiting with error",
+			logging.Pair{"error", er},
+			logging.Pair{"HTTP_ADDR", *HTTP_ADDR},
+		)
 		os.Exit(1)
 	}
+	if *CERT_FILE != "" && *KEY_FILE != "" {
+		er := endpoint.ListenTLS(*HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
+		if er != nil {
+			logging.Errorp("cbq-engine exiting with error",
+				logging.Pair{"error", er},
+				logging.Pair{"HTTP_ADDR", *HTTP_ADDR},
+			)
+			os.Exit(1)
+		}
+	}
+	signalCatcher(server, endpoint)
+}
+
+// signalCatcher blocks until a signal is recieved and then takes appropriate action
+func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
+	sig_chan := make(chan os.Signal, 4)
+	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
+
+	var s os.Signal
+	select {
+	case s = <-sig_chan:
+	}
+
+	if s == os.Interrupt {
+		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
+		logging.Infop("cbq-engine shutting down immediately...")
+		os.Exit(0)
+	}
+
+	logging.Infop("cbq-engine attempting graceful...")
+	// Stop accepting new requests
+	endpoint.Close()
+	// TODO: wait until server requests have all completed
 }

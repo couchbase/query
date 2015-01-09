@@ -10,6 +10,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"io"
 	"net/http"
@@ -31,7 +32,12 @@ func main() {
 func execute_internal(tiServer, line string, w *os.File) error {
 
 	url := tiServer + "query"
-	resp, err := http.Post(url, "text/plain", strings.NewReader(line))
+	tr := &http.Transport{}
+	if strings.HasPrefix(url, "https") {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Post(url, "text/plain", strings.NewReader(line))
 	if err != nil {
 		return err
 	}
