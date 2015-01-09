@@ -144,7 +144,7 @@ func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 					"name":         index.Name(),
 					"keyspace_id":  keyspace.Id(),
 					"namespace_id": namespace.Id(),
-					"store_id":     b.namespace.store.actualStore.Id(),
+					"datastore_id": b.namespace.store.actualStore.Id(),
 					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
 					"index_type":   datastoreObjectToJSONSafe(index.Type()),
 				})

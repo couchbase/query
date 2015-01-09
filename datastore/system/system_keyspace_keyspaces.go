@@ -128,7 +128,7 @@ func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Er
 				"id":           keyspace.Id(),
 				"name":         keyspace.Name(),
 				"namespace_id": namespace.Id(),
-				"store_id":     b.namespace.store.actualStore.Id(),
+				"datastore_id": b.namespace.store.actualStore.Id(),
 			})
 			return doc, nil
 		}
