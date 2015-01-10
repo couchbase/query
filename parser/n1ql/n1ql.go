@@ -62,6 +62,7 @@ func doParse(lex *lexer) {
 
 type lexer struct {
 	nex         yyLexer
+	posParam    int
 	errs        []string
 	stmt        algebra.Statement
 	expr        expression.Expression
@@ -92,3 +93,8 @@ func (this *lexer) setExpression(expr expression.Expression) {
 }
 
 func (this *lexer) parsingStatement() bool { return this.parsingStmt }
+
+func (this *lexer) nextParam() int {
+	this.posParam++
+	return this.posParam
+}

@@ -223,7 +223,7 @@ indexType        datastore.IndexType
 %token WORK
 %token XOR
 
-%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM
+%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -259,7 +259,7 @@ indexType        datastore.IndexType
 %type <s>                NAMED_PARAM
 %type <f>                NUMBER
 %type <n>                INT
-%type <n>                POSITIONAL_PARAM
+%type <n>                POSITIONAL_PARAM NEXT_PARAM
 %type <expr>             literal construction_expr object array
 %type <expr>             param_expr
 %type <binding>          member
@@ -2077,6 +2077,12 @@ NAMED_PARAM
 POSITIONAL_PARAM
 {
     $$ = algebra.NewPositionalParameter($1)
+}
+|
+NEXT_PARAM
+{
+    n := yylex.(*lexer).nextParam()
+    $$ = algebra.NewPositionalParameter(n)
 }
 ;
 

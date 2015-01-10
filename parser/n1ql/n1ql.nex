@@ -255,6 +255,12 @@
 		    logToken("POSITIONAL_PARAM - %d", lval.n)
 		    return POSITIONAL_PARAM
 		  }
+
+/\?/     {
+		    lval.n = 0 // Handled by parser
+		    logToken("NEXT_PARAM - ?")
+		    return NEXT_PARAM
+		  }
 //
 package n1ql
 
