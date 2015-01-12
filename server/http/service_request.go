@@ -84,7 +84,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	var timeout time.Duration
 	if err == nil {
-		timeout, err = httpArgs.getTimeDuration(TIMEOUT)
+		timeout, err = httpArgs.getDuration(TIMEOUT)
 	}
 
 	readonly := req.Method == "GET"
@@ -280,7 +280,7 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, error) {
 	}
 
 	if err == nil {
-		sc.scan_wait, err = a.getTimeDuration(SCAN_WAIT)
+		sc.scan_wait, err = a.getDuration(SCAN_WAIT)
 	}
 
 	if err == nil {
@@ -391,7 +391,7 @@ type httpRequestArgs interface {
 	getString(string, string) (string, error)
 	getBoolean(string, bool) (bool, error)
 	getValue(field string) (value.Value, error)
-	getTimeDuration(string) (time.Duration, error)
+	getDuration(string) (time.Duration, error)
 	getNamedArgs() (map[string]value.Value, error)
 	getPositionalArgs() (value.Values, error)
 	getStatement() (string, error)
@@ -524,12 +524,12 @@ func (this *urlArgs) getScanVector() ([]int, map[string]int, error) {
 	return full_vect, sparse_vect, err
 }
 
-func (this *urlArgs) getTimeDuration(f string) (time.Duration, error) {
+func (this *urlArgs) getDuration(f string) (time.Duration, error) {
 	var timeout time.Duration
 
 	timeout_field, err := this.formValue(f)
 	if err == nil && timeout_field != "" {
-		timeout, err = time.ParseDuration(timeout_field)
+		timeout, err = newDuration(timeout_field)
 	}
 
 	return timeout, err
@@ -708,13 +708,13 @@ func (this *jsonArgs) getScanVector() (full_vect []int, sparse_vect map[string]i
 	return
 }
 
-func (this *jsonArgs) getTimeDuration(f string) (time.Duration, error) {
+func (this *jsonArgs) getDuration(f string) (time.Duration, error) {
 	var timeout time.Duration
 
-	t, err := this.getString(f, "0")
+	t, err := this.getString(f, "0s")
 
 	if err != nil {
-		timeout, err = time.ParseDuration(t)
+		timeout, err = newDuration(t)
 	}
 
 	return timeout, err
@@ -932,4 +932,22 @@ func newScanConsistency(s string) server.ScanConsistency {
 	default:
 		return server.UNDEFINED_CONSISTENCY
 	}
+}
+
+// helper function to create a time.Duration instance from a given string.
+// There must be a unit - valid units are "ns", "us", "ms", "s", "m", "h"
+func newDuration(s string) (time.Duration, error) {
+	var duration time.Duration
+	var err error
+	// Error if given string has no unit
+	last_char := s[len(s)-1]
+	if last_char != 's' && last_char != 'm' && last_char != 'h' {
+		err = errors.NewError(nil,
+			fmt.Sprintf("Missing or incorrect unit for duration: "+
+				"%s (valid units: ns, us, ms, s, m, h)", s))
+	}
+	if err == nil {
+		duration, err = time.ParseDuration(s)
+	}
+	return duration, err
 }
