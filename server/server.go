@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -191,6 +192,22 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, err
 		}
 	}
-
+	if logging.LogLevel() >= logging.Trace {
+		// log EXPLAIN for the request
+		logExplain(prepared)
+	}
 	return prepared, nil
+}
+
+func logExplain(prepared *plan.Prepared) {
+	var plan plan.Operator
+
+	plan = prepared
+	explain, err := json.MarshalIndent(plan, "", "    ")
+	if err != nil {
+		logging.Tracep("Error logging explain", logging.Pair{"error", err})
+		return
+	}
+	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
+
 }

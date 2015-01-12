@@ -247,7 +247,7 @@ func (*textFormatter) format(newEntry *logEntry) string {
 
 func appendKeyValue(b *bytes.Buffer, key, value interface{}) {
 	if _, ok := value.(string); ok {
-		fmt.Fprintf(b, "%v=%q ", key, value)
+		fmt.Fprintf(b, "%v=%s ", key, value)
 	} else {
 		fmt.Fprintf(b, "%v=%v ", key, value)
 	}
