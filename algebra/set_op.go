@@ -174,6 +174,13 @@ func (this *Union) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Union) String() string {
+	return this.first.String() + " union " + this.second.String()
+}
+
+/*
 Represents the Union all set operation used to combine results
 from multiple subselects. It returns all applicable values,
 including duplicates. These forms are faster, because they do
@@ -210,6 +217,13 @@ func (this *UnionAll) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *UnionAll) String() string {
+	return this.first.String() + " union all " + this.second.String()
+}
+
+/*
 Represents the Intersect set operation used to combine results
 from multiple subselects. INTERSECT returns values from the
 first sub-select that are present in the second sub-select.
@@ -240,6 +254,13 @@ visitor pattern.
 */
 func (this *Intersect) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitIntersect(this)
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *Intersect) String() string {
+	return this.first.String() + " intersect " + this.second.String()
 }
 
 /*
@@ -277,6 +298,13 @@ func (this *IntersectAll) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *IntersectAll) String() string {
+	return this.first.String() + " intersect all " + this.second.String()
+}
+
+/*
 Represents the Except set operation used to combine results
 from multiple subselects. EXCEPT returns values from the
 first sub-select that are absent from the second sub-select.
@@ -307,6 +335,13 @@ visitor pattern.
 */
 func (this *Except) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitExcept(this)
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *Except) String() string {
+	return this.first.String() + " except " + this.second.String()
 }
 
 /*
@@ -341,4 +376,11 @@ visitor pattern.
 */
 func (this *ExceptAll) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitExceptAll(this)
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *ExceptAll) String() string {
+	return this.first.String() + " except all " + this.second.String()
 }

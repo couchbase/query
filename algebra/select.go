@@ -101,6 +101,7 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *Select) Expressions() expression.Expressions {
 	exprs := this.subresult.Expressions()
+
 	if this.order != nil {
 		exprs = append(exprs, this.order.Expressions()...)
 	}
@@ -114,6 +115,27 @@ func (this *Select) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *Select) String() string {
+	s := this.subresult.String()
+
+	if this.order != nil {
+		s += " " + this.order.String()
+	}
+
+	if this.limit != nil {
+		s += " limit " + this.limit.String()
+	}
+
+	if this.offset != nil {
+		s += " offset " + this.offset.String()
+	}
+
+	return s
 }
 
 /*
@@ -218,6 +240,11 @@ type Subresult interface {
 	   Returns all contained Expressions.
 	*/
 	Expressions() expression.Expressions
+
+	/*
+	   Representation as a N1QL string.
+	*/
+	String() string
 
 	/*
 	   Checks if correlated subquery.
@@ -375,6 +402,31 @@ func (this *Subselect) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Subselect) String() string {
+	s := "select " + this.projection.String()
+
+	if this.from != nil {
+		s += " from " + this.from.String()
+	}
+
+	if this.let != nil {
+		s += " let " + stringBindings(this.let)
+	}
+
+	if this.where != nil {
+		s += " where " + this.where.String()
+	}
+
+	if this.group != nil {
+		s += " " + this.group.String()
+	}
+
+	return s
+}
+
+/*
 Returns bool value that depicts if query is correlated
 or not.
 */
@@ -420,4 +472,24 @@ statement.
 */
 func (this *Subselect) Projection() *Projection {
 	return this.projection
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func stringBindings(bindings expression.Bindings) string {
+	s := ""
+
+	for i, b := range bindings {
+		if i > 0 {
+			s += ", "
+		}
+
+		s += "`"
+		s += b.Variable()
+		s += "` = "
+		s += b.Expression().String()
+	}
+
+	return s
 }

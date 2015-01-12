@@ -122,6 +122,35 @@ func (this *Group) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Group) String() string {
+	s := ""
+
+	if this.by != nil {
+		s += " group by "
+
+		for i, b := range this.by {
+			if i > 0 {
+				s += ", "
+			}
+
+			s += b.String()
+		}
+	}
+
+	if this.letting != nil {
+		s += " letting " + stringBindings(this.letting)
+	}
+
+	if this.having != nil {
+		s += " having " + this.having.String()
+	}
+
+	return s
+}
+
+/*
 Returns the Group by expression.
 */
 func (this *Group) By() expression.Expressions {

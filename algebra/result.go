@@ -121,6 +121,31 @@ func (this *Projection) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Projection) String() string {
+	s := ""
+
+	if this.distinct {
+		s += "distinct "
+	}
+
+	if this.raw {
+		s += "raw "
+	}
+
+	for i, term := range this.terms {
+		if i > 0 {
+			s += ", "
+		}
+
+		s += term.String()
+	}
+
+	return s
+}
+
+/*
 This method fully qualifies the identifiers for each term
 in the result expression. It disallows duplicate alias and
 exempts explicit aliases from being formalized.
@@ -252,6 +277,31 @@ func (this *ResultTerm) MapExpression(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *ResultTerm) String() string {
+	s := ""
+
+	if this.expr != nil {
+		s = this.expr.String()
+	}
+
+	if this.star {
+		if s == "" {
+			s = "*"
+		} else {
+			s += ".*"
+		}
+	}
+
+	if this.as != "" {
+		s += " as `" + this.as + "`"
+	}
+
+	return s
 }
 
 /*

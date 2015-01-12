@@ -38,6 +38,11 @@ type FromTerm interface {
 	Expressions() expression.Expressions
 
 	/*
+	   Representation as a N1QL string.
+	*/
+	String() string
+
+	/*
 	   Qualify all identifiers for the parent expression.
 	*/
 	Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error)
@@ -138,6 +143,44 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *KeyspaceTerm) String() string {
+	return this.toString(false)
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *KeyspaceTerm) toString(join bool) string {
+	s := ""
+
+	if this.namespace != "" {
+		s += this.namespace + ":"
+	}
+
+	s += this.keyspace
+
+	if this.projection != nil {
+		s += "." + this.projection.String()
+	}
+
+	if this.as != "" {
+		s += " as `" + this.as + "`"
+	}
+
+	if this.keys != nil {
+		if join {
+			s += " on keys " + this.keys.String()
+		} else {
+			s += " use keys " + this.keys.String()
+		}
+	}
+
+	return s
 }
 
 /*
@@ -308,6 +351,22 @@ func (this *Join) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Join) String() string {
+	s := this.left.String()
+
+	if this.outer {
+		s += " left outer join "
+	} else {
+		s += " join "
+	}
+
+	s += this.right.toString(true)
+	return s
+}
+
+/*
 Qualify all identifiers for the parent expression. Checks is
 a join alias exists and if it is a duplicate alias.
 */
@@ -442,6 +501,22 @@ func (this *Nest) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Nest) String() string {
+	s := this.left.String()
+
+	if this.outer {
+		s += " left outer nest "
+	} else {
+		s += " nest "
+	}
+
+	s += this.right.toString(true)
+	return s
+}
+
+/*
 Qualify all identifiers for the parent expression. Checks is
 a nest alias exists and if it is a duplicate alias.
 */
@@ -573,6 +648,27 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *Unnest) Expressions() expression.Expressions {
 	return append(this.left.Expressions(), this.expr)
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *Unnest) String() string {
+	s := this.left.String()
+
+	if this.outer {
+		s += " left outer unnest "
+	} else {
+		s += " unnest "
+	}
+
+	s += this.expr.String()
+
+	if this.as != "" {
+		s += " as `" + this.as + "`"
+	}
+
+	return s
 }
 
 /*

@@ -48,6 +48,13 @@ func (this *Order) Expressions() expression.Expressions {
 }
 
 /*
+   Representation as a N1QL string.
+*/
+func (this *Order) String() string {
+	return " order by " + this.terms.String()
+}
+
+/*
 Return the ordering terms (sort terms).
 */
 func (this *Order) Terms() SortTerms {
@@ -79,6 +86,19 @@ func NewSortTerm(expr expression.Expression, descending bool) *SortTerm {
 		expr:       expr,
 		descending: descending,
 	}
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *SortTerm) String() string {
+	s := this.expr.String()
+
+	if this.descending {
+		s += " desc"
+	}
+
+	return s
 }
 
 /*
@@ -121,4 +141,21 @@ func (this SortTerms) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this SortTerms) String() string {
+	s := ""
+
+	for i, term := range this {
+		if i > 0 {
+			s += ", "
+		}
+
+		s += term.String()
+	}
+
+	return s
 }
