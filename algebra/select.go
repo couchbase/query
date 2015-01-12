@@ -15,7 +15,7 @@ import (
 )
 
 /*
-This represents the select statement. Type select is a
+This represents the select statement. Type Select is a
 struct that contains fields mapping to each clause in
 a select statement. The subresult field maps to the
 intermediate result interface for the select clause.
@@ -94,6 +94,26 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *Select) Expressions() expression.Expressions {
+	exprs := this.subresult.Expressions()
+	if this.order != nil {
+		exprs = append(exprs, this.order.Expressions()...)
+	}
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.offset != nil {
+		exprs = append(exprs, this.offset)
+	}
+
+	return exprs
 }
 
 /*
@@ -193,6 +213,11 @@ type Subresult interface {
 	   Apply a Mapper to all the expressions in this statement
 	*/
 	MapExpressions(mapper expression.Mapper) error
+
+	/*
+	   Returns all contained Expressions.
+	*/
+	Expressions() expression.Expressions
 
 	/*
 	   Checks if correlated subquery.
@@ -321,6 +346,32 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return this.projection.MapExpressions(mapper)
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *Subselect) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.from != nil {
+		exprs = append(exprs, this.from.Expressions()...)
+	}
+
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	if this.group != nil {
+		exprs = append(exprs, this.group.Expressions()...)
+	}
+
+	exprs = append(exprs, this.projection.Expressions()...)
+	return exprs
 }
 
 /*

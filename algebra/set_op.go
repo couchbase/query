@@ -51,6 +51,13 @@ func (this *setOp) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+   Returns all contained Expressions.
+*/
+func (this *setOp) Expressions() expression.Expressions {
+	return append(this.first.Expressions(), this.second.Expressions()...)
+}
+
+/*
 Fully qualifies the identifiers in the first and second sub-result
 using the input parent.
 */

@@ -121,6 +121,19 @@ func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	return
 }
 
+/*
+   Returns all contained Expressions.
+*/
+func (this Bindings) Expressions() Expressions {
+	exprs := make(Expressions, len(this))
+
+	for i, b := range this {
+		exprs[i] = b.expr
+	}
+
+	return exprs
+}
+
 func (this Bindings) Copy() Bindings {
 	copies := make(Bindings, len(this))
 	for i, b := range this {

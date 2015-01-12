@@ -101,6 +101,27 @@ func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+   Returns all contained Expressions.
+*/
+func (this *Group) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.by != nil {
+		exprs = append(exprs, this.by...)
+	}
+
+	if this.letting != nil {
+		exprs = append(exprs, this.letting.Expressions()...)
+	}
+
+	if this.having != nil {
+		exprs = append(exprs, this.having)
+	}
+
+	return exprs
+}
+
+/*
 Returns the Group by expression.
 */
 func (this *Group) By() expression.Expressions {

@@ -92,6 +92,35 @@ func (this *Projection) Signature() value.Value {
 }
 
 /*
+This method maps the result expressions.
+*/
+func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
+	for _, term := range this.terms {
+		err = term.MapExpression(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *Projection) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, len(this.terms))
+
+	for _, term := range this.terms {
+		if term.expr != nil {
+			exprs = append(exprs, term.expr)
+		}
+	}
+
+	return exprs
+}
+
+/*
 This method fully qualifies the identifiers for each term
 in the result expression. It disallows duplicate alias and
 exempts explicit aliases from being formalized.
@@ -124,20 +153,6 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 	for _, term := range this.terms {
 		if term.as != "" {
 			f.Allowed.SetField(term.as, term.as)
-		}
-	}
-
-	return
-}
-
-/*
-This method maps the result expressions.
-*/
-func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
-	for _, term := range this.terms {
-		err = term.MapExpression(mapper)
-		if err != nil {
-			return
 		}
 	}
 

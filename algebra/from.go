@@ -33,6 +33,11 @@ type FromTerm interface {
 	MapExpressions(mapper expression.Mapper) error
 
 	/*
+	   Returns all contained Expressions.
+	*/
+	Expressions() expression.Expressions
+
+	/*
 	   Qualify all identifiers for the parent expression.
 	*/
 	Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error)
@@ -116,6 +121,23 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *KeyspaceTerm) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 2)
+
+	if this.projection != nil {
+		exprs = append(exprs, this.projection)
+	}
+
+	if this.keys != nil {
+		exprs = append(exprs, this.keys)
+	}
+
+	return exprs
 }
 
 /*
@@ -279,6 +301,13 @@ func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+   Returns all contained Expressions.
+*/
+func (this *Join) Expressions() expression.Expressions {
+	return append(this.left.Expressions(), this.right.Expressions()...)
+}
+
+/*
 Qualify all identifiers for the parent expression. Checks is
 a join alias exists and if it is a duplicate alias.
 */
@@ -406,6 +435,13 @@ func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+   Returns all contained Expressions.
+*/
+func (this *Nest) Expressions() expression.Expressions {
+	return append(this.left.Expressions(), this.right.Expressions()...)
+}
+
+/*
 Qualify all identifiers for the parent expression. Checks is
 a nest alias exists and if it is a duplicate alias.
 */
@@ -530,6 +566,13 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 
 	this.expr, err = mapper.Map(this.expr)
 	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *Unnest) Expressions() expression.Expressions {
+	return append(this.left.Expressions(), this.expr)
 }
 
 /*

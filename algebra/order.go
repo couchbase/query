@@ -41,6 +41,13 @@ func (this *Order) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+   Returns all contained Expressions.
+*/
+func (this *Order) Expressions() expression.Expressions {
+	return this.terms.Expressions()
+}
+
+/*
 Return the ordering terms (sort terms).
 */
 func (this *Order) Terms() SortTerms {
@@ -101,4 +108,17 @@ func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this SortTerms) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, len(this))
+
+	for i, term := range this {
+		exprs[i] = term.expr
+	}
+
+	return exprs
 }
