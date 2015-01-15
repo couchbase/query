@@ -589,7 +589,9 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 
 	for _, kv := range inserts {
 		key := kv.Key
-		value := kv.Value.Actual()
+		val := kv.Value.Actual()
+
+		//mv := kv.Value.GetAttachment("meta")
 
 		// TODO Need to also set meta
 		switch op {
@@ -597,24 +599,29 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		case INSERT:
 			var added bool
 			// add the key to the backend
-			added, err = b.cbbucket.Add(key, 0, value)
+			added, err = b.cbbucket.Add(key, 0, val)
 			if added == false {
 				err = errors.NewError(nil, "Key "+key+" Exists")
 			}
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
 			// to update the key
-			rv := map[string]interface{}{}
-			var cas uint64
+			var meta map[string]interface{}
+			var cas float64
 
-			err = b.cbbucket.Gets(key, &rv, &cas)
-			if err == nil {
-				err = b.cbbucket.Set(key, 0, value)
+			an := kv.Value.(value.AnnotatedValue)
+			meta = an.GetAttachment("meta").(map[string]interface{})
+
+			cas = meta["cas"].(float64)
+			if cas != 0 {
+				err = b.cbbucket.Cas(key, 0, uint64(cas), val)
 			} else {
-				logging.Errorf("Failed to insert. Key exists %s", key)
+				logging.Warnf("Warning: Cas value not found for key %v", key)
+				err = b.cbbucket.Set(key, 0, val)
 			}
+
 		case UPSERT:
-			err = b.cbbucket.Set(key, 0, value)
+			err = b.cbbucket.Set(key, 0, val)
 		}
 
 		if err != nil {
