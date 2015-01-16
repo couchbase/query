@@ -53,7 +53,7 @@ var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
-var STATIC_PATH = flag.String("staticPath", "static", "Path to static content")
+var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
