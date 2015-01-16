@@ -193,10 +193,20 @@ const (
 	ERRORS          = "errors"
 	WARNINGS        = "warnings"
 	MUTATIONS       = "mutations"
+	REQUESTS_250MS  = "requests_250ms"
+	REQUESTS_500MS  = "requests_500ms"
+	REQUESTS_1000MS = "requests_1000ms"
+	REQUESTS_5000MS = "requests_5000ms"
+
+	DURATION_250MS  = 250 * time.Millisecond
+	DURATION_500MS  = 500 * time.Millisecond
+	DURATION_1000MS = 1000 * time.Millisecond
+	DURATION_5000MS = 5000 * time.Millisecond
 )
 
 var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS,
 	QUEUED_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
+	REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS, REQUESTS_5000MS,
 	WARNINGS, MUTATIONS}
 
 // Use the give AccountingStore to create counters for all the metrics we are interested in:
@@ -221,6 +231,19 @@ func RecordMetrics(acctstore AccountingStore,
 	ms.Counter(ERRORS).Inc(int64(error_count))
 	ms.Counter(WARNINGS).Inc(int64(warn_count))
 
+	switch {
+	case request_time >= DURATION_5000MS:
+		ms.Counter(REQUESTS_5000MS).Inc(1)
+	case request_time >= DURATION_1000MS:
+		ms.Counter(REQUESTS_1000MS).Inc(1)
+	case request_time >= DURATION_500MS:
+		ms.Counter(REQUESTS_500MS).Inc(1)
+	case request_time >= DURATION_250MS:
+		ms.Counter(REQUESTS_250MS).Inc(1)
+	default:
+	}
+
+	// Do not record the type of request if errors
 	if error_count > 0 {
 		return
 	}

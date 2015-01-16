@@ -10,6 +10,7 @@
 package http
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -20,7 +21,12 @@ import (
 
 const (
 	accountingPrefix = adminPrefix + "/stats"
+	expvarsRoute     = "/debug/vars"
 )
+
+func expvarsHandler(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, accountingPrefix, http.StatusFound)
+}
 
 func registerAccountingHandlers(r *mux.Router, server *server.Server) {
 	statsHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -42,6 +48,8 @@ func registerAccountingHandlers(r *mux.Router, server *server.Server) {
 		r.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
 
+	r.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
+
 }
 
 func doStats(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -52,23 +60,33 @@ func doStats(s *server.Server, w http.ResponseWriter, req *http.Request) (interf
 	case "GET":
 		stats := make(map[string]interface{})
 		for name, metric := range reg.Counters() {
-			stats[name] = getMetricData(metric)
+			addMetricData(name, stats, getMetricData(metric))
 		}
 		for name, metric := range reg.Gauges() {
-			stats[name] = getMetricData(metric)
+			addMetricData(name, stats, getMetricData(metric))
 		}
 		for name, metric := range reg.Timers() {
-			stats[name] = getMetricData(metric)
+			addMetricData(name, stats, getMetricData(metric))
 		}
 		for name, metric := range reg.Meters() {
-			stats[name] = getMetricData(metric)
+			addMetricData(name, stats, getMetricData(metric))
 		}
 		for name, metric := range reg.Histograms() {
-			stats[name] = getMetricData(metric)
+			addMetricData(name, stats, getMetricData(metric))
 		}
 		return stats, nil
 	default:
 		return nil, nil
+	}
+}
+
+func addMetricData(name string, stats map[string]interface{}, metrics map[string]interface{}) {
+	var key_name bytes.Buffer
+	for metric_type, metric_value := range metrics {
+		key_name.WriteString(name)
+		key_name.WriteString(".")
+		key_name.WriteString(metric_type)
+		stats[key_name.String()] = metric_value
 	}
 }
 
