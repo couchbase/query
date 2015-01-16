@@ -15,7 +15,9 @@ index-stmt ::= create-primary-index | create-index | drop-primary-index | drop-i
  *  index
  */
 
-create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
+create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref using?
+
+using ::= 'USING' ('VIEW' | 'GSI')
 
 create-index ::= 'CREATE' 'INDEX' index-name 'ON' keyspace-ref '(' expr (',' expr)* ')' where-clause? using?
 
@@ -24,8 +26,6 @@ index-name ::= identifier
 named-keyspace-ref ::= (namespace ':')? keyspace
 
 partition ::= 'PARTITION' 'BY' expr
-
-using ::= 'USING' 'VIEW'
 
 drop-primary-index ::= 'DROP' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
 
