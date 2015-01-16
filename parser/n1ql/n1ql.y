@@ -1446,11 +1446,6 @@ USING VIEW
     $$ = datastore.VIEW
 }
 |
-USING LSM
-{
-    $$ = datastore.GSI
-}
-|
 USING GSI
 {
     $$ = datastore.GSI
