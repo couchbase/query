@@ -48,6 +48,11 @@ type Statement interface {
 		Returns all contained Expressions.
 	*/
 	Expressions() expression.Expressions
+
+	/*
+			Returns all required privileges.
+		Privileges() (datastore.Privileges, errors.Error)
+	*/
 }
 
 /*

@@ -299,6 +299,98 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+type SubqueryTerm struct {
+	subquery *Select
+	as       string
+}
+
+/*
+Constructor.
+*/
+func NewSubqueryTerm(subquery *Select, as string) *SubqueryTerm {
+	return &SubqueryTerm{subquery, as}
+}
+
+/*
+Visitor pattern.
+*/
+func (this *SubqueryTerm) Accept(visitor NodeVisitor) (interface{}, error) {
+	return visitor.VisitSubqueryTerm(this)
+}
+
+/*
+Apply mapping to all contained Expressions.
+*/
+func (this *SubqueryTerm) MapExpressions(mapper expression.Mapper) (err error) {
+	return this.subquery.MapExpressions(mapper)
+}
+
+/*
+   Returns all contained Expressions.
+*/
+func (this *SubqueryTerm) Expressions() expression.Expressions {
+	return this.subquery.Expressions()
+}
+
+/*
+   Representation as a N1QL string.
+*/
+func (this *SubqueryTerm) String() string {
+	return "(" + this.subquery.String() + ") as " + this.as
+}
+
+/*
+Qualify all identifiers for the parent expression. Checks for
+duplicate aliases.
+*/
+func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
+	err = this.subquery.Formalize()
+	if err != nil {
+		return
+	}
+
+	alias := this.Alias()
+	if alias == "" {
+		err = errors.NewError(nil, "FROM term must have a name or alias.")
+		return
+	}
+
+	_, ok := parent.Allowed.Field(alias)
+	if ok {
+		err = errors.NewError(nil, fmt.Sprintf("Duplicate subquery alias %s.", alias))
+		return nil, err
+	}
+
+	allowed := value.NewScopeValue(make(map[string]interface{}), parent.Allowed)
+	allowed.SetField(alias, alias)
+
+	f = expression.NewFormalizer()
+	f.Keyspace = alias
+	f.Allowed = allowed
+	return
+}
+
+/*
+Return the primary term in the from clause.
+*/
+func (this *SubqueryTerm) PrimaryTerm() FromTerm {
+	return this
+}
+
+/*
+Returns the Alias string.
+*/
+func (this *SubqueryTerm) Alias() string {
+	return this.as
+}
+
+/*
+Returns the inner subquery.
+*/
+func (this *SubqueryTerm) Subquery() *Select {
+	return this.subquery
+}
+
 /*
 Represents the join clause. Joins create new input
 objects by combining two or more source objects.

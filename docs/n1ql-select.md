@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
-* Modified: 2014-12-12
+* Modified: 2015-01-19
 
 ## Introduction
 
@@ -2471,6 +2471,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Revise descriptions of conditional functions
 * 2014-12-12 - Type functions
     * Revise type checking functions
+* 2015-01-19 - FROM subquery
+    * Allow subquery in FROM clause
 
 ### Open issues
 

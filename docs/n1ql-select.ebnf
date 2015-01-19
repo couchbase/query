@@ -23,7 +23,7 @@ alias ::= identifier
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-path ('AS'? alias)? use-keys-clause? | from-term join-clause | from-term nest-clause | from-term unnest-clause
+from-term ::= from-path ('AS'? alias)? use-keys-clause? | '(' select ')' 'AS'? alias | from-term join-clause | from-term nest-clause | from-term unnest-clause
 from-path ::= (namespace ':')? path
 namespace ::= identifier
 use-keys-clause ::= 'USE' 'PRIMARY'? 'KEYS' expr

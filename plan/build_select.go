@@ -24,6 +24,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	order := stmt.Order()
 	offset := stmt.Offset()
 	limit := stmt.Limit()
+	delayProjection := this.delayProjection
 
 	// If there is an ORDER BY, delay the final projection
 	if order != nil {
@@ -69,6 +70,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	// Perform the delayed final projection now, after the ORDER BY
 	if this.delayProjection {
 		children = append(children, NewParallel(NewFinalProject()))
+		this.delayProjection = delayProjection
 	}
 
 	return NewSequence(children...), nil
@@ -76,7 +78,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	this.where = node.Where()
-	this.children = make([]Operator, 0, 8)     // top-level children, executed sequentially
+	this.children = make([]Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	count, err := this.fastCount(node)
@@ -239,7 +241,19 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	fetch := NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
-	return fetch, nil
+	return nil, nil
+}
+
+func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+	sel, err := node.Subquery().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	this.children = make([]Operator, 0, 16)    // top-level children, executed sequentially
+	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
+	this.children = append(this.children, sel.(Operator), NewAlias(node.Alias()))
+	return nil, nil
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
@@ -262,8 +276,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 	join := NewJoin(keyspace, node)
 	this.subChildren = append(this.subChildren, join)
-
-	return join, nil
+	return nil, nil
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
@@ -286,8 +299,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 	nest := NewNest(keyspace, node)
 	this.subChildren = append(this.subChildren, nest)
-
-	return nest, nil
+	return nil, nil
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
@@ -298,8 +310,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 	unnest := NewUnnest(node)
 	this.subChildren = append(this.subChildren, unnest)
-
-	return unnest, nil
+	return nil, nil
 }
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {

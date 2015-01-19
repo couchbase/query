@@ -35,6 +35,7 @@ subresult        algebra.Subresult
 subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
+subqueryTerm     *algebra.SubqueryTerm
 path             expression.Path
 group            *algebra.Group
 resultTerm       *algebra.ResultTerm
@@ -293,6 +294,7 @@ indexType        datastore.IndexType
 %type <subselect>        from_select
 %type <fromTerm>         from_term from opt_from
 %type <keyspaceTerm>     keyspace_term join_term
+%type <subqueryTerm>     subquery_term
 %type <b>                opt_join_type
 %type <path>             path opt_subpath
 %type <s>                namespace_name keyspace_name
@@ -629,6 +631,11 @@ keyspace_term
     $$ = $1
 }
 |
+subquery_term
+{
+    $$ = $1
+}
+|
 from_term opt_join_type JOIN join_term
 {
     $$ = algebra.NewJoin($1, $2, $4)
@@ -665,6 +672,13 @@ namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
 SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
 {
     $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6)
+}
+;
+
+subquery_term:
+LPAREN fullselect RPAREN as_alias
+{
+    $$ = algebra.NewSubqueryTerm($2, $4)
 }
 ;
 

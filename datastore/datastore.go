@@ -114,7 +114,7 @@ func GetDatastore() Datastore {
 	return _DATASTORE
 }
 
-func GetKeyspace(namespace, keyspace string) (Keyspace, error) {
+func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 	datastore := GetDatastore()
 
 	ns, err := datastore.NamespaceByName(namespace)
