@@ -676,9 +676,13 @@ SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
 ;
 
 subquery_term:
-LPAREN fullselect RPAREN as_alias
+LPAREN fullselect RPAREN opt_as_alias
 {
-    $$ = algebra.NewSubqueryTerm($2, $4)
+    if $4 == "" {
+        yylex.Error("Subquery in FROM clause must have an alias.")
+    } else {
+        $$ = algebra.NewSubqueryTerm($2, $4)
+    }
 }
 ;
 
@@ -1483,7 +1487,7 @@ expr
 {
     exp := $1
     if !exp.Indexable() || exp.Value() != nil {
-        yylex.Error(fmt.Sprintf("Expression not indexable."))
+        yylex.Error(fmt.Sprintf("Expression not indexable: %s", exp.String()))
     }
 
     $$ = exp

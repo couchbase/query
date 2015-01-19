@@ -546,85 +546,85 @@ var yyAct = []int{
 	170, 3, 638, 627, 471, 636, 628, 329, 330, 546,
 	571, 314, 99, 100, 581, 497, 591, 414, 333, 537,
 	227, 426, 443, 244, 143, 275, 490, 228, 367, 428,
-	104, 116, 425, 162, 223, 165, 412, 139, 476, 322,
-	269, 452, 155, 268, 411, 247, 16, 364, 229, 73,
-	166, 141, 115, 10, 142, 136, 123, 239, 324, 127,
-	210, 294, 276, 351, 349, 140, 492, 371, 575, 147,
-	148, 294, 368, 508, 576, 444, 93, 507, 174, 175,
+	104, 412, 223, 425, 162, 476, 139, 322, 165, 452,
+	269, 155, 116, 268, 411, 166, 16, 141, 364, 142,
+	73, 229, 247, 10, 239, 115, 123, 136, 324, 127,
+	59, 210, 294, 276, 190, 140, 351, 349, 371, 147,
+	148, 575, 508, 492, 507, 444, 93, 576, 174, 175,
 	176, 177, 178, 179, 180, 181, 182, 183, 184, 185,
-	186, 187, 188, 189, 292, 568, 196, 197, 198, 474,
-	350, 278, 59, 277, 460, 128, 157, 253, 444, 295,
-	296, 297, 226, 291, 98, 280, 460, 527, 145, 146,
-	140, 77, 488, 459, 258, 96, 241, 158, 257, 93,
-	292, 79, 370, 77, 98, 459, 80, 81, 82, 489,
-	76, 487, 477, 95, 292, 478, 406, 191, 255, 291,
-	252, 79, 76, 63, 292, 472, 265, 298, 293, 295,
-	296, 297, 254, 291, 248, 248, 284, 255, 293, 295,
-	296, 297, 251, 291, 287, 257, 190, 587, 96, 250,
-	499, 171, 172, 460, 562, 249, 249, 98, 159, 159,
-	173, 286, 395, 396, 300, 301, 302, 281, 283, 282,
-	270, 397, 459, 542, 79, 389, 528, 279, 524, 213,
-	215, 217, 316, 317, 77, 171, 172, 117, 117, 385,
-	323, 97, 433, 160, 173, 341, 339, 83, 78, 80,
-	81, 82, 242, 76, 77, 340, 475, 327, 325, 343,
-	119, 344, 510, 511, 230, 382, 191, 83, 78, 80,
-	81, 82, 455, 76, 353, 144, 354, 328, 335, 357,
-	358, 359, 245, 336, 231, 117, 569, 259, 369, 267,
-	313, 332, 611, 240, 97, 637, 192, 632, 372, 337,
-	326, 117, 267, 387, 572, 405, 413, 77, 563, 149,
-	393, 544, 526, 398, 525, 342, 380, 498, 381, 338,
-	83, 78, 80, 81, 82, 388, 76, 256, 352, 383,
-	384, 225, 356, 331, 617, 362, 363, 318, 548, 319,
-	74, 320, 651, 650, 646, 194, 618, 607, 137, 474,
-	332, 386, 75, 124, 501, 420, 422, 423, 421, 377,
-	138, 79, 599, 193, 191, 419, 436, 191, 191, 191,
-	191, 191, 191, 334, 429, 379, 431, 582, 373, 597,
-	540, 132, 570, 260, 494, 348, 294, 347, 415, 299,
-	157, 418, 450, 440, 290, 442, 457, 374, 248, 248,
-	248, 432, 441, 644, 238, 543, 445, 130, 315, 346,
-	75, 158, 437, 438, 439, 541, 231, 212, 466, 249,
-	249, 249, 114, 416, 131, 453, 453, 323, 464, 461,
-	462, 449, 448, 463, 446, 458, 456, 270, 480, 270,
-	451, 195, 211, 481, 77, 616, 454, 454, 484, 376,
-	129, 493, 483, 108, 485, 486, 496, 212, 78, 80,
-	81, 82, 271, 76, 641, 503, 470, 218, 140, 292,
-	648, 642, 216, 261, 262, 294, 107, 237, 482, 191,
-	233, 512, 298, 293, 295, 296, 297, 394, 291, 518,
-	399, 400, 401, 402, 403, 404, 523, 595, 509, 506,
-	495, 647, 513, 514, 596, 505, 214, 110, 529, 534,
-	531, 532, 608, 211, 209, 273, 530, 366, 74, 151,
-	547, 613, 72, 74, 430, 274, 573, 479, 521, 519,
-	522, 429, 539, 654, 220, 221, 222, 538, 368, 535,
-	533, 232, 118, 558, 112, 84, 561, 551, 106, 111,
-	653, 93, 629, 246, 550, 565, 243, 74, 292, 552,
-	553, 133, 74, 580, 113, 589, 504, 502, 555, 556,
-	361, 298, 293, 295, 296, 297, 360, 291, 355, 567,
-	585, 566, 649, 236, 612, 586, 447, 219, 75, 588,
-	574, 560, 577, 75, 49, 564, 153, 547, 583, 584,
-	96, 601, 469, 594, 417, 378, 600, 593, 590, 98,
-	103, 592, 592, 538, 2, 375, 84, 1, 95, 606,
-	545, 602, 93, 610, 603, 604, 79, 75, 101, 102,
-	94, 500, 547, 622, 623, 609, 598, 85, 614, 615,
-	619, 621, 624, 631, 625, 626, 620, 491, 427, 424,
-	639, 630, 633, 635, 634, 640, 536, 473, 520, 41,
-	40, 643, 39, 22, 21, 20, 645, 19, 18, 17,
-	9, 96, 8, 652, 639, 639, 656, 657, 655, 84,
-	98, 7, 230, 6, 5, 93, 4, 407, 408, 95,
-	312, 321, 105, 309, 109, 161, 97, 79, 311, 306,
-	579, 94, 578, 549, 365, 266, 150, 224, 85, 77,
-	515, 516, 272, 156, 152, 86, 87, 88, 89, 90,
-	91, 92, 83, 78, 80, 81, 82, 154, 76, 70,
-	71, 33, 126, 32, 96, 54, 28, 57, 56, 31,
-	122, 121, 120, 98, 30, 134, 135, 84, 27, 50,
-	24, 409, 95, 93, 23, 0, 0, 0, 0, 0,
-	79, 0, 0, 0, 94, 0, 0, 97, 0, 0,
-	0, 85, 0, 304, 0, 0, 410, 303, 307, 310,
+	186, 187, 188, 189, 460, 568, 196, 197, 198, 460,
+	488, 350, 368, 292, 77, 128, 278, 474, 444, 277,
+	98, 253, 226, 459, 145, 146, 292, 157, 459, 258,
+	140, 77, 291, 76, 254, 96, 241, 79, 257, 93,
+	158, 295, 296, 297, 98, 291, 80, 81, 82, 280,
+	76, 527, 370, 95, 489, 292, 487, 191, 171, 172,
+	405, 79, 477, 478, 406, 255, 265, 173, 298, 293,
+	295, 296, 297, 472, 291, 252, 284, 213, 215, 217,
+	257, 251, 389, 63, 287, 248, 248, 587, 96, 562,
+	542, 528, 159, 395, 396, 524, 250, 98, 249, 249,
+	460, 286, 397, 385, 300, 301, 302, 255, 281, 283,
+	341, 339, 282, 270, 79, 171, 172, 279, 159, 459,
+	77, 117, 316, 317, 173, 242, 433, 499, 475, 327,
+	323, 97, 325, 83, 78, 80, 81, 82, 119, 76,
+	230, 294, 510, 511, 77, 340, 455, 117, 382, 343,
+	144, 344, 160, 245, 336, 231, 191, 83, 78, 80,
+	81, 82, 117, 76, 353, 328, 354, 299, 637, 357,
+	358, 359, 267, 611, 632, 117, 240, 572, 369, 335,
+	332, 313, 569, 259, 97, 318, 413, 319, 372, 320,
+	326, 267, 337, 387, 544, 290, 563, 77, 526, 149,
+	393, 525, 342, 398, 498, 338, 380, 225, 381, 331,
+	83, 78, 80, 81, 82, 388, 76, 356, 548, 651,
+	352, 362, 363, 650, 292, 617, 332, 646, 618, 607,
+	383, 384, 137, 75, 474, 256, 386, 298, 293, 295,
+	296, 297, 218, 291, 124, 420, 422, 423, 421, 334,
+	138, 294, 501, 599, 191, 419, 436, 191, 191, 191,
+	191, 191, 191, 540, 429, 394, 431, 415, 399, 400,
+	401, 402, 403, 404, 379, 582, 294, 597, 570, 260,
+	192, 418, 450, 440, 216, 442, 457, 238, 543, 315,
+	432, 157, 231, 74, 494, 348, 445, 74, 541, 248,
+	248, 248, 416, 441, 158, 214, 347, 346, 466, 437,
+	438, 439, 249, 249, 249, 212, 463, 323, 464, 461,
+	462, 449, 448, 458, 456, 446, 453, 453, 480, 194,
+	270, 451, 270, 481, 292, 74, 616, 108, 484, 454,
+	454, 493, 483, 644, 485, 486, 496, 193, 293, 295,
+	296, 297, 271, 291, 470, 503, 74, 648, 140, 292,
+	107, 132, 647, 75, 377, 482, 79, 75, 237, 191,
+	233, 512, 298, 293, 295, 296, 297, 130, 291, 518,
+	469, 261, 262, 373, 608, 211, 523, 151, 509, 506,
+	495, 110, 513, 514, 505, 209, 211, 366, 529, 534,
+	531, 532, 374, 273, 131, 75, 530, 613, 641, 595,
+	547, 212, 430, 274, 519, 642, 596, 573, 368, 521,
+	129, 429, 539, 522, 479, 195, 75, 538, 118, 535,
+	72, 533, 106, 558, 114, 84, 561, 551, 112, 111,
+	654, 93, 653, 629, 550, 565, 246, 243, 133, 77,
+	580, 74, 113, 309, 376, 589, 555, 556, 311, 306,
+	552, 553, 504, 78, 80, 81, 82, 502, 76, 567,
+	585, 566, 649, 361, 360, 586, 355, 236, 612, 588,
+	574, 560, 577, 447, 219, 564, 417, 547, 583, 584,
+	96, 601, 378, 594, 49, 375, 600, 593, 590, 98,
+	1, 592, 592, 538, 153, 545, 84, 610, 95, 606,
+	103, 602, 93, 500, 603, 604, 79, 598, 624, 631,
+	94, 491, 547, 622, 623, 609, 427, 85, 614, 615,
+	619, 621, 424, 304, 625, 626, 620, 303, 307, 310,
+	639, 630, 633, 635, 634, 640, 220, 221, 222, 536,
+	473, 643, 520, 232, 41, 40, 645, 39, 22, 2,
+	21, 96, 20, 652, 639, 639, 656, 657, 655, 84,
+	98, 19, 230, 101, 102, 93, 308, 18, 17, 95,
+	9, 8, 7, 6, 5, 4, 97, 79, 407, 408,
+	312, 94, 321, 105, 109, 305, 161, 579, 85, 77,
+	515, 516, 578, 549, 365, 86, 87, 88, 89, 90,
+	91, 92, 83, 78, 80, 81, 82, 266, 76, 150,
+	224, 272, 156, 152, 96, 154, 70, 71, 33, 126,
+	32, 54, 28, 98, 57, 56, 31, 84, 122, 121,
+	120, 409, 95, 93, 30, 134, 135, 27, 50, 24,
+	79, 23, 0, 0, 94, 0, 0, 97, 0, 0,
+	0, 85, 0, 0, 0, 0, 410, 0, 0, 0,
 	77, 467, 0, 0, 468, 0, 86, 87, 88, 89,
 	90, 91, 92, 83, 78, 80, 81, 82, 0, 76,
 	0, 0, 96, 0, 0, 0, 0, 0, 84, 0,
-	0, 98, 0, 0, 93, 0, 308, 0, 0, 0,
+	0, 98, 0, 0, 93, 0, 0, 0, 0, 0,
 	95, 0, 0, 0, 0, 0, 0, 0, 79, 0,
-	97, 0, 94, 0, 231, 305, 0, 0, 0, 85,
+	97, 0, 94, 0, 231, 0, 0, 0, 0, 85,
 	0, 0, 0, 77, 0, 0, 0, 0, 0, 86,
 	87, 88, 89, 90, 91, 92, 83, 78, 80, 81,
 	82, 0, 76, 96, 0, 0, 0, 0, 0, 0,
@@ -833,88 +833,88 @@ var yyAct = []int{
 var yyPact = []int{
 
 	2299, -1000, -1000, 1909, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, 2668, 2668, 1262, 1262, -16, -1000, -1000, -1000, -1000,
+	-1000, 2668, 2668, 1262, 1262, 4, -1000, -1000, -1000, -1000,
 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 2668,
-	-1000, -1000, -1000, 387, 459, 454, 489, 103, 452, -1000,
+	-1000, -1000, -1000, 381, 459, 458, 487, 90, 448, -1000,
 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
-	-1000, -1000, -1000, -1000, 73, 2617, -1000, -1000, 2492, -1000,
-	322, 296, 476, 196, 2668, 93, 93, 93, 2668, 2668,
-	-1000, -1000, 421, 487, 56, 1034, 53, 2668, 2668, 2668,
+	-1000, -1000, -1000, -1000, 61, 2617, -1000, -1000, 2492, -1000,
+	402, 386, 473, 190, 2668, 78, 78, 78, 2668, 2668,
+	-1000, -1000, 399, 486, 75, 1034, 43, 2668, 2668, 2668,
 	2668, 2668, 2668, 2668, 2668, 2668, 2668, 2668, 2668, 2668,
-	2668, 2668, 2668, 2681, 263, 2668, 2668, 2668, 851, 2232,
-	43, -1000, -1000, -1000, -38, 341, 482, 448, 443, -1000,
-	549, 103, 103, 103, 164, -63, 234, -1000, 103, 2131,
-	519, -1000, -1000, 1876, 230, 2668, 64, 1909, -1000, 471,
-	100, 468, 103, 103, 2, -24, -1000, -68, -10, -26,
-	1909, 1, -1000, 205, -1000, 1, 1, 1841, 1688, 114,
-	-1000, 102, 421, -1000, 428, -1000, -1000, -128, -72, -74,
-	265, -1000, -59, 2030, 2197, 2668, -1000, -1000, -1000, -1000,
-	911, -1000, -1000, 2668, 849, -50, -50, -38, -38, -38,
-	253, 2232, 2093, 2309, 2309, 2309, 63, 63, 63, 63,
-	367, -1000, 2681, 2668, 2668, 2668, 116, 43, 43, -1000,
-	664, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 301,
-	412, 2668, 2668, -1000, 265, -1000, 265, -1000, 265, 2668,
-	71, 70, 164, 186, -1000, 245, 101, -1000, -1000, -1000,
-	102, -1000, 150, 58, 2668, 57, -1000, 230, 2668, -1000,
-	2668, 1657, -1000, 292, 270, -1000, 268, -126, -1000, -75,
-	-127, -1000, 196, 2668, -1000, 2668, 514, 93, 2668, 2668,
-	2668, 512, 506, 93, 93, 439, -1000, 2668, -42, -1000,
-	-110, 114, 286, -1000, 254, 234, 83, 101, 101, 51,
-	2197, -59, 2668, -59, 652, 19, -1000, 781, -1000, 2478,
-	2681, 30, 2668, 2681, 2681, 2681, 2681, 2681, 2681, 278,
-	116, 43, 43, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+	2668, 2668, 2668, 2681, 357, 2668, 2668, 2668, 851, 2232,
+	39, -1000, -1000, -1000, -67, 405, 391, 370, 328, -1000,
+	556, 90, 90, 90, 150, -63, 220, -1000, 90, 2131,
+	523, -1000, -1000, 1876, 223, 2668, 47, 1909, -1000, 472,
+	81, 471, 90, 90, 1, -9, -1000, -64, -48, -19,
+	1909, -4, -1000, 211, -1000, -4, -4, 1841, 1688, 107,
+	-1000, 83, 399, -1000, 426, -1000, -1000, -127, -66, -69,
+	332, -1000, -35, 2030, 2197, 2668, -1000, -1000, -1000, -1000,
+	911, -1000, -1000, 2668, 849, -50, -50, -67, -67, -67,
+	368, 2232, 2093, 2309, 2309, 2309, 63, 63, 63, 63,
+	278, -1000, 2681, 2668, 2668, 2668, 116, 39, 39, -1000,
+	534, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 309,
+	394, 2668, 2668, -1000, 332, -1000, 332, -1000, 332, 2668,
+	55, 52, 150, 172, -1000, 231, 82, -1000, -1000, -1000,
+	83, -1000, 146, 33, 2668, 32, -1000, 223, 2668, -1000,
+	2668, 1657, -1000, 300, 299, -1000, 288, -123, -1000, -74,
+	-124, -1000, 190, 2668, -1000, 2668, 522, 78, 2668, 2668,
+	2668, 520, 519, 78, 78, 429, -1000, 2668, -32, -1000,
+	-109, 107, 401, -1000, 263, 220, 76, 82, 82, 25,
+	2197, -35, 2668, -35, 652, -14, -1000, 781, -1000, 2478,
+	2681, 21, 2668, 2681, 2681, 2681, 2681, 2681, 2681, 143,
+	116, 39, 39, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
 	-1000, -1000, -1000, -1000, -1000, -1000, 1909, 1909, -1000, -1000,
-	-1000, -28, -1000, 720, 134, 295, 134, 295, 114, 127,
-	114, 83, 83, 430, -1000, 234, -1000, -1000, 55, -1000,
-	1626, -1000, -1000, 1497, 1909, 2668, 103, 103, 103, 100,
-	101, 100, -1000, 1909, 1909, -1000, -1000, 1909, 1909, 1909,
-	-1000, -1000, -46, -46, 207, -1000, 548, -1000, 102, 1909,
-	102, 2668, 439, 119, 119, 2668, -1000, -1000, -1000, -1000,
-	164, -67, -1000, -128, -128, 234, -1000, 652, -1000, -1000,
-	-1000, -1000, -1000, 1466, -27, -1000, -1000, 2668, 589, -77,
-	-77, -41, -41, -41, -17, 2681, 2668, -1000, -1000, -1000,
-	-1000, -19, -1000, 69, -32, -29, 434, 2668, -19, -32,
-	412, 114, 412, 412, -33, -1000, -55, -35, -1000, 12,
-	2668, -1000, 267, 265, -1000, 2668, 1909, 148, 13, -1000,
-	-1000, -1000, 218, 503, 2668, 502, -1000, 2668, -42, -1000,
-	1909, -1000, -1000, -128, -98, -102, -1000, 652, -1000, 80,
-	2668, 234, 234, -1000, -1000, -1000, 518, -1000, 2426, -27,
-	-1000, -1000, 134, -1000, 2030, 2668, 40, 144, 142, -57,
-	1909, -1000, 38, 211, 412, 211, 211, 83, 2668, 83,
-	-1000, -1000, 93, 1909, 287, 35, 1909, -1000, 232, 2668,
-	-1000, 183, -1000, 1909, -1000, -7, 234, 101, 101, -1000,
-	-1000, -1000, 1435, 164, 164, -1000, -1000, -1000, 1306, -1000,
-	-1000, -59, 2668, 1275, 265, 2668, 16, 138, 265, -1000,
-	211, -1000, -1000, -1000, 1235, -1000, -79, -1000, 204, 130,
-	-1000, 433, 234, -1000, -1000, -100, -1000, 1909, 100, 483,
-	-1000, 260, -128, -128, -1000, -1000, -1000, -1000, 1909, 2668,
-	211, 1909, -1000, 9, 211, -1000, -1000, 501, 93, 83,
-	83, 412, 392, -1000, 262, 239, 2668, -1000, -1000, -1000,
-	2668, -1000, 245, 234, 234, 1093, -1000, -1000, -1000, -1000,
-	-1000, -1000, -67, -1000, 211, 193, 407, 287, 117, 546,
-	-1000, 1909, 427, 260, 260, -1000, -1000, 280, 192, 130,
-	148, 2668, 2668, 2668, -1000, -1000, 186, 114, 464, 412,
-	-1000, -1000, 1909, 1909, 123, 127, 114, 121, -1000, 2668,
-	211, -1000, 359, -1000, 114, -1000, -1000, 291, -1000, 1053,
-	-1000, 190, 396, -1000, 365, -1000, 528, 189, 188, 114,
-	462, 445, 121, 2668, 2668, -1000, -1000, -1000,
+	-1000, -20, -1000, 720, 124, 284, 124, 284, 107, 126,
+	107, 76, 76, 428, -1000, 220, -1000, -1000, 49, -1000,
+	1626, -1000, -1000, 1497, 1909, 2668, 90, 90, 90, 81,
+	82, 81, -1000, 1909, 1909, -1000, -1000, 1909, 1909, 1909,
+	-1000, -1000, -46, -46, 198, -1000, 555, -1000, 83, 1909,
+	83, 2668, 429, 103, 103, 2668, -1000, -1000, -1000, -1000,
+	150, -72, -1000, -127, -127, 220, -1000, 652, -1000, -1000,
+	-1000, -1000, -1000, 1466, -26, -1000, -1000, 2668, 589, -55,
+	-55, -68, -68, -68, 253, 2681, 2668, -1000, -1000, -1000,
+	-1000, -11, -1000, 51, -22, -21, 441, 2668, -11, -22,
+	394, 107, 394, 394, -28, -1000, -77, -30, -1000, 19,
+	2668, -1000, 287, 332, -1000, 2668, 1909, 145, 50, -1000,
+	-1000, -1000, 226, 513, 2668, 508, -1000, 2668, -32, -1000,
+	1909, -1000, -1000, -127, -101, -103, -1000, 652, -1000, 70,
+	2668, 220, 220, -1000, -1000, -1000, 518, -1000, 2426, -26,
+	-1000, -1000, 124, -1000, 2030, 2668, 17, 141, 138, -33,
+	1909, -1000, 13, 206, 394, 206, 206, 76, 2668, 76,
+	-1000, -1000, 78, 1909, 280, 12, 1909, -1000, 225, 2668,
+	-1000, 173, -1000, 1909, -1000, 23, 220, 82, 82, -1000,
+	-1000, -1000, 1435, 150, 150, -1000, -1000, -1000, 1306, -1000,
+	-1000, -35, 2668, 1275, 332, 2668, 11, 136, 332, -1000,
+	206, -1000, -1000, -1000, 1235, -1000, -79, -1000, 210, 113,
+	-1000, 434, 220, -1000, -1000, -97, -1000, 1909, 81, 480,
+	-1000, 268, -127, -127, -1000, -1000, -1000, -1000, 1909, 2668,
+	206, 1909, -1000, 9, 206, -1000, -1000, 501, 78, 76,
+	76, 394, 414, -1000, 270, 240, 2668, -1000, -1000, -1000,
+	2668, -1000, 231, 220, 220, 1093, -1000, -1000, -1000, -1000,
+	-1000, -1000, -72, -1000, 206, 185, 389, 280, 108, 550,
+	-1000, 1909, 423, 268, 268, -1000, -1000, 281, 184, 113,
+	145, 2668, 2668, 2668, -1000, -1000, 172, 107, 465, 394,
+	-1000, -1000, 1909, 1909, 110, 126, 107, 104, -1000, 2668,
+	206, -1000, 413, -1000, 107, -1000, -1000, 341, -1000, 1053,
+	-1000, 183, 367, -1000, 362, -1000, 528, 179, 175, 107,
+	464, 462, 104, 2668, 2668, -1000, -1000, -1000,
 }
 var yyPgo = []int{
 
-	0, 734, 730, 574, 729, 728, 55, 726, 725, 0,
-	53, 176, 37, 340, 40, 43, 48, 27, 20, 24,
-	724, 722, 721, 720, 57, 333, 719, 718, 717, 54,
-	51, 307, 22, 716, 715, 713, 712, 46, 711, 102,
-	710, 709, 707, 502, 694, 42, 41, 693, 692, 21,
-	25, 52, 31, 687, 34, 14, 289, 686, 6, 685,
-	47, 684, 683, 28, 682, 680, 50, 33, 675, 49,
-	674, 672, 39, 671, 388, 11, 60, 670, 668, 667,
-	594, 666, 664, 663, 661, 652, 650, 649, 648, 647,
-	645, 644, 643, 642, 640, 639, 402, 36, 44, 17,
-	38, 638, 637, 4, 19, 636, 16, 7, 32, 629,
-	8, 29, 628, 627, 26, 10, 623, 622, 3, 2,
-	5, 23, 45, 616, 15, 611, 9, 603, 600, 597,
-	35, 595, 18, 585, 58, 584,
+	0, 741, 739, 584, 738, 737, 57, 736, 735, 0,
+	53, 64, 36, 340, 40, 43, 51, 27, 20, 24,
+	734, 730, 729, 728, 54, 334, 726, 725, 724, 49,
+	47, 325, 22, 722, 721, 720, 719, 46, 718, 60,
+	717, 716, 715, 520, 713, 41, 39, 712, 711, 21,
+	25, 55, 42, 710, 32, 14, 289, 709, 6, 707,
+	48, 694, 693, 28, 692, 687, 45, 34, 686, 50,
+	684, 683, 37, 682, 379, 11, 61, 680, 679, 678,
+	649, 675, 674, 673, 672, 671, 670, 668, 667, 661,
+	652, 650, 648, 647, 645, 644, 524, 31, 44, 17,
+	35, 642, 640, 4, 19, 639, 16, 7, 33, 622,
+	8, 29, 616, 611, 26, 10, 609, 608, 3, 2,
+	5, 23, 52, 607, 15, 603, 9, 597, 595, 590,
+	38, 585, 18, 582, 58, 576,
 }
 var yyR1 = []int{
 
@@ -1038,7 +1038,7 @@ var yyChk = []int{
 	74, -18, -45, 167, 168, 134, -9, -122, -122, -122,
 	-121, -52, -121, -32, 154, -32, -69, 18, -15, -14,
 	-9, -60, -46, -52, -51, 133, -46, -9, -54, 190,
-	171, -50, -50, -17, -18, 172, -9, 172, 175, -11,
+	171, -50, -50, -18, -18, 172, -9, 172, 175, -11,
 	-72, -103, 174, -102, 118, 167, -100, 174, 174, 73,
 	-9, -103, -100, -75, -58, -75, -75, 174, 177, 174,
 	-114, -113, 54, -9, 97, -37, -9, -124, 149, 167,
@@ -1099,7 +1099,7 @@ var yyDef = []int{
 	0, 0, 296, 297, 100, 319, 323, 326, 324, 325,
 	320, 321, 162, 162, 0, 96, 0, 98, 0, 94,
 	0, 0, 95, 0, 0, 0, 62, 63, 82, 84,
-	75, 74, 204, 73, 73, 0, 45, 49, 40, 47,
+	75, 74, 204, 73, 73, 49, 45, 49, 40, 47,
 	211, 212, 214, 0, 232, 270, 271, 0, 0, 277,
 	278, 279, 280, 281, 282, 0, 0, 112, 114, 115,
 	116, 135, 132, 0, 141, 130, 0, 0, 135, 141,
@@ -1633,20 +1633,24 @@ yydefault:
 	case 67:
 		//line n1ql.y:677
 		{
-			yyVAL.subqueryTerm = algebra.NewSubqueryTerm(yyS[yypt-2].fullselect, yyS[yypt-0].s)
+			if yyS[yypt-0].s == "" {
+				yylex.Error("Subquery in FROM clause must have an alias.")
+			} else {
+				yyVAL.subqueryTerm = algebra.NewSubqueryTerm(yyS[yypt-2].fullselect, yyS[yypt-0].s)
+			}
 		}
 	case 68:
-		//line n1ql.y:684
+		//line n1ql.y:688
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 69:
-		//line n1ql.y:689
+		//line n1ql.y:693
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm(yyS[yypt-5].s, yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
 	case 70:
-		//line n1ql.y:694
+		//line n1ql.y:698
 		{
 			yyVAL.keyspaceTerm = algebra.NewKeyspaceTerm("#system", yyS[yypt-3].s, yyS[yypt-2].path, yyS[yypt-1].s, yyS[yypt-0].expr)
 		}
@@ -1655,856 +1659,856 @@ yydefault:
 	case 72:
 		yyVAL.s = yyS[yypt-0].s
 	case 73:
-		//line n1ql.y:709
+		//line n1ql.y:713
 		{
 			yyVAL.path = nil
 		}
 	case 74:
-		//line n1ql.y:714
+		//line n1ql.y:718
 		{
 			yyVAL.path = yyS[yypt-0].path
 		}
 	case 75:
-		//line n1ql.y:721
+		//line n1ql.y:725
 		{
 			yyVAL.expr = nil
 		}
 	case 76:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 77:
-		//line n1ql.y:730
+		//line n1ql.y:734
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 78:
-		//line n1ql.y:737
+		//line n1ql.y:741
 		{
 		}
 	case 80:
-		//line n1ql.y:745
+		//line n1ql.y:749
 		{
 			yyVAL.b = false
 		}
 	case 81:
-		//line n1ql.y:750
+		//line n1ql.y:754
 		{
 			yyVAL.b = false
 		}
 	case 82:
-		//line n1ql.y:755
+		//line n1ql.y:759
 		{
 			yyVAL.b = true
 		}
 	case 85:
-		//line n1ql.y:768
+		//line n1ql.y:772
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 86:
-		//line n1ql.y:782
+		//line n1ql.y:786
 		{
 			yyVAL.bindings = nil
 		}
 	case 87:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 88:
-		//line n1ql.y:791
+		//line n1ql.y:795
 		{
 			yyVAL.bindings = yyS[yypt-0].bindings
 		}
 	case 89:
-		//line n1ql.y:798
+		//line n1ql.y:802
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 90:
-		//line n1ql.y:803
+		//line n1ql.y:807
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 91:
-		//line n1ql.y:810
+		//line n1ql.y:814
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 92:
-		//line n1ql.y:824
+		//line n1ql.y:828
 		{
 			yyVAL.expr = nil
 		}
 	case 93:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 94:
-		//line n1ql.y:833
+		//line n1ql.y:837
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 95:
-		//line n1ql.y:847
+		//line n1ql.y:851
 		{
 			yyVAL.group = nil
 		}
 	case 96:
 		yyVAL.group = yyS[yypt-0].group
 	case 97:
-		//line n1ql.y:856
+		//line n1ql.y:860
 		{
 			yyVAL.group = algebra.NewGroup(yyS[yypt-2].exprs, yyS[yypt-1].bindings, yyS[yypt-0].expr)
 		}
 	case 98:
-		//line n1ql.y:861
+		//line n1ql.y:865
 		{
 			yyVAL.group = algebra.NewGroup(nil, yyS[yypt-0].bindings, nil)
 		}
 	case 99:
-		//line n1ql.y:868
+		//line n1ql.y:872
 		{
 			yyVAL.exprs = expression.Expressions{yyS[yypt-0].expr}
 		}
 	case 100:
-		//line n1ql.y:873
+		//line n1ql.y:877
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 101:
-		//line n1ql.y:880
+		//line n1ql.y:884
 		{
 			yyVAL.bindings = nil
 		}
 	case 102:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 103:
-		//line n1ql.y:889
+		//line n1ql.y:893
 		{
 			yyVAL.bindings = yyS[yypt-0].bindings
 		}
 	case 104:
-		//line n1ql.y:896
+		//line n1ql.y:900
 		{
 			yyVAL.expr = nil
 		}
 	case 105:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 106:
-		//line n1ql.y:905
+		//line n1ql.y:909
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 107:
-		//line n1ql.y:919
+		//line n1ql.y:923
 		{
 			yyVAL.order = nil
 		}
 	case 108:
 		yyVAL.order = yyS[yypt-0].order
 	case 109:
-		//line n1ql.y:928
+		//line n1ql.y:932
 		{
 			yyVAL.order = algebra.NewOrder(yyS[yypt-0].sortTerms)
 		}
 	case 110:
-		//line n1ql.y:935
+		//line n1ql.y:939
 		{
 			yyVAL.sortTerms = algebra.SortTerms{yyS[yypt-0].sortTerm}
 		}
 	case 111:
-		//line n1ql.y:940
+		//line n1ql.y:944
 		{
 			yyVAL.sortTerms = append(yyS[yypt-2].sortTerms, yyS[yypt-0].sortTerm)
 		}
 	case 112:
-		//line n1ql.y:947
+		//line n1ql.y:951
 		{
 			yyVAL.sortTerm = algebra.NewSortTerm(yyS[yypt-1].expr, yyS[yypt-0].b)
 		}
 	case 113:
-		//line n1ql.y:954
+		//line n1ql.y:958
 		{
 			yyVAL.b = false
 		}
 	case 114:
 		yyVAL.b = yyS[yypt-0].b
 	case 115:
-		//line n1ql.y:963
+		//line n1ql.y:967
 		{
 			yyVAL.b = false
 		}
 	case 116:
-		//line n1ql.y:968
+		//line n1ql.y:972
 		{
 			yyVAL.b = true
 		}
 	case 117:
-		//line n1ql.y:982
+		//line n1ql.y:986
 		{
 			yyVAL.expr = nil
 		}
 	case 118:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 119:
-		//line n1ql.y:991
+		//line n1ql.y:995
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 120:
-		//line n1ql.y:1005
+		//line n1ql.y:1009
 		{
 			yyVAL.expr = nil
 		}
 	case 121:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 122:
-		//line n1ql.y:1014
+		//line n1ql.y:1018
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 123:
-		//line n1ql.y:1028
+		//line n1ql.y:1032
 		{
 			yyVAL.statement = algebra.NewInsertValues(yyS[yypt-3].keyspaceRef, yyS[yypt-1].pairs, yyS[yypt-0].projection)
 		}
 	case 124:
-		//line n1ql.y:1033
+		//line n1ql.y:1037
 		{
 			yyVAL.statement = algebra.NewInsertSelect(yyS[yypt-6].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].expr, yyS[yypt-1].fullselect, yyS[yypt-0].projection)
 		}
 	case 125:
-		//line n1ql.y:1040
+		//line n1ql.y:1044
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef(yyS[yypt-3].s, yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 126:
-		//line n1ql.y:1045
+		//line n1ql.y:1049
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef("", yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 132:
 		yyVAL.pairs = yyS[yypt-0].pairs
 	case 133:
-		//line n1ql.y:1068
+		//line n1ql.y:1072
 		{
 			yyVAL.pairs = append(yyS[yypt-2].pairs, yyS[yypt-0].pairs...)
 		}
 	case 134:
-		//line n1ql.y:1075
+		//line n1ql.y:1079
 		{
 			yyVAL.pairs = algebra.Pairs{&algebra.Pair{Key: yyS[yypt-3].expr, Value: yyS[yypt-1].expr}}
 		}
 	case 135:
-		//line n1ql.y:1082
+		//line n1ql.y:1086
 		{
 			yyVAL.projection = nil
 		}
 	case 136:
 		yyVAL.projection = yyS[yypt-0].projection
 	case 137:
-		//line n1ql.y:1091
+		//line n1ql.y:1095
 		{
 			yyVAL.projection = yyS[yypt-0].projection
 		}
 	case 138:
-		//line n1ql.y:1098
+		//line n1ql.y:1102
 		{
 			yyVAL.projection = algebra.NewProjection(false, yyS[yypt-0].resultTerms)
 		}
 	case 139:
-		//line n1ql.y:1103
+		//line n1ql.y:1107
 		{
 			yyVAL.projection = algebra.NewRawProjection(false, yyS[yypt-0].expr, "")
 		}
 	case 140:
-		//line n1ql.y:1110
+		//line n1ql.y:1114
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 141:
-		//line n1ql.y:1117
+		//line n1ql.y:1121
 		{
 			yyVAL.expr = nil
 		}
 	case 142:
-		//line n1ql.y:1122
+		//line n1ql.y:1126
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 143:
-		//line n1ql.y:1136
+		//line n1ql.y:1140
 		{
 			yyVAL.statement = algebra.NewUpsertValues(yyS[yypt-3].keyspaceRef, yyS[yypt-1].pairs, yyS[yypt-0].projection)
 		}
 	case 144:
-		//line n1ql.y:1141
+		//line n1ql.y:1145
 		{
 			yyVAL.statement = algebra.NewUpsertSelect(yyS[yypt-6].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].expr, yyS[yypt-1].fullselect, yyS[yypt-0].projection)
 		}
 	case 145:
-		//line n1ql.y:1155
+		//line n1ql.y:1159
 		{
 			yyVAL.statement = algebra.NewDelete(yyS[yypt-4].keyspaceRef, yyS[yypt-3].expr, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 146:
-		//line n1ql.y:1169
+		//line n1ql.y:1173
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-6].keyspaceRef, yyS[yypt-5].expr, yyS[yypt-4].set, yyS[yypt-3].unset, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 147:
-		//line n1ql.y:1174
+		//line n1ql.y:1178
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-5].keyspaceRef, yyS[yypt-4].expr, yyS[yypt-3].set, nil, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 148:
-		//line n1ql.y:1179
+		//line n1ql.y:1183
 		{
 			yyVAL.statement = algebra.NewUpdate(yyS[yypt-5].keyspaceRef, yyS[yypt-4].expr, nil, yyS[yypt-3].unset, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 149:
-		//line n1ql.y:1186
+		//line n1ql.y:1190
 		{
 			yyVAL.set = algebra.NewSet(yyS[yypt-0].setTerms)
 		}
 	case 150:
-		//line n1ql.y:1193
+		//line n1ql.y:1197
 		{
 			yyVAL.setTerms = algebra.SetTerms{yyS[yypt-0].setTerm}
 		}
 	case 151:
-		//line n1ql.y:1198
+		//line n1ql.y:1202
 		{
 			yyVAL.setTerms = append(yyS[yypt-2].setTerms, yyS[yypt-0].setTerm)
 		}
 	case 152:
-		//line n1ql.y:1205
+		//line n1ql.y:1209
 		{
 			yyVAL.setTerm = algebra.NewSetTerm(yyS[yypt-3].path, yyS[yypt-1].expr, yyS[yypt-0].updateFor)
 		}
 	case 153:
-		//line n1ql.y:1212
+		//line n1ql.y:1216
 		{
 			yyVAL.updateFor = nil
 		}
 	case 154:
 		yyVAL.updateFor = yyS[yypt-0].updateFor
 	case 155:
-		//line n1ql.y:1221
+		//line n1ql.y:1225
 		{
 			yyVAL.updateFor = algebra.NewUpdateFor(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 156:
-		//line n1ql.y:1228
+		//line n1ql.y:1232
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 157:
-		//line n1ql.y:1233
+		//line n1ql.y:1237
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 158:
-		//line n1ql.y:1240
+		//line n1ql.y:1244
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 159:
-		//line n1ql.y:1245
+		//line n1ql.y:1249
 		{
 			yyVAL.binding = expression.NewDescendantBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 160:
 		yyVAL.s = yyS[yypt-0].s
 	case 161:
-		//line n1ql.y:1256
+		//line n1ql.y:1260
 		{
 			yyVAL.expr = yyS[yypt-0].path
 		}
 	case 162:
-		//line n1ql.y:1263
+		//line n1ql.y:1267
 		{
 			yyVAL.expr = nil
 		}
 	case 163:
-		//line n1ql.y:1268
+		//line n1ql.y:1272
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 164:
-		//line n1ql.y:1275
+		//line n1ql.y:1279
 		{
 			yyVAL.unset = algebra.NewUnset(yyS[yypt-0].unsetTerms)
 		}
 	case 165:
-		//line n1ql.y:1282
+		//line n1ql.y:1286
 		{
 			yyVAL.unsetTerms = algebra.UnsetTerms{yyS[yypt-0].unsetTerm}
 		}
 	case 166:
-		//line n1ql.y:1287
+		//line n1ql.y:1291
 		{
 			yyVAL.unsetTerms = append(yyS[yypt-2].unsetTerms, yyS[yypt-0].unsetTerm)
 		}
 	case 167:
-		//line n1ql.y:1294
+		//line n1ql.y:1298
 		{
 			yyVAL.unsetTerm = algebra.NewUnsetTerm(yyS[yypt-1].path, yyS[yypt-0].updateFor)
 		}
 	case 168:
-		//line n1ql.y:1308
+		//line n1ql.y:1312
 		{
 			source := algebra.NewMergeSourceFrom(yyS[yypt-5].keyspaceTerm, "")
 			yyVAL.statement = algebra.NewMerge(yyS[yypt-7].keyspaceRef, source, yyS[yypt-3].expr, yyS[yypt-2].mergeActions, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 169:
-		//line n1ql.y:1314
+		//line n1ql.y:1318
 		{
 			source := algebra.NewMergeSourceSelect(yyS[yypt-7].fullselect, yyS[yypt-5].s)
 			yyVAL.statement = algebra.NewMerge(yyS[yypt-10].keyspaceRef, source, yyS[yypt-3].expr, yyS[yypt-2].mergeActions, yyS[yypt-1].expr, yyS[yypt-0].projection)
 		}
 	case 170:
-		//line n1ql.y:1322
+		//line n1ql.y:1326
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, nil)
 		}
 	case 171:
-		//line n1ql.y:1327
+		//line n1ql.y:1331
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(yyS[yypt-1].mergeUpdate, yyS[yypt-0].mergeActions.Delete(), yyS[yypt-0].mergeActions.Insert())
 		}
 	case 172:
-		//line n1ql.y:1332
+		//line n1ql.y:1336
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, yyS[yypt-1].mergeDelete, yyS[yypt-0].mergeInsert)
 		}
 	case 173:
-		//line n1ql.y:1337
+		//line n1ql.y:1341
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, yyS[yypt-0].mergeInsert)
 		}
 	case 174:
-		//line n1ql.y:1344
+		//line n1ql.y:1348
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, nil)
 		}
 	case 175:
-		//line n1ql.y:1349
+		//line n1ql.y:1353
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, yyS[yypt-1].mergeDelete, yyS[yypt-0].mergeInsert)
 		}
 	case 176:
-		//line n1ql.y:1354
+		//line n1ql.y:1358
 		{
 			yyVAL.mergeActions = algebra.NewMergeActions(nil, nil, yyS[yypt-0].mergeInsert)
 		}
 	case 177:
-		//line n1ql.y:1361
+		//line n1ql.y:1365
 		{
 			yyVAL.mergeInsert = nil
 		}
 	case 178:
-		//line n1ql.y:1366
+		//line n1ql.y:1370
 		{
 			yyVAL.mergeInsert = yyS[yypt-0].mergeInsert
 		}
 	case 179:
-		//line n1ql.y:1373
+		//line n1ql.y:1377
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(yyS[yypt-1].set, nil, yyS[yypt-0].expr)
 		}
 	case 180:
-		//line n1ql.y:1378
+		//line n1ql.y:1382
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(yyS[yypt-2].set, yyS[yypt-1].unset, yyS[yypt-0].expr)
 		}
 	case 181:
-		//line n1ql.y:1383
+		//line n1ql.y:1387
 		{
 			yyVAL.mergeUpdate = algebra.NewMergeUpdate(nil, yyS[yypt-1].unset, yyS[yypt-0].expr)
 		}
 	case 182:
-		//line n1ql.y:1390
+		//line n1ql.y:1394
 		{
 			yyVAL.mergeDelete = algebra.NewMergeDelete(yyS[yypt-0].expr)
 		}
 	case 183:
-		//line n1ql.y:1397
+		//line n1ql.y:1401
 		{
 			yyVAL.mergeInsert = algebra.NewMergeInsert(yyS[yypt-1].expr, yyS[yypt-0].expr)
 		}
 	case 184:
-		//line n1ql.y:1411
+		//line n1ql.y:1415
 		{
 			yyVAL.statement = algebra.NewCreatePrimaryIndex(yyS[yypt-1].keyspaceRef, yyS[yypt-0].indexType)
 		}
 	case 185:
-		//line n1ql.y:1416
+		//line n1ql.y:1420
 		{
 			yyVAL.statement = algebra.NewCreateIndex(yyS[yypt-8].s, yyS[yypt-6].keyspaceRef, yyS[yypt-4].exprs, yyS[yypt-2].expr, yyS[yypt-1].expr, yyS[yypt-0].indexType)
 		}
 	case 186:
 		yyVAL.s = yyS[yypt-0].s
 	case 187:
-		//line n1ql.y:1427
+		//line n1ql.y:1431
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef("", yyS[yypt-0].s, "")
 		}
 	case 188:
-		//line n1ql.y:1432
+		//line n1ql.y:1436
 		{
 			yyVAL.keyspaceRef = algebra.NewKeyspaceRef(yyS[yypt-2].s, yyS[yypt-0].s, "")
 		}
 	case 189:
-		//line n1ql.y:1439
+		//line n1ql.y:1443
 		{
 			yyVAL.expr = nil
 		}
 	case 190:
-		//line n1ql.y:1444
+		//line n1ql.y:1448
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 191:
-		//line n1ql.y:1451
+		//line n1ql.y:1455
 		{
 			yyVAL.indexType = datastore.VIEW
 		}
 	case 192:
-		//line n1ql.y:1456
+		//line n1ql.y:1460
 		{
 			yyVAL.indexType = datastore.VIEW
 		}
 	case 193:
-		//line n1ql.y:1461
+		//line n1ql.y:1465
 		{
 			yyVAL.indexType = datastore.GSI
 		}
 	case 194:
-		//line n1ql.y:1468
+		//line n1ql.y:1472
 		{
 			yyVAL.exprs = expression.Expressions{yyS[yypt-0].expr}
 		}
 	case 195:
-		//line n1ql.y:1473
+		//line n1ql.y:1477
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 196:
-		//line n1ql.y:1480
+		//line n1ql.y:1484
 		{
 			exp := yyS[yypt-0].expr
 			if !exp.Indexable() || exp.Value() != nil {
-				yylex.Error(fmt.Sprintf("Expression not indexable."))
+				yylex.Error(fmt.Sprintf("Expression not indexable: %s", exp.String()))
 			}
 
 			yyVAL.expr = exp
 		}
 	case 197:
-		//line n1ql.y:1491
+		//line n1ql.y:1495
 		{
 			yyVAL.expr = nil
 		}
 	case 198:
-		//line n1ql.y:1496
+		//line n1ql.y:1500
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 199:
-		//line n1ql.y:1510
+		//line n1ql.y:1514
 		{
 			yyVAL.statement = algebra.NewDropIndex(yyS[yypt-0].keyspaceRef, "#primary")
 		}
 	case 200:
-		//line n1ql.y:1515
+		//line n1ql.y:1519
 		{
 			yyVAL.statement = algebra.NewDropIndex(yyS[yypt-2].keyspaceRef, yyS[yypt-0].s)
 		}
 	case 201:
-		//line n1ql.y:1528
+		//line n1ql.y:1532
 		{
 			yyVAL.statement = algebra.NewAlterIndex(yyS[yypt-3].keyspaceRef, yyS[yypt-1].s, yyS[yypt-0].s)
 		}
 	case 202:
-		//line n1ql.y:1534
+		//line n1ql.y:1538
 		{
 			yyVAL.s = ""
 		}
 	case 203:
-		//line n1ql.y:1539
+		//line n1ql.y:1543
 		{
 			yyVAL.s = yyS[yypt-0].s
 		}
 	case 204:
-		//line n1ql.y:1553
+		//line n1ql.y:1557
 		{
 			yyVAL.path = expression.NewIdentifier(yyS[yypt-0].s)
 		}
 	case 205:
-		//line n1ql.y:1558
+		//line n1ql.y:1562
 		{
 			yyVAL.path = expression.NewField(yyS[yypt-2].path, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 206:
-		//line n1ql.y:1563
+		//line n1ql.y:1567
 		{
 			field := expression.NewField(yyS[yypt-2].path, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.path = field
 		}
 	case 207:
-		//line n1ql.y:1570
+		//line n1ql.y:1574
 		{
 			yyVAL.path = expression.NewElement(yyS[yypt-3].path, yyS[yypt-1].expr)
 		}
 	case 208:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 209:
-		//line n1ql.y:1587
+		//line n1ql.y:1591
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 210:
-		//line n1ql.y:1592
+		//line n1ql.y:1596
 		{
 			field := expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 211:
-		//line n1ql.y:1599
+		//line n1ql.y:1603
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 		}
 	case 212:
-		//line n1ql.y:1604
+		//line n1ql.y:1608
 		{
 			field := expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 213:
-		//line n1ql.y:1611
+		//line n1ql.y:1615
 		{
 			yyVAL.expr = expression.NewElement(yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 214:
-		//line n1ql.y:1616
+		//line n1ql.y:1620
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-4].expr, yyS[yypt-2].expr)
 		}
 	case 215:
-		//line n1ql.y:1621
+		//line n1ql.y:1625
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-5].expr, yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 216:
-		//line n1ql.y:1627
+		//line n1ql.y:1631
 		{
 			yyVAL.expr = expression.NewAdd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 217:
-		//line n1ql.y:1632
+		//line n1ql.y:1636
 		{
 			yyVAL.expr = expression.NewSub(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 218:
-		//line n1ql.y:1637
+		//line n1ql.y:1641
 		{
 			yyVAL.expr = expression.NewMult(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 219:
-		//line n1ql.y:1642
+		//line n1ql.y:1646
 		{
 			yyVAL.expr = expression.NewDiv(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 220:
-		//line n1ql.y:1647
+		//line n1ql.y:1651
 		{
 			yyVAL.expr = expression.NewMod(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 221:
-		//line n1ql.y:1653
+		//line n1ql.y:1657
 		{
 			yyVAL.expr = expression.NewConcat(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 222:
-		//line n1ql.y:1659
+		//line n1ql.y:1663
 		{
 			yyVAL.expr = expression.NewAnd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 223:
-		//line n1ql.y:1664
+		//line n1ql.y:1668
 		{
 			yyVAL.expr = expression.NewOr(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 224:
-		//line n1ql.y:1669
+		//line n1ql.y:1673
 		{
 			yyVAL.expr = expression.NewNot(yyS[yypt-0].expr)
 		}
 	case 225:
-		//line n1ql.y:1675
+		//line n1ql.y:1679
 		{
 			yyVAL.expr = expression.NewEq(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 226:
-		//line n1ql.y:1680
+		//line n1ql.y:1684
 		{
 			yyVAL.expr = expression.NewEq(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 227:
-		//line n1ql.y:1685
+		//line n1ql.y:1689
 		{
 			yyVAL.expr = expression.NewNE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 228:
-		//line n1ql.y:1690
+		//line n1ql.y:1694
 		{
 			yyVAL.expr = expression.NewLT(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 229:
-		//line n1ql.y:1695
+		//line n1ql.y:1699
 		{
 			yyVAL.expr = expression.NewGT(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 230:
-		//line n1ql.y:1700
+		//line n1ql.y:1704
 		{
 			yyVAL.expr = expression.NewLE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 231:
-		//line n1ql.y:1705
+		//line n1ql.y:1709
 		{
 			yyVAL.expr = expression.NewGE(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 232:
-		//line n1ql.y:1710
+		//line n1ql.y:1714
 		{
 			yyVAL.expr = expression.NewBetween(yyS[yypt-4].expr, yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 233:
-		//line n1ql.y:1715
+		//line n1ql.y:1719
 		{
 			yyVAL.expr = expression.NewNotBetween(yyS[yypt-5].expr, yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 234:
-		//line n1ql.y:1720
+		//line n1ql.y:1724
 		{
 			yyVAL.expr = expression.NewLike(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 235:
-		//line n1ql.y:1725
+		//line n1ql.y:1729
 		{
 			yyVAL.expr = expression.NewNotLike(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 236:
-		//line n1ql.y:1730
+		//line n1ql.y:1734
 		{
 			yyVAL.expr = expression.NewIn(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 237:
-		//line n1ql.y:1735
+		//line n1ql.y:1739
 		{
 			yyVAL.expr = expression.NewNotIn(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 238:
-		//line n1ql.y:1740
+		//line n1ql.y:1744
 		{
 			yyVAL.expr = expression.NewWithin(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 239:
-		//line n1ql.y:1745
+		//line n1ql.y:1749
 		{
 			yyVAL.expr = expression.NewNotWithin(yyS[yypt-3].expr, yyS[yypt-0].expr)
 		}
 	case 240:
-		//line n1ql.y:1750
+		//line n1ql.y:1754
 		{
 			yyVAL.expr = expression.NewIsNull(yyS[yypt-2].expr)
 		}
 	case 241:
-		//line n1ql.y:1755
+		//line n1ql.y:1759
 		{
 			yyVAL.expr = expression.NewIsNotNull(yyS[yypt-3].expr)
 		}
 	case 242:
-		//line n1ql.y:1760
+		//line n1ql.y:1764
 		{
 			yyVAL.expr = expression.NewIsMissing(yyS[yypt-2].expr)
 		}
 	case 243:
-		//line n1ql.y:1765
+		//line n1ql.y:1769
 		{
 			yyVAL.expr = expression.NewIsNotMissing(yyS[yypt-3].expr)
 		}
 	case 244:
-		//line n1ql.y:1770
+		//line n1ql.y:1774
 		{
 			yyVAL.expr = expression.NewIsValued(yyS[yypt-2].expr)
 		}
 	case 245:
-		//line n1ql.y:1775
+		//line n1ql.y:1779
 		{
 			yyVAL.expr = expression.NewIsNotValued(yyS[yypt-3].expr)
 		}
 	case 246:
-		//line n1ql.y:1780
+		//line n1ql.y:1784
 		{
 			yyVAL.expr = expression.NewIsBoolean(yyS[yypt-2].expr)
 		}
 	case 247:
-		//line n1ql.y:1785
+		//line n1ql.y:1789
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsBoolean(yyS[yypt-3].expr))
 		}
 	case 248:
-		//line n1ql.y:1790
+		//line n1ql.y:1794
 		{
 			yyVAL.expr = expression.NewIsNumber(yyS[yypt-2].expr)
 		}
 	case 249:
-		//line n1ql.y:1795
+		//line n1ql.y:1799
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsNumber(yyS[yypt-3].expr))
 		}
 	case 250:
-		//line n1ql.y:1800
+		//line n1ql.y:1804
 		{
 			yyVAL.expr = expression.NewIsString(yyS[yypt-2].expr)
 		}
 	case 251:
-		//line n1ql.y:1805
+		//line n1ql.y:1809
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsString(yyS[yypt-3].expr))
 		}
 	case 252:
-		//line n1ql.y:1810
+		//line n1ql.y:1814
 		{
 			yyVAL.expr = expression.NewIsArray(yyS[yypt-2].expr)
 		}
 	case 253:
-		//line n1ql.y:1815
+		//line n1ql.y:1819
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsArray(yyS[yypt-3].expr))
 		}
 	case 254:
-		//line n1ql.y:1820
+		//line n1ql.y:1824
 		{
 			yyVAL.expr = expression.NewIsObject(yyS[yypt-2].expr)
 		}
 	case 255:
-		//line n1ql.y:1825
+		//line n1ql.y:1829
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsObject(yyS[yypt-3].expr))
 		}
 	case 256:
-		//line n1ql.y:1830
+		//line n1ql.y:1834
 		{
 			yyVAL.expr = expression.NewIsBinary(yyS[yypt-2].expr)
 		}
 	case 257:
-		//line n1ql.y:1835
+		//line n1ql.y:1839
 		{
 			yyVAL.expr = expression.NewNot(expression.NewIsBinary(yyS[yypt-3].expr))
 		}
 	case 258:
-		//line n1ql.y:1840
+		//line n1ql.y:1844
 		{
 			yyVAL.expr = expression.NewExists(yyS[yypt-0].expr)
 		}
@@ -2513,12 +2517,12 @@ yydefault:
 	case 260:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 261:
-		//line n1ql.y:1854
+		//line n1ql.y:1858
 		{
 			yyVAL.expr = expression.NewIdentifier(yyS[yypt-0].s)
 		}
 	case 262:
-		//line n1ql.y:1860
+		//line n1ql.y:1864
 		{
 			yyVAL.expr = expression.NewSelf()
 		}
@@ -2527,7 +2531,7 @@ yydefault:
 	case 264:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 265:
-		//line n1ql.y:1872
+		//line n1ql.y:1876
 		{
 			yyVAL.expr = expression.NewNeg(yyS[yypt-0].expr)
 		}
@@ -2540,106 +2544,106 @@ yydefault:
 	case 269:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 270:
-		//line n1ql.y:1891
+		//line n1ql.y:1895
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 		}
 	case 271:
-		//line n1ql.y:1896
+		//line n1ql.y:1900
 		{
 			field := expression.NewField(yyS[yypt-2].expr, expression.NewFieldName(yyS[yypt-0].s))
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 272:
-		//line n1ql.y:1903
+		//line n1ql.y:1907
 		{
 			yyVAL.expr = expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 		}
 	case 273:
-		//line n1ql.y:1908
+		//line n1ql.y:1912
 		{
 			field := expression.NewField(yyS[yypt-4].expr, yyS[yypt-1].expr)
 			field.SetCaseInsensitive(true)
 			yyVAL.expr = field
 		}
 	case 274:
-		//line n1ql.y:1915
+		//line n1ql.y:1919
 		{
 			yyVAL.expr = expression.NewElement(yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 275:
-		//line n1ql.y:1920
+		//line n1ql.y:1924
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-4].expr, yyS[yypt-2].expr)
 		}
 	case 276:
-		//line n1ql.y:1925
+		//line n1ql.y:1929
 		{
 			yyVAL.expr = expression.NewSlice(yyS[yypt-5].expr, yyS[yypt-3].expr, yyS[yypt-1].expr)
 		}
 	case 277:
-		//line n1ql.y:1931
+		//line n1ql.y:1935
 		{
 			yyVAL.expr = expression.NewAdd(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 278:
-		//line n1ql.y:1936
+		//line n1ql.y:1940
 		{
 			yyVAL.expr = expression.NewSub(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 279:
-		//line n1ql.y:1941
+		//line n1ql.y:1945
 		{
 			yyVAL.expr = expression.NewMult(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 280:
-		//line n1ql.y:1946
+		//line n1ql.y:1950
 		{
 			yyVAL.expr = expression.NewDiv(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 281:
-		//line n1ql.y:1951
+		//line n1ql.y:1955
 		{
 			yyVAL.expr = expression.NewMod(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 282:
-		//line n1ql.y:1957
+		//line n1ql.y:1961
 		{
 			yyVAL.expr = expression.NewConcat(yyS[yypt-2].expr, yyS[yypt-0].expr)
 		}
 	case 283:
-		//line n1ql.y:1971
+		//line n1ql.y:1975
 		{
 			yyVAL.expr = expression.NULL_EXPR
 		}
 	case 284:
-		//line n1ql.y:1976
+		//line n1ql.y:1980
 		{
 			yyVAL.expr = expression.MISSING_EXPR
 		}
 	case 285:
-		//line n1ql.y:1981
+		//line n1ql.y:1985
 		{
 			yyVAL.expr = expression.FALSE_EXPR
 		}
 	case 286:
-		//line n1ql.y:1986
+		//line n1ql.y:1990
 		{
 			yyVAL.expr = expression.TRUE_EXPR
 		}
 	case 287:
-		//line n1ql.y:1991
+		//line n1ql.y:1995
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].f))
 		}
 	case 288:
-		//line n1ql.y:1996
+		//line n1ql.y:2000
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].n))
 		}
 	case 289:
-		//line n1ql.y:2001
+		//line n1ql.y:2005
 		{
 			yyVAL.expr = expression.NewConstant(value.NewValue(yyS[yypt-0].s))
 		}
@@ -2648,62 +2652,62 @@ yydefault:
 	case 291:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 292:
-		//line n1ql.y:2021
+		//line n1ql.y:2025
 		{
 			yyVAL.expr = expression.NewObjectConstruct(yyS[yypt-1].bindings)
 		}
 	case 293:
-		//line n1ql.y:2028
+		//line n1ql.y:2032
 		{
 			yyVAL.bindings = nil
 		}
 	case 294:
 		yyVAL.bindings = yyS[yypt-0].bindings
 	case 295:
-		//line n1ql.y:2037
+		//line n1ql.y:2041
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 296:
-		//line n1ql.y:2042
+		//line n1ql.y:2046
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 297:
-		//line n1ql.y:2049
+		//line n1ql.y:2053
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 298:
-		//line n1ql.y:2056
+		//line n1ql.y:2060
 		{
 			yyVAL.expr = expression.NewArrayConstruct(yyS[yypt-1].exprs...)
 		}
 	case 299:
-		//line n1ql.y:2063
+		//line n1ql.y:2067
 		{
 			yyVAL.exprs = nil
 		}
 	case 300:
 		yyVAL.exprs = yyS[yypt-0].exprs
 	case 301:
-		//line n1ql.y:2079
+		//line n1ql.y:2083
 		{
 			yyVAL.expr = algebra.NewNamedParameter(yyS[yypt-0].s)
 		}
 	case 302:
-		//line n1ql.y:2084
+		//line n1ql.y:2088
 		{
 			yyVAL.expr = algebra.NewPositionalParameter(yyS[yypt-0].n)
 		}
 	case 303:
-		//line n1ql.y:2089
+		//line n1ql.y:2093
 		{
 			n := yylex.(*lexer).nextParam()
 			yyVAL.expr = algebra.NewPositionalParameter(n)
 		}
 	case 304:
-		//line n1ql.y:2104
+		//line n1ql.y:2108
 		{
 			yyVAL.expr = yyS[yypt-1].expr
 		}
@@ -2712,37 +2716,37 @@ yydefault:
 	case 306:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 307:
-		//line n1ql.y:2117
+		//line n1ql.y:2121
 		{
 			yyVAL.expr = expression.NewSimpleCase(yyS[yypt-2].expr, yyS[yypt-1].whenTerms, yyS[yypt-0].expr)
 		}
 	case 308:
-		//line n1ql.y:2124
+		//line n1ql.y:2128
 		{
 			yyVAL.whenTerms = expression.WhenTerms{&expression.WhenTerm{yyS[yypt-2].expr, yyS[yypt-0].expr}}
 		}
 	case 309:
-		//line n1ql.y:2129
+		//line n1ql.y:2133
 		{
 			yyVAL.whenTerms = append(yyS[yypt-4].whenTerms, &expression.WhenTerm{yyS[yypt-2].expr, yyS[yypt-0].expr})
 		}
 	case 310:
-		//line n1ql.y:2137
+		//line n1ql.y:2141
 		{
 			yyVAL.expr = expression.NewSearchedCase(yyS[yypt-1].whenTerms, yyS[yypt-0].expr)
 		}
 	case 311:
-		//line n1ql.y:2144
+		//line n1ql.y:2148
 		{
 			yyVAL.expr = nil
 		}
 	case 312:
-		//line n1ql.y:2149
+		//line n1ql.y:2153
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 313:
-		//line n1ql.y:2163
+		//line n1ql.y:2167
 		{
 			yyVAL.expr = nil
 			f, ok := expression.GetFunction(yyS[yypt-3].s)
@@ -2761,7 +2765,7 @@ yydefault:
 			}
 		}
 	case 314:
-		//line n1ql.y:2182
+		//line n1ql.y:2186
 		{
 			yyVAL.expr = nil
 			if !yylex.(*lexer).parsingStatement() {
@@ -2776,7 +2780,7 @@ yydefault:
 			}
 		}
 	case 315:
-		//line n1ql.y:2197
+		//line n1ql.y:2201
 		{
 			yyVAL.expr = nil
 			if !yylex.(*lexer).parsingStatement() {
@@ -2801,64 +2805,64 @@ yydefault:
 	case 318:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 319:
-		//line n1ql.y:2235
+		//line n1ql.y:2239
 		{
 			yyVAL.expr = expression.NewAny(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 320:
-		//line n1ql.y:2240
+		//line n1ql.y:2244
 		{
 			yyVAL.expr = expression.NewAny(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 321:
-		//line n1ql.y:2245
+		//line n1ql.y:2249
 		{
 			yyVAL.expr = expression.NewEvery(yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 322:
-		//line n1ql.y:2252
+		//line n1ql.y:2256
 		{
 			yyVAL.bindings = expression.Bindings{yyS[yypt-0].binding}
 		}
 	case 323:
-		//line n1ql.y:2257
+		//line n1ql.y:2261
 		{
 			yyVAL.bindings = append(yyS[yypt-2].bindings, yyS[yypt-0].binding)
 		}
 	case 324:
-		//line n1ql.y:2264
+		//line n1ql.y:2268
 		{
 			yyVAL.binding = expression.NewBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 325:
-		//line n1ql.y:2269
+		//line n1ql.y:2273
 		{
 			yyVAL.binding = expression.NewDescendantBinding(yyS[yypt-2].s, yyS[yypt-0].expr)
 		}
 	case 326:
-		//line n1ql.y:2276
+		//line n1ql.y:2280
 		{
 			yyVAL.expr = yyS[yypt-0].expr
 		}
 	case 327:
-		//line n1ql.y:2283
+		//line n1ql.y:2287
 		{
 			yyVAL.expr = expression.NewArray(yyS[yypt-4].expr, yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 328:
-		//line n1ql.y:2288
+		//line n1ql.y:2292
 		{
 			yyVAL.expr = expression.NewFirst(yyS[yypt-4].expr, yyS[yypt-2].bindings, yyS[yypt-1].expr)
 		}
 	case 329:
-		//line n1ql.y:2302
+		//line n1ql.y:2306
 		{
 			yyVAL.expr = yyS[yypt-1].expr
 		}
 	case 330:
 		yyVAL.expr = yyS[yypt-0].expr
 	case 331:
-		//line n1ql.y:2311
+		//line n1ql.y:2315
 		{
 			yyVAL.expr = nil
 			if yylex.(*lexer).parsingStatement() {
