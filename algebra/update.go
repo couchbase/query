@@ -112,6 +112,39 @@ func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Update) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.keys != nil {
+		exprs = append(exprs, this.keys)
+	}
+
+	if this.set != nil {
+		exprs = append(exprs, this.set.Expressions()...)
+	}
+
+	if this.unset != nil {
+		exprs = append(exprs, this.unset.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.returning != nil {
+		exprs = append(exprs, this.returning.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for each of the constituent clauses
 in the Update statement.
 */
@@ -253,6 +286,18 @@ func (this *Set) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Set) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+	for _, term := range this.terms {
+		exprs = append(exprs, term.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for each term in the set terms.
 */
 func (this *Set) Formalize(f *expression.Formalizer) (err error) {
@@ -304,6 +349,18 @@ func (this *Unset) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this *Unset) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+	for _, term := range this.terms {
+		exprs = append(exprs, term.Expressions()...)
+	}
+
+	return exprs
 }
 
 /*
@@ -378,6 +435,20 @@ func (this *SetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this *SetTerm) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+	exprs = append(exprs, this.path, this.value)
+
+	if this.updateFor != nil {
+		exprs = append(exprs, this.updateFor.Expressions()...)
+	}
+
+	return exprs
 }
 
 /*
@@ -482,6 +553,20 @@ func (this *UnsetTerm) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *UnsetTerm) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+	exprs = append(exprs, this.path)
+
+	if this.updateFor != nil {
+		exprs = append(exprs, this.updateFor.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for the update for stmt and the path
 expression in the unset clause.
 */
@@ -565,6 +650,19 @@ func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this *UpdateFor) Expressions() expression.Expressions {
+	exprs := this.bindings.Expressions()
+
+	if this.when != nil {
+		exprs = append(exprs, this.when)
+	}
+
+	return exprs
 }
 
 /*

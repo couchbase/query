@@ -62,6 +62,13 @@ func (this *Prepare) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Prepare) Expressions() expression.Expressions {
+	return this.stmt.Expressions()
+}
+
+/*
 Return the prepared statement.
 */
 func (this *Prepare) Statement() Statement {

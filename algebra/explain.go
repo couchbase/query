@@ -61,6 +61,13 @@ func (this *Explain) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+Return all contained Expressions.
+*/
+func (this *Explain) Expressions() expression.Expressions {
+	return this.stmt.Expressions()
+}
+
+/*
 Return the explain statement.
 */
 func (this *Explain) Statement() Statement {

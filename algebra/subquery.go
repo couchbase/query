@@ -40,9 +40,11 @@ func NewSubquery(query *Select) expression.Expression {
 	return rv
 }
 
+/*
+   Representation as a N1QL string.
+*/
 func (this *Subquery) String() string {
-	// FIXME
-	return "(select 1)"
+	return "(" + this.query.String() + ")"
 }
 
 /*
@@ -90,17 +92,17 @@ func (this *Subquery) SubsetOf(other expression.Expression) bool {
 }
 
 /*
-Return nil.
+Return inner query's Expressions.
 */
 func (this *Subquery) Children() expression.Expressions {
-	return nil
+	return this.query.Expressions()
 }
 
 /*
-Return nil.
+Map inner query's Expressions.
 */
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
-	return nil
+	return this.query.Expressions().MapExpressions(mapper)
 }
 
 /*

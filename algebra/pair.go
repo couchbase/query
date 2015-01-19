@@ -45,6 +45,13 @@ func (this *Pair) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Pair) Expressions() expression.Expressions {
+	return expression.Expressions{this.Key, this.Value}
+}
+
+/*
 Creates and returns a new array construct containing
 the key value pair.
 */
@@ -71,6 +78,20 @@ func (this Pairs) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this Pairs) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, len(this)*2)
+
+	for i, pair := range this {
+		exprs[i*2] = pair.Key
+		exprs[i*2+1] = pair.Value
+	}
+
+	return exprs
 }
 
 /*

@@ -68,6 +68,13 @@ func (this *DropIndex) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *DropIndex) Expressions() expression.Expressions {
+	return nil
+}
+
+/*
 Return the keyspace.
 */
 func (this *DropIndex) Keyspace() *KeyspaceRef {

@@ -129,6 +129,35 @@ func (this *Upsert) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Upsert) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.key != nil {
+		exprs = append(exprs, this.key)
+	}
+
+	if this.value != nil {
+		exprs = append(exprs, this.value)
+	}
+
+	if this.values != nil {
+		exprs = append(exprs, this.values.Expressions()...)
+	}
+
+	if this.query != nil {
+		exprs = append(exprs, this.query.Expressions()...)
+	}
+
+	if this.returning != nil {
+		exprs = append(exprs, this.returning.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for each of the constituent clauses
 in the upsert statement.
 */

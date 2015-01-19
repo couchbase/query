@@ -68,6 +68,13 @@ func (this *Execute) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Execute) Expressions() expression.Expressions {
+	return nil
+}
+
+/*
 Returns the input prepared value that represents the prepared
 statement.
 */

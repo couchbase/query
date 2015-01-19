@@ -106,6 +106,13 @@ func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Return expr from the create index statement.
+*/
+func (this *CreateIndex) Expressions() expression.Expressions {
+	return this.exprs
+}
+
+/*
 Returns the name of the index.
 */
 func (this *CreateIndex) Name() string {
@@ -117,13 +124,6 @@ Returns the bucket (keyspace) that the index is created on.
 */
 func (this *CreateIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
-}
-
-/*
-Return expr from the create index statement.
-*/
-func (this *CreateIndex) Expressions() expression.Expressions {
-	return this.exprs
 }
 
 /*

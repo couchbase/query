@@ -108,6 +108,27 @@ func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Merge) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 64)
+
+	exprs = append(exprs, this.source.Expressions()...)
+	exprs = append(exprs, this.key)
+	exprs = append(exprs, this.actions.Expressions()...)
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.returning != nil {
+		exprs = append(exprs, this.returning.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for each of the constituent clauses
 in the merge statement.
 */
@@ -250,6 +271,17 @@ func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *MergeSource) Expressions() expression.Expressions {
+	if this.query != nil {
+		return this.query.Expressions()
+	}
+
+	return nil
+}
+
+/*
 Fully qualify identifiers for each of the constituent fields
 in the merge source statement.
 */
@@ -335,6 +367,27 @@ func NewMergeActions(update *MergeUpdate, delete *MergeDelete, insert *MergeInse
 		delete: delete,
 		insert: insert,
 	}
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this *MergeActions) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.update != nil {
+		exprs = append(exprs, this.update.Expressions()...)
+	}
+
+	if this.delete != nil {
+		exprs = append(exprs, this.delete.Expressions()...)
+	}
+
+	if this.insert != nil {
+		exprs = append(exprs, this.delete.Expressions()...)
+	}
+
+	return exprs
 }
 
 /*
@@ -431,6 +484,27 @@ func (this *MergeUpdate) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *MergeUpdate) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+
+	if this.set != nil {
+		exprs = append(exprs, this.set.Expressions()...)
+	}
+
+	if this.unset != nil {
+		exprs = append(exprs, this.set.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	return exprs
+}
+
+/*
 Returns the set clause in a merge update merge-action
 statement.
 */
@@ -483,6 +557,19 @@ func (this *MergeDelete) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *MergeDelete) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 1)
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	return exprs
+}
+
+/*
 Return the where clause exppression condition.
 */
 func (this *MergeDelete) Where() expression.Expression {
@@ -524,6 +611,23 @@ func (this *MergeInsert) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	return
+}
+
+/*
+Returns all contained Expressions.
+*/
+func (this *MergeInsert) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 2)
+
+	if this.value != nil {
+		exprs = append(exprs, this.value)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	return exprs
 }
 
 /*

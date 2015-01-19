@@ -46,6 +46,10 @@ func (this *AlterIndex) MapExpressions(mapper expression.Mapper) error {
 	return nil
 }
 
+func (this *AlterIndex) Expressions() expression.Expressions {
+	return nil
+}
+
 func (this *AlterIndex) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }

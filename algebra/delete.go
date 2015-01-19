@@ -93,6 +93,31 @@ func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *Delete) Expressions() expression.Expressions {
+	exprs := make(expression.Expressions, 0, 8)
+
+	if this.keys != nil {
+		exprs = append(exprs, this.keys)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.returning != nil {
+		exprs = append(exprs, this.returning.Expressions()...)
+	}
+
+	return exprs
+}
+
+/*
 Fully qualify identifiers for each of the constituent clauses
 in the delete statement.
 */

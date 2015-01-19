@@ -73,6 +73,13 @@ func (this *CreatePrimaryIndex) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
+Returns all contained Expressions.
+*/
+func (this *CreatePrimaryIndex) Expressions() expression.Expressions {
+	return nil
+}
+
+/*
 Returns the input keyspace.
 */
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {

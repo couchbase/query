@@ -43,6 +43,11 @@ type Statement interface {
 		Apply a Mapper to all the expressions in this statement.
 	*/
 	MapExpressions(mapper expression.Mapper) error
+
+	/*
+		Returns all contained Expressions.
+	*/
+	Expressions() expression.Expressions
 }
 
 /*
