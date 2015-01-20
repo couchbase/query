@@ -89,7 +89,7 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value)
 	return this.writeString("{\n") &&
 		this.writeRequestID() &&
 		this.writeClientContextID() &&
-		(!srvr.Signature() || this.writeSignature(signature)) &&
+		this.writeSignature(srvr.Signature(), signature) &&
 		this.writeString(",\n    \"results\": [")
 }
 
@@ -104,8 +104,10 @@ func (this *httpRequest) writeClientContextID() bool {
 	return this.writeString(fmt.Sprintf(",\n    \"clientContextID\": \"%s\"", this.ClientID().String()))
 }
 
-func (this *httpRequest) writeSignature(signature value.Value) bool {
-	if !this.Signature() {
+func (this *httpRequest) writeSignature(server_flag bool, signature value.Value) bool {
+	s := this.Signature()
+	if s == value.FALSE ||
+		(s == value.NONE && !server_flag) {
 		return true
 	}
 	return this.writeString(",\n    \"signature\": ") &&

@@ -46,9 +46,9 @@ type Request interface {
 	PositionalArgs() value.Values
 	Namespace() string
 	Timeout() time.Duration
-	Readonly() bool
+	Readonly() value.Tristate
 	Metrics() value.Tristate
-	Signature() bool
+	Signature() value.Tristate
 	ScanConfiguration() ScanConfiguration
 	RequestTime() time.Time
 	ServiceTime() time.Time
@@ -97,8 +97,8 @@ type BaseRequest struct {
 	positionalArgs value.Values
 	namespace      string
 	timeout        time.Duration
-	readonly       bool
-	signature      bool
+	readonly       value.Tristate
+	signature      value.Tristate
 	metrics        value.Tristate
 	consistency    ScanConfiguration
 	mutationCount  uint64
@@ -147,7 +147,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, readonly bool, metrics value.Tristate, signature bool, consistency ScanConfiguration, client_id string) *BaseRequest {
+	namespace string, readonly, metrics, signature value.Tristate, consistency ScanConfiguration, client_id string) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
@@ -215,11 +215,11 @@ func (this *BaseRequest) Timeout() time.Duration {
 	return this.timeout
 }
 
-func (this *BaseRequest) Readonly() bool {
+func (this *BaseRequest) Readonly() value.Tristate {
 	return this.readonly
 }
 
-func (this *BaseRequest) Signature() bool {
+func (this *BaseRequest) Signature() value.Tristate {
 	return this.signature
 }
 

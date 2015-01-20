@@ -26,6 +26,7 @@ import (
 	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/parser/n1ql"
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/value"
 )
 
 type Server struct {
@@ -147,7 +148,9 @@ func (this *Server) serviceRequest(request Request) {
 		request.Fail(errors.NewError(err, ""))
 	}
 
-	if (this.readonly || request.Readonly()) && (prepared != nil && !prepared.Readonly()) {
+	if ((request.Readonly() == value.TRUE) ||
+		(request.Readonly() == value.NONE && this.readonly)) &&
+		(prepared != nil && !prepared.Readonly()) {
 		request.Fail(errors.NewError(nil, "The server or request is read-only"+
 			" and cannot accept this write statement."))
 	}

@@ -87,14 +87,17 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		timeout, err = httpArgs.getDuration(TIMEOUT)
 	}
 
-	readonly := req.Method == "GET"
+	var readonly value.Tristate
 	if err == nil {
-		readonly, err = getReadonly(httpArgs, readonly)
+		readonly, err = httpArgs.getTristate(READONLY)
+	}
+	if err == nil && readonly == value.FALSE && req.Method == "GET" {
+		err = fmt.Errorf("%s=false cannot be used with HTTP GET method.", READONLY)
 	}
 
 	var metrics value.Tristate
 	if err == nil {
-		metrics, err = getMetrics(httpArgs)
+		metrics, err = httpArgs.getTristate(METRICS)
 	}
 
 	var format Format
@@ -106,9 +109,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		err = fmt.Errorf("%s format not yet supported", format)
 	}
 
-	var signature bool
+	var signature value.Tristate
 	if err == nil {
-		signature, err = httpArgs.getBoolean(SIGNATURE, true)
+		signature, err = httpArgs.getTristate(SIGNATURE)
 	}
 
 	var compression Compression
@@ -129,13 +132,13 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		err = fmt.Errorf("%s encoding not yet supported", encoding)
 	}
 
-	var pretty bool
+	var pretty value.Tristate
 	if err == nil {
-		pretty, err = httpArgs.getBoolean(PRETTY, true)
+		pretty, err = httpArgs.getTristate(PRETTY)
 	}
 
-	if err == nil && !pretty {
-		err = fmt.Errorf("%v pretty printing not yet supported", pretty)
+	if err == nil && pretty == value.FALSE {
+		err = fmt.Errorf("false pretty printing not yet supported")
 	}
 
 	var consistency *scanConfigImpl
@@ -229,29 +232,6 @@ func getPrepared(a httpRequestArgs) (*plan.Prepared, error) {
 
 	err = plan.PreparedCache().AddPrepared(prepared)
 	return prepared, err
-}
-
-func getReadonly(a httpRequestArgs, isGet bool) (bool, error) {
-	readonly, err := a.getBoolean(READONLY, isGet)
-
-	if err != nil && !readonly && isGet {
-		readonly = true
-		err = fmt.Errorf("%s=false cannot be used with HTTP GET method.", READONLY)
-	}
-
-	return readonly, err
-}
-
-func getMetrics(a httpRequestArgs) (value.Tristate, error) {
-	var metrics value.Tristate
-	m, err := a.getBoolean(METRICS, true)
-
-	if err != nil {
-		metrics = value.ToTristate(m)
-	}
-
-	return metrics, err
-
 }
 
 func getCompression(a httpRequestArgs) (Compression, error) {
@@ -389,7 +369,7 @@ func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
 	getString(string, string) (string, error)
-	getBoolean(string, bool) (bool, error)
+	getTristate(f string) (value.Tristate, error)
 	getValue(field string) (value.Value, error)
 	getDuration(string) (time.Duration, error)
 	getNamedArgs() (map[string]value.Value, error)
@@ -546,15 +526,21 @@ func (this *urlArgs) getString(f string, dflt string) (string, error) {
 	return value, err
 }
 
-func (this *urlArgs) getBoolean(f string, dflt bool) (bool, error) {
-	value := dflt
-
+func (this *urlArgs) getTristate(f string) (value.Tristate, error) {
+	tristate_value := value.NONE
 	value_field, err := this.formValue(f)
-	if err == nil && value_field != "" {
-		value, err = strconv.ParseBool(value_field)
+	if err != nil {
+		return tristate_value, err
 	}
-
-	return value, err
+	if value_field == "" {
+		return tristate_value, nil
+	}
+	bool_value, err := strconv.ParseBool(value_field)
+	if err != nil {
+		return tristate_value, err
+	}
+	tristate_value = value.ToTristate(bool_value)
+	return tristate_value, err
 }
 
 func (this *urlArgs) getCredentials() ([]map[string]string, error) {
@@ -720,25 +706,24 @@ func (this *jsonArgs) getDuration(f string) (time.Duration, error) {
 	return timeout, err
 }
 
-// helper function to get a boolean typed argument
-func (this *jsonArgs) getBoolean(f string, dflt bool) (bool, error) {
-	value := dflt
+func (this *jsonArgs) getTristate(f string) (value.Tristate, error) {
+	value_tristate := value.NONE
 
 	value_field, in_request := this.args[f]
 
 	if !in_request {
-		return value, nil
+		return value_tristate, nil
 	}
 
 	b, type_ok := value_field.(bool)
 
 	if !type_ok {
-		return value, fmt.Errorf("%s parameter has to be a %s", f, "boolean")
+		return value_tristate, fmt.Errorf("%s parameter has to be a %s", f, "boolean")
 	}
 
-	value = b
+	value_tristate = value.ToTristate(b)
 
-	return value, nil
+	return value_tristate, nil
 }
 
 // helper function to get a string type argument
