@@ -25,8 +25,9 @@ type TraverserBase struct {
 	traverser Traverser
 }
 
-func (this *TraverserBase) Traverse(expr Expression) error {
-	return this.TraverseList(expr.Children())
+func (this *TraverserBase) Traverse(expr Expression) (err error) {
+	_, err = expr.Accept(this.traverser)
+	return
 }
 
 func (this *TraverserBase) TraverseList(exprs Expressions) (err error) {

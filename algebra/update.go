@@ -12,6 +12,8 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,6 +28,8 @@ unset clause, the limit expression represents the
 limit clause and returning is the returning clause.
 */
 type Update struct {
+	statementBase
+
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
 	set       *Set                  `json:"set"`
@@ -42,7 +46,18 @@ of the struct.
 */
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, set *Set, unset *Unset,
 	where, limit expression.Expression, returning *Projection) *Update {
-	return &Update{keyspace, keys, set, unset, where, limit, returning}
+	rv := &Update{
+		keyspace:  keyspace,
+		keys:      keys,
+		set:       set,
+		unset:     unset,
+		where:     where,
+		limit:     limit,
+		returning: returning,
+	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -142,6 +157,27 @@ func (this *Update) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Update) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	privs := datastore.NewPrivileges()
+	privs[ks] = datastore.PRIV_WRITE
+
+	subprivs, err := subqueryPrivileges(this.Expressions())
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -31,6 +32,8 @@ the resulting value determines which index node will contain an
 index value into the document.
 */
 type CreateIndex struct {
+	statementBase
+
 	name      string                 `json:"name"`
 	keyspace  *KeyspaceRef           `json:"keyspace"`
 	exprs     expression.Expressions `json:"expressions"`
@@ -45,7 +48,7 @@ CreateIndex struct with the input argument values as fields.
 */
 func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
 	partition, where expression.Expression, using datastore.IndexType) *CreateIndex {
-	return &CreateIndex{
+	rv := &CreateIndex{
 		name:      name,
 		keyspace:  keyspace,
 		exprs:     exprs,
@@ -53,6 +56,9 @@ func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Express
 		where:     where,
 		using:     using,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -110,6 +116,18 @@ Return expr from the create index statement.
 */
 func (this *CreateIndex) Expressions() expression.Expressions {
 	return this.exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *CreateIndex) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return datastore.Privileges{ks: datastore.PRIV_DDL}, nil
 }
 
 /*

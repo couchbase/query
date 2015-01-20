@@ -542,12 +542,12 @@ func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
 
 // NamedParameter
 func (this *Stringer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
-	return "\"$" + expr.Name() + "\"", nil
+	return "$" + expr.Name(), nil
 }
 
 // PositionalParameter
 func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
-	return "\"$" + strconv.Itoa(expr.Position()) + "\"", nil
+	return "$" + strconv.Itoa(expr.Position()), nil
 }
 
 // Bindings

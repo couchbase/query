@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,6 +27,8 @@ contains fields keyspaceref and the using IndexType
 string.
 */
 type CreatePrimaryIndex struct {
+	statementBase
+
 	keyspace *KeyspaceRef        `json:"keyspace"`
 	using    datastore.IndexType `json:"using"`
 }
@@ -36,10 +39,13 @@ to the CreatePrimaryIndex struct with the input
 argument values as fields.
 */
 func NewCreatePrimaryIndex(keyspace *KeyspaceRef, using datastore.IndexType) *CreatePrimaryIndex {
-	return &CreatePrimaryIndex{
+	rv := &CreatePrimaryIndex{
 		keyspace: keyspace,
 		using:    using,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -77,6 +83,18 @@ Returns all contained Expressions.
 */
 func (this *CreatePrimaryIndex) Expressions() expression.Expressions {
 	return nil
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *CreatePrimaryIndex) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return datastore.Privileges{ks: datastore.PRIV_DDL}, nil
 }
 
 /*

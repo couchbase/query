@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -26,6 +28,8 @@ represents pairs for the insert values. Returning
 represents the returning clause.
 */
 type Insert struct {
+	statementBase
+
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	key       expression.Expression `json:"key"`
 	value     expression.Expression `json:"value"`
@@ -41,7 +45,7 @@ struct, and setting key, value and query to nil. This
 represents the insert values clause.
 */
 func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection) *Insert {
-	return &Insert{
+	rv := &Insert{
 		keyspace:  keyspace,
 		key:       nil,
 		value:     nil,
@@ -49,6 +53,9 @@ func NewInsertValues(keyspace *KeyspaceRef, values Pairs, returning *Projection)
 		query:     nil,
 		returning: returning,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -59,7 +66,7 @@ select clause.
 */
 func NewInsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 	query *Select, returning *Projection) *Insert {
-	return &Insert{
+	rv := &Insert{
 		keyspace:  keyspace,
 		key:       key,
 		value:     value,
@@ -67,6 +74,9 @@ func NewInsertSelect(keyspace *KeyspaceRef, key, value expression.Expression,
 		query:     query,
 		returning: returning,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -155,6 +165,36 @@ func (this *Insert) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Insert) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	privs := datastore.NewPrivileges()
+	privs[ks] = datastore.PRIV_WRITE
+
+	if this.query != nil {
+		qp, err := this.query.Privileges()
+		if err != nil {
+			return nil, err
+		}
+
+		privs.Add(qp)
+	}
+
+	subprivs, err := subqueryPrivileges(this.Expressions())
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*

@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -21,9 +23,8 @@ is a struct that contains a json object value that represents
 a plan.Prepared.
 */
 type Execute struct {
-	/*
-	   Prepared is a json object that represents a plan.Prepared
-	*/
+	statementBase
+
 	prepared value.Value `json:"prepared"`
 }
 
@@ -32,7 +33,12 @@ The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
 func NewExecute(prepared expression.Expression) *Execute {
-	return &Execute{prepared.Value()}
+	rv := &Execute{
+		prepared: prepared.Value(),
+	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -72,6 +78,13 @@ Returns all contained Expressions.
 */
 func (this *Execute) Expressions() expression.Expressions {
 	return nil
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Execute) Privileges() (datastore.Privileges, errors.Error) {
+	return nil, nil
 }
 
 /*

@@ -15,6 +15,8 @@ processed by the query engine.
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -50,9 +52,9 @@ type Statement interface {
 	Expressions() expression.Expressions
 
 	/*
-			Returns all required privileges.
-		Privileges() (datastore.Privileges, errors.Error)
+		Returns all required privileges.
 	*/
+	Privileges() (datastore.Privileges, errors.Error)
 }
 
 /*

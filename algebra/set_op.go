@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -55,6 +57,24 @@ func (this *setOp) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *setOp) Expressions() expression.Expressions {
 	return append(this.first.Expressions(), this.second.Expressions()...)
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *setOp) Privileges() (datastore.Privileges, errors.Error) {
+	privs, err := this.first.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	sprivs, err := this.second.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(sprivs)
+	return privs, nil
 }
 
 /*

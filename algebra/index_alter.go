@@ -12,22 +12,29 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
 
 type AlterIndex struct {
+	statementBase
+
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
 	rename   string       `json:"rename"`
 }
 
 func NewAlterIndex(keyspace *KeyspaceRef, name, rename string) *AlterIndex {
-	return &AlterIndex{
+	rv := &AlterIndex{
 		keyspace: keyspace,
 		name:     name,
 		rename:   rename,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
@@ -48,6 +55,18 @@ func (this *AlterIndex) MapExpressions(mapper expression.Mapper) error {
 
 func (this *AlterIndex) Expressions() expression.Expressions {
 	return nil
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *AlterIndex) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return datastore.Privileges{ks: datastore.PRIV_DDL}, nil
 }
 
 func (this *AlterIndex) Keyspace() *KeyspaceRef {

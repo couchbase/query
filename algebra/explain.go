@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -19,6 +21,8 @@ Represents the explain text for a query. Type Explain is
 a struct that represents the explain json statement.
 */
 type Explain struct {
+	statementBase
+
 	stmt Statement `json:"stmt"`
 }
 
@@ -27,7 +31,12 @@ The function NewExplain returns a pointer to the Explain
 struct that has its field stmt set to the input Statement.
 */
 func NewExplain(stmt Statement) *Explain {
-	return &Explain{stmt}
+	rv := &Explain{
+		stmt: stmt,
+	}
+
+	rv.statementBase.stmt = rv
+	return rv
 }
 
 /*
@@ -65,6 +74,13 @@ Return all contained Expressions.
 */
 func (this *Explain) Expressions() expression.Expressions {
 	return this.stmt.Expressions()
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Explain) Privileges() (datastore.Privileges, errors.Error) {
+	return nil, nil
 }
 
 /*

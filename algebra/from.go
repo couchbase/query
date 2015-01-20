@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
@@ -36,6 +37,11 @@ type FromTerm interface {
 	   Returns all contained Expressions.
 	*/
 	Expressions() expression.Expressions
+
+	/*
+	   Returns all required privileges.
+	*/
+	Privileges() (datastore.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.
@@ -143,6 +149,20 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *KeyspaceTerm) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace, this.keyspace)
+	if err != nil {
+		return nil, err
+	}
+
+	privs := datastore.NewPrivileges()
+	privs[ks] = datastore.PRIV_READ
+	return privs, nil
 }
 
 /*
@@ -333,6 +353,13 @@ func (this *SubqueryTerm) Expressions() expression.Expressions {
 }
 
 /*
+Returns all required privileges.
+*/
+func (this *SubqueryTerm) Privileges() (datastore.Privileges, errors.Error) {
+	return this.subquery.Privileges()
+}
+
+/*
    Representation as a N1QL string.
 */
 func (this *SubqueryTerm) String() string {
@@ -440,6 +467,24 @@ func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *Join) Expressions() expression.Expressions {
 	return append(this.left.Expressions(), this.right.Expressions()...)
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Join) Privileges() (datastore.Privileges, errors.Error) {
+	privs, err := this.left.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	rprivs, err := this.right.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(rprivs)
+	return privs, nil
 }
 
 /*
@@ -593,6 +638,24 @@ func (this *Nest) Expressions() expression.Expressions {
 }
 
 /*
+Returns all required privileges.
+*/
+func (this *Nest) Privileges() (datastore.Privileges, errors.Error) {
+	privs, err := this.left.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	rprivs, err := this.right.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(rprivs)
+	return privs, nil
+}
+
+/*
    Representation as a N1QL string.
 */
 func (this *Nest) String() string {
@@ -740,6 +803,13 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *Unnest) Expressions() expression.Expressions {
 	return append(this.left.Expressions(), this.expr)
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Unnest) Privileges() (datastore.Privileges, errors.Error) {
+	return this.left.Privileges()
 }
 
 /*

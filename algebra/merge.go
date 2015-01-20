@@ -12,6 +12,8 @@ package algebra
 import (
 	"fmt"
 
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -29,6 +31,8 @@ the limit clause and Returning represents the returning
 clause.
 */
 type Merge struct {
+	statementBase
+
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	source    *MergeSource          `json:"source"`
 	key       expression.Expression `json:"key"`
@@ -44,7 +48,7 @@ of the struct.
 */
 func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Expression,
 	actions *MergeActions, limit expression.Expression, returning *Projection) *Merge {
-	return &Merge{
+	rv := &Merge{
 		keyspace:  keyspace,
 		source:    source,
 		key:       key,
@@ -52,6 +56,9 @@ func NewMerge(keyspace *KeyspaceRef, source *MergeSource, key expression.Express
 		limit:     limit,
 		returning: returning,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -126,6 +133,34 @@ func (this *Merge) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Merge) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	privs := datastore.NewPrivileges()
+	privs[ks] = datastore.PRIV_WRITE
+
+	sp, err := this.source.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(sp)
+
+	subprivs, err := subqueryPrivileges(this.Expressions())
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*
@@ -279,6 +314,17 @@ func (this *MergeSource) Expressions() expression.Expressions {
 	}
 
 	return nil
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *MergeSource) Privileges() (datastore.Privileges, errors.Error) {
+	if this.from != nil {
+		return this.from.Privileges()
+	}
+
+	return this.query.Privileges()
 }
 
 /*

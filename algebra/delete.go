@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -23,6 +25,8 @@ and limit expression map to the where and limit clause
 and returning represents the returning clause.
 */
 type Delete struct {
+	statementBase
+
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
 	where     expression.Expression `json:"where"`
@@ -37,7 +41,16 @@ of the struct
 */
 func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
 	returning *Projection) *Delete {
-	return &Delete{keyspace, keys, where, limit, returning}
+	rv := &Delete{
+		keyspace:  keyspace,
+		keys:      keys,
+		where:     where,
+		limit:     limit,
+		returning: returning,
+	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -115,6 +128,27 @@ func (this *Delete) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Delete) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	privs := datastore.NewPrivileges()
+	privs[ks] = datastore.PRIV_WRITE
+
+	subprivs, err := subqueryPrivileges(this.Expressions())
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*

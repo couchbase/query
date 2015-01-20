@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -25,6 +27,8 @@ similarly limit is an expression that maps to the limit
 clause.
 */
 type Select struct {
+	statementBase
+
 	subresult Subresult             `json:"subresult"`
 	order     *Order                `json:"order"`
 	offset    expression.Expression `json:"offset"`
@@ -36,12 +40,15 @@ The function NewSelect returns a pointer to the Select struct
 by assigning the input attributes to the fields of the struct.
 */
 func NewSelect(subresult Subresult, order *Order, offset, limit expression.Expression) *Select {
-	return &Select{
+	rv := &Select{
 		subresult: subresult,
 		order:     order,
 		offset:    offset,
 		limit:     limit,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -115,6 +122,38 @@ func (this *Select) Expressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Select) Privileges() (datastore.Privileges, errors.Error) {
+	privs, err := this.subresult.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.order != nil {
+		exprs = append(exprs, this.order.Expressions()...)
+	}
+
+	if this.limit != nil {
+		exprs = append(exprs, this.limit)
+	}
+
+	if this.offset != nil {
+		exprs = append(exprs, this.offset)
+	}
+
+	subprivs, err := subqueryPrivileges(exprs)
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*
@@ -240,6 +279,11 @@ type Subresult interface {
 	   Returns all contained Expressions.
 	*/
 	Expressions() expression.Expressions
+
+	/*
+	   Returns all required privileges.
+	*/
+	Privileges() (datastore.Privileges, errors.Error)
 
 	/*
 	   Representation as a N1QL string.
@@ -399,6 +443,40 @@ func (this *Subselect) Expressions() expression.Expressions {
 
 	exprs = append(exprs, this.projection.Expressions()...)
 	return exprs
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
+	privs, err := this.from.Privileges()
+	if err != nil {
+		return nil, err
+	}
+
+	exprs := make(expression.Expressions, 0, 16)
+
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	if this.group != nil {
+		exprs = append(exprs, this.group.Expressions()...)
+	}
+
+	exprs = append(exprs, this.projection.Expressions()...)
+
+	subprivs, err := subqueryPrivileges(exprs)
+	if err != nil {
+		return nil, err
+	}
+
+	privs.Add(subprivs)
+	return privs, nil
 }
 
 /*

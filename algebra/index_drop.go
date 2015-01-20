@@ -12,6 +12,8 @@ package algebra
 import (
 	"encoding/json"
 
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -22,6 +24,8 @@ a struct that contains fields mapping to each clause in the
 drop index statement, namely the keyspace and the index name.
 */
 type DropIndex struct {
+	statementBase
+
 	keyspace *KeyspaceRef `json:"keyspace"`
 	name     string       `json:"name"`
 }
@@ -31,10 +35,13 @@ The function NewDropIndex returns a pointer to the
 DropIndex struct with the input argument values as fields.
 */
 func NewDropIndex(keyspace *KeyspaceRef, name string) *DropIndex {
-	return &DropIndex{
+	rv := &DropIndex{
 		keyspace: keyspace,
 		name:     name,
 	}
+
+	rv.stmt = rv
+	return rv
 }
 
 /*
@@ -72,6 +79,18 @@ Returns all contained Expressions.
 */
 func (this *DropIndex) Expressions() expression.Expressions {
 	return nil
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *DropIndex) Privileges() (datastore.Privileges, errors.Error) {
+	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return datastore.Privileges{ks: datastore.PRIV_DDL}, nil
 }
 
 /*

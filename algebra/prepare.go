@@ -10,6 +10,8 @@
 package algebra
 
 import (
+	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/value"
 )
@@ -19,6 +21,8 @@ Represents a prepared statement. Type Prepare is a
 struct that contains a statement (json statement).
 */
 type Prepare struct {
+	statementBase
+
 	stmt Statement `json:"stmt"`
 }
 
@@ -28,7 +32,12 @@ Prepare struct with the input argument statement
 as a field.
 */
 func NewPrepare(stmt Statement) *Prepare {
-	return &Prepare{stmt}
+	rv := &Prepare{
+		stmt: stmt,
+	}
+
+	rv.statementBase.stmt = rv
+	return rv
 }
 
 /*
@@ -66,6 +75,13 @@ Returns all contained Expressions.
 */
 func (this *Prepare) Expressions() expression.Expressions {
 	return this.stmt.Expressions()
+}
+
+/*
+Returns all required privileges.
+*/
+func (this *Prepare) Privileges() (datastore.Privileges, errors.Error) {
+	return this.stmt.Privileges()
 }
 
 /*
