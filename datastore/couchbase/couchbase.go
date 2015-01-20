@@ -543,6 +543,8 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 			"flags": float64(meta_flags),
 		})
 
+		logging.Infof("CAS Value for key %v is %v", k, float64(v.Cas))
+
 		doc.Value = Value
 		rv[i] = doc
 		i++
@@ -575,7 +577,7 @@ func opToString(op int) string {
 }
 
 func isNotFoundError(err error) bool {
-	return strings.HasSuffix(err.Error(), "msg: Not found}")
+	return strings.HasSuffix(err.Error(), "msg: Not found}") || strings.EqualFold(err.Error(), "Not found")
 }
 
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
@@ -613,6 +615,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			meta = an.GetAttachment("meta").(map[string]interface{})
 
 			cas = meta["cas"].(float64)
+			logging.Infof("CAS Value (Update) for key %v is %v", key, float64(cas))
 			if cas != 0 {
 				err = b.cbbucket.Cas(key, 0, uint64(cas), val)
 			} else {
