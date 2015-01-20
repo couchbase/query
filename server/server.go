@@ -148,8 +148,7 @@ func (this *Server) serviceRequest(request Request) {
 		request.Fail(errors.NewError(err, ""))
 	}
 
-	if ((request.Readonly() == value.TRUE) ||
-		(request.Readonly() == value.NONE && this.readonly)) &&
+	if (this.readonly || value.ToBool(request.Readonly())) &&
 		(prepared != nil && !prepared.Readonly()) {
 		request.Fail(errors.NewError(nil, "The server or request is read-only"+
 			" and cannot accept this write statement."))
