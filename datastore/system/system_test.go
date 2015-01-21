@@ -160,7 +160,7 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 		return
 	}
 
-	go idx.ScanEntries(nitems, conn)
+	go idx.ScanEntries(nitems, datastore.UNBOUNDED, nil, conn)
 	for {
 		v, ok := <-conn.EntryChannel()
 		if !ok {

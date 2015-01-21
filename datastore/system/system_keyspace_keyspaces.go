@@ -16,6 +16,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -212,7 +213,8 @@ func (pi *keyspaceIndex) Drop() errors.Error {
 	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
-func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
+func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	val := ""
@@ -243,7 +245,8 @@ func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64, 
 	}
 }
 
-func (pi *keyspaceIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+func (pi *keyspaceIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()

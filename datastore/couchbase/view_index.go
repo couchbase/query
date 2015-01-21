@@ -19,6 +19,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/timestamp"
 )
 
 type viewIndexer struct {
@@ -281,8 +282,9 @@ func (vi *viewIndex) Statistics(span *datastore.Span) (datastore.Statistics, err
 	return nil, nil
 }
 
-func (vi *viewIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	vi.Scan(nil, false, limit, conn)
+func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vi.Scan(nil, false, limit, cons, vector, conn)
 }
 
 func (vi *viewIndex) Drop() errors.Error {
@@ -295,7 +297,8 @@ func (vi *viewIndex) Drop() errors.Error {
 	return nil
 }
 
-func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
+func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly

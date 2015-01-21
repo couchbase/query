@@ -25,6 +25,7 @@ import (
 	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -419,7 +420,8 @@ func (pi *primaryIndex) Drop() errors.Error {
 	return errors.NewError(nil, "This primary index cannot be dropped.")
 }
 
-func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
+func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	// For primary indexes, bounds must always be strings, so we
@@ -476,7 +478,8 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, c
 	}
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
+func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	if limit == 0 {

@@ -157,7 +157,8 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		return
 	}
 
-	this.plan.Index().Scan(dspan, this.plan.Distinct(), this.plan.Limit(), conn)
+	this.plan.Index().Scan(dspan, this.plan.Distinct(), this.plan.Limit(),
+		datastore.UNBOUNDED, nil, conn)
 }
 
 func evalSpan(ps *planner.Span, context *Context) (*datastore.Span, error) {

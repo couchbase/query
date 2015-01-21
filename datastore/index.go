@@ -12,6 +12,7 @@ package datastore
 import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -46,6 +47,14 @@ const (
 	OFFLINE IndexState = "offline" // The index requires manual intervention
 )
 
+type ScanConsistency string
+
+const (
+	UNBOUNDED ScanConsistency = "unbounded"
+	SCAN_PLUS ScanConsistency = "scan_plus"
+	AT_PLUS   ScanConsistency = "at_plus"
+)
+
 type IndexKey expression.Expressions
 
 type Indexes []Index
@@ -54,17 +63,18 @@ type Indexes []Index
 Index is the base type for indexes, which may be distributed.
 */
 type Index interface {
-	KeyspaceId() string                                                 // Id of the keyspace to which this index belongs
-	Id() string                                                         // Id of this index
-	Name() string                                                       // Name of this index
-	Type() IndexType                                                    // Type of this index
-	SeekKey() expression.Expressions                                    // Equality keys
-	RangeKey() expression.Expressions                                   // Range keys
-	Condition() expression.Expression                                   // Condition, if any
-	State() (IndexState, errors.Error)                                  // Obtain state of this index
-	Statistics(span *Span) (Statistics, errors.Error)                   // Obtain statistics for this index
-	Drop() errors.Error                                                 // Drop / delete this index
-	Scan(span *Span, distinct bool, limit int64, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
+	KeyspaceId() string                               // Id of the keyspace to which this index belongs
+	Id() string                                       // Id of this index
+	Name() string                                     // Name of this index
+	Type() IndexType                                  // Type of this index
+	SeekKey() expression.Expressions                  // Equality keys
+	RangeKey() expression.Expressions                 // Range keys
+	Condition() expression.Expression                 // Condition, if any
+	State() (IndexState, errors.Error)                // Obtain state of this index
+	Statistics(span *Span) (Statistics, errors.Error) // Obtain statistics for this index
+	Drop() errors.Error                               // Drop / delete this index
+	Scan(span *Span, distinct bool, limit int64, cons ScanConsistency, vector timestamp.Vector,
+		conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
 /*
@@ -73,7 +83,8 @@ PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
 	Index
 
-	ScanEntries(limit int64, conn *IndexConnection) // Perform a scan of all the entries in this index
+	ScanEntries(limit int64, cons ScanConsistency, vector timestamp.Vector,
+		conn *IndexConnection) // Perform a scan of all the entries in this index
 }
 
 type Range struct {

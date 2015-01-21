@@ -31,6 +31,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -740,10 +741,12 @@ func (pi *primaryIndex) Drop() errors.Error {
 	return pi.viewIndex.Drop()
 }
 
-func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64, conn *datastore.IndexConnection) {
-	pi.viewIndex.Scan(span, distinct, limit, conn)
+func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.viewIndex.Scan(span, distinct, limit, cons, vector, conn)
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, conn *datastore.IndexConnection) {
-	pi.viewIndex.ScanEntries(limit, conn)
+func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.viewIndex.ScanEntries(limit, cons, vector, conn)
 }
