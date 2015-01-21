@@ -449,9 +449,15 @@ func (this *Subselect) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
-	privs, err := this.from.Privileges()
-	if err != nil {
-		return nil, err
+	privs := datastore.NewPrivileges()
+
+	if this.from != nil {
+		fprivs, err := this.from.Privileges()
+		if err != nil {
+			return nil, err
+		}
+
+		privs.Add(fprivs)
 	}
 
 	exprs := make(expression.Expressions, 0, 16)

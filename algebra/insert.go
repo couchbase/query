@@ -171,13 +171,8 @@ func (this *Insert) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Insert) Privileges() (datastore.Privileges, errors.Error) {
-	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
 	privs := datastore.NewPrivileges()
-	privs[ks] = datastore.PRIV_WRITE
+	privs[this.keyspace.Namespace()+":"+this.keyspace.Keyspace()] = datastore.PRIV_WRITE
 
 	if this.query != nil {
 		qp, err := this.query.Privileges()

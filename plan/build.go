@@ -30,16 +30,14 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	_, is_prepared := o.(*Prepared)
 
 	if !subquery && !is_prepared {
-		/*
-			privs, er := stmt.Privileges()
-			if er != nil {
-				return nil, er
-			}
+		privs, er := stmt.Privileges()
+		if er != nil {
+			return nil, er
+		}
 
-			if len(privs) > 0 {
-				op = NewAuthorize(privs, op)
-			}
-		*/
+		if len(privs) > 0 {
+			op = NewAuthorize(privs, op)
+		}
 
 		return NewSequence(op, NewStream()), nil
 	} else {

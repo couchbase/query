@@ -155,13 +155,8 @@ func (this *KeyspaceTerm) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (datastore.Privileges, errors.Error) {
-	ks, err := datastore.GetKeyspace(this.keyspace, this.keyspace)
-	if err != nil {
-		return nil, err
-	}
-
 	privs := datastore.NewPrivileges()
-	privs[ks] = datastore.PRIV_READ
+	privs[this.namespace+":"+this.keyspace] = datastore.PRIV_READ
 	return privs, nil
 }
 

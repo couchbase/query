@@ -117,6 +117,9 @@ func GetDatastore() Datastore {
 
 func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 	datastore := GetDatastore()
+	if datastore == nil {
+		return nil, errors.NewError(nil, "Datastore not set.")
+	}
 
 	ns, err := datastore.NamespaceByName(namespace)
 	if err != nil {

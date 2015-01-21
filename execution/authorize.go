@@ -17,15 +17,17 @@ import (
 
 type Authorize struct {
 	base
-	plan  *plan.Authorize
-	child Operator
+	plan         *plan.Authorize
+	child        Operator
+	childChannel StopChannel
 }
 
 func NewAuthorize(plan *plan.Authorize, child Operator) *Authorize {
 	rv := &Authorize{
-		base:  newBase(),
-		plan:  plan,
-		child: child,
+		base:         newBase(),
+		plan:         plan,
+		child:        child,
+		childChannel: make(StopChannel, 1),
 	}
 
 	rv.output = rv
@@ -37,7 +39,12 @@ func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Authorize) Copy() Operator {
-	return &Authorize{this.base.copy(), this.plan, this.child.Copy()}
+	return &Authorize{
+		base:         this.base.copy(),
+		plan:         this.plan,
+		child:        this.child.Copy(),
+		childChannel: make(StopChannel, 1),
+	}
 }
 
 func (this *Authorize) RunOnce(context *Context, parent value.Value) {
@@ -47,12 +54,34 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		ds := datastore.GetDatastore()
-		err := ds.Authorize(this.plan.Privileges(), context.Credentials())
-		if err != nil {
-			context.Fatal(err)
-			return
+		if ds != nil {
+			err := ds.Authorize(this.plan.Privileges(), context.Credentials())
+			if err != nil {
+				context.Fatal(err)
+				return
+			}
 		}
 
-		this.child.RunOnce(context, parent)
+		this.child.SetInput(this.input)
+		this.child.SetOutput(this.output)
+		this.child.SetStop(nil)
+		this.child.SetParent(this)
+
+		go this.child.RunOnce(context, parent)
+
+		for {
+			select {
+			case <-this.childChannel: // Never closed
+				// Wait for child
+				return
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(this.child)
+			}
+		}
 	})
+}
+
+func (this *Authorize) ChildChannel() StopChannel {
+	return this.childChannel
 }

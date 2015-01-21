@@ -134,13 +134,8 @@ func (this *Delete) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *Delete) Privileges() (datastore.Privileges, errors.Error) {
-	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
 	privs := datastore.NewPrivileges()
-	privs[ks] = datastore.PRIV_WRITE
+	privs[this.keyspace.Namespace()+":"+this.keyspace.Keyspace()] = datastore.PRIV_WRITE
 
 	subprivs, err := subqueryPrivileges(this.Expressions())
 	if err != nil {

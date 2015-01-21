@@ -89,12 +89,9 @@ func (this *CreatePrimaryIndex) Expressions() expression.Expressions {
 Returns all required privileges.
 */
 func (this *CreatePrimaryIndex) Privileges() (datastore.Privileges, errors.Error) {
-	ks, err := datastore.GetKeyspace(this.keyspace.Namespace(), this.keyspace.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
-	return datastore.Privileges{ks: datastore.PRIV_DDL}, nil
+	return datastore.Privileges{
+		this.keyspace.Namespace() + ":" + this.keyspace.Keyspace(): datastore.PRIV_DDL,
+	}, nil
 }
 
 /*
