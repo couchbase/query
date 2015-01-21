@@ -21,7 +21,7 @@ import (
 type Limit struct {
 	base
 	plan  *plan.Limit
-	limit uint64
+	limit int64
 }
 
 func NewLimit(plan *plan.Limit) *Limit {
@@ -39,7 +39,7 @@ func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Limit) Copy() Operator {
-	return &Limit{this.base.copy(), this.plan, 0}
+	return &Limit{this.base.copy(), this.plan, this.limit}
 }
 
 func (this *Limit) RunOnce(context *Context, parent value.Value) {
@@ -57,7 +57,7 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 	switch actual := actual.(type) {
 	case float64:
 		if math.Trunc(actual) == actual {
-			this.limit = uint64(actual)
+			this.limit = int64(actual)
 			return true
 		}
 	}
