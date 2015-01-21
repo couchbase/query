@@ -21,6 +21,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -43,6 +44,8 @@ type Context struct {
 	namedArgs      map[string]value.Value
 	positionalArgs value.Values
 	credentials    datastore.Credentials
+	consistency    datastore.ScanConsistency
+	vector         timestamp.Vector
 	output         Output
 	subplans       *subqueryMap
 	subresults     *subqueryMap
@@ -50,7 +53,8 @@ type Context struct {
 
 func NewContext(datastore, systemstore datastore.Datastore, namespace string,
 	readonly bool, namedArgs map[string]value.Value, positionalArgs value.Values,
-	credentials datastore.Credentials, output Output) *Context {
+	credentials datastore.Credentials, consistency datastore.ScanConsistency,
+	vector timestamp.Vector, output Output) *Context {
 	return &Context{
 		datastore:      datastore,
 		systemstore:    systemstore,
@@ -60,6 +64,8 @@ func NewContext(datastore, systemstore datastore.Datastore, namespace string,
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
 		credentials:    credentials,
+		consistency:    consistency,
+		vector:         vector,
 		output:         output,
 		subplans:       newSubqueryMap(),
 		subresults:     newSubqueryMap(),
@@ -104,6 +110,14 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 
 func (this *Context) Credentials() datastore.Credentials {
 	return this.credentials
+}
+
+func (this *Context) ScanConsistency() datastore.ScanConsistency {
+	return this.consistency
+}
+
+func (this *Context) ScanVector() timestamp.Vector {
+	return this.vector
 }
 
 func (this *Context) AddMutationCount(i uint64) {
