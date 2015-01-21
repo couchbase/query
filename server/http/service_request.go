@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
@@ -148,8 +149,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	}
 
+	var creds datastore.Credentials
 	if err == nil {
-		_, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
+		creds, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
 	}
 
 	client_id := ""
@@ -158,7 +160,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
-		namespace, readonly, metrics, signature, consistency, client_id)
+		namespace, readonly, metrics, signature, consistency, client_id, creds)
 
 	rv := &httpRequest{
 		BaseRequest: *base,
@@ -310,59 +312,56 @@ func getFormat(a httpRequestArgs) (Format, error) {
 	return format, err
 }
 
-func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) ([]*url.Userinfo, error) {
-	var cred_data []map[string]string
-	var creds []*url.Userinfo
-	var err error
+func getCredentials(a httpRequestArgs, hdrCreds *url.Userinfo, auths []string) (datastore.Credentials, error) {
+	var creds datastore.Credentials
 
 	if hdrCreds != nil {
 		// Credentials are in the request URL:
-		creds = make([]*url.Userinfo, 1)
-		creds[0] = hdrCreds
-		return creds, err
+		username := hdrCreds.Username()
+		password, _ := hdrCreds.Password()
+		creds = make(datastore.Credentials)
+		creds[username] = password
+		return creds, nil
 	}
-
 	if len(auths) > 0 {
 		// Credentials are in the request header:
 		// TODO: implement non-Basic auth (digest, ntlm)
-		creds = make([]*url.Userinfo, 1)
 		auth := auths[0]
 		if strings.HasPrefix(auth, "Basic ") {
-			var decoded_creds []byte
 			encoded_creds := strings.Split(auth, " ")[1]
-			decoded_creds, err = base64.StdEncoding.DecodeString(encoded_creds)
-			if err == nil {
-				// Authorization header is in format "user:pass"
-				// per http://tools.ietf.org/html/rfc1945#section-10.2
-				u_details := strings.Split(string(decoded_creds), ":")
-				if len(u_details) == 2 {
-					creds[0] = url.UserPassword(u_details[0], u_details[1])
-				}
-				if len(u_details) == 3 {
-					// Support usernames like "local:xxx" or "admin:xxx"
-					creds[0] = url.UserPassword(strings.Join(u_details[:2], ":"), u_details[2])
-				}
+			decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
+			if err != nil {
+				return creds, err
+			}
+			// Authorization header is in format "user:pass"
+			// per http://tools.ietf.org/html/rfc1945#section-10.2
+			u_details := strings.Split(string(decoded_creds), ":")
+			creds = make(datastore.Credentials)
+			if len(u_details) == 2 {
+				creds[u_details[0]] = u_details[1]
+			}
+			if len(u_details) == 3 {
+				// Support usernames like "local:xxx" or "admin:xxx"
+				creds[strings.Join(u_details[:2], ":")] = u_details[2]
 			}
 		}
-		return creds, err
+		return creds, nil
 	}
-
 	// Credentials may be in request arguments:
-	cred_data, err = a.getCredentials()
+	cred_data, err := a.getCredentials()
 	if err == nil && len(cred_data) > 0 {
-		creds = make([]*url.Userinfo, len(cred_data))
-		for i, cred := range cred_data {
+		creds = make(datastore.Credentials)
+		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
 			if user_ok && pass_ok {
-				creds[i] = url.UserPassword(user, pass)
+				creds[user] = pass
 			} else {
 				err = fmt.Errorf("creds requires both user and pass")
 				break
 			}
 		}
 	}
-
 	return creds, err
 }
 

@@ -51,6 +51,9 @@ type Context struct {
 func NewContext(datastore, systemstore datastore.Datastore, namespace string,
 	readonly bool, namedArgs map[string]value.Value, positionalArgs value.Values,
 	credentials datastore.Credentials, output Output) *Context {
+	for user, pass := range credentials {
+		logging.Infop("Credentials", logging.Pair{"user", user}, logging.Pair{"pass", pass})
+	}
 	return &Context{
 		datastore:      datastore,
 		systemstore:    systemstore,

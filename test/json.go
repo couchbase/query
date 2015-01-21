@@ -120,7 +120,7 @@ func (this *MockResponse) NoMoreResults() {
 func Run(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
 
 	var metrics value.Tristate
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", value.FALSE, metrics, value.TRUE, nil, "")
+	base := server.NewBaseRequest(q, nil, nil, nil, "json", value.FALSE, metrics, value.TRUE, nil, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

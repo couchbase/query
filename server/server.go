@@ -177,7 +177,7 @@ func (this *Server) serviceRequest(request Request) {
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
-		this.readonly, request.NamedArgs(), request.PositionalArgs(), nil, request.Output())
+		this.readonly, request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.Output())
 	operator.RunOnce(context, nil)
 }
 

@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/couchbaselabs/query/datastore"
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/plan"
@@ -60,6 +61,7 @@ type Request interface {
 	Failed(server *Server)
 	Expire()
 	State() State
+	Credentials() datastore.Credentials
 }
 
 type RequestID interface {
@@ -105,6 +107,7 @@ type BaseRequest struct {
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
+	credentials    datastore.Credentials
 	results        value.ValueChannel
 	errors         errors.ErrorChannel
 	warnings       errors.ErrorChannel
@@ -147,7 +150,8 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, readonly, metrics, signature value.Tristate, consistency ScanConfiguration, client_id string) *BaseRequest {
+	namespace string, readonly, metrics, signature value.Tristate, consistency ScanConfiguration,
+	client_id string, creds datastore.Credentials) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
 		prepared:       prepared,
@@ -158,6 +162,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		signature:      signature,
 		metrics:        metrics,
 		consistency:    consistency,
+		credentials:    creds,
 		requestTime:    time.Now(),
 		serviceTime:    time.Now(),
 		state:          RUNNING,
@@ -245,6 +250,10 @@ func (this *BaseRequest) SetState(state State) {
 
 func (this *BaseRequest) State() State {
 	return this.state
+}
+
+func (this *BaseRequest) Credentials() datastore.Credentials {
+	return this.credentials
 }
 
 func (this *BaseRequest) CloseNotify() chan bool {
