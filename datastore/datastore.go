@@ -39,6 +39,7 @@ type Datastore interface {
 	NamespaceNames() ([]string, errors.Error)              // Names of the namespaces contained in this datastore
 	NamespaceById(id string) (Namespace, errors.Error)     // Find a namespace in this datastore using the namespace's Id
 	NamespaceByName(name string) (Namespace, errors.Error) // Find a namespace in this datastore using the namespace's name
+	Authorize(Privileges, Credentials) errors.Error        // Perform authorization and return nil if successful
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

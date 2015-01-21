@@ -71,6 +71,10 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+	return nil
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

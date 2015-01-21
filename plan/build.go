@@ -26,9 +26,21 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		return nil, err
 	}
 
-	_, is_prepared := o.(*Prepared)
 	op := o.(Operator)
+	_, is_prepared := o.(*Prepared)
+
 	if !subquery && !is_prepared {
+		/*
+			privs, er := stmt.Privileges()
+			if er != nil {
+				return nil, er
+			}
+
+			if len(privs) > 0 {
+				op = NewAuthorize(privs, op)
+			}
+		*/
+
 		return NewSequence(op, NewStream()), nil
 	} else {
 		return op, nil

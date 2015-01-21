@@ -84,6 +84,10 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 	return p, nil
 }
 
+func (s *site) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+	return nil
+}
+
 // NewSite creates a new Couchbase site for the given url.
 func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 

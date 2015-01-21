@@ -40,6 +40,7 @@ func GetOperator(name string) (Operator, bool) {
 // the "#operator" key in a marshalled object.
 var _OPERATORS = map[string]Operator{
 	"Alias":              &Alias{},
+	"Authorize":          &Authorize{},
 	"Channel":            &Channel{},
 	"Collect":            &Collect{},
 	"Delete":             &SendDelete{},

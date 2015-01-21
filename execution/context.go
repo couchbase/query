@@ -42,13 +42,15 @@ type Context struct {
 	now            time.Time
 	namedArgs      map[string]value.Value
 	positionalArgs value.Values
+	credentials    datastore.Credentials
 	output         Output
 	subplans       *subqueryMap
 	subresults     *subqueryMap
 }
 
-func NewContext(datastore, systemstore datastore.Datastore, namespace string, readonly bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values, output Output) *Context {
+func NewContext(datastore, systemstore datastore.Datastore, namespace string,
+	readonly bool, namedArgs map[string]value.Value, positionalArgs value.Values,
+	credentials datastore.Credentials, output Output) *Context {
 	return &Context{
 		datastore:      datastore,
 		systemstore:    systemstore,
@@ -57,6 +59,7 @@ func NewContext(datastore, systemstore datastore.Datastore, namespace string, re
 		now:            time.Now(),
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
+		credentials:    credentials,
 		output:         output,
 		subplans:       newSubqueryMap(),
 		subresults:     newSubqueryMap(),
@@ -97,6 +100,10 @@ func (this *Context) PositionalArg(position int) (value.Value, bool) {
 	} else {
 		return nil, false
 	}
+}
+
+func (this *Context) Credentials() datastore.Credentials {
+	return this.credentials
 }
 
 func (this *Context) AddMutationCount(i uint64) {

@@ -9,7 +9,11 @@
 
 package datastore
 
-import ()
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
 type Privilege int
 
@@ -33,3 +37,46 @@ func (this Privileges) Add(other Privileges) {
 		}
 	}
 }
+
+func (this Privileges) MarshalJSON() ([]byte, error) {
+	r := make(map[string]interface{}, len(this))
+	for k, p := range this {
+		r[k.NamespaceId()+":"+k.Id()] = p
+	}
+
+	return json.Marshal(r)
+}
+
+func (this Privileges) UnmarshalJSON(body []byte) error {
+	var _unmarshalled map[string]interface{}
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	for nk, p := range _unmarshalled {
+		s := strings.Split(nk, ":")
+		if len(s) != 2 {
+			return fmt.Errorf("Invalid keyspace in UnmarshalJSON: %s", nk)
+		}
+
+		f, ok := p.(float64)
+		if !ok || f < 1.0 || f > 3.0 {
+			return fmt.Errorf("Invalid privilege in UnmarshalJSON: %v", p)
+		}
+
+		k, er := GetKeyspace(s[0], s[1])
+		if er != nil {
+			return er
+		}
+
+		this[k] = Privilege(f)
+	}
+
+	return nil
+}
+
+/*
+Type Crednetials maps users to passwords.
+*/
+type Credentials map[string]string

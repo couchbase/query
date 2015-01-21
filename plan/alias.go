@@ -44,7 +44,7 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 func (this *Alias) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_  string `json:"#operator"`
-		As string `json:"alias"`
+		As string `json:"as"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
 	this.alias = _unmarshalled.As

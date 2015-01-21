@@ -66,6 +66,10 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+	return nil
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

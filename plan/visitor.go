@@ -76,9 +76,10 @@ type Visitor interface {
 
 	// Merge
 	VisitMerge(op *Merge) (interface{}, error)
-	VisitAlias(op *Alias) (interface{}, error)
 
 	// Framework
+	VisitAlias(op *Alias) (interface{}, error)
+	VisitAuthorize(op *Authorize) (interface{}, error)
 	VisitParallel(op *Parallel) (interface{}, error)
 	VisitSequence(op *Sequence) (interface{}, error)
 	VisitDiscard(op *Discard) (interface{}, error)

@@ -263,8 +263,19 @@ func (this *builder) VisitMerge(plan *plan.Merge) (interface{}, error) {
 	return NewMerge(plan, update, delete, insert), nil
 }
 
+// Alias
 func (this *builder) VisitAlias(plan *plan.Alias) (interface{}, error) {
 	return NewAlias(plan), nil
+}
+
+// Authorize
+func (this *builder) VisitAuthorize(plan *plan.Authorize) (interface{}, error) {
+	child, err := plan.Child().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewAuthorize(plan, child.(Operator)), nil
 }
 
 // Parallel
