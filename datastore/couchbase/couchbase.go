@@ -19,12 +19,12 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
@@ -43,12 +43,6 @@ const (
 type site struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
-}
-
-// Admin credentials
-type credentials struct {
-	user     string // username,i.e. Administrator
-	password string //  Administrator password
 }
 
 func (s *site) Id() string {
@@ -84,14 +78,102 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 	return p, nil
 }
 
-func (s *site) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+func doAuth(username, password, bucket string, requested datastore.Privilege) (bool, error) {
+
+	logging.Infof(" Authenticating for bucket %s username %s password %s", bucket, username, password)
+	creds, err := cbauth.Auth(username, password)
+	if err != nil {
+		return false, err
+	}
+
+	if requested == datastore.PRIV_DDL {
+		authResult, err := creds.CanDDLBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else if requested == datastore.PRIV_WRITE {
+		authResult, err := creds.CanAccessBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else if requested == datastore.PRIV_READ {
+		authResult, err := creds.CanReadBucket(bucket)
+		if err != nil || authResult == false {
+			return false, err
+		}
+
+	} else {
+		return false, fmt.Errorf("Invalid Privileges")
+	}
+
+	return true, nil
+
+}
+
+func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.Credentials) errors.Error {
+
+	var authResult bool
+	var err error
+
+	// if the authentication fails for any of the requested privileges return an error
+	for keyspace, privilege := range privileges {
+
+		if strings.Contains(keyspace, ":") {
+			keyspace = strings.Split(keyspace, ":")[1]
+		}
+
+		logging.Infof("Authenticating for keyspace %s", keyspace)
+
+		if len(credentials) == 0 {
+			authResult, err = doAuth(keyspace, "", keyspace, privilege)
+			if authResult == false || err != nil {
+				logging.Infof("Auth failed for keyspace %s", keyspace)
+				return errors.NewError(err, "Authentication Failed")
+			}
+		} else {
+			//look for either the bucket name or the admin credentials
+			for username, password := range credentials {
+
+				userCreds := strings.Split(username, ":")
+
+				if len(userCreds) > 1 && strings.EqualFold(userCreds[0], "admin") {
+					authResult, err = doAuth(userCreds[1], password, keyspace, privilege)
+				} else if len(userCreds) > 1 && userCreds[1] == keyspace {
+					authResult, err = doAuth(userCreds[1], password, keyspace, privilege)
+				} else {
+					//try with empty password
+					authResult, err = doAuth(keyspace, "", keyspace, privilege)
+				}
+
+				if err != nil {
+					return errors.NewError(err, "Authentication Failed")
+				}
+
+				// Auth succeeded
+				if authResult == true {
+					break
+				}
+				continue
+			}
+		}
+
+	}
+
+	if authResult == false {
+		return errors.NewError(nil, "Authentication Failed")
+	}
 	return nil
 }
 
 // NewSite creates a new Couchbase site for the given url.
 func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 
-	client, err := cb.Connect(url)
+	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
+	cb.HTTPClient.Transport = transport
+
+	client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
 	if err != nil {
 		return nil, errors.NewError(err, "Cannot connect to url "+url)
 	}
@@ -123,7 +205,13 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 		if name == "default" {
 			// if default pool is not available, try reconnecting to the server
 			url := s.URL()
-			client, err := cb.Connect(url)
+
+			/*
+				transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
+				cb.HTTPClient.Transport = transport
+			*/
+
+			client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
 			if err != nil {
 				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
 			}
@@ -136,33 +224,11 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 		}
 	}
 
-	url, err := url.Parse(s.URL())
-	if err != nil {
-		logging.Warnf("Unable to parse url %s. Error %v", s.URL(), err)
-	}
-
-	var username string
-	var password string
-
-	if url.User != nil {
-		// extract admin username and password
-		username = url.User.Username()
-		pw, set := url.User.Password()
-		if set == true {
-			password = pw
-		}
-	}
-
-	if username != "" && password != "" {
-		logging.Infof("Started with username %s and password %s", username, password)
-	}
-
 	rv := namespace{
-		site:             s,
-		name:             name,
-		cbNamespace:      cbpool,
-		keyspaceCache:    make(map[string]datastore.Keyspace),
-		adminCredentials: &credentials{user: username, password: password},
+		site:          s,
+		name:          name,
+		cbNamespace:   cbpool,
+		keyspaceCache: make(map[string]datastore.Keyspace),
 	}
 	go keepPoolFresh(&rv)
 	return &rv, nil
@@ -170,13 +236,12 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 
 // a namespace represents a couchbase pool
 type namespace struct {
-	site             *site
-	name             string
-	cbNamespace      cb.Pool
-	keyspaceCache    map[string]datastore.Keyspace
-	lock             sync.Mutex   // lock to guard the keyspaceCache
-	nslock           sync.RWMutex // lock for this structure
-	adminCredentials *credentials
+	site          *site
+	name          string
+	cbNamespace   cb.Pool
+	keyspaceCache map[string]datastore.Keyspace
+	lock          sync.Mutex   // lock to guard the keyspaceCache
+	nslock        sync.RWMutex // lock for this structure
 }
 
 func (p *namespace) DatastoreId() string {
@@ -243,7 +308,13 @@ func (p *namespace) refresh(changed bool) {
 	if err != nil {
 		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
 		url := p.site.URL()
-		client, err := cb.Connect(url)
+
+		/*
+			transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
+			cb.HTTPClient.Transport = transport
+		*/
+
+		client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
 		if err != nil {
 			logging.Errorf("Error connecting to URL %s", url)
 			return
@@ -262,7 +333,7 @@ func (p *namespace) refresh(changed bool) {
 	defer p.lock.Unlock()
 	for name, keySpace := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
-		_, err := newpool.GetBucketWithAuth(name, name, keySpace.(*keyspace).saslPassword)
+		_, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
 			keySpace.(*keyspace).deleted = true
@@ -287,39 +358,18 @@ func keepPoolFresh(p *namespace) {
 }
 
 type keyspace struct {
-	namespace    *namespace
-	name         string
-	cbbucket     *cb.Bucket
-	deleted      bool
-	saslPassword string            // SASL password
-	viewIndexer  datastore.Indexer // View index provider
-	gsiIndexer   datastore.Indexer // GSI index provider
+	namespace   *namespace
+	name        string
+	cbbucket    *cb.Bucket
+	deleted     bool
+	viewIndexer datastore.Indexer // View index provider
+	gsiIndexer  datastore.Indexer // GSI index provider
 }
 
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
-	var saslPassword string
-	var cbbucket *cb.Bucket
-
 	cbNamespace := p.getPool()
-
-	// get the bucket password if one exists
-	binfo, err := cb.GetBucketList(p.site.Id())
-	if err != nil {
-		logging.Warnf("Unable to retrieve bucket passwords. Error %v", err)
-	}
-
-	for _, bi := range binfo {
-		if bi.Name == name {
-			if bi.Password != "" {
-				saslPassword = bi.Password
-				logging.Infof("SASL password for bucket %s", bi.Password)
-			}
-			break
-		}
-	}
-
-	cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
+	cbbucket, err := cbNamespace.GetBucket(name)
 
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
@@ -331,7 +381,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 		// and then check one more time
 		logging.Infof(" Retrying bucket %s", name)
-		cbbucket, err = cbNamespace.GetBucketWithAuth(name, name, saslPassword)
+		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
 			return nil, errors.NewError(err, fmt.Sprintf("Bucket %v not found.", name))
@@ -339,10 +389,9 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	}
 
 	rv := &keyspace{
-		namespace:    p,
-		name:         name,
-		cbbucket:     cbbucket,
-		saslPassword: saslPassword,
+		namespace: p,
+		name:      name,
+		cbbucket:  cbbucket,
 	}
 
 	// Initialize index providers
@@ -504,7 +553,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			// add the key to the backend
 			added, err = b.cbbucket.Add(key, 0, val)
 			if added == false {
-				err = errors.NewError(nil, "Key "+key+" Exists")
+				err = errors.NewError(err, "For Key "+key)
 			}
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
