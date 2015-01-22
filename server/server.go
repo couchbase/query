@@ -178,7 +178,8 @@ func (this *Server) serviceRequest(request Request) {
 
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
 		this.readonly, request.NamedArgs(), request.PositionalArgs(), request.Credentials(),
-		datastore.UNBOUNDED, nil, request.Output())
+		request.ScanConsistency(), request.ScanVector(),
+		request.Output())
 	operator.RunOnce(context, nil)
 }
 

@@ -355,7 +355,11 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		logging.Warnf("Error loading indexes for keyspace %s, Error %v", name, ierr)
 	}
 
-	rv.gsiIndexer = gsi.NewGSIIndexer(p.Name(), name)
+	var qerr errors.Error
+	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.site.URL(), p.Name(), name)
+	if qerr != nil {
+		return nil, qerr
+	}
 
 	return rv, nil
 }
