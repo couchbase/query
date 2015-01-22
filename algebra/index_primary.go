@@ -29,8 +29,10 @@ string.
 type CreatePrimaryIndex struct {
 	statementBase
 
+	name     string              `json:"name"`
 	keyspace *KeyspaceRef        `json:"keyspace"`
 	using    datastore.IndexType `json:"using"`
+	with     value.Value         `json:"with"`
 }
 
 /*
@@ -38,10 +40,13 @@ The function NewCreatePrimaryIndex returns a pointer
 to the CreatePrimaryIndex struct with the input
 argument values as fields.
 */
-func NewCreatePrimaryIndex(keyspace *KeyspaceRef, using datastore.IndexType) *CreatePrimaryIndex {
+func NewCreatePrimaryIndex(name string, keyspace *KeyspaceRef,
+	using datastore.IndexType, with value.Value) *CreatePrimaryIndex {
 	rv := &CreatePrimaryIndex{
+		name:     name,
 		keyspace: keyspace,
 		using:    using,
+		with:     with,
 	}
 
 	rv.stmt = rv
@@ -95,6 +100,13 @@ func (this *CreatePrimaryIndex) Privileges() (datastore.Privileges, errors.Error
 }
 
 /*
+Index name.
+*/
+func (this *CreatePrimaryIndex) Name() string {
+	return this.name
+}
+
+/*
 Returns the input keyspace.
 */
 func (this *CreatePrimaryIndex) Keyspace() *KeyspaceRef {
@@ -109,11 +121,23 @@ func (this *CreatePrimaryIndex) Using() datastore.IndexType {
 }
 
 /*
+Returns the WITH deployment plan.
+*/
+func (this *CreatePrimaryIndex) With() value.Value {
+	return this.with
+}
+
+/*
 Marshals input receiver into byte array.
 */
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createPrimaryIndex"}
+	r["name"] = this.name
 	r["keyspaceRef"] = this.keyspace
 	r["using"] = this.using
+	if this.with != nil {
+		r["with"] = this.with
+	}
+
 	return json.Marshal(r)
 }

@@ -8,25 +8,29 @@
 
 ddl-stmt ::= index-stmt
 
-index-stmt ::= create-primary-index | create-index | drop-primary-index | drop-index
+index-stmt ::= create-primary-index | create-index | drop-primary-index | drop-index | build-indexes
 
 
 /*
  *  index
  */
 
-create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref using?
-
-using ::= 'USING' ('VIEW' | 'GSI')
-
-create-index ::= 'CREATE' 'INDEX' index-name 'ON' keyspace-ref '(' expr (',' expr)* ')' where-clause? using?
+create-primary-index ::= 'CREATE' 'PRIMARY' 'INDEX' index-name? 'ON' named-keyspace-ref index-using? index-with?
 
 index-name ::= identifier
 
 named-keyspace-ref ::= (namespace ':')? keyspace
+
+index-using ::= 'USING' ('VIEW' | 'GSI')
+
+index-with ::= 'WITH' expr
+
+create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-keyspace-ref '(' expr (',' expr)* ')' where-clause? index-using? index-with?
 
 partition ::= 'PARTITION' 'BY' expr
 
 drop-primary-index ::= 'DROP' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
 
 drop-index ::= 'DROP' 'INDEX' named-keyspace-ref '.' index-name
+
+build-indexes ::= 'BUILD' 'INDEXES' 'ON' named-keyspace-ref '(' index-name (',' index-name)* ')'

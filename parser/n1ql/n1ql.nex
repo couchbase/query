@@ -94,6 +94,7 @@
 /[bB][oO][oO][lL][eE][aA][nN]/			 { logToken("BOOLEAN"); return BOOLEAN }
 /[bB][rR][eE][aA][kK]/				 { logToken("BREAK"); return BREAK }
 /[bB][uU][cC][kK][eE][tT]/			 { logToken("BUCKET"); return BUCKET }
+/[bB][uU][iI][lL][dD]/				 { logToken("BUILD"); return BUILD }
 /[bB][yY]/					 { logToken("BY"); return BY }
 /[cC][aA][lL][lL]/				 { logToken("CALL"); return CALL }
 /[cC][aA][sS][eE]/				 { logToken("CASE"); return CASE }
@@ -142,6 +143,7 @@
 /[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
 /[iI][nN][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("INCREMENT"); return INCREMENT }
 /[iI][nN][dD][eE][xX]/				 { logToken("INDEX"); return INDEX }
+/[iI][nN][dD][eE][xX][eE][sS]/			 { logToken("INDEXES"); return INDEXES }
 /[iI][nN][lL][iI][nN][eE]/			 { logToken("INLINE"); return INLINE }
 /[iI][nN][nN][eE][rR]/				 { logToken("INNER"); return INNER }
 /[iI][nN][sS][eE][rR][tT]/			 { logToken("INSERT"); return INSERT }

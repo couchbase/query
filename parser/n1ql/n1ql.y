@@ -20,6 +20,7 @@ n int
 f float64
 b bool
 
+ss               []string
 expr             expression.Expression
 exprs            expression.Expressions
 whenTerm         *expression.WhenTerm
@@ -64,6 +65,7 @@ createIndex      *algebra.CreateIndex
 dropIndex        *algebra.DropIndex
 alterIndex       *algebra.AlterIndex
 indexType        datastore.IndexType
+val              value.Value
 }
 
 %token ALL
@@ -80,6 +82,7 @@ indexType        datastore.IndexType
 %token BOOLEAN
 %token BREAK
 %token BUCKET
+%token BUILD
 %token BY
 %token CALL
 %token CASE
@@ -128,6 +131,7 @@ indexType        datastore.IndexType
 %token INCLUDE
 %token INCREMENT
 %token INDEX
+%token INDEXES
 %token INLINE
 %token INNER
 %token INSERT
@@ -316,7 +320,7 @@ indexType        datastore.IndexType
 
 %type <statement>        stmt explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        insert upsert delete update merge
-%type <statement>        index_stmt create_index drop_index alter_index
+%type <statement>        index_stmt create_index drop_index alter_index build_indexes
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list
@@ -339,10 +343,12 @@ indexType        datastore.IndexType
 %type <mergeDelete>      merge_delete
 %type <mergeInsert>      merge_insert opt_merge_insert
 
-%type <s>                index_name
+%type <s>                index_name opt_index_name
+%type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
 %type <expr>             index_partition
 %type <indexType>        index_using
+%type <val>              index_with
 %type <s>                rename
 %type <expr>             index_expr index_where
 %type <exprs>            index_exprs
@@ -427,6 +433,8 @@ create_index
 drop_index
 |
 alter_index
+|
+build_indexes
 ;
 
 fullselect:
@@ -1414,15 +1422,24 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX ON named_keyspace_ref index_using
+CREATE PRIMARY INDEX opt_index_name ON named_keyspace_ref index_using index_with
 {
-  $$ = algebra.NewCreatePrimaryIndex($5, $6)
+    $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8)
 }
 |
-CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where index_using
+CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where index_using index_with
 {
-  $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11)
+    $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11, $12)
 }
+;
+
+opt_index_name:
+/* empty */
+{
+    $$ = ""
+}
+|
+index_name
 ;
 
 index_name:
@@ -1467,6 +1484,21 @@ USING VIEW
 USING GSI
 {
     $$ = datastore.GSI
+}
+;
+
+index_with:
+/* empty */
+{
+    $$ = nil
+}
+|
+WITH expr
+{
+    $$ = $2.Value()
+    if $$ == nil {
+	yylex.Error("WITH value must be static.")
+    }
 }
 ;
 
@@ -1545,6 +1577,31 @@ rename:
 RENAME TO index_name
 {
     $$ = $3
+}
+;
+
+/*************************************************
+ *
+ * BUILD INDEXES
+ *
+ *************************************************/
+
+build_indexes:
+BUILD INDEXES ON named_keyspace_ref LPAREN index_names RPAREN
+{
+    $$ = algebra.NewBuildIndexes($4, $6...)
+}
+;
+
+index_names:
+index_name
+{
+    $$ = []string{$1}
+}
+|
+index_names COMMA index_name
+{
+    $$ = append($1, $3)
 }
 ;
 

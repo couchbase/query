@@ -149,32 +149,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 	}
 	go scan(bufio.NewReader(in), yylex.ch, []dfa{
 		// \"((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|[^\\\"])*\"
-		{[]bool{false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, []func(rune) int{ // Transitions
+		{[]bool{false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 47:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 117:
+					return -1
+				case 125:
+					return -1
 				case 34:
 					return 1
 				case 92:
 					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
 				case 110:
-					return -1
-				case 123:
-					return -1
-				case 52:
 					return -1
 				case 114:
 					return -1
 				case 116:
 					return -1
-				case 117:
+				case 123:
 					return -1
-				case 125:
+				case 52:
 					return -1
 				}
 				switch {
@@ -189,66 +189,103 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 34:
+				case 47:
 					return 2
-				case 92:
-					return 3
-				case 47:
-					return 4
 				case 98:
-					return 4
+					return 2
 				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
 					return 4
 				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 114:
-					return 4
+					return 2
 				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 116:
-					return -1
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 117:
-					return -1
+					return 2
 				case 125:
-					return -1
+					return 2
+				case 34:
+					return 3
+				case 92:
+					return 4
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
 				case 34:
 					return -1
 				case 92:
 					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return -1
 				case 47:
 					return -1
 				case 98:
 					return -1
 				case 102:
 					return -1
-				case 110:
+				case 117:
 					return -1
-				case 123:
-					return -1
-				case 52:
+				case 125:
 					return -1
 				}
 				switch {
@@ -263,25 +300,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
+				case 47:
 					return 5
-				case 116:
+				case 98:
 					return 6
-				case 117:
+				case 102:
 					return 7
+				case 117:
+					return 8
 				case 125:
 					return -1
 				case 34:
-					return 8
-				case 92:
 					return 9
-				case 47:
+				case 92:
 					return 10
-				case 98:
-					return 11
-				case 102:
-					return 12
 				case 110:
+					return 11
+				case 114:
+					return 12
+				case 116:
 					return 13
 				case 123:
 					return -1
@@ -300,141 +337,141 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
-				case 34:
-					return 2
-				case 92:
-					return 3
 				case 47:
-					return 4
+					return 2
 				case 98:
-					return 4
+					return 2
 				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
 					return 4
 				case 110:
-					return 4
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
 				case 123:
-					return 4
+					return 2
 				case 52:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 34:
-					return 2
-				case 92:
 					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
+				case 92:
 					return 4
 				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 114:
-					return 4
+					return 2
 				case 116:
-					return 4
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 117:
-					return 4
+					return 2
 				case 125:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
-				case 34:
-					return 2
-				case 92:
-					return 3
 				case 47:
-					return 4
+					return 2
 				case 98:
-					return 4
+					return 2
 				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
 					return 4
 				case 110:
-					return 4
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
 				case 123:
-					return 4
+					return 2
 				case 52:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
-				case 34:
-					return -1
-				case 92:
-					return -1
 				case 47:
 					return -1
 				case 98:
 					return 14
 				case 102:
 					return 14
+				case 117:
+					return -1
+				case 125:
+					return -1
+				case 34:
+					return -1
+				case 92:
+					return -1
 				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				case 123:
 					return -1
 				case 52:
 					return 14
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 125:
-					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -448,252 +485,215 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
 				case 34:
-					return 2
-				case 92:
 					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
+				case 92:
 					return 4
 				case 110:
-					return 4
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
 				case 123:
-					return 4
+					return 2
 				case 52:
-					return 4
+					return 2
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 34:
-					return 2
-				case 92:
 					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
+				case 92:
 					return 4
 				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 114:
-					return 4
+					return 2
 				case 116:
-					return 4
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 117:
-					return 4
+					return 2
 				case 125:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 34:
-					return 2
-				case 92:
 					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
+				case 92:
 					return 4
 				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 114:
-					return 4
+					return 2
 				case 116:
-					return 4
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 117:
-					return 4
+					return 2
 				case 125:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
+					return 4
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
+					return 4
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 34:
-					return 2
+					return -1
 				case 92:
-					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
+					return -1
 				case 110:
-					return 4
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
 				case 123:
-					return 4
+					return -1
 				case 52:
-					return 4
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
-				case 34:
-					return 2
-				case 92:
-					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 34:
-					return 2
-				case 92:
-					return 3
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
-				case 114:
-					return 4
-				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 125:
-					return -1
-				case 34:
-					return -1
-				case 92:
-					return -1
+					return 15
 				case 47:
 					return -1
 				case 98:
 					return 15
 				case 102:
 					return 15
-				case 110:
+				case 117:
 					return -1
-				case 123:
+				case 125:
 					return -1
-				case 52:
-					return 15
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -711,22 +711,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 92:
 					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return 16
 				case 47:
 					return -1
 				case 98:
 					return 16
 				case 102:
 					return 16
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 52:
-					return 16
-				case 114:
-					return -1
-				case 116:
-					return -1
 				case 117:
 					return -1
 				case 125:
@@ -744,25 +744,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 125:
-					return -1
-				case 34:
-					return -1
-				case 92:
-					return -1
 				case 47:
 					return -1
 				case 98:
 					return 17
 				case 102:
 					return 17
+				case 117:
+					return -1
+				case 125:
+					return -1
+				case 34:
+					return -1
+				case 92:
+					return -1
 				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				case 123:
 					return -1
@@ -781,30 +781,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 125:
-					return -1
 				case 34:
 					return -1
 				case 92:
 					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
 				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				case 123:
 					return 18
 				case 52:
 					return -1
+				case 47:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 117:
+					return -1
+				case 125:
+					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -818,30 +818,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 125:
-					return -1
 				case 34:
 					return -1
 				case 92:
 					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
 				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				case 123:
 					return -1
 				case 52:
 					return 19
+				case 47:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 117:
+					return -1
+				case 125:
+					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -855,30 +855,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 34:
+					return -1
+				case 92:
+					return -1
+				case 110:
+					return -1
 				case 114:
 					return -1
 				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return -1
+				case 47:
+					return -1
+				case 98:
+					return -1
+				case 102:
 					return -1
 				case 117:
 					return -1
 				case 125:
 					return 20
-				case 34:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 52:
-					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -892,40 +892,40 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 34:
-					return 2
-				case 92:
-					return 3
 				case 47:
-					return 4
+					return 2
 				case 98:
-					return 4
+					return 2
 				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 34:
+					return 3
+				case 92:
 					return 4
 				case 110:
-					return 4
-				case 123:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 114:
-					return 4
+					return 2
 				case 116:
-					return 4
-				case 117:
-					return 4
-				case 125:
-					return 4
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
@@ -933,23 +933,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 39:
+					return 1
 				case 92:
 					return -1
 				case 47:
 					return -1
 				case 98:
 					return -1
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 39:
-					return 1
-				case 34:
-					return -1
 				case 102:
-					return -1
-				case 110:
 					return -1
 				case 117:
 					return -1
@@ -958,6 +950,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 52:
 					return -1
 				case 125:
+					return -1
+				case 34:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				}
 				switch {
@@ -974,50 +974,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 39:
 					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
 				case 114:
-					return 3
+					return 4
 				case 116:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
 				case 39:
 					return 21
-				case 34:
+				case 92:
+					return -1
+				case 47:
+					return -1
+				case 98:
 					return -1
 				case 102:
-					return -1
-				case 110:
 					return -1
 				case 117:
 					return -1
@@ -1027,11 +1029,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 125:
 					return -1
-				case 92:
+				case 34:
 					return -1
-				case 47:
-					return -1
-				case 98:
+				case 110:
 					return -1
 				case 114:
 					return -1
@@ -1050,66 +1050,27 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 39:
+					return -1
 				case 92:
-					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
-				case 34:
-					return -1
-				case 102:
-					return 3
-				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 3
-				case 65 <= r && r <= 70:
-					return 3
-				case 97 <= r && r <= 102:
-					return 3
-				}
-				return 3
-			},
-			func(r rune) int {
-				switch r {
-				case 39:
-					return -1
-				case 34:
 					return 5
-				case 102:
+				case 47:
 					return 6
-				case 110:
+				case 98:
 					return 7
-				case 117:
+				case 102:
 					return 8
+				case 117:
+					return 9
 				case 123:
 					return -1
 				case 52:
 					return -1
 				case 125:
 					return -1
-				case 92:
-					return 9
-				case 47:
+				case 34:
 					return 10
-				case 98:
+				case 110:
 					return 11
 				case 114:
 					return 12
@@ -1128,138 +1089,210 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
-					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
 					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
 				case 117:
-					return 3
+					return 4
 				case 123:
-					return 3
+					return 4
 				case 52:
-					return 3
+					return 4
 				case 125:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
-				case 65 <= r && r <= 70:
-					return 3
-				case 97 <= r && r <= 102:
-					return 3
-				}
-				return 3
-			},
-			func(r rune) int {
-				switch r {
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
-				case 34:
-					return -1
-				case 102:
-					return 3
-				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 3
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
 				case 39:
 					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
 				case 114:
-					return 3
+					return 4
 				case 116:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
-				case 39:
-					return -1
 				case 34:
 					return -1
+				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
 				case 102:
-					return 14
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 4
+				case 65 <= r && r <= 70:
+					return 4
+				case 97 <= r && r <= 102:
+					return 4
+				}
+				return 4
+			},
+			func(r rune) int {
+				switch r {
+				case 34:
+					return -1
+				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 4
+				case 65 <= r && r <= 70:
+					return 4
+				case 97 <= r && r <= 102:
+					return 4
+				}
+				return 4
+			},
+			func(r rune) int {
+				switch r {
+				case 34:
+					return -1
+				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 4
+				case 65 <= r && r <= 70:
+					return 4
+				case 97 <= r && r <= 102:
+					return 4
+				}
+				return 4
+			},
+			func(r rune) int {
+				switch r {
+				case 34:
+					return -1
 				case 110:
 					return -1
-				case 117:
+				case 114:
 					return -1
-				case 123:
+				case 116:
 					return -1
-				case 52:
-					return 14
-				case 125:
+				case 39:
 					return -1
 				case 92:
 					return -1
@@ -1267,9 +1300,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 98:
 					return 14
-				case 114:
+				case 102:
+					return 14
+				case 117:
 					return -1
-				case 116:
+				case 123:
+					return -1
+				case 52:
+					return 14
+				case 125:
 					return -1
 				}
 				switch {
@@ -1286,214 +1325,169 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 39:
 					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
 				case 114:
-					return 3
+					return 4
 				case 116:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
+			},
+			func(r rune) int {
+				switch r {
+				case 34:
+					return -1
+				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 4
+				case 65 <= r && r <= 70:
+					return 4
+				case 97 <= r && r <= 102:
+					return 4
+				}
+				return 4
 			},
 			func(r rune) int {
 				switch r {
 				case 39:
 					return 2
+				case 92:
+					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
+				case 117:
+					return 4
+				case 123:
+					return 4
+				case 52:
+					return 4
+				case 125:
+					return 4
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
 				case 114:
-					return 3
+					return 4
 				case 116:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
+				case 34:
+					return -1
+				case 110:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
 				case 114:
-					return 3
+					return 4
 				case 116:
-					return 3
+					return 4
 				case 39:
 					return 2
-				case 34:
-					return -1
-				case 102:
-					return 3
-				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 3
-				case 65 <= r && r <= 70:
-					return 3
-				case 97 <= r && r <= 102:
-					return 3
-				}
-				return 3
-			},
-			func(r rune) int {
-				switch r {
 				case 92:
-					return 4
+					return 3
 				case 47:
-					return 3
+					return 4
 				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
-				case 34:
-					return -1
+					return 4
 				case 102:
-					return 3
-				case 110:
-					return 3
+					return 4
 				case 117:
-					return 3
+					return 4
 				case 123:
-					return 3
+					return 4
 				case 52:
-					return 3
+					return 4
 				case 125:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
-				case 65 <= r && r <= 70:
-					return 3
-				case 97 <= r && r <= 102:
-					return 3
-				}
-				return 3
-			},
-			func(r rune) int {
-				switch r {
-				case 92:
 					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
-				case 34:
-					return -1
-				case 102:
-					return 3
-				case 110:
-					return 3
-				case 117:
-					return 3
-				case 123:
-					return 3
-				case 52:
-					return 3
-				case 125:
-					return 3
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 3
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
-				case 39:
-					return -1
 				case 34:
 					return -1
-				case 102:
-					return 15
 				case 110:
 					return -1
-				case 117:
+				case 114:
 					return -1
-				case 123:
+				case 116:
 					return -1
-				case 52:
-					return 15
-				case 125:
+				case 39:
 					return -1
 				case 92:
 					return -1
@@ -1501,9 +1495,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 98:
 					return 15
-				case 114:
+				case 102:
+					return 15
+				case 117:
 					return -1
-				case 116:
+				case 123:
+					return -1
+				case 52:
+					return 15
+				case 125:
 					return -1
 				}
 				switch {
@@ -1520,12 +1520,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 39:
 					return -1
-				case 34:
+				case 92:
 					return -1
+				case 47:
+					return -1
+				case 98:
+					return 16
 				case 102:
 					return 16
-				case 110:
-					return -1
 				case 117:
 					return -1
 				case 123:
@@ -1534,12 +1536,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 16
 				case 125:
 					return -1
-				case 92:
+				case 34:
 					return -1
-				case 47:
+				case 110:
 					return -1
-				case 98:
-					return 16
 				case 114:
 					return -1
 				case 116:
@@ -1557,24 +1557,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 39:
+					return -1
 				case 92:
 					return -1
 				case 47:
 					return -1
 				case 98:
 					return 17
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 39:
-					return -1
-				case 34:
-					return -1
 				case 102:
 					return 17
-				case 110:
-					return -1
 				case 117:
 					return -1
 				case 123:
@@ -1582,6 +1574,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 52:
 					return 17
 				case 125:
+					return -1
+				case 34:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
 					return -1
 				}
 				switch {
@@ -1598,11 +1598,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 39:
 					return -1
-				case 34:
+				case 92:
+					return -1
+				case 47:
+					return -1
+				case 98:
 					return -1
 				case 102:
-					return -1
-				case 110:
 					return -1
 				case 117:
 					return -1
@@ -1612,11 +1614,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 125:
 					return -1
-				case 92:
+				case 34:
 					return -1
-				case 47:
-					return -1
-				case 98:
+				case 110:
 					return -1
 				case 114:
 					return -1
@@ -1635,23 +1635,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 39:
+					return -1
 				case 92:
 					return -1
 				case 47:
 					return -1
 				case 98:
 					return -1
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 39:
-					return -1
-				case 34:
-					return -1
 				case 102:
-					return -1
-				case 110:
 					return -1
 				case 117:
 					return -1
@@ -1661,6 +1653,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 19
 				case 125:
 					return -1
+				case 34:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -1676,11 +1676,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 39:
 					return -1
-				case 34:
+				case 92:
+					return -1
+				case 47:
+					return -1
+				case 98:
 					return -1
 				case 102:
-					return -1
-				case 110:
 					return -1
 				case 117:
 					return -1
@@ -1690,11 +1692,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 125:
 					return 20
-				case 92:
+				case 34:
 					return -1
-				case 47:
-					return -1
-				case 98:
+				case 110:
 					return -1
 				case 114:
 					return -1
@@ -1713,103 +1713,97 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
-					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
 					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
 				case 117:
-					return 3
+					return 4
 				case 123:
-					return 3
+					return 4
 				case 52:
-					return 3
+					return 4
 				case 125:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
-					return 4
-				case 47:
-					return 3
-				case 98:
-					return 3
-				case 114:
-					return 3
-				case 116:
-					return 3
-				case 39:
-					return 2
 				case 34:
 					return -1
-				case 102:
-					return 3
 				case 110:
+					return 4
+				case 114:
+					return 4
+				case 116:
+					return 4
+				case 39:
+					return 2
+				case 92:
 					return 3
+				case 47:
+					return 4
+				case 98:
+					return 4
+				case 102:
+					return 4
 				case 117:
-					return 3
+					return 4
 				case 123:
-					return 3
+					return 4
 				case 52:
-					return 3
+					return 4
 				case 125:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 3
+					return 4
 				case 65 <= r && r <= 70:
-					return 3
+					return 4
 				case 97 <= r && r <= 102:
-					return 3
+					return 4
 				}
-				return 3
+				return 4
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 		// `((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`i
-		{[]bool{false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false}, []func(rune) int{ // Transitions
+		{[]bool{false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 92:
-					return -1
 				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
 					return -1
 				case 114:
 					return -1
-				case 116:
-					return -1
 				case 117:
 					return -1
-				case 52:
+				case 123:
+					return -1
+				case 110:
 					return -1
 				case 125:
 					return -1
@@ -1819,9 +1813,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 34:
 					return -1
-				case 110:
+				case 116:
 					return -1
-				case 123:
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
 					return -1
 				}
 				switch {
@@ -1836,9 +1836,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 47:
+					return 2
+				case 114:
+					return 2
 				case 117:
 					return 2
-				case 52:
+				case 123:
+					return 2
+				case 110:
 					return 2
 				case 125:
 					return 2
@@ -1848,21 +1854,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 34:
 					return -1
-				case 110:
-					return 2
-				case 123:
+				case 116:
 					return 2
 				case 92:
 					return 4
-				case 47:
-					return 2
 				case 98:
 					return 2
 				case 102:
 					return 2
-				case 114:
-					return 2
-				case 116:
+				case 52:
 					return 2
 				}
 				switch {
@@ -1877,33 +1877,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return 2
-				case 52:
+				case 110:
 					return 2
 				case 125:
 					return 2
 				case 105:
 					return 2
 				case 96:
-					return 14
+					return 21
 				case 34:
 					return -1
-				case 110:
-					return 2
-				case 123:
+				case 116:
 					return 2
 				case 92:
 					return 4
-				case 47:
-					return 2
 				case 98:
 					return 2
 				case 102:
 					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
 				case 114:
 					return 2
-				case 116:
+				case 117:
+					return 2
+				case 123:
 					return 2
 				}
 				switch {
@@ -1918,33 +1918,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
-					return -1
 				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
 					return -1
 				case 114:
 					return -1
-				case 116:
-					return -1
 				case 117:
 					return -1
-				case 52:
+				case 123:
+					return -1
+				case 110:
 					return -1
 				case 125:
 					return -1
 				case 105:
 					return -1
 				case 96:
-					return 16
+					return 23
 				case 34:
 					return -1
-				case 110:
+				case 116:
 					return -1
-				case 123:
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
 					return -1
 				}
 				switch {
@@ -1959,22 +1959,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 92:
+				case 110:
 					return 5
-				case 47:
-					return 6
-				case 98:
-					return 7
-				case 102:
-					return 8
-				case 114:
-					return 9
-				case 116:
-					return 10
-				case 117:
-					return 11
-				case 52:
-					return -1
 				case 125:
 					return -1
 				case 105:
@@ -1982,8 +1968,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 96:
 					return -1
 				case 34:
+					return 6
+				case 116:
+					return 7
+				case 92:
+					return 8
+				case 98:
+					return 9
+				case 102:
+					return 10
+				case 52:
+					return -1
+				case 47:
+					return 11
+				case 114:
 					return 12
-				case 110:
+				case 117:
 					return 13
 				case 123:
 					return -1
@@ -2000,771 +2000,771 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
 				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				case 117:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				case 117:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return 17
-				case 102:
-					return 17
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 52:
-					return 17
-				case 125:
-					return -1
-				case 105:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 17
-				case 65 <= r && r <= 70:
-					return 17
-				case 97 <= r && r <= 102:
-					return 17
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return 2
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 52:
-					return -1
-				case 125:
-					return -1
-				case 105:
-					return 15
-				case 96:
-					return 16
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return -1
-				case 65 <= r && r <= 70:
-					return -1
-				case 97 <= r && r <= 102:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 52:
-					return -1
-				case 125:
-					return -1
-				case 105:
-					return -1
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return -1
-				case 65 <= r && r <= 70:
-					return -1
-				case 97 <= r && r <= 102:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 52:
-					return 2
-				case 125:
-					return 2
-				case 105:
-					return 2
-				case 96:
-					return 14
-				case 34:
-					return -1
-				case 110:
-					return 2
-				case 123:
-					return 2
-				case 92:
-					return 4
-				case 47:
-					return 2
-				case 98:
-					return 2
-				case 102:
-					return 2
-				case 114:
-					return 2
-				case 116:
-					return 2
-				case 117:
-					return 2
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 2
-				case 65 <= r && r <= 70:
-					return 2
-				case 97 <= r && r <= 102:
-					return 2
-				}
-				return 2
-			},
-			func(r rune) int {
-				switch r {
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return 18
-				case 102:
-					return 18
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 52:
-					return 18
-				case 125:
-					return -1
-				case 105:
-					return -1
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 18
-				case 65 <= r && r <= 70:
-					return 18
-				case 97 <= r && r <= 102:
-					return 18
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return -1
-				case 52:
-					return 19
-				case 125:
-					return -1
-				case 105:
-					return -1
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return 19
-				case 102:
-					return 19
-				case 114:
-					return -1
-				case 116:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 19
-				case 65 <= r && r <= 70:
-					return 19
-				case 97 <= r && r <= 102:
-					return 19
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return 20
-				case 102:
-					return 20
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 52:
-					return 20
-				case 125:
-					return -1
-				case 105:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 20
-				case 65 <= r && r <= 70:
-					return 20
-				case 97 <= r && r <= 102:
-					return 20
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
 					return 21
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 114:
+				case 34:
 					return -1
 				case 116:
-					return -1
-				case 117:
-					return -1
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 52:
-					return -1
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
 				case 125:
-					return -1
+					return 2
 				case 105:
-					return -1
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return -1
+					return 2
 				case 65 <= r && r <= 70:
-					return -1
+					return 2
 				case 97 <= r && r <= 102:
-					return -1
+					return 2
 				}
-				return -1
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 96:
-					return -1
+					return 21
 				case 34:
 					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 114:
-					return -1
 				case 116:
-					return -1
-				case 117:
-					return -1
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 52:
-					return 22
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
 				case 125:
-					return -1
+					return 2
 				case 105:
-					return -1
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return -1
+					return 2
 				case 65 <= r && r <= 70:
-					return -1
+					return 2
 				case 97 <= r && r <= 102:
-					return -1
+					return 2
 				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return -1
-				case 34:
-					return -1
-				case 110:
-					return -1
-				case 123:
-					return -1
-				case 92:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
-				case 114:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 52:
-					return -1
-				case 125:
-					return 23
-				case 105:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return -1
-				case 65 <= r && r <= 70:
-					return -1
-				case 97 <= r && r <= 102:
-					return -1
-				}
-				return -1
+				return 2
 			},
 			func(r rune) int {
 				switch r {
 				case 92:
 					return 4
-				case 47:
-					return 2
 				case 98:
 					return 2
 				case 102:
 					return 2
-				case 114:
+				case 52:
 					return 2
-				case 116:
+				case 47:
+					return 2
+				case 114:
 					return 2
 				case 117:
 					return 2
-				case 52:
+				case 123:
+					return 2
+				case 110:
 					return 2
 				case 125:
 					return 2
 				case 105:
 					return 2
 				case 96:
-					return 14
+					return 21
 				case 34:
 					return -1
+				case 116:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
 				case 110:
 					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
 				case 123:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 92:
+					return -1
+				case 98:
+					return 14
+				case 102:
+					return 14
+				case 52:
+					return 14
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 14
+				case 65 <= r && r <= 70:
+					return 14
+				case 97 <= r && r <= 102:
+					return 14
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 92:
+					return -1
+				case 98:
+					return 15
+				case 102:
+					return 15
+				case 52:
+					return 15
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 15
+				case 65 <= r && r <= 70:
+					return 15
+				case 97 <= r && r <= 102:
+					return 15
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return 16
+				case 102:
+					return 16
+				case 52:
+					return 16
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 16
+				case 65 <= r && r <= 70:
+					return 16
+				case 97 <= r && r <= 102:
+					return 16
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return 17
+				case 102:
+					return 17
+				case 52:
+					return 17
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 17
+				case 65 <= r && r <= 70:
+					return 17
+				case 97 <= r && r <= 102:
+					return 17
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
+					return -1
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return 18
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
+					return 19
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 125:
+					return 20
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
+					return -1
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
+					return 2
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return 22
+				case 96:
+					return 23
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
+					return -1
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 125:
+					return -1
+				case 105:
+					return -1
+				case 96:
+					return -1
+				case 34:
+					return -1
+				case 116:
+					return -1
+				case 92:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 52:
+					return -1
+				case 47:
+					return -1
+				case 114:
+					return -1
+				case 117:
+					return -1
+				case 123:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 34:
+					return -1
+				case 116:
+					return 2
+				case 92:
+					return 4
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 52:
+					return 2
+				case 47:
+					return 2
+				case 114:
+					return 2
+				case 117:
+					return 2
+				case 123:
+					return 2
+				case 110:
+					return 2
+				case 125:
+					return 2
+				case 105:
 					return 2
 				}
 				switch {
@@ -2780,34 +2780,34 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 		// `((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`
-		{[]bool{false, false, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, []func(rune) int{ // Transitions
+		{[]bool{false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return -1
 				case 96:
 					return 1
 				case 92:
 					return -1
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
 					return -1
 				case 102:
 					return -1
-				case 110:
-					return -1
-				case 114:
-					return -1
 				case 117:
 					return -1
-				case 52:
-					return -1
 				case 125:
-					return -1
-				case 116:
-					return -1
-				case 123:
 					return -1
 				}
 				switch {
@@ -2822,70 +2822,109 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 96:
+				case 47:
 					return 2
-				case 92:
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 96:
 					return 3
+				case 92:
+					return 4
 				case 34:
 					return -1
-				case 47:
-					return 4
 				case 98:
-					return 4
+					return 2
 				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
+					return 2
 				case 117:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 			func(r rune) int {
 				switch r {
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
 				case 96:
-					return 6
+					return 21
 				case 92:
-					return -1
+					return 4
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
-					return -1
+					return 2
 				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
 					return -1
 				case 110:
 					return -1
 				case 114:
 					return -1
-				case 117:
-					return -1
-				case 52:
-					return -1
-				case 125:
-					return -1
 				case 116:
 					return -1
 				case 123:
+					return -1
+				case 52:
+					return -1
+				case 96:
+					return 22
+				case 92:
+					return -1
+				case 34:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 117:
+					return -1
+				case 125:
 					return -1
 				}
 				switch {
@@ -2900,460 +2939,460 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 96:
-					return -1
-				case 92:
+				case 47:
+					return 5
+				case 110:
+					return 6
+				case 114:
 					return 7
-				case 34:
+				case 116:
 					return 8
-				case 47:
+				case 123:
+					return -1
+				case 52:
+					return -1
+				case 96:
+					return -1
+				case 92:
 					return 9
-				case 98:
+				case 34:
 					return 10
-				case 102:
+				case 98:
 					return 11
-				case 110:
+				case 102:
 					return 12
-				case 114:
+				case 117:
 					return 13
+				case 125:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return -1
+				case 65 <= r && r <= 70:
+					return -1
+				case 97 <= r && r <= 102:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
 				case 117:
+					return 2
+				case 125:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
+				case 52:
+					return 2
+				case 96:
+					return 21
+				case 92:
+					return 4
+				case 34:
+					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 2
+				case 65 <= r && r <= 70:
+					return 2
+				case 97 <= r && r <= 102:
+					return 2
+				}
+				return 2
+			},
+			func(r rune) int {
+				switch r {
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
 					return 14
-				case 52:
+				case 96:
+					return -1
+				case 92:
+					return -1
+				case 34:
+					return -1
+				case 98:
+					return 14
+				case 102:
+					return 14
+				case 117:
 					return -1
 				case 125:
 					return -1
-				case 116:
+				}
+				switch {
+				case 48 <= r && r <= 57:
+					return 14
+				case 65 <= r && r <= 70:
+					return 14
+				case 97 <= r && r <= 102:
+					return 14
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 96:
+					return -1
+				case 92:
+					return -1
+				case 34:
+					return -1
+				case 98:
 					return 15
+				case 102:
+					return 15
+				case 117:
+					return -1
+				case 125:
+					return -1
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
 				case 123:
 					return -1
+				case 52:
+					return 15
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return -1
+					return 15
 				case 65 <= r && r <= 70:
-					return -1
+					return 15
 				case 97 <= r && r <= 102:
-					return -1
+					return 15
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 4
-				case 123:
-					return 4
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
 				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 116:
-					return -1
-				case 123:
-					return -1
-				case 96:
-					return 6
-				case 92:
-					return -1
-				case 34:
-					return -1
-				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
 					return -1
 				case 110:
 					return -1
 				case 114:
 					return -1
-				case 117:
-					return -1
-				case 52:
-					return -1
-				case 125:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return -1
-				case 65 <= r && r <= 70:
-					return -1
-				case 97 <= r && r <= 102:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
 				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
 					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
+				case 123:
+					return -1
 				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 116:
-					return 4
-				case 123:
-					return 4
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				case 116:
-					return 4
-				case 123:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
+					return 16
 				case 96:
 					return -1
 				case 92:
 					return -1
 				case 34:
-					return -1
-				case 47:
 					return -1
 				case 98:
 					return 16
 				case 102:
 					return 16
-				case 110:
-					return -1
-				case 114:
-					return -1
 				case 117:
 					return -1
-				case 52:
-					return 16
 				case 125:
-					return -1
-				case 116:
-					return -1
-				case 123:
 					return -1
 				}
 				switch {
@@ -3368,71 +3407,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 4
-				case 123:
-					return 4
-				case 96:
-					return 5
-				case 92:
-					return 3
-				case 34:
-					return -1
-				case 47:
-					return 4
-				case 98:
-					return 4
-				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
-				case 117:
-					return 4
-				case 52:
-					return 4
-				case 125:
-					return 4
-				}
-				switch {
-				case 48 <= r && r <= 57:
-					return 4
-				case 65 <= r && r <= 70:
-					return 4
-				case 97 <= r && r <= 102:
-					return 4
-				}
-				return 4
-			},
-			func(r rune) int {
-				switch r {
-				case 116:
-					return -1
-				case 123:
-					return -1
 				case 96:
 					return -1
 				case 92:
 					return -1
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
 					return 17
 				case 102:
 					return 17
+				case 117:
+					return -1
+				case 125:
+					return -1
+				case 47:
+					return -1
 				case 110:
 					return -1
 				case 114:
 					return -1
-				case 117:
+				case 116:
+					return -1
+				case 123:
 					return -1
 				case 52:
 					return 17
-				case 125:
-					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
@@ -3446,109 +3446,109 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return 18
+				case 52:
+					return -1
 				case 96:
 					return -1
 				case 92:
 					return -1
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
-					return 18
-				case 102:
-					return 18
-				case 110:
 					return -1
-				case 114:
+				case 102:
 					return -1
 				case 117:
 					return -1
-				case 52:
-					return 18
 				case 125:
-					return -1
-				case 116:
-					return -1
-				case 123:
 					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 18
+					return -1
 				case 65 <= r && r <= 70:
-					return 18
+					return -1
 				case 97 <= r && r <= 102:
-					return 18
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return 19
 				case 96:
 					return -1
 				case 92:
 					return -1
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
-					return 19
-				case 102:
-					return 19
-				case 110:
 					return -1
-				case 114:
+				case 102:
 					return -1
 				case 117:
 					return -1
-				case 52:
-					return 19
 				case 125:
-					return -1
-				case 116:
-					return -1
-				case 123:
 					return -1
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 19
+					return -1
 				case 65 <= r && r <= 70:
-					return 19
+					return -1
 				case 97 <= r && r <= 102:
-					return 19
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 47:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 123:
+					return -1
+				case 52:
+					return -1
 				case 96:
 					return -1
 				case 92:
 					return -1
 				case 34:
 					return -1
-				case 47:
-					return -1
 				case 98:
 					return -1
 				case 102:
 					return -1
-				case 110:
-					return -1
-				case 114:
-					return -1
 				case 117:
 					return -1
-				case 52:
-					return -1
 				case 125:
-					return -1
-				case 116:
-					return -1
-				case 123:
 					return 20
 				}
 				switch {
@@ -3563,70 +3563,70 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return -1
-				case 123:
-					return -1
-				case 96:
-					return -1
-				case 92:
-					return -1
-				case 34:
-					return -1
 				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
-					return -1
+					return 2
 				case 110:
-					return -1
+					return 2
 				case 114:
-					return -1
-				case 117:
-					return -1
+					return 2
+				case 116:
+					return 2
+				case 123:
+					return 2
 				case 52:
+					return 2
+				case 96:
 					return 21
-				case 125:
+				case 92:
+					return 4
+				case 34:
 					return -1
+				case 98:
+					return 2
+				case 102:
+					return 2
+				case 117:
+					return 2
+				case 125:
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return -1
+					return 2
 				case 65 <= r && r <= 70:
-					return -1
+					return 2
 				case 97 <= r && r <= 102:
-					return -1
+					return 2
 				}
-				return -1
+				return 2
 			},
 			func(r rune) int {
 				switch r {
-				case 96:
-					return -1
-				case 92:
-					return -1
-				case 34:
-					return -1
 				case 47:
-					return -1
-				case 98:
-					return -1
-				case 102:
 					return -1
 				case 110:
 					return -1
 				case 114:
 					return -1
-				case 117:
+				case 116:
+					return -1
+				case 123:
 					return -1
 				case 52:
 					return -1
-				case 125:
+				case 96:
 					return 22
-				case 116:
+				case 92:
 					return -1
-				case 123:
+				case 34:
+					return -1
+				case 98:
+					return -1
+				case 102:
+					return -1
+				case 117:
+					return -1
+				case 125:
 					return -1
 				}
 				switch {
@@ -3642,41 +3642,41 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 96:
-					return 5
+					return 21
 				case 92:
-					return 3
+					return 4
 				case 34:
 					return -1
-				case 47:
-					return 4
 				case 98:
-					return 4
+					return 2
 				case 102:
-					return 4
-				case 110:
-					return 4
-				case 114:
-					return 4
+					return 2
 				case 117:
-					return 4
-				case 52:
-					return 4
+					return 2
 				case 125:
-					return 4
+					return 2
+				case 47:
+					return 2
+				case 110:
+					return 2
+				case 114:
+					return 2
 				case 116:
-					return 4
+					return 2
 				case 123:
-					return 4
+					return 2
+				case 52:
+					return 2
 				}
 				switch {
 				case 48 <= r && r <= 57:
-					return 4
+					return 2
 				case 65 <= r && r <= 70:
-					return 4
+					return 2
 				case 97 <= r && r <= 102:
-					return 4
+					return 2
 				}
-				return 4
+				return 2
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
@@ -4879,13 +4879,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 65:
-					return 1
+				case 108:
+					return -1
 				case 116:
 					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 114:
 					return -1
@@ -4893,37 +4891,39 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 97:
 					return 1
-				case 108:
-					return -1
+				case 65:
+					return 1
 				case 76:
 					return -1
 				case 84:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
 				case 65:
 					return -1
+				case 76:
+					return 2
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return 2
 				case 116:
 					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 97:
-					return -1
-				case 108:
-					return 2
-				case 76:
-					return 2
-				case 84:
-					return -1
 				}
 				return -1
 			},
@@ -4931,20 +4931,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 76:
 					return -1
 				case 84:
 					return 3
-				case 65:
+				case 69:
+					return -1
+				case 108:
 					return -1
 				case 116:
 					return 3
 				case 101:
 					return -1
-				case 69:
-					return -1
 				case 114:
 					return -1
 				case 82:
@@ -4954,25 +4954,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
 				case 65:
+					return -1
+				case 76:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return 4
+				case 108:
 					return -1
 				case 116:
 					return -1
 				case 101:
 					return 4
-				case 69:
-					return 4
 				case 114:
 					return -1
 				case 82:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 108:
+					return -1
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 114:
+					return 5
+				case 82:
+					return 5
 				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 76:
 					return -1
 				case 84:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -4981,48 +5006,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 76:
 					return -1
 				case 84:
 					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 101:
-					return -1
 				case 69:
-					return -1
-				case 114:
-					return 5
-				case 82:
-					return 5
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 97:
 					return -1
 				case 108:
 					return -1
-				case 76:
+				case 116:
 					return -1
-				case 84:
+				case 101:
+					return -1
+				case 114:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
@@ -5033,19 +5033,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 121:
-					return -1
-				case 101:
-					return -1
 				case 97:
 					return 1
-				case 65:
-					return 1
-				case 78:
-					return -1
-				case 108:
+				case 110:
 					return -1
 				case 76:
 					return -1
@@ -5054,6 +5044,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 122:
 					return -1
 				case 90:
+					return -1
+				case 65:
+					return 1
+				case 78:
+					return -1
+				case 108:
+					return -1
+				case 121:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -5062,14 +5062,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
 				case 78:
 					return 2
 				case 108:
 					return -1
+				case 121:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 110:
+					return 2
 				case 76:
 					return -1
 				case 89:
@@ -5077,14 +5085,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 122:
 					return -1
 				case 90:
-					return -1
-				case 69:
-					return -1
-				case 110:
-					return 2
-				case 121:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -5093,54 +5093,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 97:
 					return 3
+				case 110:
+					return -1
+				case 76:
+					return -1
+				case 89:
+					return -1
+				case 122:
+					return -1
+				case 90:
+					return -1
 				case 65:
 					return 3
 				case 78:
 					return -1
 				case 108:
 					return -1
-				case 76:
-					return -1
-				case 89:
-					return -1
-				case 122:
-					return -1
-				case 90:
-					return -1
-				case 69:
-					return -1
-				case 110:
-					return -1
 				case 121:
 					return -1
 				case 101:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 110:
-					return -1
-				case 121:
-					return -1
-				case 101:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 78:
-					return -1
-				case 108:
-					return 4
-				case 76:
-					return 4
-				case 89:
-					return -1
-				case 122:
-					return -1
-				case 90:
 					return -1
 				case 69:
 					return -1
@@ -5149,13 +5120,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
 				case 78:
 					return -1
 				case 108:
+					return 4
+				case 121:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 110:
+					return -1
+				case 76:
+					return 4
+				case 89:
+					return -1
+				case 122:
+					return -1
+				case 90:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 65:
+					return -1
+				case 78:
+					return -1
+				case 108:
+					return -1
+				case 121:
+					return 5
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 76:
 					return -1
@@ -5165,26 +5173,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 90:
 					return -1
-				case 69:
-					return -1
-				case 110:
-					return -1
-				case 121:
-					return 5
-				case 101:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
 				case 78:
 					return -1
 				case 108:
+					return -1
+				case 121:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 76:
 					return -1
@@ -5194,32 +5202,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 90:
 					return 6
-				case 69:
-					return -1
-				case 110:
-					return -1
-				case 121:
-					return -1
-				case 101:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 121:
-					return -1
-				case 101:
-					return 7
-				case 97:
-					return -1
 				case 65:
 					return -1
 				case 78:
 					return -1
 				case 108:
+					return -1
+				case 121:
+					return -1
+				case 101:
+					return 7
+				case 69:
+					return 7
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 76:
 					return -1
@@ -5229,20 +5231,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 90:
 					return -1
-				case 69:
-					return 7
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
 				case 78:
 					return -1
 				case 108:
+					return -1
+				case 121:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 76:
 					return -1
@@ -5251,14 +5259,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 122:
 					return -1
 				case 90:
-					return -1
-				case 69:
-					return -1
-				case 110:
-					return -1
-				case 121:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -5634,15 +5634,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 66:
-					return 1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 110:
+				case 73:
+					return -1
+				case 78:
 					return -1
 				case 98:
+					return 1
+				case 66:
 					return 1
 				case 101:
 					return -1
@@ -5650,9 +5652,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 78:
+				case 110:
 					return -1
 				}
 				return -1
@@ -5660,6 +5660,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return 2
@@ -5667,32 +5669,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 66:
+				case 110:
 					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 110:
+				case 73:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
-					return -1
 				case 103:
 					return 3
 				case 71:
 					return 3
-				case 110:
+				case 73:
+					return -1
+				case 78:
 					return -1
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return -1
@@ -5700,24 +5702,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 78:
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
-					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 110:
+				case 73:
+					return 4
+				case 78:
 					return -1
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return -1
@@ -5725,32 +5727,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return 4
-				case 73:
-					return 4
-				case 78:
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
+				case 103:
 					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 105:
+				case 71:
 					return -1
 				case 73:
 					return -1
 				case 78:
 					return 5
+				case 98:
+					return -1
 				case 66:
 					return -1
-				case 103:
+				case 101:
 					return -1
-				case 71:
+				case 69:
+					return -1
+				case 105:
 					return -1
 				case 110:
 					return 5
@@ -5759,23 +5759,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 73:
+					return -1
+				case 78:
+					return -1
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 66:
-					return -1
-				case 103:
-					return -1
-				case 71:
 					return -1
 				case 110:
 					return -1
@@ -5788,13 +5788,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 98:
-					return 1
-				case 66:
-					return 1
 				case 69:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -5802,9 +5796,40 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 110:
 					return -1
+				case 78:
+					return -1
+				case 98:
+					return 1
+				case 66:
+					return 1
 				case 101:
 					return -1
+				case 116:
+					return -1
 				case 87:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 101:
+					return 2
+				case 116:
+					return -1
+				case 87:
+					return -1
+				case 69:
+					return 2
+				case 84:
+					return -1
+				case 119:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -5813,69 +5838,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return 2
-				case 87:
-					return -1
-				case 78:
-					return -1
-				case 98:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return 2
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 119:
-					return -1
-				case 110:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 101:
-					return -1
-				case 87:
-					return -1
-				case 78:
-					return -1
-				case 98:
-					return -1
-				case 66:
-					return -1
 				case 69:
 					return -1
-				case 116:
-					return 3
 				case 84:
 					return 3
 				case 119:
 					return -1
 				case 110:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 101:
-					return -1
-				case 87:
-					return 4
 				case 78:
 					return -1
 				case 98:
 					return -1
 				case 66:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 116:
+					return 3
+				case 87:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 69:
 					return -1
 				case 84:
 					return -1
@@ -5883,55 +5871,67 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 110:
 					return -1
+				case 78:
+					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 101:
+					return -1
+				case 116:
+					return -1
+				case 87:
+					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
-				case 66:
-					return -1
 				case 69:
 					return 5
-				case 116:
-					return -1
 				case 84:
 					return -1
 				case 119:
 					return -1
 				case 110:
 					return -1
+				case 78:
+					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
 				case 101:
 					return 5
-				case 87:
+				case 116:
 					return -1
-				case 78:
+				case 87:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
-				case 66:
-					return -1
 				case 69:
 					return 6
-				case 116:
-					return -1
 				case 84:
 					return -1
 				case 119:
 					return -1
 				case 110:
 					return -1
+				case 78:
+					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
 				case 101:
 					return 6
-				case 87:
+				case 116:
 					return -1
-				case 78:
+				case 87:
 					return -1
 				}
 				return -1
@@ -5942,9 +5942,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 66:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 116:
+					return -1
+				case 87:
+					return -1
+				case 69:
 					return -1
 				case 84:
 					return -1
@@ -5952,10 +5956,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 110:
 					return 7
-				case 101:
-					return -1
-				case 87:
-					return -1
 				case 78:
 					return 7
 				}
@@ -5963,9 +5963,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 69:
 					return -1
-				case 87:
+				case 84:
+					return -1
+				case 119:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -5973,15 +5977,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 66:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 116:
 					return -1
-				case 84:
-					return -1
-				case 119:
-					return -1
-				case 110:
+				case 87:
 					return -1
 				}
 				return -1
@@ -5994,23 +5994,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 98:
 					return 1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
 				case 66:
 					return 1
 				case 105:
 					return -1
+				case 97:
+					return -1
+				case 82:
+					return -1
 				case 73:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 65:
+					return -1
+				case 114:
 					return -1
 				case 121:
 					return -1
@@ -6021,116 +6021,145 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
+				case 73:
+					return 2
 				case 110:
 					return -1
-				case 97:
+				case 78:
 					return -1
 				case 65:
 					return -1
 				case 114:
 					return -1
-				case 82:
+				case 121:
+					return -1
+				case 89:
+					return -1
+				case 98:
 					return -1
 				case 66:
 					return -1
 				case 105:
 					return 2
-				case 73:
-					return 2
-				case 78:
+				case 97:
 					return -1
-				case 121:
-					return -1
-				case 89:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
+				case 73:
 					return -1
 				case 110:
 					return 3
-				case 97:
-					return -1
+				case 78:
+					return 3
 				case 65:
 					return -1
 				case 114:
 					return -1
-				case 82:
+				case 121:
+					return -1
+				case 89:
+					return -1
+				case 98:
 					return -1
 				case 66:
 					return -1
 				case 105:
 					return -1
-				case 73:
+				case 97:
 					return -1
-				case 78:
-					return 3
-				case 121:
-					return -1
-				case 89:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
+				case 73:
 					return -1
 				case 110:
 					return -1
-				case 97:
-					return 4
+				case 78:
+					return -1
 				case 65:
 					return 4
 				case 114:
 					return -1
-				case 82:
+				case 121:
+					return -1
+				case 89:
+					return -1
+				case 98:
 					return -1
 				case 66:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 121:
-					return -1
-				case 89:
+				case 97:
+					return 4
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
+				case 73:
 					return -1
 				case 110:
 					return -1
-				case 97:
+				case 78:
 					return -1
 				case 65:
 					return -1
 				case 114:
 					return 5
+				case 121:
+					return -1
+				case 89:
+					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 105:
+					return -1
+				case 97:
+					return -1
 				case 82:
 					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 65:
+					return -1
+				case 114:
+					return -1
+				case 121:
+					return 6
+				case 89:
+					return 6
+				case 98:
+					return -1
 				case 66:
 					return -1
 				case 105:
 					return -1
-				case 73:
+				case 97:
 					return -1
-				case 78:
-					return -1
-				case 121:
-					return -1
-				case 89:
+				case 82:
 					return -1
 				}
 				return -1
@@ -6139,52 +6168,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 98:
 					return -1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
 				case 66:
 					return -1
 				case 105:
 					return -1
+				case 97:
+					return -1
+				case 82:
+					return -1
 				case 73:
-					return -1
-				case 78:
-					return -1
-				case 121:
-					return 6
-				case 89:
-					return 6
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 98:
 					return -1
 				case 110:
 					return -1
-				case 97:
+				case 78:
 					return -1
 				case 65:
 					return -1
 				case 114:
-					return -1
-				case 82:
-					return -1
-				case 66:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
 					return -1
 				case 121:
 					return -1
@@ -6201,25 +6201,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 79:
-					return -1
 				case 76:
 					return -1
-				case 69:
+				case 101:
+					return -1
+				case 65:
+					return -1
+				case 110:
 					return -1
 				case 98:
 					return 1
 				case 66:
 					return 1
+				case 79:
+					return -1
 				case 108:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 97:
-					return -1
-				case 65:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
@@ -6232,83 +6232,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 66:
 					return -1
+				case 79:
+					return 2
 				case 108:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 97:
-					return -1
-				case 65:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
 				case 111:
 					return 2
-				case 79:
-					return 2
 				case 76:
 					return -1
-				case 69:
+				case 101:
+					return -1
+				case 65:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
-				case 66:
-					return -1
-				case 108:
-					return -1
-				case 101:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
 				case 111:
-					return 3
-				case 79:
 					return 3
 				case 76:
 					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 98:
-					return -1
-				case 66:
-					return -1
-				case 108:
-					return 4
 				case 101:
-					return -1
-				case 97:
 					return -1
 				case 65:
 					return -1
 				case 110:
 					return -1
-				case 78:
+				case 98:
 					return -1
-				case 111:
+				case 66:
 					return -1
 				case 79:
+					return 3
+				case 108:
 					return -1
-				case 76:
-					return 4
 				case 69:
+					return -1
+				case 97:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
@@ -6319,26 +6290,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 66:
 					return -1
-				case 108:
+				case 79:
 					return -1
-				case 101:
-					return 5
+				case 108:
+					return 4
+				case 69:
+					return -1
 				case 97:
+					return -1
+				case 78:
+					return -1
+				case 111:
+					return -1
+				case 76:
+					return 4
+				case 101:
 					return -1
 				case 65:
 					return -1
 				case 110:
 					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return 5
 				}
 				return -1
 			},
@@ -6346,26 +6317,55 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 79:
-					return -1
 				case 76:
 					return -1
-				case 69:
+				case 101:
+					return 5
+				case 65:
+					return -1
+				case 110:
 					return -1
 				case 98:
 					return -1
 				case 66:
 					return -1
+				case 79:
+					return -1
 				case 108:
+					return -1
+				case 69:
+					return 5
+				case 97:
+					return -1
+				case 78:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 111:
+					return -1
+				case 76:
 					return -1
 				case 101:
 					return -1
-				case 97:
-					return 6
 				case 65:
 					return 6
 				case 110:
 					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 79:
+					return -1
+				case 108:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return 6
 				case 78:
 					return -1
 				}
@@ -6377,26 +6377,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 66:
 					return -1
+				case 79:
+					return -1
 				case 108:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 97:
+					return -1
+				case 78:
+					return 7
+				case 111:
+					return -1
+				case 76:
+					return -1
+				case 101:
 					return -1
 				case 65:
 					return -1
 				case 110:
 					return 7
-				case 78:
-					return 7
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
@@ -6404,25 +6404,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 79:
-					return -1
 				case 76:
 					return -1
-				case 69:
+				case 101:
+					return -1
+				case 65:
+					return -1
+				case 110:
 					return -1
 				case 98:
 					return -1
 				case 66:
 					return -1
+				case 79:
+					return -1
 				case 108:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 97:
-					return -1
-				case 65:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
@@ -6435,23 +6435,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 98:
-					return 1
 				case 114:
 					return -1
-				case 65:
+				case 82:
+					return -1
+				case 97:
 					return -1
 				case 107:
 					return -1
+				case 98:
+					return 1
 				case 66:
 					return 1
-				case 82:
-					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 97:
+				case 65:
 					return -1
 				case 75:
 					return -1
@@ -6462,71 +6462,71 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 98:
 					return -1
-				case 114:
-					return 2
-				case 65:
-					return -1
-				case 107:
-					return -1
 				case 66:
 					return -1
-				case 82:
-					return 2
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 97:
+				case 65:
 					return -1
 				case 75:
+					return -1
+				case 114:
+					return 2
+				case 82:
+					return 2
+				case 97:
+					return -1
+				case 107:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
+				case 114:
 					return -1
 				case 82:
+					return -1
+				case 97:
+					return -1
+				case 107:
+					return -1
+				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return 3
 				case 69:
 					return 3
-				case 97:
-					return -1
-				case 75:
-					return -1
-				case 98:
-					return -1
-				case 114:
-					return -1
 				case 65:
 					return -1
-				case 107:
+				case 75:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
 				case 114:
 					return -1
-				case 65:
+				case 82:
+					return -1
+				case 97:
 					return 4
 				case 107:
 					return -1
-				case 66:
+				case 98:
 					return -1
-				case 82:
+				case 66:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 97:
+				case 65:
 					return 4
 				case 75:
 					return -1
@@ -6535,23 +6535,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 98:
-					return -1
 				case 114:
 					return -1
-				case 65:
+				case 82:
+					return -1
+				case 97:
 					return -1
 				case 107:
 					return 5
-				case 66:
+				case 98:
 					return -1
-				case 82:
+				case 66:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 97:
+				case 65:
 					return -1
 				case 75:
 					return 5
@@ -6560,25 +6560,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
+				case 114:
 					return -1
 				case 82:
+					return -1
+				case 97:
+					return -1
+				case 107:
+					return -1
+				case 98:
+					return -1
+				case 66:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 97:
-					return -1
-				case 75:
-					return -1
-				case 98:
-					return -1
-				case 114:
-					return -1
 				case 65:
 					return -1
-				case 107:
+				case 75:
 					return -1
 				}
 				return -1
@@ -6589,55 +6589,55 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 66:
-					return 1
-				case 117:
-					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
 				case 101:
 					return -1
-				case 84:
+				case 69:
+					return -1
+				case 116:
 					return -1
 				case 98:
 					return 1
+				case 66:
+					return 1
+				case 117:
+					return -1
 				case 85:
 					return -1
 				case 107:
 					return -1
 				case 75:
 					return -1
-				case 69:
-					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 98:
+					return -1
 				case 66:
 					return -1
 				case 117:
 					return 2
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return -1
-				case 98:
-					return -1
 				case 85:
 					return 2
 				case 107:
 					return -1
 				case 75:
 					return -1
+				case 84:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 116:
@@ -6647,19 +6647,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
-					return -1
-				case 117:
-					return -1
 				case 99:
 					return 3
 				case 67:
 					return 3
 				case 101:
 					return -1
-				case 84:
+				case 69:
+					return -1
+				case 116:
 					return -1
 				case 98:
+					return -1
+				case 66:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -6667,16 +6669,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 75:
 					return -1
-				case 69:
-					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
 				case 98:
+					return -1
+				case 66:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -6684,20 +6698,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 75:
 					return 4
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 66:
-					return -1
-				case 117:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
-					return -1
 				case 84:
 					return -1
 				}
@@ -6705,30 +6705,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 66:
-					return -1
-				case 117:
-					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
 				case 101:
 					return 5
-				case 84:
-					return -1
-				case 98:
-					return -1
-				case 85:
-					return -1
-				case 107:
-					return -1
-				case 75:
-					return -1
 				case 69:
 					return 5
 				case 116:
 					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 107:
+					return -1
+				case 75:
+					return -1
+				case 84:
+					return -1
 				}
 				return -1
 			},
@@ -6736,52 +6736,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 98:
 					return -1
+				case 66:
+					return -1
+				case 117:
+					return -1
 				case 85:
 					return -1
 				case 107:
 					return -1
 				case 75:
+					return -1
+				case 84:
+					return 6
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
 				case 116:
 					return 6
-				case 66:
-					return -1
-				case 117:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 98:
+					return -1
 				case 66:
 					return -1
 				case 117:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return -1
-				case 98:
 					return -1
 				case 85:
 					return -1
 				case 107:
 					return -1
 				case 75:
+					return -1
+				case 84:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -6791,6 +6791,160 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				return -1
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
+
+		// [bB][uU][iI][lL][dD]
+		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
+			func(r rune) int {
+				switch r {
+				case 66:
+					return 1
+				case 105:
+					return -1
+				case 68:
+					return -1
+				case 98:
+					return 1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 100:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 66:
+					return -1
+				case 105:
+					return -1
+				case 68:
+					return -1
+				case 98:
+					return -1
+				case 117:
+					return 2
+				case 85:
+					return 2
+				case 73:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 100:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 98:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 73:
+					return 3
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 100:
+					return -1
+				case 66:
+					return -1
+				case 105:
+					return 3
+				case 68:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 66:
+					return -1
+				case 105:
+					return -1
+				case 68:
+					return -1
+				case 98:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return 4
+				case 76:
+					return 4
+				case 100:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 98:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 100:
+					return 5
+				case 66:
+					return -1
+				case 105:
+					return -1
+				case 68:
+					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 98:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 100:
+					return -1
+				case 66:
+					return -1
+				case 105:
+					return -1
+				case 68:
+					return -1
+				}
+				return -1
+			},
+		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
 
 		// [bB][yY]
 		{[]bool{false, false, true}, []func(rune) int{ // Transitions
@@ -7146,66 +7300,99 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
-				case 82:
-					return -1
 				case 99:
 					return 1
 				case 67:
 					return 1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
 				case 108:
-					return -1
-				case 115:
 					return -1
 				case 101:
 					return -1
+				case 69:
+					return -1
+				case 117:
+					return -1
 				case 83:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
+				case 82:
+					return -1
+				case 76:
+					return -1
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
 				case 85:
 					return -1
-				case 84:
+				case 115:
 					return -1
-				case 69:
+				case 116:
 					return -1
 				case 82:
-					return -1
-				case 99:
-					return -1
-				case 67:
 					return -1
 				case 76:
 					return 2
-				case 116:
-					return -1
 				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 108:
 					return 2
-				case 115:
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 117:
+					return -1
+				case 83:
+					return -1
+				case 84:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 76:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 108:
 					return -1
 				case 101:
 					return -1
+				case 69:
+					return -1
+				case 117:
+					return 3
 				case 83:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return 3
+				case 115:
+					return -1
+				case 116:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
@@ -7213,97 +7400,97 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 117:
-					return 3
-				case 85:
-					return 3
-				case 84:
 					return -1
-				case 69:
-					return -1
-				case 82:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
-				case 108:
-					return -1
-				case 115:
-					return -1
-				case 101:
-					return -1
-				case 83:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 83:
 					return 4
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 84:
 					return -1
-				case 69:
-					return -1
-				case 82:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
-				case 108:
+				case 85:
 					return -1
 				case 115:
 					return 4
+				case 116:
+					return -1
+				case 82:
+					return -1
+				case 76:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 108:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 108:
-					return -1
-				case 115:
-					return -1
-				case 101:
+				case 117:
 					return -1
 				case 83:
 					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 84:
 					return 5
-				case 69:
+				case 85:
 					return -1
+				case 115:
+					return -1
+				case 116:
+					return 5
 				case 82:
+					return -1
+				case 76:
+					return -1
+				case 114:
 					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 76:
+				case 108:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 108:
+					return -1
+				case 101:
+					return 6
+				case 69:
+					return 6
+				case 117:
+					return -1
+				case 83:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 115:
 					return -1
 				case 116:
-					return 5
+					return -1
+				case 82:
+					return -1
+				case 76:
+					return -1
 				case 114:
 					return -1
 				}
@@ -7311,99 +7498,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return 6
-				case 82:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
-				case 108:
 					return -1
 				case 115:
 					return -1
-				case 101:
-					return 6
-				case 83:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 84:
-					return -1
-				case 69:
+				case 116:
 					return -1
 				case 82:
+					return 7
+				case 76:
+					return -1
+				case 114:
 					return 7
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return 7
 				case 108:
-					return -1
-				case 115:
 					return -1
 				case 101:
 					return -1
+				case 69:
+					return -1
+				case 117:
+					return -1
 				case 83:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
+				case 76:
 					return -1
-				case 85:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
-				case 82:
+				case 114:
 					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
 				case 108:
-					return -1
-				case 115:
 					return -1
 				case 101:
 					return -1
+				case 69:
+					return -1
+				case 117:
+					return -1
 				case 83:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
@@ -7414,58 +7568,58 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 99:
-					return 1
-				case 67:
-					return 1
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
-				case 108:
-					return -1
-				case 76:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
+				case 99:
+					return 1
+				case 67:
+					return 1
+				case 108:
+					return -1
+				case 76:
+					return -1
 				case 116:
 					return -1
+				case 84:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 67:
+					return -1
 				case 108:
 					return -1
 				case 76:
 					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
 				case 116:
+					return -1
+				case 84:
 					return -1
 				case 101:
 					return -1
-				case 99:
-					return -1
-				case 67:
+				case 69:
 					return -1
 				case 111:
 					return 2
 				case 79:
 					return 2
-				case 84:
+				case 97:
 					return -1
-				case 69:
+				case 65:
 					return -1
 				}
 				return -1
@@ -7475,53 +7629,53 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 99:
 					return -1
 				case 67:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 84:
-					return -1
-				case 69:
 					return -1
 				case 108:
 					return 3
 				case 76:
 					return 3
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 116:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 108:
-					return 4
-				case 76:
-					return 4
+				case 111:
+					return -1
+				case 79:
+					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 116:
-					return -1
-				case 101:
 					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 111:
-					return -1
-				case 79:
+				case 108:
+					return 4
+				case 76:
+					return 4
+				case 116:
 					return -1
 				case 84:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -7530,57 +7684,57 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
-				case 108:
-					return -1
-				case 76:
 					return -1
 				case 97:
 					return 5
 				case 65:
 					return 5
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
 				case 116:
 					return -1
+				case 84:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 108:
+				case 111:
 					return -1
-				case 76:
+				case 79:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return 6
-				case 101:
-					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 111:
+				case 108:
 					return -1
-				case 79:
+				case 76:
 					return -1
+				case 116:
+					return 6
 				case 84:
 					return 6
+				case 101:
+					return -1
 				case 69:
 					return -1
 				}
@@ -7592,52 +7746,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return 7
 				case 108:
 					return -1
 				case 76:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 101:
+					return 7
+				case 69:
+					return 7
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
-				case 101:
-					return 7
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 108:
+				case 111:
 					return -1
-				case 76:
+				case 79:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
-				case 101:
-					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 111:
+				case 108:
 					return -1
-				case 79:
+				case 76:
+					return -1
+				case 116:
 					return -1
 				case 84:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -7650,66 +7804,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 111:
+					return -1
 				case 101:
-					return -1
-				case 79:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
-				case 105:
 					return -1
 				case 110:
 					return -1
-				case 111:
+				case 99:
+					return 1
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
 					return -1
-				case 99:
-					return 1
 				case 67:
 					return 1
-				case 108:
+				case 76:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 108:
-					return -1
-				case 101:
-					return -1
-				case 79:
+				case 111:
 					return 2
-				case 76:
-					return -1
-				case 69:
-					return -1
-				case 105:
+				case 101:
 					return -1
 				case 110:
 					return -1
-				case 111:
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
 					return 2
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
+					return -1
+				case 67:
+					return -1
+				case 76:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -7718,65 +7872,65 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 116:
+				case 101:
 					return -1
-				case 84:
-					return -1
-				case 73:
-					return -1
-				case 78:
+				case 110:
 					return -1
 				case 99:
-					return -1
-				case 67:
 					return -1
 				case 108:
 					return 3
-				case 101:
+				case 105:
+					return -1
+				case 73:
 					return -1
 				case 79:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 67:
 					return -1
 				case 76:
 					return 3
 				case 69:
 					return -1
-				case 105:
-					return -1
-				case 110:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
+				case 111:
 					return -1
-				case 67:
+				case 101:
+					return -1
+				case 110:
+					return -1
+				case 99:
 					return -1
 				case 108:
 					return 4
-				case 101:
+				case 105:
+					return -1
+				case 73:
 					return -1
 				case 79:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 67:
 					return -1
 				case 76:
 					return 4
 				case 69:
 					return -1
-				case 105:
-					return -1
-				case 110:
-					return -1
-				case 111:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
 				}
 				return -1
 			},
@@ -7784,161 +7938,161 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
+				case 101:
+					return 5
+				case 110:
+					return -1
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
+					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
 					return -1
-				case 99:
-					return -1
 				case 67:
-					return -1
-				case 108:
-					return -1
-				case 101:
-					return 5
-				case 79:
 					return -1
 				case 76:
 					return -1
 				case 69:
 					return 5
-				case 105:
-					return -1
-				case 110:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
-				case 79:
-					return -1
+				case 67:
+					return 6
 				case 76:
 					return -1
 				case 69:
 					return -1
-				case 105:
+				case 111:
+					return -1
+				case 101:
 					return -1
 				case 110:
 					return -1
-				case 111:
+				case 99:
+					return 6
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
-					return -1
-				case 99:
-					return 6
-				case 67:
-					return 6
-				case 108:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 99:
 					return -1
-				case 79:
-					return -1
-				case 76:
-					return -1
-				case 69:
+				case 108:
 					return -1
 				case 105:
 					return -1
-				case 110:
+				case 73:
 					return -1
-				case 111:
+				case 79:
 					return -1
 				case 116:
 					return 7
 				case 84:
 					return 7
-				case 73:
-					return -1
 				case 78:
-					return -1
-				case 99:
 					return -1
 				case 67:
 					return -1
-				case 108:
+				case 76:
+					return -1
+				case 69:
+					return -1
+				case 111:
+					return -1
+				case 101:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
 				case 79:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 67:
 					return -1
 				case 76:
 					return -1
 				case 69:
+					return -1
+				case 111:
+					return -1
+				case 101:
+					return -1
+				case 110:
+					return -1
+				case 99:
+					return -1
+				case 108:
 					return -1
 				case 105:
 					return 8
-				case 110:
-					return -1
-				case 111:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				case 73:
 					return 8
-				case 78:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 108:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
 				case 67:
 					return -1
-				case 108:
-					return -1
-				case 101:
-					return -1
-				case 79:
-					return 9
 				case 76:
 					return -1
 				case 69:
 					return -1
-				case 105:
+				case 111:
+					return 9
+				case 101:
 					return -1
 				case 110:
 					return -1
-				case 111:
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
 					return 9
 				case 116:
 					return -1
 				case 84:
-					return -1
-				case 73:
 					return -1
 				case 78:
 					return -1
@@ -7947,31 +8101,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 111:
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 79:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
 					return 10
-				case 99:
-					return -1
 				case 67:
-					return -1
-				case 108:
-					return -1
-				case 101:
-					return -1
-				case 79:
 					return -1
 				case 76:
 					return -1
 				case 69:
 					return -1
-				case 105:
+				case 111:
+					return -1
+				case 101:
 					return -1
 				case 110:
 					return 10
@@ -7982,31 +8136,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 99:
 					return -1
-				case 67:
-					return -1
 				case 108:
-					return -1
-				case 101:
-					return -1
-				case 79:
-					return -1
-				case 76:
-					return -1
-				case 69:
 					return -1
 				case 105:
 					return -1
-				case 110:
+				case 73:
 					return -1
-				case 111:
+				case 79:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 73:
-					return -1
 				case 78:
+					return -1
+				case 67:
+					return -1
+				case 76:
+					return -1
+				case 69:
+					return -1
+				case 111:
+					return -1
+				case 101:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
@@ -8017,10 +8171,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 99:
 					return 1
 				case 67:
@@ -8029,7 +8179,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
-				case 105:
+				case 109:
+					return -1
+				case 77:
 					return -1
 				case 73:
 					return -1
@@ -8037,15 +8189,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 99:
 					return -1
 				case 67:
@@ -8054,7 +8204,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 79:
 					return 2
-				case 105:
+				case 109:
+					return -1
+				case 77:
 					return -1
 				case 73:
 					return -1
@@ -8062,11 +8214,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 99:
 					return -1
 				case 67:
@@ -8074,52 +8230,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 109:
 					return 3
 				case 77:
 					return 3
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 105:
-					return -1
 				case 73:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 109:
-					return 4
-				case 77:
-					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 77:
+				case 105:
 					return -1
 				case 99:
 					return -1
@@ -8129,10 +8256,12 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
-				case 105:
-					return 5
+				case 109:
+					return 4
+				case 77:
+					return 4
 				case 73:
-					return 5
+					return -1
 				case 116:
 					return -1
 				case 84:
@@ -8150,7 +8279,34 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 73:
+					return 5
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 105:
+					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 109:
+					return -1
+				case 77:
 					return -1
 				case 73:
 					return -1
@@ -8158,19 +8314,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 84:
 					return 6
-				case 109:
-					return -1
-				case 77:
+				case 105:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 99:
 					return -1
 				case 67:
@@ -8179,13 +8329,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
-				case 105:
+				case 109:
+					return -1
+				case 77:
 					return -1
 				case 73:
 					return -1
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 105:
 					return -1
 				}
 				return -1
@@ -8196,70 +8350,45 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 99:
+					return 1
 				case 67:
 					return 1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 116:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 84:
-					return -1
-				case 99:
-					return 1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return -1
-				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
 				case 67:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 84:
-					return -1
-				case 99:
+				case 116:
 					return -1
 				case 111:
 					return 2
 				case 79:
 					return 2
-				case 110:
-					return -1
-				case 116:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return 3
-				case 116:
-					return -1
-				case 67:
-					return -1
-				case 78:
-					return 3
 				case 101:
 					return -1
 				case 69:
@@ -8271,10 +8400,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
+				case 111:
 					return -1
-				case 78:
-					return 4
+				case 79:
+					return -1
 				case 101:
 					return -1
 				case 69:
@@ -8283,11 +8412,36 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 99:
 					return -1
+				case 67:
+					return -1
+				case 110:
+					return 3
+				case 78:
+					return 3
+				case 116:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 111:
 					return -1
 				case 79:
 					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 84:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
 				case 110:
+					return 4
+				case 78:
 					return 4
 				case 116:
 					return -1
@@ -8296,25 +8450,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 110:
-					return -1
-				case 116:
-					return -1
-				case 67:
-					return -1
-				case 78:
 					return -1
 				case 101:
 					return 5
 				case 69:
 					return 5
 				case 84:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 116:
 					return -1
 				}
 				return -1
@@ -8323,17 +8477,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 99:
 					return 6
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return -1
-				case 116:
-					return -1
 				case 67:
 					return 6
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 116:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 101:
 					return -1
@@ -8346,50 +8500,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 110:
-					return -1
-				case 116:
-					return 7
-				case 67:
-					return -1
-				case 78:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 84:
+					return 7
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 116:
 					return 7
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
 				case 67:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 116:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 84:
-					return -1
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return -1
-				case 116:
 					return -1
 				}
 				return -1
@@ -8400,31 +8554,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 67:
-					return 1
-				case 79:
+				case 116:
 					return -1
-				case 110:
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 101:
 					return -1
 				case 99:
 					return 1
 				case 111:
 					return -1
-				case 101:
+				case 110:
+					return -1
+				case 67:
+					return 1
+				case 79:
 					return -1
 				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
 				case 117:
-					return -1
-				case 85:
 					return -1
 				case 69:
 					return -1
@@ -8433,31 +8587,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
+				case 116:
 					return -1
-				case 79:
-					return 2
-				case 110:
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 101:
 					return -1
 				case 99:
 					return -1
 				case 111:
 					return 2
-				case 101:
+				case 110:
 					return -1
+				case 67:
+					return -1
+				case 79:
+					return 2
 				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
 				case 117:
-					return -1
-				case 85:
 					return -1
 				case 69:
 					return -1
@@ -8466,66 +8620,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 101:
+					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 110:
+					return 3
+				case 67:
+					return -1
+				case 79:
+					return -1
+				case 78:
+					return 3
 				case 105:
 					return -1
 				case 73:
 					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 69:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 101:
+					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 110:
 					return -1
 				case 67:
 					return -1
 				case 79:
 					return -1
-				case 110:
-					return 3
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 101:
-					return -1
 				case 78:
-					return 3
-				case 116:
 					return -1
-				case 84:
+				case 105:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 78:
+				case 73:
+					return -1
+				case 117:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return 4
 				case 84:
 					return 4
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 69:
-					return -1
-				case 67:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return -1
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -8536,19 +8690,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
-				case 110:
-					return -1
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 101:
-					return -1
 				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return 5
@@ -8556,59 +8698,65 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 5
 				case 117:
 					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 85:
 					return -1
-				case 69:
+				case 101:
+					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 67:
+					return -1
+				case 79:
+					return -1
+				case 78:
+					return 6
 				case 105:
 					return -1
 				case 73:
 					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 69:
 					return -1
-				case 67:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return 6
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 101:
-					return -1
-				case 78:
-					return 6
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 85:
+					return -1
+				case 101:
+					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 110:
+					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
+				case 67:
 					return -1
-				case 111:
-					return -1
-				case 101:
+				case 79:
 					return -1
 				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return -1
@@ -8616,13 +8764,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return 7
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 85:
 					return 7
-				case 69:
+				case 101:
 					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 110:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 67:
 					return -1
 				case 79:
+					return -1
+				case 78:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 117:
+					return -1
+				case 69:
+					return 8
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 101:
+					return 8
+				case 99:
+					return -1
+				case 111:
 					return -1
 				case 110:
 					return -1
@@ -8635,13 +8822,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 111:
 					return -1
-				case 101:
-					return 8
+				case 110:
+					return -1
+				case 67:
+					return -1
+				case 79:
+					return -1
 				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return -1
@@ -8649,48 +8836,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 69:
-					return 8
-				case 67:
-					return -1
-				case 79:
-					return -1
-				case 110:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 99:
-					return -1
-				case 111:
-					return -1
-				case 101:
-					return -1
-				case 78:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 117:
-					return -1
 				case 85:
 					return -1
-				case 69:
-					return -1
-				case 67:
-					return -1
-				case 79:
-					return -1
-				case 110:
+				case 101:
 					return -1
 				}
 				return -1
@@ -8703,23 +8857,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 99:
 					return 1
+				case 114:
+					return -1
 				case 82:
 					return -1
 				case 97:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				case 67:
 					return 1
-				case 114:
-					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
@@ -8728,40 +8882,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 99:
 					return -1
+				case 114:
+					return 2
 				case 82:
 					return 2
 				case 97:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				case 67:
 					return -1
-				case 114:
-					return 2
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 97:
-					return -1
-				case 84:
-					return -1
 				case 67:
-					return -1
-				case 114:
 					return -1
 				case 101:
 					return 3
@@ -8769,6 +8913,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 65:
 					return -1
+				case 84:
+					return -1
+				case 99:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
 				case 116:
 					return -1
 				}
@@ -8778,15 +8932,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 99:
 					return -1
+				case 114:
+					return -1
 				case 82:
 					return -1
 				case 97:
 					return 4
-				case 84:
+				case 116:
 					return -1
 				case 67:
-					return -1
-				case 114:
 					return -1
 				case 101:
 					return -1
@@ -8794,30 +8948,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 65:
 					return 4
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
+				case 99:
 					return -1
 				case 114:
 					return -1
-				case 101:
+				case 82:
 					return -1
-				case 69:
-					return -1
-				case 65:
+				case 97:
 					return -1
 				case 116:
 					return 5
-				case 99:
+				case 67:
 					return -1
-				case 82:
+				case 101:
 					return -1
-				case 97:
+				case 69:
+					return -1
+				case 65:
 					return -1
 				case 84:
 					return 5
@@ -8828,46 +8982,46 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 67:
 					return -1
-				case 114:
-					return -1
 				case 101:
 					return 6
 				case 69:
 					return 6
 				case 65:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				case 99:
+					return -1
+				case 114:
 					return -1
 				case 82:
 					return -1
 				case 97:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
+				case 99:
 					return -1
 				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 116:
+					return -1
+				case 67:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 65:
-					return -1
-				case 116:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 97:
 					return -1
 				case 84:
 					return -1
@@ -8880,9 +9034,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 100:
+					return 1
 				case 68:
 					return 1
 				case 97:
+					return -1
+				case 116:
+					return -1
+				case 98:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 65:
 					return -1
 				case 84:
 					return -1
@@ -8890,28 +9056,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
-					return -1
-				case 100:
-					return 1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 98:
-					return -1
 				case 83:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 97:
+					return 2
+				case 116:
+					return -1
+				case 98:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 65:
 					return 2
 				case 84:
 					return -1
@@ -8919,19 +9085,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
-					return -1
-				case 100:
-					return -1
-				case 65:
-					return 2
-				case 116:
-					return -1
-				case 98:
-					return -1
 				case 83:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -8940,19 +9094,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 65:
+				case 68:
+					return -1
+				case 97:
 					return -1
 				case 116:
 					return 3
 				case 98:
 					return -1
-				case 83:
-					return -1
 				case 101:
 					return -1
-				case 68:
+				case 69:
 					return -1
-				case 97:
+				case 65:
 					return -1
 				case 84:
 					return 3
@@ -8960,7 +9114,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
+				case 83:
 					return -1
 				}
 				return -1
@@ -8969,19 +9123,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 65:
+				case 68:
+					return -1
+				case 97:
 					return 4
 				case 116:
 					return -1
 				case 98:
 					return -1
-				case 83:
-					return -1
 				case 101:
 					return -1
-				case 68:
+				case 69:
 					return -1
-				case 97:
+				case 65:
 					return 4
 				case 84:
 					return -1
@@ -8989,28 +9143,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
-					return -1
 				case 65:
-					return -1
-				case 116:
-					return -1
-				case 98:
-					return 5
-				case 83:
-					return -1
-				case 101:
-					return -1
-				case 68:
-					return -1
-				case 97:
 					return -1
 				case 84:
 					return -1
@@ -9018,6 +9158,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 5
 				case 115:
 					return -1
+				case 83:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 97:
+					return -1
+				case 116:
+					return -1
+				case 98:
+					return 5
+				case 101:
+					return -1
 				case 69:
 					return -1
 				}
@@ -9027,19 +9181,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 65:
+				case 68:
+					return -1
+				case 97:
 					return 6
 				case 116:
 					return -1
 				case 98:
 					return -1
-				case 83:
-					return -1
 				case 101:
 					return -1
-				case 68:
+				case 69:
 					return -1
-				case 97:
+				case 65:
 					return 6
 				case 84:
 					return -1
@@ -9047,16 +9201,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 97:
+					return -1
+				case 116:
+					return -1
+				case 98:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 65:
 					return -1
 				case 84:
 					return -1
@@ -9064,28 +9230,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return 7
-				case 69:
-					return -1
-				case 100:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 98:
-					return -1
 				case 83:
 					return 7
-				case 101:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 97:
+					return -1
+				case 116:
+					return -1
+				case 98:
+					return -1
+				case 101:
+					return 8
+				case 69:
+					return 8
+				case 65:
 					return -1
 				case 84:
 					return -1
@@ -9093,28 +9259,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
-					return 8
-				case 100:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 98:
-					return -1
 				case 83:
 					return -1
-				case 101:
-					return 8
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 97:
+					return -1
+				case 116:
+					return -1
+				case 98:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 65:
 					return -1
 				case 84:
 					return -1
@@ -9122,19 +9288,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 69:
-					return -1
-				case 100:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 98:
-					return -1
 				case 83:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -9145,25 +9299,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 68:
-					return 1
-				case 84:
-					return -1
-				case 83:
-					return -1
-				case 69:
-					return -1
 				case 100:
 					return 1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 116:
 					return -1
 				case 115:
 					return -1
+				case 83:
+					return -1
+				case 68:
+					return 1
+				case 65:
+					return -1
+				case 84:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -9172,9 +9326,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 68:
 					return -1
+				case 65:
+					return 2
 				case 84:
 					return -1
-				case 83:
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -9182,88 +9338,86 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 97:
 					return 2
-				case 65:
-					return 2
 				case 116:
 					return -1
 				case 115:
 					return -1
-				case 101:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 68:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return 3
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 100:
 					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 116:
 					return 3
 				case 115:
 					return -1
-				case 101:
-					return -1
-				case 68:
-					return -1
-				case 84:
-					return 3
 				case 83:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 68:
+					return -1
+				case 65:
+					return 4
+				case 84:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 100:
 					return -1
 				case 97:
-					return 4
-				case 65:
 					return 4
 				case 116:
 					return -1
 				case 115:
 					return -1
-				case 101:
-					return -1
-				case 68:
-					return -1
-				case 84:
-					return -1
 				case 83:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
-				case 84:
-					return -1
-				case 83:
-					return 5
-				case 69:
-					return -1
 				case 100:
 					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 116:
 					return -1
 				case 115:
 					return 5
+				case 83:
+					return 5
+				case 68:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -9274,20 +9428,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 97:
 					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
 				case 115:
+					return -1
+				case 83:
+					return -1
+				case 68:
+					return -1
+				case 65:
+					return -1
+				case 84:
 					return -1
 				case 101:
 					return 6
-				case 68:
-					return -1
-				case 84:
-					return -1
-				case 83:
-					return -1
 				case 69:
 					return 6
 				}
@@ -9295,25 +9449,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
-				case 84:
-					return 7
-				case 83:
-					return -1
-				case 69:
-					return -1
 				case 100:
 					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 116:
 					return 7
 				case 115:
 					return -1
+				case 83:
+					return -1
+				case 68:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return 7
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -9324,19 +9478,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 97:
 					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
 				case 115:
 					return -1
-				case 101:
+				case 83:
 					return -1
 				case 68:
 					return -1
+				case 65:
+					return -1
 				case 84:
 					return -1
-				case 83:
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -9349,11 +9503,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 68:
-					return 1
-				case 115:
+				case 79:
 					return -1
-				case 111:
+				case 82:
+					return -1
+				case 100:
+					return 1
+				case 83:
+					return -1
+				case 114:
 					return -1
 				case 97:
 					return -1
@@ -9361,21 +9519,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 114:
+				case 111:
 					return -1
 				case 101:
 					return -1
-				case 100:
+				case 69:
+					return -1
+				case 68:
 					return 1
 				case 116:
 					return -1
-				case 83:
-					return -1
-				case 79:
-					return -1
-				case 82:
-					return -1
-				case 69:
+				case 115:
 					return -1
 				}
 				return -1
@@ -9384,21 +9538,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 116:
-					return -1
 				case 83:
 					return -1
-				case 79:
-					return -1
-				case 82:
-					return -1
-				case 69:
-					return -1
-				case 68:
-					return -1
-				case 115:
-					return -1
-				case 111:
+				case 114:
 					return -1
 				case 97:
 					return 2
@@ -9406,32 +9548,36 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 84:
 					return -1
-				case 114:
+				case 111:
 					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 68:
+					return -1
+				case 116:
+					return -1
+				case 115:
+					return -1
+				case 79:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
-					return -1
-				case 116:
-					return 3
-				case 83:
-					return -1
 				case 79:
 					return -1
 				case 82:
 					return -1
-				case 69:
+				case 100:
 					return -1
-				case 68:
+				case 83:
 					return -1
-				case 115:
-					return -1
-				case 111:
+				case 114:
 					return -1
 				case 97:
 					return -1
@@ -9439,42 +9585,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return 3
-				case 114:
+				case 111:
 					return -1
 				case 101:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 100:
-					return -1
-				case 116:
-					return -1
-				case 83:
-					return -1
-				case 79:
-					return -1
-				case 82:
 					return -1
 				case 69:
 					return -1
 				case 68:
 					return -1
+				case 116:
+					return 3
 				case 115:
-					return -1
-				case 111:
-					return -1
-				case 97:
-					return 4
-				case 65:
-					return 4
-				case 84:
-					return -1
-				case 114:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -9482,32 +9603,65 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 97:
-					return -1
+					return 4
 				case 65:
-					return -1
+					return 4
 				case 84:
 					return -1
-				case 114:
+				case 111:
 					return -1
 				case 101:
-					return -1
-				case 100:
-					return -1
-				case 116:
-					return -1
-				case 83:
-					return 5
-				case 79:
-					return -1
-				case 82:
 					return -1
 				case 69:
 					return -1
 				case 68:
 					return -1
+				case 116:
+					return -1
+				case 115:
+					return -1
+				case 79:
+					return -1
+				case 82:
+					return -1
+				case 100:
+					return -1
+				case 83:
+					return -1
+				case 114:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
+				case 111:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 68:
+					return -1
+				case 116:
+					return -1
 				case 115:
 					return 5
-				case 111:
+				case 79:
+					return -1
+				case 82:
+					return -1
+				case 100:
+					return -1
+				case 83:
+					return 5
+				case 114:
 					return -1
 				}
 				return -1
@@ -9516,21 +9670,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 116:
-					return 6
 				case 83:
 					return -1
-				case 79:
-					return -1
-				case 82:
-					return -1
-				case 69:
-					return -1
-				case 68:
-					return -1
-				case 115:
-					return -1
-				case 111:
+				case 114:
 					return -1
 				case 97:
 					return -1
@@ -9538,9 +9680,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return 6
-				case 114:
+				case 111:
 					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 68:
+					return -1
+				case 116:
+					return 6
+				case 115:
+					return -1
+				case 79:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
@@ -9549,30 +9703,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 68:
 					return -1
-				case 115:
-					return -1
-				case 111:
-					return 7
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 114:
-					return -1
-				case 101:
-					return -1
-				case 100:
-					return -1
 				case 116:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 79:
 					return 7
 				case 82:
 					return -1
+				case 100:
+					return -1
+				case 83:
+					return -1
+				case 114:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
+				case 111:
+					return 7
+				case 101:
+					return -1
 				case 69:
 					return -1
 				}
@@ -9582,30 +9736,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 68:
 					return -1
-				case 115:
-					return -1
-				case 111:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 114:
-					return 8
-				case 101:
-					return -1
-				case 100:
-					return -1
 				case 116:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 79:
 					return -1
 				case 82:
 					return 8
+				case 100:
+					return -1
+				case 83:
+					return -1
+				case 114:
+					return 8
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
+				case 111:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				}
@@ -9613,23 +9767,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 68:
 					return -1
 				case 116:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 79:
 					return -1
 				case 82:
 					return -1
-				case 69:
-					return 9
-				case 68:
+				case 100:
 					return -1
-				case 115:
+				case 83:
 					return -1
-				case 111:
+				case 114:
 					return -1
 				case 97:
 					return -1
@@ -9637,42 +9789,44 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 114:
+				case 111:
 					return -1
 				case 101:
+					return 9
+				case 69:
 					return 9
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 79:
+					return -1
+				case 82:
+					return -1
+				case 100:
+					return -1
+				case 83:
+					return -1
+				case 114:
+					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
 				case 84:
 					return -1
-				case 114:
+				case 111:
 					return -1
 				case 101:
-					return -1
-				case 100:
-					return -1
-				case 116:
-					return -1
-				case 83:
-					return -1
-				case 79:
-					return -1
-				case 82:
 					return -1
 				case 69:
 					return -1
 				case 68:
 					return -1
-				case 115:
+				case 116:
 					return -1
-				case 111:
+				case 115:
 					return -1
 				}
 				return -1
@@ -9687,50 +9841,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 68:
 					return 1
-				case 69:
-					return -1
-				case 99:
+				case 101:
 					return -1
 				case 67:
 					return -1
 				case 108:
 					return -1
+				case 76:
+					return -1
+				case 65:
+					return -1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 101:
+				case 69:
 					return -1
-				case 76:
+				case 99:
 					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return 2
-				case 76:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
 				case 69:
 					return 2
 				case 99:
 					return -1
+				case 97:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return 2
 				case 67:
 					return -1
 				case 108:
+					return -1
+				case 76:
+					return -1
+				case 65:
 					return -1
 				case 114:
 					return -1
@@ -9741,55 +9895,55 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
-					return -1
-				case 68:
-					return -1
 				case 69:
 					return -1
 				case 99:
 					return 3
+				case 97:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
 				case 67:
 					return 3
 				case 108:
 					return -1
+				case 76:
+					return -1
+				case 65:
+					return -1
 				case 114:
 					return -1
 				case 82:
-					return -1
-				case 101:
-					return -1
-				case 76:
-					return -1
-				case 97:
-					return -1
-				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 69:
 					return -1
-				case 76:
-					return 4
+				case 99:
+					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 100:
 					return -1
 				case 68:
 					return -1
-				case 69:
-					return -1
-				case 99:
+				case 101:
 					return -1
 				case 67:
 					return -1
 				case 108:
 					return 4
+				case 76:
+					return 4
+				case 65:
+					return -1
 				case 114:
 					return -1
 				case 82:
@@ -9803,83 +9957,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 68:
 					return -1
-				case 69:
-					return -1
-				case 99:
+				case 101:
 					return -1
 				case 67:
 					return -1
 				case 108:
 					return -1
+				case 76:
+					return -1
+				case 65:
+					return 5
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 101:
+				case 69:
 					return -1
-				case 76:
+				case 99:
 					return -1
 				case 97:
-					return 5
-				case 65:
 					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
-				case 76:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
 				case 100:
 					return -1
 				case 68:
 					return -1
-				case 69:
-					return -1
-				case 99:
+				case 101:
 					return -1
 				case 67:
 					return -1
 				case 108:
+					return -1
+				case 76:
+					return -1
+				case 65:
 					return -1
 				case 114:
 					return 6
 				case 82:
 					return 6
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 101:
-					return 7
-				case 76:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
 				case 69:
-					return 7
+					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 108:
-					return -1
-				case 114:
-					return -1
-				case 82:
+				case 97:
 					return -1
 				}
 				return -1
@@ -9890,25 +10015,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 68:
 					return -1
-				case 69:
-					return -1
-				case 99:
-					return -1
+				case 101:
+					return 7
 				case 67:
 					return -1
 				case 108:
+					return -1
+				case 76:
+					return -1
+				case 65:
 					return -1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 101:
-					return -1
-				case 76:
+				case 69:
+					return 7
+				case 99:
 					return -1
 				case 97:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 67:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
 				case 65:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 69:
+					return -1
+				case 99:
+					return -1
+				case 97:
 					return -1
 				}
 				return -1
@@ -9919,99 +10073,99 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 67:
 					return -1
-				case 69:
-					return -1
-				case 78:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
+				case 100:
+					return 1
 				case 68:
 					return 1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 82:
+				case 109:
 					return -1
 				case 77:
 					return -1
+				case 78:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
 				case 110:
 					return -1
-				case 84:
+				case 116:
 					return -1
-				case 100:
-					return 1
-				case 109:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 77:
-					return -1
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
-				case 109:
-					return -1
 				case 101:
 					return 2
 				case 69:
 					return 2
-				case 78:
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 84:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 99:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 67:
+					return 3
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 99:
 					return 3
-				case 67:
-					return 3
-				case 82:
+				case 109:
 					return -1
 				case 77:
 					return -1
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
-				case 109:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
 				case 78:
-					return -1
-				case 116:
 					return -1
 				}
 				return -1
@@ -10022,62 +10176,62 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				case 78:
+				case 114:
+					return 4
+				case 82:
+					return 4
+				case 110:
 					return -1
 				case 116:
 					return -1
-				case 114:
-					return 4
+				case 84:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 99:
 					return -1
-				case 67:
+				case 109:
 					return -1
-				case 82:
-					return 4
 				case 77:
 					return -1
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
-				case 109:
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 77:
-					return -1
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
-				case 109:
-					return -1
 				case 101:
 					return 5
 				case 69:
 					return 5
-				case 78:
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
 					return -1
 				case 116:
+					return -1
+				case 84:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 99:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
@@ -10088,127 +10242,127 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				case 78:
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 84:
+					return -1
+				case 67:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 77:
-					return 6
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
 				case 109:
 					return 6
+				case 77:
+					return 6
+				case 78:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 77:
-					return -1
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 100:
-					return -1
-				case 109:
-					return -1
 				case 101:
 					return 7
 				case 69:
 					return 7
-				case 78:
-					return -1
-				case 116:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 100:
-					return -1
-				case 109:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 78:
-					return 8
-				case 116:
-					return -1
 				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 67:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 82:
+				case 109:
 					return -1
 				case 77:
 					return -1
-				case 110:
-					return 8
-				case 84:
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 84:
+					return -1
+				case 67:
+					return -1
 				case 100:
 					return -1
+				case 68:
+					return -1
+				case 99:
+					return -1
 				case 109:
+					return -1
+				case 77:
+					return -1
+				case 78:
+					return 8
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
+					return 8
+				case 116:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 99:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 78:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 78:
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 110:
 					return -1
 				case 116:
 					return 9
-				case 114:
-					return -1
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 77:
-					return -1
-				case 110:
-					return -1
 				case 84:
 					return 9
 				}
@@ -10216,33 +10370,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 84:
+					return -1
+				case 67:
+					return -1
 				case 100:
-					return -1
-				case 109:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 78:
-					return -1
-				case 116:
-					return -1
-				case 114:
 					return -1
 				case 68:
 					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 82:
+				case 109:
 					return -1
 				case 77:
 					return -1
+				case 78:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
 				case 110:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				}
 				return -1
@@ -10406,23 +10560,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return 1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 82:
 					return -1
-				case 105:
-					return -1
 				case 118:
-					return -1
-				case 86:
 					return -1
 				case 68:
 					return 1
-				case 101:
-					return -1
-				case 69:
-					return -1
 				case 114:
 					return -1
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 86:
 					return -1
 				}
 				return -1
@@ -10430,47 +10584,47 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 100:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 118:
-					return -1
-				case 86:
-					return -1
-				case 68:
 					return -1
 				case 101:
 					return 2
 				case 69:
 					return 2
+				case 82:
+					return -1
+				case 118:
+					return -1
+				case 68:
+					return -1
 				case 114:
 					return -1
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 86:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
+				case 100:
 					return -1
 				case 101:
 					return -1
 				case 69:
+					return -1
+				case 82:
+					return 3
+				case 118:
+					return -1
+				case 68:
 					return -1
 				case 114:
 					return 3
-				case 73:
-					return -1
-				case 100:
-					return -1
-				case 82:
-					return 3
 				case 105:
 					return -1
-				case 118:
+				case 73:
 					return -1
 				case 86:
 					return -1
@@ -10481,47 +10635,47 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 68:
 					return -1
+				case 114:
+					return -1
+				case 105:
+					return 4
+				case 73:
+					return 4
+				case 86:
+					return -1
+				case 100:
+					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 114:
-					return -1
-				case 73:
-					return 4
-				case 100:
-					return -1
 				case 82:
 					return -1
-				case 105:
-					return 4
 				case 118:
-					return -1
-				case 86:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
+				case 100:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 114:
-					return -1
-				case 73:
-					return -1
-				case 100:
-					return -1
 				case 82:
-					return -1
-				case 105:
 					return -1
 				case 118:
 					return 5
+				case 68:
+					return -1
+				case 114:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 86:
 					return 5
 				}
@@ -10529,25 +10683,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 68:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 105:
 					return -1
-				case 118:
+				case 73:
 					return -1
 				case 86:
 					return -1
-				case 68:
+				case 100:
 					return -1
 				case 101:
 					return 6
 				case 69:
 					return 6
-				case 114:
+				case 82:
 					return -1
-				case 73:
+				case 118:
 					return -1
 				}
 				return -1
@@ -10556,48 +10710,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 68:
 					return 7
+				case 114:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 86:
+					return -1
+				case 100:
+					return 7
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 114:
-					return -1
-				case 73:
-					return -1
-				case 100:
-					return 7
 				case 82:
 					return -1
-				case 105:
-					return -1
 				case 118:
-					return -1
-				case 86:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 68:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 105:
 					return -1
-				case 118:
+				case 73:
 					return -1
 				case 86:
 					return -1
-				case 68:
+				case 100:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 114:
+				case 82:
 					return -1
-				case 73:
+				case 118:
 					return -1
 				}
 				return -1
@@ -10717,66 +10871,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
-				case 114:
-					return -1
-				case 100:
+				case 68:
 					return 1
 				case 101:
-					return -1
-				case 98:
-					return -1
-				case 68:
-					return 1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return -1
-				case 67:
-					return -1
-				case 105:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 68:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return 2
 				case 67:
 					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
+				case 100:
+					return 1
+				case 69:
+					return -1
 				case 115:
+					return -1
+				case 98:
 					return -1
 				case 114:
 					return -1
-				case 100:
+				case 82:
 					return -1
-				case 101:
-					return 2
-				case 98:
+				case 66:
 					return -1
 				}
 				return -1
@@ -10785,229 +10906,262 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 101:
+				case 69:
+					return 2
+				case 115:
 					return -1
 				case 98:
 					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 66:
+					return -1
 				case 68:
+					return -1
+				case 101:
+					return 2
+				case 83:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 100:
+					return -1
+				case 69:
+					return -1
+				case 115:
+					return 3
+				case 98:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 66:
+					return -1
+				case 68:
+					return -1
+				case 101:
 					return -1
 				case 83:
 					return 3
 				case 99:
 					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return -1
 				case 67:
 					return -1
 				case 105:
 					return -1
-				case 115:
-					return 3
-				case 114:
+				case 73:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 114:
 					return -1
-				case 100:
+				case 82:
 					return -1
-				case 101:
-					return -1
-				case 98:
+				case 66:
 					return -1
 				case 68:
+					return -1
+				case 101:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return 4
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return -1
 				case 67:
 					return 4
 				case 105:
 					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 69:
+					return -1
+				case 115:
+					return -1
+				case 98:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
-				case 83:
-					return -1
 				case 99:
-					return -1
-				case 82:
-					return 5
-				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
 					return -1
 				case 67:
 					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 69:
+					return -1
 				case 115:
+					return -1
+				case 98:
 					return -1
 				case 114:
 					return 5
-				case 100:
+				case 82:
+					return 5
+				case 66:
+					return -1
+				case 68:
 					return -1
 				case 101:
 					return -1
-				case 98:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 68:
 					return -1
 				case 101:
-					return -1
-				case 98:
-					return -1
-				case 68:
 					return -1
 				case 83:
 					return -1
 				case 99:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return 6
-				case 66:
-					return -1
-				case 69:
 					return -1
 				case 67:
 					return -1
 				case 105:
 					return 6
+				case 73:
+					return 6
+				case 100:
+					return -1
+				case 69:
+					return -1
 				case 115:
 					return -1
+				case 98:
+					return -1
 				case 114:
+					return -1
+				case 82:
+					return -1
+				case 66:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 114:
 					return -1
-				case 100:
-					return -1
-				case 101:
-					return -1
-				case 98:
-					return 7
-				case 68:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
 				case 82:
-					return -1
-				case 73:
 					return -1
 				case 66:
 					return 7
-				case 69:
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 83:
+					return -1
+				case 99:
 					return -1
 				case 67:
 					return -1
 				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 69:
+					return -1
+				case 115:
+					return -1
+				case 98:
+					return 7
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 68:
+					return -1
+				case 101:
+					return 8
+				case 83:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 69:
+					return 8
+				case 115:
+					return -1
+				case 98:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 66:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 114:
 					return -1
-				case 101:
-					return 8
-				case 98:
+				case 82:
+					return -1
+				case 66:
 					return -1
 				case 68:
+					return -1
+				case 101:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 82:
+				case 67:
+					return -1
+				case 105:
 					return -1
 				case 73:
-					return -1
-				case 66:
-					return -1
-				case 69:
-					return 8
-				case 67:
-					return -1
-				case 105:
-					return -1
-				case 115:
-					return -1
-				case 114:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 69:
-					return -1
-				case 67:
-					return -1
-				case 105:
-					return -1
-				case 115:
-					return -1
-				case 114:
 					return -1
 				case 100:
 					return -1
-				case 101:
+				case 69:
+					return -1
+				case 115:
 					return -1
 				case 98:
-					return -1
-				case 68:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 66:
 					return -1
 				}
 				return -1
@@ -11018,25 +11172,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 68:
-					return 1
 				case 73:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
-				case 110:
+				case 116:
 					return -1
 				case 67:
 					return -1
 				case 100:
 					return 1
+				case 68:
+					return 1
 				case 105:
 					return -1
-				case 115:
-					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -11047,85 +11201,56 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 73:
+					return 2
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 116:
+					return -1
+				case 67:
+					return -1
 				case 100:
+					return -1
+				case 68:
 					return -1
 				case 105:
 					return 2
-				case 115:
-					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 99:
-					return -1
-				case 68:
-					return -1
-				case 73:
-					return 2
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
-				case 73:
-					return -1
-				case 83:
-					return 3
-				case 110:
-					return -1
-				case 67:
-					return -1
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 105:
+					return -1
+				case 84:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 99:
+					return -1
+				case 73:
 					return -1
 				case 115:
 					return 3
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 78:
-					return -1
-				case 99:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 100:
-					return -1
-				case 105:
-					return -1
-				case 115:
-					return -1
-				case 116:
-					return 4
-				case 84:
-					return 4
-				case 78:
-					return -1
-				case 99:
-					return -1
-				case 68:
-					return -1
-				case 73:
-					return -1
 				case 83:
-					return -1
-				case 110:
+					return 3
+				case 116:
 					return -1
 				case 67:
 					return -1
@@ -11134,29 +11259,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 73:
 					return -1
-				case 105:
-					return 5
 				case 115:
 					return -1
+				case 83:
+					return -1
 				case 116:
+					return 4
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 105:
 					return -1
 				case 84:
+					return 4
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 99:
-					return -1
-				case 68:
-					return -1
-				case 73:
-					return 5
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 67:
 					return -1
 				}
 				return -1
@@ -11165,52 +11290,81 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 100:
 					return -1
-				case 105:
+				case 68:
 					return -1
+				case 105:
+					return 5
+				case 84:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 99:
+					return -1
+				case 73:
+					return 5
 				case 115:
+					return -1
+				case 83:
 					return -1
 				case 116:
 					return -1
+				case 67:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 73:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 116:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 105:
+					return -1
 				case 84:
 					return -1
+				case 110:
+					return 6
 				case 78:
 					return 6
 				case 99:
 					return -1
-				case 68:
-					return -1
-				case 73:
-					return -1
-				case 83:
-					return -1
-				case 110:
-					return 6
-				case 67:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
 				case 73:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
-				case 110:
+				case 116:
 					return -1
 				case 67:
 					return 7
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 105:
 					return -1
-				case 115:
-					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -11221,54 +11375,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 100:
-					return -1
-				case 105:
+				case 73:
 					return -1
 				case 115:
 					return -1
+				case 83:
+					return -1
 				case 116:
 					return 8
-				case 84:
-					return 8
-				case 78:
+				case 67:
 					return -1
-				case 99:
+				case 100:
 					return -1
 				case 68:
 					return -1
-				case 73:
+				case 105:
 					return -1
-				case 83:
-					return -1
+				case 84:
+					return 8
 				case 110:
 					return -1
-				case 67:
+				case 78:
+					return -1
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 68:
-					return -1
 				case 73:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
-				case 110:
+				case 116:
 					return -1
 				case 67:
 					return -1
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 105:
 					return -1
-				case 115:
-					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -11544,21 +11698,46 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 78:
-					return -1
 				case 101:
 					return 1
+				case 76:
+					return -1
+				case 109:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 69:
 					return 1
-				case 109:
+				case 108:
 					return -1
 				case 77:
 					return -1
 				case 110:
+					return -1
+				case 78:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 69:
+					return -1
+				case 108:
+					return 2
+				case 77:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 101:
+					return -1
+				case 76:
+					return 2
+				case 109:
 					return -1
 				case 116:
 					return -1
@@ -11569,46 +11748,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
 				case 69:
-					return -1
-				case 109:
+					return 3
+				case 108:
 					return -1
 				case 77:
 					return -1
 				case 110:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 108:
-					return 2
-				case 76:
-					return 2
-				case 78:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 108:
-					return -1
-				case 76:
 					return -1
 				case 78:
 					return -1
 				case 101:
 					return 3
-				case 69:
-					return 3
+				case 76:
+					return -1
 				case 109:
-					return -1
-				case 77:
-					return -1
-				case 110:
 					return -1
 				case 116:
 					return -1
@@ -11619,22 +11773,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 69:
+					return -1
 				case 108:
 					return -1
-				case 76:
+				case 77:
+					return 4
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 101:
 					return -1
-				case 69:
+				case 76:
 					return -1
 				case 109:
 					return 4
-				case 77:
-					return 4
-				case 110:
-					return -1
 				case 116:
 					return -1
 				case 84:
@@ -11646,21 +11800,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 101:
 					return 5
+				case 76:
+					return -1
+				case 109:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 69:
 					return 5
-				case 109:
+				case 108:
 					return -1
 				case 77:
 					return -1
 				case 110:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 108:
-					return -1
-				case 76:
 					return -1
 				case 78:
 					return -1
@@ -11671,22 +11825,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 101:
 					return -1
-				case 69:
+				case 76:
 					return -1
 				case 109:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
 					return -1
 				case 77:
 					return -1
 				case 110:
 					return 6
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
 				case 78:
 					return 6
 				}
@@ -11694,21 +11848,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 69:
+					return -1
 				case 108:
 					return -1
-				case 76:
+				case 77:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 101:
 					return -1
-				case 69:
+				case 76:
 					return -1
 				case 109:
-					return -1
-				case 77:
-					return -1
-				case 110:
 					return -1
 				case 116:
 					return 7
@@ -11719,25 +11873,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 108:
+				case 101:
 					return -1
 				case 76:
 					return -1
-				case 78:
+				case 109:
 					return -1
-				case 101:
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 69:
 					return -1
-				case 109:
+				case 108:
 					return -1
 				case 77:
 					return -1
 				case 110:
 					return -1
-				case 116:
-					return -1
-				case 84:
+				case 78:
 					return -1
 				}
 				return -1
@@ -12039,46 +12193,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 69:
 					return 1
-				case 120:
-					return -1
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return 1
-				case 88:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 69:
-					return -1
-				case 88:
-					return 2
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 101:
-					return -1
+					return 1
 				case 120:
-					return 2
-				case 99:
 					return -1
-				case 67:
+				case 88:
+					return -1
+				case 112:
 					return -1
 				case 116:
 					return -1
@@ -12092,43 +12221,43 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 101:
 					return -1
 				case 120:
+					return 2
+				case 88:
+					return 2
+				case 112:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 80:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 69:
 					return -1
 				case 99:
 					return 3
 				case 67:
 					return 3
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
-				case 88:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 69:
-					return 4
-				case 88:
-					return -1
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 101:
-					return 4
+					return -1
 				case 120:
 					return -1
-				case 99:
+				case 88:
 					return -1
-				case 67:
+				case 112:
 					return -1
 				case 116:
 					return -1
@@ -12140,25 +12269,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 101:
-					return -1
+					return 4
 				case 120:
 					return -1
-				case 99:
+				case 88:
 					return -1
-				case 67:
+				case 112:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
 				case 69:
+					return 4
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 80:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 69:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 80:
+					return 5
+				case 101:
+					return -1
+				case 120:
 					return -1
 				case 88:
 					return -1
 				case 112:
 					return 5
-				case 80:
-					return 5
+				case 116:
+					return -1
+				case 84:
+					return -1
 				}
 				return -1
 			},
@@ -12168,9 +12322,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 120:
 					return -1
-				case 99:
+				case 88:
 					return -1
-				case 67:
+				case 112:
 					return -1
 				case 116:
 					return 6
@@ -12178,9 +12332,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 69:
 					return -1
-				case 88:
+				case 99:
 					return -1
-				case 112:
+				case 67:
 					return -1
 				case 80:
 					return -1
@@ -12191,9 +12345,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 69:
 					return -1
-				case 88:
+				case 99:
 					return -1
-				case 112:
+				case 67:
 					return -1
 				case 80:
 					return -1
@@ -12201,9 +12355,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 120:
 					return -1
-				case 99:
+				case 88:
 					return -1
-				case 67:
+				case 112:
 					return -1
 				case 116:
 					return -1
@@ -12218,6 +12372,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 101:
+					return 1
 				case 69:
 					return 1
 				case 120:
@@ -12226,27 +12388,27 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
 				case 68:
-					return -1
-				case 101:
-					return 1
-				case 99:
-					return -1
-				case 108:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 120:
@@ -12255,27 +12417,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
 				case 68:
-					return -1
-				case 101:
-					return -1
-				case 99:
-					return -1
-				case 108:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 120:
@@ -12284,34 +12440,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return 3
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
 				case 68:
-					return -1
-				case 101:
 					return -1
 				case 99:
 					return 3
 				case 108:
 					return -1
-				case 85:
+				case 76:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
 				case 99:
 					return -1
 				case 108:
 					return 4
-				case 85:
+				case 76:
+					return 4
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -12321,9 +12475,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return 4
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
@@ -12334,6 +12488,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 120:
@@ -12342,34 +12498,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return 5
+				case 85:
 					return 5
 				case 100:
 					return -1
 				case 68:
 					return -1
-				case 101:
-					return -1
 				case 99:
 					return -1
 				case 108:
 					return -1
-				case 85:
-					return 5
+				case 76:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
 				case 99:
 					return -1
 				case 108:
 					return -1
-				case 85:
+				case 76:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -12379,9 +12533,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return 6
@@ -12394,12 +12548,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 101:
 					return 7
-				case 99:
-					return -1
-				case 108:
-					return -1
-				case 85:
-					return -1
 				case 69:
 					return 7
 				case 120:
@@ -12408,19 +12556,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
 				case 68:
+					return -1
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 76:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 120:
@@ -12429,21 +12591,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 76:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 100:
 					return -1
 				case 68:
-					return -1
-				case 101:
-					return -1
-				case 99:
-					return -1
-				case 108:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
@@ -12454,23 +12608,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 69:
-					return 1
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 99:
+				case 117:
+					return -1
+				case 116:
 					return -1
 				case 101:
 					return 1
+				case 69:
+					return 1
+				case 99:
+					return -1
 				case 67:
 					return -1
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -12479,23 +12633,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
 				case 69:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 85:
+					return -1
+				case 84:
 					return -1
 				case 120:
 					return 2
 				case 88:
 					return 2
-				case 99:
+				case 117:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 67:
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 120:
+					return -1
+				case 88:
 					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 116:
+					return -1
+				case 101:
+					return 3
+				case 69:
+					return 3
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 85:
 					return -1
 				case 84:
 					return -1
@@ -12505,98 +12684,73 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 101:
-					return 3
-				case 67:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 69:
-					return 3
-				case 120:
-					return -1
-				case 88:
-					return -1
-				case 99:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 69:
-					return -1
-				case 120:
-					return -1
-				case 88:
 					return -1
 				case 99:
 					return 4
-				case 101:
-					return -1
 				case 67:
 					return 4
-				case 117:
-					return -1
 				case 85:
 					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 117:
+					return -1
+				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
 				case 69:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 85:
+					return 5
+				case 84:
 					return -1
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 99:
-					return -1
-				case 101:
-					return -1
-				case 67:
-					return -1
 				case 117:
 					return 5
-				case 85:
-					return 5
 				case 116:
-					return -1
-				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 99:
-					return -1
-				case 101:
-					return -1
-				case 67:
-					return -1
 				case 117:
-					return -1
-				case 85:
 					return -1
 				case 116:
 					return 6
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 85:
+					return -1
 				case 84:
 					return 6
 				}
@@ -12604,23 +12758,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return 7
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 99:
+				case 117:
+					return -1
+				case 116:
 					return -1
 				case 101:
 					return 7
+				case 69:
+					return 7
+				case 99:
+					return -1
 				case 67:
 					return -1
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -12629,25 +12783,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
-				case 67:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
 				case 120:
 					return -1
 				case 88:
 					return -1
+				case 117:
+					return -1
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 99:
+					return -1
+				case 67:
+					return -1
+				case 85:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
@@ -12658,23 +12812,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 69:
+					return 1
+				case 105:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
 				case 101:
 					return 1
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 83:
-					return -1
-				case 69:
-					return 1
-				case 105:
-					return -1
 				case 73:
 					return -1
-				case 115:
-					return -1
-				case 116:
+				case 83:
 					return -1
 				case 84:
 					return -1
@@ -12683,25 +12837,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 115:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				case 101:
 					return -1
 				case 120:
 					return 2
 				case 88:
 					return 2
+				case 73:
+					return -1
 				case 83:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 115:
+					return -1
+				case 116:
 					return -1
 				}
 				return -1
@@ -12714,43 +12868,43 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 88:
 					return -1
+				case 73:
+					return 3
 				case 83:
+					return -1
+				case 84:
 					return -1
 				case 69:
 					return -1
 				case 105:
 					return 3
-				case 73:
-					return 3
 				case 115:
 					return -1
 				case 116:
-					return -1
-				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
-				case 120:
-					return -1
-				case 88:
-					return -1
-				case 83:
-					return 4
 				case 69:
 					return -1
 				case 105:
-					return -1
-				case 73:
 					return -1
 				case 115:
 					return 4
 				case 116:
 					return -1
+				case 101:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 73:
+					return -1
+				case 83:
+					return 4
 				case 84:
 					return -1
 				}
@@ -12758,49 +12912,49 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 73:
+					return -1
+				case 83:
+					return -1
+				case 84:
+					return 5
 				case 69:
 					return -1
 				case 105:
-					return -1
-				case 73:
 					return -1
 				case 115:
 					return -1
 				case 116:
 					return 5
-				case 84:
-					return 5
-				case 101:
-					return -1
-				case 120:
-					return -1
-				case 88:
-					return -1
-				case 83:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 115:
+					return 6
+				case 116:
+					return -1
 				case 101:
 					return -1
 				case 120:
 					return -1
 				case 88:
 					return -1
-				case 83:
-					return 6
-				case 69:
-					return -1
-				case 105:
-					return -1
 				case 73:
 					return -1
-				case 115:
+				case 83:
 					return 6
-				case 116:
-					return -1
 				case 84:
 					return -1
 				}
@@ -12812,13 +12966,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
 				case 115:
 					return -1
 				case 116:
-					return -1
-				case 84:
 					return -1
 				case 101:
 					return -1
@@ -12826,7 +12976,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 88:
 					return -1
+				case 73:
+					return -1
 				case 83:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
@@ -12837,230 +12991,230 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 101:
-					return 1
 				case 88:
 					return -1
 				case 108:
 					return -1
-				case 76:
-					return -1
-				case 110:
-					return -1
-				case 69:
-					return 1
 				case 112:
-					return -1
-				case 73:
-					return -1
-				case 78:
 					return -1
 				case 80:
 					return -1
+				case 65:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
 				case 120:
+					return -1
+				case 76:
 					return -1
 				case 97:
 					return -1
-				case 65:
-					return -1
+				case 101:
+					return 1
+				case 69:
+					return 1
 				case 105:
+					return -1
+				case 73:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
 				case 112:
 					return -1
-				case 73:
+				case 80:
+					return -1
+				case 65:
+					return -1
+				case 110:
 					return -1
 				case 78:
-					return -1
-				case 80:
 					return -1
 				case 120:
 					return 2
+				case 76:
+					return -1
 				case 97:
 					return -1
-				case 65:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 105:
 					return -1
-				case 101:
+				case 73:
 					return -1
 				case 88:
 					return 2
 				case 108:
 					return -1
-				case 76:
-					return -1
-				case 110:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return 3
-				case 120:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 105:
-					return -1
-				case 101:
-					return -1
 				case 88:
 					return -1
 				case 108:
 					return -1
-				case 76:
+				case 112:
+					return 3
+				case 80:
+					return 3
+				case 65:
 					return -1
 				case 110:
 					return -1
+				case 78:
+					return -1
+				case 120:
+					return -1
+				case 76:
+					return -1
+				case 97:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
-				case 112:
-					return 3
-				case 73:
+				case 105:
 					return -1
-				case 78:
+				case 73:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 65:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 120:
+					return -1
+				case 76:
+					return 4
+				case 97:
+					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 73:
 					return -1
 				case 88:
 					return -1
 				case 108:
 					return 4
-				case 76:
-					return 4
-				case 110:
-					return -1
-				case 69:
-					return -1
-				case 112:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 80:
-					return -1
-				case 120:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 105:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
+				case 88:
+					return -1
+				case 108:
 					return -1
 				case 112:
 					return -1
-				case 73:
+				case 80:
+					return -1
+				case 65:
+					return 5
+				case 110:
 					return -1
 				case 78:
 					return -1
-				case 80:
-					return -1
 				case 120:
+					return -1
+				case 76:
 					return -1
 				case 97:
 					return 5
-				case 65:
-					return 5
-				case 105:
-					return -1
 				case 101:
-					return -1
-				case 88:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 110:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 120:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 105:
-					return 6
-				case 101:
-					return -1
-				case 88:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 110:
 					return -1
 				case 69:
 					return -1
-				case 112:
+				case 105:
 					return -1
 				case 73:
-					return 6
-				case 78:
-					return -1
-				case 80:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
 				case 120:
+					return -1
+				case 76:
 					return -1
 				case 97:
 					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return 6
+				case 73:
+					return 6
+				case 88:
+					return -1
+				case 108:
+					return -1
+				case 112:
+					return -1
+				case 80:
+					return -1
 				case 65:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 120:
+					return -1
+				case 76:
+					return -1
+				case 97:
+					return -1
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 105:
 					return -1
-				case 101:
+				case 73:
 					return -1
 				case 88:
 					return -1
 				case 108:
 					return -1
-				case 76:
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 65:
 					return -1
 				case 110:
 					return 7
-				case 69:
-					return -1
-				case 112:
-					return -1
-				case 73:
-					return -1
 				case 78:
 					return 7
 				}
@@ -13068,33 +13222,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 112:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 80:
-					return -1
 				case 120:
+					return -1
+				case 76:
 					return -1
 				case 97:
 					return -1
-				case 65:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 105:
 					return -1
-				case 101:
+				case 73:
 					return -1
 				case 88:
 					return -1
 				case 108:
 					return -1
-				case 76:
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 65:
 					return -1
 				case 110:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
@@ -13107,9 +13261,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 76:
 					return -1
+				case 115:
+					return -1
 				case 83:
 					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				case 102:
 					return 1
@@ -13121,15 +13279,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 108:
 					return -1
-				case 115:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 76:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 102:
 					return -1
 				case 70:
@@ -13140,41 +13304,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 108:
 					return -1
-				case 115:
-					return -1
-				case 69:
-					return -1
-				case 76:
-					return -1
-				case 83:
-					return -1
-				case 101:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 76:
-					return 3
-				case 83:
-					return -1
-				case 101:
-					return -1
-				case 102:
-					return -1
-				case 70:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 108:
-					return 3
-				case 115:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
@@ -13189,16 +13318,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 65:
 					return -1
 				case 108:
-					return -1
-				case 115:
-					return 4
-				case 69:
-					return -1
+					return 3
 				case 76:
+					return 3
+				case 115:
 					return -1
 				case 83:
-					return 4
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -13207,9 +13336,38 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 76:
 					return -1
+				case 115:
+					return 4
+				case 83:
+					return 4
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 102:
+					return -1
+				case 70:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 108:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 76:
+					return -1
+				case 115:
+					return -1
 				case 83:
 					return -1
 				case 101:
+					return 5
+				case 69:
 					return 5
 				case 102:
 					return -1
@@ -13221,21 +13379,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 108:
 					return -1
-				case 115:
-					return -1
-				case 69:
-					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 76:
-					return -1
-				case 83:
-					return -1
-				case 101:
-					return -1
 				case 102:
 					return -1
 				case 70:
@@ -13246,7 +13394,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 108:
 					return -1
+				case 76:
+					return -1
 				case 115:
+					return -1
+				case 83:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -13261,21 +13415,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 102:
 					return 1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 70:
 					return 1
 				case 105:
 					return -1
-				case 82:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				case 73:
-					return -1
-				case 114:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
@@ -13284,72 +13438,72 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return 2
+				case 102:
+					return -1
 				case 114:
+					return -1
+				case 82:
 					return -1
 				case 115:
 					return -1
-				case 83:
+				case 116:
 					return -1
-				case 102:
+				case 84:
 					return -1
 				case 70:
 					return -1
 				case 105:
 					return 2
-				case 82:
-					return -1
-				case 116:
-					return -1
-				case 84:
+				case 73:
+					return 2
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 102:
 					return -1
 				case 114:
 					return 3
+				case 82:
+					return 3
 				case 115:
 					return -1
-				case 83:
+				case 116:
 					return -1
-				case 102:
+				case 84:
 					return -1
 				case 70:
 					return -1
 				case 105:
 					return -1
-				case 82:
-					return 3
-				case 116:
+				case 73:
 					return -1
-				case 84:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 70:
+					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 114:
-					return -1
-				case 115:
-					return 4
 				case 83:
 					return 4
 				case 102:
 					return -1
-				case 70:
-					return -1
-				case 105:
+				case 114:
 					return -1
 				case 82:
 					return -1
+				case 115:
+					return 4
 				case 116:
 					return -1
 				case 84:
@@ -13361,21 +13515,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 102:
 					return -1
-				case 70:
-					return -1
-				case 105:
+				case 114:
 					return -1
 				case 82:
+					return -1
+				case 115:
 					return -1
 				case 116:
 					return 5
 				case 84:
 					return 5
+				case 70:
+					return -1
+				case 105:
+					return -1
 				case 73:
-					return -1
-				case 114:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
@@ -13384,25 +13538,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 102:
 					return -1
 				case 114:
 					return -1
+				case 82:
+					return -1
 				case 115:
 					return -1
-				case 83:
+				case 116:
 					return -1
-				case 102:
+				case 84:
 					return -1
 				case 70:
 					return -1
 				case 105:
 					return -1
-				case 82:
+				case 73:
 					return -1
-				case 116:
-					return -1
-				case 84:
+				case 83:
 					return -1
 				}
 				return -1
@@ -13413,29 +13567,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 102:
+				case 70:
 					return 1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
+					return -1
+				case 69:
 					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 70:
+				case 102:
 					return 1
 				case 108:
 					return -1
 				case 76:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
@@ -13443,28 +13597,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 102:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 70:
 					return -1
 				case 108:
 					return 2
 				case 76:
 					return 2
-				case 84:
+				case 116:
 					return -1
 				case 101:
 					return -1
+				case 70:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
 				case 69:
+					return -1
+				case 110:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
@@ -13472,54 +13626,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 102:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 70:
 					return -1
 				case 97:
 					return 3
 				case 65:
 					return 3
-				case 116:
+				case 84:
+					return -1
+				case 69:
 					return -1
 				case 110:
 					return -1
 				case 78:
-					return -1
-				case 70:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 84:
-					return -1
-				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 70:
+				case 102:
 					return -1
 				case 108:
 					return -1
 				case 76:
 					return -1
-				case 84:
+				case 116:
 					return 4
 				case 101:
 					return -1
-				case 69:
-					return -1
-				case 102:
+				case 70:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
 					return 4
+				case 69:
+					return -1
 				case 110:
 					return -1
 				case 78:
@@ -13530,53 +13684,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 102:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return 5
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 70:
 					return -1
 				case 108:
 					return -1
 				case 76:
 					return -1
-				case 84:
+				case 116:
 					return 5
 				case 101:
 					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 70:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 84:
-					return -1
-				case 101:
-					return 6
-				case 69:
-					return 6
-				case 102:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
+					return 5
+				case 69:
 					return -1
 				case 110:
 					return -1
@@ -13587,30 +13712,59 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 102:
+				case 70:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
+				case 84:
+					return -1
+				case 69:
+					return 6
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 102:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
 				case 116:
+					return -1
+				case 101:
+					return 6
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 102:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 70:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
+				case 69:
 					return -1
 				case 110:
 					return 7
 				case 78:
 					return 7
-				case 70:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 84:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
@@ -13618,27 +13772,27 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 70:
 					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 84:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 102:
-					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 84:
+					return -1
+				case 69:
 					return -1
 				case 110:
 					return -1
 				case 78:
+					return -1
+				case 102:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 116:
+					return -1
+				case 101:
 					return -1
 				}
 				return -1
@@ -13830,166 +13984,133 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 67:
+				case 102:
+					return 1
+				case 78:
 					return -1
 				case 99:
+					return -1
+				case 117:
 					return -1
 				case 73:
 					return -1
 				case 70:
 					return 1
-				case 85:
-					return -1
 				case 110:
-					return -1
-				case 78:
 					return -1
 				case 116:
 					return -1
-				case 79:
-					return -1
-				case 102:
-					return 1
-				case 117:
-					return -1
 				case 84:
+					return -1
+				case 85:
+					return -1
+				case 67:
 					return -1
 				case 105:
 					return -1
 				case 111:
+					return -1
+				case 79:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 102:
-					return -1
 				case 117:
 					return 2
-				case 84:
-					return -1
-				case 105:
-					return -1
-				case 111:
-					return -1
-				case 67:
-					return -1
-				case 99:
-					return -1
 				case 73:
 					return -1
 				case 70:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 85:
 					return 2
-				case 110:
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 102:
 					return -1
 				case 78:
 					return -1
-				case 116:
-					return -1
-				case 79:
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
-					return -1
-				case 99:
-					return -1
-				case 73:
-					return -1
 				case 70:
-					return -1
-				case 85:
 					return -1
 				case 110:
 					return 3
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 102:
+					return -1
 				case 78:
 					return 3
-				case 116:
-					return -1
-				case 79:
-					return -1
-				case 102:
-					return -1
-				case 117:
-					return -1
-				case 84:
-					return -1
-				case 105:
-					return -1
-				case 111:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 102:
-					return -1
-				case 117:
-					return -1
-				case 84:
-					return -1
-				case 105:
-					return -1
-				case 111:
-					return -1
-				case 67:
-					return 4
 				case 99:
-					return 4
+					return -1
+				case 117:
+					return -1
 				case 73:
 					return -1
-				case 70:
-					return -1
-				case 85:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 116:
-					return -1
-				case 79:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
-					return -1
-				case 99:
+				case 117:
 					return -1
 				case 73:
 					return -1
 				case 70:
 					return -1
-				case 85:
-					return -1
 				case 110:
 					return -1
-				case 78:
-					return -1
 				case 116:
-					return 5
-				case 79:
-					return -1
-				case 102:
-					return -1
-				case 117:
 					return -1
 				case 84:
-					return 5
+					return -1
+				case 85:
+					return -1
+				case 67:
+					return 4
 				case 105:
 					return -1
 				case 111:
 					return -1
+				case 79:
+					return -1
+				case 102:
+					return -1
+				case 78:
+					return -1
+				case 99:
+					return 4
 				}
 				return -1
 			},
@@ -13997,130 +14118,163 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 70:
 					return -1
-				case 85:
-					return -1
 				case 110:
 					return -1
-				case 78:
-					return -1
 				case 116:
+					return 5
+				case 84:
+					return 5
+				case 85:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 111:
 					return -1
 				case 79:
 					return -1
 				case 102:
 					return -1
+				case 78:
+					return -1
+				case 99:
+					return -1
 				case 117:
 					return -1
+				case 73:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 102:
+					return -1
+				case 78:
+					return -1
+				case 99:
+					return -1
+				case 117:
+					return -1
+				case 73:
+					return 6
+				case 70:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
 				case 84:
+					return -1
+				case 85:
+					return -1
+				case 67:
 					return -1
 				case 105:
 					return 6
 				case 111:
 					return -1
-				case 67:
+				case 79:
 					return -1
-				case 99:
-					return -1
-				case 73:
-					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 102:
-					return -1
 				case 117:
 					return -1
+				case 73:
+					return -1
+				case 70:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
 				case 84:
+					return -1
+				case 85:
+					return -1
+				case 67:
 					return -1
 				case 105:
 					return -1
 				case 111:
 					return 7
-				case 67:
-					return -1
-				case 99:
-					return -1
-				case 73:
-					return -1
-				case 70:
-					return -1
-				case 85:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 116:
-					return -1
 				case 79:
 					return 7
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 99:
-					return -1
-				case 73:
-					return -1
-				case 70:
-					return -1
-				case 85:
-					return -1
-				case 110:
-					return 8
-				case 78:
-					return 8
-				case 116:
-					return -1
-				case 79:
-					return -1
 				case 102:
 					return -1
-				case 117:
+				case 78:
 					return -1
-				case 84:
-					return -1
-				case 105:
-					return -1
-				case 111:
-					return -1
-				case 67:
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 67:
-					return -1
-				case 99:
-					return -1
-				case 73:
-					return -1
 				case 70:
+					return -1
+				case 110:
+					return 8
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 85:
 					return -1
-				case 110:
+				case 67:
 					return -1
-				case 78:
+				case 105:
 					return -1
-				case 116:
+				case 111:
 					return -1
 				case 79:
 					return -1
 				case 102:
 					return -1
+				case 78:
+					return 8
+				case 99:
+					return -1
 				case 117:
 					return -1
+				case 73:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 117:
+					return -1
+				case 73:
+					return -1
+				case 70:
+					return -1
+				case 110:
+					return -1
+				case 116:
+					return -1
 				case 84:
+					return -1
+				case 85:
+					return -1
+				case 67:
 					return -1
 				case 105:
 					return -1
 				case 111:
+					return -1
+				case 79:
+					return -1
+				case 102:
+					return -1
+				case 78:
+					return -1
+				case 99:
 					return -1
 				}
 				return -1
@@ -14131,11 +14285,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 65:
+					return -1
 				case 103:
 					return 1
+				case 71:
+					return 1
+				case 114:
+					return -1
 				case 82:
 					return -1
-				case 65:
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -14143,63 +14305,55 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 71:
-					return 1
-				case 114:
-					return -1
-				case 97:
-					return -1
-				case 110:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 103:
+					return -1
 				case 71:
 					return -1
 				case 114:
+					return 2
+				case 82:
 					return 2
 				case 97:
 					return -1
 				case 110:
 					return -1
-				case 103:
-					return -1
-				case 82:
-					return 2
-				case 65:
-					return -1
 				case 78:
 					return -1
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 103:
-					return -1
-				case 82:
-					return -1
 				case 65:
 					return 3
-				case 78:
-					return -1
-				case 116:
-					return -1
-				case 84:
+				case 103:
 					return -1
 				case 71:
 					return -1
 				case 114:
 					return -1
+				case 82:
+					return -1
 				case 97:
 					return 3
 				case 110:
+					return -1
+				case 78:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
@@ -14208,24 +14362,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 103:
 					return -1
+				case 71:
+					return -1
+				case 114:
+					return -1
 				case 82:
 					return -1
-				case 65:
+				case 97:
 					return -1
+				case 110:
+					return 4
 				case 78:
 					return 4
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 71:
+				case 65:
 					return -1
-				case 114:
-					return -1
-				case 97:
-					return -1
-				case 110:
-					return 4
 				}
 				return -1
 			},
@@ -14233,9 +14387,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 103:
 					return -1
+				case 71:
+					return -1
+				case 114:
+					return -1
 				case 82:
 					return -1
-				case 65:
+				case 97:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
@@ -14243,32 +14403,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 5
 				case 84:
 					return 5
-				case 71:
-					return -1
-				case 114:
-					return -1
-				case 97:
-					return -1
-				case 110:
+				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 65:
+					return -1
+				case 103:
+					return -1
 				case 71:
 					return -1
 				case 114:
 					return -1
+				case 82:
+					return -1
 				case 97:
 					return -1
 				case 110:
-					return -1
-				case 103:
-					return -1
-				case 82:
-					return -1
-				case 65:
 					return -1
 				case 78:
 					return -1
@@ -14285,23 +14439,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 103:
-					return 1
-				case 71:
-					return 1
-				case 111:
+				case 114:
 					return -1
-				case 79:
+				case 117:
 					return -1
 				case 85:
 					return -1
 				case 112:
 					return -1
-				case 114:
+				case 80:
 					return -1
+				case 103:
+					return 1
+				case 71:
+					return 1
 				case 82:
 					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 82:
+					return 2
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 114:
+					return 2
 				case 117:
+					return -1
+				case 85:
+					return -1
+				case 112:
 					return -1
 				case 80:
 					return -1
@@ -14314,46 +14493,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 85:
-					return -1
-				case 112:
-					return -1
-				case 114:
-					return 2
 				case 82:
-					return 2
-				case 117:
-					return -1
-				case 80:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 117:
-					return -1
-				case 80:
-					return -1
-				case 103:
-					return -1
-				case 71:
 					return -1
 				case 111:
 					return 3
 				case 79:
 					return 3
+				case 114:
+					return -1
+				case 117:
+					return -1
 				case 85:
 					return -1
 				case 112:
+					return -1
+				case 80:
 					return -1
 				}
 				return -1
@@ -14364,20 +14518,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
+				case 82:
+					return -1
 				case 111:
 					return -1
 				case 79:
 					return -1
+				case 114:
+					return -1
+				case 117:
+					return 4
 				case 85:
 					return 4
 				case 112:
 					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 117:
-					return 4
 				case 80:
 					return -1
 				}
@@ -14387,24 +14541,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
 				case 117:
 					return -1
+				case 85:
+					return -1
+				case 112:
+					return 5
 				case 80:
 					return 5
 				case 103:
 					return -1
 				case 71:
 					return -1
+				case 82:
+					return -1
 				case 111:
 					return -1
 				case 79:
 					return -1
-				case 85:
-					return -1
-				case 112:
-					return 5
 				}
 				return -1
 			},
@@ -14412,9 +14566,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
 				case 117:
+					return -1
+				case 85:
+					return -1
+				case 112:
 					return -1
 				case 80:
 					return -1
@@ -14422,13 +14578,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
+				case 82:
+					return -1
 				case 111:
 					return -1
 				case 79:
-					return -1
-				case 85:
-					return -1
-				case 112:
 					return -1
 				}
 				return -1
@@ -14515,9 +14669,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 72:
 					return 1
-				case 118:
+				case 97:
 					return -1
 				case 86:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 65:
+					return -1
+				case 118:
 					return -1
 				case 105:
 					return -1
@@ -14527,9 +14689,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 97:
-					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 65:
+					return 2
+				case 118:
+					return -1
+				case 105:
+					return -1
+				case 78:
+					return -1
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 104:
+					return -1
+				case 72:
+					return -1
+				case 97:
+					return 2
+				case 86:
 					return -1
 				case 73:
 					return -1
@@ -14540,50 +14723,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 104:
-					return -1
-				case 72:
-					return -1
-				case 118:
-					return -1
-				case 86:
-					return -1
-				case 105:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 97:
-					return 2
-				case 65:
-					return 2
-				case 73:
-					return -1
-				case 110:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
-				case 73:
-					return -1
-				case 110:
-					return -1
-				case 104:
-					return -1
-				case 72:
-					return -1
 				case 118:
-					return 3
-				case 86:
 					return 3
 				case 105:
 					return -1
@@ -14593,26 +14735,38 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
+				case 104:
+					return -1
+				case 72:
+					return -1
+				case 97:
+					return -1
+				case 86:
+					return 3
+				case 73:
+					return -1
+				case 110:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 104:
+					return -1
+				case 72:
+					return -1
 				case 97:
 					return -1
-				case 65:
+				case 86:
 					return -1
 				case 73:
 					return 4
 				case 110:
 					return -1
-				case 104:
-					return -1
-				case 72:
+				case 65:
 					return -1
 				case 118:
-					return -1
-				case 86:
 					return -1
 				case 105:
 					return 4
@@ -14631,9 +14785,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
-				case 118:
+				case 97:
 					return -1
 				case 86:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return 5
+				case 65:
+					return -1
+				case 118:
 					return -1
 				case 105:
 					return -1
@@ -14643,34 +14805,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 73:
-					return -1
-				case 110:
-					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 104:
+					return -1
+				case 72:
+					return -1
 				case 97:
 					return -1
-				case 65:
+				case 86:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 104:
-					return -1
-				case 72:
+				case 65:
 					return -1
 				case 118:
-					return -1
-				case 86:
 					return -1
 				case 105:
 					return -1
@@ -14685,21 +14839,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
 				case 65:
 					return -1
-				case 73:
-					return -1
-				case 110:
-					return -1
-				case 104:
-					return -1
-				case 72:
-					return -1
 				case 118:
-					return -1
-				case 86:
 					return -1
 				case 105:
 					return -1
@@ -14708,6 +14850,18 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 104:
+					return -1
+				case 72:
+					return -1
+				case 97:
+					return -1
+				case 86:
+					return -1
+				case 73:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
@@ -14804,64 +14958,64 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 73:
-					return 1
-				case 78:
+				case 117:
 					return -1
-				case 108:
+				case 85:
 					return -1
-				case 100:
+				case 99:
 					return -1
 				case 68:
 					return -1
-				case 105:
-					return 1
-				case 99:
+				case 110:
 					return -1
-				case 67:
+				case 78:
+					return -1
+				case 108:
 					return -1
 				case 76:
 					return -1
 				case 101:
 					return -1
-				case 85:
-					return -1
-				case 110:
-					return -1
-				case 117:
-					return -1
 				case 69:
+					return -1
+				case 105:
+					return 1
+				case 73:
+					return 1
+				case 67:
+					return -1
+				case 100:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 68:
+					return -1
 				case 110:
 					return 2
-				case 117:
-					return -1
-				case 69:
-					return -1
-				case 73:
-					return -1
 				case 78:
 					return 2
 				case 108:
 					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 76:
 					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -14870,31 +15024,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 67:
+					return 3
+				case 100:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 99:
+					return 3
+				case 68:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 108:
 					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return 3
-				case 67:
-					return 3
 				case 76:
 					return -1
 				case 101:
-					return -1
-				case 85:
-					return -1
-				case 110:
-					return -1
-				case 117:
 					return -1
 				case 69:
 					return -1
@@ -14903,65 +15057,65 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 110:
-					return -1
 				case 117:
 					return -1
-				case 69:
+				case 85:
 					return -1
-				case 73:
+				case 99:
+					return -1
+				case 68:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 108:
 					return 4
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 76:
 					return 4
 				case 101:
 					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 68:
+					return -1
 				case 110:
+					return -1
+				case 78:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
 					return -1
 				case 117:
 					return 5
-				case 69:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 108:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 76:
-					return -1
-				case 101:
-					return -1
 				case 85:
 					return 5
 				}
@@ -14969,31 +15123,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return 6
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 99:
+					return -1
+				case 68:
+					return 6
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 108:
 					return -1
-				case 100:
-					return 6
-				case 68:
-					return 6
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 76:
 					return -1
 				case 101:
-					return -1
-				case 85:
-					return -1
-				case 110:
-					return -1
-				case 117:
 					return -1
 				case 69:
 					return -1
@@ -15002,64 +15156,64 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 110:
-					return -1
 				case 117:
 					return -1
-				case 69:
-					return 7
-				case 73:
+				case 85:
+					return -1
+				case 99:
+					return -1
+				case 68:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
 				case 108:
 					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 76:
 					return -1
 				case 101:
 					return 7
+				case 69:
+					return 7
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 99:
+					return -1
+				case 68:
+					return -1
 				case 110:
-					return -1
-				case 117:
-					return -1
-				case 69:
-					return -1
-				case 73:
 					return -1
 				case 78:
 					return -1
 				case 108:
 					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 105:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 76:
 					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 67:
+					return -1
+				case 100:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -15072,31 +15226,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 77:
-					return -1
 				case 105:
 					return 1
-				case 109:
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return -1
 				case 73:
 					return 1
-				case 67:
+				case 110:
+					return -1
+				case 77:
+					return -1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 78:
 					return -1
 				case 114:
 					return -1
-				case 69:
+				case 82:
 					return -1
 				case 84:
 					return -1
@@ -15105,163 +15259,163 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return 2
-				case 99:
+				case 101:
 					return -1
-				case 82:
+				case 109:
 					return -1
 				case 78:
 					return 2
-				case 101:
+				case 114:
 					return -1
-				case 77:
+				case 82:
+					return -1
+				case 84:
 					return -1
 				case 105:
 					return -1
-				case 109:
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return -1
 				case 73:
 					return -1
-				case 67:
-					return -1
-				case 114:
-					return -1
-				case 69:
-					return -1
-				case 84:
+				case 110:
+					return 2
+				case 77:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 84:
+					return -1
+				case 105:
 					return -1
 				case 99:
 					return 3
-				case 82:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 109:
-					return -1
-				case 116:
-					return -1
-				case 73:
-					return -1
 				case 67:
 					return 3
-				case 114:
-					return -1
 				case 69:
 					return -1
-				case 84:
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 77:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return 4
 				case 78:
-					return -1
-				case 101:
-					return -1
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 109:
-					return -1
-				case 116:
-					return -1
-				case 73:
-					return -1
-				case 67:
 					return -1
 				case 114:
 					return 4
+				case 82:
+					return 4
+				case 84:
+					return -1
+				case 105:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
 				case 69:
 					return -1
-				case 84:
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 77:
+					return -1
+				case 101:
+					return -1
+				case 109:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 73:
+					return -1
 				case 110:
 					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 78:
+				case 77:
 					return -1
 				case 101:
 					return 5
-				case 77:
+				case 109:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 84:
 					return -1
 				case 105:
 					return -1
-				case 109:
-					return -1
-				case 116:
-					return -1
-				case 73:
+				case 99:
 					return -1
 				case 67:
-					return -1
-				case 114:
 					return -1
 				case 69:
 					return 5
-				case 84:
+				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
+				case 105:
 					return -1
 				case 99:
 					return -1
-				case 82:
+				case 67:
 					return -1
-				case 78:
+				case 69:
 					return -1
-				case 101:
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 110:
 					return -1
 				case 77:
 					return 6
-				case 105:
+				case 101:
 					return -1
 				case 109:
 					return 6
-				case 116:
-					return -1
-				case 73:
-					return -1
-				case 67:
+				case 78:
 					return -1
 				case 114:
 					return -1
-				case 69:
+				case 82:
 					return -1
 				case 84:
 					return -1
@@ -15270,64 +15424,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return -1
-				case 67:
-					return -1
-				case 114:
-					return -1
-				case 69:
+				case 101:
 					return 7
-				case 84:
-					return -1
-				case 110:
-					return -1
-				case 99:
-					return -1
-				case 82:
+				case 109:
 					return -1
 				case 78:
 					return -1
-				case 101:
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 84:
+					return -1
+				case 105:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 69:
 					return 7
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 109:
-					return -1
-				case 116:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 105:
-					return -1
-				case 109:
-					return -1
 				case 116:
 					return -1
 				case 73:
 					return -1
-				case 67:
-					return -1
-				case 114:
-					return -1
-				case 69:
-					return -1
-				case 84:
-					return -1
 				case 110:
-					return 8
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 78:
-					return 8
-				case 101:
 					return -1
 				case 77:
 					return -1
@@ -15336,33 +15457,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 78:
+					return 8
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 84:
+					return -1
+				case 105:
+					return -1
+				case 99:
 					return -1
 				case 67:
 					return -1
-				case 114:
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return 8
+				case 77:
+					return -1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 69:
 					return -1
-				case 84:
+				case 116:
 					return 9
+				case 73:
+					return -1
 				case 110:
-					return -1
-				case 99:
-					return -1
-				case 82:
-					return -1
-				case 78:
-					return -1
-				case 101:
 					return -1
 				case 77:
 					return -1
-				case 105:
+				case 101:
 					return -1
 				case 109:
 					return -1
-				case 116:
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 84:
 					return 9
 				}
 				return -1
@@ -15371,31 +15525,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 78:
 					return -1
-				case 101:
+				case 114:
 					return -1
-				case 77:
+				case 82:
+					return -1
+				case 84:
 					return -1
 				case 105:
 					return -1
-				case 109:
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return -1
 				case 73:
 					return -1
-				case 67:
-					return -1
-				case 114:
-					return -1
-				case 69:
-					return -1
-				case 84:
-					return -1
 				case 110:
 					return -1
-				case 99:
+				case 77:
 					return -1
-				case 82:
+				case 101:
+					return -1
+				case 109:
 					return -1
 				}
 				return -1
@@ -15406,23 +15560,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 88:
+					return -1
+				case 105:
+					return 1
 				case 73:
 					return 1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 101:
 					return -1
 				case 69:
-					return -1
-				case 88:
-					return -1
-				case 105:
-					return 1
-				case 110:
-					return -1
-				case 100:
 					return -1
 				case 120:
 					return -1
@@ -15431,67 +15585,67 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 73:
 					return -1
+				case 110:
+					return 2
 				case 78:
 					return 2
+				case 100:
+					return -1
 				case 68:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 88:
-					return -1
-				case 105:
-					return -1
-				case 110:
-					return 2
-				case 100:
-					return -1
 				case 120:
+					return -1
+				case 88:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 110:
 					return -1
 				case 78:
 					return -1
+				case 100:
+					return 3
 				case 68:
 					return 3
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 88:
-					return -1
-				case 105:
-					return -1
-				case 110:
-					return -1
-				case 100:
-					return 3
 				case 120:
+					return -1
+				case 88:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 88:
+					return -1
 				case 105:
-					return -1
-				case 110:
-					return -1
-				case 100:
-					return -1
-				case 120:
 					return -1
 				case 73:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
@@ -15499,7 +15653,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 69:
 					return 4
-				case 88:
+				case 120:
 					return -1
 				}
 				return -1
@@ -15508,22 +15662,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 105:
 					return -1
+				case 73:
+					return -1
 				case 110:
 					return -1
+				case 78:
+					return -1
 				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 120:
 					return 5
-				case 73:
-					return -1
-				case 78:
-					return -1
-				case 68:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
 				case 88:
 					return 5
 				}
@@ -15531,23 +15685,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 88:
+					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 101:
 					return -1
 				case 69:
-					return -1
-				case 88:
-					return -1
-				case 105:
-					return -1
-				case 110:
-					return -1
-				case 100:
 					return -1
 				case 120:
 					return -1
@@ -15555,6 +15709,242 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				return -1
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
+
+		// [iI][nN][dD][eE][xX][eE][sS]
+		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 105:
+					return 1
+				case 73:
+					return 1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return 2
+				case 78:
+					return 2
+				case 69:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return 3
+				case 68:
+					return 3
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return 4
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return 4
+				case 120:
+					return -1
+				case 88:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 120:
+					return 5
+				case 88:
+					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return 6
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return 6
+				case 115:
+					return -1
+				case 83:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return 7
+				case 83:
+					return 7
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 120:
+					return -1
+				case 88:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				}
+				return -1
+			},
+		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 		// [iI][nN][lL][iI][nN][eE]
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
@@ -15841,25 +16231,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
+				case 73:
+					return 1
 				case 78:
-					return -1
-				case 101:
 					return -1
 				case 69:
 					return -1
 				case 114:
 					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 105:
 					return 1
-				case 73:
-					return 1
+				case 110:
+					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 101:
+					return -1
 				case 82:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 110:
+					return 2
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 101:
+					return -1
+				case 82:
+					return -1
+				case 73:
+					return -1
+				case 78:
+					return 2
+				case 69:
+					return -1
+				case 114:
 					return -1
 				case 116:
 					return -1
@@ -15870,141 +16289,112 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return 2
+				case 73:
+					return -1
 				case 78:
-					return 2
-				case 101:
 					return -1
 				case 69:
 					return -1
 				case 114:
 					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 82:
-					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 105:
 					return -1
-				case 73:
+				case 110:
 					return -1
 				case 115:
 					return 3
 				case 83:
 					return 3
-				case 82:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
 				case 101:
 					return -1
-				case 69:
-					return -1
-				case 114:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
 				case 73:
 					return -1
-				case 115:
+				case 78:
 					return -1
-				case 83:
-					return -1
-				case 82:
+				case 69:
+					return 4
+				case 114:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
 				case 110:
 					return -1
-				case 78:
+				case 115:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return 4
-				case 69:
-					return 4
-				case 114:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
 				case 73:
 					return -1
-				case 115:
+				case 78:
 					return -1
-				case 83:
+				case 69:
 					return -1
-				case 82:
+				case 114:
 					return 5
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
 				case 110:
 					return -1
-				case 78:
+				case 115:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return -1
-				case 69:
-					return -1
-				case 114:
+				case 82:
 					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
 				case 105:
 					return -1
-				case 73:
+				case 110:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 101:
+					return -1
 				case 82:
+					return -1
+				case 73:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 114:
 					return -1
 				case 116:
 					return 6
@@ -16015,25 +16405,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
 				case 105:
 					return -1
-				case 73:
+				case 110:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 101:
+					return -1
 				case 82:
+					return -1
+				case 73:
+					return -1
+				case 78:
+					return -1
+				case 69:
+					return -1
+				case 114:
 					return -1
 				case 116:
 					return -1
@@ -16048,264 +16438,264 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 105:
-					return 1
 				case 110:
 					return -1
 				case 101:
-					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return 1
-				case 116:
-					return -1
-				case 78:
-					return -1
-				case 84:
-					return -1
-				case 114:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 99:
+				case 105:
+					return 1
+				case 116:
+					return -1
+				case 73:
+					return 1
+				case 84:
 					return -1
 				case 69:
+					return -1
+				case 82:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
+				case 78:
+					return 2
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 110:
 					return 2
 				case 101:
 					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 78:
-					return 2
-				case 84:
-					return -1
-				case 114:
-					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 99:
+				case 105:
+					return -1
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 84:
 					return -1
 				case 69:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 105:
 					return -1
 				case 116:
 					return 3
-				case 78:
+				case 73:
 					return -1
 				case 84:
 					return 3
+				case 69:
+					return -1
+				case 82:
+					return -1
+				case 78:
+					return -1
 				case 114:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 99:
 					return -1
-				case 69:
-					return -1
-				case 105:
+				case 67:
 					return -1
 				case 110:
 					return -1
 				case 101:
 					return -1
-				case 82:
+				case 115:
 					return -1
-				case 67:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
+				case 73:
 					return -1
 				case 84:
 					return -1
+				case 69:
+					return 4
+				case 82:
+					return -1
+				case 78:
+					return -1
 				case 114:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 99:
 					return -1
-				case 69:
-					return 4
-				case 105:
+				case 67:
 					return -1
 				case 110:
 					return -1
 				case 101:
 					return 4
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 78:
-					return -1
-				case 84:
-					return -1
-				case 114:
-					return 5
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 99:
-					return -1
-				case 69:
-					return -1
 				case 105:
 					return -1
-				case 110:
-					return -1
-				case 101:
-					return -1
-				case 82:
-					return 5
-				case 67:
+				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
+				case 78:
 					return -1
-				case 105:
+				case 114:
+					return 5
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 110:
 					return -1
 				case 101:
 					return -1
-				case 82:
+				case 115:
 					return -1
-				case 67:
+				case 83:
 					return -1
-				case 73:
+				case 105:
 					return -1
 				case 116:
 					return -1
-				case 78:
+				case 73:
 					return -1
 				case 84:
 					return -1
+				case 69:
+					return -1
+				case 82:
+					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 73:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 82:
+					return -1
+				case 78:
+					return -1
 				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 110:
+					return -1
+				case 101:
 					return -1
 				case 115:
 					return 6
 				case 83:
 					return 6
-				case 99:
+				case 105:
+					return -1
+				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return -1
-				case 84:
-					return -1
-				case 114:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 69:
-					return 7
-				case 105:
-					return -1
 				case 110:
 					return -1
 				case 101:
 					return 7
-				case 82:
+				case 115:
 					return -1
-				case 67:
+				case 83:
+					return -1
+				case 105:
+					return -1
+				case 116:
 					return -1
 				case 73:
 					return -1
-				case 116:
+				case 84:
+					return -1
+				case 69:
+					return 7
+				case 82:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
-				case 110:
-					return -1
-				case 101:
-					return -1
-				case 82:
-					return -1
-				case 67:
-					return 8
-				case 73:
-					return -1
-				case 116:
-					return -1
 				case 78:
 					return -1
-				case 84:
-					return -1
 				case 114:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 99:
 					return 8
+				case 67:
+					return 8
+				case 110:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 105:
+					return -1
+				case 116:
+					return -1
+				case 73:
+					return -1
+				case 84:
+					return -1
 				case 69:
+					return -1
+				case 82:
 					return -1
 				}
 				return -1
@@ -16314,64 +16704,64 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 105:
 					return -1
+				case 116:
+					return 9
+				case 73:
+					return -1
+				case 84:
+					return 9
+				case 69:
+					return -1
+				case 82:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
 				case 110:
 					return -1
 				case 101:
 					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return 9
-				case 78:
-					return -1
-				case 84:
-					return 9
-				case 114:
-					return -1
 				case 115:
 					return -1
 				case 83:
-					return -1
-				case 99:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
+				case 73:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 82:
+					return -1
+				case 78:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 110:
 					return -1
 				case 101:
 					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 78:
-					return -1
-				case 84:
-					return -1
-				case 114:
-					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 99:
+				case 105:
 					return -1
-				case 69:
+				case 116:
 					return -1
 				}
 				return -1
@@ -16824,99 +17214,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 69:
+					return -1
 				case 121:
 					return -1
-				case 89:
+				case 83:
 					return -1
-				case 97:
+				case 112:
 					return -1
-				case 65:
+				case 80:
 					return -1
-				case 101:
+				case 115:
 					return -1
 				case 107:
 					return 1
-				case 112:
-					return -1
-				case 80:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				case 75:
 					return 1
-				case 69:
+				case 101:
 					return -1
-				case 115:
+				case 89:
 					return -1
-				case 83:
+				case 65:
+					return -1
+				case 99:
+					return -1
+				case 97:
+					return -1
+				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return 2
-				case 107:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
-				case 99:
+				case 97:
 					return -1
 				case 67:
-					return -1
-				case 75:
 					return -1
 				case 69:
 					return 2
-				case 115:
+				case 121:
 					return -1
 				case 83:
-					return -1
-				case 121:
-					return -1
-				case 89:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 121:
-					return 3
-				case 89:
-					return 3
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 101:
-					return -1
-				case 107:
 					return -1
 				case 112:
 					return -1
 				case 80:
 					return -1
-				case 99:
+				case 115:
 					return -1
-				case 67:
+				case 107:
 					return -1
 				case 75:
 					return -1
-				case 69:
+				case 101:
+					return 2
+				case 89:
 					return -1
-				case 115:
+				case 65:
 					return -1
-				case 83:
+				case 99:
 					return -1
 				}
 				return -1
@@ -16924,197 +17281,230 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 107:
+					return -1
+				case 75:
+					return -1
+				case 101:
+					return -1
+				case 89:
+					return 3
+				case 65:
+					return -1
+				case 99:
+					return -1
+				case 97:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 121:
+					return 3
+				case 83:
 					return -1
 				case 112:
 					return -1
 				case 80:
 					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 75:
-					return -1
-				case 69:
-					return -1
 				case 115:
-					return 4
-				case 83:
-					return 4
-				case 121:
-					return -1
-				case 89:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 121:
+					return -1
+				case 83:
+					return 4
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 115:
+					return 4
+				case 107:
+					return -1
+				case 75:
+					return -1
 				case 101:
 					return -1
+				case 89:
+					return -1
+				case 65:
+					return -1
+				case 99:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 107:
+					return -1
+				case 75:
+					return -1
+				case 101:
+					return -1
+				case 89:
+					return -1
+				case 65:
+					return -1
+				case 99:
+					return -1
+				case 97:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 121:
+					return -1
+				case 83:
 					return -1
 				case 112:
 					return 5
 				case 80:
 					return 5
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 75:
-					return -1
-				case 69:
-					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 121:
-					return -1
-				case 89:
-					return -1
-				case 97:
-					return -1
-				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 121:
-					return -1
-				case 89:
-					return -1
 				case 97:
 					return 6
-				case 65:
-					return 6
-				case 101:
+				case 67:
 					return -1
-				case 107:
+				case 69:
+					return -1
+				case 121:
+					return -1
+				case 83:
 					return -1
 				case 112:
 					return -1
 				case 80:
 					return -1
-				case 99:
+				case 115:
 					return -1
-				case 67:
+				case 107:
 					return -1
 				case 75:
 					return -1
-				case 69:
+				case 101:
 					return -1
-				case 115:
+				case 89:
 					return -1
-				case 83:
+				case 65:
+					return 6
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
-					return -1
 				case 107:
 					return -1
-				case 112:
+				case 75:
 					return -1
-				case 80:
+				case 101:
+					return -1
+				case 89:
+					return -1
+				case 65:
 					return -1
 				case 99:
 					return 7
+				case 97:
+					return -1
 				case 67:
 					return 7
-				case 75:
-					return -1
 				case 69:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 121:
 					return -1
-				case 89:
+				case 83:
 					return -1
-				case 97:
+				case 112:
 					return -1
-				case 65:
+				case 80:
+					return -1
+				case 115:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 75:
+				case 97:
+					return -1
+				case 67:
 					return -1
 				case 69:
 					return 8
-				case 115:
-					return -1
-				case 83:
-					return -1
 				case 121:
 					return -1
-				case 89:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 101:
-					return 8
-				case 107:
+				case 83:
 					return -1
 				case 112:
 					return -1
 				case 80:
 					return -1
-				case 99:
+				case 115:
 					return -1
-				case 67:
+				case 107:
+					return -1
+				case 75:
+					return -1
+				case 101:
+					return 8
+				case 89:
+					return -1
+				case 65:
+					return -1
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 75:
-					return -1
-				case 69:
-					return -1
 				case 115:
 					return -1
-				case 83:
+				case 107:
 					return -1
-				case 121:
-					return -1
-				case 89:
-					return -1
-				case 97:
-					return -1
-				case 65:
+				case 75:
 					return -1
 				case 101:
 					return -1
-				case 107:
+				case 89:
+					return -1
+				case 65:
+					return -1
+				case 99:
+					return -1
+				case 97:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 121:
+					return -1
+				case 83:
 					return -1
 				case 112:
 					return -1
 				case 80:
-					return -1
-				case 99:
-					return -1
-				case 67:
 					return -1
 				}
 				return -1
@@ -17415,29 +17805,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 116:
+					return -1
 				case 108:
 					return 1
 				case 76:
 					return 1
 				case 69:
 					return -1
-				case 116:
-					return -1
 				case 84:
-					return -1
-				case 110:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 101:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
@@ -17450,11 +17840,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return 2
-				case 116:
-					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
+					return -1
+				case 78:
 					return -1
 				case 103:
 					return -1
@@ -17462,11 +17856,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 101:
 					return 2
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
+				case 116:
 					return -1
 				}
 				return -1
@@ -17475,23 +17865,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 101:
 					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
+				case 116:
+					return 3
 				case 108:
 					return -1
 				case 76:
 					return -1
 				case 69:
 					return -1
-				case 116:
-					return 3
 				case 84:
 					return 3
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
+					return -1
+				case 78:
 					return -1
 				case 103:
 					return -1
@@ -17508,11 +17898,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				case 116:
-					return 4
 				case 84:
 					return 4
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
+					return -1
+				case 78:
 					return -1
 				case 103:
 					return -1
@@ -17520,36 +17914,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 101:
 					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return -1
+				case 116:
+					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 101:
+					return -1
+				case 116:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 69:
+					return -1
+				case 84:
 					return -1
 				case 105:
 					return 5
 				case 73:
 					return 5
-				case 78:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				case 110:
+					return -1
+				case 78:
 					return -1
 				case 103:
 					return -1
@@ -17566,11 +17956,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				case 116:
-					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
+					return 6
+				case 78:
 					return 6
 				case 103:
 					return -1
@@ -17578,40 +17972,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 101:
 					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
-					return 6
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
 				case 116:
-					return -1
-				case 84:
-					return -1
-				case 110:
-					return -1
-				case 103:
-					return 7
-				case 71:
-					return 7
-				case 101:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 78:
 					return -1
 				}
 				return -1
@@ -17624,23 +17985,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				case 116:
-					return -1
 				case 84:
-					return -1
-				case 110:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 101:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
+				case 110:
+					return -1
 				case 78:
+					return -1
+				case 103:
+					return 7
+				case 71:
+					return 7
+				case 101:
+					return -1
+				case 116:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 101:
+					return -1
+				case 116:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 69:
+					return -1
+				case 84:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
@@ -18034,14 +18424,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 109:
+					return 1
 				case 77:
 					return 1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 112:
-					return -1
 				case 105:
 					return -1
 				case 73:
@@ -18052,8 +18442,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 109:
-					return 1
+				case 112:
+					return -1
 				case 80:
 					return -1
 				case 78:
@@ -18063,14 +18453,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return 2
 				case 65:
 					return 2
-				case 112:
-					return -1
 				case 105:
 					return -1
 				case 73:
@@ -18081,7 +18471,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 109:
+				case 112:
 					return -1
 				case 80:
 					return -1
@@ -18092,26 +18482,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 103:
+					return -1
+				case 71:
 					return -1
 				case 112:
 					return 3
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 110:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 109:
-					return -1
 				case 80:
 					return 3
 				case 78:
@@ -18121,14 +18511,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return 4
+				case 80:
+					return 4
+				case 78:
+					return -1
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 112:
-					return 4
 				case 105:
 					return -1
 				case 73:
@@ -18139,24 +18535,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 109:
-					return -1
-				case 80:
-					return 4
-				case 78:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 78:
+					return -1
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 112:
 					return -1
 				case 105:
 					return 5
@@ -18168,24 +18564,18 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 109:
-					return -1
-				case 80:
-					return -1
-				case 78:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 112:
 					return -1
 				case 105:
 					return -1
@@ -18197,7 +18587,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 71:
 					return -1
-				case 109:
+				case 112:
 					return -1
 				case 80:
 					return -1
@@ -18208,19 +18598,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
+				case 112:
 					return -1
 				case 80:
 					return -1
 				case 78:
+					return -1
+				case 109:
 					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 112:
 					return -1
 				case 105:
 					return -1
@@ -18237,13 +18627,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 78:
+					return -1
+				case 109:
+					return -1
 				case 77:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 112:
 					return -1
 				case 105:
 					return -1
@@ -18254,12 +18650,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 103:
 					return -1
 				case 71:
-					return -1
-				case 109:
-					return -1
-				case 80:
-					return -1
-				case 78:
 					return -1
 				}
 				return -1
@@ -18270,31 +18660,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 72:
+					return -1
+				case 68:
+					return -1
 				case 109:
 					return 1
-				case 77:
-					return 1
-				case 97:
+				case 67:
 					return -1
 				case 104:
 					return -1
 				case 69:
 					return -1
-				case 68:
+				case 77:
+					return 1
+				case 84:
 					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
 				case 101:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 72:
-					return -1
-				case 116:
 					return -1
 				case 100:
 					return -1
@@ -18303,163 +18693,163 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
-					return 2
+				case 77:
+					return -1
 				case 84:
 					return -1
-				case 72:
+				case 99:
 					return -1
-				case 116:
+				case 101:
 					return -1
 				case 100:
-					return -1
-				case 109:
-					return -1
-				case 77:
 					return -1
 				case 97:
 					return 2
-				case 104:
+				case 65:
+					return 2
+				case 116:
 					return -1
-				case 69:
+				case 72:
 					return -1
 				case 68:
 					return -1
-				case 99:
+				case 109:
 					return -1
 				case 67:
 					return -1
-				case 101:
+				case 104:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 3
-				case 100:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 97:
-					return -1
-				case 104:
-					return -1
-				case 69:
-					return -1
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
 					return -1
 				case 65:
 					return -1
-				case 84:
+				case 116:
 					return 3
 				case 72:
+					return -1
+				case 68:
+					return -1
+				case 109:
+					return -1
+				case 67:
+					return -1
+				case 104:
+					return -1
+				case 69:
+					return -1
+				case 77:
+					return -1
+				case 84:
+					return 3
+				case 99:
+					return -1
+				case 101:
+					return -1
+				case 100:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
 				case 77:
 					return -1
-				case 97:
-					return -1
-				case 104:
-					return -1
-				case 69:
-					return -1
-				case 68:
+				case 84:
 					return -1
 				case 99:
 					return 4
-				case 67:
-					return 4
 				case 101:
+					return -1
+				case 100:
+					return -1
+				case 97:
 					return -1
 				case 65:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				case 72:
 					return -1
-				case 116:
+				case 68:
 					return -1
-				case 100:
+				case 109:
+					return -1
+				case 67:
+					return 4
+				case 104:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 72:
-					return 5
-				case 116:
-					return -1
-				case 100:
+				case 68:
 					return -1
 				case 109:
 					return -1
-				case 77:
-					return -1
-				case 97:
+				case 67:
 					return -1
 				case 104:
 					return 5
 				case 69:
 					return -1
-				case 68:
+				case 77:
+					return -1
+				case 84:
 					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
 				case 101:
 					return -1
+				case 100:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 72:
+					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return -1
-				case 100:
+				case 68:
 					return -1
 				case 109:
 					return -1
-				case 77:
-					return -1
-				case 97:
+				case 67:
 					return -1
 				case 104:
 					return -1
 				case 69:
 					return 6
-				case 68:
+				case 77:
+					return -1
+				case 84:
 					return -1
 				case 99:
-					return -1
-				case 67:
 					return -1
 				case 101:
 					return 6
+				case 100:
+					return -1
+				case 97:
+					return -1
 				case 65:
 					return -1
-				case 84:
+				case 116:
 					return -1
 				case 72:
 					return -1
@@ -18468,31 +18858,31 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 72:
+					return -1
+				case 68:
+					return 7
 				case 109:
 					return -1
-				case 77:
-					return -1
-				case 97:
+				case 67:
 					return -1
 				case 104:
 					return -1
 				case 69:
 					return -1
-				case 68:
-					return 7
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
-					return -1
-				case 65:
+				case 77:
 					return -1
 				case 84:
 					return -1
-				case 72:
+				case 99:
 					return -1
-				case 116:
+				case 101:
 					return -1
 				case 100:
 					return 7
@@ -18501,33 +18891,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
+				case 77:
 					return -1
 				case 84:
 					return -1
-				case 72:
+				case 99:
 					return -1
-				case 116:
+				case 101:
 					return -1
 				case 100:
 					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 72:
+					return -1
+				case 68:
+					return -1
 				case 109:
 					return -1
-				case 77:
-					return -1
-				case 97:
+				case 67:
 					return -1
 				case 104:
 					return -1
 				case 69:
-					return -1
-				case 68:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
@@ -18542,37 +18932,37 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
+				case 73:
 					return -1
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
+				case 122:
 					return -1
 				case 100:
 					return -1
 				case 77:
 					return 1
-				case 114:
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
 					return -1
 				}
 				return -1
@@ -18583,445 +18973,445 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 65:
 					return 2
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
+				case 73:
 					return -1
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
+				case 122:
 					return -1
-				case 76:
+				case 100:
 					return -1
-				case 90:
+				case 77:
 					return -1
 				case 97:
 					return 2
-				case 108:
-					return -1
-				case 100:
-					return -1
-				case 77:
-					return -1
-				case 114:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 109:
-					return -1
-				case 65:
-					return -1
-				case 116:
-					return 3
 				case 84:
-					return 3
-				case 122:
-					return -1
-				case 68:
-					return -1
-				case 101:
 					return -1
 				case 69:
 					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
+				case 108:
 					return -1
 				case 76:
 					return -1
 				case 90:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 77:
+					return -1
 				case 97:
+					return -1
+				case 84:
+					return 3
+				case 69:
 					return -1
 				case 108:
 					return -1
-				case 100:
+				case 76:
 					return -1
-				case 77:
+				case 90:
+					return -1
+				case 109:
+					return -1
+				case 65:
 					return -1
 				case 114:
+					return -1
+				case 73:
+					return -1
+				case 68:
+					return -1
+				case 116:
+					return 3
+				case 101:
+					return -1
+				case 82:
+					return -1
+				case 105:
+					return -1
+				case 122:
+					return -1
+				case 100:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
-				case 84:
-					return -1
-				case 122:
-					return -1
-				case 68:
-					return -1
 				case 101:
-					return 4
-				case 69:
 					return 4
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
+				case 122:
 					return -1
 				case 100:
 					return -1
 				case 77:
 					return -1
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return 4
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
+					return -1
+				case 109:
+					return -1
+				case 65:
+					return -1
 				case 114:
+					return -1
+				case 73:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
 				case 77:
 					return -1
-				case 114:
-					return 5
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
+					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 122:
+				case 114:
+					return 5
+				case 73:
 					return -1
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return 5
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 100:
+				case 122:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 77:
+					return -1
 				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
 					return -1
 				case 108:
 					return -1
-				case 100:
+				case 76:
 					return -1
-				case 77:
-					return -1
-				case 114:
+				case 90:
 					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
-					return -1
+				case 73:
+					return 6
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return 6
-				case 73:
-					return 6
-				case 76:
+				case 122:
 					return -1
-				case 90:
+				case 100:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 65:
-					return 7
 				case 116:
 					return -1
-				case 84:
-					return -1
-				case 122:
-					return -1
-				case 68:
-					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return 7
-				case 108:
+				case 122:
 					return -1
 				case 100:
 					return -1
 				case 77:
 					return -1
+				case 97:
+					return 7
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
+					return -1
+				case 109:
+					return -1
+				case 65:
+					return 7
 				case 114:
+					return -1
+				case 73:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 100:
+					return -1
+				case 77:
+					return -1
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return 8
+				case 76:
+					return 8
+				case 90:
+					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
+				case 73:
 					return -1
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return 8
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
-					return 8
-				case 100:
-					return -1
-				case 77:
-					return -1
-				case 114:
+				case 122:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 77:
+					return -1
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
+					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
-					return -1
+				case 73:
+					return 9
 				case 68:
 					return -1
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return 9
-				case 73:
-					return 9
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
+				case 122:
 					return -1
 				case 100:
-					return -1
-				case 77:
-					return -1
-				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
-				case 84:
-					return -1
-				case 122:
-					return 10
-				case 68:
-					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
+				case 122:
+					return 10
+				case 100:
+					return -1
+				case 77:
+					return -1
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
 					return -1
 				case 76:
 					return -1
 				case 90:
 					return 10
-				case 97:
+				case 109:
 					return -1
-				case 108:
-					return -1
-				case 100:
-					return -1
-				case 77:
+				case 65:
 					return -1
 				case 114:
+					return -1
+				case 73:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 116:
+					return -1
+				case 101:
+					return 11
+				case 82:
+					return -1
+				case 105:
+					return -1
+				case 122:
+					return -1
+				case 100:
+					return -1
 				case 77:
 					return -1
-				case 114:
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return 11
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
 					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 122:
-					return -1
-				case 68:
-					return -1
-				case 101:
-					return 11
-				case 69:
-					return 11
-				case 82:
-					return -1
-				case 105:
+				case 114:
 					return -1
 				case 73:
 					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 100:
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 116:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 76:
-					return -1
-				case 90:
-					return -1
-				case 97:
-					return -1
-				case 108:
+				case 122:
 					return -1
 				case 100:
 					return 12
 				case 77:
 					return -1
-				case 114:
+				case 97:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 90:
 					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
+				case 73:
 					return -1
 				case 68:
 					return 12
@@ -19030,41 +19420,41 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 100:
+					return -1
+				case 77:
+					return -1
+				case 97:
+					return -1
+				case 84:
 					return -1
 				case 69:
 					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
+				case 108:
 					return -1
 				case 76:
 					return -1
 				case 90:
 					return -1
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 100:
-					return -1
-				case 77:
-					return -1
-				case 114:
-					return -1
 				case 109:
 					return -1
 				case 65:
 					return -1
-				case 116:
+				case 114:
 					return -1
-				case 84:
-					return -1
-				case 122:
+				case 73:
 					return -1
 				case 68:
+					return -1
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 82:
+					return -1
+				case 105:
+					return -1
+				case 122:
 					return -1
 				}
 				return -1
@@ -19205,48 +19595,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 117:
-					return -1
 				case 109:
 					return 1
+				case 85:
+					return -1
+				case 83:
+					return -1
 				case 77:
 					return 1
 				case 105:
 					return -1
 				case 73:
 					return -1
-				case 85:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 117:
 					return -1
-				case 109:
+				case 115:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 77:
 					return -1
 				case 105:
 					return 2
 				case 73:
 					return 2
-				case 85:
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 117:
 					return -1
 				case 115:
+					return -1
+				case 109:
+					return -1
+				case 85:
 					return -1
 				case 83:
 					return -1
@@ -19255,23 +19645,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 77:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
 					return 3
 				case 78:
 					return 3
 				case 117:
 					return -1
+				case 115:
+					return -1
 				case 109:
 					return -1
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
 				case 85:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
@@ -19280,24 +19670,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 77:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 117:
 					return 4
+				case 115:
+					return -1
 				case 109:
-					return -1
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 73:
 					return -1
 				case 85:
 					return 4
-				case 115:
-					return -1
 				case 83:
 					return -1
 				}
@@ -19307,48 +19697,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 109:
 					return -1
+				case 85:
+					return -1
+				case 83:
+					return 5
 				case 77:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
-				case 85:
-					return -1
-				case 115:
-					return 5
-				case 83:
-					return 5
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 117:
 					return -1
+				case 115:
+					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
 				case 77:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
-				case 85:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 117:
+					return -1
+				case 115:
+					return -1
+				case 109:
+					return -1
+				case 85:
+					return -1
+				case 83:
 					return -1
 				}
 				return -1
@@ -19359,23 +19749,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 73:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return -1
 				case 109:
 					return 1
 				case 77:
 					return 1
 				case 105:
+					return -1
+				case 73:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 115:
+					return -1
+				case 78:
+					return -1
+				case 103:
 					return -1
 				case 71:
 					return -1
@@ -19384,17 +19774,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return 2
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
 				case 103:
+					return -1
+				case 71:
 					return -1
 				case 109:
 					return -1
@@ -19402,6 +19788,35 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return 2
+				case 73:
+					return 2
+				case 83:
+					return -1
+				case 110:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 83:
+					return 3
+				case 110:
+					return -1
+				case 115:
+					return 3
+				case 78:
+					return -1
+				case 103:
+					return -1
 				case 71:
 					return -1
 				}
@@ -19415,68 +19830,43 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return -1
-				case 71:
-					return -1
 				case 73:
 					return -1
-				case 115:
-					return 3
 				case 83:
-					return 3
+					return 4
 				case 110:
 					return -1
+				case 115:
+					return 4
 				case 78:
 					return -1
 				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 77:
-					return -1
-				case 105:
-					return -1
-				case 71:
-					return -1
-				case 73:
-					return -1
-				case 115:
-					return 4
-				case 83:
-					return 4
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 73:
-					return 5
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return -1
 				case 109:
 					return -1
 				case 77:
 					return -1
 				case 105:
 					return 5
+				case 73:
+					return 5
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 115:
+					return -1
+				case 78:
+					return -1
+				case 103:
+					return -1
 				case 71:
 					return -1
 				}
@@ -19484,26 +19874,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
+				case 78:
+					return 6
+				case 103:
+					return -1
+				case 71:
+					return -1
 				case 109:
 					return -1
 				case 77:
 					return -1
 				case 105:
 					return -1
-				case 71:
-					return -1
 				case 73:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
 				case 110:
 					return 6
-				case 78:
-					return 6
-				case 103:
-					return -1
 				}
 				return -1
 			},
@@ -19515,42 +19905,42 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 115:
+					return -1
+				case 78:
+					return -1
+				case 103:
+					return 7
 				case 71:
 					return 7
-				case 73:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return 7
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 103:
-					return -1
 				case 109:
 					return -1
 				case 77:
 					return -1
 				case 105:
+					return -1
+				case 73:
+					return -1
+				case 83:
+					return -1
+				case 110:
+					return -1
+				case 115:
+					return -1
+				case 78:
+					return -1
+				case 103:
 					return -1
 				case 71:
 					return -1
@@ -19563,130 +19953,130 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 110:
+				case 78:
 					return 1
-				case 97:
+				case 80:
 					return -1
-				case 77:
+				case 109:
 					return -1
 				case 101:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
 				case 112:
 					return -1
-				case 99:
-					return -1
+				case 110:
+					return 1
 				case 65:
 					return -1
 				case 69:
 					return -1
-				case 115:
+				case 97:
 					return -1
-				case 78:
-					return 1
+				case 77:
+					return -1
+				case 99:
+					return -1
 				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 109:
+					return -1
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 112:
+					return -1
 				case 110:
+					return -1
+				case 65:
+					return 2
+				case 69:
 					return -1
 				case 97:
 					return 2
 				case 77:
 					return -1
-				case 101:
-					return -1
-				case 83:
-					return -1
-				case 112:
-					return -1
 				case 99:
 					return -1
-				case 65:
-					return 2
-				case 69:
-					return -1
-				case 115:
-					return -1
-				case 78:
-					return -1
 				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
-					return -1
-				case 69:
-					return -1
-				case 115:
-					return -1
 				case 78:
 					return -1
-				case 67:
+				case 80:
 					return -1
 				case 109:
 					return 3
-				case 80:
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 112:
 					return -1
 				case 110:
+					return -1
+				case 65:
+					return -1
+				case 69:
 					return -1
 				case 97:
 					return -1
 				case 77:
 					return 3
-				case 101:
-					return -1
-				case 83:
-					return -1
-				case 112:
-					return -1
 				case 99:
+					return -1
+				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
+				case 78:
 					return -1
 				case 80:
 					return -1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 77:
+				case 109:
 					return -1
 				case 101:
 					return 4
+				case 115:
+					return -1
 				case 83:
 					return -1
 				case 112:
 					return -1
-				case 99:
+				case 110:
 					return -1
 				case 65:
 					return -1
 				case 69:
 					return 4
-				case 115:
+				case 97:
 					return -1
-				case 78:
+				case 77:
+					return -1
+				case 99:
 					return -1
 				case 67:
 					return -1
@@ -19695,130 +20085,130 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 109:
-					return -1
-				case 80:
-					return -1
-				case 110:
-					return -1
 				case 97:
 					return -1
 				case 77:
 					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 109:
+					return -1
 				case 101:
 					return -1
+				case 115:
+					return 5
 				case 83:
 					return 5
 				case 112:
 					return -1
-				case 99:
+				case 110:
 					return -1
 				case 65:
 					return -1
 				case 69:
-					return -1
-				case 115:
-					return 5
-				case 78:
-					return -1
-				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return -1
-				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
-					return 6
 				case 110:
+					return -1
+				case 65:
+					return -1
+				case 69:
 					return -1
 				case 97:
 					return -1
 				case 77:
 					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 78:
+					return -1
+				case 80:
+					return 6
+				case 109:
+					return -1
 				case 101:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
 				case 112:
 					return 6
-				case 99:
-					return -1
-				case 65:
-					return -1
-				case 69:
-					return -1
-				case 115:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
 				case 97:
 					return 7
 				case 77:
 					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 109:
+					return -1
 				case 101:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
 				case 112:
 					return -1
-				case 99:
+				case 110:
 					return -1
 				case 65:
 					return 7
 				case 69:
 					return -1
-				case 115:
-					return -1
-				case 78:
-					return -1
-				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 77:
+				case 109:
 					return -1
 				case 101:
+					return -1
+				case 115:
 					return -1
 				case 83:
 					return -1
 				case 112:
 					return -1
-				case 99:
-					return 8
+				case 110:
+					return -1
 				case 65:
 					return -1
 				case 69:
 					return -1
-				case 115:
+				case 97:
 					return -1
-				case 78:
+				case 77:
 					return -1
+				case 99:
+					return 8
 				case 67:
 					return 8
-				case 109:
+				case 78:
 					return -1
 				case 80:
 					return -1
@@ -19827,66 +20217,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
+				case 101:
+					return 9
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 112:
+					return -1
+				case 110:
+					return -1
 				case 65:
 					return -1
 				case 69:
 					return 9
-				case 115:
-					return -1
-				case 78:
-					return -1
-				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
-					return -1
-				case 110:
-					return -1
 				case 97:
 					return -1
 				case 77:
 					return -1
-				case 101:
-					return 9
-				case 83:
-					return -1
-				case 112:
-					return -1
 				case 99:
+					return -1
+				case 67:
+					return -1
+				case 78:
+					return -1
+				case 80:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return -1
-				case 67:
-					return -1
-				case 109:
-					return -1
-				case 80:
-					return -1
 				case 110:
-					return -1
-				case 97:
-					return -1
-				case 77:
-					return -1
-				case 101:
-					return -1
-				case 83:
-					return -1
-				case 112:
-					return -1
-				case 99:
 					return -1
 				case 65:
 					return -1
 				case 69:
 					return -1
+				case 97:
+					return -1
+				case 77:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 109:
+					return -1
+				case 101:
+					return -1
 				case 115:
+					return -1
+				case 83:
+					return -1
+				case 112:
 					return -1
 				}
 				return -1
@@ -20173,19 +20563,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 117:
 					return -1
-				case 109:
-					return -1
 				case 77:
-					return -1
-				case 66:
-					return -1
-				case 82:
-					return -1
-				case 98:
 					return -1
 				case 101:
 					return -1
 				case 69:
+					return -1
+				case 82:
+					return -1
+				case 109:
+					return -1
+				case 98:
+					return -1
+				case 66:
 					return -1
 				case 114:
 					return -1
@@ -20194,11 +20584,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 98:
 					return -1
-				case 101:
-					return -1
-				case 69:
+				case 66:
 					return -1
 				case 114:
 					return -1
@@ -20208,11 +20598,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 117:
 					return 2
-				case 109:
-					return -1
 				case 77:
 					return -1
-				case 66:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return -1
@@ -20221,38 +20611,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 117:
-					return -1
 				case 109:
 					return 3
-				case 77:
-					return 3
+				case 98:
+					return -1
 				case 66:
-					return -1
-				case 82:
-					return -1
-				case 98:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 98:
-					return 4
-				case 101:
-					return -1
-				case 69:
 					return -1
 				case 114:
 					return -1
@@ -20262,12 +20625,12 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 109:
-					return -1
 				case 77:
+					return 3
+				case 101:
 					return -1
-				case 66:
-					return 4
+				case 69:
+					return -1
 				case 82:
 					return -1
 				}
@@ -20281,32 +20644,59 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 109:
-					return -1
 				case 77:
 					return -1
-				case 66:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return -1
+				case 109:
+					return -1
 				case 98:
+					return 4
+				case 66:
+					return 4
+				case 114:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 109:
+					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 114:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 117:
+					return -1
+				case 77:
 					return -1
 				case 101:
 					return 5
 				case 69:
 					return 5
-				case 114:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 98:
 					return -1
-				case 101:
-					return -1
-				case 69:
+				case 66:
 					return -1
 				case 114:
 					return 6
@@ -20316,11 +20706,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 109:
-					return -1
 				case 77:
 					return -1
-				case 66:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return 6
@@ -20329,11 +20719,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 109:
+					return -1
 				case 98:
 					return -1
-				case 101:
-					return -1
-				case 69:
+				case 66:
 					return -1
 				case 114:
 					return -1
@@ -20343,11 +20733,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 109:
-					return -1
 				case 77:
 					return -1
-				case 66:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return -1
@@ -20360,23 +20750,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 79:
-					return 1
-				case 66:
-					return -1
-				case 74:
-					return -1
-				case 69:
-					return -1
 				case 111:
 					return 1
-				case 98:
-					return -1
-				case 106:
+				case 79:
+					return 1
+				case 74:
 					return -1
 				case 101:
 					return -1
-				case 99:
+				case 69:
 					return -1
 				case 67:
 					return -1
@@ -20384,28 +20766,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 106:
+					return -1
+				case 99:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 79:
-					return -1
-				case 66:
-					return 2
-				case 74:
-					return -1
-				case 69:
-					return -1
 				case 111:
 					return -1
-				case 98:
-					return 2
-				case 106:
+				case 79:
+					return -1
+				case 74:
 					return -1
 				case 101:
 					return -1
-				case 99:
+				case 69:
 					return -1
 				case 67:
 					return -1
@@ -20413,87 +20795,95 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 98:
+					return 2
+				case 66:
+					return 2
+				case 106:
+					return -1
+				case 99:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 79:
+				case 98:
 					return -1
 				case 66:
-					return -1
-				case 74:
-					return 3
-				case 69:
-					return -1
-				case 111:
-					return -1
-				case 98:
 					return -1
 				case 106:
 					return 3
-				case 101:
-					return -1
 				case 99:
 					return -1
-				case 67:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 79:
-					return -1
-				case 66:
-					return -1
-				case 74:
-					return -1
-				case 69:
-					return 4
 				case 111:
 					return -1
-				case 98:
-					return -1
-				case 106:
-					return -1
-				case 101:
-					return 4
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 79:
 					return -1
-				case 66:
-					return -1
 				case 74:
+					return 3
+				case 101:
 					return -1
 				case 69:
 					return -1
-				case 111:
+				case 67:
 					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 106:
 					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 74:
+					return -1
 				case 101:
+					return 4
+				case 69:
+					return 4
+				case 67:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 98:
+					return -1
+				case 66:
+					return -1
+				case 106:
 					return -1
 				case 99:
 					return 5
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 74:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 67:
 					return 5
 				case 116:
@@ -20505,15 +20895,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 111:
-					return -1
 				case 98:
+					return -1
+				case 66:
 					return -1
 				case 106:
 					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 74:
+					return -1
 				case 101:
 					return -1
-				case 99:
+				case 69:
 					return -1
 				case 67:
 					return -1
@@ -20521,14 +20919,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 84:
 					return 6
-				case 79:
-					return -1
-				case 66:
-					return -1
-				case 74:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
@@ -20536,13 +20926,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 98:
+				case 79:
 					return -1
-				case 106:
+				case 74:
 					return -1
 				case 101:
 					return -1
-				case 99:
+				case 69:
 					return -1
 				case 67:
 					return -1
@@ -20550,13 +20940,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 79:
+				case 98:
 					return -1
 				case 66:
 					return -1
-				case 74:
+				case 106:
 					return -1
-				case 69:
+				case 99:
 					return -1
 				}
 				return -1
@@ -20571,14 +20961,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 79:
 					return 1
-				case 102:
-					return -1
-				case 70:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
 				case 101:
 					return -1
 				case 69:
@@ -20586,6 +20968,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 102:
+					return -1
+				case 70:
+					return -1
+				case 115:
+					return -1
+				case 83:
 					return -1
 				}
 				return -1
@@ -20595,6 +20985,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 111:
 					return -1
 				case 79:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 102:
 					return 2
@@ -20604,14 +21002,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				}
 				return -1
 			},
@@ -20620,6 +21010,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 111:
 					return -1
 				case 79:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 102:
 					return 3
@@ -20629,6 +21027,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 102:
+					return -1
+				case 70:
+					return -1
+				case 115:
+					return 4
+				case 83:
+					return 4
+				case 111:
+					return -1
+				case 79:
+					return -1
 				case 101:
 					return -1
 				case 69:
@@ -20642,35 +21057,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 102:
-					return -1
-				case 70:
-					return -1
-				case 115:
-					return 4
-				case 83:
-					return 4
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 111:
-					return -1
-				case 79:
-					return -1
 				case 102:
 					return -1
 				case 70:
@@ -20678,6 +21064,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 115:
 					return -1
 				case 83:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 101:
 					return 5
@@ -20696,14 +21086,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 79:
 					return -1
-				case 102:
-					return -1
-				case 70:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
 				case 101:
 					return -1
 				case 69:
@@ -20712,15 +21094,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 84:
 					return 6
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 111:
-					return -1
-				case 79:
-					return -1
 				case 102:
 					return -1
 				case 70:
@@ -20728,6 +21101,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 115:
 					return -1
 				case 83:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 102:
+					return -1
+				case 70:
+					return -1
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 101:
 					return -1
@@ -20789,16 +21179,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 111:
-					return 1
-				case 80:
-					return -1
-				case 84:
-					return -1
-				case 78:
-					return -1
-				case 79:
-					return 1
 				case 112:
 					return -1
 				case 116:
@@ -20809,12 +21189,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 110:
 					return -1
+				case 111:
+					return 1
+				case 79:
+					return 1
+				case 80:
+					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 111:
+					return -1
 				case 79:
+					return -1
+				case 80:
+					return 2
+				case 84:
+					return -1
+				case 78:
 					return -1
 				case 112:
 					return 2
@@ -20826,14 +21224,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 110:
 					return -1
-				case 111:
-					return -1
-				case 80:
-					return 2
-				case 84:
-					return -1
-				case 78:
-					return -1
 				}
 				return -1
 			},
@@ -20841,13 +21231,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
+				case 79:
+					return -1
 				case 80:
 					return -1
 				case 84:
 					return 3
 				case 78:
-					return -1
-				case 79:
 					return -1
 				case 112:
 					return -1
@@ -20864,7 +21254,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 111:
+					return -1
 				case 79:
+					return -1
+				case 80:
+					return -1
+				case 84:
+					return -1
+				case 78:
 					return -1
 				case 112:
 					return -1
@@ -20876,14 +21274,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 110:
 					return -1
-				case 111:
-					return -1
-				case 80:
-					return -1
-				case 84:
-					return -1
-				case 78:
-					return -1
 				}
 				return -1
 			},
@@ -20891,14 +21281,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return 5
+				case 79:
+					return 5
 				case 80:
 					return -1
 				case 84:
 					return -1
 				case 78:
 					return -1
-				case 79:
-					return 5
 				case 112:
 					return -1
 				case 116:
@@ -20914,8 +21304,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 79:
-					return -1
 				case 112:
 					return -1
 				case 116:
@@ -20928,6 +21316,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 111:
 					return -1
+				case 79:
+					return -1
 				case 80:
 					return -1
 				case 84:
@@ -20939,7 +21329,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 111:
+					return -1
 				case 79:
+					return -1
+				case 80:
+					return -1
+				case 84:
+					return -1
+				case 78:
 					return -1
 				case 112:
 					return -1
@@ -20950,14 +21348,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 73:
 					return -1
 				case 110:
-					return -1
-				case 111:
-					return -1
-				case 80:
-					return -1
-				case 84:
-					return -1
-				case 78:
 					return -1
 				}
 				return -1
@@ -21141,25 +21531,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 79:
-					return 1
 				case 117:
-					return -1
-				case 85:
 					return -1
 				case 116:
 					return -1
-				case 84:
-					return -1
 				case 69:
+					return -1
+				case 114:
+					return -1
+				case 82:
 					return -1
 				case 111:
 					return 1
+				case 79:
+					return 1
+				case 85:
+					return -1
+				case 84:
+					return -1
 				case 101:
-					return -1
-				case 114:
-					return -1
-				case 82:
 					return -1
 				}
 				return -1
@@ -21168,44 +21558,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 111:
 					return -1
-				case 101:
-					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
 				case 79:
+					return -1
+				case 85:
+					return 2
+				case 84:
+					return -1
+				case 101:
 					return -1
 				case 117:
 					return 2
-				case 85:
-					return 2
 				case 116:
 					return -1
-				case 84:
-					return -1
 				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 79:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 116:
-					return 3
-				case 84:
-					return 3
-				case 69:
-					return -1
-				case 111:
-					return -1
-				case 101:
 					return -1
 				case 114:
 					return -1
@@ -21216,21 +21581,46 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 79:
-					return -1
 				case 117:
+					return -1
+				case 116:
+					return 3
+				case 69:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 111:
+					return -1
+				case 79:
 					return -1
 				case 85:
 					return -1
-				case 116:
+				case 84:
+					return 3
+				case 101:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 85:
 					return -1
 				case 84:
 					return -1
-				case 69:
-					return 4
-				case 111:
-					return -1
 				case 101:
+					return 4
+				case 117:
+					return -1
+				case 116:
+					return -1
+				case 69:
 					return 4
 				case 114:
 					return -1
@@ -21241,46 +21631,46 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 111:
+				case 117:
 					return -1
-				case 101:
+				case 116:
+					return -1
+				case 69:
 					return -1
 				case 114:
 					return 5
 				case 82:
 					return 5
-				case 79:
+				case 111:
 					return -1
-				case 117:
+				case 79:
 					return -1
 				case 85:
 					return -1
-				case 116:
-					return -1
 				case 84:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 79:
+				case 111:
 					return -1
-				case 117:
+				case 79:
 					return -1
 				case 85:
 					return -1
-				case 116:
-					return -1
 				case 84:
 					return -1
-				case 69:
-					return -1
-				case 111:
-					return -1
 				case 101:
+					return -1
+				case 117:
+					return -1
+				case 116:
+					return -1
+				case 69:
 					return -1
 				case 114:
 					return -1
@@ -21404,330 +21794,330 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 73:
-					return -1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 114:
-					return -1
-				case 111:
-					return -1
-				case 78:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 112:
-					return 1
 				case 80:
 					return 1
 				case 82:
 					return -1
-				case 116:
-					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
+				case 111:
+					return -1
+				case 110:
+					return -1
+				case 112:
+					return 1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
 				case 79:
+					return -1
+				case 84:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return 2
-				case 114:
-					return -1
-				case 111:
-					return -1
-				case 78:
-					return -1
-				case 65:
-					return 2
-				case 84:
-					return -1
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 82:
 					return -1
-				case 116:
-					return -1
 				case 105:
-					return -1
-				case 79:
 					return -1
 				case 73:
 					return -1
+				case 111:
+					return -1
 				case 110:
+					return -1
+				case 112:
+					return -1
+				case 97:
+					return 2
+				case 65:
+					return 2
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 79:
+					return -1
+				case 84:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 112:
+				case 84:
+					return -1
+				case 78:
 					return -1
 				case 80:
 					return -1
 				case 82:
 					return 3
-				case 116:
-					return -1
 				case 105:
-					return -1
-				case 79:
 					return -1
 				case 73:
 					return -1
+				case 111:
+					return -1
 				case 110:
 					return -1
+				case 112:
+					return -1
 				case 97:
+					return -1
+				case 65:
 					return -1
 				case 114:
 					return 3
-				case 111:
+				case 116:
 					return -1
-				case 78:
-					return -1
-				case 65:
-					return -1
-				case 84:
+				case 79:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
-					return -1
-				case 84:
-					return 4
 				case 112:
 					return -1
-				case 80:
+				case 97:
 					return -1
-				case 82:
+				case 65:
+					return -1
+				case 114:
 					return -1
 				case 116:
 					return 4
-				case 105:
-					return -1
 				case 79:
+					return -1
+				case 84:
+					return 4
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 82:
+					return -1
+				case 105:
 					return -1
 				case 73:
 					return -1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 114:
-					return -1
 				case 111:
 					return -1
-				case 78:
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return 5
-				case 110:
+				case 112:
 					return -1
 				case 97:
 					return -1
+				case 65:
+					return -1
 				case 114:
 					return -1
-				case 111:
+				case 116:
 					return -1
-				case 78:
-					return -1
-				case 65:
+				case 79:
 					return -1
 				case 84:
 					return -1
-				case 112:
+				case 78:
 					return -1
 				case 80:
 					return -1
 				case 82:
-					return -1
-				case 116:
 					return -1
 				case 105:
 					return 5
-				case 79:
+				case 73:
+					return 5
+				case 111:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 114:
-					return -1
-				case 111:
-					return -1
-				case 78:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return 6
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 82:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 111:
+					return -1
+				case 110:
+					return -1
+				case 112:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 114:
 					return -1
 				case 116:
 					return 6
-				case 105:
-					return -1
 				case 79:
 					return -1
-				case 73:
-					return -1
-				case 110:
+				case 84:
+					return 6
+				case 78:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 112:
+				case 84:
+					return -1
+				case 78:
 					return -1
 				case 80:
 					return -1
 				case 82:
-					return -1
-				case 116:
 					return -1
 				case 105:
 					return 7
-				case 79:
-					return -1
 				case 73:
 					return 7
+				case 111:
+					return -1
 				case 110:
+					return -1
+				case 112:
 					return -1
 				case 97:
 					return -1
-				case 114:
-					return -1
-				case 111:
-					return -1
-				case 78:
-					return -1
 				case 65:
 					return -1
-				case 84:
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 79:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 65:
-					return -1
-				case 84:
-					return -1
 				case 112:
 					return -1
-				case 80:
+				case 97:
 					return -1
-				case 82:
+				case 65:
+					return -1
+				case 114:
 					return -1
 				case 116:
-					return -1
-				case 105:
 					return -1
 				case 79:
 					return 8
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 80:
+					return -1
+				case 82:
+					return -1
+				case 105:
+					return -1
 				case 73:
-					return -1
-				case 110:
-					return -1
-				case 97:
-					return -1
-				case 114:
 					return -1
 				case 111:
 					return 8
-				case 78:
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 112:
 					return -1
-				case 110:
-					return 9
 				case 97:
+					return -1
+				case 65:
 					return -1
 				case 114:
 					return -1
-				case 111:
+				case 116:
 					return -1
-				case 78:
-					return 9
-				case 65:
+				case 79:
 					return -1
 				case 84:
 					return -1
-				case 112:
-					return -1
+				case 78:
+					return 9
 				case 80:
 					return -1
 				case 82:
 					return -1
-				case 116:
-					return -1
 				case 105:
 					return -1
-				case 79:
+				case 73:
 					return -1
+				case 111:
+					return -1
+				case 110:
+					return 9
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 114:
-					return -1
-				case 111:
-					return -1
-				case 78:
-					return -1
-				case 65:
-					return -1
-				case 84:
-					return -1
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 82:
 					return -1
-				case 116:
-					return -1
 				case 105:
-					return -1
-				case 79:
 					return -1
 				case 73:
 					return -1
+				case 111:
+					return -1
 				case 110:
+					return -1
+				case 112:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 79:
+					return -1
+				case 84:
+					return -1
+				case 78:
 					return -1
 				}
 				return -1
@@ -21738,297 +22128,297 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 111:
+					return -1
+				case 100:
+					return -1
+				case 68:
+					return -1
 				case 112:
 					return 1
-				case 82:
-					return -1
-				case 97:
-					return -1
+				case 80:
+					return 1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 119:
 					return -1
 				case 79:
 					return -1
-				case 80:
-					return 1
-				case 115:
+				case 82:
 					return -1
-				case 111:
+				case 97:
 					return -1
-				case 114:
-					return -1
-				case 100:
+				case 83:
 					return -1
 				case 87:
 					return -1
-				case 68:
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return 2
-				case 65:
-					return 2
-				case 83:
-					return -1
-				case 119:
-					return -1
-				case 79:
-					return -1
-				case 80:
-					return -1
-				case 115:
-					return -1
 				case 111:
 					return -1
-				case 114:
-					return -1
 				case 100:
-					return -1
-				case 87:
 					return -1
 				case 68:
 					return -1
 				case 112:
 					return -1
+				case 80:
+					return -1
+				case 65:
+					return 2
+				case 115:
+					return -1
+				case 119:
+					return -1
+				case 79:
+					return -1
 				case 82:
+					return -1
+				case 97:
+					return 2
+				case 83:
+					return -1
+				case 87:
+					return -1
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 87:
-					return -1
-				case 68:
-					return -1
 				case 112:
 					return -1
-				case 82:
-					return -1
-				case 97:
+				case 80:
 					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return 3
 				case 119:
 					return -1
 				case 79:
 					return -1
-				case 80:
+				case 82:
 					return -1
-				case 115:
+				case 97:
+					return -1
+				case 83:
 					return 3
-				case 111:
+				case 87:
 					return -1
 				case 114:
 					return -1
+				case 111:
+					return -1
 				case 100:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 87:
-					return -1
-				case 68:
-					return -1
 				case 112:
 					return -1
-				case 82:
-					return -1
-				case 97:
+				case 80:
 					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return 4
 				case 119:
 					return -1
 				case 79:
 					return -1
-				case 80:
+				case 82:
 					return -1
-				case 115:
+				case 97:
+					return -1
+				case 83:
 					return 4
-				case 111:
+				case 87:
 					return -1
 				case 114:
 					return -1
+				case 111:
+					return -1
 				case 100:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 87:
-					return 5
-				case 68:
-					return -1
 				case 112:
 					return -1
-				case 82:
-					return -1
-				case 97:
+				case 80:
 					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 119:
 					return 5
 				case 79:
 					return -1
-				case 80:
+				case 82:
 					return -1
-				case 115:
+				case 97:
+					return -1
+				case 83:
+					return -1
+				case 87:
+					return 5
+				case 114:
 					return -1
 				case 111:
 					return -1
-				case 114:
-					return -1
 				case 100:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return -1
+				case 83:
+					return -1
 				case 87:
+					return -1
+				case 114:
+					return -1
+				case 111:
+					return 6
+				case 100:
 					return -1
 				case 68:
 					return -1
 				case 112:
 					return -1
-				case 82:
-					return -1
-				case 97:
+				case 80:
 					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 119:
 					return -1
 				case 79:
 					return 6
-				case 80:
-					return -1
-				case 115:
-					return -1
-				case 111:
-					return 6
-				case 114:
-					return -1
-				case 100:
+				case 82:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 115:
-					return -1
 				case 111:
 					return -1
-				case 114:
-					return 7
 				case 100:
-					return -1
-				case 87:
 					return -1
 				case 68:
 					return -1
 				case 112:
+					return -1
+				case 80:
+					return -1
+				case 65:
+					return -1
+				case 115:
+					return -1
+				case 119:
+					return -1
+				case 79:
 					return -1
 				case 82:
 					return 7
 				case 97:
 					return -1
+				case 83:
+					return -1
+				case 87:
+					return -1
+				case 114:
+					return 7
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 111:
+					return -1
+				case 100:
+					return 8
+				case 68:
+					return 8
+				case 112:
+					return -1
+				case 80:
+					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 119:
 					return -1
 				case 79:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 83:
+					return -1
+				case 87:
+					return -1
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 83:
-					return -1
-				case 119:
-					return -1
-				case 79:
-					return -1
-				case 80:
-					return -1
-				case 115:
-					return -1
 				case 111:
 					return -1
-				case 114:
-					return -1
 				case 100:
-					return 8
-				case 87:
-					return -1
-				case 68:
-					return 8
-				case 112:
-					return -1
-				case 82:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 80:
-					return -1
-				case 115:
-					return -1
-				case 111:
-					return -1
-				case 114:
-					return -1
-				case 100:
-					return -1
-				case 87:
 					return -1
 				case 68:
 					return -1
 				case 112:
 					return -1
-				case 82:
-					return -1
-				case 97:
+				case 80:
 					return -1
 				case 65:
 					return -1
-				case 83:
+				case 115:
 					return -1
 				case 119:
 					return -1
 				case 79:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 83:
+					return -1
+				case 87:
+					return -1
+				case 114:
 					return -1
 				}
 				return -1
@@ -22409,17 +22799,36 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 112:
+					return 1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 89:
+				case 105:
 					return -1
-				case 112:
-					return 1
+				case 97:
+					return -1
+				case 121:
+					return -1
 				case 80:
 					return 1
-				case 105:
+				case 73:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 65:
+					return -1
+				case 89:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 80:
 					return -1
 				case 73:
 					return -1
@@ -22427,38 +22836,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 77:
 					return -1
-				case 97:
-					return -1
 				case 65:
 					return -1
-				case 121:
+				case 89:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
+				case 112:
+					return -1
 				case 114:
 					return 2
 				case 82:
 					return 2
-				case 89:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 121:
 					return -1
@@ -22469,25 +22859,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 112:
 					return -1
-				case 80:
+				case 114:
+					return -1
+				case 82:
 					return -1
 				case 105:
 					return 3
+				case 97:
+					return -1
+				case 121:
+					return -1
+				case 80:
+					return -1
 				case 73:
 					return 3
 				case 109:
 					return -1
 				case 77:
 					return -1
-				case 97:
-					return -1
 				case 65:
-					return -1
-				case 121:
-					return -1
-				case 114:
-					return -1
-				case 82:
 					return -1
 				case 89:
 					return -1
@@ -22496,17 +22886,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 89:
+				case 105:
 					return -1
-				case 112:
+				case 97:
+					return -1
+				case 121:
 					return -1
 				case 80:
-					return -1
-				case 105:
 					return -1
 				case 73:
 					return -1
@@ -22514,67 +22906,65 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 77:
 					return 4
-				case 97:
-					return -1
 				case 65:
 					return -1
-				case 121:
+				case 89:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
 				case 114:
 					return -1
 				case 82:
+					return -1
+				case 105:
+					return -1
+				case 97:
+					return 5
+				case 121:
+					return -1
+				case 80:
+					return -1
+				case 73:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 65:
+					return 5
+				case 89:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 80:
+					return -1
+				case 73:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 65:
 					return -1
 				case 89:
 					return -1
 				case 112:
 					return -1
-				case 80:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
-				case 97:
-					return 5
-				case 65:
-					return 5
-				case 121:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 114:
 					return 6
 				case 82:
 					return 6
-				case 89:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 121:
 					return -1
@@ -22585,25 +22975,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 112:
 					return -1
-				case 80:
+				case 114:
+					return -1
+				case 82:
 					return -1
 				case 105:
 					return -1
-				case 73:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 97:
-					return -1
-				case 65:
 					return -1
 				case 121:
 					return 7
-				case 114:
+				case 80:
 					return -1
-				case 82:
+				case 73:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 65:
 					return -1
 				case 89:
 					return 7
@@ -22612,17 +23002,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
 				case 114:
 					return -1
 				case 82:
 					return -1
-				case 89:
+				case 105:
 					return -1
-				case 112:
+				case 97:
+					return -1
+				case 121:
 					return -1
 				case 80:
-					return -1
-				case 105:
 					return -1
 				case 73:
 					return -1
@@ -22630,11 +23022,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 77:
 					return -1
-				case 97:
-					return -1
 				case 65:
 					return -1
-				case 121:
+				case 89:
 					return -1
 				}
 				return -1
@@ -22645,29 +23035,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
 				case 112:
+					return 1
+				case 82:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 80:
 					return 1
 				case 114:
 					return -1
-				case 105:
-					return -1
-				case 69:
-					return -1
-				case 80:
-					return 1
 				case 118:
 					return -1
 				case 97:
 					return -1
-				case 101:
-					return -1
-				case 86:
-					return -1
 				case 65:
 					return -1
-				case 82:
-					return -1
 				case 73:
+					return -1
+				case 86:
 					return -1
 				case 116:
 					return -1
@@ -22678,199 +23068,199 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 118:
-					return -1
-				case 97:
-					return -1
-				case 101:
+				case 73:
 					return -1
 				case 86:
-					return -1
-				case 65:
-					return -1
-				case 82:
-					return 2
-				case 73:
 					return -1
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 105:
 					return -1
 				case 112:
 					return -1
-				case 114:
+				case 82:
 					return 2
-				case 105:
+				case 101:
 					return -1
 				case 69:
+					return -1
+				case 80:
+					return -1
+				case 114:
+					return 2
+				case 118:
+					return -1
+				case 97:
+					return -1
+				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 86:
-					return -1
-				case 65:
+				case 112:
 					return -1
 				case 82:
 					return -1
-				case 73:
-					return 3
-				case 116:
+				case 101:
 					return -1
-				case 84:
-					return -1
-				case 112:
-					return -1
-				case 114:
-					return -1
-				case 105:
-					return 3
 				case 69:
 					return -1
 				case 80:
+					return -1
+				case 114:
 					return -1
 				case 118:
 					return -1
 				case 97:
 					return -1
-				case 101:
+				case 65:
 					return -1
+				case 73:
+					return 3
+				case 86:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 105:
+					return 3
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
+				case 82:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 80:
+					return -1
+				case 114:
 					return -1
 				case 118:
 					return 4
 				case 97:
 					return -1
-				case 101:
+				case 65:
+					return -1
+				case 73:
 					return -1
 				case 86:
 					return 4
-				case 65:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 112:
-					return -1
-				case 114:
-					return -1
 				case 105:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
 				case 112:
 					return -1
-				case 114:
+				case 82:
 					return -1
-				case 105:
+				case 101:
 					return -1
 				case 69:
 					return -1
 				case 80:
+					return -1
+				case 114:
 					return -1
 				case 118:
 					return -1
 				case 97:
 					return 5
-				case 101:
-					return -1
-				case 86:
-					return -1
 				case 65:
 					return 5
+				case 73:
+					return -1
+				case 86:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 105:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return 6
-				case 84:
-					return 6
 				case 112:
 					return -1
-				case 114:
+				case 82:
 					return -1
-				case 105:
+				case 101:
 					return -1
 				case 69:
 					return -1
 				case 80:
 					return -1
+				case 114:
+					return -1
 				case 118:
 					return -1
 				case 97:
 					return -1
-				case 101:
+				case 65:
+					return -1
+				case 73:
 					return -1
 				case 86:
 					return -1
-				case 65:
+				case 116:
+					return 6
+				case 84:
+					return 6
+				case 105:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 86:
-					return -1
-				case 65:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 84:
+				case 105:
 					return -1
 				case 112:
 					return -1
-				case 114:
+				case 82:
 					return -1
-				case 105:
-					return -1
+				case 101:
+					return 7
 				case 69:
 					return 7
 				case 80:
 					return -1
+				case 114:
+					return -1
 				case 118:
 					return -1
 				case 97:
 					return -1
-				case 101:
-					return 7
+				case 65:
+					return -1
+				case 73:
+					return -1
+				case 86:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				}
 				return -1
 			},
@@ -22878,29 +23268,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 80:
 					return -1
+				case 114:
+					return -1
 				case 118:
 					return -1
 				case 97:
 					return -1
-				case 101:
-					return -1
-				case 86:
-					return -1
 				case 65:
 					return -1
-				case 82:
-					return -1
 				case 73:
+					return -1
+				case 86:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 105:
+					return -1
 				case 112:
 					return -1
-				case 114:
+				case 82:
 					return -1
-				case 105:
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -22913,66 +23303,66 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 112:
-					return 1
-				case 80:
-					return 1
-				case 82:
+				case 114:
+					return -1
+				case 118:
 					return -1
 				case 105:
 					return -1
 				case 73:
 					return -1
-				case 114:
-					return -1
-				case 118:
+				case 108:
 					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 86:
-					return -1
-				case 108:
+				case 80:
+					return 1
+				case 82:
 					return -1
 				case 76:
 					return -1
 				case 101:
 					return -1
 				case 69:
+					return -1
+				case 112:
+					return 1
+				case 86:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return 2
-				case 118:
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
 					return -1
 				case 103:
 					return -1
 				case 71:
-					return -1
-				case 86:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 112:
 					return -1
 				case 80:
 					return -1
 				case 82:
 					return 2
-				case 105:
+				case 76:
 					return -1
-				case 73:
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 112:
+					return -1
+				case 86:
+					return -1
+				case 114:
+					return 2
+				case 118:
 					return -1
 				}
 				return -1
@@ -22982,39 +23372,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 114:
 					return -1
 				case 118:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 86:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 112:
-					return -1
-				case 80:
-					return -1
-				case 82:
 					return -1
 				case 105:
 					return 3
 				case 73:
 					return 3
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 86:
-					return 4
 				case 108:
+					return -1
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 80:
+					return -1
+				case 82:
 					return -1
 				case 76:
 					return -1
@@ -23024,22 +23395,41 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 112:
 					return -1
-				case 80:
+				case 86:
 					return -1
-				case 82:
-					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 105:
 					return -1
 				case 73:
 					return -1
-				case 114:
+				case 108:
 					return -1
-				case 118:
-					return 4
 				case 103:
 					return -1
 				case 71:
 					return -1
+				case 80:
+					return -1
+				case 82:
+					return -1
+				case 76:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 112:
+					return -1
+				case 86:
+					return 4
+				case 114:
+					return -1
+				case 118:
+					return 4
 				}
 				return -1
 			},
@@ -23047,25 +23437,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 112:
 					return -1
-				case 80:
+				case 86:
 					return -1
-				case 82:
+				case 114:
+					return -1
+				case 118:
 					return -1
 				case 105:
 					return 5
 				case 73:
 					return 5
-				case 114:
-					return -1
-				case 118:
+				case 108:
 					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 86:
+				case 80:
 					return -1
-				case 108:
+				case 82:
 					return -1
 				case 76:
 					return -1
@@ -23078,10 +23468,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 86:
+				case 114:
+					return -1
+				case 118:
+					return -1
+				case 105:
+					return -1
+				case 73:
 					return -1
 				case 108:
 					return 6
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 80:
+					return -1
+				case 82:
+					return -1
 				case 76:
 					return 6
 				case 101:
@@ -23090,48 +23494,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 112:
 					return -1
-				case 80:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 114:
-					return -1
-				case 118:
-					return -1
-				case 103:
-					return -1
-				case 71:
+				case 86:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 112:
-					return -1
 				case 80:
 					return -1
 				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 114:
-					return -1
-				case 118:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 86:
-					return -1
-				case 108:
 					return -1
 				case 76:
 					return -1
@@ -23139,32 +23511,32 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 7
 				case 69:
 					return 7
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 112:
 					return -1
-				case 80:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
+				case 86:
 					return -1
 				case 114:
 					return -1
 				case 118:
 					return -1
-				case 103:
-					return 8
-				case 71:
-					return 8
-				case 86:
+				case 105:
+					return -1
+				case 73:
 					return -1
 				case 108:
+					return -1
+				case 103:
+					return -1
+				case 71:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 80:
+					return -1
+				case 82:
 					return -1
 				case 76:
 					return -1
@@ -23172,32 +23544,42 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 69:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
 				case 112:
 					return -1
-				case 80:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
+				case 86:
 					return -1
 				case 114:
 					return -1
 				case 118:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
+				case 103:
+					return 8
+				case 71:
+					return 8
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 86:
+				case 80:
 					return -1
-				case 108:
+				case 82:
 					return -1
 				case 76:
 					return -1
@@ -23205,6 +23587,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 9
 				case 69:
 					return 9
+				case 112:
+					return -1
+				case 86:
+					return -1
+				case 114:
+					return -1
+				case 118:
+					return -1
 				}
 				return -1
 			},
@@ -23214,13 +23604,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 118:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
-				case 86:
+				case 80:
 					return -1
-				case 108:
+				case 82:
 					return -1
 				case 76:
 					return -1
@@ -23230,13 +23626,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 112:
 					return -1
-				case 80:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 73:
+				case 86:
 					return -1
 				}
 				return -1
@@ -23247,7 +23637,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 69:
+					return -1
+				case 100:
+					return -1
 				case 112:
+					return 1
+				case 80:
 					return 1
 				case 82:
 					return -1
@@ -23257,17 +23657,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 69:
-					return -1
-				case 80:
-					return 1
-				case 114:
-					return -1
-				case 99:
-					return -1
 				case 101:
-					return -1
-				case 100:
 					return -1
 				case 117:
 					return -1
@@ -23278,21 +23668,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 114:
-					return 2
-				case 99:
-					return -1
-				case 101:
-					return -1
-				case 100:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return 2
@@ -23302,14 +23680,36 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
+				case 101:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 114:
+					return 2
+				case 99:
+					return -1
 				case 69:
+					return -1
+				case 100:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 69:
+					return -1
+				case 100:
+					return -1
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return -1
@@ -23319,17 +23719,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 67:
 					return -1
-				case 69:
-					return -1
-				case 80:
-					return -1
-				case 114:
-					return -1
-				case 99:
-					return -1
 				case 101:
-					return -1
-				case 100:
 					return -1
 				case 117:
 					return -1
@@ -23341,6 +23731,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return -1
@@ -23350,18 +23742,47 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return 4
-				case 69:
+				case 101:
 					return -1
-				case 80:
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 114:
 					return -1
 				case 99:
 					return 4
-				case 101:
+				case 69:
 					return -1
 				case 100:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 69:
+					return 5
+				case 100:
+					return -1
+				case 112:
+					return -1
+				case 80:
+					return -1
+				case 82:
+					return -1
+				case 111:
+					return -1
+				case 79:
+					return -1
+				case 67:
+					return -1
+				case 101:
+					return 5
 				case 117:
 					return -1
 				case 85:
@@ -23373,6 +23794,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 112:
 					return -1
+				case 80:
+					return -1
 				case 82:
 					return -1
 				case 111:
@@ -23381,52 +23804,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 69:
-					return 5
-				case 80:
-					return -1
-				case 114:
-					return -1
-				case 99:
-					return -1
 				case 101:
-					return 5
-				case 100:
 					return -1
 				case 117:
 					return -1
 				case 85:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 80:
-					return -1
 				case 114:
 					return -1
 				case 99:
 					return -1
-				case 101:
-					return -1
-				case 100:
+				case 69:
 					return 6
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 112:
-					return -1
-				case 82:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 67:
-					return -1
-				case 69:
+				case 100:
 					return 6
 				}
 				return -1
@@ -23435,6 +23825,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 112:
 					return -1
+				case 80:
+					return -1
 				case 82:
 					return -1
 				case 111:
@@ -23443,28 +23835,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 69:
-					return -1
-				case 80:
-					return -1
-				case 114:
-					return -1
-				case 99:
-					return -1
 				case 101:
-					return -1
-				case 100:
 					return -1
 				case 117:
 					return 7
 				case 85:
 					return 7
+				case 114:
+					return -1
+				case 99:
+					return -1
+				case 69:
+					return -1
+				case 100:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return 8
@@ -23474,42 +23866,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 69:
+				case 101:
 					return -1
-				case 80:
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 114:
 					return 8
 				case 99:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 100:
-					return -1
-				case 117:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 114:
-					return -1
-				case 99:
-					return -1
-				case 101:
-					return 9
-				case 100:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return -1
@@ -23519,14 +23897,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
+				case 101:
+					return 9
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 114:
+					return -1
+				case 99:
+					return -1
 				case 69:
 					return 9
+				case 100:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 112:
+					return -1
+				case 80:
 					return -1
 				case 82:
 					return -1
@@ -23536,21 +23928,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 69:
+				case 101:
 					return -1
-				case 80:
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 114:
 					return -1
 				case 99:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				case 100:
-					return -1
-				case 117:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
@@ -23565,52 +23955,52 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 117:
 					return -1
-				case 98:
+				case 85:
 					return -1
 				case 66:
 					return -1
-				case 76:
+				case 108:
 					return -1
 				case 105:
-					return -1
-				case 73:
-					return -1
-				case 67:
 					return -1
 				case 80:
 					return 1
-				case 85:
+				case 98:
 					return -1
-				case 108:
+				case 76:
+					return -1
+				case 73:
 					return -1
 				case 99:
+					return -1
+				case 67:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 85:
-					return 2
-				case 108:
-					return -1
-				case 99:
-					return -1
 				case 112:
 					return -1
 				case 117:
 					return 2
-				case 98:
-					return -1
+				case 85:
+					return 2
 				case 66:
 					return -1
-				case 76:
+				case 108:
 					return -1
 				case 105:
 					return -1
+				case 80:
+					return -1
+				case 98:
+					return -1
+				case 76:
+					return -1
 				case 73:
+					return -1
+				case 99:
 					return -1
 				case 67:
 					return -1
@@ -23619,88 +24009,59 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 80:
-					return -1
-				case 85:
-					return -1
-				case 108:
-					return -1
-				case 99:
-					return -1
 				case 112:
 					return -1
 				case 117:
+					return -1
+				case 85:
+					return -1
+				case 66:
+					return 3
+				case 108:
+					return -1
+				case 105:
+					return -1
+				case 80:
 					return -1
 				case 98:
 					return 3
-				case 66:
-					return 3
 				case 76:
 					return -1
-				case 105:
-					return -1
 				case 73:
-					return -1
-				case 67:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 112:
-					return -1
-				case 117:
-					return -1
-				case 98:
-					return -1
-				case 66:
-					return -1
-				case 76:
-					return 4
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 67:
-					return -1
-				case 80:
-					return -1
-				case 85:
-					return -1
-				case 108:
-					return 4
-				case 99:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 112:
-					return -1
-				case 117:
-					return -1
-				case 98:
-					return -1
-				case 66:
-					return -1
-				case 76:
-					return -1
-				case 105:
-					return 5
-				case 73:
-					return 5
-				case 67:
-					return -1
-				case 80:
-					return -1
-				case 85:
-					return -1
-				case 108:
 					return -1
 				case 99:
 					return -1
+				case 67:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 80:
+					return -1
+				case 98:
+					return -1
+				case 76:
+					return 4
+				case 73:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
+				case 112:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 66:
+					return -1
+				case 108:
+					return 4
+				case 105:
+					return -1
 				}
 				return -1
 			},
@@ -23710,54 +24071,83 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 117:
 					return -1
-				case 98:
+				case 85:
 					return -1
 				case 66:
 					return -1
+				case 108:
+					return -1
+				case 105:
+					return 5
+				case 80:
+					return -1
+				case 98:
+					return -1
 				case 76:
+					return -1
+				case 73:
+					return 5
+				case 99:
+					return -1
+				case 67:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 112:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 66:
+					return -1
+				case 108:
 					return -1
 				case 105:
 					return -1
+				case 80:
+					return -1
+				case 98:
+					return -1
+				case 76:
+					return -1
 				case 73:
 					return -1
-				case 67:
+				case 99:
 					return 6
-				case 80:
-					return -1
-				case 85:
-					return -1
-				case 108:
-					return -1
-				case 99:
+				case 67:
 					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 80:
+					return -1
+				case 98:
+					return -1
+				case 76:
+					return -1
+				case 73:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
 				case 112:
 					return -1
 				case 117:
 					return -1
-				case 98:
+				case 85:
 					return -1
 				case 66:
 					return -1
-				case 76:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 67:
-					return -1
-				case 80:
-					return -1
-				case 85:
-					return -1
 				case 108:
 					return -1
-				case 99:
+				case 105:
 					return -1
 				}
 				return -1
@@ -23840,40 +24230,40 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 82:
+					return 1
+				case 65:
+					return -1
+				case 108:
+					return -1
+				case 109:
+					return -1
+				case 114:
+					return 1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 97:
 					return -1
-				case 108:
-					return -1
-				case 77:
-					return -1
-				case 114:
-					return 1
-				case 82:
-					return 1
-				case 65:
-					return -1
 				case 76:
 					return -1
-				case 109:
+				case 77:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 65:
 					return -1
-				case 76:
+				case 108:
 					return -1
 				case 109:
+					return -1
+				case 114:
 					return -1
 				case 101:
 					return 2
@@ -23881,7 +24271,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 2
 				case 97:
 					return -1
-				case 108:
+				case 76:
 					return -1
 				case 77:
 					return -1
@@ -23890,25 +24280,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 82:
+					return -1
+				case 65:
+					return 3
+				case 108:
+					return -1
+				case 109:
+					return -1
+				case 114:
+					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 97:
 					return 3
-				case 108:
-					return -1
-				case 77:
-					return -1
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 65:
-					return 3
 				case 76:
 					return -1
-				case 109:
+				case 77:
 					return -1
 				}
 				return -1
@@ -23917,71 +24307,71 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 76:
-					return 4
-				case 109:
-					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 97:
 					return -1
-				case 108:
+				case 76:
 					return 4
 				case 77:
+					return -1
+				case 82:
+					return -1
+				case 65:
+					return -1
+				case 108:
+					return 4
+				case 109:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 101:
+				case 82:
 					return -1
-				case 69:
-					return -1
-				case 97:
+				case 65:
 					return -1
 				case 108:
 					return -1
-				case 77:
+				case 109:
 					return 5
 				case 114:
 					return -1
-				case 82:
+				case 101:
 					return -1
-				case 65:
+				case 69:
+					return -1
+				case 97:
 					return -1
 				case 76:
 					return -1
-				case 109:
+				case 77:
 					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 114:
+					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
 				case 97:
 					return -1
-				case 108:
+				case 76:
 					return -1
 				case 77:
-					return -1
-				case 114:
 					return -1
 				case 82:
 					return -1
 				case 65:
 					return -1
-				case 76:
+				case 108:
 					return -1
 				case 109:
 					return -1
@@ -23994,7 +24384,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 100:
+				case 114:
+					return 1
+				case 69:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -24002,17 +24396,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 67:
 					return -1
-				case 114:
-					return 1
 				case 82:
 					return 1
 				case 101:
 					return -1
-				case 69:
+				case 100:
 					return -1
 				case 68:
-					return -1
-				case 117:
 					return -1
 				}
 				return -1
@@ -24020,18 +24410,43 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 114:
+					return -1
+				case 69:
+					return 2
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 82:
 					return -1
 				case 101:
 					return 2
-				case 69:
-					return 2
+				case 100:
+					return -1
 				case 68:
 					return -1
-				case 117:
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 82:
+					return -1
+				case 101:
 					return -1
 				case 100:
+					return 3
+				case 68:
+					return 3
+				case 114:
+					return -1
+				case 69:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -24046,55 +24461,42 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
-				case 68:
-					return 3
 				case 117:
-					return -1
-				case 100:
-					return 3
-				case 85:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 100:
-					return -1
+					return 4
 				case 85:
 					return 4
 				case 99:
 					return -1
 				case 67:
 					return -1
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
 					return -1
-				case 69:
+				case 100:
 					return -1
 				case 68:
 					return -1
-				case 117:
-					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 82:
+					return -1
+				case 101:
+					return -1
 				case 100:
+					return -1
+				case 68:
+					return -1
+				case 114:
+					return -1
+				case 69:
+					return -1
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -24102,36 +24504,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 5
 				case 67:
 					return 5
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 68:
-					return -1
-				case 117:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
 					return 6
-				case 69:
-					return 6
+				case 100:
+					return -1
 				case 68:
 					return -1
-				case 117:
+				case 114:
 					return -1
-				case 100:
+				case 69:
+					return 6
+				case 117:
 					return -1
 				case 85:
 					return -1
@@ -24146,23 +24536,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
-				case 68:
-					return -1
 				case 117:
-					return -1
-				case 100:
 					return -1
 				case 85:
 					return -1
 				case 99:
 					return -1
 				case 67:
+					return -1
+				case 82:
+					return -1
+				case 101:
+					return -1
+				case 100:
+					return -1
+				case 68:
 					return -1
 				}
 				return -1
@@ -24175,48 +24565,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return 1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 65:
 					return -1
 				case 109:
+					return -1
+				case 77:
 					return -1
 				case 82:
 					return 1
-				case 101:
-					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 97:
-					return -1
-				case 77:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 82:
-					return -1
-				case 101:
-					return 2
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 97:
-					return -1
-				case 77:
-					return -1
-				case 114:
-					return -1
-				case 69:
-					return 2
-				case 65:
-					return -1
-				case 109:
 					return -1
 				}
 				return -1
@@ -24225,15 +24590,42 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
+				case 101:
+					return 2
+				case 69:
+					return 2
+				case 65:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 97:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 114:
+					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 65:
 					return -1
 				case 109:
 					return -1
-				case 82:
+				case 77:
 					return -1
-				case 101:
+				case 82:
 					return -1
 				case 110:
 					return 3
@@ -24241,14 +24633,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 97:
 					return -1
-				case 77:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 97:
+					return 4
 				case 114:
+					return -1
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -24256,16 +24656,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 109:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 97:
-					return 4
 				case 77:
 					return -1
 				}
@@ -24275,23 +24665,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 82:
 					return -1
-				case 101:
-					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 97:
 					return -1
-				case 77:
+				case 114:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 65:
+					return -1
+				case 109:
 					return 5
-				case 114:
-					return -1
-				case 69:
-					return -1
-				case 65:
-					return -1
-				case 109:
+				case 77:
 					return 5
 				}
 				return -1
@@ -24300,23 +24690,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
+				case 101:
+					return 6
 				case 69:
 					return 6
 				case 65:
 					return -1
 				case 109:
 					return -1
+				case 77:
+					return -1
 				case 82:
 					return -1
-				case 101:
-					return 6
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 97:
-					return -1
-				case 77:
 					return -1
 				}
 				return -1
@@ -24325,23 +24715,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 65:
 					return -1
 				case 109:
 					return -1
-				case 82:
+				case 77:
 					return -1
-				case 101:
+				case 82:
 					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
 				case 97:
-					return -1
-				case 77:
 					return -1
 				}
 				return -1
@@ -24352,48 +24742,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 84:
-					return -1
 				case 114:
 					return 1
-				case 82:
-					return 1
-				case 101:
-					return -1
 				case 69:
 					return -1
 				case 116:
 					return -1
-				case 117:
-					return -1
 				case 85:
 					return -1
-				case 110:
-					return -1
 				case 78:
+					return -1
+				case 82:
+					return 1
+				case 101:
+					return -1
+				case 84:
+					return -1
+				case 117:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return -1
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
 					return 2
+				case 84:
+					return -1
+				case 117:
+					return -1
+				case 110:
+					return -1
+				case 114:
+					return -1
 				case 69:
 					return 2
 				case 116:
 					return -1
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
@@ -24402,23 +24792,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return 3
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
+					return -1
+				case 84:
+					return 3
+				case 117:
+					return -1
+				case 110:
+					return -1
+				case 114:
 					return -1
 				case 69:
 					return -1
 				case 116:
 					return 3
-				case 117:
-					return -1
 				case 85:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
@@ -24427,25 +24817,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
+					return -1
+				case 84:
+					return -1
+				case 117:
+					return 4
+				case 110:
+					return -1
+				case 114:
 					return -1
 				case 69:
 					return -1
 				case 116:
 					return -1
-				case 117:
-					return 4
 				case 85:
 					return 4
-				case 110:
-					return -1
 				case 78:
-					return -1
-				case 84:
 					return -1
 				}
 				return -1
@@ -24454,23 +24844,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return 5
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 85:
+					return -1
+				case 78:
+					return -1
 				case 82:
 					return 5
 				case 101:
 					return -1
-				case 69:
-					return -1
-				case 116:
+				case 84:
 					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 110:
-					return -1
-				case 78:
-					return -1
-				case 84:
 					return -1
 				}
 				return -1
@@ -24479,48 +24869,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
 				case 116:
 					return -1
-				case 117:
-					return -1
 				case 85:
+					return -1
+				case 78:
+					return 6
+				case 82:
+					return -1
+				case 101:
+					return -1
+				case 84:
+					return -1
+				case 117:
 					return -1
 				case 110:
 					return 6
-				case 78:
-					return 6
-				case 84:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 101:
+					return -1
+				case 84:
+					return -1
+				case 117:
+					return -1
+				case 110:
+					return -1
+				case 114:
 					return -1
 				case 69:
 					return -1
 				case 116:
 					return -1
-				case 117:
-					return -1
 				case 85:
 					return -1
-				case 110:
-					return -1
 				case 78:
-					return -1
-				case 84:
 					return -1
 				}
 				return -1
@@ -24531,29 +24921,62 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 105:
-					return -1
-				case 103:
-					return -1
-				case 71:
+				case 101:
 					return -1
 				case 85:
 					return -1
 				case 114:
 					return 1
+				case 105:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 73:
+					return -1
 				case 82:
 					return 1
-				case 101:
-					return -1
-				case 84:
+				case 117:
 					return -1
 				case 110:
+					return -1
+				case 103:
+					return -1
+				case 71:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 82:
+					return -1
+				case 117:
+					return -1
+				case 110:
+					return -1
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 101:
+					return 2
+				case 85:
+					return -1
+				case 114:
+					return -1
+				case 105:
+					return -1
+				case 69:
+					return 2
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 78:
 					return -1
@@ -24566,29 +24989,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
+				case 105:
 					return -1
-				case 101:
-					return 2
+				case 69:
+					return -1
+				case 116:
+					return 3
 				case 84:
-					return -1
-				case 110:
-					return -1
+					return 3
 				case 78:
 					return -1
 				case 73:
 					return -1
-				case 69:
-					return 2
-				case 116:
+				case 82:
 					return -1
 				case 117:
 					return -1
-				case 105:
+				case 110:
 					return -1
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 101:
 					return -1
 				case 85:
 					return -1
@@ -24599,62 +25022,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return 3
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 73:
-					return -1
-				case 69:
-					return -1
-				case 116:
-					return 3
-				case 117:
-					return -1
 				case 105:
 					return -1
-				case 103:
+				case 69:
 					return -1
-				case 71:
-					return -1
-				case 85:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 101:
+				case 116:
 					return -1
 				case 84:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
 				case 73:
 					return -1
-				case 69:
-					return -1
-				case 116:
+				case 82:
 					return -1
 				case 117:
 					return 4
-				case 105:
+				case 110:
 					return -1
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 101:
 					return -1
 				case 85:
 					return 4
@@ -24663,63 +25053,63 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
+				case 69:
 					return -1
-				case 114:
-					return 5
-				case 82:
-					return 5
-				case 101:
+				case 116:
 					return -1
 				case 84:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
 				case 73:
 					return -1
-				case 69:
-					return -1
-				case 116:
-					return -1
+				case 82:
+					return 5
 				case 117:
 					return -1
-				case 105:
+				case 110:
 					return -1
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 101:
+					return -1
+				case 85:
+					return -1
+				case 114:
+					return 5
+				case 105:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 105:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 85:
-					return -1
-				case 114:
-					return -1
 				case 82:
 					return -1
-				case 101:
-					return -1
-				case 84:
+				case 117:
 					return -1
 				case 110:
 					return 6
+				case 103:
+					return -1
+				case 71:
+					return -1
+				case 101:
+					return -1
+				case 85:
+					return -1
+				case 114:
+					return -1
+				case 105:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 78:
 					return 6
 				case 73:
@@ -24729,33 +25119,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 73:
+				case 105:
 					return 7
 				case 69:
 					return -1
 				case 116:
 					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 73:
+					return 7
+				case 82:
+					return -1
 				case 117:
 					return -1
-				case 105:
-					return 7
+				case 110:
+					return -1
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 101:
+					return -1
+				case 85:
 					return -1
 				}
 				return -1
@@ -24766,58 +25156,58 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 116:
 					return -1
+				case 84:
+					return -1
+				case 78:
+					return 8
+				case 73:
+					return -1
+				case 82:
+					return -1
 				case 117:
 					return -1
-				case 105:
-					return -1
+				case 110:
+					return 8
 				case 103:
 					return -1
 				case 71:
+					return -1
+				case 101:
 					return -1
 				case 85:
 					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return -1
-				case 110:
-					return 8
-				case 78:
-					return 8
-				case 73:
+				case 105:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
 				case 85:
 					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 101:
-					return -1
-				case 84:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
-				case 73:
+				case 105:
 					return -1
 				case 69:
 					return -1
 				case 116:
 					return -1
+				case 84:
+					return -1
+				case 78:
+					return -1
+				case 73:
+					return -1
+				case 82:
+					return -1
 				case 117:
 					return -1
-				case 105:
+				case 110:
 					return -1
 				case 103:
 					return 9
@@ -24828,29 +25218,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 116:
+				case 82:
 					return -1
 				case 117:
 					return -1
-				case 105:
+				case 110:
 					return -1
 				case 103:
 					return -1
 				case 71:
 					return -1
+				case 101:
+					return -1
 				case 85:
 					return -1
 				case 114:
 					return -1
-				case 82:
+				case 105:
 					return -1
-				case 101:
+				case 69:
+					return -1
+				case 116:
 					return -1
 				case 84:
-					return -1
-				case 110:
 					return -1
 				case 78:
 					return -1
@@ -24865,23 +25255,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 82:
-					return 1
-				case 111:
-					return -1
-				case 107:
-					return -1
 				case 114:
 					return 1
+				case 82:
+					return 1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 118:
 					return -1
 				case 86:
 					return -1
+				case 111:
+					return -1
+				case 75:
+					return -1
+				case 69:
+					return -1
 				case 79:
+					return -1
+				case 107:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 69:
+					return 2
+				case 79:
+					return -1
+				case 107:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 101:
+					return 2
+				case 118:
+					return -1
+				case 86:
+					return -1
+				case 111:
 					return -1
 				case 75:
 					return -1
@@ -24890,50 +25305,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
+				case 69:
 					return -1
-				case 111:
+				case 79:
 					return -1
 				case 107:
 					return -1
 				case 114:
 					return -1
-				case 101:
-					return 2
-				case 69:
-					return 2
-				case 118:
-					return -1
-				case 86:
-					return -1
-				case 79:
-					return -1
-				case 75:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
+				case 82:
 					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				case 118:
 					return 3
 				case 86:
 					return 3
-				case 79:
-					return -1
-				case 75:
-					return -1
-				case 82:
-					return -1
 				case 111:
 					return -1
-				case 107:
+				case 75:
 					return -1
 				}
 				return -1
@@ -24942,21 +25332,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 101:
+				case 82:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 118:
 					return -1
 				case 86:
 					return -1
-				case 79:
+				case 111:
 					return 4
 				case 75:
 					return -1
-				case 82:
+				case 69:
 					return -1
-				case 111:
+				case 79:
 					return 4
 				case 107:
 					return -1
@@ -24965,23 +25355,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
+				case 69:
 					return -1
-				case 111:
+				case 79:
 					return -1
 				case 107:
 					return 5
 				case 114:
 					return -1
-				case 101:
+				case 82:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 118:
 					return -1
 				case 86:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 75:
 					return 5
@@ -24990,25 +25380,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
-					return -1
-				case 111:
-					return -1
-				case 107:
-					return -1
 				case 114:
 					return -1
+				case 82:
+					return -1
 				case 101:
-					return 6
-				case 69:
 					return 6
 				case 118:
 					return -1
 				case 86:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 75:
+					return -1
+				case 69:
+					return 6
+				case 79:
+					return -1
+				case 107:
 					return -1
 				}
 				return -1
@@ -25017,21 +25407,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 101:
+				case 82:
 					return -1
-				case 69:
+				case 101:
 					return -1
 				case 118:
 					return -1
 				case 86:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 75:
 					return -1
-				case 82:
+				case 69:
 					return -1
-				case 111:
+				case 79:
 					return -1
 				case 107:
 					return -1
@@ -25046,71 +25436,71 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return 1
+				case 71:
+					return -1
+				case 104:
+					return -1
+				case 72:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 82:
 					return 1
 				case 105:
 					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 72:
-					return -1
-				case 84:
-					return -1
 				case 73:
 					return -1
-				case 104:
-					return -1
-				case 116:
+				case 103:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 105:
 					return 2
-				case 103:
-					return -1
-				case 71:
-					return -1
-				case 72:
-					return -1
-				case 84:
-					return -1
 				case 73:
 					return 2
+				case 103:
+					return -1
+				case 114:
+					return -1
+				case 71:
+					return -1
 				case 104:
 					return -1
+				case 72:
+					return -1
 				case 116:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
-					return -1
-				case 104:
-					return -1
-				case 116:
-					return -1
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 105:
+					return -1
+				case 73:
 					return -1
 				case 103:
 					return 3
+				case 114:
+					return -1
 				case 71:
 					return 3
+				case 104:
+					return -1
 				case 72:
+					return -1
+				case 116:
 					return -1
 				case 84:
 					return -1
@@ -25119,73 +25509,73 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
 				case 82:
 					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
 				case 103:
 					return -1
+				case 114:
+					return -1
 				case 71:
-					return -1
-				case 72:
-					return 4
-				case 84:
-					return -1
-				case 73:
 					return -1
 				case 104:
 					return 4
-				case 116:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 73:
-					return -1
-				case 104:
-					return -1
-				case 116:
-					return 5
-				case 114:
-					return -1
-				case 82:
-					return -1
-				case 105:
-					return -1
-				case 103:
-					return -1
-				case 71:
-					return -1
 				case 72:
+					return 4
+				case 116:
 					return -1
 				case 84:
-					return 5
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 73:
+				case 114:
+					return -1
+				case 71:
 					return -1
 				case 104:
 					return -1
+				case 72:
+					return -1
 				case 116:
-					return -1
-				case 114:
-					return -1
+					return 5
+				case 84:
+					return 5
 				case 82:
 					return -1
 				case 105:
 					return -1
+				case 73:
+					return -1
 				case 103:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 82:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 103:
+					return -1
+				case 114:
 					return -1
 				case 71:
 					return -1
+				case 104:
+					return -1
 				case 72:
+					return -1
+				case 116:
 					return -1
 				case 84:
 					return -1
@@ -25309,164 +25699,131 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 82:
 					return 1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 108:
-					return -1
-				case 98:
-					return -1
-				case 107:
-					return -1
-				case 76:
+				case 66:
 					return -1
 				case 65:
-					return -1
-				case 99:
-					return -1
-				case 75:
-					return -1
-				case 97:
 					return -1
 				case 114:
 					return 1
-				case 66:
+				case 79:
 					return -1
 				case 67:
+					return -1
+				case 75:
+					return -1
+				case 111:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 98:
+					return -1
+				case 97:
+					return -1
+				case 99:
+					return -1
+				case 107:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
+				case 114:
+					return -1
+				case 79:
+					return 2
+				case 67:
+					return -1
+				case 75:
 					return -1
 				case 111:
 					return 2
-				case 79:
-					return 2
 				case 108:
-					return -1
-				case 98:
-					return -1
-				case 107:
 					return -1
 				case 76:
 					return -1
-				case 65:
-					return -1
-				case 99:
-					return -1
-				case 75:
+				case 98:
 					return -1
 				case 97:
 					return -1
-				case 114:
+				case 99:
+					return -1
+				case 107:
+					return -1
+				case 82:
 					return -1
 				case 66:
 					return -1
-				case 67:
+				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
-					return -1
 				case 111:
-					return -1
-				case 79:
 					return -1
 				case 108:
 					return 3
-				case 98:
-					return -1
-				case 107:
-					return -1
 				case 76:
 					return 3
-				case 65:
-					return -1
-				case 99:
-					return -1
-				case 75:
+				case 98:
 					return -1
 				case 97:
 					return -1
-				case 114:
+				case 99:
+					return -1
+				case 107:
+					return -1
+				case 82:
 					return -1
 				case 66:
 					return -1
+				case 65:
+					return -1
+				case 114:
+					return -1
+				case 79:
+					return -1
 				case 67:
+					return -1
+				case 75:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 76:
-					return 4
-				case 65:
-					return -1
-				case 99:
-					return -1
-				case 75:
-					return -1
-				case 97:
-					return -1
 				case 114:
 					return -1
-				case 66:
+				case 79:
 					return -1
 				case 67:
 					return -1
-				case 82:
+				case 75:
 					return -1
 				case 111:
-					return -1
-				case 79:
 					return -1
 				case 108:
 					return 4
-				case 98:
-					return -1
-				case 107:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 114:
-					return -1
-				case 66:
-					return 5
-				case 67:
-					return -1
-				case 82:
-					return -1
-				case 111:
-					return -1
-				case 79:
-					return -1
-				case 108:
-					return -1
-				case 98:
-					return 5
-				case 107:
-					return -1
 				case 76:
-					return -1
-				case 65:
-					return -1
-				case 99:
-					return -1
-				case 75:
+					return 4
+				case 98:
 					return -1
 				case 97:
 					return -1
+				case 99:
+					return -1
+				case 107:
+					return -1
+				case 82:
+					return -1
+				case 66:
+					return -1
+				case 65:
+					return -1
 				}
 				return -1
 			},
@@ -25474,95 +25831,128 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 114:
 					return -1
-				case 66:
+				case 79:
 					return -1
 				case 67:
 					return -1
-				case 82:
+				case 75:
 					return -1
 				case 111:
 					return -1
-				case 79:
-					return -1
 				case 108:
-					return -1
-				case 98:
-					return -1
-				case 107:
 					return -1
 				case 76:
 					return -1
+				case 98:
+					return 5
+				case 97:
+					return -1
+				case 99:
+					return -1
+				case 107:
+					return -1
+				case 82:
+					return -1
+				case 66:
+					return 5
 				case 65:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 114:
+					return -1
+				case 79:
+					return -1
+				case 67:
+					return -1
+				case 75:
+					return -1
+				case 111:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 98:
+					return -1
+				case 97:
 					return 6
 				case 99:
 					return -1
-				case 75:
+				case 107:
 					return -1
-				case 97:
+				case 82:
+					return -1
+				case 66:
+					return -1
+				case 65:
 					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 114:
+				case 82:
 					return -1
 				case 66:
 					return -1
-				case 67:
-					return 7
-				case 82:
+				case 65:
 					return -1
-				case 111:
+				case 114:
 					return -1
 				case 79:
 					return -1
+				case 67:
+					return 7
+				case 75:
+					return -1
+				case 111:
+					return -1
 				case 108:
-					return -1
-				case 98:
-					return -1
-				case 107:
 					return -1
 				case 76:
 					return -1
-				case 65:
+				case 98:
+					return -1
+				case 97:
 					return -1
 				case 99:
 					return 7
-				case 75:
+				case 107:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 76:
+				case 82:
+					return -1
+				case 66:
 					return -1
 				case 65:
 					return -1
-				case 99:
+				case 114:
+					return -1
+				case 79:
+					return -1
+				case 67:
 					return -1
 				case 75:
 					return 8
-				case 97:
-					return -1
-				case 114:
-					return -1
-				case 66:
-					return -1
-				case 67:
-					return -1
-				case 82:
-					return -1
 				case 111:
-					return -1
-				case 79:
 					return -1
 				case 108:
 					return -1
+				case 76:
+					return -1
 				case 98:
+					return -1
+				case 97:
+					return -1
+				case 99:
 					return -1
 				case 107:
 					return 8
@@ -25571,33 +25961,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
+				case 82:
 					return -1
 				case 66:
 					return -1
-				case 67:
+				case 65:
 					return -1
-				case 82:
-					return -1
-				case 111:
+				case 114:
 					return -1
 				case 79:
 					return -1
-				case 108:
-					return -1
-				case 98:
-					return -1
-				case 107:
-					return -1
-				case 76:
-					return -1
-				case 65:
-					return -1
-				case 99:
+				case 67:
 					return -1
 				case 75:
 					return -1
+				case 111:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
+				case 98:
+					return -1
 				case 97:
+					return -1
+				case 99:
+					return -1
+				case 107:
 					return -1
 				}
 				return -1
@@ -25608,27 +25998,56 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 115:
-					return 1
-				case 83:
-					return 1
+				case 97:
+					return -1
 				case 65:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 73:
+					return -1
 				case 70:
+					return -1
+				case 69:
+					return -1
+				case 115:
+					return 1
+				case 83:
+					return 1
+				case 105:
+					return -1
+				case 102:
+					return -1
+				case 101:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 105:
+					return -1
+				case 102:
 					return -1
 				case 101:
 					return -1
 				case 97:
+					return 2
+				case 65:
+					return 2
+				case 116:
 					return -1
-				case 105:
+				case 84:
 					return -1
 				case 73:
 					return -1
-				case 102:
+				case 70:
 					return -1
 				case 69:
 					return -1
@@ -25641,34 +26060,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
-				case 65:
-					return 2
-				case 116:
+				case 105:
 					return -1
-				case 84:
-					return -1
-				case 70:
+				case 102:
 					return -1
 				case 101:
 					return -1
 				case 97:
-					return 2
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 102:
-					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 65:
 					return -1
@@ -25676,17 +26074,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 84:
 					return 3
-				case 70:
-					return -1
-				case 101:
-					return -1
-				case 97:
-					return -1
-				case 105:
-					return -1
 				case 73:
 					return -1
-				case 102:
+				case 70:
 					return -1
 				case 69:
 					return -1
@@ -25699,23 +26089,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
+				case 105:
+					return 4
+				case 102:
+					return -1
+				case 101:
+					return -1
+				case 97:
+					return -1
 				case 65:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
-				case 70:
-					return -1
-				case 101:
-					return -1
-				case 97:
-					return -1
-				case 105:
-					return 4
 				case 73:
 					return 4
-				case 102:
+				case 70:
 					return -1
 				case 69:
 					return -1
@@ -25724,29 +26114,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 102:
-					return -1
-				case 69:
-					return -1
 				case 115:
 					return 5
 				case 83:
 					return 5
+				case 105:
+					return -1
+				case 102:
+					return -1
+				case 101:
+					return -1
+				case 97:
+					return -1
 				case 65:
 					return -1
 				case 116:
 					return -1
 				case 84:
 					return -1
+				case 73:
+					return -1
 				case 70:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				}
 				return -1
@@ -25757,23 +26147,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
-				case 65:
+				case 105:
 					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 70:
+				case 102:
 					return 6
 				case 101:
 					return -1
 				case 97:
 					return -1
-				case 105:
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 73:
 					return -1
-				case 102:
+				case 70:
 					return 6
 				case 69:
 					return -1
@@ -25784,11 +26174,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 97:
 					return -1
-				case 105:
-					return 7
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 73:
 					return 7
-				case 102:
+				case 70:
 					return -1
 				case 69:
 					return -1
@@ -25796,13 +26190,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
-				case 65:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 70:
+				case 105:
+					return 7
+				case 102:
 					return -1
 				case 101:
 					return -1
@@ -25811,19 +26201,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 102:
-					return -1
-				case 69:
-					return 8
 				case 115:
 					return -1
 				case 83:
+					return -1
+				case 105:
+					return -1
+				case 102:
+					return -1
+				case 101:
+					return 8
+				case 97:
 					return -1
 				case 65:
 					return -1
@@ -25831,9 +26219,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 73:
+					return -1
 				case 70:
 					return -1
-				case 101:
+				case 69:
 					return 8
 				}
 				return -1
@@ -25842,11 +26232,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 97:
 					return -1
-				case 105:
+				case 65:
+					return -1
+				case 116:
+					return -1
+				case 84:
 					return -1
 				case 73:
 					return -1
-				case 102:
+				case 70:
 					return -1
 				case 69:
 					return -1
@@ -25854,13 +26248,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 9
 				case 83:
 					return 9
-				case 65:
+				case 105:
 					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 70:
+				case 102:
 					return -1
 				case 101:
 					return -1
@@ -25869,19 +26259,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 102:
-					return -1
-				case 69:
-					return -1
 				case 115:
 					return -1
 				case 83:
+					return -1
+				case 105:
+					return -1
+				case 102:
+					return -1
+				case 101:
+					return -1
+				case 97:
 					return -1
 				case 65:
 					return -1
@@ -25889,9 +26277,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 73:
+					return -1
 				case 70:
 					return -1
-				case 101:
+				case 69:
 					return -1
 				}
 				return -1
@@ -25904,21 +26294,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 115:
 					return 1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
 				case 83:
 					return 1
 				case 99:
 					return -1
-				case 72:
-					return -1
-				case 101:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 67:
 					return -1
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return -1
@@ -25933,21 +26323,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 115:
 					return -1
-				case 83:
-					return -1
-				case 99:
-					return 2
-				case 72:
-					return -1
 				case 101:
 					return -1
 				case 109:
 					return -1
 				case 77:
 					return -1
+				case 83:
+					return -1
+				case 99:
+					return 2
 				case 67:
 					return 2
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return -1
@@ -25962,21 +26352,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 115:
 					return -1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 72:
+				case 67:
+					return -1
+				case 104:
 					return 3
-				case 101:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
-				case 67:
-					return -1
-				case 104:
+				case 72:
 					return 3
 				case 69:
 					return -1
@@ -25989,9 +26379,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 83:
+					return -1
+				case 99:
+					return -1
 				case 67:
 					return -1
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return 4
@@ -26000,12 +26396,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 65:
 					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 72:
 					return -1
 				case 101:
 					return 4
@@ -26018,9 +26408,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 83:
+					return -1
+				case 99:
+					return -1
 				case 67:
 					return -1
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return -1
@@ -26029,12 +26425,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 65:
 					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 72:
 					return -1
 				case 101:
 					return -1
@@ -26047,23 +26437,15 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 72:
-					return -1
-				case 101:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 67:
 					return -1
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return -1
@@ -26071,34 +26453,42 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 65:
 					return 6
+				case 115:
+					return -1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 77:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 72:
-					return -1
-				case 101:
-					return -1
-				case 109:
-					return -1
-				case 77:
-					return -1
 				case 67:
 					return -1
 				case 104:
+					return -1
+				case 72:
 					return -1
 				case 69:
 					return -1
 				case 97:
 					return -1
 				case 65:
+					return -1
+				case 115:
+					return -1
+				case 101:
+					return -1
+				case 109:
+					return -1
+				case 77:
 					return -1
 				}
 				return -1
@@ -26109,16 +26499,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 108:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 115:
-					return 1
 				case 83:
 					return 1
 				case 101:
@@ -26129,12 +26509,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 115:
+					return 1
+				case 69:
+					return -1
+				case 108:
+					return -1
+				case 99:
+					return -1
+				case 67:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 115:
+					return -1
+				case 69:
+					return 2
+				case 108:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 83:
 					return -1
@@ -26146,29 +26544,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 69:
-					return 2
-				case 108:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 69:
-					return -1
-				case 108:
-					return 3
-				case 99:
-					return -1
-				case 67:
-					return -1
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 101:
@@ -26179,12 +26559,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
+				case 115:
+					return -1
+				case 69:
+					return -1
+				case 108:
+					return 3
+				case 99:
+					return -1
+				case 67:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 115:
+					return -1
+				case 69:
+					return 4
+				case 108:
+					return -1
+				case 99:
+					return -1
+				case 67:
 					return -1
 				case 83:
 					return -1
@@ -26196,21 +26594,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 84:
 					return -1
-				case 69:
-					return 4
-				case 108:
-					return -1
-				case 99:
-					return -1
-				case 67:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 101:
@@ -26220,6 +26608,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 115:
 					return -1
 				case 69:
 					return -1
@@ -26234,8 +26624,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 101:
@@ -26246,6 +26634,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 84:
 					return 6
+				case 115:
+					return -1
 				case 69:
 					return -1
 				case 108:
@@ -26259,8 +26649,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 101:
@@ -26270,6 +26658,8 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 115:
 					return -1
 				case 69:
 					return -1
@@ -26817,19 +27207,44 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 115:
-					return 1
 				case 83:
 					return 1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 67:
+				case 105:
 					return -1
+				case 73:
+					return -1
+				case 99:
+					return -1
+				case 115:
+					return 1
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 67:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 115:
+					return -1
+				case 116:
+					return 2
+				case 84:
+					return 2
+				case 67:
+					return -1
+				case 83:
+					return -1
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 105:
 					return -1
@@ -26842,42 +27257,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 2
-				case 84:
-					return 2
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 99:
-					return -1
 				case 115:
 					return -1
-				case 83:
+				case 116:
 					return -1
-				case 97:
-					return -1
-				case 65:
+				case 84:
 					return -1
 				case 67:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 99:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
@@ -26885,17 +27271,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 65:
 					return 3
-				case 67:
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 99:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 4
-				case 84:
-					return 4
+				case 83:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
 				case 105:
 					return -1
 				case 73:
@@ -26904,12 +27296,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 83:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
+				case 116:
+					return 4
+				case 84:
+					return 4
 				case 67:
 					return -1
 				}
@@ -26919,17 +27309,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 115:
 					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 67:
+					return -1
 				case 83:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 67:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return 5
@@ -26942,19 +27332,44 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return 6
 				case 83:
 					return 6
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 67:
+				case 105:
 					return -1
+				case 73:
+					return -1
+				case 99:
+					return -1
+				case 115:
+					return 6
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 67:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 115:
+					return -1
+				case 116:
+					return 7
+				case 84:
+					return 7
+				case 67:
+					return -1
+				case 83:
+					return -1
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 105:
 					return -1
@@ -26967,44 +27382,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return 7
-				case 84:
-					return 7
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 99:
-					return -1
 				case 115:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 67:
 					return -1
 				case 83:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 67:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 67:
-					return -1
-				case 116:
-					return -1
-				case 84:
 					return -1
 				case 105:
 					return 8
@@ -27017,9 +27407,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 67:
+					return 9
+				case 83:
+					return -1
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 105:
 					return -1
@@ -27027,24 +27427,24 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 99:
 					return 9
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 67:
-					return 9
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return 10
 				case 116:
 					return -1
 				case 84:
+					return -1
+				case 67:
+					return -1
+				case 83:
+					return 10
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 105:
 					return -1
@@ -27052,24 +27452,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 99:
 					return -1
-				case 115:
-					return 10
-				case 83:
-					return 10
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 67:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
+				case 83:
 					return -1
-				case 84:
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 105:
 					return -1
@@ -27079,11 +27471,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 115:
 					return -1
-				case 83:
+				case 116:
 					return -1
-				case 97:
-					return -1
-				case 65:
+				case 84:
 					return -1
 				case 67:
 					return -1
@@ -27096,21 +27486,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 115:
+					return 1
 				case 84:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 115:
-					return 1
+				case 71:
+					return -1
 				case 83:
 					return 1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return -1
@@ -27118,28 +27510,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return -1
-				case 71:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
 				case 84:
 					return 2
-				case 82:
+				case 114:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 115:
+				case 71:
 					return -1
 				case 83:
 					return -1
 				case 116:
 					return 2
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return -1
@@ -27147,28 +27539,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return -1
-				case 71:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
 				case 84:
 					return -1
-				case 82:
+				case 114:
 					return 3
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 115:
+				case 71:
 					return -1
 				case 83:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return 3
 				case 105:
 					return -1
@@ -27176,28 +27568,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return -1
-				case 71:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return -1
-				case 82:
-					return -1
-				case 73:
-					return 4
-				case 110:
-					return -1
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return 4
@@ -27205,6 +27585,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return -1
+				case 115:
+					return -1
+				case 84:
+					return -1
+				case 114:
+					return -1
+				case 73:
+					return 4
+				case 110:
+					return -1
 				case 71:
 					return -1
 				}
@@ -27212,21 +27602,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
 				case 84:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return 5
-				case 115:
+				case 71:
 					return -1
 				case 83:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return -1
@@ -27234,28 +27626,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 5
 				case 103:
 					return -1
-				case 71:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 115:
+					return -1
 				case 84:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 115:
-					return -1
+				case 71:
+					return 6
 				case 83:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return -1
@@ -27263,20 +27655,16 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return 6
-				case 71:
-					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 116:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 105:
 					return -1
@@ -27284,15 +27672,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 103:
 					return -1
-				case 71:
+				case 115:
 					return -1
 				case 84:
 					return -1
-				case 82:
+				case 114:
 					return -1
 				case 73:
 					return -1
 				case 110:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
@@ -27303,48 +27693,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 115:
-					return 1
-				case 83:
-					return 1
-				case 89:
-					return -1
 				case 116:
 					return -1
 				case 101:
 					return -1
-				case 109:
+				case 69:
 					return -1
 				case 77:
 					return -1
+				case 115:
+					return 1
+				case 83:
+					return 1
 				case 121:
+					return -1
+				case 89:
 					return -1
 				case 84:
 					return -1
-				case 69:
+				case 109:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 121:
-					return 2
-				case 84:
-					return -1
-				case 69:
-					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 121:
+					return 2
 				case 89:
 					return 2
+				case 84:
+					return -1
+				case 109:
+					return -1
 				case 116:
 					return -1
 				case 101:
 					return -1
-				case 109:
+				case 69:
 					return -1
 				case 77:
 					return -1
@@ -27357,21 +27747,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 3
 				case 83:
 					return 3
+				case 121:
+					return -1
 				case 89:
+					return -1
+				case 84:
+					return -1
+				case 109:
 					return -1
 				case 116:
 					return -1
 				case 101:
 					return -1
-				case 109:
+				case 69:
 					return -1
 				case 77:
-					return -1
-				case 121:
-					return -1
-				case 84:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
@@ -27382,21 +27772,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
+				case 121:
+					return -1
 				case 89:
+					return -1
+				case 84:
+					return 4
+				case 109:
 					return -1
 				case 116:
 					return 4
 				case 101:
 					return -1
-				case 109:
+				case 69:
 					return -1
 				case 77:
-					return -1
-				case 121:
-					return -1
-				case 84:
-					return 4
-				case 69:
 					return -1
 				}
 				return -1
@@ -27407,45 +27797,45 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 83:
 					return -1
+				case 121:
+					return -1
 				case 89:
+					return -1
+				case 84:
+					return -1
+				case 109:
 					return -1
 				case 116:
 					return -1
 				case 101:
 					return 5
-				case 109:
-					return -1
-				case 77:
-					return -1
-				case 121:
-					return -1
-				case 84:
-					return -1
 				case 69:
 					return 5
+				case 77:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 121:
-					return -1
-				case 84:
-					return -1
-				case 69:
-					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 121:
+					return -1
 				case 89:
 					return -1
-				case 116:
-					return -1
-				case 101:
+				case 84:
 					return -1
 				case 109:
 					return 6
+				case 116:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
 				case 77:
 					return 6
 				}
@@ -27453,25 +27843,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 121:
+				case 116:
 					return -1
-				case 84:
+				case 101:
 					return -1
 				case 69:
+					return -1
+				case 77:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
+				case 121:
+					return -1
 				case 89:
 					return -1
-				case 116:
-					return -1
-				case 101:
+				case 84:
 					return -1
 				case 109:
-					return -1
-				case 77:
 					return -1
 				}
 				return -1
@@ -27634,109 +28024,72 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 84:
-					return 1
-				case 114:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 97:
-					return -1
-				case 110:
-					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return 1
-				case 78:
+				case 84:
+					return 1
+				case 65:
 					return -1
-				case 111:
+				case 73:
+					return -1
+				case 110:
+					return -1
+				case 114:
 					return -1
 				case 82:
 					return -1
-				case 65:
+				case 97:
+					return -1
+				case 78:
 					return -1
 				case 115:
 					return -1
+				case 67:
+					return -1
 				case 105:
+					return -1
+				case 79:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 116:
+					return -1
 				case 84:
+					return -1
+				case 65:
+					return -1
+				case 73:
+					return -1
+				case 110:
 					return -1
 				case 114:
 					return 2
-				case 67:
-					return -1
-				case 73:
-					return -1
-				case 97:
-					return -1
-				case 110:
-					return -1
-				case 83:
-					return -1
-				case 99:
-					return -1
-				case 79:
-					return -1
-				case 116:
-					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
 				case 82:
 					return 2
-				case 65:
+				case 97:
+					return -1
+				case 78:
 					return -1
 				case 115:
-					return -1
-				case 105:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 82:
-					return -1
-				case 65:
-					return 3
-				case 115:
-					return -1
-				case 105:
-					return -1
-				case 84:
-					return -1
-				case 114:
 					return -1
 				case 67:
 					return -1
-				case 73:
+				case 105:
 					return -1
-				case 97:
-					return 3
-				case 110:
+				case 79:
 					return -1
 				case 83:
 					return -1
 				case 99:
-					return -1
-				case 79:
-					return -1
-				case 116:
-					return -1
-				case 78:
 					return -1
 				case 111:
 					return -1
@@ -27745,72 +28098,109 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
+				case 114:
 					return -1
-				case 110:
-					return 4
+				case 82:
+					return -1
+				case 97:
+					return 3
+				case 78:
+					return -1
+				case 115:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
+					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return -1
-				case 78:
-					return 4
-				case 111:
-					return -1
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
-					return -1
 				case 84:
 					return -1
-				case 114:
-					return -1
-				case 67:
-					return -1
+				case 65:
+					return 3
 				case 73:
+					return -1
+				case 110:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 114:
+					return -1
+				case 82:
+					return -1
 				case 97:
 					return -1
+				case 78:
+					return 4
+				case 115:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
+					return -1
+				case 83:
+					return -1
+				case 99:
+					return -1
+				case 111:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 65:
+					return -1
+				case 73:
+					return -1
 				case 110:
+					return 4
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 78:
+					return -1
+				case 115:
+					return 5
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
 					return -1
 				case 83:
 					return 5
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return 5
-				case 105:
-					return -1
 				case 84:
 					return -1
-				case 114:
-					return -1
-				case 67:
+				case 65:
 					return -1
 				case 73:
 					return -1
@@ -27821,109 +28211,109 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 116:
 					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 82:
+				case 84:
 					return -1
 				case 65:
 					return 6
-				case 115:
+				case 73:
 					return -1
-				case 105:
-					return -1
-				case 84:
+				case 110:
 					return -1
 				case 114:
 					return -1
-				case 67:
-					return -1
-				case 73:
+				case 82:
 					return -1
 				case 97:
 					return 6
-				case 110:
+				case 78:
+					return -1
+				case 115:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
-					return -1
-				case 84:
+				case 110:
 					return -1
 				case 114:
 					return -1
-				case 67:
-					return 7
-				case 73:
+				case 82:
 					return -1
 				case 97:
 					return -1
-				case 110:
+				case 78:
+					return -1
+				case 115:
+					return -1
+				case 67:
+					return 7
+				case 105:
+					return -1
+				case 79:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return 7
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return -1
-				case 78:
+				case 84:
 					return -1
-				case 111:
+				case 65:
+					return -1
+				case 73:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 110:
-					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return 8
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
-					return -1
 				case 84:
 					return 8
+				case 65:
+					return -1
+				case 73:
+					return -1
+				case 110:
+					return -1
 				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 78:
+					return -1
+				case 115:
 					return -1
 				case 67:
 					return -1
-				case 73:
+				case 105:
+					return -1
+				case 79:
 					return -1
 				}
 				return -1
@@ -27932,108 +28322,108 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 116:
 					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 82:
+				case 84:
 					return -1
 				case 65:
 					return -1
+				case 73:
+					return 9
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 78:
+					return -1
 				case 115:
+					return -1
+				case 67:
 					return -1
 				case 105:
 					return 9
-				case 84:
-					return -1
-				case 114:
-					return -1
-				case 67:
-					return -1
-				case 73:
-					return 9
-				case 97:
-					return -1
-				case 110:
+				case 79:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return -1
 				case 114:
 					return -1
-				case 67:
-					return -1
-				case 73:
+				case 82:
 					return -1
 				case 97:
 					return -1
-				case 110:
+				case 78:
 					return -1
-				case 83:
+				case 115:
 					return -1
-				case 99:
+				case 67:
+					return -1
+				case 105:
 					return -1
 				case 79:
 					return 10
-				case 116:
+				case 83:
 					return -1
-				case 78:
+				case 99:
 					return -1
 				case 111:
 					return 10
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
+				case 116:
 					return -1
 				case 84:
 					return -1
-				case 114:
-					return -1
-				case 67:
+				case 65:
 					return -1
 				case 73:
 					return -1
-				case 97:
+				case 110:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 65:
+					return -1
+				case 73:
 					return -1
 				case 110:
 					return 11
+				case 114:
+					return -1
+				case 82:
+					return -1
+				case 97:
+					return -1
+				case 78:
+					return 11
+				case 115:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
+					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
-					return -1
-				case 116:
-					return -1
-				case 78:
-					return 11
 				case 111:
 					return -1
 				}
@@ -28041,35 +28431,35 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 110:
+					return -1
+				case 114:
+					return -1
+				case 82:
+					return -1
 				case 97:
 					return -1
-				case 110:
+				case 78:
+					return -1
+				case 115:
+					return -1
+				case 67:
+					return -1
+				case 105:
+					return -1
+				case 79:
 					return -1
 				case 83:
 					return -1
 				case 99:
 					return -1
-				case 79:
+				case 111:
 					return -1
 				case 116:
 					return -1
-				case 78:
-					return -1
-				case 111:
-					return -1
-				case 82:
-					return -1
-				case 65:
-					return -1
-				case 115:
-					return -1
-				case 105:
-					return -1
 				case 84:
 					return -1
-				case 114:
-					return -1
-				case 67:
+				case 65:
 					return -1
 				case 73:
 					return -1
@@ -28082,149 +28472,149 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 84:
+					return 1
+				case 82:
+					return -1
 				case 105:
+					return -1
+				case 73:
+					return -1
+				case 71:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return 1
-				case 84:
-					return 1
 				case 114:
-					return -1
-				case 82:
-					return -1
-				case 73:
 					return -1
 				case 103:
 					return -1
-				case 71:
-					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 84:
+					return -1
+				case 82:
+					return 2
 				case 105:
 					return -1
-				case 116:
+				case 73:
 					return -1
-				case 84:
+				case 71:
+					return -1
+				case 69:
+					return -1
+				case 116:
 					return -1
 				case 114:
 					return 2
-				case 82:
-					return 2
-				case 73:
-					return -1
 				case 103:
 					return -1
-				case 71:
-					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return 3
-				case 116:
-					return -1
 				case 84:
-					return -1
-				case 114:
 					return -1
 				case 82:
 					return -1
+				case 105:
+					return 3
 				case 73:
 					return 3
-				case 103:
-					return -1
 				case 71:
 					return -1
-				case 101:
-					return -1
 				case 69:
+					return -1
+				case 116:
+					return -1
+				case 114:
+					return -1
+				case 103:
+					return -1
+				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
-				case 116:
-					return -1
 				case 84:
-					return -1
-				case 114:
 					return -1
 				case 82:
 					return -1
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 71:
+					return 4
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 114:
 					return -1
 				case 103:
 					return 4
-				case 71:
-					return 4
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
-				case 116:
-					return -1
 				case 84:
-					return -1
-				case 114:
 					return -1
 				case 82:
 					return -1
+				case 105:
+					return -1
 				case 73:
+					return -1
+				case 71:
+					return 5
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 114:
 					return -1
 				case 103:
 					return 5
-				case 71:
-					return 5
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
 				case 116:
-					return -1
-				case 84:
 					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
-				case 73:
-					return -1
 				case 103:
-					return -1
-				case 71:
 					return -1
 				case 101:
 					return 6
+				case 84:
+					return -1
+				case 82:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 71:
+					return -1
 				case 69:
 					return 6
 				}
@@ -28232,48 +28622,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return -1
 				case 84:
 					return -1
-				case 114:
-					return 7
 				case 82:
 					return 7
-				case 73:
+				case 105:
 					return -1
-				case 103:
+				case 73:
 					return -1
 				case 71:
 					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
-				case 105:
+				case 116:
+					return -1
+				case 114:
+					return 7
+				case 103:
+					return -1
+				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
 				case 116:
-					return -1
-				case 84:
 					return -1
 				case 114:
 					return -1
+				case 103:
+					return -1
+				case 101:
+					return -1
+				case 84:
+					return -1
 				case 82:
+					return -1
+				case 105:
 					return -1
 				case 73:
 					return -1
-				case 103:
-					return -1
 				case 71:
-					return -1
-				case 101:
 					return -1
 				case 69:
 					return -1
@@ -28395,131 +28785,131 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 117:
-					return -1
-				case 110:
-					return -1
 				case 84:
 					return 1
-				case 99:
-					return -1
-				case 97:
-					return -1
-				case 116:
-					return 1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 65:
+				case 117:
 					return -1
 				case 85:
 					return -1
-				case 78:
+				case 99:
 					return -1
 				case 101:
 					return -1
+				case 114:
+					return -1
+				case 67:
+					return -1
 				case 69:
+					return -1
+				case 116:
+					return 1
+				case 78:
+					return -1
+				case 97:
+					return -1
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 65:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return -1
-				case 99:
-					return -1
-				case 97:
-					return -1
-				case 116:
-					return -1
-				case 82:
+				case 114:
 					return 2
 				case 67:
 					return -1
-				case 65:
+				case 69:
 					return -1
-				case 85:
+				case 116:
 					return -1
 				case 78:
 					return -1
-				case 101:
+				case 97:
 					return -1
-				case 69:
-					return -1
-				case 114:
+				case 82:
 					return 2
+				case 110:
+					return -1
+				case 65:
+					return -1
+				case 84:
+					return -1
 				case 117:
 					return -1
-				case 110:
+				case 85:
+					return -1
+				case 99:
+					return -1
+				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 65:
+					return -1
+				case 84:
 					return -1
 				case 117:
 					return 3
-				case 110:
-					return -1
-				case 84:
-					return -1
-				case 99:
-					return -1
-				case 97:
-					return -1
-				case 116:
-					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 65:
-					return -1
 				case 85:
 					return 3
-				case 78:
+				case 99:
 					return -1
 				case 101:
 					return -1
+				case 114:
+					return -1
+				case 67:
+					return -1
 				case 69:
+					return -1
+				case 116:
+					return -1
+				case 78:
+					return -1
+				case 97:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 116:
-					return -1
 				case 82:
-					return -1
-				case 67:
-					return -1
-				case 65:
-					return -1
-				case 85:
-					return -1
-				case 78:
-					return 4
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
-				case 117:
 					return -1
 				case 110:
 					return 4
+				case 65:
+					return -1
 				case 84:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 99:
 					return -1
+				case 101:
+					return -1
+				case 114:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 78:
+					return 4
 				case 97:
 					return -1
 				}
@@ -28527,165 +28917,165 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 82:
+					return -1
+				case 110:
+					return -1
+				case 65:
+					return -1
 				case 84:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 99:
 					return 5
-				case 97:
+				case 101:
 					return -1
-				case 116:
-					return -1
-				case 82:
+				case 114:
 					return -1
 				case 67:
 					return 5
-				case 65:
+				case 69:
 					return -1
-				case 85:
+				case 116:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
-				case 117:
-					return -1
-				case 110:
+				case 97:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
+				case 84:
 					return -1
 				case 117:
 					return -1
-				case 110:
-					return -1
-				case 84:
+				case 85:
 					return -1
 				case 99:
+					return -1
+				case 101:
+					return -1
+				case 114:
+					return -1
+				case 67:
+					return -1
+				case 69:
+					return -1
+				case 116:
+					return -1
+				case 78:
 					return -1
 				case 97:
 					return 6
-				case 116:
-					return -1
 				case 82:
 					return -1
-				case 67:
+				case 110:
 					return -1
 				case 65:
 					return 6
-				case 85:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 84:
-					return 7
-				case 99:
+				case 114:
 					return -1
-				case 97:
+				case 67:
+					return -1
+				case 69:
 					return -1
 				case 116:
 					return 7
+				case 78:
+					return -1
+				case 97:
+					return -1
 				case 82:
 					return -1
-				case 67:
+				case 110:
 					return -1
 				case 65:
 					return -1
-				case 85:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
+				case 84:
+					return 7
 				case 117:
 					return -1
-				case 110:
+				case 85:
+					return -1
+				case 99:
+					return -1
+				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 78:
-					return -1
-				case 101:
-					return 8
-				case 69:
-					return 8
-				case 114:
-					return -1
-				case 117:
+				case 82:
 					return -1
 				case 110:
 					return -1
+				case 65:
+					return -1
 				case 84:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 99:
 					return -1
-				case 97:
-					return -1
-				case 116:
-					return -1
-				case 82:
+				case 101:
+					return 8
+				case 114:
 					return -1
 				case 67:
 					return -1
-				case 65:
+				case 69:
+					return 8
+				case 116:
+					return -1
+				case 78:
+					return -1
+				case 97:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 114:
-					return -1
-				case 117:
+				case 82:
 					return -1
 				case 110:
 					return -1
+				case 65:
+					return -1
 				case 84:
 					return -1
-				case 99:
-					return -1
-				case 97:
-					return -1
-				case 116:
-					return -1
-				case 82:
-					return -1
-				case 67:
-					return -1
-				case 65:
+				case 117:
 					return -1
 				case 85:
 					return -1
-				case 78:
+				case 99:
 					return -1
 				case 101:
 					return -1
+				case 114:
+					return -1
+				case 67:
+					return -1
 				case 69:
+					return -1
+				case 116:
+					return -1
+				case 78:
+					return -1
+				case 97:
 					return -1
 				}
 				return -1
@@ -28696,48 +29086,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 78:
+				case 110:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
+				case 101:
+					return -1
 				case 69:
 					return -1
-				case 114:
+				case 82:
 					return -1
 				case 117:
 					return 1
 				case 85:
 					return 1
-				case 110:
+				case 78:
 					return -1
-				case 100:
-					return -1
-				case 101:
-					return -1
-				case 82:
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return 2
-				case 68:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
 				case 117:
 					return -1
 				case 85:
+					return -1
+				case 78:
+					return 2
+				case 114:
 					return -1
 				case 110:
 					return 2
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return -1
@@ -28746,73 +29136,73 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return -1
-				case 68:
-					return 3
-				case 69:
-					return -1
-				case 114:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 110:
 					return -1
 				case 100:
 					return 3
+				case 68:
+					return 3
 				case 101:
 					return -1
+				case 69:
+					return -1
 				case 82:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 78:
+					return -1
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
+				case 110:
+					return -1
+				case 100:
 					return -1
 				case 68:
 					return -1
+				case 101:
+					return 4
 				case 69:
 					return 4
-				case 114:
+				case 82:
 					return -1
 				case 117:
 					return -1
 				case 85:
 					return -1
-				case 110:
+				case 78:
 					return -1
-				case 100:
-					return -1
-				case 101:
-					return 4
-				case 82:
+				case 114:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
-				case 85:
-					return -1
 				case 110:
 					return -1
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return 5
+				case 117:
+					return -1
+				case 85:
+					return -1
 				case 78:
-					return -1
-				case 68:
-					return -1
-				case 69:
 					return -1
 				case 114:
 					return 5
@@ -28821,23 +29211,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 78:
-					return -1
-				case 68:
-					return -1
-				case 69:
-					return -1
-				case 114:
-					return -1
 				case 117:
 					return -1
 				case 85:
+					return -1
+				case 78:
+					return -1
+				case 114:
 					return -1
 				case 110:
 					return -1
 				case 100:
 					return -1
+				case 68:
+					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
 					return -1
@@ -28984,17 +29374,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 85:
 					return 1
-				case 105:
-					return -1
-				case 81:
+				case 113:
 					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return -1
@@ -29009,17 +29399,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 85:
 					return -1
-				case 105:
-					return -1
-				case 81:
+				case 113:
 					return -1
 				case 110:
 					return 2
 				case 78:
 					return 2
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return -1
@@ -29030,101 +29420,101 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 105:
-					return 3
-				case 81:
-					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return 3
 				case 73:
 					return 3
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return -1
 				case 69:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 113:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 105:
-					return -1
-				case 81:
-					return 4
 				case 110:
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return 4
 				case 101:
 					return -1
 				case 69:
 					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 113:
+					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 117:
+					return 5
+				case 85:
+					return 5
+				case 113:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 117:
-					return 5
-				case 85:
-					return 5
-				case 105:
-					return -1
-				case 81:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 113:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return 6
 				case 69:
 					return 6
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 105:
-					return -1
-				case 81:
-					return -1
 				}
 				return -1
 			},
@@ -29134,9 +29524,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 78:
 					return -1
+				case 105:
+					return -1
 				case 73:
 					return -1
-				case 113:
+				case 81:
 					return -1
 				case 101:
 					return -1
@@ -29146,9 +29538,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 85:
 					return -1
-				case 105:
-					return -1
-				case 81:
+				case 113:
 					return -1
 				}
 				return -1
@@ -29159,99 +29549,99 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
 				case 117:
+					return 1
+				case 85:
 					return 1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
 				case 69:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return 1
-				case 115:
 					return -1
 				case 83:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 110:
 					return 2
 				case 78:
 					return 2
-				case 101:
-					return -1
 				case 69:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 116:
+					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 110:
 					return 3
 				case 78:
 					return 3
-				case 101:
-					return -1
 				case 69:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 115:
 					return -1
 				case 83:
 					return -1
-				case 116:
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
+				case 101:
+					return 4
 				case 115:
-					return -1
-				case 83:
 					return -1
 				case 116:
 					return -1
 				case 117:
 					return -1
+				case 85:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return 4
 				case 69:
 					return 4
+				case 83:
+					return -1
 				case 84:
 					return -1
 				}
@@ -29261,21 +29651,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return -1
+				case 85:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 115:
+				case 83:
 					return 5
-				case 83:
+				case 84:
+					return -1
+				case 101:
+					return -1
+				case 115:
 					return 5
 				case 116:
 					return -1
@@ -29284,25 +29674,25 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 116:
-					return 6
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
 				case 69:
 					return -1
+				case 83:
+					return -1
 				case 84:
+					return 6
+				case 101:
+					return -1
+				case 115:
+					return -1
+				case 116:
 					return 6
 				}
 				return -1
@@ -29311,21 +29701,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return -1
+				case 85:
+					return -1
 				case 110:
 					return -1
 				case 78:
 					return -1
-				case 101:
-					return -1
 				case 69:
+					return -1
+				case 83:
 					return -1
 				case 84:
 					return -1
-				case 85:
+				case 101:
 					return -1
 				case 115:
-					return -1
-				case 83:
 					return -1
 				case 116:
 					return -1
@@ -29342,21 +29732,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 1
 				case 110:
 					return -1
-				case 78:
+				case 115:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return -1
 				case 69:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
 				case 85:
 					return 1
-				case 115:
+				case 78:
 					return -1
-				case 83:
+				case 116:
 					return -1
 				}
 				return -1
@@ -29367,21 +29757,21 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 110:
 					return 2
+				case 115:
+					return -1
+				case 83:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 84:
+					return -1
+				case 85:
+					return -1
 				case 78:
 					return 2
-				case 101:
-					return -1
-				case 69:
-					return -1
 				case 116:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				}
 				return -1
@@ -29389,22 +29779,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 85:
+					return -1
+				case 78:
+					return -1
+				case 116:
+					return -1
+				case 117:
+					return -1
+				case 110:
 					return -1
 				case 115:
 					return 3
 				case 83:
 					return 3
-				case 117:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
 				case 101:
 					return -1
 				case 69:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -29415,22 +29805,22 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 85:
 					return -1
-				case 115:
+				case 78:
 					return -1
-				case 83:
+				case 116:
 					return -1
 				case 117:
 					return -1
 				case 110:
 					return -1
-				case 78:
+				case 115:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return 4
 				case 69:
 					return 4
-				case 116:
-					return -1
 				case 84:
 					return -1
 				}
@@ -29438,50 +29828,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
+				case 117:
+					return -1
+				case 110:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 117:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 116:
+				case 84:
 					return 5
-				case 84:
+				case 85:
+					return -1
+				case 78:
+					return -1
+				case 116:
 					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
+				case 117:
+					return -1
+				case 110:
 					return -1
 				case 115:
 					return -1
 				case 83:
 					return -1
-				case 117:
-					return -1
-				case 110:
-					return -1
-				case 78:
-					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 116:
-					return -1
 				case 84:
+					return -1
+				case 85:
+					return -1
+				case 78:
+					return -1
+				case 116:
 					return -1
 				}
 				return -1
@@ -29494,54 +29884,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return 1
-				case 80:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 84:
-					return -1
 				case 85:
 					return 1
+				case 80:
+					return -1
+				case 100:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 69:
+					return -1
 				case 112:
+					return -1
+				case 68:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
 				case 101:
-					return -1
-				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return 2
+				case 68:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 101:
+					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 80:
 					return 2
 				case 100:
 					return -1
-				case 68:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 112:
-					return 2
-				case 97:
-					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
-				case 101:
+				case 84:
 					return -1
 				case 69:
 					return -1
@@ -29550,27 +29940,27 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 112:
+					return -1
+				case 68:
+					return 3
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 101:
+					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 80:
 					return -1
 				case 100:
 					return 3
-				case 68:
-					return 3
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 112:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
 				case 116:
 					return -1
-				case 101:
+				case 84:
 					return -1
 				case 69:
 					return -1
@@ -29581,26 +29971,55 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return -1
+				case 85:
+					return -1
 				case 80:
 					return -1
 				case 100:
 					return -1
-				case 68:
+				case 116:
 					return -1
 				case 84:
 					return -1
-				case 85:
+				case 69:
 					return -1
 				case 112:
+					return -1
+				case 68:
 					return -1
 				case 97:
 					return 4
 				case 65:
 					return 4
-				case 116:
+				case 101:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 112:
+					return -1
+				case 68:
+					return -1
+				case 97:
+					return -1
+				case 65:
 					return -1
 				case 101:
 					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 80:
+					return -1
+				case 100:
+					return -1
+				case 116:
+					return 5
+				case 84:
+					return 5
 				case 69:
 					return -1
 				}
@@ -29608,57 +30027,28 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
-					return -1
-				case 80:
-					return -1
-				case 100:
+				case 112:
 					return -1
 				case 68:
-					return -1
-				case 84:
-					return 5
-				case 85:
-					return -1
-				case 112:
 					return -1
 				case 97:
 					return -1
 				case 65:
-					return -1
-				case 116:
-					return 5
-				case 101:
-					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return -1
-				case 80:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 84:
-					return -1
-				case 85:
-					return -1
-				case 112:
-					return -1
-				case 97:
-					return -1
-				case 65:
-					return -1
-				case 116:
 					return -1
 				case 101:
 					return 6
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 80:
+					return -1
+				case 100:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
 				case 69:
 					return 6
 				}
@@ -29666,29 +30056,29 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
 				case 112:
+					return -1
+				case 68:
 					return -1
 				case 97:
 					return -1
 				case 65:
 					return -1
-				case 116:
-					return -1
 				case 101:
 					return -1
-				case 69:
-					return -1
 				case 117:
+					return -1
+				case 85:
 					return -1
 				case 80:
 					return -1
 				case 100:
 					return -1
-				case 68:
+				case 116:
 					return -1
 				case 84:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -29699,87 +30089,58 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 117:
+				case 85:
 					return 1
 				case 80:
+					return -1
+				case 115:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				case 117:
+					return 1
+				case 112:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 84:
-					return -1
-				case 85:
-					return 1
-				case 112:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 114:
-					return -1
 				case 82:
-					return -1
-				case 116:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
+				case 117:
 					return -1
 				case 112:
 					return 2
-				case 115:
-					return -1
 				case 83:
 					return -1
-				case 114:
+				case 101:
+					return -1
+				case 69:
 					return -1
 				case 82:
-					return -1
-				case 116:
-					return -1
-				case 117:
-					return -1
-				case 80:
-					return 2
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 84:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 117:
-					return -1
-				case 80:
-					return -1
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 84:
 					return -1
 				case 85:
 					return -1
-				case 112:
-					return -1
+				case 80:
+					return 2
 				case 115:
-					return 3
-				case 83:
-					return 3
+					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
 				case 116:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
@@ -29788,54 +30149,83 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return -1
+				case 112:
+					return -1
+				case 83:
+					return 3
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 82:
+					return -1
+				case 85:
+					return -1
 				case 80:
+					return -1
+				case 115:
+					return 3
+				case 114:
+					return -1
+				case 116:
+					return -1
+				case 84:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 117:
+					return -1
+				case 112:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return 4
 				case 69:
 					return 4
-				case 84:
+				case 82:
 					return -1
 				case 85:
 					return -1
-				case 112:
+				case 80:
 					return -1
 				case 115:
 					return -1
-				case 83:
-					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
 				case 116:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
+				case 117:
 					return -1
 				case 112:
 					return -1
-				case 115:
-					return -1
 				case 83:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 82:
+					return 5
+				case 85:
+					return -1
+				case 80:
+					return -1
+				case 115:
 					return -1
 				case 114:
 					return 5
-				case 82:
-					return 5
 				case 116:
-					return -1
-				case 117:
-					return -1
-				case 80:
-					return -1
-				case 101:
-					return -1
-				case 69:
 					return -1
 				case 84:
 					return -1
@@ -29844,30 +30234,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
+				case 85:
 					return -1
 				case 80:
+					return -1
+				case 115:
+					return -1
+				case 114:
+					return -1
+				case 116:
+					return 6
+				case 84:
+					return 6
+				case 117:
+					return -1
+				case 112:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 84:
-					return 6
-				case 85:
-					return -1
-				case 112:
-					return -1
-				case 115:
-					return -1
-				case 83:
-					return -1
-				case 114:
-					return -1
 				case 82:
 					return -1
-				case 116:
-					return 6
 				}
 				return -1
 			},
@@ -29875,27 +30265,27 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 117:
 					return -1
-				case 80:
+				case 112:
+					return -1
+				case 83:
 					return -1
 				case 101:
 					return -1
 				case 69:
 					return -1
-				case 84:
+				case 82:
 					return -1
 				case 85:
 					return -1
-				case 112:
+				case 80:
 					return -1
 				case 115:
 					return -1
-				case 83:
-					return -1
 				case 114:
 					return -1
-				case 82:
-					return -1
 				case 116:
+					return -1
+				case 84:
 					return -1
 				}
 				return -1
@@ -30087,99 +30477,99 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 83:
+					return -1
+				case 105:
+					return -1
+				case 78:
+					return -1
+				case 117:
+					return 1
 				case 85:
 					return 1
 				case 115:
 					return -1
-				case 83:
-					return -1
-				case 105:
-					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 71:
-					return -1
-				case 117:
-					return 1
-				case 78:
-					return -1
 				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 115:
-					return 2
 				case 83:
 					return 2
 				case 105:
 					return -1
+				case 78:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 115:
+					return 2
 				case 73:
 					return -1
 				case 110:
 					return -1
-				case 71:
-					return -1
-				case 117:
-					return -1
-				case 78:
-					return -1
 				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 85:
-					return -1
-				case 115:
-					return -1
 				case 83:
 					return -1
 				case 105:
 					return 3
+				case 78:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 115:
+					return -1
 				case 73:
 					return 3
 				case 110:
 					return -1
-				case 71:
-					return -1
-				case 117:
-					return -1
-				case 78:
-					return -1
 				case 103:
+					return -1
+				case 71:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 117:
+				case 83:
+					return -1
+				case 105:
 					return -1
 				case 78:
 					return 4
-				case 103:
+				case 117:
 					return -1
 				case 85:
 					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 105:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return 4
+				case 103:
+					return -1
 				case 71:
 					return -1
 				}
@@ -30187,50 +30577,50 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 117:
+					return -1
 				case 85:
 					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 105:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
+				case 103:
+					return 5
 				case 71:
 					return 5
-				case 117:
+				case 83:
+					return -1
+				case 105:
 					return -1
 				case 78:
 					return -1
-				case 103:
-					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 117:
+					return -1
 				case 85:
 					return -1
 				case 115:
-					return -1
-				case 83:
-					return -1
-				case 105:
 					return -1
 				case 73:
 					return -1
 				case 110:
 					return -1
+				case 103:
+					return -1
 				case 71:
 					return -1
-				case 117:
+				case 83:
+					return -1
+				case 105:
 					return -1
 				case 78:
-					return -1
-				case 103:
 					return -1
 				}
 				return -1
@@ -30241,126 +30631,101 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 86:
-					return 1
 				case 97:
 					return -1
-				case 117:
+				case 65:
+					return -1
+				case 76:
 					return -1
 				case 85:
-					return -1
-				case 101:
 					return -1
 				case 118:
 					return 1
-				case 65:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 118:
-					return -1
-				case 65:
-					return 2
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
 				case 86:
+					return 1
+				case 108:
 					return -1
-				case 97:
-					return 2
 				case 117:
-					return -1
-				case 85:
 					return -1
 				case 101:
 					return -1
+				case 69:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 97:
+					return 2
+				case 65:
+					return 2
+				case 76:
+					return -1
+				case 85:
+					return -1
 				case 118:
 					return -1
+				case 86:
+					return -1
+				case 108:
+					return -1
+				case 117:
+					return -1
+				case 101:
+					return -1
+				case 69:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 97:
+					return -1
 				case 65:
+					return -1
+				case 76:
+					return 3
+				case 85:
+					return -1
+				case 118:
+					return -1
+				case 86:
 					return -1
 				case 108:
 					return 3
-				case 76:
-					return 3
-				case 69:
-					return -1
-				case 86:
-					return -1
-				case 97:
-					return -1
 				case 117:
 					return -1
-				case 85:
-					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 118:
+					return -1
 				case 86:
 					return -1
-				case 97:
+				case 108:
 					return -1
 				case 117:
 					return 4
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 76:
+					return -1
 				case 85:
 					return 4
-				case 101:
-					return -1
-				case 118:
-					return -1
-				case 65:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 86:
-					return -1
-				case 97:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 101:
-					return 5
-				case 118:
-					return -1
-				case 65:
-					return -1
-				case 108:
-					return -1
-				case 76:
-					return -1
-				case 69:
-					return 5
 				}
 				return -1
 			},
@@ -30368,23 +30733,48 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 118:
 					return -1
-				case 65:
+				case 86:
 					return -1
 				case 108:
 					return -1
-				case 76:
+				case 117:
 					return -1
+				case 101:
+					return 5
 				case 69:
-					return -1
-				case 86:
-					return -1
+					return 5
 				case 97:
 					return -1
-				case 117:
+				case 65:
+					return -1
+				case 76:
 					return -1
 				case 85:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 118:
+					return -1
+				case 86:
+					return -1
+				case 108:
+					return -1
+				case 117:
+					return -1
 				case 101:
+					return -1
+				case 69:
+					return -1
+				case 97:
+					return -1
+				case 65:
+					return -1
+				case 76:
+					return -1
+				case 85:
 					return -1
 				}
 				return -1
@@ -30395,13 +30785,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 118:
-					return 1
 				case 86:
 					return 1
 				case 65:
 					return -1
+				case 108:
+					return -1
 				case 76:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 101:
 					return -1
@@ -30411,13 +30805,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 68:
 					return -1
+				case 118:
+					return 1
 				case 97:
-					return -1
-				case 108:
-					return -1
-				case 117:
-					return -1
-				case 85:
 					return -1
 				}
 				return -1
@@ -30426,11 +30816,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 118:
 					return -1
+				case 97:
+					return 2
 				case 86:
 					return -1
 				case 65:
 					return 2
+				case 108:
+					return -1
 				case 76:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 101:
 					return -1
@@ -30440,64 +30838,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 68:
 					return -1
-				case 97:
-					return 2
-				case 108:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 118:
-					return -1
 				case 86:
 					return -1
 				case 65:
 					return -1
-				case 76:
+				case 108:
 					return 3
-				case 101:
-					return -1
-				case 69:
-					return -1
-				case 100:
-					return -1
-				case 68:
-					return -1
-				case 97:
-					return -1
-				case 108:
+				case 76:
 					return 3
 				case 117:
 					return -1
 				case 85:
 					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 117:
-					return 4
-				case 85:
-					return 4
-				case 118:
-					return -1
-				case 86:
-					return -1
-				case 65:
-					return -1
-				case 76:
-					return -1
 				case 101:
 					return -1
 				case 69:
@@ -30506,26 +30863,59 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 68:
 					return -1
+				case 118:
+					return -1
+				case 97:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
+				case 86:
+					return -1
+				case 65:
 					return -1
 				case 108:
 					return -1
-				case 117:
+				case 76:
 					return -1
+				case 117:
+					return 4
 				case 85:
+					return 4
+				case 101:
+					return -1
+				case 69:
+					return -1
+				case 100:
+					return -1
+				case 68:
 					return -1
 				case 118:
+					return -1
+				case 97:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 118:
+					return -1
+				case 97:
 					return -1
 				case 86:
 					return -1
 				case 65:
 					return -1
+				case 108:
+					return -1
 				case 76:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 101:
 					return 5
@@ -30540,21 +30930,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 118:
-					return -1
 				case 86:
 					return -1
 				case 65:
 					return -1
+				case 108:
+					return -1
 				case 76:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 101:
 					return -1
@@ -30564,26 +30950,26 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 68:
 					return 6
+				case 118:
+					return -1
+				case 97:
+					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 97:
-					return -1
-				case 108:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 118:
-					return -1
 				case 86:
 					return -1
 				case 65:
 					return -1
+				case 108:
+					return -1
 				case 76:
+					return -1
+				case 117:
+					return -1
+				case 85:
 					return -1
 				case 101:
 					return -1
@@ -30592,6 +30978,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 100:
 					return -1
 				case 68:
+					return -1
+				case 118:
+					return -1
+				case 97:
 					return -1
 				}
 				return -1
@@ -30602,54 +30992,54 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
+				case 86:
+					return 1
 				case 97:
 					return -1
-				case 76:
+				case 65:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 101:
 					return -1
 				case 69:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				case 118:
 					return 1
-				case 86:
-					return 1
-				case 65:
-					return -1
 				case 108:
 					return -1
-				case 117:
+				case 76:
 					return -1
-				case 85:
+				case 115:
 					return -1
-				case 101:
+				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 118:
-					return -1
 				case 86:
 					return -1
+				case 97:
+					return 2
 				case 65:
 					return 2
-				case 108:
-					return -1
 				case 117:
 					return -1
 				case 85:
 					return -1
 				case 101:
 					return -1
-				case 97:
-					return 2
-				case 76:
-					return -1
 				case 69:
+					return -1
+				case 118:
+					return -1
+				case 108:
+					return -1
+				case 76:
 					return -1
 				case 115:
 					return -1
@@ -30662,40 +31052,38 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 118:
 					return -1
+				case 108:
+					return 3
+				case 76:
+					return 3
+				case 115:
+					return -1
+				case 83:
+					return -1
 				case 86:
+					return -1
+				case 97:
 					return -1
 				case 65:
 					return -1
-				case 108:
-					return 3
 				case 117:
 					return -1
 				case 85:
 					return -1
 				case 101:
 					return -1
-				case 97:
-					return -1
-				case 76:
-					return 3
 				case 69:
-					return -1
-				case 115:
-					return -1
-				case 83:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 118:
-					return -1
 				case 86:
 					return -1
-				case 65:
+				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 117:
 					return 4
@@ -30703,11 +31091,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 101:
 					return -1
-				case 97:
+				case 69:
+					return -1
+				case 118:
+					return -1
+				case 108:
 					return -1
 				case 76:
-					return -1
-				case 69:
 					return -1
 				case 115:
 					return -1
@@ -30718,13 +31108,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
-				case 118:
-					return -1
 				case 86:
 					return -1
-				case 65:
+				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 117:
 					return -1
@@ -30732,12 +31120,14 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 101:
 					return 5
-				case 97:
-					return -1
-				case 76:
-					return -1
 				case 69:
 					return 5
+				case 118:
+					return -1
+				case 108:
+					return -1
+				case 76:
+					return -1
 				case 115:
 					return -1
 				case 83:
@@ -30747,42 +31137,40 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			},
 			func(r rune) int {
 				switch r {
+				case 86:
+					return -1
 				case 97:
 					return -1
-				case 76:
+				case 65:
+					return -1
+				case 117:
+					return -1
+				case 85:
+					return -1
+				case 101:
 					return -1
 				case 69:
+					return -1
+				case 118:
+					return -1
+				case 108:
+					return -1
+				case 76:
 					return -1
 				case 115:
 					return 6
 				case 83:
 					return 6
-				case 118:
-					return -1
-				case 86:
-					return -1
-				case 65:
-					return -1
-				case 108:
-					return -1
-				case 117:
-					return -1
-				case 85:
-					return -1
-				case 101:
-					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
-				case 118:
-					return -1
 				case 86:
 					return -1
-				case 65:
+				case 97:
 					return -1
-				case 108:
+				case 65:
 					return -1
 				case 117:
 					return -1
@@ -30790,11 +31178,13 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 101:
 					return -1
-				case 97:
+				case 69:
+					return -1
+				case 118:
+					return -1
+				case 108:
 					return -1
 				case 76:
-					return -1
-				case 69:
 					return -1
 				case 115:
 					return -1
@@ -31163,44 +31553,69 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
-				case 105:
+				case 76:
 					return -1
-				case 73:
+				case 101:
 					return -1
 				case 69:
 					return -1
 				case 87:
 					return 1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 108:
-					return -1
-				case 76:
-					return -1
-				case 101:
 					return -1
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 87:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
 				case 119:
 					return -1
 				case 104:
 					return 2
 				case 72:
 					return 2
-				case 105:
+				case 76:
 					return -1
-				case 73:
+				case 101:
 					return -1
 				case 69:
 					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
 				case 87:
 					return -1
+				case 105:
+					return 3
+				case 73:
+					return 3
 				case 108:
+					return -1
+				case 119:
+					return -1
+				case 104:
+					return -1
+				case 72:
 					return -1
 				case 76:
 					return -1
 				case 101:
+					return -1
+				case 69:
 					return -1
 				}
 				return -1
@@ -31213,68 +31628,43 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
-				case 105:
-					return 3
-				case 73:
-					return 3
+				case 76:
+					return 4
+				case 101:
+					return -1
 				case 69:
 					return -1
 				case 87:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 108:
-					return -1
-				case 76:
-					return -1
-				case 101:
-					return -1
+					return 4
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 87:
+					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
+				case 108:
+					return -1
 				case 119:
 					return -1
 				case 104:
 					return -1
 				case 72:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 69:
-					return -1
-				case 87:
-					return -1
-				case 108:
-					return 4
-				case 76:
-					return 4
-				case 101:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 87:
-					return -1
-				case 108:
 					return -1
 				case 76:
 					return -1
 				case 101:
 					return 5
-				case 119:
-					return -1
-				case 104:
-					return -1
-				case 72:
-					return -1
-				case 105:
-					return -1
-				case 73:
-					return -1
 				case 69:
 					return 5
 				}
@@ -31284,11 +31674,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 87:
 					return -1
+				case 105:
+					return -1
+				case 73:
+					return -1
 				case 108:
-					return -1
-				case 76:
-					return -1
-				case 101:
 					return -1
 				case 119:
 					return -1
@@ -31296,9 +31686,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
-				case 105:
+				case 76:
 					return -1
-				case 73:
+				case 101:
 					return -1
 				case 69:
 					return -1
@@ -31420,11 +31810,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		{[]bool{false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
-				case 105:
-					return -1
+				case 119:
+					return 1
+				case 87:
+					return 1
 				case 73:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -31432,12 +31822,12 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
+				case 105:
+					return -1
+				case 116:
+					return -1
 				case 110:
 					return -1
-				case 119:
-					return 1
-				case 87:
-					return 1
 				case 78:
 					return -1
 				}
@@ -31447,48 +31837,23 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				switch r {
 				case 105:
 					return 2
+				case 116:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 119:
+					return -1
+				case 87:
+					return -1
 				case 73:
 					return 2
-				case 116:
-					return -1
 				case 84:
 					return -1
 				case 104:
 					return -1
 				case 72:
-					return -1
-				case 110:
-					return -1
-				case 119:
-					return -1
-				case 87:
-					return -1
-				case 78:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return 3
-				case 84:
-					return 3
-				case 104:
-					return -1
-				case 72:
-					return -1
-				case 110:
-					return -1
-				case 119:
-					return -1
-				case 87:
-					return -1
-				case 78:
 					return -1
 				}
 				return -1
@@ -31499,13 +31864,40 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 87:
 					return -1
-				case 78:
+				case 73:
+					return -1
+				case 84:
+					return 3
+				case 104:
+					return -1
+				case 72:
 					return -1
 				case 105:
 					return -1
-				case 73:
+				case 116:
+					return 3
+				case 110:
+					return -1
+				case 78:
+					return -1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
 					return -1
 				case 116:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
+				case 119:
+					return -1
+				case 87:
+					return -1
+				case 73:
 					return -1
 				case 84:
 					return -1
@@ -31513,7 +31905,30 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 4
 				case 72:
 					return 4
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 105:
+					return 5
+				case 116:
+					return -1
 				case 110:
+					return -1
+				case 78:
+					return -1
+				case 119:
+					return -1
+				case 87:
+					return -1
+				case 73:
+					return 5
+				case 84:
+					return -1
+				case 104:
+					return -1
+				case 72:
 					return -1
 				}
 				return -1
@@ -31524,13 +31939,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 87:
 					return -1
-				case 78:
-					return -1
-				case 105:
-					return 5
 				case 73:
-					return 5
-				case 116:
 					return -1
 				case 84:
 					return -1
@@ -31538,57 +31947,38 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				case 72:
 					return -1
+				case 105:
+					return -1
+				case 116:
+					return -1
 				case 110:
-					return -1
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 119:
-					return -1
-				case 87:
-					return -1
-				case 78:
 					return 6
-				case 105:
-					return -1
-				case 73:
-					return -1
-				case 116:
-					return -1
-				case 84:
-					return -1
-				case 104:
-					return -1
-				case 72:
-					return -1
-				case 110:
+				case 78:
 					return 6
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
+				case 105:
+					return -1
+				case 116:
+					return -1
+				case 110:
+					return -1
+				case 78:
+					return -1
 				case 119:
 					return -1
 				case 87:
 					return -1
-				case 78:
-					return -1
-				case 105:
-					return -1
 				case 73:
-					return -1
-				case 116:
 					return -1
 				case 84:
 					return -1
 				case 104:
 					return -1
 				case 72:
-					return -1
-				case 110:
 					return -1
 				}
 				return -1
@@ -32302,884 +32692,896 @@ func (yylex *Lexer) Lex(lval *yySymType) int {
 			continue
 		case 48:
 			{
+				logToken("BUILD")
+				return BUILD
+			}
+			continue
+		case 49:
+			{
 				logToken("BY")
 				return BY
 			}
 			continue
-		case 49:
+		case 50:
 			{
 				logToken("CALL")
 				return CALL
 			}
 			continue
-		case 50:
+		case 51:
 			{
 				logToken("CASE")
 				return CASE
 			}
 			continue
-		case 51:
+		case 52:
 			{
 				logToken("CAST")
 				return CAST
 			}
 			continue
-		case 52:
+		case 53:
 			{
 				logToken("CLUSTER")
 				return CLUSTER
 			}
 			continue
-		case 53:
+		case 54:
 			{
 				logToken("COLLATE")
 				return COLLATE
 			}
 			continue
-		case 54:
+		case 55:
 			{
 				logToken("COLLECTION")
 				return COLLECTION
 			}
 			continue
-		case 55:
+		case 56:
 			{
 				logToken("COMMIT")
 				return COMMIT
 			}
 			continue
-		case 56:
+		case 57:
 			{
 				logToken("CONNECT")
 				return CONNECT
 			}
 			continue
-		case 57:
+		case 58:
 			{
 				logToken("CONTINUE")
 				return CONTINUE
 			}
 			continue
-		case 58:
+		case 59:
 			{
 				logToken("CREATE")
 				return CREATE
 			}
 			continue
-		case 59:
+		case 60:
 			{
 				logToken("DATABASE")
 				return DATABASE
 			}
 			continue
-		case 60:
+		case 61:
 			{
 				logToken("DATASET")
 				return DATASET
 			}
 			continue
-		case 61:
+		case 62:
 			{
 				logToken("DATASTORE")
 				return DATASTORE
 			}
 			continue
-		case 62:
+		case 63:
 			{
 				logToken("DECLARE")
 				return DECLARE
 			}
 			continue
-		case 63:
+		case 64:
 			{
 				logToken("DECREMENT")
 				return DECREMENT
 			}
 			continue
-		case 64:
+		case 65:
 			{
 				logToken("DELETE")
 				return DELETE
 			}
 			continue
-		case 65:
+		case 66:
 			{
 				logToken("DERIVED")
 				return DERIVED
 			}
 			continue
-		case 66:
+		case 67:
 			{
 				logToken("DESC")
 				return DESC
 			}
 			continue
-		case 67:
+		case 68:
 			{
 				logToken("DESCRIBE")
 				return DESCRIBE
 			}
 			continue
-		case 68:
+		case 69:
 			{
 				logToken("DISTINCT")
 				return DISTINCT
 			}
 			continue
-		case 69:
+		case 70:
 			{
 				logToken("DO")
 				return DO
 			}
 			continue
-		case 70:
+		case 71:
 			{
 				logToken("DROP")
 				return DROP
 			}
 			continue
-		case 71:
+		case 72:
 			{
 				logToken("EACH")
 				return EACH
 			}
 			continue
-		case 72:
+		case 73:
 			{
 				logToken("ELEMENT")
 				return ELEMENT
 			}
 			continue
-		case 73:
+		case 74:
 			{
 				logToken("ELSE")
 				return ELSE
 			}
 			continue
-		case 74:
+		case 75:
 			{
 				logToken("END")
 				return END
 			}
 			continue
-		case 75:
+		case 76:
 			{
 				logToken("EVERY")
 				return EVERY
 			}
 			continue
-		case 76:
+		case 77:
 			{
 				logToken("EXCEPT")
 				return EXCEPT
 			}
 			continue
-		case 77:
+		case 78:
 			{
 				logToken("EXCLUDE")
 				return EXCLUDE
 			}
 			continue
-		case 78:
+		case 79:
 			{
 				logToken("EXECUTE")
 				return EXECUTE
 			}
 			continue
-		case 79:
+		case 80:
 			{
 				logToken("EXISTS")
 				return EXISTS
 			}
 			continue
-		case 80:
+		case 81:
 			{
 				logToken("EXPLAIN")
 				return EXPLAIN
 			}
 			continue
-		case 81:
+		case 82:
 			{
 				logToken("FALSE")
 				return FALSE
 			}
 			continue
-		case 82:
+		case 83:
 			{
 				logToken("FIRST")
 				return FIRST
 			}
 			continue
-		case 83:
+		case 84:
 			{
 				logToken("FLATTEN")
 				return FLATTEN
 			}
 			continue
-		case 84:
+		case 85:
 			{
 				logToken("FOR")
 				return FOR
 			}
 			continue
-		case 85:
+		case 86:
 			{
 				logToken("FROM")
 				return FROM
 			}
 			continue
-		case 86:
+		case 87:
 			{
 				logToken("FUNCTION")
 				return FUNCTION
 			}
 			continue
-		case 87:
+		case 88:
 			{
 				logToken("GRANT")
 				return GRANT
 			}
 			continue
-		case 88:
+		case 89:
 			{
 				logToken("GROUP")
 				return GROUP
 			}
 			continue
-		case 89:
+		case 90:
 			{
 				logToken("GSI")
 				return GSI
 			}
 			continue
-		case 90:
+		case 91:
 			{
 				logToken("HAVING")
 				return HAVING
 			}
 			continue
-		case 91:
+		case 92:
 			{
 				logToken("IF")
 				return IF
 			}
 			continue
-		case 92:
+		case 93:
 			{
 				logToken("IN")
 				return IN
 			}
 			continue
-		case 93:
+		case 94:
 			{
 				logToken("INCLUDE")
 				return INCLUDE
 			}
 			continue
-		case 94:
+		case 95:
 			{
 				logToken("INCREMENT")
 				return INCREMENT
 			}
 			continue
-		case 95:
+		case 96:
 			{
 				logToken("INDEX")
 				return INDEX
 			}
 			continue
-		case 96:
+		case 97:
+			{
+				logToken("INDEXES")
+				return INDEXES
+			}
+			continue
+		case 98:
 			{
 				logToken("INLINE")
 				return INLINE
 			}
 			continue
-		case 97:
+		case 99:
 			{
 				logToken("INNER")
 				return INNER
 			}
 			continue
-		case 98:
+		case 100:
 			{
 				logToken("INSERT")
 				return INSERT
 			}
 			continue
-		case 99:
+		case 101:
 			{
 				logToken("INTERSECT")
 				return INTERSECT
 			}
 			continue
-		case 100:
+		case 102:
 			{
 				logToken("INTO")
 				return INTO
 			}
 			continue
-		case 101:
+		case 103:
 			{
 				logToken("IS")
 				return IS
 			}
 			continue
-		case 102:
+		case 104:
 			{
 				logToken("JOIN")
 				return JOIN
 			}
 			continue
-		case 103:
+		case 105:
 			{
 				logToken("KEY")
 				return KEY
 			}
 			continue
-		case 104:
+		case 106:
 			{
 				logToken("KEYS")
 				return KEYS
 			}
 			continue
-		case 105:
+		case 107:
 			{
 				logToken("KEYSPACE")
 				return KEYSPACE
 			}
 			continue
-		case 106:
+		case 108:
 			{
 				logToken("LAST")
 				return LAST
 			}
 			continue
-		case 107:
+		case 109:
 			{
 				logToken("LEFT")
 				return LEFT
 			}
 			continue
-		case 108:
+		case 110:
 			{
 				logToken("LET")
 				return LET
 			}
 			continue
-		case 109:
+		case 111:
 			{
 				logToken("LETTING")
 				return LETTING
 			}
 			continue
-		case 110:
+		case 112:
 			{
 				logToken("LIKE")
 				return LIKE
 			}
 			continue
-		case 111:
+		case 113:
 			{
 				logToken("LIMIT")
 				return LIMIT
 			}
 			continue
-		case 112:
+		case 114:
 			{
 				logToken("LSM")
 				return LSM
 			}
 			continue
-		case 113:
+		case 115:
 			{
 				logToken("MAP")
 				return MAP
 			}
 			continue
-		case 114:
+		case 116:
 			{
 				logToken("MAPPING")
 				return MAPPING
 			}
 			continue
-		case 115:
+		case 117:
 			{
 				logToken("MATCHED")
 				return MATCHED
 			}
 			continue
-		case 116:
+		case 118:
 			{
 				logToken("MATERIALIZED")
 				return MATERIALIZED
 			}
 			continue
-		case 117:
+		case 119:
 			{
 				logToken("MERGE")
 				return MERGE
 			}
 			continue
-		case 118:
+		case 120:
 			{
 				logToken("MINUS")
 				return MINUS
 			}
 			continue
-		case 119:
+		case 121:
 			{
 				logToken("MISSING")
 				return MISSING
 			}
 			continue
-		case 120:
+		case 122:
 			{
 				logToken("NAMESPACE")
 				return NAMESPACE
 			}
 			continue
-		case 121:
+		case 123:
 			{
 				logToken("NEST")
 				return NEST
 			}
 			continue
-		case 122:
+		case 124:
 			{
 				logToken("NOT")
 				return NOT
 			}
 			continue
-		case 123:
+		case 125:
 			{
 				logToken("NULL")
 				return NULL
 			}
 			continue
-		case 124:
+		case 126:
 			{
 				logToken("NUMBER")
 				return NUMBER
 			}
 			continue
-		case 125:
+		case 127:
 			{
 				logToken("OBJECT")
 				return OBJECT
 			}
 			continue
-		case 126:
+		case 128:
 			{
 				logToken("OFFSET")
 				return OFFSET
 			}
 			continue
-		case 127:
+		case 129:
 			{
 				logToken("ON")
 				return ON
 			}
 			continue
-		case 128:
+		case 130:
 			{
 				logToken("OPTION")
 				return OPTION
 			}
 			continue
-		case 129:
+		case 131:
 			{
 				logToken("OR")
 				return OR
 			}
 			continue
-		case 130:
+		case 132:
 			{
 				logToken("ORDER")
 				return ORDER
 			}
 			continue
-		case 131:
+		case 133:
 			{
 				logToken("OUTER")
 				return OUTER
 			}
 			continue
-		case 132:
+		case 134:
 			{
 				logToken("OVER")
 				return OVER
 			}
 			continue
-		case 133:
+		case 135:
 			{
 				logToken("PARTITION")
 				return PARTITION
 			}
 			continue
-		case 134:
+		case 136:
 			{
 				logToken("PASSWORD")
 				return PASSWORD
 			}
 			continue
-		case 135:
+		case 137:
 			{
 				logToken("PATH")
 				return PATH
 			}
 			continue
-		case 136:
+		case 138:
 			{
 				logToken("POOL")
 				return POOL
 			}
 			continue
-		case 137:
+		case 139:
 			{
 				logToken("PREPARE")
 				return PREPARE
 			}
 			continue
-		case 138:
+		case 140:
 			{
 				logToken("PRIMARY")
 				return PRIMARY
 			}
 			continue
-		case 139:
+		case 141:
 			{
 				logToken("PRIVATE")
 				return PRIVATE
 			}
 			continue
-		case 140:
+		case 142:
 			{
 				logToken("PRIVILEGE")
 				return PRIVILEGE
 			}
 			continue
-		case 141:
+		case 143:
 			{
 				logToken("PROCEDURE")
 				return PROCEDURE
 			}
 			continue
-		case 142:
+		case 144:
 			{
 				logToken("PUBLIC")
 				return PUBLIC
 			}
 			continue
-		case 143:
+		case 145:
 			{
 				logToken("RAW")
 				return RAW
 			}
 			continue
-		case 144:
+		case 146:
 			{
 				logToken("REALM")
 				return REALM
 			}
 			continue
-		case 145:
+		case 147:
 			{
 				logToken("REDUCE")
 				return REDUCE
 			}
 			continue
-		case 146:
+		case 148:
 			{
 				logToken("RENAME")
 				return RENAME
 			}
 			continue
-		case 147:
+		case 149:
 			{
 				logToken("RETURN")
 				return RETURN
 			}
 			continue
-		case 148:
+		case 150:
 			{
 				logToken("RETURNING")
 				return RETURNING
 			}
 			continue
-		case 149:
+		case 151:
 			{
 				logToken("REVOKE")
 				return REVOKE
 			}
 			continue
-		case 150:
+		case 152:
 			{
 				logToken("RIGHT")
 				return RIGHT
 			}
 			continue
-		case 151:
+		case 153:
 			{
 				logToken("ROLE")
 				return ROLE
 			}
 			continue
-		case 152:
+		case 154:
 			{
 				logToken("ROLLBACK")
 				return ROLLBACK
 			}
 			continue
-		case 153:
+		case 155:
 			{
 				logToken("SATISFIES")
 				return SATISFIES
 			}
 			continue
-		case 154:
+		case 156:
 			{
 				logToken("SCHEMA")
 				return SCHEMA
 			}
 			continue
-		case 155:
+		case 157:
 			{
 				logToken("SELECT")
 				return SELECT
 			}
 			continue
-		case 156:
+		case 158:
 			{
 				logToken("SELF")
 				return SELF
 			}
 			continue
-		case 157:
+		case 159:
 			{
 				logToken("SET")
 				return SET
 			}
 			continue
-		case 158:
+		case 160:
 			{
 				logToken("SHOW")
 				return SHOW
 			}
 			continue
-		case 159:
+		case 161:
 			{
 				logToken("SOME")
 				return SOME
 			}
 			continue
-		case 160:
+		case 162:
 			{
 				logToken("START")
 				return START
 			}
 			continue
-		case 161:
+		case 163:
 			{
 				logToken("STATISTICS")
 				return STATISTICS
 			}
 			continue
-		case 162:
+		case 164:
 			{
 				logToken("STRING")
 				return STRING
 			}
 			continue
-		case 163:
+		case 165:
 			{
 				logToken("SYSTEM")
 				return SYSTEM
 			}
 			continue
-		case 164:
+		case 166:
 			{
 				logToken("THEN")
 				return THEN
 			}
 			continue
-		case 165:
+		case 167:
 			{
 				logToken("TO")
 				return TO
 			}
 			continue
-		case 166:
+		case 168:
 			{
 				logToken("TRANSACTION")
 				return TRANSACTION
 			}
 			continue
-		case 167:
+		case 169:
 			{
 				logToken("TRIGGER")
 				return TRIGGER
 			}
 			continue
-		case 168:
+		case 170:
 			{
 				logToken("TRUE")
 				return TRUE
 			}
 			continue
-		case 169:
+		case 171:
 			{
 				logToken("TRUNCATE")
 				return TRUNCATE
 			}
 			continue
-		case 170:
+		case 172:
 			{
 				logToken("UNDER")
 				return UNDER
 			}
 			continue
-		case 171:
+		case 173:
 			{
 				logToken("UNION")
 				return UNION
 			}
 			continue
-		case 172:
+		case 174:
 			{
 				logToken("UNIQUE")
 				return UNIQUE
 			}
 			continue
-		case 173:
+		case 175:
 			{
 				logToken("UNNEST")
 				return UNNEST
 			}
 			continue
-		case 174:
+		case 176:
 			{
 				logToken("UNSET")
 				return UNSET
 			}
 			continue
-		case 175:
+		case 177:
 			{
 				logToken("UPDATE")
 				return UPDATE
 			}
 			continue
-		case 176:
+		case 178:
 			{
 				logToken("UPSERT")
 				return UPSERT
 			}
 			continue
-		case 177:
+		case 179:
 			{
 				logToken("USE")
 				return USE
 			}
 			continue
-		case 178:
+		case 180:
 			{
 				logToken("USER")
 				return USER
 			}
 			continue
-		case 179:
+		case 181:
 			{
 				logToken("USING")
 				return USING
 			}
 			continue
-		case 180:
+		case 182:
 			{
 				logToken("VALUE")
 				return VALUE
 			}
 			continue
-		case 181:
+		case 183:
 			{
 				logToken("VALUED")
 				return VALUED
 			}
 			continue
-		case 182:
+		case 184:
 			{
 				logToken("VALUES")
 				return VALUES
 			}
 			continue
-		case 183:
+		case 185:
 			{
 				logToken("VIEW")
 				return VIEW
 			}
 			continue
-		case 184:
+		case 186:
 			{
 				logToken("WHEN")
 				return WHEN
 			}
 			continue
-		case 185:
+		case 187:
 			{
 				logToken("WHERE")
 				return WHERE
 			}
 			continue
-		case 186:
+		case 188:
 			{
 				logToken("WHILE")
 				return WHILE
 			}
 			continue
-		case 187:
+		case 189:
 			{
 				logToken("WITH")
 				return WITH
 			}
 			continue
-		case 188:
+		case 190:
 			{
 				logToken("WITHIN")
 				return WITHIN
 			}
 			continue
-		case 189:
+		case 191:
 			{
 				logToken("WORK")
 				return WORK
 			}
 			continue
-		case 190:
+		case 192:
 			{
 				logToken("XOR")
 				return XOR
 			}
 			continue
-		case 191:
+		case 193:
 			{
 				lval.s = yylex.Text()
 				logToken("IDENTIFIER - %s", lval.s)
 				return IDENTIFIER
 			}
 			continue
-		case 192:
+		case 194:
 			{
 				lval.s = yylex.Text()[1:]
 				logToken("NAMED_PARAM - %s", lval.s)
 				return NAMED_PARAM
 			}
 			continue
-		case 193:
+		case 195:
 			{
 				lval.n, _ = strconv.Atoi(yylex.Text()[1:])
 				logToken("POSITIONAL_PARAM - %d", lval.n)
 				return POSITIONAL_PARAM
 			}
 			continue
-		case 194:
+		case 196:
 			{
 				lval.n = 0 // Handled by parser
 				logToken("NEXT_PARAM - ?")

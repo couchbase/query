@@ -40,6 +40,7 @@ type CreateIndex struct {
 	partition expression.Expression  `json:"partition"`
 	where     expression.Expression  `json:"where"`
 	using     datastore.IndexType    `json:"using"`
+	with      value.Value            `json:"with"`
 }
 
 /*
@@ -47,7 +48,7 @@ The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
 func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
-	partition, where expression.Expression, using datastore.IndexType) *CreateIndex {
+	partition, where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
 	rv := &CreateIndex{
 		name:      name,
 		keyspace:  keyspace,
@@ -55,6 +56,7 @@ func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Express
 		partition: partition,
 		where:     where,
 		using:     using,
+		with:      with,
 	}
 
 	rv.stmt = rv
@@ -163,6 +165,13 @@ func (this *CreateIndex) Using() datastore.IndexType {
 }
 
 /*
+Returns the WITH deployment plan.
+*/
+func (this *CreateIndex) With() value.Value {
+	return this.with
+}
+
+/*
 Marshals input receiver into byte array.
 */
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
@@ -172,9 +181,13 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	if this.partition != nil {
 		r["partition"] = expression.NewStringer().Visit(this.partition)
 	}
-	r["using"] = this.using
 	if this.where != nil {
 		r["where"] = expression.NewStringer().Visit(this.where)
 	}
+	r["using"] = this.using
+	if this.with != nil {
+		r["with"] = this.with
+	}
+
 	return json.Marshal(r)
 }

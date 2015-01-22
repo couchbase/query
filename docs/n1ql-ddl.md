@@ -2,7 +2,7 @@
 
 * Status: DRAFT/PROPOSAL
 * Latest: [n1ql-ddl](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md)
-* Modified: 2015-01-16
+* Modified: 2015-01-21
 
 ## Summary
 
@@ -112,6 +112,10 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Added diagram for DROP PRIMARY INDEX
 * 2014-01-16 - USING GSI
     * Added USING GSI
+* 2014-01-21 - Index deployment flexibility
+    * WITH clause
+    * Multiple, named primary indexes
+    * BUILD INDEXES statement
 
 ### Open Issues
 
