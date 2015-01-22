@@ -20,12 +20,13 @@ import (
 	"github.com/couchbaselabs/query/expression"
 	"github.com/couchbaselabs/query/logging"
 	"github.com/couchbaselabs/query/timestamp"
+	"github.com/couchbaselabs/query/value"
 )
 
 type viewIndexer struct {
 	keyspace         *keyspace
 	indexes          map[string]datastore.Index
-	primary          datastore.PrimaryIndex
+	primary          map[string]datastore.PrimaryIndex
 	nonUsableIndexes []string // indexes that cannot be used
 }
 
@@ -33,6 +34,7 @@ func newViewIndexer(keyspace *keyspace) datastore.Indexer {
 	rv := &viewIndexer{
 		keyspace:         keyspace,
 		indexes:          make(map[string]datastore.Index),
+		primary:          make(map[string]datastore.PrimaryIndex),
 		nonUsableIndexes: make([]string, 0, 10),
 	}
 
@@ -69,37 +71,18 @@ func (view *viewIndexer) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (view *viewIndexer) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-
-	if view.primary == nil {
-
-		logging.Infof("Number of indexes %d", len(view.indexes))
-
-		if len(view.indexes) == 0 {
-			if err := view.loadViewIndexes(); err != nil {
-				return nil, errors.NewError(err, "No indexes found. Please create a primary index")
-
-			}
-
-		}
-		idx, ok := view.indexes[PRIMARY_INDEX]
-		if ok {
-			primary := idx.(datastore.PrimaryIndex)
-			return primary, nil
-		}
-		all, ok := view.indexes[ALLDOCS_INDEX]
-		if ok {
-			primary := all.(datastore.PrimaryIndex)
-			return primary, nil
-		}
-	}
-	return view.primary, nil
-}
-
 func (view *viewIndexer) IndexIds() ([]string, errors.Error) {
 	rv := make([]string, 0, len(view.indexes))
 	for name, _ := range view.indexes {
 		rv = append(rv, name)
+	}
+	return rv, nil
+}
+
+func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
+	rv := make([]datastore.PrimaryIndex, 0, len(view.primary))
+	for _, index := range view.primary {
+		rv = append(rv, index)
 	}
 	return rv, nil
 }
@@ -112,22 +95,7 @@ func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
 	return rv, nil
 }
 
-func (view *viewIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
-	if _, exists := view.indexes[PRIMARY_INDEX]; exists {
-		return nil, errors.NewError(nil, "Primary index already exists")
-	}
-	idx, err := newViewPrimaryIndex(view)
-	if err != nil {
-		return nil, errors.NewError(err, "Error creating primary index")
-	}
-	view.indexes[idx.Name()] = idx
-	return idx, nil
-
-}
-
-func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression) (datastore.Index, errors.Error) {
-
+func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
 	if _, exists := view.indexes[name]; exists {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
 	}
@@ -139,6 +107,39 @@ func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.
 		}
 	}
 
+	if with != nil {
+		return nil, errors.NewError(nil, "WITH not allowed in view indexes.")
+	}
+
+	logging.Infof("Creating primary index %s", name)
+
+	idx, err := newViewPrimaryIndex(view, name)
+	if err != nil {
+		return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+	}
+
+	view.indexes[idx.Name()] = idx
+	view.primary[idx.Name()] = idx
+	return idx, nil
+}
+
+func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
+	if _, exists := view.indexes[name]; exists {
+		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+	}
+
+	// if the name matches any of the unusable indexes, return an error
+	for _, iname := range view.nonUsableIndexes {
+		if name == iname {
+			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+		}
+	}
+
+	if with != nil {
+		return nil, errors.NewError(nil, "WITH not allowed in view indexes.")
+	}
+
 	logging.Infof("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
 
 	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
@@ -147,6 +148,10 @@ func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.
 	}
 	view.indexes[idx.Name()] = idx
 	return idx, nil
+}
+
+func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
+	return errors.NewError(nil, "BUILD INDEXES is not supported for VIEW.")
 }
 
 func (view *viewIndexer) loadViewIndexes() errors.Error {
@@ -243,13 +248,6 @@ func (vi *viewIndex) Type() datastore.IndexType {
 	return vi.using
 }
 
-func (vi *viewIndex) IsPrimary() bool {
-	if vi.name == PRIMARY_INDEX {
-		return true
-	}
-	return false
-}
-
 func (vi *viewIndex) Key() datastore.IndexKey {
 	return vi.on
 }
@@ -323,7 +321,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 				entry := datastore.IndexEntry{PrimaryKey: viewRow.ID}
 
 				// try to add the view row key as the entry key (unless this is _all_docs)
-				if vi.DDocName() != "" && vi.IsPrimary() == false {
+				if vi.DDocName() != "" /* FIXME && vi.IsPrimary() == false */ {
 					lookupValue, err := convertCouchbaseViewKeyToLookupValue(viewRow.Key)
 					if err == nil {
 						entry.EntryKey = lookupValue

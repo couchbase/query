@@ -81,13 +81,21 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 
 	indexers, err := k.Indexers()
 	for _, indexer := range indexers {
-		this.index, err = indexer.IndexByPrimary()
+		index, err := indexer.IndexByName(_unmarshalled.Index)
 		if err == nil {
-			return nil
+			primary, ok := index.(datastore.PrimaryIndex)
+			if ok {
+				this.index = primary
+				return nil
+			}
 		}
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("Unable to unmarshal %s as primary index.", _unmarshalled.Index)
 }
 
 type IndexScan struct {

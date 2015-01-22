@@ -21,13 +21,15 @@ import (
 type BuildIndexes struct {
 	statementBase
 
-	keyspace *KeyspaceRef `json:"keyspace"`
-	names    []string     `json:"names"`
+	keyspace *KeyspaceRef        `json:"keyspace"`
+	using    datastore.IndexType `json:"using"`
+	names    []string            `json:"names"`
 }
 
-func NewBuildIndexes(keyspace *KeyspaceRef, names ...string) *BuildIndexes {
+func NewBuildIndexes(keyspace *KeyspaceRef, using datastore.IndexType, names ...string) *BuildIndexes {
 	rv := &BuildIndexes{
 		keyspace: keyspace,
+		using:    using,
 		names:    names,
 	}
 
@@ -36,9 +38,7 @@ func NewBuildIndexes(keyspace *KeyspaceRef, names ...string) *BuildIndexes {
 }
 
 func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
-	// FIXME
-	//return visitor.VisitBuildIndexes(this)
-	return nil, nil
+	return visitor.VisitBuildIndexes(this)
 }
 
 func (this *BuildIndexes) Signature() value.Value {
@@ -70,6 +70,13 @@ func (this *BuildIndexes) Keyspace() *KeyspaceRef {
 	return this.keyspace
 }
 
+/*
+Returns the index type string for the using clause.
+*/
+func (this *BuildIndexes) Using() datastore.IndexType {
+	return this.using
+}
+
 func (this *BuildIndexes) Names() []string {
 	return this.names
 }
@@ -77,6 +84,7 @@ func (this *BuildIndexes) Names() []string {
 func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "BuildIndexes"}
 	r["keyspaceRef"] = this.keyspace
+	r["using"] = this.using
 	r["names"] = this.names
 	return json.Marshal(r)
 }

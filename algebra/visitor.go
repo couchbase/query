@@ -35,6 +35,7 @@ type Visitor interface {
 	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
 	VisitDropIndex(stmt *DropIndex) (interface{}, error)
 	VisitAlterIndex(stmt *AlterIndex) (interface{}, error)
+	VisitBuildIndexes(stmt *BuildIndexes) (interface{}, error)
 
 	/*
 	   Visitor for EXPLAIN statements.

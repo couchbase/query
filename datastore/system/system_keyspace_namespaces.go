@@ -56,39 +56,6 @@ func (b *namespaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *namespaceKeyspace) IndexIds() ([]string, errors.Error) {
-	return b.IndexNames()
-}
-
-func (b *namespaceKeyspace) IndexNames() ([]string, errors.Error) {
-	return b.indexer.IndexNames()
-}
-
-func (b *namespaceKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.indexer.IndexByName(id)
-}
-
-func (b *namespaceKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	return b.indexer.IndexByName(name)
-}
-
-func (b *namespaceKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.indexer.IndexByPrimary()
-}
-
-func (b *namespaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	return b.indexer.Indexes()
-}
-
-func (b *namespaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	return b.indexer.CreatePrimaryIndex()
-}
-
-func (b *namespaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return b.indexer.CreateIndex(name, equalKey, rangeKey, where)
-}
-
 func (b *namespaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
@@ -141,7 +108,7 @@ func newNamespacesKeyspace(p *namespace) (*namespaceKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_NAMESPACES
 
-	primary := &namespaceIndex{name: "primary", keyspace: b}
+	primary := &namespaceIndex{name: "#primary", keyspace: b}
 	b.indexer = &systemIndexer{keyspace: b, indexes: make(map[string]datastore.Index), primary: primary}
 
 	return b, nil
@@ -165,7 +132,7 @@ func (pi *namespaceIndex) Name() string {
 }
 
 func (pi *namespaceIndex) Type() datastore.IndexType {
-	return datastore.UNSPECIFIED
+	return datastore.DEFAULT
 }
 
 func (pi *namespaceIndex) SeekKey() expression.Expressions {

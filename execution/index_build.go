@@ -14,13 +14,13 @@ import (
 	"github.com/couchbaselabs/query/value"
 )
 
-type CreatePrimaryIndex struct {
+type BuildIndexes struct {
 	base
-	plan *plan.CreatePrimaryIndex
+	plan *plan.BuildIndexes
 }
 
-func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) *CreatePrimaryIndex {
-	rv := &CreatePrimaryIndex{
+func NewBuildIndexes(plan *plan.BuildIndexes) *BuildIndexes {
+	rv := &BuildIndexes{
 		base: newBase(),
 		plan: plan,
 	}
@@ -29,15 +29,15 @@ func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) *CreatePrimaryIndex {
 	return rv
 }
 
-func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitCreatePrimaryIndex(this)
+func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitBuildIndexes(this)
 }
 
-func (this *CreatePrimaryIndex) Copy() Operator {
-	return &CreatePrimaryIndex{this.base.copy(), this.plan}
+func (this *BuildIndexes) Copy() Operator {
+	return &BuildIndexes{this.base.copy(), this.plan}
 }
 
-func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
+func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
@@ -47,15 +47,16 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Actually create primary index
+		// Actually build indexes
 		node := this.plan.Node()
+
 		indexer, err := this.plan.Keyspace().Indexer(node.Using())
 		if err != nil {
 			context.Error(err)
 			return
 		}
 
-		_, err = indexer.CreatePrimaryIndex(node.Name(), node.With())
+		err = indexer.BuildIndexes(node.Names()...)
 		if err != nil {
 			context.Error(err)
 		}

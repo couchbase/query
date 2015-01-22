@@ -142,22 +142,27 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 	}
 
 	var primary datastore.PrimaryIndex
+
 	for _, indexer := range indexers {
-		primary, err = indexer.IndexByPrimary()
+		indexes, err := indexer.PrimaryIndexes()
 		if err != nil {
 			return nil, err
 		}
 
-		state, er := primary.State()
-		if er != nil {
-			return nil, er
-		}
+		for _, index := range indexes {
+			state, er := index.State()
+			if er != nil {
+				return nil, er
+			}
 
-		if state != datastore.ONLINE {
-			continue
-		}
+			if state != datastore.ONLINE {
+				primary = index
+				continue
+			}
 
-		break
+			scan := NewPrimaryScan(index, node)
+			return scan, nil
+		}
 	}
 
 	if primary == nil {
@@ -166,15 +171,5 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 			keyspace.Name())
 	}
 
-	state, err := primary.State()
-	if err != nil {
-		return nil, err
-	}
-
-	if state != datastore.ONLINE {
-		return nil, fmt.Errorf("Primary index %s not online.", primary.Name())
-	}
-
-	scan := NewPrimaryScan(primary, node)
-	return scan, nil
+	return nil, fmt.Errorf("Primary index %s not online.", primary.Name())
 }

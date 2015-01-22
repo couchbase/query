@@ -63,7 +63,7 @@ type Keyspace interface {
 	Id() string                                     // Id of this keyspace
 	Name() string                                   // Name of this keyspace
 	Count() (int64, errors.Error)                   // Number of key-value entries in this keyspace
-	Indexer(name IndexType) (Indexer, errors.Error) // Index provider by name, e.g. VIEW or GSI; "" returns default Indexer
+	Indexer(name IndexType) (Indexer, errors.Error) // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
 	Indexers() ([]Indexer, errors.Error)            // List of index providers
 
 	// Used by both SELECT and DML statements

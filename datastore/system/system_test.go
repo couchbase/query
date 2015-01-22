@@ -160,12 +160,13 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 		return
 	}
 
-	idx, excp := indexers[0].IndexByPrimary()
-	if excp != nil {
-		t.Fatalf("failed to retrieve Primary index")
+	pindexes, excp := indexers[0].PrimaryIndexes()
+	if excp != nil || len(pindexes) < 1 {
+		t.Fatalf("failed to retrieve primary indexes")
 		return
 	}
 
+	idx := pindexes[0]
 	go idx.ScanEntries(nitems, datastore.UNBOUNDED, nil, conn)
 	for {
 		v, ok := <-conn.EntryChannel()

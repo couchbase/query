@@ -71,39 +71,6 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *keyspaceKeyspace) IndexIds() ([]string, errors.Error) {
-	return b.IndexNames()
-}
-
-func (b *keyspaceKeyspace) IndexNames() ([]string, errors.Error) {
-	return b.indexer.IndexNames()
-}
-
-func (b *keyspaceKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.IndexByName(id)
-}
-
-func (b *keyspaceKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	return b.indexer.IndexByName(name)
-}
-
-func (b *keyspaceKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.indexer.IndexByPrimary()
-}
-
-func (b *keyspaceKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	return b.indexer.Indexes()
-}
-
-func (b *keyspaceKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	return b.indexer.CreatePrimaryIndex()
-}
-
-func (b *keyspaceKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return b.indexer.CreateIndex(name, equalKey, rangeKey, where)
-}
-
 func (b *keyspaceKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
@@ -162,7 +129,7 @@ func newKeyspacesKeyspace(p *namespace) (*keyspaceKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_KEYSPACES
 
-	primary := &keyspaceIndex{name: "primary", keyspace: b}
+	primary := &keyspaceIndex{name: "#primary", keyspace: b}
 	b.indexer = &systemIndexer{keyspace: b, indexes: make(map[string]datastore.Index), primary: primary}
 
 	return b, nil
@@ -186,7 +153,7 @@ func (pi *keyspaceIndex) Name() string {
 }
 
 func (pi *keyspaceIndex) Type() datastore.IndexType {
-	return datastore.UNSPECIFIED
+	return datastore.DEFAULT
 }
 
 func (pi *keyspaceIndex) SeekKey() expression.Expressions {

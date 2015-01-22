@@ -37,7 +37,6 @@ import (
 
 const (
 	PRIMARY_INDEX = "#primary"
-	ALLDOCS_INDEX = "#alldocs"
 )
 
 // datasite is the root for the couchbase datasite
@@ -374,8 +373,6 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count() (int64, errors.Error) {
-	var err error
-
 	statsMap := b.cbbucket.GetStats("")
 	for _, stats := range statsMap {
 		itemCount := stats["curr_items_tot"]
@@ -385,27 +382,7 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 	}
 
-	pi, err := b.IndexByPrimary()
-	if err != nil || pi == nil {
-		return 0, errors.NewError(nil, "Unable to get item count and no primary index found for bucket "+b.Name())
-	}
-
-	var totalCount int64
-
-	switch pi := pi.(type) {
-	case *primaryIndex:
-		vi := pi
-		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
-	case *viewIndex:
-		vi := pi
-		totalCount, err = ViewTotalRows(vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), map[string]interface{}{})
-	}
-
-	if err != nil {
-		return 0, errors.NewError(err, "")
-	}
-
-	return totalCount, nil
+	return 0, errors.NewError(nil, "Unable to obtain count from bucket stats map.")
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -421,96 +398,11 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	indexers := make([]datastore.Indexer, 0, 4)
-
-	// There will always be a VIEW indexer
-	indexers = append(indexers, b.viewIndexer)
-	indexers = append(indexers, b.gsiIndexer)
-	return indexers, nil
-}
-
-// To be deprecated
-func (b *keyspace) IndexIds() ([]string, errors.Error) {
-	vi, _ := b.viewIndexer.IndexIds()
-	gsi, _ := b.gsiIndexer.IndexIds()
-	return append(vi, gsi...), nil
-}
-
-func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	vi, _ := b.viewIndexer.IndexNames()
-	gsi, _ := b.gsiIndexer.IndexNames()
-	return append(vi, gsi...), nil
-}
-
-func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.IndexByName(id)
-}
-
-func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	idx, err := b.viewIndexer.IndexByName(name)
-	if err != nil {
-		return b.gsiIndexer.IndexByName(name)
-	}
-	return idx, nil
-}
-
-// End of to be deprecated block
-
-func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-
-	//TODO: Who gets priority. View Indexes or 2i ?
-	pi, err := b.viewIndexer.IndexByPrimary()
-
-	if err != nil {
-		index, _ := b.gsiIndexer.IndexByPrimary()
-		logging.Infof("No view indexes found. Getting GSI index %v", index)
-		pi, err = b.gsiIndexer.IndexByPrimary()
-		if err != nil {
-			return nil, errors.NewError(nil, "No indexes found for bucket "+b.Name())
-		}
-	}
-
-	return pi, nil
-}
-
-func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	indexes := make([]datastore.Index, 0, 1)
-	indexes, err := b.viewIndexer.Indexes()
-	if err != nil {
-		logging.Infof(" Failed to get View Indexes %v", err)
-	}
-	gsiIndexes, err := b.gsiIndexer.Indexes()
-	if err != nil {
-		logging.Infof(" Failed to get GSI Indexes %v", err)
-	}
-	indexes = append(indexes, gsiIndexes...)
-	return indexes, err
-}
-
-func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	switch using {
-	case datastore.VIEW:
-		return b.viewIndexer.CreatePrimaryIndex()
-	case datastore.GSI:
-		return b.gsiIndexer.CreatePrimaryIndex()
-
-	default:
-		return nil, errors.NewError(nil, "Not yet implemented.")
-	}
-}
-
-func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-
-	switch using {
-	case datastore.VIEW:
-		return b.viewIndexer.CreateIndex(name, equalKey, rangeKey, where)
-	case datastore.GSI:
-		return b.gsiIndexer.CreateIndex(name, equalKey, rangeKey, where)
-
-	default:
-		return nil, errors.NewError(nil, "Not yet implemented.")
-	}
+	return []datastore.Indexer{
+		// There will always be a VIEW indexer
+		b.viewIndexer,
+		b.gsiIndexer,
+	}, nil
 }
 
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {

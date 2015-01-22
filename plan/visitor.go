@@ -92,6 +92,7 @@ type Visitor interface {
 	VisitCreateIndex(op *CreateIndex) (interface{}, error)
 	VisitDropIndex(op *DropIndex) (interface{}, error)
 	VisitAlterIndex(op *AlterIndex) (interface{}, error)
+	VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
 
 	// Explain
 	VisitExplain(op *Explain) (interface{}, error)

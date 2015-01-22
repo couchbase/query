@@ -53,39 +53,6 @@ func (b *dualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.di}, nil
 }
 
-func (b *dualKeyspace) IndexIds() ([]string, errors.Error) {
-	return b.IndexNames()
-}
-
-func (b *dualKeyspace) IndexNames() ([]string, errors.Error) {
-	return b.di.IndexNames()
-}
-
-func (b *dualKeyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.IndexByName(id)
-}
-
-func (b *dualKeyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	return b.di.IndexByName(name)
-}
-
-func (b *dualKeyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.di.IndexByPrimary()
-}
-
-func (b *dualKeyspace) Indexes() ([]datastore.Index, errors.Error) {
-	return b.di.Indexes()
-}
-
-func (b *dualKeyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	return b.di.CreatePrimaryIndex()
-}
-
-func (b *dualKeyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
-}
-
 func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
@@ -149,7 +116,7 @@ func (pi *dualIndex) Name() string {
 }
 
 func (pi *dualIndex) Type() datastore.IndexType {
-	return datastore.UNSPECIFIED
+	return datastore.DEFAULT
 }
 
 func (pi *dualIndex) SeekKey() expression.Expressions {

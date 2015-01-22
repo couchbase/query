@@ -91,6 +91,16 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 	return NewAlterIndex(index, stmt), nil
 }
 
+func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
+	ksref := stmt.Keyspace()
+	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+
+	return NewBuildIndexes(keyspace, stmt), nil
+}
+
 func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {
 	if ns == "" {
 		ns = this.namespace

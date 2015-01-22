@@ -344,6 +344,11 @@ func (this *builder) VisitAlterIndex(plan *plan.AlterIndex) (interface{}, error)
 	return NewAlterIndex(plan), nil
 }
 
+// BuildIndexes
+func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, error) {
+	return NewBuildIndexes(plan), nil
+}
+
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
 	return NewPrepare(plan.Prepared()), nil

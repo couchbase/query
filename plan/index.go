@@ -50,7 +50,7 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["name"] = this.node
+	r["node"] = this.node
 	return json.Marshal(r)
 }
 
@@ -59,7 +59,7 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 		_     string                      `json:"#operator"`
 		Keys  string                      `json:"keyspace"`
 		Names string                      `json:"namespace"`
-		Node  *algebra.CreatePrimaryIndex `json:"name"`
+		Node  *algebra.CreatePrimaryIndex `json:"node"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -105,7 +105,7 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CreateIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["name"] = this.node
+	r["node"] = this.node
 	return json.Marshal(r)
 }
 
@@ -114,7 +114,7 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		_     string               `json:"#operator"`
 		Keys  string               `json:"keyspace"`
 		Names string               `json:"namespace"`
-		Node  *algebra.CreateIndex `json:"name"`
+		Node  *algebra.CreateIndex `json:"node"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -158,14 +158,14 @@ func (this *DropIndex) Node() *algebra.DropIndex {
 
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "DropIndex"}
-	r["name"] = this.node
+	r["node"] = this.node
 	return json.Marshal(r)
 }
 
 func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_    string             `json:"#operator"`
-		Node *algebra.DropIndex `json:"name"`
+		Node *algebra.DropIndex `json:"node"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -205,7 +205,7 @@ func (this *AlterIndex) Node() *algebra.AlterIndex {
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "AlterIndex"}
 	r["index"] = this.index.Name()
-	r["name"] = this.node
+	r["node"] = this.node
 	return json.Marshal(r)
 }
 
@@ -213,10 +213,65 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string              `json:"#operator"`
 		Index string              `json:"index"`
-		Node  *algebra.AlterIndex `json:"name"`
+		Node  *algebra.AlterIndex `json:"node"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	return err
 	// TODO: recover index from index name
+}
+
+// Build indexes
+type BuildIndexes struct {
+	readwrite
+	keyspace datastore.Keyspace
+	node     *algebra.BuildIndexes
+}
+
+func NewBuildIndexes(keyspace datastore.Keyspace, node *algebra.BuildIndexes) *BuildIndexes {
+	return &BuildIndexes{
+		keyspace: keyspace,
+		node:     node,
+	}
+}
+
+func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitBuildIndexes(this)
+}
+
+func (this *BuildIndexes) New() Operator {
+	return &BuildIndexes{}
+}
+
+func (this *BuildIndexes) Keyspace() datastore.Keyspace {
+	return this.keyspace
+}
+
+func (this *BuildIndexes) Node() *algebra.BuildIndexes {
+	return this.node
+}
+
+func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "BuildIndexes"}
+	r["keyspace"] = this.keyspace.Name()
+	r["namespace"] = this.keyspace.NamespaceId()
+	r["node"] = this.node
+	return json.Marshal(r)
+}
+
+func (this *BuildIndexes) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string                `json:"#operator"`
+		Keys  string                `json:"keyspace"`
+		Names string                `json:"namespace"`
+		Node  *algebra.BuildIndexes `json:"node"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }

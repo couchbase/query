@@ -77,7 +77,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// try create a primary index
-	index, err := indexer.CreatePrimaryIndex()
+	index, err := indexer.CreatePrimaryIndex("#primary", nil)
 	if err != nil {
 		// keep going. maybe index already exists
 		fmt.Printf(" Cannot create a primary index on bucket. Error %v", err)
@@ -105,20 +105,15 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Failed to delete %v", err)
 	}
 
-	pi, err := indexer.IndexByPrimary()
-	if err != nil {
-		fmt.Printf("No primary index found")
-		return
-	}
-
-	if pi == nil {
+	pi, err := indexer.PrimaryIndexes()
+	if err != nil || len(pi) < 1 {
 		fmt.Printf("No primary index found")
 		return
 	}
 
 	//fmt.Printf(" got primary index %s", pi.name)
 	conn := datastore.NewIndexConnection(nil)
-	go pi.ScanEntries(math.MaxInt64, datastore.UNBOUNDED, nil, conn)
+	go pi[0].ScanEntries(math.MaxInt64, datastore.UNBOUNDED, nil, conn)
 
 	var entry *datastore.IndexEntry
 
@@ -132,5 +127,4 @@ func TestServer(t *testing.T) {
 			}
 		}
 	}
-
 }

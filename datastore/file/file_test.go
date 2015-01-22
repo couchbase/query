@@ -90,10 +90,16 @@ func TestFile(t *testing.T) {
 		t.Errorf("Expected at least 1 index for keyspace")
 	}
 
-	index, err := indexers[0].IndexByPrimary()
+	pindexes, err := indexers[0].PrimaryIndexes()
 	if err != nil {
-		t.Fatalf("failed to get primary index: %v", err)
+		t.Errorf("failed to get primary indexes")
 	}
+
+	if len(pindexes) < 1 {
+		t.Errorf("Expected at least 1 primary index for keyspace")
+	}
+
+	index := pindexes[0]
 
 	context := &testingContext{t}
 	conn := datastore.NewIndexConnection(context)

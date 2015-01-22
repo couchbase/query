@@ -347,8 +347,8 @@ val              value.Value
 %type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
 %type <expr>             index_partition
-%type <indexType>        index_using
-%type <val>              index_with
+%type <indexType>        index_using opt_index_using
+%type <val>              index_with opt_index_with
 %type <s>                rename
 %type <expr>             index_expr index_where
 %type <exprs>            index_exprs
@@ -1422,12 +1422,12 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_index_name ON named_keyspace_ref index_using index_with
+CREATE PRIMARY INDEX opt_index_name ON named_keyspace_ref opt_index_using opt_index_with
 {
     $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8)
 }
 |
-CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where index_using index_with
+CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where opt_index_using opt_index_with
 {
     $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11, $12)
 }
@@ -1470,12 +1470,16 @@ PARTITION BY expr
 }
 ;
 
-index_using:
+opt_index_using:
 /* empty */
 {
-    $$ = datastore.VIEW
+    $$ = datastore.DEFAULT
 }
 |
+index_using
+;
+
+index_using:
 USING VIEW
 {
     $$ = datastore.VIEW
@@ -1487,12 +1491,16 @@ USING GSI
 }
 ;
 
-index_with:
+opt_index_with:
 /* empty */
 {
     $$ = nil
 }
 |
+index_with
+;
+
+index_with:
 WITH expr
 {
     $$ = $2.Value()
@@ -1587,9 +1595,9 @@ RENAME TO index_name
  *************************************************/
 
 build_indexes:
-BUILD INDEXES ON named_keyspace_ref LPAREN index_names RPAREN
+BUILD INDEXES ON named_keyspace_ref LPAREN index_names RPAREN index_using
 {
-    $$ = algebra.NewBuildIndexes($4, $6...)
+    $$ = algebra.NewBuildIndexes($4, $8, $6...)
 }
 ;
 

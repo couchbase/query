@@ -149,39 +149,6 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.mi}, nil
 }
 
-func (b *keyspace) IndexIds() ([]string, errors.Error) {
-	return b.IndexNames()
-}
-
-func (b *keyspace) IndexNames() ([]string, errors.Error) {
-	return b.mi.IndexNames()
-}
-
-func (b *keyspace) IndexById(id string) (datastore.Index, errors.Error) {
-	return b.IndexByName(id)
-}
-
-func (b *keyspace) IndexByName(name string) (datastore.Index, errors.Error) {
-	return b.mi.IndexByName(name)
-}
-
-func (b *keyspace) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return b.mi.IndexByPrimary()
-}
-
-func (b *keyspace) Indexes() ([]datastore.Index, errors.Error) {
-	return b.mi.Indexes()
-}
-
-func (b *keyspace) CreatePrimaryIndex(using datastore.IndexType) (datastore.PrimaryIndex, errors.Error) {
-	return b.mi.CreatePrimaryIndex()
-}
-
-func (b *keyspace) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, using datastore.IndexType) (datastore.Index, errors.Error) {
-	return b.mi.CreateIndex(name, equalKey, rangeKey, where)
-}
-
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 	rv := make([]datastore.AnnotatedPair, len(keys))
 	for i, k := range keys {
@@ -260,7 +227,7 @@ func (mi *mockIndexer) KeyspaceId() string {
 }
 
 func (mi *mockIndexer) Name() datastore.IndexType {
-	return datastore.UNSPECIFIED
+	return datastore.DEFAULT
 }
 
 func (mi *mockIndexer) IndexIds() ([]string, errors.Error) {
@@ -291,24 +258,20 @@ func (mi *mockIndexer) IndexByName(name string) (datastore.Index, errors.Error) 
 	return index, nil
 }
 
-func (mi *mockIndexer) IndexByPrimary() (datastore.PrimaryIndex, errors.Error) {
-	return mi.primary, nil
+func (mi *mockIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
+	return []datastore.PrimaryIndex{mi.primary}, nil
 }
 
 func (mi *mockIndexer) Indexes() ([]datastore.Index, errors.Error) {
-	rv := make([]datastore.Index, 0, len(mi.indexes))
-	for _, index := range mi.indexes {
-		rv = append(rv, index)
-	}
-	return rv, nil
+	return []datastore.Index{mi.primary}, nil
 }
 
-func (mi *mockIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Error) {
+func (mi *mockIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
 	if mi.primary == nil {
 		pi := new(primaryIndex)
 		mi.primary = pi
 		pi.keyspace = mi.keyspace
-		pi.name = "#primary"
+		pi.name = name
 		mi.indexes[pi.name] = pi
 	}
 
@@ -316,8 +279,12 @@ func (mi *mockIndexer) CreatePrimaryIndex() (datastore.PrimaryIndex, errors.Erro
 }
 
 func (mi *mockIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "Create index is not supported for file-based datastore.")
+	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
+	return nil, errors.NewError(nil, "CREATE INDEX is not supported for mock datastore.")
+}
+
+func (mi *mockIndexer) BuildIndexes(names ...string) errors.Error {
+	return errors.NewError(nil, "BUILD INDEXES is not supported for mock datastore.")
 }
 
 // NewDatastore creates a new mock store for the given "path".  The
@@ -356,7 +323,7 @@ func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems}
 
 			b.mi = newMockIndexer(b)
-			b.mi.CreatePrimaryIndex()
+			b.mi.CreatePrimaryIndex("#primary", nil)
 			p.keyspaces[b.name] = b
 			p.keyspaceNames = append(p.keyspaceNames, b.name)
 		}
@@ -393,7 +360,7 @@ func (pi *primaryIndex) Name() string {
 }
 
 func (pi *primaryIndex) Type() datastore.IndexType {
-	return datastore.UNSPECIFIED
+	return datastore.DEFAULT
 }
 
 func (pi *primaryIndex) SeekKey() expression.Expressions {

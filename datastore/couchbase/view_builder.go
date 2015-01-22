@@ -205,15 +205,15 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 	return indexes, nil
 }
 
-func newViewPrimaryIndex(v *viewIndexer) (*primaryIndex, error) {
-	ddoc := newPrimaryDDoc()
+func newViewPrimaryIndex(v *viewIndexer, name string) (*primaryIndex, error) {
+	ddoc := newPrimaryDDoc(name)
 	doc := expression.NewIdentifier(v.keyspace.Name())
 	meta := expression.NewMeta(doc)
 	mdid := expression.NewField(meta, expression.NewFieldName("id"))
 
 	inst := primaryIndex{
 		viewIndex{
-			name:     PRIMARY_INDEX,
+			name:     name,
 			using:    datastore.VIEW,
 			on:       datastore.IndexKey{mdid},
 			ddoc:     ddoc,
@@ -235,33 +235,14 @@ func newViewPrimaryIndex(v *viewIndexer) (*primaryIndex, error) {
 	return &inst, nil
 }
 
-func newAllDocsIndex(b *keyspace) *primaryIndex {
-
-	doc := expression.NewIdentifier(b.Name())
-	meta := expression.NewMeta(doc)
-	mdid := expression.NewField(meta, expression.NewFieldName("id"))
-
-	ddoc := designdoc{name: "", viewname: "_all_docs"}
-	idx := primaryIndex{
-		viewIndex{
-			name:     ALLDOCS_INDEX,
-			using:    datastore.VIEW,
-			on:       datastore.IndexKey{mdid},
-			ddoc:     &ddoc,
-			keyspace: b,
-		},
-	}
-	return &idx
-}
-
-func newPrimaryDDoc() *designdoc {
+func newPrimaryDDoc(name string) *designdoc {
 	var doc designdoc
 	line := strings.Replace(templPrimary, "$rnd", strconv.Itoa(int(rand.Int31())), -1)
 	line = strings.Replace(line, "$string", strconv.Itoa(TYPE_STRING), -1)
 	doc.mapfn = line
 	doc.reducefn = ""
-	doc.name = "ddl_" + PRIMARY_INDEX
-	doc.viewname = PRIMARY_INDEX
+	doc.name = "ddl_" + name
+	doc.viewname = name
 	return &doc
 }
 
