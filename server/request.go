@@ -17,6 +17,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/execution"
 	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/util"
 	"github.com/couchbaselabs/query/value"
 )
@@ -50,7 +51,8 @@ type Request interface {
 	Readonly() value.Tristate
 	Metrics() value.Tristate
 	Signature() value.Tristate
-	ScanConfiguration() ScanConfiguration
+	ScanConsistency() datastore.ScanConsistency
+	ScanVector() timestamp.Vector
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
@@ -84,10 +86,9 @@ const (
 )
 
 type ScanConfiguration interface {
-	ScanConsistency() ScanConsistency
+	ScanConsistency() datastore.ScanConsistency
 	ScanWait() time.Duration
-	ScanVectorFull() []int
-	ScanVectorSparse() map[string]int
+	ScanVector() timestamp.Vector
 }
 
 type BaseRequest struct {
@@ -232,8 +233,18 @@ func (this *BaseRequest) Metrics() value.Tristate {
 	return this.metrics
 }
 
-func (this *BaseRequest) ScanConfiguration() ScanConfiguration {
-	return this.consistency
+func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
+	if this.consistency == nil {
+		return datastore.UNBOUNDED
+	}
+	return this.consistency.ScanConsistency()
+}
+
+func (this *BaseRequest) ScanVector() timestamp.Vector {
+	if this.consistency == nil {
+		return nil
+	}
+	return this.consistency.ScanVector()
 }
 
 func (this *BaseRequest) RequestTime() time.Time {

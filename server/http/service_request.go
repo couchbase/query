@@ -24,6 +24,7 @@ import (
 	"github.com/couchbaselabs/query/errors"
 	"github.com/couchbaselabs/query/plan"
 	"github.com/couchbaselabs/query/server"
+	"github.com/couchbaselabs/query/timestamp"
 	"github.com/couchbaselabs/query/value"
 )
 
@@ -146,7 +147,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	if err == nil {
 		consistency, err = getScanConfiguration(httpArgs)
-
 	}
 
 	var creds datastore.Credentials
@@ -260,27 +260,15 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, error) {
 			err = fmt.Errorf("Unknown %s value: %s", SCAN_CONSISTENCY, scan_consistency_field)
 		}
 	}
-
 	if err == nil {
 		sc.scan_wait, err = a.getDuration(SCAN_WAIT)
 	}
-
 	if err == nil {
-		sc.scan_vector_full, sc.scan_vector_sparse, err = a.getScanVector()
+		sc.scan_vector, err = a.getScanVector()
 	}
-
-	if sc.scan_vector_full != nil && len(sc.scan_vector_full) != SCAN_VECTOR_SIZE {
-		err = fmt.Errorf("%s parameter has to contain %d sequence numbers", SCAN_VECTOR, SCAN_VECTOR_SIZE)
-	}
-
-	if sc.scan_vector_sparse != nil && len(sc.scan_vector_sparse) < 1 {
-		err = fmt.Errorf("%s parameter has to contain at least one sequence number", SCAN_VECTOR)
-	}
-
-	if sc.scan_level == server.AT_PLUS && sc.scan_vector_sparse == nil && sc.scan_vector_full == nil {
+	if err == nil && sc.scan_level == server.AT_PLUS && sc.scan_vector == nil {
 		err = fmt.Errorf("%s parameter value of AT_PLUS requires %s", SCAN_CONSISTENCY, SCAN_VECTOR)
 	}
-
 	return &sc, err
 }
 
@@ -375,7 +363,7 @@ type httpRequestArgs interface {
 	getPositionalArgs() (value.Values, error)
 	getStatement() (string, error)
 	getCredentials() ([]map[string]string, error)
-	getScanVector() ([]int, map[string]int, error)
+	getScanVector() (timestamp.Vector, error)
 }
 
 // getRequestParams creates a httpRequestArgs implementation,
@@ -481,26 +469,26 @@ func (this *urlArgs) getPositionalArgs() (value.Values, error) {
 	return positionalArgs, nil
 }
 
-func (this *urlArgs) getScanVector() ([]int, map[string]int, error) {
-	var full_vect []int
-	var sparse_vect map[string]int
+func (this *urlArgs) getScanVector() (timestamp.Vector, error) {
+	var full_vector_data []*restArg
+	var sparse_vector_data map[string]*restArg
 
-	scan_vect_field, err := this.formValue(SCAN_VECTOR)
+	scan_vector_data_field, err := this.formValue(SCAN_VECTOR)
 
-	if err != nil || scan_vect_field == "" {
-		return full_vect, sparse_vect, err
+	if err != nil || scan_vector_data_field == "" {
+		return nil, err
 	}
-
-	decoder := json.NewDecoder(strings.NewReader(scan_vect_field))
-	err = decoder.Decode(&full_vect)
+	decoder := json.NewDecoder(strings.NewReader(scan_vector_data_field))
+	err = decoder.Decode(&full_vector_data)
 	if err == nil {
-		return full_vect, sparse_vect, err
+		return makeFullVector(full_vector_data)
 	}
-
-	decoder = json.NewDecoder(strings.NewReader(scan_vect_field))
-	err = decoder.Decode(&sparse_vect)
-
-	return full_vect, sparse_vect, err
+	decoder = json.NewDecoder(strings.NewReader(scan_vector_data_field))
+	err = decoder.Decode(&sparse_vector_data)
+	if err != nil {
+		return nil, err
+	}
+	return makeSparseVector(sparse_vector_data)
 }
 
 func (this *urlArgs) getDuration(f string) (time.Duration, error) {
@@ -657,40 +645,22 @@ func (this *jsonArgs) getCredentials() ([]map[string]string, error) {
 	return creds_data, nil
 }
 
-func (this *jsonArgs) getScanVector() (full_vect []int, sparse_vect map[string]int, err error) {
+func (this *jsonArgs) getScanVector() (timestamp.Vector, error) {
 	var type_ok bool
 
-	scan_vect_field, in_request := this.args[SCAN_VECTOR]
-
+	scan_vector_data_field, in_request := this.args[SCAN_VECTOR]
 	if !in_request {
-		return
+		return nil, nil
 	}
-
-	full_vect, type_ok = scan_vect_field.([]int)
-
+	full_vector_data, type_ok := scan_vector_data_field.([]*restArg)
 	if type_ok {
-		return
+		return makeFullVector(full_vector_data)
 	}
-
-	sparse_vect_i, type_ok := scan_vect_field.(map[string]interface{})
-
+	sparse_vector_data, type_ok := scan_vector_data_field.(map[string]*restArg)
 	if !type_ok {
-		err = fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
 	}
-
-	// the json library marshals numbers to float64 - need to convert these to ints:
-	sparse_vect = make(map[string]int, len(sparse_vect_i))
-
-	for vbuck_no, seq_no := range sparse_vect_i {
-		switch seq_no := seq_no.(type) {
-		case float64:
-			sparse_vect[vbuck_no] = int(seq_no)
-		default:
-			err = fmt.Errorf("%s parameter - invalid format for sequence number: %v", SCAN_VECTOR, seq_no)
-			break
-		}
-	}
-	return
+	return makeSparseVector(sparse_vector_data)
 }
 
 func (this *jsonArgs) getDuration(f string) (time.Duration, error) {
@@ -873,34 +843,108 @@ func (c Compression) String() string {
 	return s
 }
 
+// scanVectorEntry implements timestamp.Entry
+type scanVectorEntry struct {
+	pos  uint32
+	val  uint64
+	uuid string
+}
+
+func (this *scanVectorEntry) Position() uint32 {
+	return this.pos
+}
+
+func (this *scanVectorEntry) Value() uint64 {
+	return this.val
+}
+
+func (this *scanVectorEntry) Validation() string {
+	return this.uuid
+}
+
+// scanVectorEntries implements timestamp.Vector
+type scanVectorEntries struct {
+	entries []timestamp.Entry
+}
+
+func (this *scanVectorEntries) Entries() []timestamp.Entry {
+	return this.entries
+}
+
+// restArg captures how vector data is passed via REST
+type restArg struct {
+	Seqno uint64 `json:"seqno"`
+	Uuid  string `json:"uuid"`
+}
+
+// makeFullVector is used when the request includes all entries
+func makeFullVector(args []*restArg) (*scanVectorEntries, error) {
+	if len(args) != SCAN_VECTOR_SIZE {
+		return nil,
+			fmt.Errorf("%s parameter has to contain %d sequence numbers",
+				SCAN_VECTOR, SCAN_VECTOR_SIZE)
+	}
+	entries := make([]timestamp.Entry, len(args))
+	for i, arg := range args {
+		entries[i] = &scanVectorEntry{
+			pos:  uint32(i),
+			val:  arg.Seqno,
+			uuid: arg.Uuid,
+		}
+	}
+	return &scanVectorEntries{
+		entries: entries,
+	}, nil
+}
+
+// makeSparseVector is used when the request contains a sparse entry arg
+func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, error) {
+	entries := make([]timestamp.Entry, len(args))
+	i := 0
+	for key, arg := range args {
+		index, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = &scanVectorEntry{
+			pos:  uint32(index),
+			val:  arg.Seqno,
+			uuid: arg.Uuid,
+		}
+		i = i + 1
+	}
+	return &scanVectorEntries{
+		entries: entries,
+	}, nil
+}
+
 const SCAN_VECTOR_SIZE = 1024
 
 type scanConfigImpl struct {
-	scan_level         server.ScanConsistency
-	scan_wait          time.Duration
-	scan_vector_full   []int
-	scan_vector_sparse map[string]int
+	scan_level  server.ScanConsistency
+	scan_wait   time.Duration
+	scan_vector timestamp.Vector
 }
 
-func (this *scanConfigImpl) ScanConsistency() server.ScanConsistency {
-	return this.scan_level
+func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
+	switch this.scan_level {
+	case server.NOT_BOUNDED:
+		return datastore.UNBOUNDED
+	case server.REQUEST_PLUS, server.STATEMENT_PLUS:
+		return datastore.SCAN_PLUS
+	case server.AT_PLUS:
+		return datastore.AT_PLUS
+	default:
+		return datastore.UNBOUNDED
+	}
 }
 
 func (this *scanConfigImpl) ScanWait() time.Duration {
 	return this.scan_wait
 }
 
-func (this *scanConfigImpl) ScanVectorFull() []int {
-	return this.scan_vector_full
-}
-
-func (this *scanConfigImpl) ScanVectorSparse() map[string]int {
-	return this.scan_vector_sparse
-}
-
-func (this *scanConfigImpl) String() string {
-	return fmt.Sprintf("scan_level: %d, scan_wait: %s, scan_vector_full: %v, scan_vector_sparse: %v",
-		this.scan_level, this.scan_wait, this.scan_vector_full, this.scan_vector_sparse)
+func (this *scanConfigImpl) ScanVector() timestamp.Vector {
+	return this.scan_vector
 }
 
 func newScanConsistency(s string) server.ScanConsistency {
