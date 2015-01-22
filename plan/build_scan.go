@@ -35,9 +35,20 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	formalizer := expression.NewFormalizer()
 	formalizer.Keyspace = node.Alias()
 
-	indexes, err := keyspace.Indexes()
+	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err
+	}
+
+	indexes := make([]datastore.Index, 0, len(indexers)*16)
+
+	for _, indexer := range indexers {
+		idxs, err := indexer.Indexes()
+		if err != nil {
+			return nil, err
+		}
+
+		indexes = append(indexes, idxs...)
 	}
 
 	unfiltered := make(map[datastore.Index]expression.Expression, len(indexes))
@@ -125,9 +136,28 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 	node *algebra.KeyspaceTerm) (Operator, error) {
-	primary, err := keyspace.IndexByPrimary()
+	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err
+	}
+
+	var primary datastore.PrimaryIndex
+	for _, indexer := range indexers {
+		primary, err = indexer.IndexByPrimary()
+		if err != nil {
+			return nil, err
+		}
+
+		state, er := primary.State()
+		if er != nil {
+			return nil, er
+		}
+
+		if state != datastore.ONLINE {
+			continue
+		}
+
+		break
 	}
 
 	if primary == nil {
@@ -142,7 +172,7 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 	}
 
 	if state != datastore.ONLINE {
-		return nil, fmt.Errorf("Primary index not online.")
+		return nil, fmt.Errorf("Primary index %s not online.", primary.Name())
 	}
 
 	scan := NewPrimaryScan(primary, node)

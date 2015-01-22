@@ -55,8 +55,14 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			equalKey = expression.Expressions{node.Partition()}
 		}
 
-		_, err := this.plan.Keyspace().CreateIndex(
-			node.Name(), equalKey, node.Expressions(), node.Where(), node.Using())
+		indexer, err := this.plan.Keyspace().Indexer(node.Using())
+		if err != nil {
+			context.Error(err)
+			return
+		}
+
+		_, err = indexer.CreateIndex(node.Name(), equalKey,
+			node.Expressions(), node.Where())
 		if err != nil {
 			context.Error(err)
 		}

@@ -70,8 +70,14 @@ func TestServer(t *testing.T) {
 		return
 	}
 
+	indexer, err := ks.Indexer(datastore.VIEW)
+	if err != nil {
+		fmt.Printf("No indexers found")
+		return
+	}
+
 	// try create a primary index
-	index, err := ks.CreatePrimaryIndex(datastore.VIEW)
+	index, err := indexer.CreatePrimaryIndex()
 	if err != nil {
 		// keep going. maybe index already exists
 		fmt.Printf(" Cannot create a primary index on bucket. Error %v", err)
@@ -99,14 +105,14 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Failed to delete %v", err)
 	}
 
-	pi, err := ks.IndexByPrimary()
+	pi, err := indexer.IndexByPrimary()
 	if err != nil {
 		fmt.Printf("No primary index found")
 		return
 	}
 
 	if pi == nil {
-		fmt.Printf("no primary index found")
+		fmt.Printf("No primary index found")
 		return
 	}
 

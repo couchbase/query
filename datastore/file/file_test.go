@@ -76,16 +76,21 @@ func TestFile(t *testing.T) {
 		t.Fatalf("failed to get keyspace by name: contacts")
 	}
 
-	indexes, err := keyspace.Indexes()
+	indexers, err := keyspace.Indexers()
 	if err != nil {
-		t.Errorf("failed ot get indexes")
+		t.Errorf("failed to get indexers")
+	}
+
+	indexes, err := indexers[0].Indexes()
+	if err != nil {
+		t.Errorf("failed to get indexes")
 	}
 
 	if len(indexes) < 1 {
 		t.Errorf("Expected at least 1 index for keyspace")
 	}
 
-	index, err := keyspace.IndexByPrimary()
+	index, err := indexers[0].IndexByPrimary()
 	if err != nil {
 		t.Fatalf("failed to get primary index: %v", err)
 	}

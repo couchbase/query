@@ -237,8 +237,7 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	indexers := make([]datastore.Indexer, 0, 1)
-	return append(indexers, b.fi), nil
+	return []datastore.Indexer{b.fi}, nil
 }
 
 func (b *keyspace) IndexIds() ([]string, errors.Error) {

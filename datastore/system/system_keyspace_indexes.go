@@ -54,9 +54,16 @@ func (b *indexKeyspace) Count() (int64, errors.Error) {
 					for _, keyspaceId := range keyspaceIds {
 						keyspace, excp := namespace.KeyspaceById(keyspaceId)
 						if excp == nil {
-							indexIds, excp := keyspace.IndexIds()
+							indexers, excp := keyspace.Indexers()
 							if excp == nil {
-								count += int64(len(indexIds))
+								for _, indexer := range indexers {
+									indexIds, excp := indexer.IndexIds()
+									if excp == nil {
+										count += int64(len(indexIds))
+									} else {
+										return 0, errors.NewError(excp, "")
+									}
+								}
 							} else {
 								return 0, errors.NewError(excp, "")
 							}
@@ -138,7 +145,8 @@ func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 	if namespace != nil {
 		keyspace, _ := namespace.KeyspaceById(ids[1])
 		if keyspace != nil {
-			index, _ := keyspace.IndexById(ids[2])
+			indexers, _ := keyspace.Indexers()
+			index, _ := indexers[0].IndexById(ids[2])
 			if index != nil {
 				doc := value.NewAnnotatedValue(map[string]interface{}{
 					"id":           index.Id(),
@@ -279,7 +287,8 @@ func (pi *indexIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 		return
 	}
 
-	index, _ := keyspace.IndexById(ids[2])
+	indexers, _ := keyspace.Indexers()
+	index, _ := indexers[0].IndexById(ids[2])
 	if keyspace != nil {
 		entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespace.Id(), keyspace.Id(), index.Id())}
 		conn.EntryChannel() <- &entry
@@ -300,15 +309,20 @@ func (pi *indexIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 					for _, keyspaceId := range keyspaceIds {
 						keyspace, err := namespace.KeyspaceById(keyspaceId)
 						if err == nil {
-							indexIds, err := keyspace.IndexIds()
+							indexers, err := keyspace.Indexers()
 							if err == nil {
-								for i, indexId := range indexIds {
-									if limit > 0 && int64(i) > limit {
-										break
-									}
+								for _, indexer := range indexers {
+									indexIds, err := indexer.IndexIds()
+									if err == nil {
+										for i, indexId := range indexIds {
+											if limit > 0 && int64(i) > limit {
+												break
+											}
 
-									entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
-									conn.EntryChannel() <- &entry
+											entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
+											conn.EntryChannel() <- &entry
+										}
+									}
 								}
 							}
 						}

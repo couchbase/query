@@ -142,11 +142,11 @@ func (b *keyspace) Count() (int64, errors.Error) {
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return b.mi, nil
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return []datastore.Indexer{b.mi}, nil
 }
 
 func (b *keyspace) IndexIds() ([]string, errors.Error) {

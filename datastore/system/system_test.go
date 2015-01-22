@@ -154,7 +154,13 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 		return
 	}
 
-	idx, excp := b.IndexByPrimary()
+	indexers, excp := b.Indexers()
+	if excp != nil {
+		t.Fatalf("failed to retrieve indexers")
+		return
+	}
+
+	idx, excp := indexers[0].IndexByPrimary()
 	if excp != nil {
 		t.Fatalf("failed to retrieve Primary index")
 		return

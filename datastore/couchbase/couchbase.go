@@ -411,12 +411,12 @@ func (b *keyspace) Count() (int64, errors.Error) {
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
 	switch name {
-	case datastore.VIEW:
+	case datastore.VIEW, datastore.DEFAULT:
 		return b.viewIndexer, nil
 	case datastore.GSI:
 		return b.gsiIndexer, nil
 	default:
-		return nil, errors.NewError(nil, "Not yet implemented.")
+		return nil, errors.NewError(nil, fmt.Sprintf("Unimplemented indexer %s", name))
 	}
 }
 

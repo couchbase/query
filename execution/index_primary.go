@@ -49,7 +49,13 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 
 		// Actually create primary index
 		node := this.plan.Node()
-		_, err := this.plan.Keyspace().CreatePrimaryIndex(node.Using())
+		indexer, err := this.plan.Keyspace().Indexer(node.Using())
+		if err != nil {
+			context.Error(err)
+			return
+		}
+
+		_, err = indexer.CreatePrimaryIndex()
 		if err != nil {
 			context.Error(err)
 		}

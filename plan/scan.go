@@ -78,7 +78,14 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil)
-	this.index, err = k.IndexByPrimary()
+
+	indexers, err := k.Indexers()
+	for _, indexer := range indexers {
+		this.index, err = indexer.IndexByPrimary()
+		if err == nil {
+			return nil
+		}
+	}
 
 	return err
 }
@@ -178,7 +185,15 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.spans = _unmarshalled.Spans
 	this.distinct = _unmarshalled.Distinct
 	this.limit = _unmarshalled.Limit
-	this.index, err = k.IndexByName(_unmarshalled.Index)
+
+	indexers, err := k.Indexers()
+	for _, indexer := range indexers {
+		this.index, err = indexer.IndexByName(_unmarshalled.Index)
+		if err == nil {
+			return nil
+		}
+	}
+
 	return err
 }
 

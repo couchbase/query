@@ -19,7 +19,7 @@ import (
 type IndexType string
 
 const (
-	DEFAULT     IndexType = "default"     // default may vary per backend
+	DEFAULT     IndexType = ""            // default may vary per backend
 	UNSPECIFIED IndexType = "unspecified" // used by non-view primary_indexes
 	VIEW        IndexType = "view"
 	GSI         IndexType = "gsi"
