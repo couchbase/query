@@ -652,15 +652,71 @@ func (this *jsonArgs) getScanVector() (timestamp.Vector, error) {
 	if !in_request {
 		return nil, nil
 	}
-	full_vector_data, type_ok := scan_vector_data_field.([]*restArg)
+	full_vector_data, type_ok := scan_vector_data_field.([]interface{})
 	if type_ok {
-		return makeFullVector(full_vector_data)
+		if len(full_vector_data) != SCAN_VECTOR_SIZE {
+			return nil,
+				fmt.Errorf("%s parameter has to contain %d sequence numbers",
+					SCAN_VECTOR, SCAN_VECTOR_SIZE)
+		}
+		entries := make([]timestamp.Entry, len(full_vector_data))
+		for index, arg := range full_vector_data {
+			nextEntry, err := makeVectorEntry(index, arg)
+			if err != nil {
+				return nil, err
+			}
+			entries[index] = nextEntry
+		}
 	}
-	sparse_vector_data, type_ok := scan_vector_data_field.(map[string]*restArg)
+	sparse_vector_data, type_ok := scan_vector_data_field.(map[string]interface{})
 	if !type_ok {
 		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
 	}
-	return makeSparseVector(sparse_vector_data)
+	entries := make([]timestamp.Entry, len(sparse_vector_data))
+	i := 0
+	for key, arg := range sparse_vector_data {
+		index, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, err
+		}
+		nextEntry, err := makeVectorEntry(index, arg)
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = nextEntry
+		i = i + 1
+	}
+	return &scanVectorEntries{
+		entries: entries,
+	}, nil
+}
+
+func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, error) {
+	data, is_map := args.(map[string]interface{})
+	if !is_map {
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+	seqno, has_seqno := data["seqno"]
+	if !has_seqno {
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+	seqno_val, is_number := seqno.(float64)
+	if !is_number {
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+	uuid, has_uuid := data["uuid"]
+	if !has_uuid {
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+	uuid_val, uuid_ok := uuid.(string)
+	if !uuid_ok {
+		return nil, fmt.Errorf("%s parameter - format not recognised", SCAN_VECTOR)
+	}
+	return &scanVectorEntry{
+		pos:  uint32(index),
+		val:  uint64(seqno_val),
+		uuid: uuid_val,
+	}, nil
 }
 
 func (this *jsonArgs) getDuration(f string) (time.Duration, error) {
