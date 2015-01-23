@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [design_links](https://github.com/couchbaselabs/query/blob/master/docs/design_links.md)
-* Modified: 2014-11-17
+* Modified: 2015-01-23
 
 ## Introduction
 
@@ -12,6 +12,7 @@ This document provides links to external design documents; links are provided un
 
 * [N1QL Query API](http://goo.gl/ezpmVx) - design document for query REST API
 * [Prepared Statements](http://goo.gl/T8l7nd) - design document for prepared statements
+* [N1QL Error Handling](http://goo.gl/IzZA0y) - design document for error handling
 
 ## Clustering Management
 
