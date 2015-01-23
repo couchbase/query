@@ -69,8 +69,8 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.httpRespCode = http.StatusOK
 	_ = this.writePrefix(srvr, signature) &&
-		this.writeResults() &&
-		this.writeSuffix(srvr.Metrics(), "")
+		this.writeResults()
+	this.writeSuffix(srvr.Metrics(), "")
 	this.writer.noMoreData()
 }
 
@@ -154,7 +154,8 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 
 	bytes, err := json.MarshalIndent(item, "        ", "    ")
 	if err != nil {
-		panic(err.Error())
+		this.Errors() <- errors.NewError(err, "")
+		return false
 	}
 
 	this.resultSize += len(bytes)
