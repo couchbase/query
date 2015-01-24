@@ -131,7 +131,6 @@ val              value.Value
 %token INCLUDE
 %token INCREMENT
 %token INDEX
-%token INDEXES
 %token INLINE
 %token INNER
 %token INSERT
@@ -320,7 +319,7 @@ val              value.Value
 
 %type <statement>        stmt explain prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        insert upsert delete update merge
-%type <statement>        index_stmt create_index drop_index alter_index build_indexes
+%type <statement>        index_stmt create_index drop_index alter_index build_index
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list
@@ -434,7 +433,7 @@ drop_index
 |
 alter_index
 |
-build_indexes
+build_index
 ;
 
 fullselect:
@@ -1590,12 +1589,12 @@ RENAME TO index_name
 
 /*************************************************
  *
- * BUILD INDEXES
+ * BUILD INDEX
  *
  *************************************************/
 
-build_indexes:
-BUILD INDEXES ON named_keyspace_ref LPAREN index_names RPAREN index_using
+build_index:
+BUILD INDEX ON named_keyspace_ref LPAREN index_names RPAREN index_using
 {
     $$ = algebra.NewBuildIndexes($4, $8, $6...)
 }
