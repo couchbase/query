@@ -154,7 +154,7 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 
 	bytes, err := json.MarshalIndent(item, "        ", "    ")
 	if err != nil {
-		this.Errors() <- errors.NewError(err, "")
+		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
 		return false
 	}
 

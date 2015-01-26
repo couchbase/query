@@ -166,6 +166,52 @@ func NewNotImplemented(feature string) Error {
 	return &err{level: EXCEPTION, ICode: 1001, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
 }
 
+// service level errors - errors that are created in the service module
+
+func NewServiceErrorReadonly(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 1000, IKey: "service.io.readonly", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorHTTPMethod(method string) Error {
+	return &err{level: EXCEPTION, ICode: 1010, IKey: "service.io.http.unsupported_method",
+		InternalMsg: fmt.Sprintf("Unsupported http method: %s", method), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorNotImplemented(feature string, value string) Error {
+	return &err{level: EXCEPTION, ICode: 1020, IKey: "service.io.request.unimplemented",
+		InternalMsg: fmt.Sprintf("%s %s not yet implemented", value, feature), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorUnrecognizedValue(feature string, value string) Error {
+	return &err{level: EXCEPTION, ICode: 1030, IKey: "service.io.request.unrecognized_value",
+		InternalMsg: fmt.Sprintf("Unknown %s value: %s", feature, value), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorBadValue(e error, feature string) Error {
+	return &err{level: EXCEPTION, ICode: 1040, IKey: "service.io.request.bad_value", ICause: e,
+		InternalMsg: fmt.Sprintf("Error processing %s", feature), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorMissingValue(feature string) Error {
+	return &err{level: EXCEPTION, ICode: 1050, IKey: "service.io.request.missing_value",
+		InternalMsg: fmt.Sprintf("No value for %s parameter", feature), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorMultipleValues(feature string) Error {
+	return &err{level: EXCEPTION, ICode: 1060, IKey: "service.io.request.multiple_values",
+		InternalMsg: fmt.Sprintf("Multiple values for %s.", feature), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorTypeMismatch(feature string, expected string) Error {
+	return &err{level: EXCEPTION, ICode: 1070, IKey: "service.io.request.type_mismatch",
+		InternalMsg: fmt.Sprintf("%s parameter has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorInvalidJSON(e error) Error {
+	return &err{level: EXCEPTION, ICode: 1100, IKey: "service.io.response.invalid_json", ICause: e,
+		InternalMsg: "Invalid JSON in results", InternalCaller: CallerN(1)}
+}
+
 // Returns "FileName:LineNum" of caller.
 func Caller() string {
 	return CallerN(1)
