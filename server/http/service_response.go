@@ -40,11 +40,18 @@ func (this *httpRequest) Fail(err errors.Error) {
 
 func mapErrorToHttpResponse(err errors.Error) int {
 	switch err.Code() {
-	// TODO return appropriate http error code for warning
+	case 1000: // readonly violation
+		return http.StatusForbidden
+	case 1010: // unsupported http method
+		return http.StatusMethodNotAllowed
+	case 1020, 1030, 1040, 1050, 1060, 1070:
+		return http.StatusBadRequest
+	case 3000: // parse error range
+		return http.StatusBadRequest
+	case 4000: // plan error range
+		return http.StatusNotFound
 	case 5000:
 		return http.StatusInternalServerError
-	case 4100:
-		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

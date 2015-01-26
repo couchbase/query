@@ -166,7 +166,7 @@ func NewNotImplemented(feature string) Error {
 	return &err{level: EXCEPTION, ICode: 1001, IKey: "not_implemented", InternalMsg: fmt.Sprintf("Not yet implemented: %v", feature), InternalCaller: CallerN(1)}
 }
 
-// service level errors - errors that are created in the service module
+// service level errors - errors that are created in the service package
 
 func NewServiceErrorReadonly(msg string) Error {
 	return &err{level: EXCEPTION, ICode: 1000, IKey: "service.io.readonly", InternalMsg: msg, InternalCaller: CallerN(1)}
@@ -194,7 +194,7 @@ func NewServiceErrorBadValue(e error, feature string) Error {
 
 func NewServiceErrorMissingValue(feature string) Error {
 	return &err{level: EXCEPTION, ICode: 1050, IKey: "service.io.request.missing_value",
-		InternalMsg: fmt.Sprintf("No value for %s parameter", feature), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("No %s value", feature), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorMultipleValues(feature string) Error {
@@ -204,12 +204,23 @@ func NewServiceErrorMultipleValues(feature string) Error {
 
 func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 	return &err{level: EXCEPTION, ICode: 1070, IKey: "service.io.request.type_mismatch",
-		InternalMsg: fmt.Sprintf("%s parameter has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("%s has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorInvalidJSON(e error) Error {
 	return &err{level: EXCEPTION, ICode: 1100, IKey: "service.io.response.invalid_json", ICause: e,
 		InternalMsg: "Invalid JSON in results", InternalCaller: CallerN(1)}
+}
+
+// Parse errors - errors that are created in the parse package
+func NewParseSyntaxError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+// Plan errors - errors that are created in the plan package
+func NewPlanError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 // Returns "FileName:LineNum" of caller.

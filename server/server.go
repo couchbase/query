@@ -145,7 +145,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	prepared, err := this.getPrepared(request, namespace)
 	if err != nil {
-		request.Fail(errors.NewError(err, ""))
+		request.Fail(err)
 	}
 
 	if (this.readonly || value.ToBool(request.Readonly())) &&
@@ -156,6 +156,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	var operator execution.Operator
 	if request.State() != FATAL {
+		var err error
 		operator, err = execution.Build(prepared)
 		if err != nil {
 			request.Fail(errors.NewError(err, ""))
@@ -183,17 +184,17 @@ func (this *Server) serviceRequest(request Request) {
 	operator.RunOnce(context, nil)
 }
 
-func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, error) {
+func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
 	prepared := request.Prepared()
 	if prepared == nil {
 		stmt, err := n1ql.ParseStatement(request.Statement())
 		if err != nil {
-			return nil, err
+			return nil, errors.NewParseSyntaxError(err, "")
 		}
 
 		prepared, err = plan.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
-			return nil, err
+			return nil, errors.NewPlanError(err, "")
 		}
 	}
 	if logging.LogLevel() >= logging.Trace {

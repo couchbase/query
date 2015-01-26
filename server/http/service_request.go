@@ -251,7 +251,7 @@ func getCompression(a httpRequestArgs) (Compression, errors.Error) {
 	if err == nil && compression_field != "" {
 		compression = newCompression(compression_field)
 		if compression == UNDEFINED_COMPRESSION {
-			err = errors.NewServiceErrorUnrecognizedValue(COMPRESSION, compression.String())
+			err = errors.NewServiceErrorUnrecognizedValue(COMPRESSION, compression_field)
 		}
 	}
 	return compression, err
@@ -286,7 +286,7 @@ func getEncoding(a httpRequestArgs) (Encoding, errors.Error) {
 	if err == nil && encoding_field != "" {
 		encoding = newEncoding(encoding_field)
 		if encoding == UNDEFINED_ENCODING {
-			err = errors.NewServiceErrorUnrecognizedValue(ENCODING, encoding.String())
+			err = errors.NewServiceErrorUnrecognizedValue(ENCODING, encoding_field)
 		}
 	}
 	return encoding, err
@@ -299,7 +299,7 @@ func getFormat(a httpRequestArgs) (Format, errors.Error) {
 	if err == nil && format_field != "" {
 		format = newFormat(format_field)
 		if format == UNDEFINED_FORMAT {
-			err = errors.NewServiceErrorUnrecognizedValue(FORMAT, format.String())
+			err = errors.NewServiceErrorUnrecognizedValue(FORMAT, format_field)
 		}
 	}
 	return format, err
@@ -351,7 +351,7 @@ func getCredentials(a httpRequestArgs,
 			if user_ok && pass_ok {
 				creds[user] = pass
 			} else {
-				err = errors.NewServiceErrorMissingValue("username and password")
+				err = errors.NewServiceErrorMissingValue("user or pass")
 				break
 			}
 		}
@@ -436,7 +436,7 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
 		}
 		if len(argString) == 0 {
 			//This is an error - there _has_ to be a value for a named argument
-			return namedArgs, errors.NewServiceErrorMissingValue(fmt.Sprintf("Named argument %s", namedArg))
+			return namedArgs, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", namedArg))
 		}
 		argValue := value.NewValue([]byte(argString))
 		if namedArgs == nil {
@@ -672,7 +672,7 @@ func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	}
 	sparse_vector_data, type_ok := scan_vector_data_field.(map[string]interface{})
 	if !type_ok {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	entries := make([]timestamp.Entry, len(sparse_vector_data))
 	i := 0
@@ -696,23 +696,23 @@ func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
 func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Error) {
 	data, is_map := args.(map[string]interface{})
 	if !is_map {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	seqno, has_seqno := data["seqno"]
 	if !has_seqno {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	seqno_val, is_number := seqno.(float64)
 	if !is_number {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	uuid, has_uuid := data["uuid"]
 	if !has_uuid {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	uuid_val, uuid_ok := uuid.(string)
 	if !uuid_ok {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { seqno, uuid }")
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	return &scanVectorEntry{
 		pos:  uint32(index),
