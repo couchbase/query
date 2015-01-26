@@ -54,15 +54,17 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	r["index"] = this.index.Name()
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
+	r["using"] = this.index.Type()
 	return json.Marshal(r)
 }
 
 func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Index string `json:"index"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
+		_     string              `json:"#operator"`
+		Index string              `json:"index"`
+		Names string              `json:"namespace"`
+		Keys  string              `json:"keyspace"`
+		Using datastore.IndexType `json:"using"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -79,20 +81,20 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil)
 
-	indexers, err := k.Indexers()
-	for _, indexer := range indexers {
-		index, err := indexer.IndexByName(_unmarshalled.Index)
-		if err == nil {
-			primary, ok := index.(datastore.PrimaryIndex)
-			if ok {
-				this.index = primary
-				return nil
-			}
-		}
-	}
-
+	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
+	}
+
+	index, err := indexer.IndexByName(_unmarshalled.Index)
+	if err != nil {
+		return err
+	}
+
+	primary, ok := index.(datastore.PrimaryIndex)
+	if ok {
+		this.index = primary
+		return nil
 	}
 
 	return fmt.Errorf("Unable to unmarshal %s as primary index.", _unmarshalled.Index)
@@ -151,6 +153,7 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r["index"] = this.index.Name()
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
+	r["using"] = this.index.Type()
 
 	// FIXME
 	r["spans"] = this.spans
@@ -168,13 +171,14 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string        `json:"#operator"`
-		Index    string        `json:"index"`
-		Names    string        `json:"namespace"`
-		Keys     string        `json:"keyspace"`
-		Spans    planner.Spans `json:"spans"`
-		Distinct bool          `json:"distinct"`
-		Limit    int64         `json:"limit"`
+		_        string              `json:"#operator"`
+		Index    string              `json:"index"`
+		Names    string              `json:"namespace"`
+		Keys     string              `json:"keyspace"`
+		Using    datastore.IndexType `json:"using"`
+		Spans    planner.Spans       `json:"spans"`
+		Distinct bool                `json:"distinct"`
+		Limit    int64               `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -194,14 +198,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.distinct = _unmarshalled.Distinct
 	this.limit = _unmarshalled.Limit
 
-	indexers, err := k.Indexers()
-	for _, indexer := range indexers {
-		this.index, err = indexer.IndexByName(_unmarshalled.Index)
-		if err == nil {
-			return nil
-		}
+	indexer, err := k.Indexer(_unmarshalled.Using)
+	if err != nil {
+		return err
 	}
 
+	this.index, err = indexer.IndexByName(_unmarshalled.Index)
 	return err
 }
 
