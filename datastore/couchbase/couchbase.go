@@ -121,7 +121,14 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	for keyspace, privilege := range privileges {
 
 		if strings.Contains(keyspace, ":") {
-			keyspace = strings.Split(keyspace, ":")[1]
+			q := strings.Split(keyspace, ":")
+			pool := q[0]
+			keyspace = q[1]
+
+			if strings.EqualFold(pool, "#system") {
+				// trying auth on system keyspace
+				return nil
+			}
 		}
 
 		logging.Infof("Authenticating for keyspace %s", keyspace)
