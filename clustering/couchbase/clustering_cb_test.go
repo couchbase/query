@@ -52,6 +52,13 @@ func TestCBClustering(t *testing.T) {
 		t.Fatalf("Error adding cluster: ", err)
 	}
 
+	_, no_such_cluster := cs.ClusterByName("no_such_cluster")
+	if no_such_cluster == nil {
+		t.Fatalf("Expected error retrieving configuration of non-existent cluster")
+	}
+	if no_such_cluster.Code() != 2010 && no_such_cluster.TranslationKey() != "admin.clustering.cluster_config_error" {
+		t.Fatalf("Expected error code %d", 2010)
+	}
 	// There should be a cluster called "default" in the Couchbase installation:
 	cluster1check, errCheck := cs.ClusterByName("default")
 	if errCheck != nil {

@@ -223,6 +223,23 @@ func NewPlanError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+// admin level errors - errors that are created in the clustering and accounting packages
+
+func NewAdminConnectionError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2000, IKey: "admin.clustering.connection_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminClusterConfigError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2010, IKey: "admin.clustering.cluster_config_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminNodeConfigError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2020, IKey: "admin.clustering.node_config_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
 // Returns "FileName:LineNum" of caller.
 func Caller() string {
 	return CallerN(1)

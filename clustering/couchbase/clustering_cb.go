@@ -42,7 +42,8 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	}
 	c, err := couchbase.Connect(path)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, errors.NewAdminConnectionError(err,
+			fmt.Sprintf("Cannot connect to %s", path))
 	}
 	return &cbConfigStore{
 		adminUrl: path,
@@ -76,14 +77,14 @@ func (c *cbConfigStore) ClusterNames() ([]string, errors.Error) {
 func (c *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
 	_, err := c.cbConn.GetPool(name)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, errors.NewAdminClusterConfigError(err, fmt.Sprintf("Cluster %s", name))
 	}
-	var clusterConfig cbCluster
-	clusterConfig.configStore = c
-	clusterConfig.ClusterName = name
-	clusterConfig.ConfigstoreURI = c.URL()
-	clusterConfig.DatastoreURI = c.URL() // datastore and configstore are same in Couchbase implementation
-	return &clusterConfig, nil
+	return &cbCluster{
+		configStore:    c,
+		ClusterName:    name,
+		ConfigstoreURI: c.URL(),
+		DatastoreURI:   c.URL(),
+	}, nil
 }
 
 func (c *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
@@ -91,12 +92,12 @@ func (c *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
 }
 
 // helper method to get all the services in a pool
-func (c *cbConfigStore) getPoolServices(name string) (poolServices couchbase.PoolServices, err errors.Error) {
-	poolServices, errCheck := c.cbConn.GetPoolServices(name)
-	if errCheck != nil {
-		err = errors.NewError(errCheck, "")
+func (c *cbConfigStore) getPoolServices(name string) (couchbase.PoolServices, errors.Error) {
+	poolServices, err := c.cbConn.GetPoolServices(name)
+	if err != nil {
+		return poolServices, errors.NewAdminClusterConfigError(err, name)
 	}
-	return
+	return poolServices, nil
 }
 
 // cbConfigStore also implements clustering.ConfigurationManager interface
@@ -122,14 +123,11 @@ func (c *cbConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
 func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	clusters := []clustering.Cluster{}
 	// foreach name n in  c.ClusterNames(), add c.ClusterByName(n) to clusters
-	clusterNames, err := c.ClusterNames()
-	if err != nil {
-		return nil, errors.NewError(err, "")
-	}
+	clusterNames, _ := c.ClusterNames()
 	for _, name := range clusterNames {
 		cluster, err := c.ClusterByName(name)
 		if err != nil {
-			return nil, errors.NewError(err, "")
+			return nil, err
 		}
 		clusters = append(clusters, cluster)
 	}
@@ -203,7 +201,8 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	// Get a handle of the go-couchbase connection:
 	cbConn, ok := c.configStore.(*cbConfigStore)
 	if !ok {
-		return nil, errors.NewWarning(fmt.Sprintf("Unable to connect to couchbase at %s", c.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil,
+			fmt.Sprintf("Cannot connect to %s", c.ConfigurationStoreId()))
 	}
 	poolServices, err := cbConn.getPoolServices(c.ClusterName)
 	if err != nil {
@@ -243,7 +242,7 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	qryNodeNames, err := c.QueryNodeNames()
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, err
 	}
 	qryNodeName := ""
 	for _, q := range qryNodeNames {
@@ -253,15 +252,15 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 		}
 	}
 	if qryNodeName == "" {
-		return nil, errors.NewError(nil, "No query node named "+name)
+		return nil, errors.NewAdminNodeConfigError(nil,
+			fmt.Sprintf("No query node %s", name))
 	}
-	var queryNode cbQueryNodeConfig
-	queryNode.ClusterName = c.Name()
-	queryNode.QueryNodeName = qryNodeName
-	queryNode.QueryEndpointURL = http.GetServiceURL(qryNodeName, c.queryNodes[qryNodeName])
-	queryNode.AdminEndpointURL = http.GetAdminURL(qryNodeName, c.queryNodes[qryNodeName])
-	queryNode.ClusterRef = c
-	return &queryNode, nil
+	return &cbQueryNodeConfig{
+		ClusterName:      c.Name(),
+		QueryNodeName:    qryNodeName,
+		QueryEndpointURL: http.GetServiceURL(qryNodeName, c.queryNodes[qryNodeName]),
+		AdminEndpointURL: http.GetAdminURL(qryNodeName, c.queryNodes[qryNodeName]),
+	}, nil
 }
 
 func (c *cbCluster) Datastore() datastore.Datastore {
@@ -311,12 +310,12 @@ func (c *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	// for each name n in c.QueryNodeNames(), add c.QueryNodeByName(n) to qryNodes
 	names, err := c.QueryNodeNames()
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, err
 	}
 	for _, name := range names {
 		qryNode, err := c.QueryNodeByName(name)
 		if err != nil {
-			return nil, errors.NewError(err, "")
+			return nil, err
 		}
 		qryNodes = append(qryNodes, qryNode)
 	}
