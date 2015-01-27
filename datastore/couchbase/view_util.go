@@ -105,21 +105,31 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 	}
 }
 
-func generateViewOptions(low value.Values, high value.Values, inclusion datastore.Inclusion) map[string]interface{} {
+func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) map[string]interface{} {
 	viewOptions := map[string]interface{}{}
+	if span != nil {
+		low := span.Range.Low
+		high := span.Range.High
+		inclusion := span.Range.Inclusion
+		if low != nil {
+			viewOptions["startkey"] = encodeValuesAsMapKey(low)
+			if inclusion == datastore.NEITHER || inclusion == datastore.HIGH {
+				viewOptions["startkey_docid"] = MAX_ID
+			}
+		}
 
-	if low != nil {
-		viewOptions["startkey"] = encodeValuesAsMapKey(low)
-		if inclusion == datastore.NEITHER || inclusion == datastore.HIGH {
-			viewOptions["startkey_docid"] = MAX_ID
+		if high != nil {
+			viewOptions["endkey"] = encodeValuesAsMapKey(high)
+			if inclusion == datastore.NEITHER || inclusion == datastore.LOW {
+				viewOptions["endkey_docid"] = MIN_ID
+			}
 		}
 	}
 
-	if high != nil {
-		viewOptions["endkey"] = encodeValuesAsMapKey(high)
-		if inclusion == datastore.NEITHER || inclusion == datastore.LOW {
-			viewOptions["endkey_docid"] = MIN_ID
-		}
+	if cons == datastore.SCAN_PLUS || cons == datastore.AT_PLUS {
+		viewOptions["stale"] = "false"
+	} else if cons == datastore.UNBOUNDED {
+		viewOptions["stale"] = "ok"
 	}
 
 	return viewOptions

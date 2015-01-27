@@ -311,9 +311,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	// can just enforce that directly
 
 	viewOptions := map[string]interface{}{}
-	if span != nil {
-		viewOptions = generateViewOptions(span.Range.Low, span.Range.High, span.Range.Inclusion)
-	}
+	viewOptions = generateViewOptions(cons, span) /*span.Range.Low, span.Range.High, span.Range.Inclusion) */
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
 	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), viewOptions, 1000, limit)
