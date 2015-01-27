@@ -128,7 +128,7 @@ func doClusters(s *server.Server, w http.ResponseWriter, req *http.Request) (int
 	case "POST":
 		cluster, err := getClusterFromRequest(req)
 		if err != nil {
-			return nil, errors.NewError(err, "")
+			return nil, err
 		}
 		return cfgStore.ConfigurationManager().AddCluster(cluster)
 	default:
@@ -169,7 +169,7 @@ func doNodes(s *server.Server, w http.ResponseWriter, req *http.Request) (interf
 	case "POST":
 		node, err := getNodeFromRequest(req)
 		if err != nil {
-			return nil, errors.NewError(err, "")
+			return nil, err
 		}
 		return cluster.ClusterManager().AddQueryNode(node)
 	default:
@@ -197,16 +197,22 @@ func doNode(s *server.Server, w http.ResponseWriter, req *http.Request) (interfa
 	}
 }
 
-func getClusterFromRequest(req *http.Request) (clustering.Cluster, error) {
+func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error) {
 	var cluster clustering.Cluster
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&cluster)
-	return cluster, err
+	if err != nil {
+		return nil, errors.NewAdminDecodingError(err)
+	}
+	return cluster, nil
 }
 
-func getNodeFromRequest(req *http.Request) (clustering.QueryNode, error) {
+func getNodeFromRequest(req *http.Request) (clustering.QueryNode, errors.Error) {
 	var node clustering.QueryNode
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&node)
-	return node, err
+	if err != nil {
+		return nil, errors.NewAdminDecodingError(err)
+	}
+	return node, nil
 }

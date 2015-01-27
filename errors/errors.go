@@ -230,13 +230,43 @@ func NewAdminConnectionError(e error, msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewAdminInvalidURL(component string, url string) Error {
+	return &err{level: EXCEPTION, ICode: 2005, IKey: "admin.invalid_url",
+		InternalMsg: fmt.Sprintf("Invalid % url: %s", component, url), InternalCaller: CallerN(1)}
+}
+
+func NewAdminDecodingError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 2007, IKey: "admin.json_decoding_error", ICause: e,
+		InternalMsg: "Error in JSON decoding", InternalCaller: CallerN(1)}
+}
+
+func NewAdminEncodingError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 2009, IKey: "admin.json_encoding_error", ICause: e,
+		InternalMsg: "Error in JSON encoding", InternalCaller: CallerN(1)}
+}
+
 func NewAdminClusterConfigError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 2010, IKey: "admin.clustering.cluster_config_error", ICause: e,
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewAdminAddClusterConfigError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 2015, IKey: "admin.clustering.add_cluster_config_error", ICause: e,
+		InternalMsg: "Error Adding Cluster", InternalCaller: CallerN(1)}
+}
+
+func NewAdminRemoveClusterConfigError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 2017, IKey: "admin.clustering.remove_cluster_config_error", ICause: e,
+		InternalMsg: "Error Removing Cluster", InternalCaller: CallerN(1)}
+}
+
 func NewAdminNodeConfigError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 2020, IKey: "admin.clustering.node_config_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminMakeMetricError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2030, IKey: "admin.accounting.stats.create_stat", ICause: e,
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 

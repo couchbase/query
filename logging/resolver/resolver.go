@@ -10,7 +10,6 @@
 package resolver
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -26,8 +25,7 @@ func NewLogger(uri string) (logging.Logger, errors.Error) {
 		logging.SetLogger(logger)
 		return logger, nil
 	}
-
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid logger uri: %s", uri))
+	return nil, errors.NewAdminInvalidURL("Logger", uri)
 }
 
 func init() {

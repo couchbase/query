@@ -41,7 +41,7 @@ func wrapAPI(s *server.Server, w http.ResponseWriter, req *http.Request, f apiFu
 
 	buf, json_err := json.Marshal(obj)
 	if json_err != nil {
-		writeError(w, errors.NewError(json_err, ""))
+		writeError(w, errors.NewAdminDecodingError(json_err))
 		return
 	}
 	w.WriteHeader(http.StatusOK)

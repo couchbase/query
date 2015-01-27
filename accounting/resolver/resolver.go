@@ -10,7 +10,6 @@
 package resolver
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -29,5 +28,5 @@ func NewAcctstore(uri string) (accounting.AccountingStore, errors.Error) {
 		return accounting_gm.NewAccountingStore(), nil
 	}
 
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid datastore uri: %s", uri))
+	return nil, errors.NewAdminInvalidURL("AccountingStore", uri)
 }

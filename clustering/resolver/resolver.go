@@ -10,7 +10,6 @@
 package resolver
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/couchbaselabs/query/accounting"
@@ -36,8 +35,7 @@ func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(uri, "stub:") {
 		return clustering_stub.NewConfigurationStore()
 	}
-
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
+	return nil, errors.NewAdminInvalidURL("ConfigurationStore", uri)
 }
 
 func NewClusterConfig(uri string,
@@ -51,8 +49,7 @@ func NewClusterConfig(uri string,
 		v := clustering.NewVersion(version)
 		return clustering_zk.NewCluster(clusterName, v, cfgstore, datastore, acctstore)
 	}
-
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
+	return nil, errors.NewAdminInvalidURL("ConfigurationStore", uri)
 }
 
 func NewQueryNodeConfig(uri string,
@@ -68,6 +65,5 @@ func NewQueryNodeConfig(uri string,
 		s := clustering.NewStandalone(v, cfgstore, datastore, acctstore)
 		return clustering_zk.NewQueryNode(httpAddr, s, &opts)
 	}
-
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid configstore uri: %s", uri))
+	return nil, errors.NewAdminInvalidURL("ConfigurationStore", uri)
 }

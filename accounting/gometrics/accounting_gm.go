@@ -62,7 +62,8 @@ type goMetricRegistry struct {
 func (g *goMetricRegistry) Register(name string, metric accounting.Metric) errors.Error {
 	err := metrics.Register(name, metric)
 	if err != nil {
-		return errors.NewError(err, "")
+		return errors.NewAdminMakeMetricError(err,
+			fmt.Sprintf("Failed to register metric %s", name))
 	}
 	return nil
 }
