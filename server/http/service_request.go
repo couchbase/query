@@ -221,8 +221,11 @@ func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
 	}
 
 	prepared, e := plan.PreparedCache().GetPrepared(prepared_field)
-	if e != nil || prepared != nil {
+	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(e, PREPARED)
+	}
+	if prepared != nil {
+		return prepared, nil
 	}
 
 	prepared = &plan.Prepared{}
