@@ -342,7 +342,7 @@ val              value.Value
 %type <mergeDelete>      merge_delete
 %type <mergeInsert>      merge_insert opt_merge_insert
 
-%type <s>                index_name opt_index_name
+%type <s>                index_name opt_primary_name
 %type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
 %type <expr>             index_partition
@@ -1421,7 +1421,7 @@ expr opt_where
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_index_name ON named_keyspace_ref opt_index_using opt_index_with
+CREATE PRIMARY INDEX opt_primary_name ON named_keyspace_ref opt_index_using opt_index_with
 {
     $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8)
 }
@@ -1432,10 +1432,10 @@ CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_pa
 }
 ;
 
-opt_index_name:
+opt_primary_name:
 /* empty */
 {
-    $$ = ""
+    $$ = "#primary"
 }
 |
 index_name

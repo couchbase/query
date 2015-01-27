@@ -2187,7 +2187,7 @@ yydefault:
 	case 187:
 		//line n1ql.y:1434
 		{
-			yyVAL.s = ""
+			yyVAL.s = "#primary"
 		}
 	case 188:
 		yyVAL.s = yyS[yypt-0].s
