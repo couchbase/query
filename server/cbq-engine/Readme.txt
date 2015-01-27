@@ -19,3 +19,11 @@ e.g.
 
 ./start-cbq-engine.sh -datastore=http://localhost:9000/
 
+Alternatively cbq-engine can be started by providing the username and 
+password as part of the url 
+
+./cbq-engine -datastore=http://Administrator:asdasd@localhost:9000/
+
+To run cbq-engine without cbauth the Administrator credentials need not
+be provided as part of the datastore url. In this scenario the engine will
+not have access to SASL protected buckets

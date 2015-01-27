@@ -19,6 +19,8 @@ package couchbase
 import (
 	"encoding/binary"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +45,7 @@ const (
 type site struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
+	CbAuthInit     bool                  // whether cbAuth is initialized
 }
 
 func (s *site) Id() string {
@@ -117,6 +120,12 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	var authResult bool
 	var err error
 
+	if s.CbAuthInit == false {
+		// cbauth is not initialized. No Authorization, access to SASL protected buckets will
+		// not be allowed by couchbase server
+		return nil
+	}
+
 	// if the authentication fails for any of the requested privileges return an error
 	for keyspace, privilege := range privileges {
 
@@ -174,8 +183,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	return nil
 }
 
-// NewSite creates a new Couchbase site for the given url.
-func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
+func initCbAuth(url string) (*cb.Client, error) {
 
 	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
 	cb.HTTPClient.Transport = transport
@@ -185,9 +193,63 @@ func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 		return nil, errors.NewError(err, "Cannot connect to url "+url)
 	}
 
+	return &client, nil
+}
+
+// NewSite creates a new Couchbase site for the given url.
+func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
+
+	var client cb.Client
+	var cbAuthInit bool
+
+	// try and initialize cbauth
+
+	c, err := initCbAuth(u)
+	if err != nil {
+		logging.Errorf(" Unable to initialize cbauth. Error %v", err)
+		url, err := url.Parse(u)
+		if err != nil {
+			return nil, errors.NewError(err, "Failed to parse url :"+u)
+		}
+
+		if url.User != nil {
+			password, _ := url.User.Password()
+			if password == "" {
+				logging.Errorf("No password found in url %s", u)
+			}
+
+			// intialize cb_auth variables manually
+			set, err := cbauth.InternalRetryDefaultInit(url.Host, url.User.Username(), password)
+			if set == false || err != nil {
+				logging.Errorf(" Unable to initialize cbauth variables. Error %v", err)
+			} else {
+				c, err = initCbAuth("http://" + url.Host)
+				if err != nil {
+					logging.Errorf("Unable to initliaze cbauth.  Error %v", err)
+				} else {
+					client = *c
+					cbAuthInit = true
+				}
+			}
+		}
+	} else {
+		client = *c
+		cbAuthInit = true
+	}
+
+	if cbAuthInit == false {
+		// connect without auth
+		cb.HTTPClient = &http.Client{}
+		client, err = cb.Connect(u)
+		if err != nil {
+			return nil, errors.NewError(err, "Cannot connect to url "+u)
+		}
+	}
+
 	site := &site{
 		client:         client,
 		namespaceCache: make(map[string]*namespace),
+		CbAuthInit:     cbAuthInit,
 	}
 
 	// initialize the default pool.
@@ -200,7 +262,7 @@ func NewDatastore(url string) (s datastore.Datastore, e errors.Error) {
 	}
 
 	site.namespaceCache["default"] = defaultPool
-	logging.Infof("New site created with url %s", url)
+	logging.Infof("New site created with url %s", u)
 
 	return site, nil
 }
@@ -213,12 +275,13 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 			// if default pool is not available, try reconnecting to the server
 			url := s.URL()
 
-			/*
-				transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
-				cb.HTTPClient.Transport = transport
-			*/
+			var client cb.Client
 
-			client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+			if s.CbAuthInit == true {
+				client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+			} else {
+				client, err = cb.Connect(url)
+			}
 			if err != nil {
 				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
 			}
@@ -313,6 +376,9 @@ func (p *namespace) refresh(changed bool) {
 
 	newpool, err := p.site.client.GetPool(p.name)
 	if err != nil {
+
+		var client cb.Client
+
 		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
 		url := p.site.URL()
 
@@ -321,7 +387,11 @@ func (p *namespace) refresh(changed bool) {
 			cb.HTTPClient.Transport = transport
 		*/
 
-		client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+		if p.site.CbAuthInit == true {
+			client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+		} else {
+			client, err = cb.Connect(url)
+		}
 		if err != nil {
 			logging.Errorf("Error connecting to URL %s", url)
 			return

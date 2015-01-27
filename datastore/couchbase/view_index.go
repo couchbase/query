@@ -96,6 +96,12 @@ func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
 }
 
 func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
+
+	// if name is not provided then use default name #primary
+	if name == "" {
+		name = PRIMARY_INDEX
+	}
+
 	if _, exists := view.indexes[name]; exists {
 		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
 	}
@@ -169,9 +175,12 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	}
 
 	for _, index := range indexes {
-		logging.Infof("Found index on keyspace %s", (*index).Name())
+		logging.Infof("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
 		view.indexes[name] = *index
+		if name == PRIMARY_INDEX {
+			view.primary[name] = (*index).(datastore.PrimaryIndex)
+		}
 	}
 
 	return nil

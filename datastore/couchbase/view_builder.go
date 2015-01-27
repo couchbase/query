@@ -174,6 +174,7 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 		var index datastore.Index
 
+		logging.Infof("Found index name %v keyspace %v", iname, b.Name())
 		if iname == PRIMARY_INDEX {
 			index = &viewIndex{
 				name:     iname,
