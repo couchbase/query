@@ -270,6 +270,117 @@ func NewAdminMakeMetricError(e error, msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+// Authorization Errors
+
+func NewDatastoreAuthorizationError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 10000, IKey: "datastore.couchbase.authorization_error", ICause: e,
+		InternalMsg: "Authorization Failed " + msg, InternalCaller: CallerN(1)}
+}
+
+// Datastore/couchbase error codes
+
+func NewCbConnectionError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12000, IKey: "datastore.couchbase.connection_error", ICause: e,
+		InternalMsg: "Cannot connect " + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewCbUrlParseError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12001, IKey: "datastore.couchbase.url_parse", ICause: e,
+		InternalMsg: "Cannot parse url " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbNamespaceNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12002, IKey: "datastore.couchbase.namespace_not_found", ICause: e,
+		InternalMsg: "Namespace not found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbKeyspaceNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12003, IKey: "datastore.couchbase.keyspace_not_found", ICause: e,
+		InternalMsg: "Keyspace not found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbPrimaryIndexNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12004, IKey: "datastore.couchbase.primary_idx_not_found", ICause: e,
+		InternalMsg: "Primary Index not found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbIndexerNotImplementedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12005, IKey: "datastore.couchbase.indexer_not_implemented", ICause: e,
+		InternalMsg: "Indexer not implemented " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbKeyspaceCountError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12006, IKey: "datastore.couchbase.keyspace_count_error", ICause: e,
+		InternalMsg: "Failed to get keyspace count " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbNoKeysFetchError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12007, IKey: "datastore.couchbase.no_keys_fetch", ICause: e,
+		InternalMsg: "No keys to fetch " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbBulkGetError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12008, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
+		InternalMsg: "Error performing buck get " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbDMLError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
+		InternalMsg: "DML Error" + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbNoKeysInsertError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12010, IKey: "datastore.couchbase.no_keys_insert", ICause: e,
+		InternalMsg: "No keys to insert " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbDeleteFailedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12011, IKey: "datastore.couchbase.delete_failed", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbLoadIndexesError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12012, IKey: "datastore.couchbase.load_index_failed", ICause: e,
+		InternalMsg: "Failed to load indexes" + msg, InternalCaller: CallerN(1)}
+}
+
+// Datastore/couchbase/view index error codes
+func NewCbViewCreateError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,
+		InternalMsg: "Failed to create view" + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13001, IKey: "datastore.couchbase.view.not_found", ICause: e,
+		InternalMsg: "View Index not found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewExistsError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13003, IKey: "datastore.couchbase.view.exists", ICause: e,
+		InternalMsg: "View index exists" + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewsWithNotAllowedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13004, IKey: "datastore.couchbase.view.with_not_allowed", ICause: e,
+		InternalMsg: "Views not allowed for WITH keyword" + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewsNotSupportedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13005, IKey: "datastore.couchbase.view.not_supported", ICause: e,
+		InternalMsg: "View indexes not supported" + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewsDropIndexError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13006, IKey: "datastore.couchbase.view.drop_index_error", ICause: e,
+		InternalMsg: "Failed to drop index " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbViewsAccessError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13007, IKey: "datastore.couchbase.view.access_error", ICause: e,
+		InternalMsg: "Failed to access view " + msg, InternalCaller: CallerN(1)}
+}
+
 // Returns "FileName:LineNum" of caller.
 func Caller() string {
 	return CallerN(1)

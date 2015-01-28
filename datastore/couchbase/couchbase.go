@@ -146,7 +146,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 			authResult, err = doAuth(keyspace, "", keyspace, privilege)
 			if authResult == false || err != nil {
 				logging.Infof("Auth failed for keyspace %s", keyspace)
-				return errors.NewError(err, "Authentication Failed")
+				return errors.NewDatastoreAuthorizationError(err, "Keyspace "+keyspace)
 			}
 		} else {
 			//look for either the bucket name or the admin credentials
@@ -164,7 +164,8 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 				}
 
 				if err != nil {
-					return errors.NewError(err, "Authentication Failed")
+					return errors.NewDatastoreAuthorizationError(err, "Keyspace "+keyspace)
+
 				}
 
 				// Auth succeeded
@@ -178,7 +179,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	}
 
 	if authResult == false {
-		return errors.NewError(nil, "Authentication Failed")
+		return errors.NewDatastoreAuthorizationError(err, "")
 	}
 	return nil
 }
@@ -190,7 +191,7 @@ func initCbAuth(url string) (*cb.Client, error) {
 
 	client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
 	if err != nil {
-		return nil, errors.NewError(err, "Cannot connect to url "+url)
+		return nil, err
 	}
 
 	return &client, nil
@@ -209,7 +210,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		logging.Errorf(" Unable to initialize cbauth. Error %v", err)
 		url, err := url.Parse(u)
 		if err != nil {
-			return nil, errors.NewError(err, "Failed to parse url :"+u)
+			return nil, errors.NewCbUrlParseError(err, "url "+u)
 		}
 
 		if url.User != nil {
@@ -242,7 +243,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		cb.HTTPClient = &http.Client{}
 		client, err = cb.Connect(u)
 		if err != nil {
-			return nil, errors.NewError(err, "Cannot connect to url "+u)
+			return nil, errors.NewCbConnectionError(err, "url "+u)
 		}
 	}
 
@@ -283,12 +284,12 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 				client, err = cb.Connect(url)
 			}
 			if err != nil {
-				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
+				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
 			}
 			// check if the default pool exists
 			cbpool, err = client.GetPool(name)
 			if err != nil {
-				return nil, errors.NewError(nil, fmt.Sprintf("Pool %v not found.", name))
+				return nil, errors.NewCbNamespaceNotFoundError(err, "Namespace "+name)
 			}
 			s.client = client
 		}
@@ -345,7 +346,7 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		var err errors.Error
 		b, err = newKeyspace(p, name)
 		if err != nil {
-			return nil, errors.NewError(err, "Keyspace "+name+" name not found")
+			return nil, errors.NewCbKeyspaceNotFoundError(err, "Keyspace "+name)
 		}
 		p.lock.Lock()
 		defer p.lock.Unlock()
@@ -461,7 +462,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
-			return nil, errors.NewError(err, fmt.Sprintf("Bucket %v not found.", name))
+			return nil, errors.NewCbKeyspaceNotFoundError(err, "keyspace "+name)
 		}
 	}
 
@@ -512,7 +513,7 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 	}
 
-	return 0, errors.NewError(nil, "Unable to obtain count from bucket stats map.")
+	return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name())
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -523,7 +524,7 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 	case datastore.GSI:
 		return b.gsiIndexer, nil
 	default:
-		return nil, errors.NewError(nil, fmt.Sprintf("Unimplemented indexer %s", name))
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
 }
 
@@ -538,14 +539,14 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
 
 	if len(keys) == 0 {
-		return nil, errors.NewError(nil, "No keys to fetch")
+		return nil, errors.NewCbNoKeysFetchError(nil, ":(")
 	}
 
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
-			return nil, errors.NewError(err, "Error doing bulk get")
+			return nil, errors.NewCbBulkGetError(err, "")
 		}
 	}
 
@@ -610,7 +611,7 @@ func isNotFoundError(err error) bool {
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 
 	if len(inserts) == 0 {
-		return nil, errors.NewError(nil, "No keys to insert")
+		return nil, errors.NewCbNoKeysInsertError(nil, ":(")
 	}
 
 	insertedKeys := make([]datastore.Pair, 0)
@@ -662,7 +663,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 	}
 
 	if len(insertedKeys) == 0 {
-		return nil, errors.NewError(err, "Failed to perform "+opToString(op))
+		return nil, errors.NewCbDMLError(err, "Failed to perform "+opToString(op))
 	}
 
 	return insertedKeys, nil
@@ -699,7 +700,7 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 	}
 
 	if len(failedDeletes) > 0 {
-		return actualDeletes, errors.NewError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
+		return actualDeletes, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
 	}
 
 	return actualDeletes, nil

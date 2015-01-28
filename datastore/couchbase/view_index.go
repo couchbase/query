@@ -10,7 +10,6 @@
 package couchbase
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -58,7 +57,7 @@ func (view *viewIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := view.indexes[name]
 	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("View Index %v not found.", name))
+		return nil, errors.NewCbViewNotFoundError(nil, name)
 	}
 	return index, nil
 }
@@ -103,25 +102,25 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 	}
 
 	if _, exists := view.indexes[name]; exists {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+		return nil, errors.NewCbViewExistsError(nil, name)
 	}
 
 	// if the name matches any of the unusable indexes, return an error
 	for _, iname := range view.nonUsableIndexes {
 		if name == iname {
-			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+			return nil, errors.NewCbViewExistsError(nil, "Non usuable index "+name)
 		}
 	}
 
 	if with != nil {
-		return nil, errors.NewError(nil, "WITH not allowed in view indexes.")
+		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
 	}
 
 	logging.Infof("Creating primary index %s", name)
 
 	idx, err := newViewPrimaryIndex(view, name)
 	if err != nil {
-		return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+		return nil, errors.NewCbViewCreateError(err, name)
 	}
 
 	view.indexes[idx.Name()] = idx
@@ -132,32 +131,32 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	if _, exists := view.indexes[name]; exists {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+		return nil, errors.NewCbViewExistsError(nil, name)
 	}
 
 	// if the name matches any of the unusable indexes, return an error
 	for _, iname := range view.nonUsableIndexes {
 		if name == iname {
-			return nil, errors.NewError(nil, fmt.Sprintf("Index already exists: %s", name))
+			return nil, errors.NewCbViewExistsError(nil, "Non usuable index "+name)
 		}
 	}
 
 	if with != nil {
-		return nil, errors.NewError(nil, "WITH not allowed in view indexes.")
+		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
 	}
 
 	logging.Infof("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
 
 	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
 	if err != nil {
-		return nil, errors.NewError(err, fmt.Sprintf("Error creating index: %s", name))
+		return nil, errors.NewCbViewCreateError(err, name)
 	}
 	view.indexes[idx.Name()] = idx
 	return idx, nil
 }
 
 func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
-	return errors.NewError(nil, "BUILD INDEXES is not supported for VIEW.")
+	return errors.NewCbViewsNotSupportedError(nil, "BUILD INDEXES is not supported for VIEW.")
 }
 
 func (view *viewIndexer) loadViewIndexes() errors.Error {
@@ -166,12 +165,12 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	// and recreate remaining from ddocs
 	indexes, err := loadViewIndexes(view)
 	if err != nil {
-		return errors.NewError(err, "Error loading indexes")
+		return errors.NewCbLoadIndexesError(err, "Keyspace "+view.KeyspaceId())
 	}
 
 	if len(indexes) == 0 {
 		logging.Errorf("No view indexes found for bucket %s", view.keyspace.Name())
-		return errors.NewError(nil, "No primary view index found for bucket "+view.keyspace.Name()+". Create a primary index ")
+		return errors.NewCbPrimaryIndexNotFoundError(nil, "Keyspace "+view.keyspace.Name()+". Create a primary index ")
 	}
 
 	for _, index := range indexes {
@@ -297,7 +296,7 @@ func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 func (vi *viewIndex) Drop() errors.Error {
 	err := vi.DropViewIndex()
 	if err != nil {
-		return errors.NewError(err, fmt.Sprintf("Cannot drop index %s", vi.Name()))
+		return errors.NewCbViewsDropIndexError(err, vi.Name())
 	}
 	// TODO need mutex
 	delete(vi.view.indexes, vi.name)
@@ -360,7 +359,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 						// ask the pool to refresh
 						vi.keyspace.namespace.refresh(true)
 						// bucket doesnt exist any more
-						conn.Error(errors.NewError(nil, "bucket "+vi.keyspace.Name()+" not found"))
+						conn.Error(errors.NewCbKeyspaceNotFoundError(nil, "keyspace "+vi.keyspace.Name()))
 						return
 					}
 

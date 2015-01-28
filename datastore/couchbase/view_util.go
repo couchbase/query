@@ -43,7 +43,7 @@ func ViewTotalRows(bucket *cb.Bucket, ddoc string, view string, options map[stri
 	}
 	vres, err := bucket.View(ddoc, view, options)
 	if err != nil {
-		return 0, errors.NewError(err, "Unable to access view")
+		return 0, errors.NewCbViewsAccessError(err, "View Name"+view)
 	}
 
 	return int64(vres.TotalRows), nil
@@ -63,7 +63,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 		r := recover()
 		if r != nil {
 			logging.Errorf("View Walking Panic: %v\n%s", r, debug.Stack())
-			errs <- errors.NewError(nil, "Panic In View Walking")
+			errs <- errors.NewCbViewsAccessError(nil, "Panic In walking view "+view)
 		}
 	}()
 
@@ -79,7 +79,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 		}
 		vres, err := bucket.View(ddoc, view, options)
 		if err != nil {
-			errs <- errors.NewError(err, "Unable to access view")
+			errs <- errors.NewCbViewsAccessError(err, "View name "+view)
 			return
 		}
 
