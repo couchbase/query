@@ -58,7 +58,7 @@ func (z *zkConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
 	nodes, _, err := z.conn.Children("/")
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, "")
+		return nil, errors.NewAdminGetClusterError(err, "/")
 	}
 	for _, name := range nodes {
 		clusterIds = append(clusterIds, name)
@@ -69,7 +69,7 @@ func (z *zkConfigStore) ClusterNames() ([]string, errors.Error) {
 func (z *zkConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
 	data, _, err := z.conn.Get("/" + name)
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, name)
+		return nil, errors.NewAdminGetClusterError(err, name)
 	}
 	var clusterConfig zkCluster
 	err = json.Unmarshal(data, &clusterConfig)
@@ -98,7 +98,7 @@ func (z *zkConfigStore) AddCluster(c clustering.Cluster) (clustering.Cluster, er
 	}
 	_, err = z.conn.Create("/"+c.Name(), clusterBytes, flags, acl)
 	if err != nil {
-		return nil, errors.NewAdminAddClusterConfigError(err)
+		return nil, errors.NewAdminAddClusterError(err, c.Name())
 	}
 	return c, nil
 }
@@ -110,7 +110,7 @@ func (z *zkConfigStore) RemoveCluster(c clustering.Cluster) (bool, errors.Error)
 func (z *zkConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
 	err := z.conn.Delete("/"+name, 0)
 	if err != nil {
-		return false, errors.NewAdminRemoveClusterConfigError(err)
+		return false, errors.NewAdminRemoveClusterError(err, name)
 	} else {
 		return true, nil
 	}
@@ -121,7 +121,7 @@ func (z *zkConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	clusters := []clustering.Cluster{}
 	nodes, _, err := z.conn.Children("/")
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, "")
+		return nil, errors.NewAdminGetClusterError(err, "/")
 	}
 	for _, name := range nodes {
 		if name == _RESERVED_NAME {
@@ -129,7 +129,7 @@ func (z *zkConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 		}
 		data, _, err := z.conn.Get("/" + name)
 		if err != nil {
-			return nil, errors.NewAdminClusterConfigError(err, name)
+			return nil, errors.NewAdminGetClusterError(err, name)
 		}
 		cluster := &zkCluster{}
 		err = json.Unmarshal(data, cluster)
@@ -201,12 +201,11 @@ func (z *zkCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, z.ConfigurationStoreId())
 	}
 	nodes, _, err := impl.conn.Children("/" + z.ClusterName)
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, z.ClusterName)
+		return nil, errors.NewAdminGetClusterError(err, z.ClusterName)
 	}
 	for _, name := range nodes {
 		queryNodeNames = append(queryNodeNames, name)
@@ -217,13 +216,12 @@ func (z *zkCluster) QueryNodeNames() ([]string, errors.Error) {
 func (z *zkCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, z.ConfigurationStoreId())
 	}
 	nodePath := "/" + z.ClusterName + "/" + name
 	data, _, err := impl.conn.Get(nodePath)
 	if err != nil {
-		return nil, errors.NewAdminNodeConfigError(err, nodePath)
+		return nil, errors.NewAdminGetNodeError(err, nodePath)
 	}
 	var queryNode zkQueryNodeConfig
 	err = json.Unmarshal(data, &queryNode)
@@ -270,8 +268,7 @@ func (z *zkCluster) Cluster() clustering.Cluster {
 func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, z.ConfigurationStoreId())
 	}
 	// Check that query node has compatible backend connections:
 	if n.Standalone().Datastore().URL() != z.DatastoreURI {
@@ -302,7 +299,7 @@ func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, 
 	}
 	_, err = impl.conn.Create(key, value, flags, acl)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, errors.NewAdminAddNodeError(err, "/"+z.Name()+"/"+n.Name())
 	}
 	return n, nil
 }
@@ -314,12 +311,11 @@ func (z *zkCluster) RemoveQueryNode(n clustering.QueryNode) (clustering.QueryNod
 func (z *zkCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, z.ConfigurationStoreId())
 	}
 	err := impl.conn.Delete("/"+z.Name()+"/"+name, 0)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, errors.NewAdminRemoveNodeError(err, "/"+z.Name()+"/"+name)
 	}
 	return nil, nil
 }
@@ -327,19 +323,18 @@ func (z *zkCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, er
 func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	impl, ok := getConfigStoreImplementation(z)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Unable to connect to zookeeper at %s", z.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, z.ConfigurationStoreId())
 	}
 	qryNodes := []clustering.QueryNode{}
 	nodes, _, err := impl.conn.Children("/" + z.Name())
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, z.Name())
+		return nil, errors.NewAdminGetClusterError(err, z.Name())
 	}
 	for _, name := range nodes {
 		nodePath := "/" + z.Name() + "/" + name
 		data, _, err := impl.conn.Get(nodePath)
 		if err != nil {
-			return nil, errors.NewAdminNodeConfigError(err, nodePath)
+			return nil, errors.NewAdminGetNodeError(err, nodePath)
 		}
 		queryNode := &zkQueryNodeConfig{}
 		err = json.Unmarshal(data, queryNode)
@@ -384,7 +379,7 @@ func makeZkQueryNodeConfig(ClusterName string,
 	adminEndpoint string,
 	standalone *clustering.StdStandalone,
 	opts *clustering.ClOptions) clustering.QueryNode {
-	node := zkQueryNodeConfig{
+	return &zkQueryNodeConfig{
 		ClusterName:      ClusterName,
 		QueryNodeName:    Name,
 		QueryEndpointURL: queryEndpoint,
@@ -393,7 +388,6 @@ func makeZkQueryNodeConfig(ClusterName string,
 		StandaloneRef:    standalone,
 		OptionsCL:        opts,
 	}
-	return &node
 }
 
 // zkQueryNodeConfig implements Stringer interface

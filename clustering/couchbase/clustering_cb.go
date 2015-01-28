@@ -42,8 +42,7 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	}
 	c, err := couchbase.Connect(path)
 	if err != nil {
-		return nil, errors.NewAdminConnectionError(err,
-			fmt.Sprintf("Cannot connect to %s", path))
+		return nil, errors.NewAdminConnectionError(err, path)
 	}
 	return &cbConfigStore{
 		adminUrl: path,
@@ -77,7 +76,7 @@ func (c *cbConfigStore) ClusterNames() ([]string, errors.Error) {
 func (c *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
 	_, err := c.cbConn.GetPool(name)
 	if err != nil {
-		return nil, errors.NewAdminClusterConfigError(err, fmt.Sprintf("Cluster %s", name))
+		return nil, errors.NewAdminGetClusterError(err, name)
 	}
 	return &cbCluster{
 		configStore:    c,
@@ -95,7 +94,7 @@ func (c *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
 func (c *cbConfigStore) getPoolServices(name string) (couchbase.PoolServices, errors.Error) {
 	poolServices, err := c.cbConn.GetPoolServices(name)
 	if err != nil {
-		return poolServices, errors.NewAdminClusterConfigError(err, name)
+		return poolServices, errors.NewAdminGetClusterError(err, name)
 	}
 	return poolServices, nil
 }
@@ -201,8 +200,7 @@ func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	// Get a handle of the go-couchbase connection:
 	cbConn, ok := c.configStore.(*cbConfigStore)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil,
-			fmt.Sprintf("Cannot connect to %s", c.ConfigurationStoreId()))
+		return nil, errors.NewAdminConnectionError(nil, c.ConfigurationStoreId())
 	}
 	poolServices, err := cbConn.getPoolServices(c.ClusterName)
 	if err != nil {
@@ -252,8 +250,7 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 		}
 	}
 	if qryNodeName == "" {
-		return nil, errors.NewAdminNodeConfigError(nil,
-			fmt.Sprintf("No query node %s", name))
+		return nil, errors.NewAdminNoNodeError(name)
 	}
 	return &cbQueryNodeConfig{
 		ClusterName:      c.Name(),

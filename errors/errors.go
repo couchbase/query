@@ -227,47 +227,62 @@ func NewPlanError(e error, msg string) Error {
 
 func NewAdminConnectionError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 2000, IKey: "admin.clustering.connection_error", ICause: e,
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Error connecting to " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewAdminInvalidURL(component string, url string) Error {
-	return &err{level: EXCEPTION, ICode: 2005, IKey: "admin.invalid_url",
+	return &err{level: EXCEPTION, ICode: 2010, IKey: "admin.invalid_url",
 		InternalMsg: fmt.Sprintf("Invalid % url: %s", component, url), InternalCaller: CallerN(1)}
 }
 
 func NewAdminDecodingError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 2007, IKey: "admin.json_decoding_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: 2020, IKey: "admin.json_decoding_error", ICause: e,
 		InternalMsg: "Error in JSON decoding", InternalCaller: CallerN(1)}
 }
 
 func NewAdminEncodingError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 2009, IKey: "admin.json_encoding_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: 2030, IKey: "admin.json_encoding_error", ICause: e,
 		InternalMsg: "Error in JSON encoding", InternalCaller: CallerN(1)}
 }
 
-func NewAdminClusterConfigError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2010, IKey: "admin.clustering.cluster_config_error", ICause: e,
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewAdminGetClusterError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2040, IKey: "admin.clustering.get_cluster_error", ICause: e,
+		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewAdminAddClusterConfigError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 2015, IKey: "admin.clustering.add_cluster_config_error", ICause: e,
-		InternalMsg: "Error Adding Cluster", InternalCaller: CallerN(1)}
+func NewAdminAddClusterError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2050, IKey: "admin.clustering.add_cluster_error", ICause: e,
+		InternalMsg: "Error adding cluster " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewAdminRemoveClusterConfigError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 2017, IKey: "admin.clustering.remove_cluster_config_error", ICause: e,
-		InternalMsg: "Error Removing Cluster", InternalCaller: CallerN(1)}
+func NewAdminRemoveClusterError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2060, IKey: "admin.clustering.remove_cluster_error", ICause: e,
+		InternalMsg: "Error removing cluster " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewAdminNodeConfigError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2020, IKey: "admin.clustering.node_config_error", ICause: e,
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewAdminGetNodeError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2070, IKey: "admin.clustering.get_node_error", ICause: e,
+		InternalMsg: "Error retrieving node " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminNoNodeError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2080, IKey: "admin.clustering.no_node_error",
+		InternalMsg: "No such  node " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminAddNodeError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2090, IKey: "admin.clustering.add_cluster_error", ICause: e,
+		InternalMsg: "Error adding node " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewAdminRemoveNodeError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 2100, IKey: "admin.clustering.remove_cluster_error", ICause: e,
+		InternalMsg: "Error removing node " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewAdminMakeMetricError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2030, IKey: "admin.accounting.stats.create_stat", ICause: e,
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: 2110, IKey: "admin.accounting.stats.create_stat", ICause: e,
+		InternalMsg: "Error creating metric " + msg, InternalCaller: CallerN(1)}
 }
 
 // Authorization Errors
