@@ -72,19 +72,19 @@ func (b *dualKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error)
 }
 
 func (b *dualKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
+	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
+	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
+	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
 func (b *dualKeyspace) Delete(deletes []string) ([]string, errors.Error) {
-	return nil, errors.NewError(nil, "Mutations not allowed on system:dual.")
+	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
 func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
@@ -140,7 +140,7 @@ func (pi *dualIndex) Statistics(span *datastore.Span) (datastore.Statistics, err
 }
 
 func (pi *dualIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewSystemIdxNoDropError(nil, "For system:dual")
 }
 
 func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -154,7 +154,7 @@ func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	case string:
 		val = a
 	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
+		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
 		return
 	}
 

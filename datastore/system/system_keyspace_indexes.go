@@ -61,26 +61,26 @@ func (b *indexKeyspace) Count() (int64, errors.Error) {
 									if excp == nil {
 										count += int64(len(indexIds))
 									} else {
-										return 0, errors.NewError(excp, "")
+										return 0, errors.NewSystemDatastoreError(excp, "")
 									}
 								}
 							} else {
-								return 0, errors.NewError(excp, "")
+								return 0, errors.NewSystemDatastoreError(excp, "")
 							}
 						} else {
-							return 0, errors.NewError(excp, "")
+							return 0, errors.NewSystemDatastoreError(excp, "")
 						}
 					}
 				} else {
-					return 0, errors.NewError(excp, "")
+					return 0, errors.NewSystemDatastoreError(excp, "")
 				}
 			} else {
-				return 0, errors.NewError(excp, "")
+				return 0, errors.NewSystemDatastoreError(excp, "")
 			}
 		}
 		return count, nil
 	}
-	return 0, errors.NewError(excp, "")
+	return 0, errors.NewSystemDatastoreError(excp, "")
 }
 
 func (b *indexKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -178,22 +178,22 @@ func newIndexesKeyspace(p *namespace) (*indexKeyspace, errors.Error) {
 
 func (b *indexKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *indexKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
 func (b *indexKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
 func (b *indexKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
 type indexIndex struct {
@@ -238,7 +238,7 @@ func (pi *indexIndex) Statistics(span *datastore.Span) (datastore.Statistics, er
 }
 
 func (pi *indexIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
 func (pi *indexIndex) Scan(span *datastore.Span, distinct bool, limit int64,

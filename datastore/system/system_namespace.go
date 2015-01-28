@@ -54,7 +54,7 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
 	b, ok := p.keyspaces[name]
 	if !ok {
-		return nil, errors.NewError(nil, "Keyspace "+name+" not found.")
+		return nil, errors.NewSystemKeyspaceNotFoundError(nil, name)
 	}
 
 	return b, nil

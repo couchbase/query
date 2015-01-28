@@ -75,27 +75,27 @@ func (b *storeKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 		})
 		return doc, nil
 	}
-	return nil, errors.NewError(nil, "Not Found")
+	return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
 }
 
 func (b *storeKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *storeKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *storeKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *storeKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
@@ -154,7 +154,7 @@ func (si *systemIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 func (si *systemIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := si.indexes[name]
 	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewSystemIdxNotFoundError(nil, name)
 	}
 	return index, nil
 }
@@ -181,11 +181,11 @@ func (si *systemIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 
 func (mi *systemIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "CREATE INDEX is not supported for system datastore.")
+	return nil, errors.NewSystemNotSupportedError(nil, "CREATE INDEX is not supported for system datastore.")
 }
 
 func (mi *systemIndexer) BuildIndexes(names ...string) errors.Error {
-	return errors.NewError(nil, "BUILD INDEXES is not supported for system datastore.")
+	return errors.NewSystemNotSupportedError(nil, "BUILD INDEXES is not supported for system datastore.")
 }
 
 type storeIndex struct {
@@ -230,7 +230,7 @@ func (pi *storeIndex) Statistics(span *datastore.Span) (datastore.Statistics, er
 }
 
 func (pi *storeIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewSystemIdxNoDropError(nil, pi.Name())
 }
 
 func (pi *storeIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -244,7 +244,7 @@ func (pi *storeIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	case string:
 		val = a
 	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
+		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
 		return
 	}
 

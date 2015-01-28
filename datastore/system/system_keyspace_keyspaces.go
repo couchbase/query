@@ -52,15 +52,15 @@ func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
 				if excp == nil {
 					count += int64(len(keyspaceIds))
 				} else {
-					return 0, errors.NewError(excp, "")
+					return 0, errors.NewSystemDatastoreError(excp, "")
 				}
 			} else {
-				return 0, errors.NewError(excp, "")
+				return 0, errors.NewSystemDatastoreError(excp, "")
 			}
 		}
 		return count, nil
 	}
-	return 0, errors.NewError(excp, "")
+	return 0, errors.NewSystemDatastoreError(excp, "")
 }
 
 func (b *keyspaceKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -106,22 +106,22 @@ func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Er
 
 func (b *keyspaceKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *keyspaceKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *keyspaceKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *keyspaceKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func newKeyspacesKeyspace(p *namespace) (*keyspaceKeyspace, errors.Error) {
@@ -177,7 +177,7 @@ func (pi *keyspaceIndex) Statistics(span *datastore.Span) (datastore.Statistics,
 }
 
 func (pi *keyspaceIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
 func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -191,7 +191,7 @@ func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	case string:
 		val = a
 	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
+		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
 		return
 	}
 

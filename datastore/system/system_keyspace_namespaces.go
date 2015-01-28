@@ -45,7 +45,7 @@ func (b *namespaceKeyspace) Count() (int64, errors.Error) {
 	if excp == nil {
 		return int64(len(namespaceIds)), nil
 	}
-	return 0, errors.NewError(excp, "")
+	return 0, errors.NewSystemDatastoreError(excp, "")
 }
 
 func (b *namespaceKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -80,27 +80,27 @@ func (b *namespaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.E
 		})
 		return doc, nil
 	}
-	return nil, errors.NewError(excp, "Not Found")
+	return nil, errors.NewSystemDatastoreError(excp, "Key Not Found "+key)
 }
 
 func (b *namespaceKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *namespaceKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *namespaceKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func (b *namespaceKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
 func newNamespacesKeyspace(p *namespace) (*namespaceKeyspace, errors.Error) {
@@ -156,7 +156,7 @@ func (pi *namespaceIndex) Statistics(span *datastore.Span) (datastore.Statistics
 }
 
 func (pi *namespaceIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
 func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -170,7 +170,7 @@ func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	case string:
 		val = a
 	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
+		conn.Error(errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
 		return
 	}
 
