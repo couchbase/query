@@ -1698,7 +1698,8 @@ It returns a textual representation of the time value formatted
 according to the Format string.
 */
 func timeToStr(t time.Time, format string) string {
-	return t.Format(format)
+	_, fmt, _ := strToTimeFormat(format)
+	return t.Format(fmt)
 }
 
 /*
