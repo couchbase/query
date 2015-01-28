@@ -61,7 +61,7 @@ func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error)
 func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaces[strings.ToUpper(name)]
 	if !ok {
-		e = errors.NewError(nil, "Namespace "+name+" not found.")
+		e = errors.NewFileNamespaceNotFoundError(nil, name)
 	}
 
 	return
@@ -75,7 +75,7 @@ func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Er
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)
 	if er != nil {
-		return nil, errors.NewError(er, "")
+		return nil, errors.NewFileDatastoreError(er, "")
 	}
 
 	fs := &store{path: path}
@@ -92,7 +92,7 @@ func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 func (s *store) loadNamespaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(s.path)
 	if er != nil {
-		return errors.NewError(er, "")
+		return errors.NewFileDatastoreError(er, "")
 	}
 
 	s.namespaces = make(map[string]*namespace, len(dirEntries))
@@ -104,7 +104,7 @@ func (s *store) loadNamespaces() (e errors.Error) {
 			s.namespaceNames = append(s.namespaceNames, dirEntry.Name())
 			diru := strings.ToUpper(dirEntry.Name())
 			if _, ok := s.namespaces[diru]; ok {
-				return errors.NewError(nil, "Duplicate namespace name "+dirEntry.Name())
+				return errors.NewFileDuplicateNamespaceError(nil, dirEntry.Name())
 			}
 
 			p, e = newNamespace(s, dirEntry.Name())
@@ -154,7 +154,7 @@ func (p *namespace) KeyspaceById(id string) (b datastore.Keyspace, e errors.Erro
 func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
 	b, ok := p.keyspaces[strings.ToUpper(name)]
 	if !ok {
-		e = errors.NewError(nil, "Keyspace "+name+" not found.")
+		e = errors.NewFileKeyspaceNotFoundError(nil, name)
 	}
 
 	return
@@ -177,7 +177,7 @@ func newNamespace(s *store, dir string) (p *namespace, e errors.Error) {
 func (p *namespace) loadKeyspaces() (e errors.Error) {
 	dirEntries, er := ioutil.ReadDir(p.path())
 	if er != nil {
-		return errors.NewError(er, "")
+		return errors.NewFileDatastoreError(er, "")
 	}
 
 	p.keyspaces = make(map[string]*keyspace, len(dirEntries))
@@ -188,7 +188,7 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 		if dirEntry.IsDir() {
 			diru := strings.ToUpper(dirEntry.Name())
 			if _, ok := p.keyspaces[diru]; ok {
-				return errors.NewError(nil, "Duplicate keyspace name "+dirEntry.Name())
+				return errors.NewFileDuplicateKeyspaceError(nil, dirEntry.Name())
 			}
 
 			b, e = newKeyspace(p, dirEntry.Name())
@@ -227,7 +227,7 @@ func (b *keyspace) Name() string {
 func (b *keyspace) Count() (int64, errors.Error) {
 	dirEntries, er := ioutil.ReadDir(b.path())
 	if er != nil {
-		return 0, errors.NewError(er, "")
+		return 0, errors.NewFileDatastoreError(er, "")
 	}
 	return int64(len(dirEntries)), nil
 }
@@ -306,7 +306,7 @@ func opToString(op int) string {
 func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair, errors.Error) {
 
 	if len(kvPairs) == 0 {
-		return nil, errors.NewError(nil, "No keys to insert")
+		return nil, errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())
 	}
 
 	insertedKeys := make([]datastore.Pair, 0)
@@ -329,7 +329,7 @@ func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair
 		case INSERT:
 			// add the key only if it doesn't exist
 			if _, err = os.Stat(filename); err == nil {
-				err = errors.NewError(nil, "File "+filename+" exists")
+				err = errors.NewFileKeyExists(nil, "Key (File) "+filename)
 			} else {
 				// create and write the file
 				if file, err = os.Create(filename); err == nil {
@@ -356,7 +356,7 @@ func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair
 		}
 
 		if err != nil {
-			returnErr = errors.NewError(returnErr, opToString(op)+" Failed "+err.Error())
+			returnErr = errors.NewFileDMLError(returnErr, opToString(op)+" Failed "+err.Error())
 		} else {
 			insertedKeys = append(insertedKeys, kv)
 		}
@@ -395,7 +395,7 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 	if len(fileError) > 0 {
 		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
-		return deleted, errors.NewError(nil, errLine)
+		return deleted, errors.NewFileDatastoreError(nil, errLine)
 	}
 
 	return deleted, nil
@@ -416,11 +416,11 @@ func newKeyspace(p *namespace, dir string) (b *keyspace, e errors.Error) {
 
 	fi, er := os.Stat(b.path())
 	if er != nil {
-		return nil, errors.NewError(er, "")
+		return nil, errors.NewFileDatastoreError(er, "")
 	}
 
 	if !fi.IsDir() {
-		return nil, errors.NewError(nil, "Keyspace path must be a directory.")
+		return nil, errors.NewFileKeyspaceNotDirError(nil, "Keyspace path "+dir)
 	}
 
 	b.fi = newFileIndexer(b)
@@ -474,7 +474,7 @@ func (fi *fileIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 func (fi *fileIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := fi.indexes[name]
 	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewFileIdxNotFound(nil, name)
 	}
 	return index, nil
 }
@@ -502,11 +502,11 @@ func (fi *fileIndexer) CreatePrimaryIndex(name string, with value.Value) (
 
 func (b *fileIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "CREATE INDEX is not supported for file-based datastore.")
+	return nil, errors.NewFileNotSupported(nil, "CREATE INDEX is not supported for file-based datastore.")
 }
 
 func (b *fileIndexer) BuildIndexes(names ...string) errors.Error {
-	return errors.NewError(nil, "BUILD INDEXES is not supported for file-based datastore.")
+	return errors.NewFileNotSupported(nil, "BUILD INDEXES is not supported for file-based datastore.")
 }
 
 // primaryIndex performs full keyspace scans.
@@ -553,7 +553,7 @@ func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, 
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewFilePrimaryIdxNoDropError(nil, pi.Name())
 }
 
 func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -571,7 +571,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 		case string:
 			low = a
 		default:
-			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
+			conn.Error(errors.NewFileDatastoreError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
 			return
 		}
 	}
@@ -583,14 +583,14 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 		case string:
 			high = a
 		default:
-			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
+			conn.Error(errors.NewFileDatastoreError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
 			return
 		}
 	}
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
-		conn.Error(errors.NewError(er, ""))
+		conn.Error(errors.NewFileDatastoreError(er, ""))
 		return
 	}
 
@@ -632,7 +632,7 @@ func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())
 	if er != nil {
-		conn.Error(errors.NewError(er, ""))
+		conn.Error(errors.NewFileDatastoreError(er, ""))
 		return
 	}
 
@@ -654,7 +654,7 @@ func fetch(path string) (item value.AnnotatedValue, e errors.Error) {
 			// file doesn't exist should simply return nil, nil
 			return
 		}
-		return nil, errors.NewError(er, "")
+		return nil, errors.NewFileDatastoreError(er, "")
 	}
 
 	doc := value.NewAnnotatedValue(value.NewValue(bytes))
