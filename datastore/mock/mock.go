@@ -66,7 +66,7 @@ func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error)
 func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaces[name]
 	if !ok {
-		p, e = nil, errors.NewError(nil, "Namespace "+name+" not found.")
+		p, e = nil, errors.NewOtherNamespaceNotFoundError(nil, name+" for Mock datastore")
 	}
 
 	return
@@ -111,7 +111,7 @@ func (p *namespace) KeyspaceById(id string) (b datastore.Keyspace, e errors.Erro
 func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.Error) {
 	b, ok := p.keyspaces[name]
 	if !ok {
-		b, e = nil, errors.NewError(nil, "Keyspace "+name+" not found.")
+		b, e = nil, errors.NewOtherKeyspaceNotFoundError(nil, name+" for Mock datastore")
 	}
 
 	return
@@ -167,7 +167,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	i, e := strconv.Atoi(key)
 	if e != nil {
-		return nil, errors.NewError(e, fmt.Sprintf("no mock item: %v", key))
+		return nil, errors.NewOtherKeyNotFoundError(e, fmt.Sprintf("no mock item: %v", key))
 	} else {
 		return genItem(i, b.nitems)
 	}
@@ -176,7 +176,7 @@ func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 // generate a mock document - used by fetchOne to mock a document in the keyspace
 func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	if i < 0 || i >= nitems {
-		return nil, errors.NewError(nil,
+		return nil, errors.NewOtherDatastoreError(nil,
 			fmt.Sprintf("item out of mock range: %v [0,%v)", i, nitems))
 	}
 	id := strconv.Itoa(i)
@@ -187,22 +187,22 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 
 func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
 func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
 func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
 func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
-	return nil, errors.NewError(nil, "Not yet implemented.")
+	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
 func (b *keyspace) Release() {
@@ -253,7 +253,7 @@ func (mi *mockIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 func (mi *mockIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
 	index, ok := mi.indexes[name]
 	if !ok {
-		return nil, errors.NewError(nil, fmt.Sprintf("Index %v not found.", name))
+		return nil, errors.NewOtherIdxNotFoundError(nil, name+"for Mock datastore")
 	}
 	return index, nil
 }
@@ -280,11 +280,11 @@ func (mi *mockIndexer) CreatePrimaryIndex(name string, with value.Value) (datast
 
 func (mi *mockIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
-	return nil, errors.NewError(nil, "CREATE INDEX is not supported for mock datastore.")
+	return nil, errors.NewOtherNotSupportedError(nil, "CREATE INDEX is not supported for mock datastore.")
 }
 
 func (mi *mockIndexer) BuildIndexes(names ...string) errors.Error {
-	return errors.NewError(nil, "BUILD INDEXES is not supported for mock datastore.")
+	return errors.NewOtherNotSupportedError(nil, "BUILD INDEXES is not supported for mock datastore.")
 }
 
 // NewDatastore creates a new mock store for the given "path".  The
@@ -307,7 +307,7 @@ func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 		pair := strings.Split(kv, "=")
 		v, e := strconv.Atoi(pair[1])
 		if e != nil {
-			return nil, errors.NewError(e,
+			return nil, errors.NewOtherDatastoreError(e,
 				fmt.Sprintf("could not parse mock param key: %s, val: %s",
 					pair[0], pair[1]))
 		}
@@ -384,7 +384,7 @@ func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, 
 }
 
 func (pi *primaryIndex) Drop() errors.Error {
-	return errors.NewError(nil, "This primary index cannot be dropped.")
+	return errors.NewOtherIdxNoDrop(nil, "This primary index cannot be dropped for Mock datastore.")
 }
 
 func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
@@ -402,7 +402,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 		case string:
 			low = a
 		default:
-			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
+			conn.Error(errors.NewOtherDatastoreError(nil, fmt.Sprintf("Invalid lower bound %v of type %T.", a, a)))
 			return
 		}
 	}
@@ -414,7 +414,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 		case string:
 			high = a
 		default:
-			conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
+			conn.Error(errors.NewOtherDatastoreError(nil, fmt.Sprintf("Invalid upper bound %v of type %T.", a, a)))
 			return
 		}
 	}

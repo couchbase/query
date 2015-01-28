@@ -382,64 +382,106 @@ func NewCbViewsAccessError(e error, msg string) Error {
 }
 
 // Datastore File based error codes
+
+func NewFileDatastoreError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 15000, IKey: "datastore.file.generic_file_error", ICause: e,
+		InternalMsg: "Error in file datastore " + msg, InternalCaller: CallerN(1)}
+}
+
 func NewFileNamespaceNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15000, IKey: "datastore.file.namespace_not_found", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15001, IKey: "datastore.file.namespace_not_found", ICause: e,
 		InternalMsg: "Namespace not found " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileKeyspaceNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15001, IKey: "datastore.file.keyspace_not_found", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15002, IKey: "datastore.file.keyspace_not_found", ICause: e,
 		InternalMsg: "Keyspace not found " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileDuplicateNamespaceError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15002, IKey: "datastore.file.duplicate_namespace", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15003, IKey: "datastore.file.duplicate_namespace", ICause: e,
 		InternalMsg: "Duplicate Namespace " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileDuplicateKeyspaceError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15003, IKey: "datastore.file.duplicate_keyspace", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15004, IKey: "datastore.file.duplicate_keyspace", ICause: e,
 		InternalMsg: "Duplicate Keyspace " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileNoKeysInsertError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15004, IKey: "datastore.file.no_keys_insert", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15005, IKey: "datastore.file.no_keys_insert", ICause: e,
 		InternalMsg: "No keys to insert " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileKeyExists(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15005, IKey: "datastore.file.key_exists", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15006, IKey: "datastore.file.key_exists", ICause: e,
 		InternalMsg: "Key Exists " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileDMLError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15006, IKey: "datastore.file.DML_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15007, IKey: "datastore.file.DML_error", ICause: e,
 		InternalMsg: "DML Error " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileKeyspaceNotDirError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15007, IKey: "datastore.file.keyspacenot_dir", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15008, IKey: "datastore.file.keyspacenot_dir", ICause: e,
 		InternalMsg: "Keyspace path must be a directory " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileIdxNotFound(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15008, IKey: "datastore.file.idx_not_found", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15009, IKey: "datastore.file.idx_not_found", ICause: e,
 		InternalMsg: "Index not found " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFileNotSupported(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15009, IKey: "datastore.file.not_supported", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15010, IKey: "datastore.file.not_supported", ICause: e,
 		InternalMsg: "Operation not supported " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewFilePrimaryIdxNoDropError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15010, IKey: "datastore.file.primary_idx_no_drop", ICause: e,
+	return &err{level: EXCEPTION, ICode: 15011, IKey: "datastore.file.primary_idx_no_drop", ICause: e,
 		InternalMsg: "Primary Index cannot be dropped " + msg, InternalCaller: CallerN(1)}
 }
 
-func NewFileDatastoreError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 15011, IKey: "datastore.file.datastore_file_error", ICause: e,
-		InternalMsg: "Error in file datastore " + msg, InternalCaller: CallerN(1)}
+// Error codes for all other datastores, e.g Mock
+func NewOtherDatastoreError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16000, IKey: "datastore.other.datastore_generic_error", ICause: e,
+		InternalMsg: "Error in datastore " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherNamespaceNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16001, IKey: "datastore.other.namespace_not_found", ICause: e,
+		InternalMsg: "Namespace Not Found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherKeyspaceNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16002, IKey: "datastore.other.keyspace_not_found", ICause: e,
+		InternalMsg: "Keyspace Not Found " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherNotImplementedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16003, IKey: "datastore.other.not_implemented", ICause: e,
+		InternalMsg: "Not Implemented " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherIdxNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16004, IKey: "datastore.other.idx_not_found", ICause: e,
+		InternalMsg: "Index not found  " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherIdxNoDrop(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16005, IKey: "datastore.other.idx_no_drop", ICause: e,
+		InternalMsg: "Index Cannot be dropped " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherNotSupportedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16006, IKey: "datastore.other.not_supported", ICause: e,
+		InternalMsg: "Not supported for this datastore " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewOtherKeyNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16007, IKey: "datastore.other.key_not_found", ICause: e,
+		InternalMsg: "Key not found " + msg, InternalCaller: CallerN(1)}
 }
 
 // Returns "FileName:LineNum" of caller.
