@@ -92,43 +92,60 @@ func (b *indexKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
-	rv := make([]datastore.AnnotatedPair, len(keys))
-	for i, k := range keys {
-		item, e := b.fetchOne(k)
-		if e != nil {
-			return nil, e
+	rv := make([]datastore.AnnotatedPair, 0, len(keys)*2)
+
+	for _, key := range keys {
+		pairs, err := b.fetchOne(key)
+		if err != nil {
+			return nil, err
 		}
 
-		rv[i].Key = k
-		rv[i].Value = item
+		rv = append(rv, pairs...)
 	}
+
 	return rv, nil
 }
 
-func (b *indexKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
+func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.Error) {
+	rv := make([]datastore.AnnotatedPair, 0, 2)
 	ids := strings.SplitN(key, "/", 3)
 
-	namespace, err := b.namespace.store.actualStore.NamespaceById(ids[0])
-	if namespace != nil {
-		keyspace, _ := namespace.KeyspaceById(ids[1])
-		if keyspace != nil {
-			indexers, _ := keyspace.Indexers()
-			index, _ := indexers[0].IndexById(ids[2])
-			if index != nil {
-				doc := value.NewAnnotatedValue(map[string]interface{}{
-					"id":           index.Id(),
-					"name":         index.Name(),
-					"keyspace_id":  keyspace.Id(),
-					"namespace_id": namespace.Id(),
-					"datastore_id": b.namespace.store.actualStore.Id(),
-					"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
-					"index_type":   datastoreObjectToJSONSafe(index.Type()),
-				})
-				return doc, nil
-			}
-		}
+	actualStore := b.namespace.store.actualStore
+	namespace, err := actualStore.NamespaceById(ids[0])
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+
+	keyspace, err := namespace.KeyspaceById(ids[1])
+	if err != nil {
+		return nil, err
+	}
+
+	indexers, err := keyspace.Indexers()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, indexer := range indexers {
+		index, err := indexer.IndexById(ids[2])
+		if err != nil {
+			continue
+		}
+
+		doc := value.NewAnnotatedValue(map[string]interface{}{
+			"id":           index.Id(),
+			"name":         index.Name(),
+			"keyspace_id":  keyspace.Id(),
+			"namespace_id": namespace.Id(),
+			"datastore_id": actualStore.Id(),
+			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
+			"using":        datastoreObjectToJSONSafe(index.Type()),
+		})
+
+		rv = append(rv, datastore.AnnotatedPair{key, doc})
+	}
+
+	return rv, nil
 }
 
 func indexKeyToIndexKeyStringArray(key expression.Expressions) []string {
@@ -226,50 +243,21 @@ func (pi *indexIndex) Drop() errors.Error {
 
 func (pi *indexIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-
-	val := ""
-
-	a := span.Seek[0].Actual()
-	switch a := a.(type) {
-	case string:
-		val = a
-	default:
-		conn.Error(errors.NewError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", a, a)))
-		return
-	}
-
-	ids := strings.SplitN(val, "/", 3)
-	if len(ids) != 3 {
-		return
-	}
-
-	namespace, _ := pi.keyspace.namespace.store.actualStore.NamespaceById(ids[0])
-	if namespace == nil {
-		return
-	}
-
-	keyspace, _ := namespace.KeyspaceById(ids[1])
-	if keyspace == nil {
-		return
-	}
-
-	indexers, _ := keyspace.Indexers()
-	index, _ := indexers[0].IndexById(ids[2])
-	if keyspace != nil {
-		entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespace.Id(), keyspace.Id(), index.Id())}
-		conn.EntryChannel() <- &entry
-	}
+	pi.ScanEntries(limit, cons, vector, conn)
 }
 
 func (pi *indexIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
+	// eliminate duplicate keys
+	keys := make(map[string]string, 64)
+
+	actualStore := pi.keyspace.namespace.store.actualStore
+	namespaceIds, err := actualStore.NamespaceIds()
 	if err == nil {
 		for _, namespaceId := range namespaceIds {
-			namespace, err := pi.keyspace.namespace.store.actualStore.NamespaceById(namespaceId)
+			namespace, err := actualStore.NamespaceById(namespaceId)
 			if err == nil {
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
@@ -281,13 +269,9 @@ func (pi *indexIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 								for _, indexer := range indexers {
 									indexIds, err := indexer.IndexIds()
 									if err == nil {
-										for i, indexId := range indexIds {
-											if limit > 0 && int64(i) > limit {
-												break
-											}
-
-											entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)}
-											conn.EntryChannel() <- &entry
+										for _, indexId := range indexIds {
+											key := fmt.Sprintf("%s/%s/%s", namespaceId, keyspaceId, indexId)
+											keys[key] = key
 										}
 									}
 								}
@@ -297,5 +281,10 @@ func (pi *indexIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 				}
 			}
 		}
+	}
+
+	for k, _ := range keys {
+		entry := datastore.IndexEntry{PrimaryKey: k}
+		conn.EntryChannel() <- &entry
 	}
 }
