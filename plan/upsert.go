@@ -20,13 +20,15 @@ import (
 type SendUpsert struct {
 	readwrite
 	keyspace datastore.Keyspace
+	alias    string
 	key      expression.Expression
 	value    expression.Expression
 }
 
-func NewSendUpsert(keyspace datastore.Keyspace, key, value expression.Expression) *SendUpsert {
+func NewSendUpsert(keyspace datastore.Keyspace, alias string, key, value expression.Expression) *SendUpsert {
 	return &SendUpsert{
 		keyspace: keyspace,
+		alias:    alias,
 		key:      key,
 		value:    value,
 	}
@@ -44,6 +46,10 @@ func (this *SendUpsert) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *SendUpsert) Alias() string {
+	return this.alias
+}
+
 func (this *SendUpsert) Key() expression.Expression {
 	return this.key
 }
@@ -56,6 +62,7 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "SendUpsert"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
+	r["alias"] = this.alias
 
 	if this.key != nil {
 		r["key"] = this.key.String()
@@ -75,6 +82,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 		ValueExpr string `json:"value"`
 		Keys      string `json:"keyspace"`
 		Names     string `json:"namespace"`
+		Alias     string `json:"alias"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -96,6 +104,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 		}
 	}
 
+	this.alias = _unmarshalled.Alias
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return nil
 }

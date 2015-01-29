@@ -131,8 +131,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Capture the upserted keys in case there is a RETURNING clause
 	for i, k := range keys {
-		av := value.NewAnnotatedValue(dpairs[i].Value)
+		av := value.NewAnnotatedValue(make(map[string]interface{}))
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
+		av.SetField(this.plan.Alias(), dpairs[i].Value)
 		if !this.sendItem(av) {
 			return false
 		}
