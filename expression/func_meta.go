@@ -12,9 +12,8 @@ package expression
 import (
 	"encoding/base64"
 
+	"github.com/couchbaselabs/query/util"
 	"github.com/couchbaselabs/query/value"
-
-	"github.com/twinj/uuid"
 )
 
 ///////////////////////////////////////////////////
@@ -251,14 +250,6 @@ type Uuid struct {
 }
 
 /*
-The init method is used to set the format of the uuid output.
-The current set format is CleanHyphen Format = "%x-%x-%x-%x%x-%x".
-*/
-func init() {
-	uuid.SwitchFormat(uuid.CleanHyphen)
-}
-
-/*
 The function NewUuid returns a pointer to the NewNullaryFunctionBase
 to create a function named UUID. It has no input arguments.
 */
@@ -286,13 +277,16 @@ It returns a string value.
 func (this *Uuid) Type() value.Type { return value.STRING }
 
 /*
-Generate a Version 4 UUID as specified in RFC 4122 using
-package github/com/twinj/uuid, function NewV4. This returns
-a string. Call newValue and return it.
+Generate a Version 4 UUID as specified in RFC 4122, wrap it in a value
+and return it. The UUID() function may return an error, if so return
+a nil value UUID with the error.
 */
 func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, error) {
-	u := uuid.NewV4()
-	return value.NewValue(u.String()), nil
+	u, err := util.UUID()
+	if err != nil {
+		return nil, err
+	}
+	return value.NewValue(u), nil
 }
 
 /*
