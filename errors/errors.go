@@ -266,22 +266,22 @@ func NewAdminGetNodeError(e error, msg string) Error {
 }
 
 func NewAdminNoNodeError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2080, IKey: "admin.clustering.no_node_error",
+	return &err{level: EXCEPTION, ICode: 2080, IKey: "admin.clustering.no_such_node",
 		InternalMsg: "No such  node " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewAdminAddNodeError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2090, IKey: "admin.clustering.add_cluster_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: 2090, IKey: "admin.clustering.add_node_error", ICause: e,
 		InternalMsg: "Error adding node " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewAdminRemoveNodeError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2100, IKey: "admin.clustering.remove_cluster_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: 2100, IKey: "admin.clustering.remove_node_error", ICause: e,
 		InternalMsg: "Error removing node " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewAdminMakeMetricError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 2110, IKey: "admin.accounting.stats.create_stat", ICause: e,
+	return &err{level: EXCEPTION, ICode: 2110, IKey: "admin.accounting.metric.create", ICause: e,
 		InternalMsg: "Error creating metric " + msg, InternalCaller: CallerN(1)}
 }
 
