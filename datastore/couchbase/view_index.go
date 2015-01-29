@@ -294,12 +294,18 @@ func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 }
 
 func (vi *viewIndex) Drop() errors.Error {
+
 	err := vi.DropViewIndex()
 	if err != nil {
+		logging.Infof(" Failed with error %v. Retrying after refresh..", err)
 		return errors.NewCbViewsDropIndexError(err, vi.Name())
 	}
 	// TODO need mutex
 	delete(vi.view.indexes, vi.name)
+	if vi.Name() == PRIMARY_INDEX {
+		logging.Infof(" Primary index being dropped ")
+		delete(vi.view.primary, vi.name)
+	}
 	return nil
 }
 
@@ -332,7 +338,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 					if err == nil {
 						entry.EntryKey = lookupValue
 					} else {
-						logging.Errorf("unable to convert index key to lookup value err:%v key %v", err, viewRow.Key)
+						logging.Debugf("unable to convert index key to lookup value err:%v key %v", err, viewRow.Key)
 					}
 				}
 
@@ -359,7 +365,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 						// ask the pool to refresh
 						vi.keyspace.namespace.refresh(true)
 						// bucket doesnt exist any more
-						conn.Error(errors.NewCbKeyspaceNotFoundError(nil, "keyspace "+vi.keyspace.Name()))
+						conn.Error(errors.NewCbViewsAccessError(nil, "keyspace "+vi.keyspace.Name()))
 						return
 					}
 

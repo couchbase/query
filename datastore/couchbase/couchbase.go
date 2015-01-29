@@ -571,7 +571,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 			"flags": float64(meta_flags),
 		})
 
-		logging.Infof("CAS Value for key %v is %v", k, float64(v.Cas))
+		logging.Debugf("CAS Value for key %v is %v", k, float64(v.Cas))
 
 		doc.Value = Value
 		rv[i] = doc
