@@ -17,7 +17,7 @@ type Vector interface {
 }
 
 type Entry interface {
-	Position() uint32   // vbucket/partition index
-	Validation() string // vbucket/partition validation UUID
-	Value() uint64      // Logical sequence number
+	Position() uint32 // vbucket/partition index (0-based)
+	Guard() string    // vbucket/partition validation UUID
+	Value() uint64    // Logical sequence number
 }

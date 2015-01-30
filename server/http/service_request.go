@@ -905,7 +905,7 @@ func (this *scanVectorEntry) Value() uint64 {
 	return this.val
 }
 
-func (this *scanVectorEntry) Validation() string {
+func (this *scanVectorEntry) Guard() string {
 	return this.uuid
 }
 
