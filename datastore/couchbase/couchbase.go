@@ -511,16 +511,26 @@ func (b *keyspace) Name() string {
 }
 
 func (b *keyspace) Count() (int64, errors.Error) {
+
+	var staterr error
+	var totalCount int64
 	statsMap := b.cbbucket.GetStats("")
 	for _, stats := range statsMap {
-		itemCount := stats["curr_items_tot"]
-		if totalCount, err := strconv.Atoi(itemCount); err == nil {
-			return int64(totalCount), nil
+		itemCount := stats["vb_active_curr_items"]
+		count, err := strconv.Atoi(itemCount)
+		if err != nil {
+			staterr = err
+			break
+		} else {
+			totalCount = totalCount + int64(count)
 		}
-
 	}
 
-	return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name())
+	if staterr == nil {
+		return totalCount, nil
+	}
+
+	return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+staterr.Error())
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
