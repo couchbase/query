@@ -297,7 +297,6 @@ func (vi *viewIndex) Drop() errors.Error {
 
 	err := vi.DropViewIndex()
 	if err != nil {
-		logging.Infof(" Failed with error %v. Retrying after refresh..", err)
 		return errors.NewCbViewsDropIndexError(err, vi.Name())
 	}
 	// TODO need mutex

@@ -194,6 +194,8 @@ func initCbAuth(url string) (*cb.Client, error) {
 		return nil, err
 	}
 
+	logging.Infof(" Initialization of cbauth succeeded ")
+
 	return &client, nil
 }
 
@@ -220,6 +222,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 			}
 
 			// intialize cb_auth variables manually
+			logging.Infof(" Trying to init cbauth with credentials %s %s %s", url.Host, url.User.Username(), password)
 			set, err := cbauth.InternalRetryDefaultInit(url.Host, url.User.Username(), password)
 			if set == false || err != nil {
 				logging.Errorf(" Unable to initialize cbauth variables. Error %v", err)
@@ -409,15 +412,19 @@ func (p *namespace) refresh(changed bool) {
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	for name, keySpace := range p.keyspaceCache {
+	for name, ks := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
 		_, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
-			keySpace.(*keyspace).deleted = true
+			ks.(*keyspace).deleted = true
 			logging.Errorf(" Error retrieving bucket %s", name)
 			delete(p.keyspaceCache, name)
 
+		}
+		// Not deleted. Check if GSI indexer is available
+		if ks.(*keyspace).gsiIndexer == nil {
+			ks.(*keyspace).refreshIndexer(p.site.URL(), p.Name())
 		}
 	}
 
@@ -485,7 +492,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	var qerr errors.Error
 	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.site.URL(), p.Name(), name)
 	if qerr != nil {
-		return nil, qerr
+		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	}
 
 	return rv, nil
@@ -518,22 +525,30 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
+	// view indexer will always be availab;e
 	switch name {
 	case datastore.VIEW, datastore.DEFAULT:
 		return b.viewIndexer, nil
 	case datastore.GSI:
-		return b.gsiIndexer, nil
+		if b.gsiIndexer != nil {
+			return b.gsiIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return []datastore.Indexer{
-		// There will always be a VIEW indexer
-		b.viewIndexer,
-		b.gsiIndexer,
-	}, nil
+
+	// view indexer will always be available
+	indexers := make([]datastore.Indexer, 0, 2)
+	indexers = append(indexers, b.viewIndexer)
+	if b.gsiIndexer != nil {
+		indexers = append(indexers, b.gsiIndexer)
+	}
+
+	return indexers, nil
 }
 
 func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
@@ -709,6 +724,14 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 func (b *keyspace) Release() {
 	b.deleted = true
 	b.cbbucket.Close()
+}
+
+func (b *keyspace) refreshIndexer(url string, poolName string) {
+	var err error
+	b.gsiIndexer, err = gsi.NewGSIIndexer(url, poolName, b.Name())
+	if err == nil {
+		logging.Infof(" GSI Indexer loaded ")
+	}
 }
 
 func (b *keyspace) loadIndexes() (err errors.Error) {
