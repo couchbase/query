@@ -456,10 +456,6 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	cbNamespace := p.getPool()
 	cbbucket, err := cbNamespace.GetBucket(name)
 
-	if strings.EqualFold(cbbucket.Type, "memcached") {
-		return nil, errors.NewCbBucketTypeNotSupportedError(nil, cbbucket.Type)
-	}
-
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)
 		// go-couchbase caches the buckets
@@ -475,6 +471,10 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 			// really no such bucket exists
 			return nil, errors.NewCbKeyspaceNotFoundError(err, "keyspace "+name)
 		}
+	}
+
+	if strings.EqualFold(cbbucket.Type, "memcached") {
+		return nil, errors.NewCbBucketTypeNotSupportedError(nil, cbbucket.Type)
 	}
 
 	rv := &keyspace{
