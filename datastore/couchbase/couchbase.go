@@ -349,7 +349,7 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		var err errors.Error
 		b, err = newKeyspace(p, name)
 		if err != nil {
-			return nil, errors.NewCbKeyspaceNotFoundError(err, "Keyspace "+name)
+			return nil, err
 		}
 		p.lock.Lock()
 		defer p.lock.Unlock()
@@ -455,6 +455,10 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()
 	cbbucket, err := cbNamespace.GetBucket(name)
+
+	if strings.EqualFold(cbbucket.Type, "memcached") {
+		return nil, errors.NewCbBucketTypeNotSupportedError(nil, cbbucket.Type)
+	}
 
 	if err != nil {
 		logging.Infof(" keyspace %s not found %v", name, err)

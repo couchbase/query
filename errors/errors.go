@@ -398,13 +398,18 @@ func NewCbDeleteFailedError(e error, msg string) Error {
 
 func NewCbLoadIndexesError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12012, IKey: "datastore.couchbase.load_index_failed", ICause: e,
-		InternalMsg: "Failed to load indexes" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Failed to load indexes " + msg, InternalCaller: CallerN(1)}
+}
+
+func NewCbBucketTypeNotSupportedError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12013, IKey: "datastore.couchbase.bucket_type_not_supported", ICause: e,
+		InternalMsg: "This bucket type is not supported " + msg, InternalCaller: CallerN(1)}
 }
 
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,
-		InternalMsg: "Failed to create view" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Failed to create view " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbViewNotFoundError(e error, msg string) Error {
@@ -414,17 +419,17 @@ func NewCbViewNotFoundError(e error, msg string) Error {
 
 func NewCbViewExistsError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13003, IKey: "datastore.couchbase.view.exists", ICause: e,
-		InternalMsg: "View index exists" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "View index exists " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbViewsWithNotAllowedError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13004, IKey: "datastore.couchbase.view.with_not_allowed", ICause: e,
-		InternalMsg: "Views not allowed for WITH keyword" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Views not allowed for WITH keyword " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbViewsNotSupportedError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13005, IKey: "datastore.couchbase.view.not_supported", ICause: e,
-		InternalMsg: "View indexes not supported" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "View indexes not supported " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbViewsDropIndexError(e error, msg string) Error {
