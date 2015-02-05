@@ -146,8 +146,11 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
 			"state":        string(state),
-			"message":      msg,
 		})
+
+		if msg != "" {
+			doc.SetField("message", msg)
+		}
 
 		rv = append(rv, datastore.AnnotatedPair{key, doc})
 	}
