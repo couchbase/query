@@ -801,7 +801,7 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return pi.viewIndex.Condition()
 }
 
-func (pi *primaryIndex) State() (datastore.IndexState, errors.Error) {
+func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return pi.viewIndex.State()
 }
 

@@ -55,7 +55,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	filtered := make(map[datastore.Index]expression.Expression, len(indexes))
 
 	for _, index := range indexes {
-		state, er := index.State()
+		state, _, er := index.State()
 		if er != nil {
 			return nil, er
 		}
@@ -150,7 +150,7 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 		}
 
 		for _, index := range indexes {
-			state, er := index.State()
+			state, _, er := index.State()
 			if er != nil {
 				return nil, er
 			}

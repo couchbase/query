@@ -132,6 +132,11 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			continue
 		}
 
+		state, msg, err := index.State()
+		if err != nil {
+			return nil, err
+		}
+
 		doc := value.NewAnnotatedValue(map[string]interface{}{
 			"id":           index.Id(),
 			"name":         index.Name(),
@@ -140,6 +145,8 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			"datastore_id": actualStore.Id(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
+			"state":        string(state),
+			"message":      msg,
 		})
 
 		rv = append(rv, datastore.AnnotatedPair{key, doc})
@@ -229,8 +236,8 @@ func (pi *indexIndex) Condition() expression.Expression {
 	return pi.Condition()
 }
 
-func (pi *indexIndex) State() (datastore.IndexState, errors.Error) {
-	return datastore.ONLINE, nil
+func (pi *indexIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+	return datastore.ONLINE, "", nil
 }
 
 func (pi *indexIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {

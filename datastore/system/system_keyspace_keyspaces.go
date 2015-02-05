@@ -168,8 +168,8 @@ func (pi *keyspaceIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *keyspaceIndex) State() (datastore.IndexState, errors.Error) {
-	return datastore.ONLINE, nil
+func (pi *keyspaceIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+	return datastore.ONLINE, "", nil
 }
 
 func (pi *keyspaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {

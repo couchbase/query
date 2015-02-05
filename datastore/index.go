@@ -63,16 +63,16 @@ type Indexes []Index
 Index is the base type for indexes, which may be distributed.
 */
 type Index interface {
-	KeyspaceId() string                               // Id of the keyspace to which this index belongs
-	Id() string                                       // Id of this index
-	Name() string                                     // Name of this index
-	Type() IndexType                                  // Type of this index
-	SeekKey() expression.Expressions                  // Equality keys
-	RangeKey() expression.Expressions                 // Range keys
-	Condition() expression.Expression                 // Condition, if any
-	State() (IndexState, errors.Error)                // Obtain state of this index
-	Statistics(span *Span) (Statistics, errors.Error) // Obtain statistics for this index
-	Drop() errors.Error                               // Drop / delete this index
+	KeyspaceId() string                                      // Id of the keyspace to which this index belongs
+	Id() string                                              // Id of this index
+	Name() string                                            // Name of this index
+	Type() IndexType                                         // Type of this index
+	SeekKey() expression.Expressions                         // Equality keys
+	RangeKey() expression.Expressions                        // Range keys
+	Condition() expression.Expression                        // Condition, if any
+	State() (state IndexState, msg string, err errors.Error) // Obtain state of this index
+	Statistics(span *Span) (Statistics, errors.Error)        // Obtain statistics for this index
+	Drop() errors.Error                                      // Drop / delete this index
 	Scan(span *Span, distinct bool, limit int64, cons ScanConsistency, vector timestamp.Vector,
 		conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }

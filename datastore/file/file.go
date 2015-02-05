@@ -544,8 +544,8 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *primaryIndex) State() (datastore.IndexState, errors.Error) {
-	return datastore.ONLINE, nil
+func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+	return datastore.ONLINE, "", nil
 }
 
 func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {

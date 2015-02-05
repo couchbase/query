@@ -221,8 +221,8 @@ func (pi *storeIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *storeIndex) State() (datastore.IndexState, errors.Error) {
-	return datastore.ONLINE, nil
+func (pi *storeIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+	return datastore.ONLINE, "", nil
 }
 
 func (pi *storeIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {

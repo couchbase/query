@@ -280,8 +280,8 @@ func (vi *viewIndex) Condition() expression.Expression {
 	return expression.Expression(vi.where)
 }
 
-func (vi *viewIndex) State() (datastore.IndexState, errors.Error) {
-	return datastore.ONLINE, nil
+func (vi *viewIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+	return datastore.ONLINE, "", nil
 }
 
 func (vi *viewIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
