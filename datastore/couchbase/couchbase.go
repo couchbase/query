@@ -518,9 +518,20 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 	var staterr error
 	var totalCount int64
-	statsMap := b.cbbucket.GetStats("")
+
+	// this is not an ideal implementation. We will change this when
+	// gocouchbase implements a mechanism to detect cluster changes
+
+	ns := b.namespace.getPool()
+	cbBucket, err := ns.GetBucket(b.Name())
+	if err != nil {
+		return 0, errors.NewCbKeyspaceNotFoundError(nil, b.Name())
+	}
+
+	statsMap := cbBucket.GetStats("")
 	for _, stats := range statsMap {
-		itemCount := stats["vb_active_curr_items"]
+
+		itemCount := stats["curr_items"]
 		count, err := strconv.Atoi(itemCount)
 		if err != nil {
 			staterr = err
@@ -535,6 +546,7 @@ func (b *keyspace) Count() (int64, errors.Error) {
 	}
 
 	return 0, errors.NewCbKeyspaceCountError(nil, "keyspace "+b.Name()+"Error "+staterr.Error())
+
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
