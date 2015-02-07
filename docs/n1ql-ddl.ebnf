@@ -29,8 +29,8 @@ create-index ::= 'CREATE' 'INDEX' index-name 'ON' named-keyspace-ref '(' expr ('
 
 partition ::= 'PARTITION' 'BY' expr
 
-drop-primary-index ::= 'DROP' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref
+drop-primary-index ::= 'DROP' 'PRIMARY' 'INDEX' 'ON' named-keyspace-ref index-using?
 
-drop-index ::= 'DROP' 'INDEX' named-keyspace-ref '.' index-name
+drop-index ::= 'DROP' 'INDEX' named-keyspace-ref '.' index-name index-using?
 
-build-indexes ::= 'BUILD' 'INDEXES' 'ON' named-keyspace-ref '(' index-name (',' index-name)* ')'
+build-indexes ::= 'BUILD' 'INDEXES' 'ON' named-keyspace-ref '(' index-name (',' index-name)* ')' index-using?

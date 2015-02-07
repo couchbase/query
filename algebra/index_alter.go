@@ -21,15 +21,18 @@ import (
 type AlterIndex struct {
 	statementBase
 
-	keyspace *KeyspaceRef `json:"keyspace"`
-	name     string       `json:"name"`
-	rename   string       `json:"rename"`
+	keyspace *KeyspaceRef        `json:"keyspace"`
+	name     string              `json:"name"`
+	using    datastore.IndexType `json:"using"`
+	rename   string              `json:"rename"`
 }
 
-func NewAlterIndex(keyspace *KeyspaceRef, name, rename string) *AlterIndex {
+func NewAlterIndex(keyspace *KeyspaceRef, name string,
+	using datastore.IndexType, rename string) *AlterIndex {
 	rv := &AlterIndex{
 		keyspace: keyspace,
 		name:     name,
+		using:    using,
 		rename:   rename,
 	}
 
@@ -74,6 +77,13 @@ func (this *AlterIndex) Name() string {
 	return this.name
 }
 
+/*
+Returns the index type string for the using clause.
+*/
+func (this *AlterIndex) Using() datastore.IndexType {
+	return this.using
+}
+
 func (this *AlterIndex) Rename() string {
 	return this.rename
 }
@@ -82,6 +92,7 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "alterIndex"}
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
+	r["using"] = this.using
 	r["rename"] = this.rename
 	return json.Marshal(r)
 }

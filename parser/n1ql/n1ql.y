@@ -1552,14 +1552,14 @@ WHERE index_expr
  *************************************************/
 
 drop_index:
-DROP PRIMARY INDEX ON named_keyspace_ref
+DROP PRIMARY INDEX ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($5, "#primary") 
+    $$ = algebra.NewDropIndex($5, "#primary", $6) 
 }
 |
-DROP INDEX named_keyspace_ref DOT index_name
+DROP INDEX named_keyspace_ref DOT index_name opt_index_using
 {
-    $$ = algebra.NewDropIndex($3, $5)
+    $$ = algebra.NewDropIndex($3, $5, $6)
 }
 ;
 
@@ -1570,9 +1570,9 @@ DROP INDEX named_keyspace_ref DOT index_name
  *************************************************/
 
 alter_index:
-ALTER INDEX named_keyspace_ref DOT index_name rename
+ALTER INDEX named_keyspace_ref DOT index_name opt_index_using rename
 {
-    $$ = algebra.NewAlterIndex($3, $5, $6)
+    $$ = algebra.NewAlterIndex($3, $5, $6, $7)
 }
 
 rename:
@@ -1594,7 +1594,7 @@ RENAME TO index_name
  *************************************************/
 
 build_index:
-BUILD INDEX ON named_keyspace_ref LPAREN index_names RPAREN index_using
+BUILD INDEX ON named_keyspace_ref LPAREN index_names RPAREN opt_index_using
 {
     $$ = algebra.NewBuildIndexes($4, $8, $6...)
 }

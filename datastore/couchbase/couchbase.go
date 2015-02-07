@@ -551,7 +551,7 @@ func (b *keyspace) Count() (int64, errors.Error) {
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
-	// view indexer will always be availab;e
+	// view indexer will always be available
 	switch name {
 	case datastore.VIEW, datastore.DEFAULT:
 		return b.viewIndexer, nil

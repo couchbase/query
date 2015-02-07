@@ -44,19 +44,12 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, err
 	}
 
-	indexers, er := keyspace.Indexers()
+	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
 	}
 
-	var index datastore.Index
-	for _, indexer := range indexers {
-		index, er = indexer.IndexByName(stmt.Name())
-		if er == nil {
-			break
-		}
-	}
-
+	index, er := indexer.IndexByName(stmt.Name())
 	if er != nil {
 		return nil, er
 	}
