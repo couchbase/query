@@ -57,6 +57,11 @@ func (b *indexKeyspace) Count() (int64, errors.Error) {
 							indexers, excp := keyspace.Indexers()
 							if excp == nil {
 								for _, indexer := range indexers {
+									excp = indexer.Refresh()
+									if excp != nil {
+										return 0, errors.NewSystemDatastoreError(excp, "")
+									}
+
 									indexIds, excp := indexer.IndexIds()
 									if excp == nil {
 										count += int64(len(indexIds))
@@ -277,6 +282,12 @@ func (pi *indexIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 							indexers, err := keyspace.Indexers()
 							if err == nil {
 								for _, indexer := range indexers {
+									err = indexer.Refresh()
+									if err != nil {
+										conn.Error(errors.NewSystemDatastoreError(err, ""))
+										return
+									}
+
 									indexIds, err := indexer.IndexIds()
 									if err == nil {
 										for _, indexId := range indexIds {

@@ -287,6 +287,10 @@ func (mi *mockIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewOtherNotSupportedError(nil, "BUILD INDEXES is not supported for mock datastore.")
 }
 
+func (mi *mockIndexer) Refresh() errors.Error {
+	return nil
+}
+
 // NewDatastore creates a new mock store for the given "path".  The
 // path has prefix "mock:", with the rest of the path treated as a
 // comma-separated key=value params.  For example:

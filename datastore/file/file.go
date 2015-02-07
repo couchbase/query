@@ -509,6 +509,10 @@ func (b *fileIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewFileNotSupported(nil, "BUILD INDEXES is not supported for file-based datastore.")
 }
 
+func (b *fileIndexer) Refresh() errors.Error {
+	return nil
+}
+
 // primaryIndex performs full keyspace scans.
 type primaryIndex struct {
 	name     string

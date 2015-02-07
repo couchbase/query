@@ -188,6 +188,10 @@ func (mi *systemIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewSystemNotSupportedError(nil, "BUILD INDEXES is not supported for system datastore.")
 }
 
+func (mi *systemIndexer) Refresh() errors.Error {
+	return nil
+}
+
 type storeIndex struct {
 	name     string
 	keyspace *storeKeyspace

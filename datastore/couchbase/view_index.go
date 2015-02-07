@@ -159,6 +159,11 @@ func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewCbViewsNotSupportedError(nil, "BUILD INDEXES is not supported for VIEW.")
 }
 
+func (view *viewIndexer) Refresh() errors.Error {
+	// FIXME
+	return nil
+}
+
 func (view *viewIndexer) loadViewIndexes() errors.Error {
 	// #alldocs implicitly exists
 

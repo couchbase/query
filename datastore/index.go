@@ -37,6 +37,7 @@ type Indexer interface {
 	CreateIndex(name string, equalKey, rangeKey expression.Expressions,            // Create a secondary index on this keyspace
 		where expression.Expression, with value.Value) (Index, errors.Error)
 	BuildIndexes(name ...string) errors.Error // Build indexes that were deferred at creation
+	Refresh() errors.Error                    // Refresh list of indexes from metadata
 }
 
 type IndexState string
