@@ -451,9 +451,12 @@ func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Ex
 			aggs[str] = agg
 		}
 
-		children := expr.Children()
-		if len(children) > 0 {
-			collectAggregates(aggs, children...)
+		_, ok = expr.(*algebra.Subquery)
+		if !ok {
+			children := expr.Children()
+			if len(children) > 0 {
+				collectAggregates(aggs, children...)
+			}
 		}
 	}
 }
