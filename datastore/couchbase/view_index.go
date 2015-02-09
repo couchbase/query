@@ -11,7 +11,6 @@ package couchbase
 
 import (
 	"net/http"
-	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbaselabs/query/datastore"
@@ -36,8 +35,6 @@ func newViewIndexer(keyspace *keyspace) datastore.Indexer {
 		primary:          make(map[string]datastore.PrimaryIndex),
 		nonUsableIndexes: make([]string, 0, 10),
 	}
-
-	go keepIndexesFresh(rv)
 
 	return rv
 }
@@ -159,11 +156,6 @@ func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewCbViewsNotSupportedError(nil, "BUILD INDEXES is not supported for VIEW.")
 }
 
-func (view *viewIndexer) Refresh() errors.Error {
-	// FIXME
-	return nil
-}
-
 func (view *viewIndexer) loadViewIndexes() errors.Error {
 	// #alldocs implicitly exists
 
@@ -190,42 +182,38 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	return nil
 }
 
-func (view *viewIndexer) refresh() {
+func (view *viewIndexer) Refresh() errors.Error {
 	// trigger refresh of this indexer
 	logging.Infof("Refreshing Indexes in keyspace %s", view.keyspace.Name())
+
+	indexMap := make(map[string]datastore.Index)
+	primaryIndexMap := make(map[string]datastore.PrimaryIndex)
+
+	//TODO need mutex here
+	view.indexes = indexMap
+	view.primary = primaryIndexMap
 
 	indexes, err := loadViewIndexes(view)
 	if err != nil {
 		logging.Errorf(" Error loading indexes for bucket %s", view.keyspace.Name())
-		return
+		return errors.NewCbViewIndexesLoadingError(err, view.keyspace.Name())
 	}
 
 	if len(indexes) == 0 {
-		return
+		logging.Infof("No indexes found for bucket %s", view.keyspace.Name())
+		return nil
 	}
 
-	indexMap := make(map[string]datastore.Index)
 	for _, index := range indexes {
 		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), view.keyspace.Name())
 		name := (*index).Name()
 		indexMap[name] = *index
-	}
-
-	//TODO need mutex here
-	view.indexes = indexMap
-
-}
-
-func keepIndexesFresh(view *viewIndexer) {
-
-	tickChan := time.Tick(1 * time.Minute)
-
-	for _ = range tickChan {
-		if view.keyspace.deleted == true {
-			return
+		if name == PRIMARY_INDEX {
+			primaryIndexMap[name] = (*index).(datastore.PrimaryIndex)
 		}
-		view.refresh()
 	}
+
+	return nil
 }
 
 type viewIndex struct {

@@ -442,6 +442,11 @@ func NewCbViewsAccessError(e error, msg string) Error {
 		InternalMsg: "Failed to access view " + msg, InternalCaller: CallerN(1)}
 }
 
+func NewCbViewIndexesLoadingError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 13008, IKey: "datastore.couchbase.view.not_found", ICause: e,
+		InternalMsg: "Failed to load indexes for keyspace " + msg, InternalCaller: CallerN(1)}
+}
+
 // Datastore File based error codes
 
 func NewFileDatastoreError(e error, msg string) Error {

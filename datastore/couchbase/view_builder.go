@@ -200,7 +200,7 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 	v.nonUsableIndexes = nonUsableIndexes
 
 	if len(indexes) == 0 {
-		return nil, fmt.Errorf("No usuable indexes found for bucket " + b.Name())
+		return nil, nil
 	}
 
 	return indexes, nil
