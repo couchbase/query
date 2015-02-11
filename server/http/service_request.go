@@ -333,13 +333,17 @@ func getCredentials(a httpRequestArgs,
 			// Authorization header is in format "user:pass"
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
 			u_details := strings.Split(string(decoded_creds), ":")
-			creds = make(datastore.Credentials)
-			if len(u_details) == 2 {
+			switch len(u_details) {
+			case 2:
+				creds = make(datastore.Credentials)
 				creds[u_details[0]] = u_details[1]
-			}
-			if len(u_details) == 3 {
+			case 3:
+				creds = make(datastore.Credentials)
 				// Support usernames like "local:xxx" or "admin:xxx"
 				creds[strings.Join(u_details[:2], ":")] = u_details[2]
+			default:
+				// Authorization header format is incorrect
+				return creds, errors.NewServiceErrorBadValue(nil, CREDS)
 			}
 		}
 		return creds, nil
