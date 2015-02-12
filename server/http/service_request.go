@@ -427,29 +427,23 @@ func (this *urlArgs) getStatement() (string, errors.Error) {
 
 // A named argument is an argument of the form: $<identifier>=json_value
 func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	var namedArgs map[string]value.Value
+	var args map[string]value.Value
 
-	for namedArg, _ := range this.req.Form {
-		if !strings.HasPrefix(namedArg, "$") {
+	for name, _ := range this.req.Form {
+		if !strings.HasPrefix(name, "$") {
 			continue
 		}
-		argString, err := this.formValue(namedArg)
+		arg, err := this.formValue(name)
 		if err != nil {
-			return namedArgs, err
+			return args, err
 		}
-		if len(argString) == 0 {
+		if len(arg) == 0 {
 			//This is an error - there _has_ to be a value for a named argument
-			return namedArgs, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", namedArg))
+			return args, errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", name))
 		}
-		argValue := value.NewValue([]byte(argString))
-		if namedArgs == nil {
-			namedArgs = make(map[string]value.Value)
-		}
-		// NB the '$' is trimmed from the argument name when put in the Value map:
-		namedArgs[strings.TrimPrefix(namedArg, "$")] = argValue
+		args = addNamedArg(args, name, value.NewValue([]byte(arg)))
 	}
-
-	return namedArgs, nil
+	return args, nil
 }
 
 // Positional args are of the form: args=json_list
@@ -597,20 +591,14 @@ func (this *jsonArgs) getStatement() (string, errors.Error) {
 }
 
 func (this *jsonArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
-	var namedArgs map[string]value.Value
-
-	for namedArg, arg := range this.args {
-		if strings.HasPrefix(namedArg, "$") {
-			// Found a named argument - parse it into a value.Value
-			argValue := value.NewValue(arg)
-			if namedArgs == nil {
-				namedArgs = make(map[string]value.Value)
-			}
-			namedArgs[namedArg] = argValue
+	var args map[string]value.Value
+	for name, arg := range this.args {
+		if !strings.HasPrefix(name, "$") {
+			continue
 		}
+		args = addNamedArg(args, name, value.NewValue(arg))
 	}
-
-	return namedArgs, nil
+	return args, nil
 }
 
 func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
@@ -1006,6 +994,16 @@ func newScanConsistency(s string) server.ScanConsistency {
 	default:
 		return server.UNDEFINED_CONSISTENCY
 	}
+}
+
+// addNamedArgs is used by getNamedArgs implementations to add a named argument
+func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[string]value.Value {
+	if args == nil {
+		args = make(map[string]value.Value)
+	}
+	// The '$' is trimmed from the argument name when added to args:
+	args[strings.TrimPrefix(name, "$")] = arg
+	return args
 }
 
 // helper function to create a time.Duration instance from a given string.
