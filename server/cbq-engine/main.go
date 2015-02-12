@@ -68,11 +68,6 @@ func main() {
 		f, err = os.Create(*MEM_PROFILE)
 		if err != nil {
 			fmt.Printf("Cannot start mem profiler %v\n", err)
-		} else {
-			defer func() {
-				pprof.WriteHeapProfile(f)
-				f.Close()
-			}()
 		}
 	}
 
@@ -81,30 +76,8 @@ func main() {
 		if err != nil {
 			fmt.Printf("Cannot start cpu profiler %v\n", err)
 		} else {
-
 			pprof.StartCPUProfile(f)
-			defer pprof.StopCPUProfile()
-
 		}
-	}
-
-	// install signal hanlders to write the profile on exit
-	if *CPU_PROFILE != "" || *MEM_PROFILE != "" {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		go func() {
-			for sig := range c {
-				fmt.Printf("captured %v, stopping profiler and exiting..\n", sig)
-				if *CPU_PROFILE != "" {
-					pprof.StopCPUProfile()
-				}
-				if *MEM_PROFILE != "" {
-					pprof.WriteHeapProfile(f)
-					f.Close()
-				}
-				os.Exit(1)
-			}
-		}()
 	}
 
 	if *LOGGER != "" {
@@ -200,11 +173,11 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	signalCatcher(server, endpoint)
+	signalCatcher(server, endpoint, *CPU_PROFILE != "", f)
 }
 
 // signalCatcher blocks until a signal is recieved and then takes appropriate action
-func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
+func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint, writeCPUprof bool, f *os.File) {
 	sig_chan := make(chan os.Signal, 4)
 	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
 
@@ -212,13 +185,20 @@ func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
 	select {
 	case s = <-sig_chan:
 	}
-
+	if writeCPUprof {
+		logging.Infop("Stopping CPU profiling...")
+		pprof.StopCPUProfile()
+	}
+	if f != nil {
+		logging.Infop("Stopping Memory profiling...")
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 	if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
 		logging.Infop("cbq-engine shutting down immediately...")
 		os.Exit(0)
 	}
-
 	logging.Infop("cbq-engine attempting graceful...")
 	// Stop accepting new requests
 	endpoint.Close()
