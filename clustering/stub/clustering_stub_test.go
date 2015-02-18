@@ -12,7 +12,7 @@ package clustering_stub
 import (
 	"testing"
 
-	"github.com/couchbaselabs/query/accounting/stub"
+	"github.com/couchbase/query/accounting/stub"
 )
 
 func TestStub(t *testing.T) {

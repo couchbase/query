@@ -12,7 +12,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 func main() {

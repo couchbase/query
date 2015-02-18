@@ -12,7 +12,7 @@ package algebra
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 /*

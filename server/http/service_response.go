@@ -19,10 +19,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/execution"
-	"github.com/couchbaselabs/query/server"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/value"
 )
 
 func (this *httpRequest) Output() execution.Output {

@@ -12,8 +12,8 @@ package algebra
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 type Aggregates []Aggregate

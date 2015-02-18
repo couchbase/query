@@ -12,7 +12,7 @@ package expression
 import (
 	"encoding/json"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 ///////////////////////////////////////////////////

@@ -1,7 +1,7 @@
 # N1QL DP4 Syntax Changes
 
 * Status: DRAFT
-* Latest: [dp4-syntax-changes](https://github.com/couchbaselabs/query/blob/master/docs/dp4-syntax-changes.md)
+* Latest: [dp4-syntax-changes](https://github.com/couchbase/query/blob/master/docs/dp4-syntax-changes.md)
 * Modified: 2014-10-29
 
 ## Introduction

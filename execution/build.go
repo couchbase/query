@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/plan"
+	"github.com/couchbase/query/plan"
 )
 
 // Build a query execution pipeline from a query plan.

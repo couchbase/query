@@ -10,8 +10,8 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/value"
 )
 
 func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) ([]value.Value, error) {

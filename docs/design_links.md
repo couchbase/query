@@ -1,7 +1,7 @@
 # External Design Links for Query
 
 * Status: DRAFT
-* Latest: [design_links](https://github.com/couchbaselabs/query/blob/master/docs/design_links.md)
+* Latest: [design_links](https://github.com/couchbase/query/blob/master/docs/design_links.md)
 * Modified: 2015-01-23
 
 ## Introduction

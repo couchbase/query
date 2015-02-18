@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/server"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
 )
 

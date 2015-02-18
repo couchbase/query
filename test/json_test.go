@@ -17,7 +17,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/couchbaselabs/query/server"
+	"github.com/couchbase/query/server"
 	"github.com/dustin/go-jsonpointer"
 )
 

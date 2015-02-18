@@ -35,7 +35,7 @@ expression.go:  Adding the expression type() allows you to know the schema or sh
 
 Formalizer : Takes an expression and converts it to its full equivalent form.
 
-func_* : Function names are case-insensitive. See Appendices of the N1QL Specs for the supported functions. [https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md]
+func_* : Function names are case-insensitive. See Appendices of the N1QL Specs for the supported functions. [https://github.com/couchbase/query/blob/master/docs/n1ql-select.md]
 
 identifier.go :An identifier is a symbolic reference to a particular value in the current context.
 An identifier can either be escaped or unescaped. Unescaped identifiers cannot support the full range of idenfiers allowed in a JSON document, but do support the most common ones with a simpler syntax. Escaped identifiers are surrounded with backticks and support all identifiers allowed in JSON. Using the backtick character within an escaped identifier can be accomplised by using two consecutive backtick characters.

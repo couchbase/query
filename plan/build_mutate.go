@@ -10,9 +10,9 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace,

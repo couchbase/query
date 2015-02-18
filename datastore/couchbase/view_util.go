@@ -16,10 +16,10 @@ import (
 	"strings"
 
 	cb "github.com/couchbaselabs/go-couchbase"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/value"
 )
 
 const NETWORK_CHANNEL = "NETWORK"

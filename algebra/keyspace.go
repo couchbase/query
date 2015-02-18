@@ -12,9 +12,9 @@ package algebra
 import (
 	"encoding/json"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 /*

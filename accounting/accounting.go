@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/errors"
 )
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)

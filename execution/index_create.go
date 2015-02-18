@@ -10,9 +10,9 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 type CreateIndex struct {

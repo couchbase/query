@@ -12,7 +12,7 @@ package execution
 import (
 	"runtime"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 type Parallel struct {

@@ -10,7 +10,7 @@
 package planner
 
 import (
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/expression"
 )
 
 type sargableOr struct {

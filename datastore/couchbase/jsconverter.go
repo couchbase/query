@@ -14,8 +14,8 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
-	"github.com/couchbaselabs/query/expression"
-	stack "github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/expression"
+	stack "github.com/couchbase/query/util"
 	"io"
 	"strings"
 )

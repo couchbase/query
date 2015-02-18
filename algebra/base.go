@@ -10,9 +10,9 @@
 package algebra
 
 import (
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 )
 
 type statementBase struct {

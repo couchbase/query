@@ -1,6 +1,6 @@
 # Query README
 
-* Latest: [Query README](https://github.com/couchbaselabs/query/blob/master/README.md)
+* Latest: [Query README](https://github.com/couchbase/query/blob/master/README.md)
 * Modified: 2014-11-20
 
 ## Introduction
@@ -449,7 +449,7 @@ data-parallelization and serialization points.
 
 Clone the git repo into the current working directory, to get the source, so as to be able to make a build. This clones it into query:
 
-     $ git clone https://github.com/couchbaselabs/query query
+     $ git clone https://github.com/couchbase/query query
      $ cd query 
      $ ./build.sh
 

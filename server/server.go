@@ -17,16 +17,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/datastore/system"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/execution"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/parser/n1ql"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/parser/n1ql"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 type Server struct {

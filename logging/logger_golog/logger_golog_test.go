@@ -14,7 +14,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbase/query/logging"
 )
 
 func TestStub(t *testing.T) {

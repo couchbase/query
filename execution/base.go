@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 type base struct {

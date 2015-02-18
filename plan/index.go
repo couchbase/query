@@ -12,8 +12,8 @@ package plan
 import (
 	"encoding/json"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 )
 
 // Create primary index

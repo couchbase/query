@@ -10,7 +10,7 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 type Sequence struct {

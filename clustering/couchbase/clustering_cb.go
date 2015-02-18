@@ -11,13 +11,13 @@ import (
 	"sync"
 
 	"github.com/couchbaselabs/go-couchbase"
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/server/http"
-	"github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/util"
 )
 
 const _PREFIX = "couchbase:"

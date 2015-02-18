@@ -12,11 +12,11 @@ package resolver
 import (
 	"strings"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/accounting/gometrics"
-	"github.com/couchbaselabs/query/accounting/stub"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/accounting/gometrics"
+	"github.com/couchbase/query/accounting/stub"
 
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/errors"
 )
 
 func NewAcctstore(uri string) (accounting.AccountingStore, errors.Error) {

@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/accounting/stub"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/accounting/stub"
+	"github.com/couchbase/query/errors"
 	metrics "github.com/rcrowley/go-metrics"
 )
 

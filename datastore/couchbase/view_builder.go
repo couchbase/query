@@ -11,10 +11,10 @@ import (
 	"time"
 
 	cb "github.com/couchbaselabs/go-couchbase"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/expression/parser"
-	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/logging"
 )
 
 type ddocJSON struct {

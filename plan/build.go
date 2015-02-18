@@ -12,9 +12,9 @@ package plan
 import (
 	"strings"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,

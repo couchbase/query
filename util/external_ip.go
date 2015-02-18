@@ -13,7 +13,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/errors"
 )
 
 // helper function to determine the external IP address of a query node -

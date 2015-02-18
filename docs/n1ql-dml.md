@@ -1,7 +1,7 @@
 # N1QL Query Language&mdash;DML
 
 + Status: DRAFT/PROPOSAL
-+ Latest: [n1ql-dml](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
++ Latest: [n1ql-dml](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
 + Modified: 2014-12-21
 
 ## Introduction
@@ -195,7 +195,7 @@ _rollback:_
 ## About this Document
 
 The
-[grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.ebnf)
+[grammar](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.ebnf)
 forming the basis of this document is written in a [W3C dialect of
 EBNF](http://www.w3.org/TR/REC-xml/#sec-notation).
 

@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 )
 
 func ParseStatement(input string) (algebra.Statement, error) {

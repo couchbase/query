@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 )
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {

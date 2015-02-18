@@ -21,11 +21,11 @@ Query Node Name, Query Endpoint and Cluster Endpoint.
 package clustering_stub
 
 import (
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/accounting/stub"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/accounting/stub"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 ///////////////////////////////////////////////////

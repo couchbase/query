@@ -12,14 +12,14 @@ package resolver
 import (
 	"strings"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/clustering/couchbase"
-	"github.com/couchbaselabs/query/clustering/stub"
-	"github.com/couchbaselabs/query/clustering/zookeeper"
-	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/clustering/couchbase"
+	"github.com/couchbase/query/clustering/stub"
+	"github.com/couchbase/query/clustering/zookeeper"
+	"github.com/couchbase/query/datastore"
 
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/errors"
 )
 
 func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {

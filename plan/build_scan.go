@@ -13,10 +13,10 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/planner"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/planner"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace,

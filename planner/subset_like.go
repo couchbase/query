@@ -13,7 +13,7 @@ import (
 	"math"
 	"regexp"
 
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/expression"
 )
 
 func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {

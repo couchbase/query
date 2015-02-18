@@ -12,7 +12,7 @@ package plan
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbase/query/algebra"
 )
 
 func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {

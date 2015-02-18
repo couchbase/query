@@ -13,7 +13,7 @@ import (
 	"bytes"
 	"math"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 /*

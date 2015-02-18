@@ -18,7 +18,7 @@ The goal is offer a consistent type structure to allow you to process JSON end-t
 
 ### Documentation
 
-See [GoDoc](http://godoc.org/github.com/couchbaselabs/query)
+See [GoDoc](http://godoc.org/github.com/couchbase/query)
 
 ### Performance
 

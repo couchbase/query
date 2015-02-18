@@ -12,7 +12,7 @@ package expression
 import (
 	"reflect"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 /*

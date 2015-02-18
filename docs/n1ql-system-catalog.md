@@ -1,7 +1,7 @@
 # Schema for N1QL System Catalog
 
 * Status: OPERATIVE
-* Latest: [n1ql-system-catalog](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-system-catalog.md)
+* Latest: [n1ql-system-catalog](https://github.com/couchbase/query/blob/master/docs/n1ql-system-catalog.md)
 * Modified: 2013-08-27
 
 ## Summary

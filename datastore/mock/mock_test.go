@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 func TestMock(t *testing.T) {

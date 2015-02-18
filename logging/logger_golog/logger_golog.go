@@ -17,7 +17,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbase/query/logging"
 )
 
 type goLogger struct {

@@ -10,10 +10,10 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool) {

@@ -16,10 +16,10 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/go-couchbase"
-	"github.com/couchbaselabs/query/accounting/stub"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore/mock"
-	_ "github.com/couchbaselabs/query/logging/resolver"
+	"github.com/couchbase/query/accounting/stub"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore/mock"
+	_ "github.com/couchbase/query/logging/resolver"
 )
 
 const (

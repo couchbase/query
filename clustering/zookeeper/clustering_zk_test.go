@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting/stub"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore/mock"
+	"github.com/couchbase/query/accounting/stub"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore/mock"
 	"github.com/samuel/go-zookeeper/zk"
 )
 

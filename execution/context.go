@@ -16,13 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/timestamp"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/value"
 )
 
 type Output interface {

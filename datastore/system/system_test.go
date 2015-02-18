@@ -12,9 +12,9 @@ package system
 import (
 	"testing"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/datastore/mock"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/mock"
+	"github.com/couchbase/query/errors"
 )
 
 func TestSystem(t *testing.T) {

@@ -1,7 +1,7 @@
 # N1QL Authentication
 
 * Status: DRAFT
-* Latest: [n1ql-authentication](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-authentication.md)
+* Latest: [n1ql-authentication](https://github.com/couchbase/query/blob/master/docs/n1ql-authentication.md)
 * Modified: 2014-05-23
 
 ## Introduction

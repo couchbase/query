@@ -3,7 +3,7 @@
 by Gerald Sangudi, Marty Schoch, Steve Yen, and Sriram Melkote
 
 * Status: DRAFT
-* Latest: [n1ql-preview-model](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-model.md)
+* Latest: [n1ql-preview-model](https://github.com/couchbase/query/blob/master/docs/n1ql-preview-model.md)
 * Modified: 2013-09-04
 
 ## Introduction

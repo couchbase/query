@@ -13,7 +13,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 ///////////////////////////////////////////////////

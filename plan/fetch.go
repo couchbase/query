@@ -13,11 +13,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/expression/parser"
-	"github.com/couchbaselabs/query/logging"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/logging"
 )
 
 type Fetch struct {

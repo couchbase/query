@@ -9,7 +9,7 @@ The clustering_zk implementation depends on an external [Go Zookeeper Client](ht
 
 To update your repository with this package:
 
-    $ cd $GOPATH/src/github.com/couchbaselabs/query
+    $ cd $GOPATH/src/github.com/couchbase/query
     $ go get -d -v ./...
 
 ### Zookeeper Installation and Start-up
@@ -23,6 +23,6 @@ Install and start zookeeper:
 
 With zookeeper installed and running at localhost:2181, clustering_zk unit tests can be run:
 
-    $ cd $GOPATH/src/github.com/couchbaselabs/query/clustering/zookeeper
+    $ cd $GOPATH/src/github.com/couchbase/query/clustering/zookeeper
     $ go test
 

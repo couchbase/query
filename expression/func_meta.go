@@ -12,8 +12,8 @@ package expression
 import (
 	"encoding/base64"
 
-	"github.com/couchbaselabs/query/util"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 ///////////////////////////////////////////////////

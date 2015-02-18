@@ -15,9 +15,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/value"
 )
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,

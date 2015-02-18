@@ -1,7 +1,7 @@
 # N1QL DP4 Feature Status
 
 * Status: DRAFT
-* Latest: [dp4-feature-status](https://github.com/couchbaselabs/query/blob/master/docs/dp4-feature-status.md)
+* Latest: [dp4-feature-status](https://github.com/couchbase/query/blob/master/docs/dp4-feature-status.md)
 * Modified: 2014-12-22
 
 ## Introduction
@@ -13,11 +13,11 @@ The document also indicates the status of features with respect to
 Couchbase datastore and file-based datastore.
 
 See the N1QL [SELECT
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md),
+spec](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md),
 [DDL
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-ddl.md),
+spec](https://github.com/couchbase/query/blob/master/docs/n1ql-ddl.md),
 and [DML
-spec](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md).
+spec](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md).
 
 ## DP4 Features
 

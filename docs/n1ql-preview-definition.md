@@ -1,7 +1,7 @@
 # N1QL Preview&mdash;Language Definition
 
 * Status: DRAFT/PROPOSAL
-* Latest: [n1ql-preview-definition](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-preview-definition.md)
+* Latest: [n1ql-preview-definition](https://github.com/couchbase/query/blob/master/docs/n1ql-preview-definition.md)
 * Modified: 2013-07-25
 
 ## Introduction

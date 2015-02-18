@@ -12,10 +12,10 @@ package execution
 import (
 	"strconv"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/sort"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sort"
+	"github.com/couchbase/query/value"
 )
 
 type Order struct {

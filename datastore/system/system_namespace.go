@@ -10,8 +10,8 @@
 package system
 
 import (
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 type namespace struct {

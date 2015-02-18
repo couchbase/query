@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/util"
 )
 
 // Define the pattern for UUIDs - RFC 4122, version 4

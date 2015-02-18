@@ -1,7 +1,7 @@
 # ACID Requirements for N1QL
 
 * Status: DRAFT
-* Latest: [n1ql-acid](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-acid.md)
+* Latest: [n1ql-acid](https://github.com/couchbase/query/blob/master/docs/n1ql-acid.md)
 * Modified: 2014-01-05
 
 ## Introduction
@@ -23,7 +23,7 @@ and transactions.
 ## N1QL background
 
 N1QL will include the following features. Please see the [N1QL
-specs](https://github.com/couchbaselabs/query/blob/master/docs)
+specs](https://github.com/couchbase/query/blob/master/docs)
 for more details.
 
 1. Predicate queries (SELECT ... FROM ... WHERE) and aggregates (GROUP

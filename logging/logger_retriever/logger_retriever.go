@@ -12,8 +12,8 @@ package logger_retriever
 import (
 	"reflect"
 
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/querylog"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/querylog"
 	"github.com/couchbaselabs/retriever/logger"
 )
 

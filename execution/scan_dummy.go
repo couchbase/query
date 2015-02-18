@@ -12,7 +12,7 @@ package execution
 import (
 	_ "fmt"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 type DummyScan struct {

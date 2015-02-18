@@ -1,7 +1,7 @@
 # N1QL Definition
 
 * Status: DRAFT
-* Latest: [n1ql-definition](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-definition.md)
+* Latest: [n1ql-definition](https://github.com/couchbase/query/blob/master/docs/n1ql-definition.md)
 * Modified: 2014-08-25
 
 ## Begin outline

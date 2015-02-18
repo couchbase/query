@@ -18,8 +18,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/errors"
 )
 
 const (

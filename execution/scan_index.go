@@ -12,12 +12,12 @@ package execution
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/planner"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/value"
 )
 
 type IndexScan struct {

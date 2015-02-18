@@ -12,7 +12,7 @@ package planner
 import (
 	"regexp"
 
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/expression"
 )
 
 type sargableLike struct {

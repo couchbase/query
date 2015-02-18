@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/datastore/couchbase"
-	"github.com/couchbaselabs/query/datastore/file"
-	"github.com/couchbaselabs/query/datastore/mock"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/couchbase"
+	"github.com/couchbase/query/datastore/file"
+	"github.com/couchbase/query/datastore/mock"
+	"github.com/couchbase/query/errors"
 )
 
 func NewDatastore(uri string) (datastore.Datastore, errors.Error) {

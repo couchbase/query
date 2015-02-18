@@ -12,11 +12,11 @@ package system
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/timestamp"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/value"
 )
 
 type namespaceKeyspace struct {

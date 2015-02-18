@@ -13,15 +13,15 @@ import (
 	"encoding/json"
 	"os"
 
-	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
-	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
-	"github.com/couchbaselabs/query/datastore/resolver"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/execution"
-	"github.com/couchbaselabs/query/logging"
-	log_resolver "github.com/couchbaselabs/query/logging/resolver"
-	"github.com/couchbaselabs/query/server"
-	"github.com/couchbaselabs/query/value"
+	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	config_resolver "github.com/couchbase/query/clustering/resolver"
+	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
+	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/value"
 )
 
 func init() {

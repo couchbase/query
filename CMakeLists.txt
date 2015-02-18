@@ -18,10 +18,10 @@ INCLUDE (FindCouchbaseGo)
 
 GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
-GoInstall (TARGET cbq-engine PACKAGE github.com/couchbaselabs/query/server/cbq-engine
+GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   DEPENDS n1ql-yacc INSTALL_PATH bin OUTPUT cbq-engine)
 
-GoInstall (TARGET cbq PACKAGE github.com/couchbaselabs/query/shell/cbq
+GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin OUTPUT cbq)

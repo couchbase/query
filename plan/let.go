@@ -12,8 +12,8 @@ package plan
 import (
 	"encoding/json"
 
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/expression/parser"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 )
 
 type Let struct {

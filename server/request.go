@@ -13,13 +13,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/execution"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/timestamp"
-	"github.com/couchbaselabs/query/util"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type RequestChannel chan Request

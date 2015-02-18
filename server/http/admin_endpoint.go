@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/server"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
 )
 
 const (

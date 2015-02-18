@@ -22,10 +22,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/logging"
-	log_resolver "github.com/couchbaselabs/query/logging/resolver"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/logging"
+	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/value"
 )
 
 const TEST_URL = "http://localhost:9000/"

@@ -12,7 +12,7 @@ package plan
 import (
 	"encoding/json"
 
-	"github.com/couchbaselabs/query/datastore"
+	"github.com/couchbase/query/datastore"
 )
 
 type Authorize struct {

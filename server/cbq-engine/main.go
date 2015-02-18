@@ -20,16 +20,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	acct_resolver "github.com/couchbaselabs/query/accounting/resolver"
-	config_resolver "github.com/couchbaselabs/query/clustering/resolver"
-	datastore_package "github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/datastore/resolver"
-	"github.com/couchbaselabs/query/logging"
-	log_resolver "github.com/couchbaselabs/query/logging/resolver"
-	"github.com/couchbaselabs/query/server"
-	"github.com/couchbaselabs/query/server/http"
-	"github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/accounting"
+	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	config_resolver "github.com/couchbase/query/clustering/resolver"
+	datastore_package "github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/logging"
+	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/util"
 )
 
 var VERSION = "0.7.0" // Build-time overriddable.

@@ -15,10 +15,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/server"
-	"github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 

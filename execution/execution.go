@@ -16,7 +16,7 @@ data-parallel to the extent possible.
 package execution
 
 import (
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 type StopChannel chan bool

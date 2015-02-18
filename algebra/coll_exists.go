@@ -10,7 +10,7 @@
 package algebra
 
 import (
-	"github.com/couchbaselabs/query/expression"
+	"github.com/couchbase/query/expression"
 )
 
 /*

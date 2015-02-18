@@ -1,7 +1,7 @@
 # N1QL&mdash;Query Language for N1NF (Non-1st Normal Form): Logic
 
 * Status: DRAFT/PROPOSAL
-* Latest: [n1ql-logic](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-logic.md)
+* Latest: [n1ql-logic](https://github.com/couchbase/query/blob/master/docs/n1ql-logic.md)
 * Modified: 2013-07-19
 
 ## Summary
@@ -9,9 +9,9 @@
 N1QL is a query language for Couchbase, and is a continuation of
 [UNQL](https://github.com/couchbaselabs/tuqqedin/blob/master/docs/unql-2013.md).
 This document builds on the [N1QL
-Select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
+Select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
 and [N1QL
-DML](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-dml.md)
+DML](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
 specs.
 
 This document describes the syntax and semantics of the logic
@@ -415,7 +415,7 @@ execute:
 ## About this Document
 
 The
-[grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-logic.ebnf)
+[grammar](https://github.com/couchbase/query/blob/master/docs/n1ql-logic.ebnf)
 forming the basis of this document is written in a [W3C dialect of
 EBNF](http://www.w3.org/TR/REC-xml/#sec-notation).
 

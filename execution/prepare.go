@@ -9,7 +9,7 @@
 
 package execution
 
-import "github.com/couchbaselabs/query/value"
+import "github.com/couchbase/query/value"
 
 type Prepare struct {
 	base

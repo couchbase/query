@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	/*
-		"github.com/couchbaselabs/query/logging"
-		"github.com/couchbaselabs/query/querylog"
+		"github.com/couchbase/query/logging"
+		"github.com/couchbase/query/querylog"
 	*/)
 
 func TestRetrieverLogger(t *testing.T) {

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-project=github.com/couchbaselabs/query
+project=github.com/couchbase/query
 top=`go list -f '{{.Dir}}' $project/server/cbq-engine`
 version=`git describe`
 path=server/cbq-engine

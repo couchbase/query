@@ -9,7 +9,7 @@
 
 package plan
 
-import "github.com/couchbaselabs/query/algebra"
+import "github.com/couchbase/query/algebra"
 
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 

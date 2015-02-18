@@ -10,9 +10,9 @@
 package execution
 
 import (
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 // Grouping of input data.

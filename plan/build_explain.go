@@ -10,7 +10,7 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
+	"github.com/couchbase/query/algebra"
 )
 
 func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {

@@ -1,7 +1,7 @@
 # N1QL Query Language&mdash;SELECT
 
 * Status: DRAFT
-* Latest: [n1ql-select](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.md)
+* Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
 * Modified: 2015-01-19
 
 ## Introduction
@@ -2282,7 +2282,7 @@ The following features are not supported in DP3.
 ## About this document
 
 The
-[grammar](https://github.com/couchbaselabs/query/blob/master/docs/n1ql-select.ebnf)
+[grammar](https://github.com/couchbase/query/blob/master/docs/n1ql-select.ebnf)
 forming the basis of this document is written in a [W3C dialect of
 EBNF](http://www.w3.org/TR/REC-xml/#sec-notation).
 

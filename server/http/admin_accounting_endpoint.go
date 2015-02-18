@@ -13,9 +13,9 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/server"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
 )
 

@@ -10,8 +10,8 @@
 package plan
 
 import (
-	"github.com/couchbaselabs/query/algebra"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {

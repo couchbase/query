@@ -20,7 +20,7 @@ Get and build the sherlock branch,  this has support for the query engine (cbq-e
 
 With Couchbase installed and running locally, run the unit test:
 
-    $ cd $GOPATH/src/github.com/couchbaselabs/query/clustering/couchbase
+    $ cd $GOPATH/src/github.com/couchbase/query/clustering/couchbase
     $ go test
 
 To test against a Couchbase instance running in a different location than localhost, edit the couchbase_location parameter in clustering_cb_test.go.

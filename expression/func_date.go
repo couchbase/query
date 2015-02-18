@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/value"
 )
 
 ///////////////////////////////////////////////////

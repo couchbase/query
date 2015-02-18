@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/clustering"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/util"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/clustering"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/samuel/go-zookeeper/zk"
 )
 

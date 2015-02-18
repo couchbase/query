@@ -13,9 +13,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/logging"
-	"github.com/couchbaselabs/query/logging/logger_golog"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/logger_golog"
 )
 
 func NewLogger(uri string) (logging.Logger, errors.Error) {

@@ -24,9 +24,9 @@ The logical hierarchy is as follows:
 package clustering
 
 import (
-	"github.com/couchbaselabs/query/accounting"
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
+	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 type Mode string // A Query Node runs in a particular Mode

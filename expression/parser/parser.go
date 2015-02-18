@@ -13,8 +13,8 @@ Package parser parses N1QL strings into expressions.
 package parser
 
 import (
-	"github.com/couchbaselabs/query/expression"
-	"github.com/couchbaselabs/query/parser/n1ql"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/parser/n1ql"
 )
 
 func Parse(s string) (expression.Expression, error) {

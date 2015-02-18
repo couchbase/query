@@ -20,12 +20,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/query/datastore"
-	"github.com/couchbaselabs/query/errors"
-	"github.com/couchbaselabs/query/plan"
-	"github.com/couchbaselabs/query/server"
-	"github.com/couchbaselabs/query/timestamp"
-	"github.com/couchbaselabs/query/value"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/value"
 )
 
 const MAX_REQUEST_BYTES = 1 << 20
