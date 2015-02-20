@@ -505,3 +505,4 @@ Data sample set zip file(sample set of json documents)
 6.	Run N1QL queries on the CLI.
 
 NOTE : Ctrl + c should allow you to exit the running cbq and cbq-engine processes.
+
