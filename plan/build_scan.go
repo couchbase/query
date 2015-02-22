@@ -34,6 +34,9 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 	formalizer := expression.NewFormalizer()
 	formalizer.Keyspace = node.Alias()
+	primaryKey := expression.NewField(
+		expression.NewMeta(expression.NewConstant(node.Alias())),
+		expression.NewFieldName("id"))
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
@@ -41,6 +44,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 
 	indexes := make([]datastore.Index, 0, len(indexers)*16)
+	primaryIndexes := make(map[datastore.Index]bool, len(indexers)*2)
 
 	for _, indexer := range indexers {
 		idxs, err := indexer.Indexes()
@@ -49,6 +53,15 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		}
 
 		indexes = append(indexes, idxs...)
+
+		primaryIdxs, err := indexer.PrimaryIndexes()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range primaryIdxs {
+			primaryIndexes[p] = true
+		}
 	}
 
 	unfiltered := make(map[datastore.Index]expression.Expression, len(indexes))
@@ -64,22 +77,28 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			continue
 		}
 
-		rangeKey := index.RangeKey()
-		if len(rangeKey) == 0 || rangeKey[0] == nil {
-			// Index not rangeable
-			continue
-		}
+		var key expression.Expression
 
-		key := rangeKey[0].Copy()
+		if primaryIndexes[index] {
+			key = primaryKey
+		} else {
+			rangeKey := index.RangeKey()
+			if len(rangeKey) == 0 || rangeKey[0] == nil {
+				// Index not rangeable
+				continue
+			}
 
-		key, err = formalizer.Map(key)
-		if err != nil {
-			return nil, err
-		}
+			key := rangeKey[0].Copy()
 
-		key, err = nnf.Map(key)
-		if err != nil {
-			return nil, err
+			key, err = formalizer.Map(key)
+			if err != nil {
+				return nil, err
+			}
+
+			key, err = nnf.Map(key)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if !planner.SargableFor(where, key) {

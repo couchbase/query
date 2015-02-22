@@ -4,13 +4,13 @@
 		    return STRING
 		  }
 
-/'((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|('')|[^\\\"'])*'/	   {
+/'((\\\\)|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|('')|[^\\'])*'/	   {
 		    lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
 		    logToken("STRING - %s", lval.s)
 		    return STRING
 		  }
 
-/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`i/ {
+/`((\\\\)|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\`])+`i/ {
 		    // Case-insensitive identifier
 		    text := yylex.Text()
 		    text = text[0 : len(text)-1]
@@ -19,7 +19,7 @@
 		    return IDENTIFIER_ICASE
 		  }
 
-/`((\\\\)|(\\\")|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\\"`])+`/ {
+/`((\\\\)|(\\\/)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]){4})|(``)|[^\\`])+`/ {
 		    // Escaped identifier
 		    lval.s, _ = UnmarshalBackQuoted(yylex.Text())
 		    logToken("IDENTIFIER - %s", lval.s)
