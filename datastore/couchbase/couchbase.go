@@ -28,13 +28,13 @@ import (
 
 	"github.com/couchbase/cbauth"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
-	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	cb "github.com/couchbaselabs/go-couchbase"
 )
 
 const (
@@ -152,12 +152,20 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 			//look for either the bucket name or the admin credentials
 			for username, password := range credentials {
 
+				var un string
 				userCreds := strings.Split(username, ":")
+				if len(userCreds) == 1 {
+					un = userCreds[0]
+				} else {
+					un = userCreds[1]
+				}
 
-				if len(userCreds) > 1 && strings.EqualFold(userCreds[0], "admin") {
-					authResult, err = doAuth(userCreds[1], password, keyspace, privilege)
-				} else if len(userCreds) > 1 && userCreds[1] == keyspace {
-					authResult, err = doAuth(userCreds[1], password, keyspace, privilege)
+				logging.Infof(" Credentials %v %v %v", un, userCreds, password)
+
+				if strings.EqualFold(un, "Administrator") || strings.EqualFold(userCreds[0], "admin") {
+					authResult, err = doAuth(un, password, keyspace, privilege)
+				} else if un == keyspace {
+					authResult, err = doAuth(un, password, keyspace, privilege)
 				} else {
 					//try with empty password
 					authResult, err = doAuth(keyspace, "", keyspace, privilege)
