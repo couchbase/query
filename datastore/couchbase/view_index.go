@@ -12,13 +12,13 @@ package couchbase
 import (
 	"net/http"
 
-	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	cb "github.com/couchbaselabs/go-couchbase"
 )
 
 type viewIndexer struct {
@@ -357,7 +357,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 						// ask the pool to refresh
 						vi.keyspace.namespace.refresh(true)
 						// bucket doesnt exist any more
-						conn.Error(errors.NewCbViewsAccessError(nil, "keyspace "+vi.keyspace.Name()))
+						conn.Error(errors.NewCbViewsAccessError(nil, "keyspace "+vi.keyspace.Name()+" or view index missing"))
 						return
 					}
 
