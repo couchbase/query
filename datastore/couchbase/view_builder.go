@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	cb "github.com/couchbaselabs/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
+	cb "github.com/couchbaselabs/go-couchbase"
 )
 
 type ddocJSON struct {
@@ -265,7 +265,7 @@ func generateMap(bucketName string, on datastore.IndexKey, where expression.Expr
 	for idx, expr := range on {
 
 		walker := NewWalker()
-		_, err := walker.Visit(expr)
+		_, err := walker.Visit(bucketName, expr)
 		if err != nil {
 			return err
 		}
@@ -423,11 +423,17 @@ func (this *JsStatement) JS() string {
 }
 
 // inorder traversal of the AST to get JS expression out of it
-func (this *JsStatement) Visit(e expression.Expression) (expression.Expression, error) {
+func (this *JsStatement) Visit(bucketName string, e expression.Expression) (expression.Expression, error) {
 
-	this.js.WriteString("doc.")
 	stringer := NewJSConverter().Visit(e)
 	if stringer != "" {
+		if strings.Contains(stringer, "meta") {
+			// if the expression contains a meta do not add .doc and also
+			// strip out the bucket name
+			stringer = strings.Replace(stringer, ".`"+bucketName+"`", "", -1)
+		} else {
+			this.js.WriteString("doc.")
+		}
 		stringer = strings.Replace(stringer, "`", "", -1)
 		this.js.WriteString(stringer)
 	} else {

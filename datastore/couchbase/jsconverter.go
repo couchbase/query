@@ -490,6 +490,7 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 
 	buf.WriteString("(")
 	var nopush bool
+	var nobracket bool
 	var pushOperands bool
 
 	switch strings.ToLower(expr.Name()) {
@@ -517,6 +518,10 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 		pushOperands = true
 	case "now_millis":
 		buf.WriteString("Date.now().toString()")
+	case "meta":
+		buf.WriteString("meta")
+		buf.WriteString(".")
+		nobracket = true
 	default:
 		nopush = true
 		buf.WriteString(expr.Name())
@@ -552,7 +557,7 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 		buf.WriteString(this.Visit(firstOp))
 	}
 
-	if nopush == true {
+	if nopush == true && nobracket == false {
 		buf.WriteString("))")
 	} else {
 		buf.WriteString(")")
