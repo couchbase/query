@@ -98,6 +98,7 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 		name = PRIMARY_INDEX
 	}
 
+	view.Refresh()
 	if _, exists := view.indexes[name]; exists {
 		return nil, errors.NewCbViewExistsError(nil, name)
 	}
@@ -127,6 +128,8 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 
 func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
+
+	view.Refresh()
 	if _, exists := view.indexes[name]; exists {
 		return nil, errors.NewCbViewExistsError(nil, name)
 	}
