@@ -52,6 +52,7 @@ func (view *viewIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
+	view.Refresh()
 	index, ok := view.indexes[name]
 	if !ok {
 		return nil, errors.NewCbViewNotFoundError(nil, name)
@@ -60,6 +61,7 @@ func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error
 }
 
 func (view *viewIndexer) IndexNames() ([]string, errors.Error) {
+	view.Refresh()
 	rv := make([]string, 0, len(view.indexes))
 	for name, _ := range view.indexes {
 		rv = append(rv, name)
@@ -68,14 +70,11 @@ func (view *viewIndexer) IndexNames() ([]string, errors.Error) {
 }
 
 func (view *viewIndexer) IndexIds() ([]string, errors.Error) {
-	rv := make([]string, 0, len(view.indexes))
-	for name, _ := range view.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
+	return view.IndexNames()
 }
 
 func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
+	view.Refresh()
 	rv := make([]datastore.PrimaryIndex, 0, len(view.primary))
 	for _, index := range view.primary {
 		rv = append(rv, index)
@@ -84,6 +83,7 @@ func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Erro
 }
 
 func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
+	view.Refresh()
 	rv := make([]datastore.Index, 0, len(view.indexes))
 	for _, index := range view.indexes {
 		rv = append(rv, index)
