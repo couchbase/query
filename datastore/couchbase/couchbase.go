@@ -367,8 +367,18 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		newbucket, err := p.cbNamespace.GetBucket(name)
 		if err != nil {
 			b.(*keyspace).deleted = true
-			logging.Errorf(" Error retrieving bucket %s", name)
+			logging.Errorf(" Error retrieving bucket %s %s", name, err.Error())
 			delete(p.keyspaceCache, name)
+
+			// special case error, where the cached bucket UUID is not valid
+			if strings.ContainsAny(err.Error(), "uuid does not match") {
+				b, err = newKeyspace(p, name)
+				if err == nil {
+					// new incarnation of the keyspace
+					return b, nil
+				}
+			}
+
 			return nil, errors.NewCbKeyspaceNotFoundError(err, name)
 		} else if b.(*keyspace).cbbucket.UUID != newbucket.UUID {
 			logging.Infof(" UUid of keyspace %v uuid now %v", b.(*keyspace).cbbucket.UUID, newbucket.UUID)
@@ -435,7 +445,6 @@ func (p *namespace) refresh(changed bool) {
 	for name, ks := range p.keyspaceCache {
 		logging.Infof(" Checking keyspace %s", name)
 		newbucket, err := newpool.GetBucket(name)
-		logging.Infof(" UUid of keyspace %v uuid now %v", ks.(*keyspace).cbbucket.UUID, newbucket.UUID)
 		if err != nil {
 			changed = true
 			ks.(*keyspace).deleted = true
@@ -443,6 +452,8 @@ func (p *namespace) refresh(changed bool) {
 			delete(p.keyspaceCache, name)
 
 		} else if ks.(*keyspace).cbbucket.UUID != newbucket.UUID {
+
+			logging.Infof(" UUid of keyspace %v uuid now %v", ks.(*keyspace).cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
 			ks.(*keyspace).cbbucket = newbucket
 		}
