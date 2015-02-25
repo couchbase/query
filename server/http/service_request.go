@@ -495,6 +495,13 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
 	}
+	// Check that the rest data has the expected names
+	for _, arg := range sparse_vector_data {
+		if arg.Value == 0 || arg.Guard == "" {
+			return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
+		}
+	}
+
 	return makeSparseVector(sparse_vector_data)
 }
 
@@ -693,26 +700,26 @@ func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Erro
 	if !is_map {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
-	seqno, has_seqno := data["seqno"]
-	if !has_seqno {
+	value, has_value := data["value"]
+	if !has_value {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
-	seqno_val, is_number := seqno.(float64)
+	value_val, is_number := value.(float64)
 	if !is_number {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
-	uuid, has_uuid := data["uuid"]
-	if !has_uuid {
+	guard, has_guard := data["guard"]
+	if !has_guard {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
-	uuid_val, uuid_ok := uuid.(string)
-	if !uuid_ok {
+	guard_val, guard_ok := guard.(string)
+	if !guard_ok {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
 	return &scanVectorEntry{
-		pos:  uint32(index),
-		val:  uint64(seqno_val),
-		uuid: uuid_val,
+		position: uint32(index),
+		value:    uint64(value_val),
+		guard:    guard_val,
 	}, nil
 }
 
@@ -884,21 +891,21 @@ func (c Compression) String() string {
 
 // scanVectorEntry implements timestamp.Entry
 type scanVectorEntry struct {
-	pos  uint32
-	val  uint64
-	uuid string
+	position uint32
+	value    uint64
+	guard    string
 }
 
 func (this *scanVectorEntry) Position() uint32 {
-	return this.pos
+	return this.position
 }
 
 func (this *scanVectorEntry) Value() uint64 {
-	return this.val
+	return this.value
 }
 
 func (this *scanVectorEntry) Guard() string {
-	return this.uuid
+	return this.guard
 }
 
 // scanVectorEntries implements timestamp.Vector
@@ -912,8 +919,8 @@ func (this *scanVectorEntries) Entries() []timestamp.Entry {
 
 // restArg captures how vector data is passed via REST
 type restArg struct {
-	Seqno uint64 `json:"seqno"`
-	Uuid  string `json:"uuid"`
+	Value uint64 `json:"value"`
+	Guard string `json:"guard"`
 }
 
 // makeFullVector is used when the request includes all entries
@@ -925,9 +932,9 @@ func makeFullVector(args []*restArg) (*scanVectorEntries, errors.Error) {
 	entries := make([]timestamp.Entry, len(args))
 	for i, arg := range args {
 		entries[i] = &scanVectorEntry{
-			pos:  uint32(i),
-			val:  arg.Seqno,
-			uuid: arg.Uuid,
+			position: uint32(i),
+			value:    arg.Value,
+			guard:    arg.Guard,
 		}
 	}
 	return &scanVectorEntries{
@@ -945,9 +952,9 @@ func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, errors.Erro
 			return nil, errors.NewServiceErrorBadValue(err, SCAN_VECTOR)
 		}
 		entries[i] = &scanVectorEntry{
-			pos:  uint32(index),
-			val:  arg.Seqno,
-			uuid: arg.Uuid,
+			position: uint32(index),
+			value:    arg.Value,
+			guard:    arg.Guard,
 		}
 		i = i + 1
 	}
