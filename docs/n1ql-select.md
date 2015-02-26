@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2015-01-19
+* Modified: 2015-02-26
 
 ## Introduction
 
@@ -2473,6 +2473,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Revise type checking functions
 * 2015-01-19 - FROM subquery
     * Allow subquery in FROM clause
+* 2015-02-26 - FROM subquery
+    * Update syntax diagram to show subquery in FROM clause 
 
 ### Open issues
 
