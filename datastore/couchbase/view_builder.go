@@ -88,7 +88,7 @@ func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, wher
 func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 	b := v.keyspace
-	rows, err := b.cbbucket.GetDDocs()
+	rows, err := b.cbbucket.GetDDocsWithRetry()
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (ddoc *designdoc) checksum() int {
 
 func getDesignDoc(b *keyspace, ddocname string) (*ddocJSON, error) {
 	var ddoc ddocJSON
-	err := b.cbbucket.GetDDoc(ddocname, &ddoc)
+	err := b.cbbucket.GetDDocWithRetry(ddocname, &ddoc)
 	if err != nil {
 		return nil, err
 	}
