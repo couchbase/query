@@ -1,0 +1,17 @@
+{
+    "type": "player",
+    "uuid": "zid-jungle-0001",
+    "name": "Don Pinto",
+    "score":663,
+    "level":4,
+    "loggedIn": false,
+    "lastLogin": "22nd December 2013",
+    "payer": false,
+    "gameworld": {
+        "piggies" : ["nero", "hero", "coma"],
+        "position" :[23, 45, 12],
+        "farm-length" : 32,
+        "farm-width": 64
+    },
+    "friends": ["zid-jungle-0002", "zid-jungle-0003"]
+}

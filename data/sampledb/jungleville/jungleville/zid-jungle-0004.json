@@ -1,0 +1,17 @@
+{
+    "type": "keeper",
+    "uuid": "zid-jungle-0004",
+    "name": "Dixon Jude",
+    "score":1663,
+    "level":47,
+    "loggedIn": false,
+    "lastLogin": "6th January 2014",
+    "payer": false,
+    "gameworld": {
+        "piggies" : ["britney", "beiber", "kama", "sutra"],
+        "position" :[13, 35, 14, 22],
+        "farm-length" : 132,
+        "farm-width": 264
+    },
+    "friends": ["zid-jungle-0001", "zid-jungle-0002", "zid-jungle-0003"]
+}

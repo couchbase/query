@@ -1,0 +1,13 @@
+{
+    "type": "player",
+    "uuid": "zid-jungle-0001",
+    "requests":6,
+    "fps":34,
+    "loggedIn": false,
+    "lastLogin": "22nd December 2013",
+    "avg_session_length": 1145,
+    "session_hist": [122, 3334, 1223, 1123, 145],
+    "loadtime": 23,
+    "country": "India",
+    "pvp-hist": [{"uuid":"zid-jungle-0003", "result": "lost"}, {"uuid":"zid-jungle-0002", "result":"lost"}]
+}

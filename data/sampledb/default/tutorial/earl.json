@@ -1,0 +1,13 @@
+{"type":"contact",
+ "title": "Mr.",
+ "fname":"Earl",
+ "lname":"Johnson",
+ "age": 46,
+ "email": "earl@gmail.com",
+ "children":[
+        {"fname":"Xena","age":17,"gender":"f"},
+        {"fname":"Yuri","age":2,"gender":"m"}
+ ],
+ "hobbies":["surfing"],
+ "relation": "friend"
+}

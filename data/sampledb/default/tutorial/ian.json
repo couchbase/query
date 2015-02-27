@@ -1,0 +1,13 @@
+{"type":"contact",
+ "title": "Mr.",
+ "fname":"Ian",
+ "lname": "Taylor",
+ "age": 56,
+ "email": "ian@gmail.com",
+ "children":[
+    {"fname":"Abama","age":17,"gender":"m"},
+    {"fname":"Bebama","age":21,"gender":"m"}
+ ],
+ "hobbies":["golf", "surfing"],
+ "relation": "cousin"
+}

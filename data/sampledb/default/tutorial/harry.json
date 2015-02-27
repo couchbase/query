@@ -1,0 +1,8 @@
+{"type":"contact",
+ "title": "Mr.",
+ "fname":"Harry",
+ "lname":"Jackson",
+ "age": 20,
+ "email": "harry@yahoo.com",
+ "relation": "parent"
+}

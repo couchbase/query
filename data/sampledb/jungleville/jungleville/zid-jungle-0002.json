@@ -1,0 +1,17 @@
+{
+    "type": "player",
+    "uuid": "zid-jungle-0002",
+    "name": "Rudy Francis",
+    "score":1633,
+    "level":14,
+    "loggedIn": true,
+    "lastLogin": "26nd December 2013",
+    "payer": true,
+    "gameworld": {
+        "piggies" : ["zero", "moriaty", "los-lobos", "rascala"],
+        "position" :[23, 45, 12, 22],
+        "farm-length" : 32,
+        "farm-width": 144
+    },
+    "friends": ["zid-jungle-0001", "zid-jungle-0004"]
+}

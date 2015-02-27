@@ -1,0 +1,10 @@
+{"type":"contact",
+ "title": "Mr.",
+ "fname":"Fred",
+ "lname":"Jackson",
+ "age": 18,
+ "email": "fred@gmail.com",
+ "hobbies":["golf","surfing"],
+ "children": null,
+ "relation": "coworker"
+}

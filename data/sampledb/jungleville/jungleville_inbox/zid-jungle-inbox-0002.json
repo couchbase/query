@@ -1,0 +1,12 @@
+{
+    "uuid" : "zid-jungle-0002",
+    "messages" : [
+        {"user": "zid-jungle-0003", "type" : "gift", "content" : "more and more gifts", "message" : "more more presents for you "},
+        {"user": "zid-jungle-0001", "type" : "help-needed", "content": null, "message" : "pink pink"},
+        {"user": "zid-jungle-0003", "type" : "help-needed", "content": "sausages", "message": "hungry like the wolf"},
+        {"user": "zid-jungle-0004", "type" : "gift", "content" : "more work", "message" : "more help for you "},
+        {"user": "zid-jungle-0004", "type" : "help-needed", "content": null, "message" : "ping me"},
+        {"user": "zid-jungle-0004", "type" : "help-needed", "content": "salt", "message": "hungry like the wolf"}
+
+    ]
+}

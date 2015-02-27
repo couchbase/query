@@ -1,0 +1,8 @@
+{
+    "uuid" : "zid-jungle-0001",
+    "messages" : [
+        {"user": "zid-jungle-0002", "type" : "gift", "content" : "more work", "message" : "more help for you "},
+        {"user": "zid-jungle-0002", "type" : "help-needed", "content": null, "message" : "1.2.3.Go"},
+        {"user": "zid-jungle-0003", "type" : "help-needed", "content": "meat-cleaver", "message": "hungry like the wolf"}
+    ]
+}

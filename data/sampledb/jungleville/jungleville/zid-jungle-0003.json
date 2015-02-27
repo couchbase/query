@@ -1,0 +1,17 @@
+{
+    "type": "player",
+    "uuid": "zid-jungle-0003",
+    "name": "Joe Marconi",
+    "score":777,
+    "level":8,
+    "loggedIn": false,
+    "lastLogin": "31st December 2013",
+    "payer": false,
+    "gameworld": {
+        "piggies" : ["bolero", "bambino", "kool and the gang"],
+        "position" :[23, 45, 12],
+        "farm-length" : 32,
+        "farm-width": 64
+    },
+    "friends": ["zid-jungle-0002"]
+}
