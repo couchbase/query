@@ -442,10 +442,10 @@ data-parallelization and serialization points.
 ### Get a working repository
 
      $ export GOPATH=$HOME/query/
-     $ mkdir -p $GOPATH/src/github.com/couchbaselabs/
+     $ mkdir -p $GOPATH/src/github.com/couchbase/
      $ cd ~/query
      $ mkdir bin pkg
-     $ cd $GOPATH/src/github.com/couchbaselabs/
+     $ cd $GOPATH/src/github.com/couchbase/
 
 Clone the git repo into the current working directory, to get the source, so as to be able to make a build. This clones it into query:
 
