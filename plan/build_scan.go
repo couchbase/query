@@ -88,7 +88,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 				continue
 			}
 
-			key := rangeKey[0].Copy()
+			key = rangeKey[0].Copy()
 
 			key, err = formalizer.Map(key)
 			if err != nil {
