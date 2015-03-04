@@ -139,14 +139,7 @@ func (this *clientContextIDImpl) String() string {
 	return this.id
 }
 
-const MAX_CLIENTID = 64
-
 func newClientContextIDImpl(id string) *clientContextIDImpl {
-	if len(id) > MAX_CLIENTID {
-		id_cut := make([]byte, MAX_CLIENTID)
-		copy(id_cut[:], id)
-		return &clientContextIDImpl{id: string(id_cut)}
-	}
 	return &clientContextIDImpl{id: id}
 }
 

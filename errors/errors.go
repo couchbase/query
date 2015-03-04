@@ -212,6 +212,11 @@ func NewServiceErrorInvalidJSON(e error) Error {
 		InternalMsg: "Invalid JSON in results", InternalCaller: CallerN(1)}
 }
 
+func NewServiceErrorClientID(id string) Error {
+	return &err{level: EXCEPTION, ICode: 1110, IKey: "service.io.response.client_id",
+		InternalMsg: "forbidden character (\\ or \") in client_context_id", InternalCaller: CallerN(1)}
+}
+
 // Parse errors - errors that are created in the parse package
 func NewParseSyntaxError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,

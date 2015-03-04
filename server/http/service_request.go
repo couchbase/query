@@ -22,6 +22,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
@@ -161,7 +162,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	client_id := ""
 	if err == nil {
-		client_id, err = httpArgs.getString(CLIENT_CONTEXT_ID, "")
+		client_id, err = getClientID(httpArgs)
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
@@ -364,6 +365,35 @@ func getCredentials(a httpRequestArgs,
 		}
 	}
 	return creds, err
+}
+
+const MAX_CLIENTID = 64
+
+// Ensure that client context id is no more than 64 characters.
+// Also ensure that client context id does not contain characters that would
+// break json syntax.
+func getClientID(a httpRequestArgs) (string, errors.Error) {
+	client_id, err := a.getString(CLIENT_CONTEXT_ID, "")
+	logging.Infop("getClientID", logging.Pair{"client_id", client_id})
+	if err != nil {
+		return client_id, err
+	}
+	if len(client_id) > MAX_CLIENTID {
+		id_trunc := make([]byte, MAX_CLIENTID)
+		copy(id_trunc[:], client_id)
+		client_id = string(id_trunc)
+	}
+	l := len(client_id)
+	for i := 0; i < l; i++ {
+		switch client_id[i] {
+		case '"':
+		case '\\':
+			return client_id, errors.NewServiceErrorClientID(client_id)
+		default:
+			continue
+		}
+	}
+	return client_id, nil
 }
 
 // httpRequestArgs is an interface for getting the arguments in a http request
