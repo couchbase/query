@@ -105,9 +105,25 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 	}
 }
 
+func checkRangesEqual(span *datastore.Span) bool {
+
+	if len(span.Range.Low) != len(span.Range.High) {
+		return false
+	}
+
+	for i, value := range span.Range.Low {
+		if span.Range.High[i] != value {
+			return false
+		}
+	}
+
+	return true
+}
+
 func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) map[string]interface{} {
 	viewOptions := map[string]interface{}{}
-	if span != nil {
+	if span != nil && checkRangesEqual(span) == false {
+
 		low := span.Range.Low
 		high := span.Range.High
 		inclusion := span.Range.Inclusion
