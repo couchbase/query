@@ -298,3 +298,120 @@ func (this *Uuid) Constructor() FunctionConstructor {
 		return this
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// Version
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Meta function VERSION(). It returns
+the current version of the N1QL server
+*/
+type Version struct {
+	NullaryFunctionBase
+}
+
+/*
+The function NewVersion returns a pointer to the NewNullaryFunctionBase
+to create a function named Version. It has no input arguments.
+*/
+func NewVersion() Function {
+	rv := &Version{
+		*NewNullaryFunctionBase("version"),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *Version) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a string value.
+*/
+func (this *Version) Type() value.Type { return value.STRING }
+
+/*
+Return the current server version, wrapped in a value.
+*/
+func (this *Version) Evaluate(item value.Value, context Context) (value.Value, error) {
+	v := util.VERSION
+	return value.NewValue(v), nil
+}
+
+/*
+The constructor returns a NewVersion by casting the receiver to a
+Function as the FunctionConstructor.
+*/
+func (this *Version) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return this
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// MinVersion
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Meta function MIN_VERSION(). It returns
+the current minimum supported version of the N1QL server
+*/
+type MinVersion struct {
+	NullaryFunctionBase
+}
+
+/*
+The function NewMinVersion returns a pointer to the NewNullaryFunctionBase
+to create a function named MinVersion. It has no input arguments.
+*/
+func NewMinVersion() Function {
+	rv := &MinVersion{
+		*NewNullaryFunctionBase("version"),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *MinVersion) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a string value.
+*/
+func (this *MinVersion) Type() value.Type { return value.STRING }
+
+/*
+Return the current minimum version, wrapped in a value.
+*/
+func (this *MinVersion) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return value.NewValue(util.MIN_VERSION), nil
+}
+
+/*
+The constructor returns a NewMinVersion by casting the receiver to a
+Function as the FunctionConstructor.
+*/
+func (this *MinVersion) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return this
+	}
+}
