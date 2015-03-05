@@ -91,13 +91,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	// Attach meta and send
 	for _, pair := range pairs {
-		item := pair.Value.(value.AnnotatedValue)
+		pv := pair.Value.(value.AnnotatedValue)
 		var fv value.AnnotatedValue
 
 		// Apply projection, if any
 		projection := this.plan.Term().Projection()
 		if projection != nil {
-			projectedItem, e := projection.Evaluate(item, context)
+			projectedItem, e := projection.Evaluate(pv, context)
 			if e != nil {
 				context.Error(errors.NewError(e,
 					"Error evaluating fetch path."))
@@ -109,16 +109,15 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			}
 
 			fv = value.NewAnnotatedValue(projectedItem)
-			fv.SetAttachments(item.Attachments())
+			fv.SetAttachments(pv.Attachments())
 		} else {
-			fv = item
+			fv = pv
 		}
 
-		av := value.NewAnnotatedValue(make(map[string]interface{}))
-		av.SetAttachments(fv.Attachments())
-		av.SetField(this.plan.Term().Alias(), fv)
+		item := value.NewAnnotatedValue(make(map[string]interface{}))
+		item.SetField(this.plan.Term().Alias(), fv)
 
-		if !this.sendItem(av) {
+		if !this.sendItem(item) {
 			return false
 		}
 	}

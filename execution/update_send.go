@@ -91,7 +91,19 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	pairs := make([]datastore.Pair, len(this.batch))
 
-	for i, av := range this.batch {
+	for i, item := range this.batch {
+		uv, ok := item.Field(this.plan.Alias())
+		if !ok {
+			context.Error(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s not found in item.", this.plan.Alias())))
+			return false
+		}
+
+		av, ok := uv.(value.AnnotatedValue)
+		if !ok {
+			context.Fatal(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s has no metadata in item.", this.plan.Alias())))
+			return false
+		}
+
 		key, ok := this.requireKey(av, context)
 		if !ok {
 			return false
@@ -99,7 +111,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 		pairs[i].Key = key
 
-		clone := av.GetAttachment("clone")
+		clone := item.GetAttachment("clone")
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
 			pairs[i].Value = clone
@@ -119,8 +131,8 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		context.Error(e)
 	}
 
-	for _, av := range this.batch {
-		p := av.GetAttachment("clone")
+	for _, item := range this.batch {
+		p := item.GetAttachment("clone")
 		if !this.sendItem(p.(value.AnnotatedValue)) {
 			break
 		}

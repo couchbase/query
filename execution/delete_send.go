@@ -89,7 +89,19 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	keys := make([]string, len(this.batch))
 
-	for i, av := range this.batch {
+	for i, item := range this.batch {
+		dv, ok := item.Field(this.plan.Alias())
+		if !ok {
+			context.Error(errors.NewError(nil, fmt.Sprintf("DELETE alias %s not found in item.", this.plan.Alias())))
+			return false
+		}
+
+		av, ok := dv.(value.AnnotatedValue)
+		if !ok {
+			context.Fatal(errors.NewError(nil, fmt.Sprintf("DELETE alias %s has no metadata in item.", this.plan.Alias())))
+			return false
+		}
+
 		key, ok := this.requireKey(av, context)
 		if !ok {
 			return false
@@ -106,8 +118,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		context.Error(e)
 	}
 
-	for _, av := range this.batch {
-		if !this.sendItem(av) {
+	for _, item := range this.batch {
+		if !this.sendItem(item) {
 			break
 		}
 	}
