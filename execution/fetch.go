@@ -90,8 +90,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	// Attach meta and send
-	for i, pair := range pairs {
-		item := pair.Value
+	for _, pair := range pairs {
+		item := pair.Value.(value.AnnotatedValue)
 		var fv value.AnnotatedValue
 
 		// Apply projection, if any
@@ -107,20 +107,15 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			if projectedItem.Type() == value.MISSING {
 				continue
 			}
+
 			fv = value.NewAnnotatedValue(projectedItem)
+			fv.SetAttachments(item.Attachments())
 		} else {
-
-			fv = value.NewAnnotatedValue(item)
+			fv = item
 		}
 
-		av := this.batch[i]
-		switch item := item.(type) {
-		case value.AnnotatedValue:
-			meta := item.(value.AnnotatedValue).GetAttachment("meta")
-			fv.SetAttachment("meta", meta)
-		default:
-			fv.SetAttachment("meta", av.GetAttachment("meta"))
-		}
+		av := value.NewAnnotatedValue(make(map[string]interface{}))
+		av.SetAttachments(fv.Attachments())
 		av.SetField(this.plan.Term().Alias(), fv)
 
 		if !this.sendItem(av) {
