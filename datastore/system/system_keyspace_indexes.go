@@ -237,15 +237,15 @@ func (pi *indexIndex) Type() datastore.IndexType {
 }
 
 func (pi *indexIndex) SeekKey() expression.Expressions {
-	return pi.SeekKey()
+	return nil
 }
 
 func (pi *indexIndex) RangeKey() expression.Expressions {
-	return pi.RangeKey()
+	return nil
 }
 
 func (pi *indexIndex) Condition() expression.Expression {
-	return pi.Condition()
+	return nil
 }
 
 func (pi *indexIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
