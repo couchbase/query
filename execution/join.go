@@ -99,11 +99,10 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			}
 
 			jv = value.NewAnnotatedValue(projectedItem)
+			jv.SetAttachments(joinItem.Attachments())
 		} else {
-			jv = value.NewAnnotatedValue(joinItem)
+			jv = joinItem
 		}
-
-		jv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
 
 		var av value.AnnotatedValue
 		if i < len(pairs)-1 {

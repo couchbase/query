@@ -98,10 +98,11 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 
 		pairs[i].Key = key
+
 		clone := av.GetAttachment("clone")
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
-			pairs[i].Value = this.unwrapTop(clone)
+			pairs[i].Value = clone
 		default:
 			context.Error(errors.NewError(nil, fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
@@ -131,18 +132,4 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 func (this *SendUpdate) readonly() bool {
 	return false
-}
-
-// The item may have been wrapped in a top-level object by a previous
-// operator (key scan, primary scan) - take the inner value if so, as
-// we do not want to write the top-level value to the datastore
-func (this *SendUpdate) unwrapTop(item value.AnnotatedValue) value.Value {
-	top := this.plan.Alias()
-	value := item.GetValue()
-	inner_value, ok := value.Field(top)
-
-	if ok {
-		return inner_value
-	}
-	return item
 }

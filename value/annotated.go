@@ -103,7 +103,7 @@ attachments.
 func (this *annotatedValue) CopyForUpdate() Value {
 	return &annotatedValue{
 		Value:    this.Value.CopyForUpdate(),
-		attacher: attacher{this.attacher.attachments},
+		attacher: attacher{copyMap(this.attacher.attachments, self)},
 	}
 }
 

@@ -10,17 +10,23 @@
 package execution
 
 import (
+	"fmt"
+
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
 	base
+	plan *plan.Clone
 }
 
-func NewClone() *Clone {
+func NewClone(plan *plan.Clone) *Clone {
 	rv := &Clone{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -32,7 +38,10 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Clone) Copy() Operator {
-	return &Clone{this.base.copy()}
+	return &Clone{
+		base: this.base.copy(),
+		plan: this.plan,
+	}
 }
 
 func (this *Clone) RunOnce(context *Context, parent value.Value) {
@@ -40,11 +49,19 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
-	target, ok := item.GetAttachment("target").(value.Value)
+	t, ok := item.Field(this.plan.Alias())
 	if !ok {
-		target = item
+		context.Fatal(errors.NewError(nil, fmt.Sprintf("Update alias %s not found in item.", this.plan.Alias())))
+		return false
 	}
 
-	item.SetAttachment("clone", target.CopyForUpdate())
+	target, ok := t.(value.AnnotatedValue)
+	if !ok {
+		context.Fatal(errors.NewError(nil, fmt.Sprintf("Update alias %s has no metadata in item.", this.plan.Alias())))
+		return false
+	}
+
+	clone := target.CopyForUpdate()
+	item.SetAttachment("clone", clone)
 	return this.sendItem(item)
 }

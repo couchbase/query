@@ -22,6 +22,7 @@ import (
 // Enable copy-before-write, so that all reads use old values
 type Clone struct {
 	readonly
+	alias string
 }
 
 // Write to copy
@@ -44,8 +45,10 @@ type SendUpdate struct {
 	limit    expression.Expression
 }
 
-func NewClone() *Clone {
-	return &Clone{}
+func NewClone(alias string) *Clone {
+	return &Clone{
+		alias: alias,
+	}
 }
 
 func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
@@ -54,6 +57,10 @@ func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Clone) New() Operator {
 	return &Clone{}
+}
+
+func (this *Clone) Alias() string {
+	return this.alias
 }
 
 func (this *Clone) MarshalJSON() ([]byte, error) {

@@ -66,7 +66,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewClone())
+		ops = append(ops, NewClone(ksref.Alias()))
 
 		if act.Set() != nil {
 			ops = append(ops, NewSet(act.Set()))
@@ -88,7 +88,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendDelete(keyspace, stmt.Limit()))
+		ops = append(ops, NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
 		delete = NewSequence(ops...)
 	}
 

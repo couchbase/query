@@ -19,12 +19,14 @@ import (
 type SendDelete struct {
 	readwrite
 	keyspace datastore.Keyspace
+	alias    string
 	limit    expression.Expression
 }
 
-func NewSendDelete(keyspace datastore.Keyspace, limit expression.Expression) *SendDelete {
+func NewSendDelete(keyspace datastore.Keyspace, alias string, limit expression.Expression) *SendDelete {
 	return &SendDelete{
 		keyspace: keyspace,
+		alias:    alias,
 		limit:    limit,
 	}
 }
@@ -37,6 +39,10 @@ func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
+func (this *SendDelete) Alias() string {
+	return this.alias
+}
+
 func (this *SendDelete) Limit() expression.Expression {
 	return this.limit
 }
@@ -45,6 +51,7 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "SendDelete"}
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
+	r["alias"] = this.alias
 	return json.Marshal(r)
 }
 
@@ -57,6 +64,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		_     string `json:"#operator"`
 		Names string `json:"namespace"`
 		Keys  string `json:"keyspace"`
+		Alias string `json:"alias"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -64,6 +72,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	this.alias = _unmarshalled.Alias
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 
 	return err

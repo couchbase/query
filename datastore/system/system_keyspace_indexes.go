@@ -153,6 +153,10 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			"state":        string(state),
 		})
 
+		doc.SetAttachment("meta", map[string]interface{}{
+			"id": key,
+		})
+
 		if msg != "" {
 			doc.SetField("message", msg)
 		}

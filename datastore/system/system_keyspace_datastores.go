@@ -61,6 +61,12 @@ func (b *storeKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.
 			return nil, e
 		}
 
+		if item != nil {
+			item.SetAttachment("meta", map[string]interface{}{
+				"id": k,
+			})
+		}
+
 		rv[i].Key = k
 		rv[i].Value = item
 	}

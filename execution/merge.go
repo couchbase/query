@@ -136,15 +136,9 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	}
 
 	if len(bvs) > 0 {
-		bv := bvs[0].Value
+		bv := bvs[0]
 
-		// Matched; join source and target
-		if update != nil {
-			item.SetAttachment("target", bv)
-		}
-
-		abv := value.NewAnnotatedValue(bv)
-		item.SetField(this.plan.KeyspaceRef().Alias(), abv)
+		item.SetField(this.plan.KeyspaceRef().Alias(), bv)
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {

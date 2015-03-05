@@ -217,7 +217,7 @@ func (this *builder) VisitSendDelete(plan *plan.SendDelete) (interface{}, error)
 
 // Update
 func (this *builder) VisitClone(plan *plan.Clone) (interface{}, error) {
-	return NewClone(), nil
+	return NewClone(plan), nil
 }
 
 func (this *builder) VisitSet(plan *plan.Set) (interface{}, error) {

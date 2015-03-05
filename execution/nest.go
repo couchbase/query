@@ -88,7 +88,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	nvs := make([]interface{}, 0, len(pairs))
-	for i, pair := range pairs {
+	for _, pair := range pairs {
 		nestItem := pair.Value
 		var nv value.AnnotatedValue
 
@@ -105,12 +105,13 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 			if projectedItem.Type() == value.MISSING {
 				continue
 			}
+
 			nv = value.NewAnnotatedValue(projectedItem)
+			nv.SetAttachments(nestItem.Attachments())
 		} else {
-			nv = value.NewAnnotatedValue(nestItem)
+			nv = nestItem
 		}
 
-		nv.SetAttachment("meta", map[string]interface{}{"id": keys[i]})
 		nvs = append(nvs, nv)
 	}
 

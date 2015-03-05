@@ -28,7 +28,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	subChildren := this.subChildren
-	subChildren = append(subChildren, NewClone())
+	subChildren = append(subChildren, NewClone(ksref.Alias()))
 
 	if stmt.Set() != nil {
 		subChildren = append(subChildren, NewSet(stmt.Set()))
