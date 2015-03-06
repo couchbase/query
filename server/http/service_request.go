@@ -22,7 +22,6 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
@@ -374,7 +373,6 @@ const MAX_CLIENTID = 64
 // break json syntax.
 func getClientID(a httpRequestArgs) (string, errors.Error) {
 	client_id, err := a.getString(CLIENT_CONTEXT_ID, "")
-	logging.Infop("getClientID", logging.Pair{"client_id", client_id})
 	if err != nil {
 		return client_id, err
 	}
