@@ -60,9 +60,13 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 		n := len(this.children)
 
-		for i := 1; i < n; i++ {
-			this.children[i].SetInput(this.children[i-1].Output())
-			this.children[i].SetStop(this.children[i-1])
+		// Define all Inputs and Outputs
+		for i := 0; i < n-1; i++ {
+			curr := this.children[i]
+			next := this.children[i+1]
+			curr.SetOutput(curr)
+			next.SetInput(curr.Output())
+			next.SetStop(curr)
 		}
 
 		last_child := this.children[n-1]

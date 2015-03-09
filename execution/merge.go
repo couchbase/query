@@ -24,7 +24,6 @@ type Merge struct {
 	delete       Operator
 	insert       Operator
 	childChannel StopChannel
-	childCount   int
 }
 
 func NewMerge(plan *plan.Merge, update, delete, insert Operator) *Merge {
@@ -71,20 +70,35 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		update := this.wrapChild(this.update)
 		delete := this.wrapChild(this.delete)
 		insert := this.wrapChild(this.insert)
-		children := []Operator{update, delete, insert}
-		for _, child := range children {
-			if child != nil {
-				go child.RunOnce(context, parent)
-			}
+
+		children := make([]Operator, 0, 3)
+
+		if update != nil {
+			children = append(children, update)
 		}
 
+		if delete != nil {
+			children = append(children, delete)
+		}
+
+		if insert != nil {
+			children = append(children, insert)
+		}
+
+		for _, child := range children {
+			go child.RunOnce(context, parent)
+		}
+
+		i := 0
+
 		var item value.AnnotatedValue
-		n := this.childCount
 		ok := true
 	loop:
 		for ok {
 			select {
 			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(children...)
 				break loop
 			default:
 			}
@@ -93,18 +107,33 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			case item, ok = <-this.input.ItemChannel():
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
+					i++
 				}
 			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(children...)
 				break loop
 			}
 		}
 
-		this.notifyStop()
-		notifyChildren(children...)
+		for _, child := range children {
+			// Signal end of input data
+			select {
+			case child.Input().StopChannel() <- false:
+			default:
+			}
+		}
 
-		// Await children
-		for ; n > 0; n-- {
-			<-this.childChannel // Never closed
+		n := len(children)
+		for n > 0 {
+			select {
+			case <-this.childChannel: // Never closed
+				// Wait for all children
+				n--
+			case <-this.stopChannel: // Never closed
+				this.notifyStop()
+				notifyChildren(children...)
+			}
 		}
 	})
 }
@@ -137,8 +166,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 	if len(bvs) > 0 {
 		bv := bvs[0]
-
-		item.SetField(this.plan.KeyspaceRef().Alias(), bv)
+		item.SetField(this.plan.KeyspaceRef().Alias(), bv.Value)
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
@@ -168,6 +196,5 @@ func (this *Merge) wrapChild(op Operator) Operator {
 	seq.SetInput(ch)
 	seq.SetParent(this)
 	seq.SetOutput(this.output)
-	this.childCount++
 	return seq
 }

@@ -33,7 +33,7 @@ func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Channel) Copy() Operator {
 	return &Channel{
-		this.base.copy(),
+		base: this.base.copy(),
 	}
 }
 

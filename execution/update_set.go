@@ -47,7 +47,14 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
-	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
+	atmt := item.GetAttachment("clone")
+	if atmt == nil {
+		context.Error(errors.NewError(nil,
+			fmt.Sprintf("Missing UPDATE clone.")))
+		return false
+	}
+
+	clone, ok := atmt.(value.AnnotatedValue)
 	if !ok {
 		context.Error(errors.NewError(nil,
 			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone)))
