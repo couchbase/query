@@ -719,7 +719,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			meta = an.GetAttachment("meta").(map[string]interface{})
 
 			cas = meta["cas"].(float64)
-			logging.Infof("CAS Value (Update) for key %v is %v", key, float64(cas))
+			logging.Debugf("CAS Value (Update) for key %v is %v", key, float64(cas))
 			if cas != 0 {
 				err = b.cbbucket.Cas(key, 0, uint64(cas), val)
 			} else {
