@@ -246,6 +246,7 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["alias"] = this.alias
+	r["limit"] = this.limit
 	return json.Marshal(r)
 }
 
@@ -255,6 +256,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 		Keys  string `json:"keyspace"`
 		Names string `json:"namespace"`
 		Alias string `json:"alias"`
+		Limit string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -263,7 +265,14 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
-	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 
-	return nil
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	return err
 }

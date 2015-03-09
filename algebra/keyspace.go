@@ -103,7 +103,7 @@ func (this *KeyspaceRef) Alias() string {
 Marshals input into byte array.
 */
 func (this *KeyspaceRef) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "keyspaceRef"}
+	r := map[string]interface{}{}
 	r["as"] = this.as
 	r["keyspace"] = this.keyspace
 	r["namespace"] = this.namespace

@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 )
 
 type SendDelete struct {
@@ -52,6 +53,7 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
 	r["alias"] = this.alias
+	r["limit"] = this.limit
 	return json.Marshal(r)
 }
 
@@ -65,6 +67,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		Names string `json:"namespace"`
 		Keys  string `json:"keyspace"`
 		Alias string `json:"alias"`
+		Limit string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -73,6 +76,14 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 
 	return err
