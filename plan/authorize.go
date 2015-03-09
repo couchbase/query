@@ -55,10 +55,21 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string               `json:"#operator"`
 		Privs datastore.Privileges `json:"privileges"`
-		Child Operator             `json:"child"`
+		Child json.RawMessage      `json:"child"`
+	}
+	var child_type struct {
+		Operator string `json:"#operator"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
 	this.privs = _unmarshalled.Privs
-	this.child = _unmarshalled.Child
+
+	err = json.Unmarshal(_unmarshalled.Child, &child_type)
+	if err != nil {
+		return err
+	}
+	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
 	return err
 }

@@ -10,6 +10,7 @@
 package expression
 
 import (
+	"encoding/json"
 	"reflect"
 
 	"github.com/couchbase/query/value"
@@ -31,12 +32,8 @@ func (this *ExpressionBase) String() string {
 }
 
 func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
-	s, err := this.expr.Accept(NewStringer())
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(s.(string)), nil
+	s := NewStringer().Visit(this.expr)
+	return json.Marshal(s)
 }
 
 /*

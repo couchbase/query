@@ -12,11 +12,13 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/planner"
 )
 
@@ -154,8 +156,6 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
-
-	// FIXME
 	r["spans"] = this.spans
 
 	if this.distinct {
@@ -176,12 +176,13 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Names    string              `json:"namespace"`
 		Keys     string              `json:"keyspace"`
 		Using    datastore.IndexType `json:"using"`
-		Spans    planner.Spans       `json:"spans"`
+		Spans    json.RawMessage     `json:"spans"`
 		Distinct bool                `json:"distinct"`
-		Limit    int64               `json:"limit"`
+		Limit    float64             `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
+	logging.Infop("IndexScan.Unmarshal", logging.Pair{"err", err})
 	if err != nil {
 		return err
 	}
@@ -194,9 +195,17 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil)
-	this.spans = _unmarshalled.Spans
+	err = this.spans.UnmarshalJSON(_unmarshalled.Spans)
+	if err != nil {
+		return err
+	}
+
 	this.distinct = _unmarshalled.Distinct
-	this.limit = _unmarshalled.Limit
+	if _unmarshalled.Limit >= math.MaxInt64 {
+		this.limit = math.MaxInt64
+	} else {
+		this.limit = int64(_unmarshalled.Limit)
+	}
 
 	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {

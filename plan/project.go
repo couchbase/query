@@ -91,9 +91,8 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 
 func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_ string `json:"#operator"`
-		//Terms    []json.RawMessage `json:"result_terms"`
-		Terms []struct {
+		_     string `json:"#operator"`
+		Terms []*struct {
 			Expr string `json:"expr"`
 			As   string `json:"as"`
 			Star bool   `json:"star"`
@@ -109,21 +108,13 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 
 	terms := make(algebra.ResultTerms, len(_unmarshalled.Terms))
 	for i, term_data := range _unmarshalled.Terms {
-		/*var term_data struct {
-			Expr string `json:"expr"`
-			As   string `json:"as"`
-			Star bool   `json:"star"`
+		var expr expression.Expression
+		if term_data.Expr != "" {
+			expr, err = parser.Parse(term_data.Expr)
+			if err != nil {
+				return err
+			}
 		}
-		err := json.Unmarshal(raw_term, &term_data)
-		if err != nil {
-			return err
-		}
-		*/
-		expr, err := parser.Parse(term_data.Expr)
-		if err != nil {
-			return err
-		}
-
 		terms[i] = algebra.NewResultTerm(expr, term_data.Star, term_data.As)
 	}
 	projection := algebra.NewProjection(_unmarshalled.Distinct, terms)
