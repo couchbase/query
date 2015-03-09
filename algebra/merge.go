@@ -535,7 +535,7 @@ func (this *MergeUpdate) Expressions() expression.Expressions {
 	}
 
 	if this.unset != nil {
-		exprs = append(exprs, this.set.Expressions()...)
+		exprs = append(exprs, this.unset.Expressions()...)
 	}
 
 	if this.where != nil {
