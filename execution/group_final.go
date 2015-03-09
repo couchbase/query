@@ -57,7 +57,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating GROUP key."))
+			context.Fatal(errors.NewError(e, "Error evaluating GROUP key."))
 			return false
 		}
 	}
@@ -65,7 +65,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	// Get or seed the group value
 	gv := this.groups[gk]
 	if gv != nil {
-		context.Error(errors.NewError(nil, "Duplicate final GROUP."))
+		context.Fatal(errors.NewError(nil, "Duplicate final GROUP."))
 		return false
 	}
 
@@ -79,8 +79,8 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		for _, agg := range this.plan.Aggregates() {
 			v, e := agg.ComputeFinal(aggregates[agg.String()], context)
 			if e != nil {
-				context.Error(errors.NewError(
-					e, "Error updating GROUP value."))
+				context.Fatal(errors.NewError(
+					e, "Error updating final GROUP value."))
 				return false
 			}
 
@@ -89,29 +89,16 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 
 		return true
 	default:
-		context.Error(errors.NewError(nil, fmt.Sprintf(
+		context.Fatal(errors.NewError(nil, fmt.Sprintf(
 			"Invalid or missing aggregates of type %T.", aggregates)))
 		return false
 	}
 }
 
 func (this *FinalGroup) afterItems(context *Context) {
-	if len(this.groups) > 0 {
-		for _, av := range this.groups {
-			if !this.sendItem(av) {
-				return
-			}
+	for _, av := range this.groups {
+		if !this.sendItem(av) {
+			return
 		}
-	} else if this.plan.Keys() == nil {
-		// Grouping over all inputs -- always send a result
-		av := value.NewAnnotatedValue(nil)
-		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
-		av.SetAttachment("aggregates", aggregates)
-
-		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()] = agg.Default()
-		}
-
-		this.sendItem(av)
 	}
 }

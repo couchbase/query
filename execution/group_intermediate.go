@@ -58,7 +58,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating GROUP key."))
+			context.Fatal(errors.NewError(e, "Error evaluating GROUP key."))
 			return false
 		}
 	}
@@ -72,26 +72,31 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	}
 
 	// Cumulate aggregates
-	aggregates := gv.GetAttachment("aggregates")
-	switch aggregates := aggregates.(type) {
-	case map[string]value.Value:
-		for _, agg := range this.plan.Aggregates() {
-			v, e := agg.CumulateIntermediate(item, aggregates[agg.String()], context)
-			if e != nil {
-				context.Error(errors.NewError(
-					e, "Error updating GROUP value."))
-				return false
-			}
-
-			aggregates[agg.String()] = v
-		}
-
-		return true
-	default:
-		context.Error(errors.NewError(nil, fmt.Sprintf(
-			"Invalid or missing aggregates of type %T.", aggregates)))
+	part, ok := item.GetAttachment("aggregates").(map[string]value.Value)
+	if !ok {
+		context.Fatal(errors.NewError(nil, fmt.Sprintf("Invalid partial aggregates %v of type %T", part, part)))
 		return false
 	}
+
+	cumulative := gv.GetAttachment("aggregates").(map[string]value.Value)
+	if !ok {
+		context.Fatal(errors.NewError(nil, fmt.Sprintf("Invalid cumulative aggregates %v of type %T", cumulative, cumulative)))
+		return false
+	}
+
+	for _, agg := range this.plan.Aggregates() {
+		a := agg.String()
+		v, e := agg.CumulateIntermediate(part[a], cumulative[a], context)
+		if e != nil {
+			context.Fatal(errors.NewError(
+				e, "Error updating intermediate GROUP value."))
+			return false
+		}
+
+		cumulative[a] = v
+	}
+
+	return true
 }
 
 func (this *IntermediateGroup) afterItems(context *Context) {

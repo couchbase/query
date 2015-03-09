@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -56,7 +58,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating GROUP key."))
+			context.Fatal(errors.NewError(e, "Error evaluating GROUP key."))
 			return false
 		}
 	}
@@ -75,11 +77,16 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	// Cumulate aggregates
-	aggregates := gv.GetAttachment("aggregates").(map[string]value.Value)
+	aggregates, ok := gv.GetAttachment("aggregates").(map[string]value.Value)
+	if !ok {
+		context.Fatal(errors.NewError(nil, fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
+		return false
+	}
+
 	for _, agg := range this.plan.Aggregates() {
 		v, e := agg.CumulateInitial(item, aggregates[agg.String()], context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error updating GROUP value."))
+			context.Fatal(errors.NewError(e, "Error updating initial GROUP value."))
 			return false
 		}
 
