@@ -75,6 +75,7 @@ func (view *viewIndexer) IndexIds() ([]string, errors.Error) {
 
 func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
 	view.Refresh()
+	logging.Infof(" Number of primary indexes on b0 %v", len(view.primary))
 	rv := make([]datastore.PrimaryIndex, 0, len(view.primary))
 	for _, index := range view.primary {
 		rv = append(rv, index)
@@ -177,7 +178,7 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 		logging.Infof("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
 		view.indexes[name] = *index
-		if name == PRIMARY_INDEX {
+		if (*index).(*viewIndex).isPrimaryIndex() == true {
 			view.primary[name] = (*index).(datastore.PrimaryIndex)
 		}
 	}
@@ -188,13 +189,6 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 func (view *viewIndexer) Refresh() errors.Error {
 	// trigger refresh of this indexer
 	logging.Infof("Refreshing Indexes in keyspace %s", view.keyspace.Name())
-
-	indexMap := make(map[string]datastore.Index)
-	primaryIndexMap := make(map[string]datastore.PrimaryIndex)
-
-	//TODO need mutex here
-	view.indexes = indexMap
-	view.primary = primaryIndexMap
 
 	indexes, err := loadViewIndexes(view)
 	if err != nil {
@@ -207,26 +201,18 @@ func (view *viewIndexer) Refresh() errors.Error {
 		return nil
 	}
 
-	for _, index := range indexes {
-		logging.Infof("Found index %s  on keyspace %s", (*index).Name(), view.keyspace.Name())
-		name := (*index).Name()
-		indexMap[name] = *index
-		if name == PRIMARY_INDEX {
-			primaryIndexMap[name] = (*index).(datastore.PrimaryIndex)
-		}
-	}
-
 	return nil
 }
 
 type viewIndex struct {
-	name     string
-	using    datastore.IndexType
-	on       datastore.IndexKey
-	where    expression.Expression
-	ddoc     *designdoc
-	keyspace *keyspace
-	view     *viewIndexer
+	name      string
+	using     datastore.IndexType
+	on        datastore.IndexKey
+	where     expression.Expression
+	ddoc      *designdoc
+	keyspace  *keyspace
+	view      *viewIndexer
+	isPrimary bool
 }
 
 type designdoc struct {
@@ -289,6 +275,10 @@ func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 	vi.Scan(nil, false, limit, cons, vector, conn)
 }
 
+func (vi *viewIndex) isPrimaryIndex() bool {
+	return vi.isPrimary
+}
+
 func (vi *viewIndex) Drop() errors.Error {
 
 	err := vi.DropViewIndex()
@@ -297,7 +287,7 @@ func (vi *viewIndex) Drop() errors.Error {
 	}
 	// TODO need mutex
 	delete(vi.view.indexes, vi.name)
-	if vi.Name() == PRIMARY_INDEX {
+	if vi.isPrimaryIndex() == true {
 		logging.Infof(" Primary index being dropped ")
 		delete(vi.view.primary, vi.name)
 	}

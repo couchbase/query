@@ -21,6 +21,7 @@ type ddocJSON struct {
 	cb.DDoc
 	IndexOn       []string `json:"indexOn"`
 	IndexChecksum int      `json:"indexChecksum"`
+	PrimaryIndex  bool     `json:"primaryIndex"`
 }
 
 func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, view *viewIndexer) (*viewIndex, error) {
@@ -141,7 +142,7 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 		exprlist := make([]expression.Expression, 0, len(jdoc.IndexOn))
 
 		for _, ser := range jdoc.IndexOn {
-			if iname == PRIMARY_INDEX {
+			if jdoc.PrimaryIndex == true {
 				doc := expression.NewIdentifier(b.Name())
 				meta := expression.NewMeta(doc)
 				mdid := expression.NewField(meta, expression.NewFieldName("id"))
@@ -174,28 +175,18 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 		var index datastore.Index
 
-		logging.Infof("Found index name %v keyspace %v", iname, b.Name())
-		if iname == PRIMARY_INDEX {
-			index = &viewIndex{
-				name:     iname,
-				keyspace: b,
-				view:     v,
-				using:    datastore.VIEW,
-				ddoc:     &ddoc,
-				on:       exprlist,
-			}
-			indexes = append(indexes, &index)
-		} else {
-			index = &viewIndex{
-				name:     iname,
-				keyspace: b,
-				view:     v,
-				using:    datastore.VIEW,
-				ddoc:     &ddoc,
-				on:       exprlist,
-			}
-			indexes = append(indexes, &index)
+		logging.Infof("Found index name %v keyspace %v Primary index %v", iname, b.Name(), jdoc.PrimaryIndex)
+		index = &viewIndex{
+			name:      iname,
+			keyspace:  b,
+			view:      v,
+			using:     datastore.VIEW,
+			ddoc:      &ddoc,
+			on:        exprlist,
+			isPrimary: jdoc.PrimaryIndex,
 		}
+		indexes = append(indexes, &index)
+
 	}
 	v.nonUsableIndexes = nonUsableIndexes
 
@@ -214,12 +205,13 @@ func newViewPrimaryIndex(v *viewIndexer, name string) (*primaryIndex, error) {
 
 	inst := primaryIndex{
 		viewIndex{
-			name:     name,
-			using:    datastore.VIEW,
-			on:       datastore.IndexKey{mdid},
-			ddoc:     ddoc,
-			keyspace: v.keyspace,
-			view:     v,
+			name:      name,
+			using:     datastore.VIEW,
+			on:        datastore.IndexKey{mdid},
+			ddoc:      ddoc,
+			keyspace:  v.keyspace,
+			view:      v,
+			isPrimary: true,
 		},
 	}
 
@@ -327,6 +319,7 @@ func (idx *viewIndex) putDesignDoc() error {
 	put.Views = make(map[string]cb.ViewDefinition)
 	put.Views[idx.name] = view
 	put.IndexChecksum = idx.ddoc.checksum()
+	put.PrimaryIndex = idx.isPrimaryIndex()
 
 	put.IndexOn = make([]string, len(idx.on))
 	for idx, expr := range idx.on {
