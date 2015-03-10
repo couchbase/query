@@ -77,6 +77,7 @@ func (this *Order) afterItems(context *Context) {
 			return
 		}
 	}
+	context.AddSortCount(uint64(this.Len()))
 }
 
 func (this *Order) Len() int {

@@ -296,6 +296,10 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 		rv = rv && this.writeString(fmt.Sprintf(",\n        \"mutationCount\": %d", this.MutationCount()))
 	}
 
+	if this.SortCount() > 0 {
+		rv = rv && this.writeString(fmt.Sprintf(",\n        \"sortCount\": %d", this.SortCount()))
+	}
+
 	if this.errorCount > 0 {
 		rv = rv && this.writeString(fmt.Sprintf(",\n        \"errorCount\": %d", this.errorCount))
 	}

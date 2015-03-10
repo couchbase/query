@@ -33,6 +33,8 @@ type Output interface {
 	Warning(wrn errors.Error)
 	AddMutationCount(uint64)
 	MutationCount() uint64
+	AddSortCount(uint64)
+	SortCount() uint64
 }
 
 type Context struct {
@@ -126,6 +128,14 @@ func (this *Context) AddMutationCount(i uint64) {
 
 func (this *Context) MutationCount() uint64 {
 	return this.output.MutationCount()
+}
+
+func (this *Context) AddSortCount(i uint64) {
+	this.output.AddSortCount(i)
+}
+
+func (this *Context) SortCount() uint64 {
+	return this.output.SortCount()
 }
 
 func (this *Context) Result(item value.Value) bool {
