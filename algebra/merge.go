@@ -425,7 +425,7 @@ func (this *MergeActions) Expressions() expression.Expressions {
 	}
 
 	if this.insert != nil {
-		exprs = append(exprs, this.delete.Expressions()...)
+		exprs = append(exprs, this.insert.Expressions()...)
 	}
 
 	return exprs

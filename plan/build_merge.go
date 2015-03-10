@@ -100,7 +100,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			ops = append(ops, NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), nil, stmt.Limit()))
+		ops = append(ops, NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), act.Value(), stmt.Limit()))
 		insert = NewSequence(ops...)
 	}
 
