@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/clog"
+	"github.com/couchbase/clog"
 	"github.com/russross/blackfriday"
 )
 

@@ -1,7 +1,7 @@
 package n1ql
 
 import "strconv"
-import "github.com/couchbaselabs/clog"
+import "github.com/couchbase/clog"
 import ("bufio";"io";"strings")
 type intstring struct {
   i int

@@ -34,7 +34,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	cb "github.com/couchbaselabs/go-couchbase"
+	cb "github.com/couchbase/go-couchbase"
 )
 
 const (

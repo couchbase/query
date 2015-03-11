@@ -6,7 +6,7 @@ import __yyfmt__ "fmt"
 //line n1ql.y:2
 import "fmt"
 import "strings"
-import "github.com/couchbaselabs/clog"
+import "github.com/couchbase/clog"
 import "github.com/couchbase/query/algebra"
 import "github.com/couchbase/query/datastore"
 import "github.com/couchbase/query/expression"

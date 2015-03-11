@@ -12,7 +12,7 @@ package querylog
 import (
 	"fmt"
 
-	"github.com/couchbaselabs/retriever/logger"
+	"github.com/couchbase/retriever/logger"
 )
 
 var QueryLogger *logger.LogWriter

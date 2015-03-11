@@ -14,7 +14,7 @@ import (
 
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/querylog"
-	"github.com/couchbaselabs/retriever/logger"
+	"github.com/couchbase/retriever/logger"
 )
 
 type RetrieverLogger struct {

@@ -14,7 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
-	cb "github.com/couchbaselabs/go-couchbase"
+	cb "github.com/couchbase/go-couchbase"
 )
 
 type ddocJSON struct {

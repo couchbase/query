@@ -16,7 +16,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/couchbaselabs/clog"
+	"github.com/couchbase/clog"
 	"github.com/sbinet/liner"
 )
 

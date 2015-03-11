@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
-	"github.com/couchbaselabs/go-couchbase"
+	"github.com/couchbase/go-couchbase"
 )
 
 const _PREFIX = "couchbase:"
