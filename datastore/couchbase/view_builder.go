@@ -20,6 +20,7 @@ import (
 type ddocJSON struct {
 	cb.DDoc
 	IndexOn       []string `json:"indexOn"`
+	Condition     string   `json:"condition"`
 	IndexChecksum int      `json:"indexChecksum"`
 	PrimaryIndex  bool     `json:"primaryIndex"`
 }
@@ -161,6 +162,15 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			continue
 		}
 
+		var conditionExpr expression.Expression
+		if jdoc.Condition != "" {
+			conditionExpr, err = parser.Parse(jdoc.Condition)
+			if err != nil {
+				logging.Errorf("Unable to parse condition expression. Err %v", err)
+				continue
+			}
+		}
+
 		ddoc := designdoc{
 			name:     ddname,
 			viewname: iname,
@@ -183,6 +193,7 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			using:     datastore.VIEW,
 			ddoc:      &ddoc,
 			on:        exprlist,
+			where:     conditionExpr,
 			isPrimary: jdoc.PrimaryIndex,
 		}
 		indexes = append(indexes, &index)
@@ -324,6 +335,10 @@ func (idx *viewIndex) putDesignDoc() error {
 	put.IndexOn = make([]string, len(idx.on))
 	for idx, expr := range idx.on {
 		put.IndexOn[idx] = expression.NewStringer().Visit(expr)
+	}
+
+	if condition := idx.Condition(); condition != nil {
+		put.Condition = expression.NewStringer().Visit(condition)
 	}
 
 	if err := idx.keyspace.cbbucket.PutDDoc(idx.DDocName(), &put); err != nil {

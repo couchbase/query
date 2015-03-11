@@ -171,7 +171,7 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 
 	if len(indexes) == 0 {
 		logging.Errorf("No view indexes found for bucket %s", view.keyspace.Name())
-		return errors.NewCbPrimaryIndexNotFoundError(nil, "Keyspace "+view.keyspace.Name()+". Create a primary index ")
+		return nil
 	}
 
 	for _, index := range indexes {
