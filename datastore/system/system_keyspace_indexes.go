@@ -161,6 +161,11 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			doc.SetField("message", msg)
 		}
 
+		cond := index.Condition()
+		if cond != nil {
+			doc.SetField("condition", cond.String())
+		}
+
 		rv = append(rv, datastore.AnnotatedPair{key, doc})
 	}
 

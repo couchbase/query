@@ -438,6 +438,12 @@ func (this *JsStatement) Visit(bucketName string, e expression.Expression) (expr
 
 // inorder traversal of the where expression AST to get JS expression out of it
 func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) (expression.Expression, error) {
+	// Formalize e by prefixing field names with the bucketName
+	var err error
+	e, err = this.formalize(bucketName, e)
+	if err != nil {
+		return nil, err
+	}
 
 	stringer := NewJSConverter().Visit(e)
 	if stringer != "" {
@@ -450,4 +456,12 @@ func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) 
 	}
 
 	return e, nil
+}
+
+// Formalize e by prefixing field names with the bucketName
+func (this *JsStatement) formalize(bucketName string, e expression.Expression) (expression.Expression, error) {
+	f := expression.NewFormalizer()
+	f.Keyspace = bucketName
+	f.Allowed.SetField(bucketName, true)
+	return f.Map(e.Copy())
 }
