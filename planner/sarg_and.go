@@ -27,11 +27,11 @@ func newSargAnd(expr *expression.And) *sargAnd {
 
 		for _, op := range expr.Operands() {
 			s := SargFor(op, expr2)
-			if s == nil {
+			if len(s) == 0 {
 				continue
 			}
 
-			if spans == nil {
+			if len(spans) == 0 {
 				spans = s
 			} else {
 				spans = constrain(spans, s)
