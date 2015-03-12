@@ -91,7 +91,7 @@ func (this *SendInsert) UnmarshalJSON(body []byte) error {
 		Keys      string `json:"keyspace"`
 		Names     string `json:"namespace"`
 		Alias     string `json:"alias"`
-		Limit string `json:"limit"`
+		Limit     string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

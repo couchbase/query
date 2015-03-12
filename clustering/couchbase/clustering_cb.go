@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
@@ -17,7 +18,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
-	"github.com/couchbase/go-couchbase"
 )
 
 const _PREFIX = "couchbase:"

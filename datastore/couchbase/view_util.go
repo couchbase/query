@@ -15,11 +15,11 @@ import (
 	"sort"
 	"strings"
 
+	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
-	cb "github.com/couchbase/go-couchbase"
 )
 
 const NETWORK_CHANNEL = "NETWORK"

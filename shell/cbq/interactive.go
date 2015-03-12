@@ -11,11 +11,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/sbinet/liner"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"github.com/sbinet/liner"
 )
 
 const (
@@ -24,8 +24,8 @@ const (
 	QRY_PROMPT2 = "   > "
 )
 
-var reset      = "\x1b[0m"
-var fgRed      = "\x1b[31m"
+var reset = "\x1b[0m"
+var fgRed = "\x1b[31m"
 
 func HandleInteractiveMode(tiServer, prompt string) {
 
@@ -75,7 +75,7 @@ func HandleInteractiveMode(tiServer, prompt string) {
 				UpdateHistory(liner, homeDir, queryString+QRY_EOL)
 				err = execute_internal(tiServer, queryString, os.Stdout)
 				if err != nil {
-					fmt.Println(fgRed,"ERROR", ": ", err, reset)
+					fmt.Println(fgRed, "ERROR", ": ", err, reset)
 				}
 			}
 			// reset state for multi-line query

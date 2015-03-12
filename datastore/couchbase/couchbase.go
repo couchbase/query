@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	cb "github.com/couchbase/go-couchbase"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -34,7 +35,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	cb "github.com/couchbase/go-couchbase"
 )
 
 const (

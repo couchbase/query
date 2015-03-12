@@ -15,11 +15,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore/mock"
 	_ "github.com/couchbase/query/logging/resolver"
-	"github.com/couchbase/go-couchbase"
 )
 
 const (

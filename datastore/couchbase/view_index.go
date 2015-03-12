@@ -12,13 +12,13 @@ package couchbase
 import (
 	"net/http"
 
+	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	cb "github.com/couchbase/go-couchbase"
 )
 
 type viewIndexer struct {
