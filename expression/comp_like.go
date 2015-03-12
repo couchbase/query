@@ -91,7 +91,7 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = this.Compile(s)
+		re, err = this.Compile("^" + s + "$")
 		if err != nil {
 			return nil, err
 		}
@@ -129,7 +129,8 @@ func (this *Like) Precompile() {
 		return
 	}
 
-	re, err := this.Compile(sv.Actual().(string))
+	s := sv.Actual().(string)
+	re, err := this.Compile("^" + s + "$")
 	if err != nil {
 		return
 	}

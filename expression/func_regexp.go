@@ -47,7 +47,7 @@ func NewRegexpContains(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second)
+	rv.re, _ = precompileRegexp(second, false)
 	rv.expr = rv
 	return rv
 }
@@ -147,7 +147,7 @@ func NewRegexpLike(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second)
+	rv.re, _ = precompileRegexp(second, true)
 	rv.expr = rv
 	return rv
 }
@@ -194,7 +194,7 @@ func (this *RegexpLike) Apply(context Context, first, second value.Value) (value
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = regexp.Compile(s)
+		re, err = regexp.Compile("^" + s + "$")
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +249,7 @@ func NewRegexpPosition(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second)
+	rv.re, _ = precompileRegexp(second, false)
 	rv.expr = rv
 	return rv
 }
@@ -357,7 +357,7 @@ func NewRegexpReplace(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(operands[1])
+	rv.re, _ = precompileRegexp(operands[1], false)
 	rv.expr = rv
 	return rv
 }
@@ -478,12 +478,17 @@ If not then call Compile with the value, to parse a regular
 expression and return, if successful, a Regexp object that
 can be used to match against text.
 */
-func precompileRegexp(rexpr Expression) (re *regexp.Regexp, err error) {
+func precompileRegexp(rexpr Expression, full bool) (re *regexp.Regexp, err error) {
 	rv := rexpr.Value()
 	if rv == nil || rv.Type() != value.STRING {
 		return
 	}
 
-	re, err = regexp.Compile(rv.Actual().(string))
+	s := rv.Actual().(string)
+	if full {
+		s = "^" + s + "$"
+	}
+
+	re, err = regexp.Compile(s)
 	return
 }
