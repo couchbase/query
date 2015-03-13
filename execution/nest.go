@@ -75,10 +75,13 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	// Fetch
-	pairs, err := this.plan.Keyspace().Fetch(keys)
-	if err != nil {
+	pairs, errs := this.plan.Keyspace().Fetch(keys)
+	fetchOk := true
+	for _, err := range errs {
 		context.Error(err)
-		return false
+		if err.IsFatal() {
+			fetchOk = false
+		}
 	}
 
 	found := len(pairs) > 0
@@ -117,5 +120,5 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 
 	// Attach and send
 	item.SetField(this.plan.Term().Alias(), nvs)
-	return this.sendItem(item)
+	return this.sendItem(item) && fetchOk
 }

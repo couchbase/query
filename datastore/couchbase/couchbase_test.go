@@ -86,9 +86,9 @@ func TestServer(t *testing.T) {
 		fmt.Printf("primary index created %v", index)
 	}
 
-	pair, err := ks.Fetch([]string{"357", "aass_brewery"})
-	if err != nil {
-		t.Fatalf(" Cannot fetch keys error %v", err)
+	pair, errs := ks.Fetch([]string{"357", "aass_brewery"})
+	if errs != nil {
+		t.Fatalf(" Cannot fetch keys errors %v", errs)
 
 	}
 

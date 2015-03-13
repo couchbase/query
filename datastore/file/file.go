@@ -240,18 +240,22 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.fi}, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
-	rv := make([]datastore.AnnotatedPair, len(keys))
-	nils_count := 0
-	for i, k := range keys {
+func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+	var errs []errors.Error
+	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	for _, k := range keys {
 		item, e := b.fetchOne(k)
-		if item == nil {
-			// Keep track of nils - they will be removed from slice
-			nils_count++
-		}
 
 		if e != nil {
-			return nil, e
+			if os.IsNotExist(e.Cause()) {
+				// file doesn't exist => key denotes non-existent doc => ignore it
+				continue
+			}
+			if errs == nil {
+				errs = make([]errors.Error, 0, 1)
+			}
+			errs = append(errs, e)
+			continue
 		}
 
 		if item != nil {
@@ -260,23 +264,13 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error
 			})
 		}
 
-		rv[i].Key = k
-		rv[i].Value = item
+		rv = append(rv, datastore.AnnotatedPair{
+			Key:   k,
+			Value: item,
+		})
 	}
 
-	if nils_count > 0 {
-		_rv := make([]datastore.AnnotatedPair, len(keys)-nils_count)
-		i := 0
-		for _, k := range rv {
-			if k.Value != nil {
-				_rv[i].Key = k.Key
-				_rv[i].Value = k.Value
-				i++
-			}
-		}
-		rv = _rv
-	}
-	return rv, nil
+	return rv, errs
 }
 
 func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
@@ -660,10 +654,6 @@ func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 func fetch(path string) (item value.AnnotatedValue, e errors.Error) {
 	bytes, er := ioutil.ReadFile(path)
 	if er != nil {
-		if os.IsNotExist(er) {
-			// file doesn't exist should simply return nil, nil
-			return
-		}
 		return nil, errors.NewFileDatastoreError(er, "")
 	}
 

@@ -158,10 +158,13 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
-	bvs, err := this.plan.Keyspace().Fetch([]string{k})
-	if err != nil {
+	fetchOk := true
+	bvs, errs := this.plan.Keyspace().Fetch([]string{k})
+	for _, err := range errs {
 		context.Error(err)
-		return false
+		if err.IsFatal() {
+			fetchOk = false
+		}
 	}
 
 	if len(bvs) > 0 {
@@ -183,7 +186,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		}
 	}
 
-	return true
+	return fetchOk
 }
 
 func (this *Merge) wrapChild(op Operator) Operator {

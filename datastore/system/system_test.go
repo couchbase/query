@@ -94,9 +94,9 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the keyspaces keyspace - expect to find a value for this key:
-	vals, err := bb.Fetch([]string{"p0/b1"})
-	if err != nil {
-		t.Fatalf("error in key fetch %v", err)
+	vals, errs := bb.Fetch([]string{"p0/b1"})
+	if errs != nil {
+		t.Fatalf("errors in key fetch %v", errs)
 	}
 
 	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
@@ -104,9 +104,9 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the indexes keyspace - expect to find a value for this key:
-	vals, err = ib.Fetch([]string{"p0/b1/#primary"})
-	if err != nil {
-		t.Fatalf("error in key fetch %v", err)
+	vals, errs = ib.Fetch([]string{"p0/b1/#primary"})
+	if errs != nil {
+		t.Fatalf("errors in key fetch %v", errs)
 	}
 
 	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
@@ -114,9 +114,9 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Fetch on the keyspaces keyspace - expect to not find a value for this key:
-	vals, err = bb.Fetch([]string{"p0/b5"})
-	if err != nil {
-		t.Fatalf("error in key fetch %v", err)
+	vals, errs = bb.Fetch([]string{"p0/b5"})
+	if errs != nil {
+		t.Fatalf("error in key fetch %v", errs)
 	}
 
 	if vals == nil || (len(vals) == 1 && vals[0].Value != nil) {

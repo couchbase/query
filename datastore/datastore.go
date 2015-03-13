@@ -67,7 +67,7 @@ type Keyspace interface {
 	Indexers() ([]Indexer, errors.Error)            // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
+	Fetch(keys []string) ([]AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
 	//Fetch(keys []string, projection, filter expression.Expression) ([]AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements

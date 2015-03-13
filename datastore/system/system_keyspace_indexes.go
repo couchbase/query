@@ -96,19 +96,24 @@ func (b *indexKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
+func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+	var errs []errors.Error
 	rv := make([]datastore.AnnotatedPair, 0, len(keys)*2)
 
 	for _, key := range keys {
 		pairs, err := b.fetchOne(key)
 		if err != nil {
-			return nil, err
+			if errs == nil {
+				errs = make([]errors.Error, 0, 1)
+			}
+			errs = append(errs, err)
+			continue
 		}
 
 		rv = append(rv, pairs...)
 	}
 
-	return rv, nil
+	return rv, errs
 }
 
 func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.Error) {

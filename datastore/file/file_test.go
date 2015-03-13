@@ -116,9 +116,9 @@ func TestFile(t *testing.T) {
 		}
 	}
 
-	freds, err := keyspace.Fetch([]string{"fred"})
-	if err != nil || len(freds) == 0 {
-		t.Errorf("failed to fetch fred: %v", err)
+	freds, errs := keyspace.Fetch([]string{"fred"})
+	if errs != nil || len(freds) == 0 {
+		t.Errorf("failed to fetch fred: %v", errs)
 	}
 
 	// DML test cases

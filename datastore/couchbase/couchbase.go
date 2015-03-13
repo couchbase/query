@@ -612,17 +612,17 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
 
 	if len(keys) == 0 {
-		return nil, errors.NewCbNoKeysFetchError(nil, ":(")
+		return nil, nil
 	}
 
 	bulkResponse, err := b.cbbucket.GetBulk(keys)
 	if err != nil {
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
-			return nil, errors.NewCbBulkGetError(err, "")
+			return nil, []errors.Error{errors.NewCbBulkGetError(err, "")}
 		}
 	}
 
@@ -687,7 +687,7 @@ func isNotFoundError(err error) bool {
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
 
 	if len(inserts) == 0 {
-		return nil, errors.NewCbNoKeysInsertError(nil, ":(")
+		return nil, nil
 	}
 
 	insertedKeys := make([]datastore.Pair, 0)
