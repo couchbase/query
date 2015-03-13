@@ -1,5 +1,13 @@
 [
-    {
+   {
+     "statements": "select `LIKE`(\"query\",\"query%\")",
+     "results": [
+          {
+              "$1": true
+          }
+      ]
+   },  
+ {
         "statements": "SELECT lower(details.title) as title FROM default:catalog ORDER BY title",
         "results": [
         {
@@ -383,6 +391,14 @@
       ]
     },
     {
+       "statements":"select REGEXP_LIKE(\"query\",\"query.*\")",
+       "results": [
+        {
+            "$1": true
+        }
+    ]
+    },
+     {
        "statements":"select REGEXP_POSITION(\"Thisisabigsubquery\",\"query\")",
        "results": [
         {
