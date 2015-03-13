@@ -368,11 +368,19 @@
     },
     {
        "statements":"select REGEXP_LIKE(\"Thisisabigsubquery\",\"query\")",
+      "results": [
+        {
+            "$1": false
+        }
+    ]   
+    },
+    {
+       "statements":"select REGEXP_LIKE(\"query\",\"query\")",
        "results": [
         {
             "$1": true
         }
-    ]
+      ]
     },
     {
        "statements":"select REGEXP_POSITION(\"Thisisabigsubquery\",\"query\")",
