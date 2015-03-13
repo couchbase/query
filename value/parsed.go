@@ -301,6 +301,17 @@ func (this *parsedValue) Fields() map[string]interface{} {
 }
 
 /*
+Return nil if the parsedType is binary; else delegate.
+*/
+func (this *parsedValue) Successor() Value {
+	if this.parsedType == BINARY {
+		return nil
+	}
+
+	return this.parse().Successor()
+}
+
+/*
 It is used to populate the values in the structure. If the parsed value
 is nil and the parsedType is binary, panic(error) since an attempt
 to parse a non JSON value has been made. If not then create a variable

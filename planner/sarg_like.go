@@ -23,23 +23,23 @@ type sargLike struct {
 
 var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
 
-func newSargLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
+func newSargLike(cond expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
 	prefix := ""
 	if re != nil {
 		prefix, complete := re.LiteralPrefix()
 		if complete {
-			eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
+			eq := expression.NewEq(cond.First(), expression.NewConstant(prefix))
 			return newSargEq(eq.(*expression.Eq))
 		}
 	}
 
 	rv := &sargLike{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if expr.EquivalentTo(expr2) {
+		if cond.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if !expr.First().EquivalentTo(expr2) {
+		if !cond.First().EquivalentTo(expr2) {
 			return nil, nil
 		}
 

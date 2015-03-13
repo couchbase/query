@@ -18,15 +18,15 @@ type sargAnd struct {
 	sargBase
 }
 
-func newSargAnd(expr *expression.And) *sargAnd {
+func newSargAnd(cond *expression.And) *sargAnd {
 	rv := &sargAnd{}
 	rv.sarg = func(expr2 expression.Expression) (spans Spans, err error) {
-		if expr.EquivalentTo(expr2) {
+		if cond.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		for _, op := range expr.Operands() {
-			s := SargFor(op, expr2)
+		for _, op := range cond.Operands() {
+			s := SargFor(op, expression.Expressions{expr2})
 			if len(s) == 0 {
 				continue
 			}

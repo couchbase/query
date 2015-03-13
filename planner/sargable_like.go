@@ -19,10 +19,10 @@ type sargableLike struct {
 	predicate
 }
 
-func newSargableLike(expr expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
+func newSargableLike(cond expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
 	rv := &sargableLike{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.EquivalentTo(expr2) || expr.First().EquivalentTo(expr2), nil
+		return cond.EquivalentTo(expr2) || cond.First().EquivalentTo(expr2), nil
 	}
 
 	return rv

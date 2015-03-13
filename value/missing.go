@@ -157,10 +157,17 @@ func (this missingValue) Descendants(buffer []interface{}) []interface{} {
 }
 
 /*
-Missing has no fields to list. Hence return nil.
+MISSING has no fields to list. Hence return nil.
 */
 func (this missingValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+MISSING is succeeded by NULL.
+*/
+func (this missingValue) Successor() Value {
+	return NULL_VALUE
 }
 
 /*

@@ -11,11 +11,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/sbinet/liner"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/sbinet/liner"
 )
 
 const (

@@ -17,11 +17,11 @@ type sargableBinary struct {
 	predicate
 }
 
-func newSargableBinary(expr expression.BinaryFunction) *sargableBinary {
+func newSargableBinary(cond expression.BinaryFunction) *sargableBinary {
 	rv := &sargableBinary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.First().EquivalentTo(expr2) ||
-			expr.Second().EquivalentTo(expr2), nil
+		return cond.First().EquivalentTo(expr2) ||
+			cond.Second().EquivalentTo(expr2), nil
 	}
 
 	return rv

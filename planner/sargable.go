@@ -13,17 +13,17 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(expr1, expr2 expression.Expression) bool {
-	if expr2.Value() != nil {
+func SargableFor(cond expression.Expression, exprs expression.Expressions) bool {
+	if len(exprs) == 0 || exprs[0].Value() != nil {
 		return false
 	}
 
-	s := newSargable(expr1)
-	result, _ := expr2.Accept(s)
+	s := newSargable(cond)
+	result, _ := exprs[0].Accept(s)
 	return result.(bool)
 }
 
-func newSargable(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SARGABLE_FACTORY)
+func newSargable(cond expression.Expression) expression.Visitor {
+	s, _ := cond.Accept(_SARGABLE_FACTORY)
 	return s.(expression.Visitor)
 }

@@ -266,6 +266,27 @@ func (this objectValue) Fields() map[string]interface{} {
 }
 
 /*
+Return a longer object.
+*/
+func (this objectValue) Successor() Value {
+	if len(this) == 0 {
+		return _SMALL_OBJECT_VALUE
+	}
+
+	s := copyMap(this, self)
+
+	// To add a unique name, append a small byte to the greatest
+	// name
+	names := sortedNames(this)
+	n := names[len(names)-1]
+	s[n+"\t"] = nil
+
+	return objectValue(s)
+}
+
+var _SMALL_OBJECT_VALUE = objectValue(map[string]interface{}{"": nil})
+
+/*
 Do an element by element comparison to return true if all
 fields are the same and false if not. The first comparison
 made by the function is the length of the two objects, if

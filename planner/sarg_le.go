@@ -18,22 +18,31 @@ type sargLE struct {
 	sargBase
 }
 
-func newSargLE(expr *expression.LE) *sargLE {
+func newSargLE(cond *expression.LE) *sargLE {
 	rv := &sargLE{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if expr.EquivalentTo(expr2) {
+		if cond.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		var exprs expression.Expressions
 		span := &Span{}
 
-		if expr.First().EquivalentTo(expr2) {
-			exprs = expression.Expressions{expr.Second().Static()}
-			span.Range.High = exprs
-			span.Range.Inclusion = datastore.HIGH
-		} else if expr.Second().EquivalentTo(expr2) {
-			exprs = expression.Expressions{expr.First().Static()}
+		if cond.First().EquivalentTo(expr2) {
+			hs := cond.Second().Static()
+			if hs != nil {
+				hv := hs.Value()
+				if hv != nil {
+					hv = hv.Successor()
+					if hv != nil {
+						exprs = expression.Expressions{expression.NewConstant(hv)}
+						span.Range.High = exprs
+						span.Range.Inclusion = datastore.HIGH
+					}
+				}
+			}
+		} else if cond.Second().EquivalentTo(expr2) {
+			exprs = expression.Expressions{cond.First().Static()}
 			span.Range.Low = exprs
 			span.Range.Inclusion = datastore.LOW
 		}

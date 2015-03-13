@@ -148,3 +148,10 @@ Null has no fields to list. Hence return nil.
 func (this *nullValue) Fields() map[string]interface{} {
 	return nil
 }
+
+/*
+NULL is succeeded by FALSE.
+*/
+func (this *nullValue) Successor() Value {
+	return FALSE_VALUE
+}

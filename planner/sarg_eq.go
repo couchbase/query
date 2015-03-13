@@ -18,27 +18,37 @@ type sargEq struct {
 	sargBase
 }
 
-func newSargEq(expr *expression.Eq) *sargEq {
+func newSargEq(cond *expression.Eq) *sargEq {
 	rv := &sargEq{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if expr.EquivalentTo(expr2) {
+		if cond.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		span := &Span{}
 
-		if expr.First().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{expr.Second().Static()}
-		} else if expr.Second().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{expr.First().Static()}
+		if cond.First().EquivalentTo(expr2) {
+			span.Range.Low = expression.Expressions{cond.Second().Static()}
+		} else if cond.Second().EquivalentTo(expr2) {
+			span.Range.Low = expression.Expressions{cond.First().Static()}
 		}
 
 		if len(span.Range.Low) == 0 {
 			return nil, nil
 		}
 
-		span.Range.High = span.Range.Low
-		span.Range.Inclusion = datastore.BOTH
+		span.Range.Inclusion = datastore.LOW
+		hs := span.Range.Low[0]
+		if hs != nil {
+			hv := hs.Value()
+			if hv != nil {
+				hv = hv.Successor()
+				if hv != nil {
+					span.Range.High = expression.Expressions{expression.NewConstant(hv)}
+				}
+			}
+		}
+
 		return Spans{span}, nil
 	}
 

@@ -32,13 +32,13 @@ type Span struct {
 
 type Spans []*Span
 
-func SargFor(expr1, expr2 expression.Expression) Spans {
-	if expr2.Value() != nil {
+func SargFor(cond expression.Expression, exprs expression.Expressions) Spans {
+	if len(exprs) == 0 || exprs[0].Value() != nil {
 		return nil
 	}
 
-	s := newSarg(expr1)
-	result, _ := expr2.Accept(s)
+	s := newSarg(cond)
+	result, _ := exprs[0].Accept(s)
 	if result != nil {
 		return result.(Spans)
 	}
@@ -46,8 +46,8 @@ func SargFor(expr1, expr2 expression.Expression) Spans {
 	return nil
 }
 
-func newSarg(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SARG_FACTORY)
+func newSarg(cond expression.Expression) expression.Visitor {
+	s, _ := cond.Accept(_SARG_FACTORY)
 	return s.(expression.Visitor)
 }
 

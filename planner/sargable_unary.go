@@ -17,10 +17,10 @@ type sargableUnary struct {
 	predicate
 }
 
-func newSargableUnary(expr expression.UnaryFunction) *sargableUnary {
+func newSargableUnary(cond expression.UnaryFunction) *sargableUnary {
 	rv := &sargableUnary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.Operand().EquivalentTo(expr2), nil
+		return cond.Operand().EquivalentTo(expr2), nil
 	}
 
 	return rv

@@ -262,6 +262,19 @@ func (this sliceValue) Fields() map[string]interface{} {
 }
 
 /*
+Append a small value.
+*/
+func (this sliceValue) Successor() Value {
+	if len(this) == 0 {
+		return _SMALL_ARRAY_VALUE
+	}
+
+	return sliceValue(append(this, nil))
+}
+
+var _SMALL_ARRAY_VALUE = sliceValue([]interface{}{nil})
+
+/*
 It is a struct containing slice values. This enables us to call all
 the implemented methods for slicevalue without having to redefine them.
 */
@@ -403,6 +416,13 @@ Call implemented Fields method for slice in *listValue.
 */
 func (this *listValue) Fields() map[string]interface{} {
 	return this.slice.Fields()
+}
+
+/*
+Append a small value.
+*/
+func (this *listValue) Successor() Value {
+	return this.slice.Successor()
 }
 
 /*

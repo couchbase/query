@@ -92,13 +92,13 @@ and its corresponding string representation.
 var _TYPE_NAMES = []string{
 	MISSING: "missing",
 	NULL:    "null",
-	BINARY:  "binary",
 	BOOLEAN: "boolean",
 	NUMBER:  "number",
 	STRING:  "string",
 	ARRAY:   "array",
 	OBJECT:  "object",
 	JSON:    "json",
+	BINARY:  "binary",
 }
 
 /*
@@ -263,6 +263,14 @@ type Value interface {
 	   Value).
 	*/
 	Fields() map[string]interface{}
+
+	/*
+	   Returns an approximate successor to this value, or nil. An
+	   approximate successor is a value greater than this value,
+	   yet as small as is reasonable. The successor is not exact,
+	   to account for floating point and other imprecisions.
+	*/
+	Successor() Value
 }
 
 /*

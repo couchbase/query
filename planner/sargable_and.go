@@ -17,11 +17,11 @@ type sargableAnd struct {
 	predicate
 }
 
-func newSargableAnd(expr *expression.And) *sargableAnd {
+func newSargableAnd(cond *expression.And) *sargableAnd {
 	rv := &sargableAnd{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		for _, child := range expr.Operands() {
-			if SargableFor(child, expr2) {
+		for _, child := range cond.Operands() {
+			if SargableFor(child, expression.Expressions{expr2}) {
 				return true, nil
 			}
 		}

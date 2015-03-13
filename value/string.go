@@ -174,3 +174,10 @@ No fields to list. Hence return nil.
 func (this stringValue) Fields() map[string]interface{} {
 	return nil
 }
+
+/*
+Append a low-valued byte to string.
+*/
+func (this stringValue) Successor() Value {
+	return NewValue(string(this) + "\t")
+}

@@ -9,7 +9,9 @@
 
 package value
 
-import ()
+import (
+	"math"
+)
 
 /*
 BoolValue is defined as a bool type.
@@ -183,3 +185,16 @@ Bool has no fields to list. Hence return nil.
 func (this boolValue) Fields() map[string]interface{} {
 	return nil
 }
+
+/*
+FALSE is succeeded by TRUE, TRUE by numbers.
+*/
+func (this boolValue) Successor() Value {
+	if bool(this) {
+		return _MIN_NUMBER_VALUE
+	} else {
+		return TRUE_VALUE
+	}
+}
+
+var _MIN_NUMBER_VALUE = NewValue(-math.MaxFloat64)

@@ -17,16 +17,16 @@ type sargOr struct {
 	sargDefault
 }
 
-func newSargOr(expr *expression.Or) *sargOr {
+func newSargOr(cond *expression.Or) *sargOr {
 	rv := &sargOr{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if expr.EquivalentTo(expr2) {
+		if cond.EquivalentTo(expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		spans := make(Spans, 0, len(expr.Operands()))
-		for _, child := range expr.Operands() {
-			cspans := SargFor(child, expr2)
+		spans := make(Spans, 0, len(cond.Operands()))
+		for _, child := range cond.Operands() {
+			cspans := SargFor(child, expression.Expressions{expr2})
 			if len(cspans) > 0 {
 				spans = append(spans, cspans...)
 			}

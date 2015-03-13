@@ -17,10 +17,10 @@ type sargableDefault struct {
 	predicate
 }
 
-func newSargableDefault(expr expression.Expression) *sargableDefault {
+func newSargableDefault(cond expression.Expression) *sargableDefault {
 	rv := &sargableDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return expr.EquivalentTo(expr2), nil
+		return cond.EquivalentTo(expr2), nil
 	}
 
 	return rv

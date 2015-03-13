@@ -194,3 +194,16 @@ As number has no fields, return nil.
 func (this floatValue) Fields() map[string]interface{} {
 	return nil
 }
+
+/*
+NUMBER is succeeded by STRING.
+*/
+func (this floatValue) Successor() Value {
+	// Use smallest float32 instead of smallest float64, to leave
+	// room for imprecision
+	if float64(this) < 0 || (math.MaxFloat64-float64(this)) > float64(math.SmallestNonzeroFloat32) {
+		return NewValue(float64(this) + float64(math.SmallestNonzeroFloat32))
+	} else {
+		return EMPTY_STRING_VALUE
+	}
+}

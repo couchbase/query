@@ -34,9 +34,11 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 	formalizer := expression.NewFormalizer()
 	formalizer.Keyspace = node.Alias()
-	primaryKey := expression.NewField(
-		expression.NewMeta(expression.NewConstant(node.Alias())),
-		expression.NewFieldName("id"))
+	primaryKey := expression.Expressions{
+		expression.NewField(
+			expression.NewMeta(expression.NewConstant(node.Alias())),
+			expression.NewFieldName("id")),
+	}
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
@@ -64,8 +66,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		}
 	}
 
-	unfiltered := make(map[datastore.Index]expression.Expression, len(indexes))
-	filtered := make(map[datastore.Index]expression.Expression, len(indexes))
+	unfiltered := make(map[datastore.Index]expression.Expressions, len(indexes))
+	filtered := make(map[datastore.Index]expression.Expressions, len(indexes))
 
 	for _, index := range indexes {
 		state, _, er := index.State()
@@ -77,10 +79,10 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			continue
 		}
 
-		var key expression.Expression
+		var keys expression.Expressions
 
 		if primaryIndexes[index] {
-			key = primaryKey
+			keys = primaryKey
 		} else {
 			rangeKey := index.RangeKey()
 			if len(rangeKey) == 0 || rangeKey[0] == nil {
@@ -88,27 +90,36 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 				continue
 			}
 
-			key = rangeKey[0].Copy()
+			keys = make(expression.Expressions, 0, len(rangeKey))
+			for _, key := range rangeKey {
+				if key == nil {
+					break
+				}
 
-			key, err = formalizer.Map(key)
-			if err != nil {
-				return nil, err
-			}
+				key = key.Copy()
 
-			key, err = nnf.Map(key)
-			if err != nil {
-				return nil, err
+				key, err = formalizer.Map(key)
+				if err != nil {
+					return nil, err
+				}
+
+				key, err = nnf.Map(key)
+				if err != nil {
+					return nil, err
+				}
+
+				keys = append(keys, key)
 			}
 		}
 
-		if !planner.SargableFor(where, key) {
+		if !planner.SargableFor(where, keys) {
 			// Index not applicable
 			continue
 		}
 
 		indexCond := index.Condition()
 		if indexCond == nil {
-			unfiltered[index] = key
+			unfiltered[index] = keys
 			continue
 		}
 
@@ -126,20 +137,20 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 		if planner.SubsetOf(where, indexCond) {
 			// Index condition satisfies query condition
-			filtered[index] = key
+			filtered[index] = keys
 			break
 		}
 	}
 
-	var indexMap map[datastore.Index]expression.Expression
+	var indexMap map[datastore.Index]expression.Expressions
 	if len(filtered) > 0 {
 		indexMap = filtered
 	} else if len(unfiltered) > 0 {
 		indexMap = unfiltered
 	}
 
-	for index, key := range indexMap {
-		spans := planner.SargFor(where, key)
+	for index, keys := range indexMap {
+		spans := planner.SargFor(where, keys)
 		var scan Operator
 		scan = NewIndexScan(index, node, spans, false, math.MaxInt64)
 		if len(spans) > 1 {
