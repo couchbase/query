@@ -87,7 +87,9 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 				}
 			case <-this.childChannel:
 				n--
-				break loop
+				if n == 0 {
+					break loop
+				}
 			case <-this.stopChannel:
 				this.values = nil
 				break loop
