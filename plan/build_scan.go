@@ -66,8 +66,9 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		}
 	}
 
-	unfiltered := make(map[datastore.Index]expression.Expressions, len(indexes))
+	equivalent := make(map[datastore.Index]expression.Expressions, 1)
 	filtered := make(map[datastore.Index]expression.Expressions, len(indexes))
+	unfiltered := make(map[datastore.Index]expression.Expressions, len(indexes))
 
 	for _, index := range indexes {
 		state, _, er := index.State()
@@ -135,15 +136,22 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			return nil, err
 		}
 
+		if where.EquivalentTo(indexCond) {
+			// Index condition equivalent to query condition
+			equivalent[index] = keys
+			break
+		}
+
 		if planner.SubsetOf(where, indexCond) {
 			// Index condition satisfies query condition
 			filtered[index] = keys
-			break
 		}
 	}
 
 	var indexMap map[datastore.Index]expression.Expressions
-	if len(filtered) > 0 {
+	if len(equivalent) > 0 {
+		indexMap = equivalent
+	} else if len(filtered) > 0 {
 		indexMap = filtered
 	} else if len(unfiltered) > 0 {
 		indexMap = unfiltered
