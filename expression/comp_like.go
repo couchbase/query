@@ -91,7 +91,7 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = this.Compile("^" + s + "$")
+		re, err = this.Compile(s)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func (this *Like) Precompile() {
 	}
 
 	s := sv.Actual().(string)
-	re, err := this.Compile("^" + s + "$")
+	re, err := this.Compile(s)
 	if err != nil {
 		return
 	}
@@ -150,8 +150,10 @@ matches of the Regexp have been replaced by the return
 value of function replacer applied to the matched substring.
 */
 func (this *Like) Compile(s string) (*regexp.Regexp, error) {
-	repl := regexp.MustCompile("\\\\|\\_|\\%|_|%")
+	s = regexp.QuoteMeta(s)
+	repl := regexp.MustCompile(`\\|\_|\%|_|%`)
 	s = repl.ReplaceAllStringFunc(s, replacer)
+	s = "^" + s + "$"
 
 	re, err := regexp.Compile(s)
 	if err != nil {
@@ -174,18 +176,18 @@ All these characters need to be replaced correctly.
 */
 func replacer(s string) string {
 	switch s {
-	case "\\\\":
+	case `\\`:
 		return "\\"
-	case "\\_":
+	case `\_`:
 		return "_"
-	case "\\%":
+	case `\%`:
 		return "%"
 	case "_":
 		return "(.)"
 	case "%":
 		return "(.*)"
 	default:
-		panic("Unknown regexp replacer " + s)
+		return s
 	}
 }
 
