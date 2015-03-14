@@ -91,7 +91,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	// Attach meta and send
 	for _, pair := range pairs {
-		pv := pair.Value.(value.AnnotatedValue)
+		pv, ok := pair.Value.(value.AnnotatedValue)
+		if !ok {
+			context.Fatal(errors.NewError(nil, fmt.Sprintf(
+				"Invalid fetch value %v of type %T", pair.Value)))
+			return false
+		}
+
 		var fv value.AnnotatedValue
 
 		// Apply projection, if any
