@@ -201,9 +201,11 @@ NUMBER is succeeded by STRING.
 func (this floatValue) Successor() Value {
 	// Use smallest float32 instead of smallest float64, to leave
 	// room for imprecision
-	if float64(this) < 0 || (math.MaxFloat64-float64(this)) > float64(math.SmallestNonzeroFloat32) {
-		return NewValue(float64(this) + float64(math.SmallestNonzeroFloat32))
+	if float64(this) < 0 || (math.MaxFloat64-float64(this)) > _NUMBER_SUCCESSOR_DELTA {
+		return NewValue(float64(this) + _NUMBER_SUCCESSOR_DELTA)
 	} else {
 		return EMPTY_STRING_VALUE
 	}
 }
+
+var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-6)
