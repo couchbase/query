@@ -42,7 +42,8 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	case OBJECT, ARRAY:
 		return this.parse().MarshalJSON()
 	case BINARY:
-		return this.raw, fmt.Errorf("Marshaling binary value returns raw bytes: %v", string(this.raw))
+		s := fmt.Sprintf("\"<binary (%d b)>\"", len(this.raw))
+		return []byte(s), nil
 	default:
 		return this.raw, nil
 	}

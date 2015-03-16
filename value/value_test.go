@@ -345,7 +345,7 @@ func TestUnmodifiedValuesFromBytesBackToBytes(t *testing.T) {
 		input         []byte
 		expectedBytes []byte
 	}{
-		{[]byte(`asdf`), []byte(`asdf`)},
+		{[]byte(`asdf`), []byte(`"<binary (4 b)>"`)},
 		{[]byte(`null`), []byte(`null`)},
 		{[]byte(`3.65`), []byte(`3.65`)},
 		{[]byte(`-3.65`), []byte(`-3.65`)},

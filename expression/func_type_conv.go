@@ -79,6 +79,8 @@ func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error
 		return arg, nil
 	} else if arg.Type() == value.ARRAY {
 		return arg, nil
+	} else if arg.Type() == value.BINARY {
+		return value.NULL_VALUE, nil
 	}
 
 	return value.NewValue([]interface{}{arg.Actual()}), nil
@@ -145,6 +147,8 @@ func (this *ToAtom) Type() value.Type {
 	t := this.Operand().Type()
 	if t < value.ARRAY {
 		return t
+	} else if t == value.BINARY {
+		return t
 	} else {
 		return value.JSON
 	}
@@ -170,6 +174,8 @@ we return a NULL.
 */
 func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() < value.ARRAY {
+		return arg, nil
+	} else if arg.Type() == value.BINARY {
 		return arg, nil
 	} else {
 		switch a := arg.Actual().(type) {
@@ -270,6 +276,8 @@ func (this *ToBoolean) Apply(context Context, arg value.Value) (value.Value, err
 			return value.NewValue(!math.IsNaN(a) && a != 0), nil
 		case string:
 			return value.NewValue(len(a) > 0), nil
+		case []byte:
+			return value.NewValue(len(a) > 0), nil
 		case []interface{}:
 			return value.NewValue(len(a) > 0), nil
 		case map[string]interface{}:
@@ -357,13 +365,13 @@ func (this *ToNumber) Apply(context Context, arg value.Value) (value.Value, erro
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
-	default:
+	case value.BOOLEAN, value.STRING:
 		switch a := arg.Actual().(type) {
 		case bool:
 			if a {
-				return value.NewValue(1.0), nil
+				return value.ONE_VALUE, nil
 			} else {
-				return value.NewValue(0.0), nil
+				return value.ZERO_VALUE, nil
 			}
 		case string:
 			f, err := strconv.ParseFloat(a, 64)
@@ -536,6 +544,14 @@ func (this *ToString) Apply(context Context, arg value.Value) (value.Value, erro
 		return arg, nil
 	case value.BOOLEAN, value.NUMBER:
 		return value.NewValue(fmt.Sprint(arg.Actual())), nil
+	case value.BINARY:
+		raw, ok := arg.Actual().([]byte)
+		if !ok {
+			return value.NULL_VALUE, nil
+		}
+
+		s := string(raw)
+		return value.NewValue(s), nil
 	default:
 		return value.NULL_VALUE, nil
 	}
