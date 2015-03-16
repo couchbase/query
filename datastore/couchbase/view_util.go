@@ -110,7 +110,7 @@ func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) m
 
 	if span != nil {
 
-		logging.Infof("Scan range. Low %v High %v Inclusion %v", span.Range.Low, span.Range.High, span.Range.Inclusion)
+		logging.Infof("Scan range. %v", span)
 		low := span.Range.Low
 		high := span.Range.High
 		inclusion := span.Range.Inclusion
