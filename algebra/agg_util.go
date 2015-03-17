@@ -27,34 +27,28 @@ it. If set has not been initialized yet, create a new set
 with capacity _OBJECT_CAP and add the item. Return the
 set value.
 */
-func setAdd(item, cumulative value.Value) (value.Value, error) {
-	set, e := getSet(cumulative)
+func setAdd(item, cumulative value.Value) (value.AnnotatedValue, error) {
+	av, ok := cumulative.(value.AnnotatedValue)
+	if !ok {
+		av = value.NewAnnotatedValue(cumulative)
+	}
+
+	set, e := getSet(av)
 	if e == nil {
 		set.Add(item)
-		return cumulative, nil
+		return av, nil
 	}
 
 	set = value.NewSet(_OBJECT_CAP)
 	set.Add(item)
-	av := value.NewAnnotatedValue(nil)
 	av.SetAttachment("set", set)
 	return av, nil
 }
 
 /*
 Aggregate distinct intermediate results and return them.
-If no partial result exists(its value is a null) return the
-cumulative value. If the cumulative input value is null,
-return the partial value. Get the input partial and cumulative
-sets and add the smaller set to the bigger. Return this set.
 */
-func cumulateSets(part, cumulative value.Value) (value.Value, error) {
-	if part.Type() == value.NULL {
-		return cumulative, nil
-	} else if cumulative.Type() == value.NULL {
-		return part, nil
-	}
-
+func cumulateSets(part, cumulative value.Value) (value.AnnotatedValue, error) {
 	pset, e := getSet(part)
 	if e != nil {
 		return nil, e
@@ -77,8 +71,13 @@ func cumulateSets(part, cumulative value.Value) (value.Value, error) {
 		bigger.Add(v)
 	}
 
-	cumulative.(value.AnnotatedValue).SetAttachment("set", bigger)
-	return cumulative, nil
+	av, ok := cumulative.(value.AnnotatedValue)
+	if !ok {
+		return nil, fmt.Errorf("Invalid cumulative value, not an AnnotatedValue: %v", cumulative)
+	}
+
+	av.SetAttachment("set", bigger)
+	return av, nil
 }
 
 /*

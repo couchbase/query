@@ -89,7 +89,7 @@ func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Cont
 		return nil, e
 	}
 
-	if item.Type() <= value.MISSING {
+	if item.Type() <= value.MISSING || item.Type() == value.BINARY {
 		return cumulative, nil
 	}
 

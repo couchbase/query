@@ -199,7 +199,6 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	}
 
 	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggv))
-	this.subChildren = append(this.subChildren, NewIntermediateGroup(group.By(), aggv))
 	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
 	this.children = append(this.children, NewIntermediateGroup(group.By(), aggv))
 	this.children = append(this.children, NewFinalGroup(group.By(), aggv))
