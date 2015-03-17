@@ -489,13 +489,6 @@
                                             "count(*)"
                                         ],
                                         "group_keys": []
-                                    },
-                                    {
-                                        "#operator": "IntermediateGroup",
-                                        "aggregates": [
-                                            "count(*)"
-                                        ],
-                                        "group_keys": []
                                     }
                                 ]
                             }
@@ -580,14 +573,6 @@
                                     },
                                     {
                                         "#operator": "InitialGroup",
-                                        "aggregates": [
-                                            "count(*)",
-                                            "min((`game`.`score`))"
-                                        ],
-                                        "group_keys": []
-                                    },
-                                    {
-                                        "#operator": "IntermediateGroup",
                                         "aggregates": [
                                             "count(*)",
                                             "min((`game`.`score`))"
@@ -686,13 +671,6 @@
                                     },
                                     {
                                         "#operator": "InitialGroup",
-                                        "aggregates": [
-                                            "count(*)"
-                                        ],
-                                        "group_keys": []
-                                    },
-                                    {
-                                        "#operator": "IntermediateGroup",
                                         "aggregates": [
                                             "count(*)"
                                         ],
