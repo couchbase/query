@@ -50,7 +50,7 @@ func ViewTotalRows(bucket *cb.Bucket, ddoc string, view string, options map[stri
 }
 
 func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *cb.Bucket,
-	ddoc string, view string, options map[string]interface{}, batchSize int64, limit int64) {
+	ddoc string, view string, isPrimary bool, options map[string]interface{}, batchSize int64, limit int64) {
 
 	if limit != 0 && limit < batchSize {
 		batchSize = limit
@@ -70,6 +70,8 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 	options["limit"] = batchSize + 1
 
 	numRead := int64(0)
+	numSent := int64(0)
+	keysSent := map[string]bool{}
 	ok := true
 	for ok {
 
@@ -84,10 +86,18 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 		}
 
 		for i, row := range vres.Rows {
+			// dont process the last row, its just used to see if we
+			// need to continue processing
 			if int64(i) < batchSize {
-				// dont process the last row, its just used to see if we
-				// need to continue processing
-				result <- row
+				// Send the row if its primary key has not been sent
+				if isPrimary || !keysSent[row.ID] {
+					result <- row
+					numSent += 1
+				}
+				// For non primary views, mark the row's primary key as sent
+				if !isPrimary {
+					keysSent[row.ID] = true
+				}
 				numRead += 1
 			}
 		}
@@ -103,6 +113,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 			ok = false
 		}
 	}
+	logging.Infof("View %s: %d rows fetched, %d rows sent", view, numRead, numSent)
 }
 
 func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) map[string]interface{} {

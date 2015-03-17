@@ -304,7 +304,8 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	viewOptions = generateViewOptions(cons, span) /*span.Range.Low, span.Range.High, span.Range.Inclusion) */
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
-	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket, vi.DDocName(), vi.ViewName(), viewOptions, 1000, limit)
+	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket,
+		vi.DDocName(), vi.ViewName(), vi.isPrimaryIndex(), viewOptions, 1000, limit)
 
 	var viewRow cb.ViewRow
 	var err errors.Error
