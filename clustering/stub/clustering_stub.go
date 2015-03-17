@@ -82,6 +82,10 @@ func NewConfigurationStore() (clustering.ConfigurationStore, errors.Error) {
 	return ConfigurationStoreStub{}, nil
 }
 
+func (ConfigurationStoreStub) Authorize(map[string]string, []clustering.Privilege) errors.Error {
+	return nil
+}
+
 // ClusterStub is a stub implementation of clustering.Cluster
 // It has one Query Node, an instance of QueryNodeStub
 type ClusterStub struct{}

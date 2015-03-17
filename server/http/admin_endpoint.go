@@ -16,19 +16,18 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 )
 
 const (
 	adminPrefix = "/admin"
 )
 
-type apiFunc func(*server.Server, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
+type apiFunc func(*HttpEndpoint, http.ResponseWriter, *http.Request) (interface{}, errors.Error)
 
 type handlerFunc func(http.ResponseWriter, *http.Request)
 
-func wrapAPI(s *server.Server, w http.ResponseWriter, req *http.Request, f apiFunc) {
-	obj, err := f(s, w, req)
+func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f apiFunc) {
+	obj, err := f(this, w, req)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -63,7 +62,14 @@ func writeError(w http.ResponseWriter, err errors.Error) {
 }
 
 func mapErrorToHttpStatus(err errors.Error) int {
-	return http.StatusInternalServerError
+	switch err.Code() {
+	case errors.ADMIN_AUTH_ERROR:
+		return http.StatusUnauthorized
+	case errors.ADMIN_SSL_NOT_ENABLED:
+		return http.StatusNotFound
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 func GetAdminURL(host string, port int) string {

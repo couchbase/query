@@ -141,6 +141,10 @@ func (z *zkConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	return clusters, nil
 }
 
+func (z *zkConfigStore) Authorize(map[string]string, []clustering.Privilege) errors.Error {
+	return nil
+}
+
 // zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`

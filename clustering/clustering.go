@@ -40,6 +40,13 @@ const (
 	STOPPING     Mode = "stopping"     // Query Node is in the process of shutting down
 )
 
+type Privilege int
+
+const (
+	PRIV_READ      Privilege = 1 // read operations (e.g. retrieve node configuration)
+	PRIV_SYS_ADMIN Privilege = 2 // system administrator operations (e.g. add node, reload ssl certificate)
+)
+
 // Version provides a abstraction of logical software version for Query Nodes;
 // it could represent server build version or API version
 type Version interface {
@@ -49,11 +56,12 @@ type Version interface {
 
 // ConfigurationStore represents a store for maintaining all cluster configuration data.
 type ConfigurationStore interface {
-	Id() string                                        // Id of this ConfigurationStore
-	URL() string                                       // URL to this ConfigurationStore
-	ClusterNames() ([]string, errors.Error)            // Names of the Clusters in this ConfigurationStore
-	ClusterByName(name string) (Cluster, errors.Error) // Find a Cluster in this ConfigurationStore using the Cluster's name
-	ConfigurationManager() ConfigurationManager        // Get a ConfigurationManager for this ConfigurationStore
+	Id() string                                            // Id of this ConfigurationStore
+	URL() string                                           // URL to this ConfigurationStore
+	ClusterNames() ([]string, errors.Error)                // Names of the Clusters in this ConfigurationStore
+	ClusterByName(name string) (Cluster, errors.Error)     // Find a Cluster in this ConfigurationStore using the Cluster's name
+	ConfigurationManager() ConfigurationManager            // Get a ConfigurationManager for this ConfigurationStore
+	Authorize(map[string]string, []Privilege) errors.Error // Do authorization returning an error if unsuccessful
 }
 
 // Cluster is a named collection of Query Nodes. It is basically a single-level namespace for one or more Query Nodes.

@@ -10,14 +10,16 @@
 package http
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
@@ -26,24 +28,27 @@ const (
 	clustersPrefix = adminPrefix + "/clusters"
 )
 
-func registerClusterHandlers(r *mux.Router, server *server.Server) {
+func (this *HttpEndpoint) registerClusterHandlers() {
 	pingHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doPing)
+		this.wrapAPI(w, req, doPing)
 	}
 	configHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doConfig)
+		this.wrapAPI(w, req, doConfig)
+	}
+	sslCertHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doSslCert)
 	}
 	clustersHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doClusters)
+		this.wrapAPI(w, req, doClusters)
 	}
 	clusterHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doCluster)
+		this.wrapAPI(w, req, doCluster)
 	}
 	nodesHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doNodes)
+		this.wrapAPI(w, req, doNodes)
 	}
 	nodeHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doNode)
+		this.wrapAPI(w, req, doNode)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -51,6 +56,7 @@ func registerClusterHandlers(r *mux.Router, server *server.Server) {
 	}{
 		adminPrefix + "/ping":                      {handler: pingHandler, methods: []string{"GET"}},
 		adminPrefix + "/config":                    {handler: configHandler, methods: []string{"GET"}},
+		adminPrefix + "/ssl_cert":                  {handler: sslCertHandler, methods: []string{"POST"}},
 		clustersPrefix:                             {handler: clustersHandler, methods: []string{"GET", "POST"}},
 		clustersPrefix + "/{cluster}":              {handler: clusterHandler, methods: []string{"GET", "PUT", "DELETE"}},
 		clustersPrefix + "/{cluster}/nodes":        {handler: nodesHandler, methods: []string{"GET", "POST"}},
@@ -58,7 +64,7 @@ func registerClusterHandlers(r *mux.Router, server *server.Server) {
 	}
 
 	for route, h := range routeMap {
-		r.HandleFunc(route, h.handler).Methods(h.methods...)
+		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
 
 }
@@ -69,7 +75,7 @@ var pingStatus = struct {
 	"ok",
 }
 
-func doPing(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	return &pingStatus, nil
 }
 
@@ -78,10 +84,11 @@ var localConfig struct {
 	myConfig clustering.QueryNode
 }
 
-func doConfig(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	if localConfig.myConfig != nil {
 		return localConfig.myConfig, nil
 	}
+	cfgStore := endpoint.server.ConfigurationStore()
 	var self clustering.QueryNode
 	ip, err := util.ExternalIP()
 	if err != nil {
@@ -93,7 +100,7 @@ func doConfig(s *server.Server, w http.ResponseWriter, req *http.Request) (inter
 		return nil, err
 	}
 
-	cm := s.ConfigurationStore().ConfigurationManager()
+	cm := cfgStore.ConfigurationManager()
 	clusters, err := cm.GetClusters()
 	if err != nil {
 		return nil, err
@@ -119,8 +126,8 @@ func doConfig(s *server.Server, w http.ResponseWriter, req *http.Request) (inter
 	return localConfig.myConfig, nil
 }
 
-func doClusters(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	cfgStore := s.ConfigurationStore()
+func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	cfgStore := endpoint.server.ConfigurationStore()
 	cm := cfgStore.ConfigurationManager()
 	switch req.Method {
 	case "GET":
@@ -136,10 +143,10 @@ func doClusters(s *server.Server, w http.ResponseWriter, req *http.Request) (int
 	}
 }
 
-func doCluster(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
-	cfgStore := s.ConfigurationStore()
+	cfgStore := endpoint.server.ConfigurationStore()
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil {
 		return nil, err
@@ -155,10 +162,10 @@ func doCluster(s *server.Server, w http.ResponseWriter, req *http.Request) (inte
 	}
 }
 
-func doNodes(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
-	cfgStore := s.ConfigurationStore()
+	cfgStore := endpoint.server.ConfigurationStore()
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil || cluster == nil {
 		return cluster, err
@@ -177,11 +184,11 @@ func doNodes(s *server.Server, w http.ResponseWriter, req *http.Request) (interf
 	}
 }
 
-func doNode(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	node := vars["node"]
 	name := vars["cluster"]
-	cfgStore := s.ConfigurationStore()
+	cfgStore := endpoint.server.ConfigurationStore()
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil || cluster == nil {
 		return cluster, err
@@ -195,6 +202,69 @@ func doNode(s *server.Server, w http.ResponseWriter, req *http.Request) (interfa
 	default:
 		return nil, nil
 	}
+}
+
+// reload the ssl certificate. Only performed if the server is running https and
+// the request contains basic authorization credentials that can be successfully
+// authorized against the configuration store.
+func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	if endpoint.httpsAddr == "" {
+		return nil, errors.NewAdminNotSSLEnabledError()
+	}
+	// retrieve the credentials from the request; the credentials must be specified
+	// using basic authorization format. An error is returned if there is a step that
+	// prevents retrieval of the credentials.
+	authHdr := req.Header["Authorization"]
+	if len(authHdr) == 0 {
+		return nil, errors.NewAdminAuthError(nil, "ssl reload requres basic authorization")
+	}
+
+	auth := authHdr[0]
+	basicPrefix := "Basic "
+	if !strings.HasPrefix(auth, basicPrefix) {
+		return nil, errors.NewAdminAuthError(nil, "ssl reload requres basic authorization")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(auth[len(basicPrefix):])
+	if err != nil {
+		return nil, errors.NewAdminDecodingError(err)
+	}
+
+	colonIndex := bytes.IndexByte(decoded, ':')
+	if colonIndex == -1 {
+		return nil, errors.NewAdminAuthError(nil, "incorrect authorization header")
+	}
+
+	user := string(decoded[:colonIndex])
+	password := string(decoded[colonIndex+1:])
+	creds := map[string]string{user: password}
+
+	// Attempt authorization with the cluster
+	configstore := endpoint.server.ConfigurationStore()
+	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
+	authErr := configstore.Authorize(creds, sslPrivs)
+	if authErr != nil {
+		return nil, authErr
+	}
+
+	// Auth clear: restart TLS listener to reload the SSL cert.
+	closeErr := endpoint.CloseTLS()
+	if closeErr != nil {
+		return nil, errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
+	}
+
+	tlsErr := endpoint.ListenTLS()
+	if tlsErr != nil {
+		return nil, errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+	}
+
+	// response payload
+	sslStatus := map[string]string{}
+	sslStatus["status"] = "ok"
+	sslStatus["keyfile"] = endpoint.keyFile
+	sslStatus["certfile"] = endpoint.certFile
+
+	return sslStatus, nil
 }
 
 func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error) {

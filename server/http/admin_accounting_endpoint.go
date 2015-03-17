@@ -15,7 +15,6 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
 )
 
@@ -28,12 +27,12 @@ func expvarsHandler(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, accountingPrefix, http.StatusFound)
 }
 
-func registerAccountingHandlers(r *mux.Router, server *server.Server) {
+func (this *HttpEndpoint) registerAccountingHandlers() {
 	statsHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doStats)
+		this.wrapAPI(w, req, doStats)
 	}
 	statHandler := func(w http.ResponseWriter, req *http.Request) {
-		wrapAPI(server, w, req, doStat)
+		this.wrapAPI(w, req, doStat)
 	}
 
 	routeMap := map[string]struct {
@@ -45,15 +44,15 @@ func registerAccountingHandlers(r *mux.Router, server *server.Server) {
 	}
 
 	for route, h := range routeMap {
-		r.HandleFunc(route, h.handler).Methods(h.methods...)
+		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
 
-	r.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
+	this.mux.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
 
 }
 
-func doStats(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	acctStore := s.AccountingStore()
+func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
 
 	switch req.Method {
@@ -90,10 +89,10 @@ func addMetricData(name string, stats map[string]interface{}, metrics map[string
 	}
 }
 
-func doStat(s *server.Server, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["stat"]
-	acctStore := s.AccountingStore()
+	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
 
 	switch req.Method {

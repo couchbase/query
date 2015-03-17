@@ -27,6 +27,10 @@ import (
 type HttpEndpoint struct {
 	server      *server.Server
 	metrics     bool
+	httpAddr    string
+	httpsAddr   string
+	certFile    string
+	keyFile     string
 	bufpool     BufferPool
 	listener    net.Listener
 	listenerTLS net.Listener
@@ -37,42 +41,49 @@ const (
 	servicePrefix = "/query/service"
 )
 
-func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool) *HttpEndpoint {
+func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool,
+	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
-		server:  server,
-		metrics: metrics,
-		bufpool: NewSyncPool(server.KeepAlive()),
+		server:    server,
+		metrics:   metrics,
+		httpAddr:  httpAddr,
+		httpsAddr: httpsAddr,
+		certFile:  certFile,
+		keyFile:   keyFile,
+		bufpool:   NewSyncPool(server.KeepAlive()),
 	}
 
 	rv.registerHandlers(staticPath)
 	return rv
 }
 
-func (this *HttpEndpoint) Listen(addr string) error {
-	ln, err := net.Listen("tcp", addr)
+func (this *HttpEndpoint) Listen() error {
+	ln, err := net.Listen("tcp", this.httpAddr)
 	if err == nil {
 		this.listener = ln
 		go http.Serve(ln, this.mux)
+		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
 	}
 	return err
 }
 
-func (this *HttpEndpoint) ListenTLS(addr, certFile, keyFile string) error {
+func (this *HttpEndpoint) ListenTLS() error {
 	// create tls configuration
-	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	tlsCert, err := tls.LoadX509KeyPair(this.certFile, this.keyFile)
 	if err != nil {
 		return err
 	}
 
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen("tcp", this.httpsAddr)
 	if err == nil {
 		cfg := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
 			ClientAuth:   tls.NoClientCert,
 		}
 		tls_ln := tls.NewListener(ln, cfg)
-		this.listener = tls_ln
+		this.listenerTLS = tls_ln
 		go http.Serve(tls_ln, this.mux)
+		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
 	}
 	return err
 }
@@ -107,15 +118,21 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 }
 
-func (this *HttpEndpoint) Close() {
-	if this.listener != nil {
-		this.listener.Close()
-		logging.Infop("HttpEndpoint.Close()", logging.Pair{"Address", this.listener.Addr()})
+func (this *HttpEndpoint) Close() error {
+	return this.closeListener(this.listener)
+}
+
+func (this *HttpEndpoint) CloseTLS() error {
+	return this.closeListener(this.listenerTLS)
+}
+
+func (this *HttpEndpoint) closeListener(l net.Listener) error {
+	var err error
+	if l != nil {
+		err = l.Close()
+		logging.Infop("HttpEndpoint: close listener ", logging.Pair{"Address", l.Addr()}, logging.Pair{"err", err})
 	}
-	if this.listenerTLS != nil {
-		this.listenerTLS.Close()
-		logging.Infop("HttpEndpoint.Close()", logging.Pair{"Address", this.listener.Addr()})
-	}
+	return err
 }
 
 func (this *HttpEndpoint) registerHandlers(staticPath string) {
@@ -131,8 +148,8 @@ func (this *HttpEndpoint) registerHandlers(staticPath string) {
 	this.mux.Handle("/query", this).
 		Methods("GET", "POST")
 
-	registerClusterHandlers(this.mux, this.server)
-	registerAccountingHandlers(this.mux, this.server)
+	this.registerClusterHandlers()
+	this.registerAccountingHandlers()
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest) {

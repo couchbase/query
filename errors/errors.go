@@ -290,6 +290,27 @@ func NewAdminMakeMetricError(e error, msg string) Error {
 		InternalMsg: "Error creating metric " + msg, InternalCaller: CallerN(1)}
 }
 
+const ADMIN_AUTH_ERROR = 2120
+
+func NewAdminAuthError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: ADMIN_AUTH_ERROR, IKey: "admin.clustering.authorize", ICause: e,
+		InternalMsg: "Error authorizing against cluster " + msg, InternalCaller: CallerN(1)}
+}
+
+const ADMIN_ENDPOINT_ERROR = 2130
+
+func NewAdminEndpointError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: ADMIN_ENDPOINT_ERROR, IKey: "admin.service.HttpEndpoint", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+const ADMIN_SSL_NOT_ENABLED = 2140
+
+func NewAdminNotSSLEnabledError() Error {
+	return &err{level: EXCEPTION, ICode: ADMIN_SSL_NOT_ENABLED, IKey: "admin.service.ssl_cert",
+		InternalMsg: "server is not ssl enabled", InternalCaller: CallerN(1)}
+}
+
 // Authorization Errors
 func NewDatastoreAuthorizationError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 10000, IKey: "datastore.couchbase.authorization_error", ICause: e,

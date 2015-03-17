@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
@@ -131,6 +132,39 @@ func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 		clusters = append(clusters, cluster)
 	}
 	return clusters, nil
+}
+
+func (c *cbConfigStore) Authorize(credentials map[string]string, privileges []clustering.Privilege) errors.Error {
+
+	if len(credentials) == 0 {
+		return errors.NewAdminAuthError(nil, "no credentials provided")
+	}
+
+	for username, password := range credentials {
+		auth, err := cbauth.Auth(username, password)
+		if err != nil {
+			return errors.NewAdminAuthError(err, "")
+		}
+		for _, requested := range privileges {
+			switch requested {
+			case clustering.PRIV_SYS_ADMIN:
+				isAdmin, err := auth.IsAdmin()
+				if err != nil {
+					return errors.NewAdminAuthError(err, "")
+				}
+				if isAdmin {
+					return nil
+				}
+				return errors.NewAdminAuthError(nil, "sys admin requires administrator credentials")
+			case clustering.PRIV_READ:
+				if auth.CanReadAnyMetadata() {
+					return nil
+				}
+				return errors.NewAdminAuthError(nil, "read not authorized")
+			}
+		}
+	}
+	return errors.NewAdminAuthError(nil, "unrecognized authorization request")
 }
 
 // cbCluster implements clustering.Cluster

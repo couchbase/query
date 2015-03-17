@@ -154,8 +154,9 @@ func main() {
 		logging.Pair{"datastore", *DATASTORE},
 	)
 	// Create http endpoint
-	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS)
-	er := endpoint.Listen(*HTTP_ADDR)
+	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
+		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
+	er := endpoint.Listen()
 	if er != nil {
 		logging.Errorp("cbq-engine exiting with error",
 			logging.Pair{"error", er},
@@ -164,11 +165,11 @@ func main() {
 		os.Exit(1)
 	}
 	if *CERT_FILE != "" && *KEY_FILE != "" {
-		er := endpoint.ListenTLS(*HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
+		er := endpoint.ListenTLS()
 		if er != nil {
 			logging.Errorp("cbq-engine exiting with error",
 				logging.Pair{"error", er},
-				logging.Pair{"HTTP_ADDR", *HTTP_ADDR},
+				logging.Pair{"HTTPS_ADDR", *HTTPS_ADDR},
 			)
 			os.Exit(1)
 		}
@@ -201,6 +202,13 @@ func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint, writeCPUp
 	}
 	logging.Infop("cbq-engine attempting graceful...")
 	// Stop accepting new requests
-	endpoint.Close()
+	err := endpoint.Close()
+	if err != nil {
+		logging.Errorp("error closing http listener", logging.Pair{"err", err})
+	}
+	err = endpoint.CloseTLS()
+	if err != nil {
+		logging.Errorp("error closing https listener", logging.Pair{"err", err})
+	}
 	// TODO: wait until server requests have all completed
 }
