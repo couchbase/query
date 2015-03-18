@@ -133,7 +133,8 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	for _, item := range this.batch {
 		p := item.GetAttachment("clone")
-		if !this.sendItem(p.(value.AnnotatedValue)) {
+		item.SetField(this.plan.Alias(), p)
+		if !this.sendItem(item) {
 			break
 		}
 	}
