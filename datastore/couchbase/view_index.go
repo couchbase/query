@@ -161,25 +161,32 @@ func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
 }
 
 func (view *viewIndexer) loadViewIndexes() errors.Error {
-	// #alldocs implicitly exists
 
-	// and recreate remaining from ddocs
-	indexes, err := loadViewIndexes(view)
+	// recreate indexes from ddocs
+	indexes := make(map[string]datastore.Index)
+	primary := make(map[string]datastore.PrimaryIndex)
+
+	defer func() {
+		view.primary = primary
+		view.indexes = indexes
+	}()
+
+	indexList, err := loadViewIndexes(view)
 	if err != nil {
 		return errors.NewCbLoadIndexesError(err, "Keyspace "+view.KeyspaceId())
 	}
 
-	if len(indexes) == 0 {
-		logging.Errorf("No view indexes found for bucket %s", view.keyspace.Name())
+	if len(indexList) == 0 {
+		logging.Infof("No view indexes found for bucket %s", view.keyspace.Name())
 		return nil
 	}
 
-	for _, index := range indexes {
+	for _, index := range indexList {
 		logging.Infof("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
-		view.indexes[name] = *index
+		indexes[name] = *index
 		if (*index).(*viewIndex).isPrimaryIndex() == true {
-			view.primary[name] = (*index).(datastore.PrimaryIndex)
+			primary[name] = (*index).(datastore.PrimaryIndex)
 		}
 	}
 
@@ -190,15 +197,10 @@ func (view *viewIndexer) Refresh() errors.Error {
 	// trigger refresh of this indexer
 	logging.Infof("Refreshing Indexes in keyspace %s", view.keyspace.Name())
 
-	indexes, err := loadViewIndexes(view)
+	err := view.loadViewIndexes()
 	if err != nil {
 		logging.Errorf(" Error loading indexes for bucket %s", view.keyspace.Name())
 		return errors.NewCbViewIndexesLoadingError(err, view.keyspace.Name())
-	}
-
-	if len(indexes) == 0 {
-		logging.Infof("No indexes found for bucket %s", view.keyspace.Name())
-		return nil
 	}
 
 	return nil

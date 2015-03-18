@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/couchbase/cbauth"
 	cb "github.com/couchbase/go-couchbase"
@@ -312,7 +311,7 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 		cbNamespace:   cbpool,
 		keyspaceCache: make(map[string]datastore.Keyspace),
 	}
-	go keepPoolFresh(&rv)
+
 	return &rv, nil
 }
 
@@ -383,9 +382,31 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		} else if b.(*keyspace).cbbucket.UUID != newbucket.UUID {
 			logging.Infof(" UUid of keyspace %v uuid now %v", b.(*keyspace).cbbucket.UUID, newbucket.UUID)
 			b.(*keyspace).cbbucket = newbucket
+		} else if len(newbucket.HealthyNodes()) != len(b.(*keyspace).cbbucket.HealthyNodes()) ||
+			!compareNodeAddress(newbucket.NodeAddresses(), b.(*keyspace).cbbucket.NodeAddresses()) {
+
+			logging.Infof(" node list or addresses changed now %v before %v", len(newbucket.HealthyNodes()), len(b.(*keyspace).cbbucket.HealthyNodes()))
+			b.(*keyspace).cbbucket = newbucket
 		}
+
 	}
 	return b, nil
+}
+
+// compare the list of node addresses
+// Assumption: the list of node addresses in each list are sorted
+func compareNodeAddress(a, b []string) bool {
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
@@ -465,15 +486,6 @@ func (p *namespace) refresh(changed bool) {
 
 	if changed == true {
 		p.setPool(newpool)
-	}
-}
-
-func keepPoolFresh(p *namespace) {
-
-	tickChan := time.Tick(1 * time.Minute)
-
-	for _ = range tickChan {
-		p.refresh(false)
 	}
 }
 

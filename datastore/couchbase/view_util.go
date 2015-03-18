@@ -77,7 +77,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 
 		logURL, err := bucket.ViewURL(ddoc, view, options)
 		if err == nil {
-			logging.Infof("Request View: %v", logURL)
+			logging.Debugf("Request View: %v", logURL)
 		}
 		vres, err := bucket.View(ddoc, view, options)
 		if err != nil {
