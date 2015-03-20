@@ -217,17 +217,6 @@ func NewServiceErrorClientID(id string) Error {
 		InternalMsg: "forbidden character (\\ or \") in client_context_id", InternalCaller: CallerN(1)}
 }
 
-// Parse errors - errors that are created in the parse package
-func NewParseSyntaxError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,
-		InternalMsg: msg, InternalCaller: CallerN(1)}
-}
-
-// Plan errors - errors that are created in the plan package
-func NewPlanError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
-}
-
 // admin level errors - errors that are created in the clustering and accounting packages
 
 func NewAdminConnectionError(e error, msg string) Error {
@@ -309,6 +298,48 @@ const ADMIN_SSL_NOT_ENABLED = 2140
 func NewAdminNotSSLEnabledError() Error {
 	return &err{level: EXCEPTION, ICode: ADMIN_SSL_NOT_ENABLED, IKey: "admin.service.ssl_cert",
 		InternalMsg: "server is not ssl enabled", InternalCaller: CallerN(1)}
+}
+
+// Parse errors - errors that are created in the parse package
+func NewParseSyntaxError(e error, msg string) Error {
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,
+			InternalMsg: msg, InternalCaller: CallerN(1)}
+	}
+}
+
+// Plan errors - errors that are created in the plan and algebra packages
+func NewPlanError(e error, msg string) Error {
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		return &err{level: EXCEPTION, ICode: 4000, IKey: "plan_error", ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
+	}
+}
+
+const NO_TERM_NAME = 4010
+
+func NewNoTermNameError(termType string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: NO_TERM_NAME, IKey: iKey,
+		InternalMsg: fmt.Sprintf("%s term must have a name or alias", termType), InternalCaller: CallerN(1)}
+}
+
+const DUPLICATE_ALIAS = 4020
+
+func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: DUPLICATE_ALIAS, IKey: iKey,
+		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
+}
+
+const SUBQUERY_MISSING_KEYS = 4030
+
+func NewSubqueryMissingKeysError(keyspace string) Error {
+	return &err{level: EXCEPTION, ICode: SUBQUERY_MISSING_KEYS, IKey: "plan.build_select.subquery_missing_keys",
+		InternalMsg: fmt.Sprintf("FROM in subquery must use KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
 }
 
 // Authorization Errors

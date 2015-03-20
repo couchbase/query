@@ -225,9 +225,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		this.children = append(this.children, scan)
 	} else {
 		if this.subquery {
-			return nil, errors.NewError(nil, fmt.Sprintf(
-				"FROM in subquery must use KEYS clause: FROM %s.",
-				node.Keyspace()))
+			return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 		}
 
 		scan, err := this.selectScan(keyspace, node)

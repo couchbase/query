@@ -11,7 +11,6 @@ package algebra
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -205,7 +204,7 @@ duplicate aliases.
 func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewError(nil, "FROM term must have a name or alias.")
+		err = errors.NewNoTermNameError("FROM", "plan.keyspace.requires_name_or_alias")
 		return
 	}
 
@@ -218,7 +217,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 
 	_, ok := parent.Allowed.Field(keyspace)
 	if ok {
-		err = errors.NewError(nil, fmt.Sprintf("Duplicate subquery alias %s.", keyspace))
+		err = errors.NewDuplicateAliasError("subquery", keyspace, "plan.keyspace.duplicate_alias")
 		return nil, err
 	}
 
@@ -373,13 +372,13 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewError(nil, "FROM term must have a name or alias.")
+		err = errors.NewNoTermNameError("FROM", "plan.subquery.requires_name_or_alias")
 		return
 	}
 
 	_, ok := parent.Allowed.Field(alias)
 	if ok {
-		err = errors.NewError(nil, fmt.Sprintf("Duplicate subquery alias %s.", alias))
+		err = errors.NewDuplicateAliasError("subquery", alias, "plan.subquery.duplicate_alias")
 		return nil, err
 	}
 
@@ -516,13 +515,13 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewError(nil, "JOIN term must have a name or alias.")
+		err = errors.NewNoTermNameError("JOIN", "plan.join.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := f.Allowed.Field(alias)
 	if ok {
-		err = errors.NewError(nil, fmt.Sprintf("Duplicate JOIN alias %s.", alias))
+		err = errors.NewDuplicateAliasError("JOIN", alias, "plan.join.duplicate_alias")
 		return nil, err
 	}
 
@@ -684,13 +683,13 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewError(nil, "NEST term must have a name or alias.")
+		err = errors.NewNoTermNameError("NEST", "plan.nest.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := f.Allowed.Field(alias)
 	if ok {
-		err = errors.NewError(nil, fmt.Sprintf("Duplicate NEST alias %s.", alias))
+		err = errors.NewDuplicateAliasError("NEST", alias, "plan.nest.duplicate_alias")
 		return nil, err
 	}
 
@@ -845,13 +844,13 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewError(nil, "UNNEST term must have a name or alias.")
+		err = errors.NewNoTermNameError("UNNEST", "plan.unnest.requires_name_or_alias")
 		return nil, err
 	}
 
 	_, ok := f.Allowed.Field(alias)
 	if ok {
-		err = errors.NewError(nil, fmt.Sprintf("Duplicate UNNEST alias %s.", alias))
+		err = errors.NewDuplicateAliasError("UNNEST", alias, "plan.unnest.duplicate_alias")
 		return nil, err
 	}
 
