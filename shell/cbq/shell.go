@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-var tiServer = flag.String("engine", "http://localhost:8093/", "URL to cbq-engine")
+var tiServer = flag.String("engine", "http://localhost:8093/", "#URL to the query service(cbq-engine). By default, cbq connects to: http://localhost:8093\n\n Examples:\n\t cbq \n\t\t #Connects to local query node. Same as: cbq -engine=http://localhost:8093\n\t cbq -engine=http://172.23.107.18:8093 \n\t\t #Connects to query node at 172.23.107.18 Port 8093 \n\t cbq -engine=https://my.secure.node.com:8093 \n\t\t #Connects to query node at my.secure.node.com:8093 using secure https protocol.")
 
 func main() {
 	flag.Parse()
