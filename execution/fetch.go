@@ -132,6 +132,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	this.batch = nil
+	this.batch = this.batch[:0]
 	return fetchOk
 }

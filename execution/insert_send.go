@@ -147,7 +147,6 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	}
 
 	dpairs = dpairs[0:i]
-	this.batch = nil
 
 	// Perform the actual INSERT
 	keys, e := this.plan.Keyspace().Insert(dpairs)
@@ -165,10 +164,12 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
 		av.SetField(this.plan.Alias(), dpairs[i].Value)
 		if !this.sendItem(av) {
+			this.batch = nil
 			return false
 		}
 	}
 
+	this.batch = this.batch[:0]
 	return true
 }
 
