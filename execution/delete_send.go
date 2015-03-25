@@ -120,7 +120,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	for _, item := range this.batch {
 		if !this.sendItem(item) {
-			break
+			this.batch = nil
+			return false
 		}
 	}
 

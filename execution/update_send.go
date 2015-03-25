@@ -114,7 +114,14 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		clone := item.GetAttachment("clone")
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
-			pairs[i].Value = clone
+			cv, ok := clone.Field(this.plan.Alias())
+			if !ok {
+				context.Error(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s not found in item.", this.plan.Alias())))
+				return false
+			}
+
+			pairs[i].Value = cv
+			item.SetField(this.plan.Alias(), cv)
 		default:
 			context.Error(errors.NewError(nil, fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
@@ -132,10 +139,9 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 	}
 
 	for _, item := range this.batch {
-		p := item.GetAttachment("clone")
-		item.SetField(this.plan.Alias(), p)
 		if !this.sendItem(item) {
-			break
+			this.batch = nil
+			return false
 		}
 	}
 

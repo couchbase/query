@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -84,17 +85,15 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return nil, err
 	}
 
-	if v.Type() == value.MISSING {
+	if t.Path() != nil {
+		ok := t.Path().Set(clone, v, context)
+		if !ok {
+			s := expression.NewStringer().Visit(t.Path())
+			context.Warning(errors.NewWarning(fmt.Sprintf("Unable to SET path %s", s)))
+		}
 	}
 
-	if t.Path() != nil {
-		t.Path().Set(clone, v, context)
-		return clone, nil
-	} else {
-		av := value.NewAnnotatedValue(v)
-		av.SetAttachments(clone.Attachments())
-		return av, nil
-	}
+	return clone, nil
 }
 
 func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {

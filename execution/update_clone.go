@@ -10,9 +10,6 @@
 package execution
 
 import (
-	"fmt"
-
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -49,19 +46,7 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
-	t, ok := item.Field(this.plan.Alias())
-	if !ok {
-		context.Fatal(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s not found in item.", this.plan.Alias())))
-		return false
-	}
-
-	target, ok := t.(value.AnnotatedValue)
-	if !ok {
-		context.Fatal(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s has no metadata in item.", this.plan.Alias())))
-		return false
-	}
-
-	clone := target.CopyForUpdate()
+	clone := item.CopyForUpdate()
 	item.SetAttachment("clone", clone)
 	return this.sendItem(item)
 }

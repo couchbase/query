@@ -127,9 +127,11 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		item.SetField(this.plan.Term().Alias(), fv)
 
 		if !this.sendItem(item) {
+			this.batch = nil
 			return false
 		}
 	}
 
+	this.batch = nil
 	return fetchOk
 }
