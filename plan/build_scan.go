@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/planner"
 )
 
@@ -73,9 +74,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	for _, index := range indexes {
 		state, _, er := index.State()
 		if er != nil {
-			return nil, er
+			logging.Errorp("Scan Selection", logging.Pair{"error", er.Error()})
 		}
-
 		if state != datastore.ONLINE {
 			continue
 		}
@@ -190,9 +190,8 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 		for _, index := range indexes {
 			state, _, er := index.State()
 			if er != nil {
-				return nil, er
+				logging.Errorp("PrimaryScan Selection", logging.Pair{"error", er.Error()})
 			}
-
 			if state != datastore.ONLINE {
 				primary = index
 				continue

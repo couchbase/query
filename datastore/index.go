@@ -48,6 +48,10 @@ const (
 	OFFLINE IndexState = "offline" // The index requires manual intervention
 )
 
+func (indexState IndexState) String() string {
+	return string(indexState)
+}
+
 type ScanConsistency string
 
 const (

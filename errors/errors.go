@@ -463,6 +463,11 @@ func NewCbBucketTypeNotSupportedError(e error, msg string) Error {
 		InternalMsg: "This bucket type is not supported " + msg, InternalCaller: CallerN(1)}
 }
 
+func NewCbIndexStateError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 12014, IKey: "datastore.couchbase.index_state_error",
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,

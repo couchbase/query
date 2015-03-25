@@ -14,6 +14,7 @@ indexing.
 package expression
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -163,4 +164,18 @@ func Copy(expr Expression) Expression {
 	}
 
 	return expr.Copy()
+}
+
+// Expressions implements Stringer() API.
+func (this Expressions) String() string {
+	var exprText bytes.Buffer
+	exprText.WriteString("[")
+	for i, expr := range this {
+		if i > 0 {
+			exprText.WriteString(", ")
+		}
+		exprText.WriteString(expr.String())
+	}
+	exprText.WriteString("]")
+	return exprText.String()
 }
