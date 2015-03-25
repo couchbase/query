@@ -75,7 +75,6 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		for ok {
 			select {
 			case <-this.stopChannel:
-				this.values = nil
 				break loop
 			default:
 			}
@@ -87,15 +86,16 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 				}
 			case <-this.childChannel:
 				n--
+			case <-this.stopChannel:
+				break loop
+			default:
 				if n == 0 {
 					break loop
 				}
-			case <-this.stopChannel:
-				this.values = nil
-				break loop
 			}
 		}
 
+		this.values = nil
 		this.notifyScans()
 
 		// Await children

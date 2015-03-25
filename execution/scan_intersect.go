@@ -73,12 +73,13 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 		var item value.AnnotatedValue
 		n := len(this.scans)
+		stopped := false
 		ok := true
 	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
-				this.values = nil
+				stopped = true
 				break loop
 			default:
 			}
@@ -89,15 +90,24 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
+				if n == len(this.scans) {
+					this.notifyScans()
+				}
 				n--
-				break loop
 			case <-this.stopChannel:
-				this.values = nil
+				stopped = true
 				break loop
+			default:
+				if n < len(this.scans) {
+					break loop
+				}
 			}
 		}
 
-		this.notifyScans()
+		this.values = nil
+		if n == len(this.scans) {
+			this.notifyScans()
+		}
 
 		// Await children
 		for ; n > 0; n-- {
@@ -109,7 +119,12 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		default:
 		}
 
-		this.sendItems()
+		if !stopped {
+			this.sendItems()
+		}
+
+		this.values = nil
+		this.counts = nil
 	})
 }
 
@@ -150,9 +165,8 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 }
 
 func (this *IntersectScan) sendItems() {
-	n := len(this.scans)
-	for key, av := range this.values {
-		if this.counts[key] == n && !this.sendItem(av) {
+	for _, av := range this.values {
+		if !this.sendItem(av) {
 			return
 		}
 	}

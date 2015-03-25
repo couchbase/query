@@ -25,7 +25,7 @@ func NewStringer() *Stringer { return &Stringer{} }
 func (this *Stringer) Visit(expr Expression) string {
 	s, err := expr.Accept(this)
 	if err != nil {
-		panic(fmt.Sprintf("Unexpected error in Stringer: %v", err))
+		panic(fmt.Sprintf("Unexpected error in Stringer. expr: %v, error: %v", expr, err))
 	}
 
 	switch s := s.(type) {

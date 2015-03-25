@@ -89,8 +89,6 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			go child.RunOnce(context, parent)
 		}
 
-		i := 0
-
 		var item value.AnnotatedValue
 		ok := true
 	loop:
@@ -107,7 +105,6 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			case item, ok = <-this.input.ItemChannel():
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
-					i++
 				}
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
