@@ -719,7 +719,8 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			// add the key to the backend
 			added, err = b.cbbucket.Add(key, 0, val)
 			if added == false {
-				err = errors.NewError(err, "For Key "+key)
+				// false => given key aready exists in the bucket
+				err = errors.NewError(err, "Duplicate Key "+key)
 			}
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
