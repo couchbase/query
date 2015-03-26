@@ -50,7 +50,13 @@ type Error interface {
 type ErrorChannel chan Error
 
 func NewError(e error, internalMsg string) Error {
-	return &err{level: EXCEPTION, ICode: 5000, IKey: "Internal Error", ICause: e, InternalMsg: internalMsg, InternalCaller: CallerN(1)}
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		return &err{level: EXCEPTION, ICode: 5000, IKey: "Internal Error", ICause: e,
+			InternalMsg: internalMsg, InternalCaller: CallerN(1)}
+	}
 }
 
 func NewWarning(internalMsg string) Error {
@@ -340,6 +346,28 @@ const SUBQUERY_MISSING_KEYS = 4030
 func NewSubqueryMissingKeysError(keyspace string) Error {
 	return &err{level: EXCEPTION, ICode: SUBQUERY_MISSING_KEYS, IKey: "plan.build_select.subquery_missing_keys",
 		InternalMsg: fmt.Sprintf("FROM in subquery must use KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
+}
+
+// Execution errors - errors that are created in the execution package
+
+func NewEvaluationError(e error, termType string) Error {
+	return &err{level: EXCEPTION, ICode: 5010, IKey: "execution.evaluation_error", ICause: e,
+		InternalMsg: fmt.Sprintf("Error evaluating %s.", termType), InternalCaller: CallerN(1)}
+}
+
+func NewGroupUpdateError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5020, IKey: "execution.group_update_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewInvalidValueError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5030, IKey: "execution.invalid_value_error",
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewDuplicateFinalGroupError() Error {
+	return &err{level: EXCEPTION, ICode: 5040, IKey: "execution.duplicate_final_group",
+		InternalMsg: "Duplicate Final Group.", InternalCaller: CallerN(1)}
 }
 
 // Authorization Errors

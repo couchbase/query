@@ -71,7 +71,7 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 	case float64:
 		this.limit = int64(l)
 	default:
-		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
 		return false
 	}
 

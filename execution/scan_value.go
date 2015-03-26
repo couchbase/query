@@ -51,13 +51,13 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		for _, pair := range pairs {
 			key, err := pair.Key.Evaluate(parent, context)
 			if err != nil {
-				context.Error(errors.NewError(err, "Error evaluating VALUES."))
+				context.Error(errors.NewEvaluationError(err, "VALUES"))
 				return
 			}
 
 			val, err := pair.Value.Evaluate(parent, context)
 			if err != nil {
-				context.Error(errors.NewError(err, "Error evaluating VALUES."))
+				context.Error(errors.NewEvaluationError(err, "VALUES"))
 				return
 			}
 

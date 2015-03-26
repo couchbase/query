@@ -152,7 +152,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 
 	dspan, err := evalSpan(this.span, context)
 	if err != nil {
-		context.Error(errors.NewError(err, "Error evaluating span."))
+		context.Error(errors.NewEvaluationError(err, "span"))
 		close(conn.EntryChannel())
 		return
 	}

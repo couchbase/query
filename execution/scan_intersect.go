@@ -136,7 +136,7 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
-		context.Error(errors.NewError(nil,
+		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Missing or invalid meta %v of type %T.", m, m)))
 		return false
 	}
@@ -144,7 +144,7 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 	k := meta["id"]
 	key, ok := k.(string)
 	if !ok {
-		context.Error(errors.NewError(nil,
+		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Missing or invalid primary key %v of type %T.", k, k)))
 		return false
 	}

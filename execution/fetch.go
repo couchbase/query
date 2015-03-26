@@ -70,13 +70,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			case string:
 				keys[i] = act
 			default:
-				context.Error(errors.NewError(nil, fmt.Sprintf(
+				context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
 					act, act)))
 				return false
 			}
 		default:
-			context.Error(errors.NewError(nil,
+			context.Error(errors.NewInvalidValueError(
 				"Missing or invalid meta for primary key."))
 			return false
 		}
@@ -96,7 +96,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	for _, pair := range pairs {
 		pv, ok := pair.Value.(value.AnnotatedValue)
 		if !ok {
-			context.Fatal(errors.NewError(nil, fmt.Sprintf(
+			context.Fatal(errors.NewInvalidValueError(fmt.Sprintf(
 				"Invalid fetch value %v of type %T", pair.Value)))
 			return false
 		}
@@ -108,8 +108,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(pv, context)
 			if e != nil {
-				context.Error(errors.NewError(e,
-					"Error evaluating fetch path."))
+				context.Error(errors.NewEvaluationError(e, "fetch path"))
 				return false
 			}
 

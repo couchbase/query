@@ -73,7 +73,7 @@ func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
 	case float64:
 		this.limit = int64(l)
 	default:
-		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
 		return false
 	}
 
@@ -123,7 +123,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			pairs[i].Value = cv
 			item.SetField(this.plan.Alias(), cv)
 		default:
-			context.Error(errors.NewError(nil, fmt.Sprintf(
+			context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
 			return false
 		}

@@ -143,14 +143,14 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
 	if e != nil {
-		context.Error(errors.NewError(e, "Error evaluatating MERGE key."))
+		context.Error(errors.NewEvaluationError(e, "MERGE key"))
 		return false
 	}
 
 	ka := kv.Actual()
 	k, ok := ka.(string)
 	if !ok {
-		context.Error(errors.NewError(nil,
+		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid MERGE key %v of type %T.", ka, ka)))
 		return false
 	}

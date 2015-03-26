@@ -45,7 +45,7 @@ func (this *Join) RunOnce(context *Context, parent value.Value) {
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Keys().Evaluate(item, context)
 	if e != nil {
-		context.Error(errors.NewError(e, "Error evaluating JOIN keys."))
+		context.Error(errors.NewEvaluationError(e, "JOIN keys"))
 		return false
 	}
 
@@ -96,8 +96,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(joinItem, context)
 			if e != nil {
-				context.Error(errors.NewError(e,
-					"Error evaluating join path."))
+				context.Error(errors.NewEvaluationError(e, "join path"))
 				return false
 			}
 

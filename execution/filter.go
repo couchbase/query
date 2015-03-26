@@ -45,7 +45,7 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
 	val, e := this.plan.Condition().Evaluate(item, context)
 	if e != nil {
-		context.Error(errors.NewError(e, "Error evaluating filter."))
+		context.Error(errors.NewEvaluationError(e, "filter"))
 		return false
 	}
 

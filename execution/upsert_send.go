@@ -73,16 +73,16 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			// UPSERT ... SELECT
 			key, err = keyExpr.Evaluate(av, context)
 			if err != nil {
-				context.Error(errors.NewError(err,
-					fmt.Sprintf("Error evaluating UPSERT key for %v", av.GetValue())))
+				context.Error(errors.NewEvaluationError(err,
+					fmt.Sprintf("UPSERT key for %v", av.GetValue())))
 				continue
 			}
 
 			if valExpr != nil {
 				val, err = valExpr.Evaluate(av, context)
 				if err != nil {
-					context.Error(errors.NewError(err,
-						fmt.Sprintf("Error evaluating UPSERT value for %v", av.GetValue())))
+					context.Error(errors.NewEvaluationError(err,
+						fmt.Sprintf("UPSERT value for %v", av.GetValue())))
 					continue
 				}
 			} else {

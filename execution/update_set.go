@@ -57,7 +57,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 
 	clone, ok := atmt.(value.AnnotatedValue)
 	if !ok {
-		context.Error(errors.NewError(nil,
+		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone)))
 		return false
 	}
@@ -66,7 +66,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	for _, t := range this.plan.Node().Terms() {
 		clone, e = setPath(t, clone, item, context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating SET clause."))
+			context.Error(errors.NewEvaluationError(e, "SET clause"))
 			return false
 		}
 	}

@@ -51,7 +51,7 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 	for _, b := range this.plan.Bindings() {
 		v, e := b.Expression().Evaluate(item, context)
 		if e != nil {
-			context.Error(errors.NewError(e, "Error evaluating LET."))
+			context.Error(errors.NewEvaluationError(e, "LET"))
 			return false
 		}
 

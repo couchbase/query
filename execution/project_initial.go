@@ -72,7 +72,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		// Raw projection of an expression
 		v, err := expr.Evaluate(item, context)
 		if err != nil {
-			context.Error(errors.NewError(err, "Error evaluating projection."))
+			context.Error(errors.NewEvaluationError(err, "projection"))
 			return false
 		}
 
@@ -113,7 +113,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		if term.Result().Alias() != "" {
 			v, err := term.Result().Expression().Evaluate(item, context)
 			if err != nil {
-				context.Error(errors.NewError(err, "Error evaluating projection."))
+				context.Error(errors.NewEvaluationError(err, "projection"))
 				return false
 			}
 
@@ -130,7 +130,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				var err error
 				starval, err = term.Result().Expression().Evaluate(item, context)
 				if err != nil {
-					context.Error(errors.NewError(err, "Error evaluating projection."))
+					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false
 				}
 			}

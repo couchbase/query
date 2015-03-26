@@ -45,7 +45,7 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
 	ev, err := this.plan.Term().Expression().Evaluate(item, context)
 	if err != nil {
-		context.Error(errors.NewError(err, "Error evaluating UNNEST path."))
+		context.Error(errors.NewEvaluationError(err, "UNNEST path"))
 		return false
 	}
 

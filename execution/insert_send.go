@@ -72,7 +72,7 @@ func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
 	case float64:
 		this.limit = int64(l)
 	default:
-		context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+		context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
 		return false
 	}
 
@@ -103,16 +103,16 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			// INSERT ... SELECT
 			key, err = keyExpr.Evaluate(av, context)
 			if err != nil {
-				context.Error(errors.NewError(err,
-					fmt.Sprintf("Error evaluating INSERT key for %v", av.GetValue())))
+				context.Error(errors.NewEvaluationError(err,
+					fmt.Sprintf("INSERT key for %v", av.GetValue())))
 				continue
 			}
 
 			if valExpr != nil {
 				val, err = valExpr.Evaluate(av, context)
 				if err != nil {
-					context.Error(errors.NewError(err,
-						fmt.Sprintf("Error evaluating INSERT value for %v", av.GetValue())))
+					context.Error(errors.NewEvaluationError(err,
+						fmt.Sprintf("INSERT value for %v", av.GetValue())))
 					continue
 				}
 			} else {

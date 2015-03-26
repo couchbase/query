@@ -45,7 +45,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
 	kv, e := this.plan.Term().Keys().Evaluate(item, context)
 	if e != nil {
-		context.Error(errors.NewError(e, "Error evaluating NEST keys."))
+		context.Error(errors.NewEvaluationError(e, "NEST keys"))
 		return false
 	}
 
@@ -100,8 +100,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(nestItem, context)
 			if e != nil {
-				context.Error(errors.NewError(e,
-					"Error evaluating nest path."))
+				context.Error(errors.NewEvaluationError(e, "nest path"))
 				return false
 			}
 

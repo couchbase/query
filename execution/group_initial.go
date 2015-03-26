@@ -58,7 +58,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		var e error
 		gk, e = groupKey(item, this.plan.Keys(), context)
 		if e != nil {
-			context.Fatal(errors.NewError(e, "Error evaluating GROUP key."))
+			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
 			return false
 		}
 	}
@@ -79,14 +79,15 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	// Cumulate aggregates
 	aggregates, ok := gv.GetAttachment("aggregates").(map[string]value.Value)
 	if !ok {
-		context.Fatal(errors.NewError(nil, fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
+		context.Fatal(errors.NewInvalidValueError(
+			fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
 		return false
 	}
 
 	for _, agg := range this.plan.Aggregates() {
 		v, e := agg.CumulateInitial(item, aggregates[agg.String()], context)
 		if e != nil {
-			context.Fatal(errors.NewError(e, "Error updating initial GROUP value."))
+			context.Fatal(errors.NewGroupUpdateError(e, "Error updating initial GROUP value."))
 			return false
 		}
 

@@ -102,7 +102,7 @@ func (this *Order) Less(i, j int) bool {
 		default:
 			ev1, e = term.Expression().Evaluate(v1, this.context)
 			if e != nil {
-				this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
+				this.context.Error(errors.NewEvaluationError(e, "ORDER BY"))
 				return false
 			}
 
@@ -116,7 +116,7 @@ func (this *Order) Less(i, j int) bool {
 		default:
 			ev2, e = term.Expression().Evaluate(v2, this.context)
 			if e != nil {
-				this.context.Error(errors.NewError(e, "Error evaluating ORDER BY."))
+				this.context.Error(errors.NewEvaluationError(e, "ORDER BY"))
 				return false
 			}
 

@@ -49,7 +49,7 @@ func (this *Limit) RunOnce(context *Context, parent value.Value) {
 func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 	val, e := this.plan.Expression().Evaluate(parent, context)
 	if e != nil {
-		context.Error(errors.NewError(e, "Error evaluating LIMIT."))
+		context.Error(errors.NewEvaluationError(e, "LIMIT"))
 		return false
 	}
 
@@ -62,7 +62,8 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 		}
 	}
 
-	context.Error(errors.NewError(nil, fmt.Sprintf("Invalid LIMIT value %v.", actual)))
+	context.Error(errors.NewInvalidValueError(
+		fmt.Sprintf("Invalid LIMIT value %v.", actual)))
 	return false
 }
 
