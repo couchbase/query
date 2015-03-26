@@ -82,7 +82,7 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 
 func doAuth(username, password, bucket string, requested datastore.Privilege) (bool, error) {
 
-	logging.Infof(" Authenticating for bucket %s username %s password %s", bucket, username, password)
+	logging.Debugf(" Authenticating for bucket %s username %s", bucket, username)
 	creds, err := cbauth.Auth(username, password)
 	if err != nil {
 		return false, err
@@ -139,7 +139,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 			}
 		}
 
-		logging.Infof("Authenticating for keyspace %s", keyspace)
+		logging.Debugf("Authenticating for keyspace %s", keyspace)
 
 		if len(credentials) == 0 {
 			authResult, err = doAuth(keyspace, "", keyspace, privilege)
@@ -159,7 +159,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 					un = userCreds[1]
 				}
 
-				logging.Infof(" Credentials %v %v %v", un, userCreds, password)
+				logging.Debugf(" Credentials %v %v", un, userCreds)
 
 				if strings.EqualFold(un, "Administrator") || strings.EqualFold(userCreds[0], "admin") {
 					authResult, err = doAuth(un, password, keyspace, privilege)
