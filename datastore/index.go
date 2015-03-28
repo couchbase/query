@@ -149,7 +149,7 @@ type IndexConnection struct {
 	context      Context
 }
 
-const _ENTRY_CAP = 1024
+const _ENTRY_CAP = 64 * 1024
 
 func NewIndexConnection(context Context) *IndexConnection {
 	return &IndexConnection{

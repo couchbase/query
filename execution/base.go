@@ -28,7 +28,7 @@ type base struct {
 	batch       []value.AnnotatedValue
 }
 
-const _ITEM_CAP = 1024
+const _ITEM_CAP = 8 * 1024
 
 func newBase() base {
 	return base{
