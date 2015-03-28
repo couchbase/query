@@ -20,7 +20,8 @@ type sargableBinary struct {
 func newSargableBinary(cond expression.BinaryFunction) *sargableBinary {
 	rv := &sargableBinary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return cond.First().EquivalentTo(expr2) ||
+		return cond.EquivalentTo(expr2) ||
+			cond.First().EquivalentTo(expr2) ||
 			cond.Second().EquivalentTo(expr2), nil
 	}
 

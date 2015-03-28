@@ -54,11 +54,7 @@ func newSargDefault(cond expression.Expression) *sargDefault {
 		}
 
 		if spans != nil && cond.DependsOn(expr2) {
-			return _VALUED_SPANS, nil
-		}
-
-		if spans != nil && cond.DependsOn(expr2) {
-			return _FULL_SPANS, nil
+			return spans, nil
 		}
 
 		return nil, nil

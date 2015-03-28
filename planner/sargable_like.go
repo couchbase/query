@@ -22,7 +22,8 @@ type sargableLike struct {
 func newSargableLike(cond expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
 	rv := &sargableLike{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return cond.EquivalentTo(expr2) || cond.First().EquivalentTo(expr2), nil
+		return cond.EquivalentTo(expr2) ||
+			cond.First().EquivalentTo(expr2), nil
 	}
 
 	return rv
