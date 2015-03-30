@@ -122,23 +122,20 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			// INSERT ... VALUES
 			key, ok = av.GetAttachment("key").(value.Value)
 			if !ok {
-				context.Error(errors.NewError(nil,
-					fmt.Sprintf("No INSERT key for %v", av.GetValue())))
+				context.Error(errors.NewInsertKeyError(av.GetValue()))
 				continue
 			}
 
 			val, ok = av.GetAttachment("value").(value.Value)
 			if !ok {
-				context.Error(errors.NewError(nil,
-					fmt.Sprintf("No INSERT value for %v", av.GetValue())))
+				context.Error(errors.NewInsertValueError(av.GetValue()))
 				continue
 			}
 		}
 
 		dpair.Key, ok = key.Actual().(string)
 		if !ok {
-			context.Error(errors.NewError(nil,
-				fmt.Sprintf("Cannot INSERT non-string key %v of type %T.", key, key)))
+			context.Error(errors.NewInsertKeyTypeError(key))
 			continue
 		}
 

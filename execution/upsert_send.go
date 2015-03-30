@@ -92,23 +92,20 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			// UPSERT ... VALUES
 			key, ok = av.GetAttachment("key").(value.Value)
 			if !ok {
-				context.Error(errors.NewError(nil,
-					fmt.Sprintf("No UPSERT key for %v", av.GetValue())))
+				context.Error(errors.NewUpsertKeyError(av.GetValue()))
 				continue
 			}
 
 			val, ok = av.GetAttachment("value").(value.Value)
 			if !ok {
-				context.Error(errors.NewError(nil,
-					fmt.Sprintf("No UPSERT value for %v", av.GetValue())))
+				context.Error(errors.NewUpsertValueError(av.GetValue()))
 				continue
 			}
 		}
 
 		dpair.Key, ok = key.Actual().(string)
 		if !ok {
-			context.Error(errors.NewError(nil,
-				fmt.Sprintf("Cannot UPSERT non-string key %v of type %T.", key, key)))
+			context.Error(errors.NewUpsertKeyTypeError(key))
 			continue
 		}
 

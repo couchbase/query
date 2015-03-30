@@ -94,13 +94,13 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 	for i, item := range this.batch {
 		uv, ok := item.Field(this.plan.Alias())
 		if !ok {
-			context.Error(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s not found in item.", this.plan.Alias())))
+			context.Error(errors.NewUpdateAliasMissingError(this.plan.Alias()))
 			return false
 		}
 
 		av, ok := uv.(value.AnnotatedValue)
 		if !ok {
-			context.Fatal(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s has no metadata in item.", this.plan.Alias())))
+			context.Error(errors.NewUpdateAliasMetadataError(this.plan.Alias()))
 			return false
 		}
 
@@ -116,7 +116,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		case value.AnnotatedValue:
 			cv, ok := clone.Field(this.plan.Alias())
 			if !ok {
-				context.Error(errors.NewError(nil, fmt.Sprintf("UPDATE alias %s not found in item.", this.plan.Alias())))
+				context.Error(errors.NewUpdateAliasMissingError(this.plan.Alias()))
 				return false
 			}
 

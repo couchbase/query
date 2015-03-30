@@ -92,13 +92,13 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	for i, item := range this.batch {
 		dv, ok := item.Field(this.plan.Alias())
 		if !ok {
-			context.Error(errors.NewError(nil, fmt.Sprintf("DELETE alias %s not found in item.", this.plan.Alias())))
+			context.Error(errors.NewDeleteAliasMissingError(this.plan.Alias()))
 			return false
 		}
 
 		av, ok := dv.(value.AnnotatedValue)
 		if !ok {
-			context.Fatal(errors.NewError(nil, fmt.Sprintf("DELETE alias %s has no metadata in item.", this.plan.Alias())))
+			context.Error(errors.NewDeleteAliasMetadataError(this.plan.Alias()))
 			return false
 		}
 
