@@ -728,6 +728,7 @@ describes the order by type (from lowest to highest):
 * object (larger objects sort after; for objects of equal length,
   name/value by name/value comparison is performed; names are examined
   in sorted order using the normal ordering for strings)
+* binary (raw byte-wise comparison)
 
 ## OFFSET clause
 
