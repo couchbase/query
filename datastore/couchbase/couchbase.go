@@ -342,6 +342,7 @@ func (p *namespace) KeyspaceIds() ([]string, errors.Error) {
 }
 
 func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
+	p.refresh(true)
 	rv := make([]string, 0, len(p.cbNamespace.BucketMap))
 	for name, _ := range p.cbNamespace.BucketMap {
 		rv = append(rv, name)
