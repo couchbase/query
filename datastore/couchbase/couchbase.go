@@ -694,7 +694,7 @@ func opToString(op int) string {
 }
 
 func isNotFoundError(err error) bool {
-	return strings.HasSuffix(err.Error(), "msg: Not found}") || strings.EqualFold(err.Error(), "Not found")
+	return cb.IsKeyNoEntError(err)
 }
 
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
@@ -781,7 +781,7 @@ func (b *keyspace) Delete(deletes []string) ([]string, errors.Error) {
 	for _, key := range deletes {
 		if err = b.cbbucket.Delete(key); err != nil {
 			if !isNotFoundError(err) {
-				logging.Infof("Failed to delete key %s", key)
+				logging.Infof("Failed to delete key %s Error %s", key, err)
 				failedDeletes = append(failedDeletes, key)
 			}
 		} else {
