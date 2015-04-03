@@ -30,8 +30,7 @@ func (this *httpRequest) Output() execution.Output {
 }
 
 func (this *httpRequest) Fail(err errors.Error) {
-	defer this.Stop(server.FATAL)
-
+	this.SetState(server.FATAL)
 	// Determine the appropriate http response code based on the error
 	this.httpRespCode = mapErrorToHttpResponse(err)
 	// Put the error on the errors channel
@@ -58,6 +57,8 @@ func mapErrorToHttpResponse(err errors.Error) int {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
+	defer this.Stop(server.FATAL)
+
 	this.writeString("{\n")
 	this.writeRequestID()
 	this.writeClientContextID()
