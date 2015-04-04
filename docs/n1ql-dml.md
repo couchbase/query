@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2014-12-21
++ Modified: 2015-04-03
 
 ## Introduction
 
@@ -78,9 +78,29 @@ _delete:_
 
 ![](diagram/delete.png)
 
+_use-clause:_
+
+![](diagram/use-clause.png)
+
 _use-keys-clause:_
 
 ![](diagram/use-keys-clause.png)
+
+_use-index-clause:_
+
+![](diagram/use-index-clause.png)
+
+_index-ref:_
+
+![](diagram/index-ref.png)
+
+_index-name:_
+
+![](diagram/index-name.png)
+
+_index-using:_
+
+![](diagram/index-using.png)
 
 _where-clause:_
 
@@ -291,6 +311,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Refine INSERT / UPSERT syntax
 * 2014-12-21 - MERGE syntax
     * Include key-clause in MERGE syntax diagrams
+* 2015-04-03 - Hints
+    * Add syntax for index hints
 
 ### Open Issues
 

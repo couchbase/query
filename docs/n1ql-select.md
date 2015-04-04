@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2015-02-26
+* Modified: 2015-04-03
 
 ## Introduction
 
@@ -81,9 +81,29 @@ _namespace:_
 
 ![](diagram/namespace.png)
 
+_use-clause:_
+
+![](diagram/use-clause.png)
+
 _use-keys-clause:_
 
 ![](diagram/use-keys-clause.png)
+
+_use-index-clause:_
+
+![](diagram/use-index-clause.png)
+
+_index-ref:_
+
+![](diagram/index-ref.png)
+
+_index-name:_
+
+![](diagram/index-name.png)
+
+_index-using:_
+
+![](diagram/index-using.png)
 
 _join-clause:_
 
@@ -225,38 +245,6 @@ _from-clause:_
 _from-term:_
 
 ![](diagram/from-term.png)
-
-_from-path:_
-
-![](diagram/from-path.png)
-
-_pool-name:_
-
-![](diagram/pool-name.png)
-
-_use-keys-clause:_
-
-![](diagram/use-keys-clause.png)
-
-_join-clause:_
-
-![](diagram/join-clause.png)
-
-_join-type:_
-
-![](diagram/join-type.png)
-
-_on-keys-clause:_
-
-![](diagram/on-keys-clause.png)
-
-_nest-clause:_
-
-![](diagram/nest-clause.png)
-
-_unnest-clause:_
-
-![](diagram/unnest-clause.png)
 
 The following sections discuss various elements of the FROM
 clause. These elements can be combined.
@@ -2476,6 +2464,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Allow subquery in FROM clause
 * 2015-02-26 - FROM subquery
     * Update syntax diagram to show subquery in FROM clause 
+* 2015-04-03 - Hints
+    * Add syntax for index hints
 
 ### Open issues
 

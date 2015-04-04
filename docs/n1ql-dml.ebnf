@@ -32,12 +32,12 @@ upsert ::= 'UPSERT' 'INTO' keyspace-ref (insert-values | insert-select) returnin
 /*
  *  delete
  */
-delete ::= 'DELETE' 'FROM' keyspace-ref use-keys-clause? where-clause? limit-clause? returning-clause?
+delete ::= 'DELETE' 'FROM' keyspace-ref use-clause? where-clause? limit-clause? returning-clause?
 
 /*
  *  update
  */
-update ::= 'UPDATE' keyspace-ref use-keys-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
+update ::= 'UPDATE' keyspace-ref use-clause? set-clause? unset-clause? where-clause? limit-clause? returning-clause?
 
 set-clause ::= 'SET' path '=' expr update-for? (',' path '=' expr update-for?)*
 
