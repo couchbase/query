@@ -26,9 +26,9 @@ _select:_
 
 ![](diagram/select.png)
 
-_set-op:_
+_select-term:_
 
-![](diagram/set-op.png)
+![](diagram/select-term.png)
 
 In N1QL, SELECT statements can begin with either SELECT or FROM. The
 behavior is the same in either case.
@@ -44,6 +44,10 @@ _select-from:_
 _from-select:_
 
 ![](diagram/from-select.png)
+
+_set-op:_
+
+![](diagram/set-op.png)
 
 ### SELECT clause
 

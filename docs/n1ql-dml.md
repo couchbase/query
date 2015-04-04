@@ -106,14 +106,14 @@ _where-clause:_
 
 ![](diagram/where-clause.png)
 
-_limit-clause:_
-
-![](diagram/limit-clause.png)
-
 In N1QL DML statements, the LIMIT clause serves as a hint. The query
 engine can stop processing records any time after the LIMIT is
 reached. The LIMIT is not applied exactly, which is different from
 SELECT statements.
+
+_limit-clause:_
+
+![](diagram/limit-clause.png)
 
 ## UPDATE
 
