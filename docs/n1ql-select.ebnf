@@ -5,18 +5,19 @@
 /*
  *  select statement
  */
-select ::= subselect (set-op 'ALL'? subselect)* order-by-clause? limit-clause? offset-clause?
-set-op ::= 'UNION' | 'INTERSECT' | 'EXCEPT'
+select ::= select-term (set-op 'ALL'? select-term)* order-by-clause? limit-clause? offset-clause?
+select-term ::= subselect | '(' select ')'
 subselect ::= select-from | from-select
 select-from ::= select-clause from-clause? let-clause? where-clause? group-by-clause?
 from-select ::= from-clause let-clause? where-clause? group-by-clause? select-clause
+set-op ::= 'UNION' | 'INTERSECT' | 'EXCEPT'
 
 /*
  *  select clause
  */
 select-clause ::= 'SELECT' ('ALL' | 'DISTINCT')? (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr ('AS'? alias)?)
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
-path ::= identifier ('[' expr ']')? ('.' path)?
+path ::= identifier ('[' expr ']')* ('.' path)?
 alias ::= identifier
 
 /*

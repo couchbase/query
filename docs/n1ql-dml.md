@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2015-04-03
++ Modified: 2015-04-04
 
 ## Introduction
 
@@ -109,6 +109,11 @@ _where-clause:_
 _limit-clause:_
 
 ![](diagram/limit-clause.png)
+
+In N1QL DML statements, the LIMIT clause serves as a hint. The query
+engine can stop processing records any time after the LIMIT is
+reached. The LIMIT is not applied exactly, which is different from
+SELECT statements.
 
 ## UPDATE
 
@@ -313,6 +318,8 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
     * Include key-clause in MERGE syntax diagrams
 * 2015-04-03 - Hints
     * Add syntax for index hints
+* 2015-04-04 - LIMIT
+    * Explain that LIMIT is not exact.
 
 ### Open Issues
 
