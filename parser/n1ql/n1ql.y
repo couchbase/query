@@ -36,6 +36,9 @@ subresult        algebra.Subresult
 subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
+use              *algebra.Use
+indexRefs        algebra.IndexRefs
+indexRef         *algebra.IndexRef
 subqueryTerm     *algebra.SubqueryTerm
 path             expression.Path
 group            *algebra.Group
@@ -120,6 +123,7 @@ val              value.Value
 %token FIRST
 %token FLATTEN
 %token FOR
+%token FORCE
 %token FROM
 %token FUNCTION
 %token GRANT
@@ -127,6 +131,7 @@ val              value.Value
 %token GSI
 %token HAVING
 %token IF
+%token IGNORE
 %token IN
 %token INCLUDE
 %token INCREMENT
@@ -301,7 +306,10 @@ val              value.Value
 %type <b>                opt_join_type
 %type <path>             path opt_subpath
 %type <s>                namespace_name keyspace_name
-%type <expr>             use_keys opt_use_keys on_keys
+%type <use>              opt_use
+%type <expr>             use_keys on_keys
+%type <indexRefs>        use_index index_refs
+%type <indexRef>         index_ref
 %type <bindings>         opt_let let
 %type <expr>             opt_where where
 %type <group>            opt_group group
@@ -666,19 +674,19 @@ FLATTEN
 ;
 
 keyspace_term:
-keyspace_name opt_subpath opt_as_alias opt_use_keys
+keyspace_name opt_subpath opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4.Keys(), $4.Indexes())
 }
 |
-namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
+namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6.Keys(), $6.Indexes())
 }
 |
-SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use_keys
+SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6)
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6.Keys(), $6.Indexes())
 }
 ;
 
@@ -696,17 +704,17 @@ LPAREN fullselect RPAREN opt_as_alias
 join_term:
 keyspace_name opt_subpath opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4)
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4, nil)
 }
 |
 namespace_name COLON keyspace_name opt_subpath opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6)
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6, nil)
 }
 |
 SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6)
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6, nil)
 }
 ;
 
@@ -730,13 +738,21 @@ DOT path
 }
 ;
 
-opt_use_keys:
+opt_use:
 /* empty */
 {
-    $$ = nil
+    $$ = algebra.EMPTY_USE
 }
 |
 use_keys
+{
+    $$ = algebra.NewUse($1, nil)
+}
+|
+use_index
+{
+    $$ = algebra.NewUse(nil, $1)
+}
 ;
 
 use_keys:
@@ -753,6 +769,31 @@ opt_primary:
 |
 PRIMARY
 ;
+
+use_index:
+USE INDEX LPAREN index_refs RPAREN
+{
+    $$ = $4
+}
+;
+
+index_refs:
+index_ref
+{
+    $$ = algebra.IndexRefs{$1}
+}
+|
+index_refs COMMA index_ref
+{
+    $$ = append($1, $3)
+}
+;
+
+index_ref:
+index_name opt_index_using
+{
+    $$ = algebra.NewIndexRef($1, $2)
+}
 
 opt_join_type:
 /* empty */
@@ -1165,9 +1206,9 @@ UPSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_re
  *************************************************/
 
 delete:
-DELETE FROM keyspace_ref opt_use_keys opt_where opt_limit opt_returning
+DELETE FROM keyspace_ref opt_use opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewDelete($3, $4, $5, $6, $7)
+    $$ = algebra.NewDelete($3, $4.Keys(), $4.Indexes(), $5, $6, $7)
 }
 ;
 
@@ -1179,19 +1220,19 @@ DELETE FROM keyspace_ref opt_use_keys opt_where opt_limit opt_returning
  *************************************************/
 
 update:
-UPDATE keyspace_ref opt_use_keys set unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use set unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($2, $3, $4, $5, $6, $7, $8)
+    $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), $4, $5, $6, $7, $8)
 }
 |
-UPDATE keyspace_ref opt_use_keys set opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use set opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($2, $3, $4, nil, $5, $6, $7)
+    $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), $4, nil, $5, $6, $7)
 }
 |
-UPDATE keyspace_ref opt_use_keys unset opt_where opt_limit opt_returning
+UPDATE keyspace_ref opt_use unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($2, $3, nil, $4, $5, $6, $7)
+    $$ = algebra.NewUpdate($2, $3.Keys(), $3.Indexes(), nil, $4, $5, $6, $7)
 }
 ;
 

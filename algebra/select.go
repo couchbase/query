@@ -52,16 +52,14 @@ func NewSelect(subresult Subresult, order *Order, offset, limit expression.Expre
 }
 
 /*
-It calls the VisitSelect method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Select) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelect(this)
 }
 
 /*
-This method returns the shape of the subresult. It returns a value
-that represents the signature of the subresult.
+This method returns the shape of this statement.
 */
 func (this *Select) Signature() value.Value {
 	return this.subresult.Signature()

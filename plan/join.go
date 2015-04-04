@@ -94,7 +94,7 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		nil, _unmarshalled.As, keys_expr)
+		nil, _unmarshalled.As, keys_expr, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 }
@@ -175,7 +175,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		nil, _unmarshalled.As, keys_expr)
+		nil, _unmarshalled.As, keys_expr, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
 

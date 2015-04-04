@@ -548,6 +548,10 @@ func (pi *primaryIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *primaryIndex) IsPrimary() bool {
+	return true
+}
+
 func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }

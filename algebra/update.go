@@ -32,6 +32,7 @@ type Update struct {
 
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
+	indexes   IndexRefs             `json:"indexes"`
 	set       *Set                  `json:"set"`
 	unset     *Unset                `json:"unset"`
 	where     expression.Expression `json:"where"`
@@ -44,11 +45,12 @@ The function NewUpdate returns a pointer to the Update
 struct by assigning the input attributes to the fields
 of the struct.
 */
-func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, set *Set, unset *Unset,
-	where, limit expression.Expression, returning *Projection) *Update {
+func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
+	set *Set, unset *Unset, where, limit expression.Expression, returning *Projection) *Update {
 	rv := &Update{
 		keyspace:  keyspace,
 		keys:      keys,
+		indexes:   indexes,
 		set:       set,
 		unset:     unset,
 		where:     where,
@@ -242,6 +244,13 @@ clause.
 */
 func (this *Update) Keys() expression.Expression {
 	return this.keys
+}
+
+/*
+Returns the indexes defined by the use index clause.
+*/
+func (this *Update) Indexes() IndexRefs {
+	return this.indexes
 }
 
 /*

@@ -145,6 +145,10 @@ func (pi *dualIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *dualIndex) IsPrimary() bool {
+	return true
+}
+
 func (pi *dualIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }

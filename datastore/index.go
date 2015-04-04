@@ -75,6 +75,7 @@ type Index interface {
 	SeekKey() expression.Expressions                         // Equality keys
 	RangeKey() expression.Expressions                        // Range keys
 	Condition() expression.Expression                        // Condition, if any
+	IsPrimary() bool                                         // Is this a primary index
 	State() (state IndexState, msg string, err errors.Error) // Obtain state of this index
 	Statistics(span *Span) (Statistics, errors.Error)        // Obtain statistics for this index
 	Drop() errors.Error                                      // Drop / delete this index

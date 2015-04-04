@@ -313,13 +313,7 @@ func (this *parsedValue) Successor() Value {
 }
 
 /*
-It is used to populate the values in the structure. If the parsed value
-is nil and the parsedType is binary, panic(error) since an attempt
-to parse a non JSON value has been made. If not then create a variable
-of type interface, Unmarshal the raw bytes, and add it to it. If there is
-an error while unmarshalling, it is an unexpected parse error. If not
-populate the value field parsed with the NewVaue of the interface.
-The parsed value is finally returned.
+Delayed parse.
 */
 func (this *parsedValue) parse() Value {
 	if this.parsed == nil {

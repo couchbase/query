@@ -185,7 +185,7 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 		logging.Infof("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
 		indexes[name] = *index
-		if (*index).(*viewIndex).isPrimaryIndex() == true {
+		if (*index).(*viewIndex).IsPrimary() == true {
 			primary[name] = (*index).(datastore.PrimaryIndex)
 		}
 	}
@@ -264,6 +264,10 @@ func (vi *viewIndex) Condition() expression.Expression {
 	return expression.Expression(vi.where)
 }
 
+func (vi *viewIndex) IsPrimary() bool {
+	return vi.isPrimary
+}
+
 func (vi *viewIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }
@@ -277,10 +281,6 @@ func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
 	vi.Scan(nil, false, limit, cons, vector, conn)
 }
 
-func (vi *viewIndex) isPrimaryIndex() bool {
-	return vi.isPrimary
-}
-
 func (vi *viewIndex) Drop() errors.Error {
 
 	err := vi.DropViewIndex()
@@ -289,7 +289,7 @@ func (vi *viewIndex) Drop() errors.Error {
 	}
 	// TODO need mutex
 	delete(vi.view.indexes, vi.name)
-	if vi.isPrimaryIndex() == true {
+	if vi.IsPrimary() == true {
 		logging.Infof(" Primary index being dropped ")
 		delete(vi.view.primary, vi.name)
 	}
@@ -307,7 +307,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
 	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket,
-		vi.DDocName(), vi.ViewName(), vi.isPrimaryIndex(), viewOptions, 1000, limit)
+		vi.DDocName(), vi.ViewName(), vi.IsPrimary(), viewOptions, 1000, limit)
 
 	var viewRow cb.ViewRow
 	var err errors.Error

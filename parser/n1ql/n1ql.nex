@@ -132,6 +132,7 @@
 /[fF][iI][rR][sS][tT]/				 { logToken("FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { logToken("FLATTEN"); return FLATTEN }
 /[fF][oO][rR]/					 { logToken("FOR"); return FOR }
+/[fF][oO][rR][cC][eE]/				 { logToken("FORCE"); return FORCE }
 /[fF][rR][oO][mM]/				 { logToken("FROM"); return FROM }
 /[fF][uU][nN][cC][tT][iI][oO][nN]/		 { logToken("FUNCTION"); return FUNCTION }
 /[gG][rR][aA][nN][tT]/				 { logToken("GRANT"); return GRANT }
@@ -139,6 +140,7 @@
 /[gG][sS][iI]/					 { logToken("GSI"); return GSI }
 /[hH][aA][vV][iI][nN][gG]/			 { logToken("HAVING"); return HAVING }
 /[iI][fF]/					 { logToken("IF"); return IF }
+/[iI][gG][nN][oO][rR][eE]/			 { logToken("IGNORE"); return IGNORE }
 /[iI][nN]/					 { logToken("IN"); return IN }
 /[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
 /[iI][nN][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("INCREMENT"); return INCREMENT }

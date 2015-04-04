@@ -21,14 +21,45 @@ import (
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace,
-	node *algebra.KeyspaceTerm) (Operator, error) {
+	node *algebra.KeyspaceTerm) (op Operator, err error) {
+	indexers, err := keyspace.Indexers()
+	if err != nil {
+		return nil, err
+	}
+
+	indexes := make([]datastore.Index, 0, len(indexers)*16)
+	primaryIndexes := make(map[datastore.PrimaryIndex]bool, len(indexers)*2)
+
+	// Hints from USE INDEX clause
+	hints := node.Indexes()
+	if hints != nil {
+		for _, hint := range hints {
+			indexer, err := keyspace.Indexer(hint.Using())
+			if err != nil {
+				return nil, err
+			}
+
+			index, err := indexer.IndexByName(hint.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			indexes = append(indexes, index)
+
+			if index.IsPrimary() {
+				primary := index.(datastore.PrimaryIndex)
+				primaryIndexes[primary] = true
+			}
+		}
+	}
+
 	if this.where == nil {
-		return this.selectPrimaryScan(keyspace, node)
+		return this.selectPrimaryScan(keyspace, node, primaryIndexes)
 	}
 
 	nnf := planner.NewNNF()
 	where := this.where.Copy()
-	where, err := nnf.Map(where)
+	where, err = nnf.Map(where)
 	if err != nil {
 		return nil, err
 	}
@@ -41,29 +72,23 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			expression.NewFieldName("id")),
 	}
 
-	indexers, err := keyspace.Indexers()
-	if err != nil {
-		return nil, err
-	}
+	if hints == nil {
+		for _, indexer := range indexers {
+			idxs, err := indexer.Indexes()
+			if err != nil {
+				return nil, err
+			}
 
-	indexes := make([]datastore.Index, 0, len(indexers)*16)
-	primaryIndexes := make(map[datastore.Index]bool, len(indexers)*2)
+			indexes = append(indexes, idxs...)
 
-	for _, indexer := range indexers {
-		idxs, err := indexer.Indexes()
-		if err != nil {
-			return nil, err
-		}
+			primaryIdxs, err := indexer.PrimaryIndexes()
+			if err != nil {
+				return nil, err
+			}
 
-		indexes = append(indexes, idxs...)
-
-		primaryIdxs, err := indexer.PrimaryIndexes()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, p := range primaryIdxs {
-			primaryIndexes[p] = true
+			for _, p := range primaryIdxs {
+				primaryIndexes[p] = true
+			}
 		}
 	}
 
@@ -82,7 +107,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 		var keys expression.Expressions
 
-		if primaryIndexes[index] {
+		if index.IsPrimary() {
 			keys = primaryKey
 		} else {
 			rangeKey := index.RangeKey()
@@ -169,17 +194,35 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 		return scan, err
 	}
 
-	return this.selectPrimaryScan(keyspace, node)
+	return this.selectPrimaryScan(keyspace, node, primaryIndexes)
 }
 
 func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
-	node *algebra.KeyspaceTerm) (Operator, error) {
+	node *algebra.KeyspaceTerm, primaryIndexes map[datastore.PrimaryIndex]bool) (Operator, error) {
+	var primary datastore.PrimaryIndex
+
+	// Prefer any primary indexes from hints
+	for index, _ := range primaryIndexes {
+		state, _, er := index.State()
+		if er != nil {
+			logging.Errorp("PrimaryScan Selection", logging.Pair{"error", er.Error()})
+		}
+
+		if state != datastore.ONLINE {
+			primary = index
+			continue
+		}
+
+		scan := NewPrimaryScan(index, node)
+		return scan, nil
+	}
+
+	// Now consider all primary indexes
+
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err
 	}
-
-	var primary datastore.PrimaryIndex
 
 	for _, indexer := range indexers {
 		indexes, err := indexer.PrimaryIndexes()
@@ -192,6 +235,7 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 			if er != nil {
 				logging.Errorp("PrimaryScan Selection", logging.Pair{"error", er.Error()})
 			}
+
 			if state != datastore.ONLINE {
 				primary = index
 				continue

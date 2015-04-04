@@ -95,7 +95,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		proj_expr = _proj_expr
 	}
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		proj_expr, _unmarshalled.As, nil)
+		proj_expr, _unmarshalled.As, nil, nil)
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 

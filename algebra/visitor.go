@@ -48,7 +48,7 @@ type Visitor interface {
 	VisitPrepare(stmt *Prepare) (interface{}, error)
 
 	/*
-	   Visit for EXECUTE.
+	   Visitor for EXECUTE.
 	*/
 	VisitExecute(stmt *Execute) (interface{}, error)
 }

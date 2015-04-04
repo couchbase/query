@@ -15,10 +15,10 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *builder) beginMutate(keyspace datastore.Keyspace,
-	ksref *algebra.KeyspaceRef, keys, where expression.Expression) error {
+func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
+	keys expression.Expression, indexes algebra.IndexRefs, where expression.Expression) error {
 	ksref.SetDefaultNamespace(this.namespace)
-	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil)
+	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), nil, indexes)
 
 	this.children = make([]Operator, 0, 8)
 	this.subChildren = make([]Operator, 0, 8)

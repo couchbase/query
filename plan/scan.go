@@ -81,7 +81,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
-		nil, "", nil)
+		nil, "", nil, nil)
 
 	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {
@@ -194,7 +194,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
-		nil, "", nil)
+		nil, "", nil, nil)
 	err = this.spans.UnmarshalJSON(_unmarshalled.Spans)
 	if err != nil {
 		return err

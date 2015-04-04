@@ -183,6 +183,10 @@ func (pi *keyspaceIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *keyspaceIndex) IsPrimary() bool {
+	return true
+}
+
 func (pi *keyspaceIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }

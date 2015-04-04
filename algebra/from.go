@@ -91,14 +91,16 @@ type KeyspaceTerm struct {
 	projection expression.Path
 	as         string
 	keys       expression.Expression
+	indexes    IndexRefs
 }
 
 /*
 The function NewKeyspaceTerm returns a pointer to the KeyspaceTerm
 struct by assigning the input attributes to the fields of the struct.
 */
-func NewKeyspaceTerm(namespace, keyspace string, projection expression.Path, as string, keys expression.Expression) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, projection, as, keys}
+func NewKeyspaceTerm(namespace, keyspace string, projection expression.Path, as string,
+	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
+	return &KeyspaceTerm{namespace, keyspace, projection, as, keys, indexes}
 }
 
 /*
@@ -283,17 +285,25 @@ func (this *KeyspaceTerm) Projection() expression.Path {
 }
 
 /*
-Returns the alias string.
+Returns the alias.
 */
 func (this *KeyspaceTerm) As() string {
 	return this.as
 }
 
 /*
-Returns the keys expression.
+Returns the keys expression defined by the use keys
+clause.
 */
 func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
+}
+
+/*
+Returns the indexes defined by the use index clause.
+*/
+func (this *KeyspaceTerm) Indexes() IndexRefs {
+	return this.indexes
 }
 
 /*

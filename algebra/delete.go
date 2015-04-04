@@ -29,6 +29,7 @@ type Delete struct {
 
 	keyspace  *KeyspaceRef          `json:"keyspace"`
 	keys      expression.Expression `json:"keys"`
+	indexes   IndexRefs             `json:"indexes"`
 	where     expression.Expression `json:"where"`
 	limit     expression.Expression `json:"limit"`
 	returning *Projection           `json:"returning"`
@@ -39,11 +40,12 @@ The function NewDelete returns a pointer to the Delete
 struct by assigning the input attributes to the fields
 of the struct
 */
-func NewDelete(keyspace *KeyspaceRef, keys, where, limit expression.Expression,
-	returning *Projection) *Delete {
+func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
+	where, limit expression.Expression, returning *Projection) *Delete {
 	rv := &Delete{
 		keyspace:  keyspace,
 		keys:      keys,
+		indexes:   indexes,
 		where:     where,
 		limit:     limit,
 		returning: returning,
@@ -198,6 +200,13 @@ statement.
 */
 func (this *Delete) Keys() expression.Expression {
 	return this.keys
+}
+
+/*
+Returns the indexes defined by the use index clause.
+*/
+func (this *Delete) Indexes() IndexRefs {
+	return this.indexes
 }
 
 /*

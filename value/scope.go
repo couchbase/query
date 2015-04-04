@@ -108,14 +108,14 @@ func (this *ScopeValue) Fields() map[string]interface{} {
 }
 
 /*
-Return the value field in the scopeValue struct.
+Return the immediate scope.
 */
 func (this *ScopeValue) GetValue() Value {
 	return this.Value
 }
 
 /*
-Return the value field in the scopeValue struct.
+Return the parent scope.
 */
 func (this *ScopeValue) Parent() Value {
 	return this.parent

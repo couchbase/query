@@ -330,7 +330,7 @@ func (idx *viewIndex) putDesignDoc() error {
 	put.Views = make(map[string]cb.ViewDefinition)
 	put.Views[idx.name] = view
 	put.IndexChecksum = idx.ddoc.checksum()
-	put.PrimaryIndex = idx.isPrimaryIndex()
+	put.PrimaryIndex = idx.IsPrimary()
 
 	put.IndexOn = make([]string, len(idx.on))
 	for idx, expr := range idx.on {

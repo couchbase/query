@@ -258,6 +258,10 @@ func (pi *indexIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *indexIndex) IsPrimary() bool {
+	return true
+}
+
 func (pi *indexIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }

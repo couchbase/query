@@ -78,9 +78,19 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspaceRef"] = this.ref
 	r["key"] = expression.NewStringer().Visit(this.key)
-	r["update"] = this.update
-	r["delete"] = this.delete
-	r["insert"] = this.insert
+
+	if this.update != nil {
+		r["update"] = this.update
+	}
+
+	if this.delete != nil {
+		r["delete"] = this.delete
+	}
+
+	if this.insert != nil {
+		r["insert"] = this.insert
+	}
+
 	return json.Marshal(r)
 }
 
@@ -118,6 +128,7 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		_unmarshalled.Delete,
 		_unmarshalled.Insert,
 	}
+
 	for i, child := range ops {
 		var op_type struct {
 			Operator string `json:"#operator"`

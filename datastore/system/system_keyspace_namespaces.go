@@ -162,6 +162,10 @@ func (pi *namespaceIndex) Condition() expression.Expression {
 	return nil
 }
 
+func (pi *namespaceIndex) IsPrimary() bool {
+	return true
+}
+
 func (pi *namespaceIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }
