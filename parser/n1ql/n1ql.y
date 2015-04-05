@@ -23,6 +23,7 @@ b bool
 ss               []string
 expr             expression.Expression
 exprs            expression.Expressions
+subquery         *algebra.Subquery
 whenTerm         *expression.WhenTerm
 whenTerms        expression.WhenTerms
 binding          *expression.Binding
@@ -33,6 +34,7 @@ statement        algebra.Statement
 
 fullselect       *algebra.Select
 subresult        algebra.Subresult
+selectTerm       *algebra.SelectTerm
 subselect        *algebra.Subselect
 fromTerm         algebra.FromTerm
 keyspaceTerm     *algebra.KeyspaceTerm
@@ -293,10 +295,11 @@ val              value.Value
 %type <expr>             function_expr
 %type <s>                function_name
 
-%type <expr>             paren_or_subquery_expr paren_or_subquery
+%type <expr>             paren_expr
+%type <subquery>         subquery_expr
 
 %type <fullselect>       fullselect
-%type <subresult>        subselects
+%type <subresult>        select_term select_terms
 %type <subselect>        subselect
 %type <subselect>        select_from
 %type <subselect>        from_select
@@ -405,7 +408,7 @@ PREPARE stmt
 ;
 
 execute:
-EXECUTE object
+EXECUTE expr
 {
     $$ = algebra.NewExecute($2)
 }
@@ -445,56 +448,104 @@ build_index
 ;
 
 fullselect:
-subselects opt_order_by
+select_terms opt_order_by
 {
     $$ = algebra.NewSelect($1, $2, nil, nil) /* OFFSET precedes LIMIT */
 }
 |
-subselects opt_order_by limit opt_offset
+select_terms opt_order_by limit opt_offset
 {
     $$ = algebra.NewSelect($1, $2, $4, $3) /* OFFSET precedes LIMIT */
 }
 |
-subselects opt_order_by offset opt_limit
+select_terms opt_order_by offset opt_limit
 {
     $$ = algebra.NewSelect($1, $2, $3, $4) /* OFFSET precedes LIMIT */
 }
 ;
 
-subselects:
+select_terms:
 subselect
 {
     $$ = $1
 }
 |
-subselects UNION subselect
+select_terms UNION select_term
 {
     $$ = algebra.NewUnion($1, $3)
 }
 |
-subselects UNION ALL subselect
+select_terms UNION ALL select_term
 {
     $$ = algebra.NewUnionAll($1, $4)
 }
 |
-subselects INTERSECT subselect
+select_terms INTERSECT select_term
 {
     $$ = algebra.NewIntersect($1, $3)
 }
 |
-subselects INTERSECT ALL subselect
+select_terms INTERSECT ALL select_term
 {
     $$ = algebra.NewIntersectAll($1, $4)
 }
 |
-subselects EXCEPT subselect
+select_terms EXCEPT select_term
 {
     $$ = algebra.NewExcept($1, $3)
 }
 |
-subselects EXCEPT ALL subselect
+select_terms EXCEPT ALL select_term
 {
     $$ = algebra.NewExceptAll($1, $4)
+}
+|
+subquery_expr UNION select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewUnion(left_term, $3)
+}
+|
+subquery_expr UNION ALL select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewUnionAll(left_term, $4)
+}
+|
+subquery_expr INTERSECT select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewIntersect(left_term, $3)
+}
+|
+subquery_expr INTERSECT ALL select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewIntersectAll(left_term, $4)
+}
+|
+subquery_expr EXCEPT select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewExcept(left_term, $3)
+}
+|
+subquery_expr EXCEPT ALL select_term
+{
+    left_term := algebra.NewSelectTerm($1.Select())
+    $$ = algebra.NewExceptAll(left_term, $4)
+}
+;
+
+select_term:
+subselect
+{
+    $$ = $1
+}
+|
+subquery_expr
+{
+    $$ = algebra.NewSelectTerm($1.Select())
 }
 ;
 
@@ -564,6 +615,8 @@ raw:
 RAW
 |
 ELEMENT
+|
+VALUE
 ;
 
 projects:
@@ -691,7 +744,7 @@ SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use
 ;
 
 subquery_term:
-LPAREN fullselect RPAREN opt_as_alias
+LPAREN fullselect RPAREN as_alias
 {
     if $4 == "" {
         yylex.Error("Subquery in FROM clause must have an alias.")
@@ -1992,7 +2045,7 @@ case_expr
 collection_expr
 |
 /* Grouping and subquery */
-paren_or_subquery_expr
+paren_expr
 ;
 
 b_expr:
@@ -2409,21 +2462,24 @@ FIRST expr FOR coll_bindings opt_when END
  *
  *************************************************/
 
-paren_or_subquery_expr:
-LPAREN paren_or_subquery RPAREN
+paren_expr:
+LPAREN expr RPAREN
 {
     $$ = $2
 }
+|
+subquery_expr
+{
+    $$ = $1
+}
 ;
 
-paren_or_subquery:
-expr
-|
-fullselect
+subquery_expr:
+LPAREN fullselect RPAREN
 {
     $$ = nil;
     if yylex.(*lexer).parsingStatement() {
-        $$ = algebra.NewSubquery($1);
+        $$ = algebra.NewSubquery($2);
     } else {
         yylex.Error("Cannot use subquery as an inline expression.");
     }

@@ -31,7 +31,7 @@ The function NewSubquery returns a pointer to the
 Subquery struct by assigning the input attributes
 to the fields of the struct.
 */
-func NewSubquery(query *Select) expression.Expression {
+func NewSubquery(query *Select) *Subquery {
 	rv := &Subquery{
 		query: query,
 	}

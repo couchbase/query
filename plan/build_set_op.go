@@ -1,0 +1,142 @@
+//  Copyright (c) 2014 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package plan
+
+import (
+	"github.com/couchbase/query/algebra"
+)
+
+func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
+	// Inject DISTINCT into both terms
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	unionAll := NewUnionAll(first.(Operator), second.(Operator))
+	return NewSequence(unionAll, NewDistinct()), nil
+}
+
+func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewUnionAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+	// Inject DISTINCT into both terms
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	// Inject DISTINCT into second term
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
+	// Inject DISTINCT into both terms
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewExceptAll(first.(Operator), second.(Operator)), nil
+}
+
+func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+	this.order = nil             // Disable aggregates from ORDER BY
+	this.delayProjection = false // Disable ORDER BY non-projected expressions
+
+	first, err := node.First().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	// Inject DISTINCT into second term
+	distinct := this.distinct
+	this.distinct = true
+	defer func() { this.distinct = distinct }()
+
+	second, err := node.Second().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewExceptAll(first.(Operator), second.(Operator)), nil
+}
