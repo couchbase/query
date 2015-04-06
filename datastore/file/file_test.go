@@ -19,7 +19,7 @@ import (
 )
 
 func TestFile(t *testing.T) {
-	store, err := NewDatastore("../../test/json")
+	store, err := NewDatastore("../../test/filestore/json")
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
