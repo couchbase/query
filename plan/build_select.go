@@ -74,7 +74,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	// Perform the delayed final projection now, after the ORDER BY
 	if this.delayProjection {
-		children = append(children, NewParallel(NewFinalProject()))
+		children = append(children, NewFinalProject())
 	}
 
 	return NewSequence(children...), nil
