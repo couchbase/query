@@ -52,10 +52,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -114,10 +111,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -182,10 +176,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -244,10 +235,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -318,10 +306,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -380,10 +365,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -454,10 +436,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -535,10 +514,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -629,10 +605,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
@@ -721,10 +694,7 @@
                     ]
                 },
                 {
-                    "#operator": "Parallel",
-                    "~child": {
-                        "#operator": "FinalProject"
-                    }
+                    "#operator": "FinalProject"
                 }
             ]
         }
