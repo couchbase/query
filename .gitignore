@@ -5,3 +5,4 @@ shell/cbq/cbq
 server/cbq-engine/cbq-engine
 tutorial/tutorial
 *.swp
+parser/n1ql/y.go
