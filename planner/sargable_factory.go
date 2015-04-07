@@ -162,7 +162,7 @@ func (this *sargableFactory) VisitAnd(expr *expression.And) (interface{}, error)
 }
 
 func (this *sargableFactory) VisitNot(expr *expression.Not) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableUnary(expr), nil
 }
 
 func (this *sargableFactory) VisitOr(expr *expression.Or) (interface{}, error) {

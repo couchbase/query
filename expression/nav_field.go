@@ -227,3 +227,10 @@ Return the name of the Field as its Alias.
 func (this *FieldName) Alias() string {
 	return this.name
 }
+
+/*
+Constants are not transformed, so no need to copy.
+*/
+func (this *FieldName) Copy() Expression {
+	return this
+}

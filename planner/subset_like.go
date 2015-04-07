@@ -16,6 +16,10 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+type subsetLike struct {
+	predicate
+}
+
 func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
 	if re == nil {
 		// Pattern is not a constant
@@ -47,5 +51,15 @@ func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression
 			expression.EMPTY_ARRAY_EXPR))
 	}
 
-	return newSubsetAnd(and.(*expression.And))
+	sand := newSubsetAnd(and.(*expression.And))
+	rv := &subsetLike{}
+	rv.test = func(expr2 expression.Expression) (bool, error) {
+		if expr.EquivalentTo(expr2) {
+			return true, nil
+		}
+
+		return sand.test(expr2)
+	}
+
+	return rv
 }

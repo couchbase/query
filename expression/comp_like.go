@@ -28,7 +28,8 @@ representation of a compiled regular expression.
 */
 type Like struct {
 	BinaryFunctionBase
-	re *regexp.Regexp
+	re   *regexp.Regexp
+	part *regexp.Regexp
 }
 
 /*
@@ -40,9 +41,10 @@ func NewLike(first, second Expression) Function {
 	rv := &Like{
 		*NewBinaryFunctionBase("like", first, second),
 		nil,
+		nil,
 	}
 
-	rv.Precompile()
+	rv.precompile()
 	rv.expr = rv
 	return rv
 }
@@ -91,7 +93,7 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 	re := this.re
 	if re == nil {
 		var err error
-		re, err = this.Compile(s)
+		re, _, err = this.compile(s)
 		if err != nil {
 			return nil, err
 		}
@@ -111,10 +113,11 @@ func (this *Like) Constructor() FunctionConstructor {
 }
 
 /*
-Return the regular expression field from the Like structure
-from the receiver.
+Return the regular expression without delimiters.
 */
-func (this *Like) Regexp() *regexp.Regexp { return this.re }
+func (this *Like) Regexp() *regexp.Regexp {
+	return this.part
+}
 
 /*
 This method sets the regexp field in the Like struct.
@@ -123,44 +126,44 @@ and if not returns. Compile the string and set the regular
 expression field in the struct for the receiver to this
 compiled value.
 */
-func (this *Like) Precompile() {
+func (this *Like) precompile() {
 	sv := this.Second().Value()
 	if sv == nil || sv.Type() != value.STRING {
 		return
 	}
 
 	s := sv.Actual().(string)
-	re, err := this.Compile(s)
+	re, part, err := this.compile(s)
 	if err != nil {
 		return
 	}
 
-	this.re = re
+	this.re, this.part = re, part
 }
 
 /*
-This method compiles the input string s into a regular
-expression and returns it. Before this, use the
-MustCompile method from the Regexp package, which
-parses a regular expression and returns
-a Regexp object that can be used to match against text.
-Using this value, call the ReplaceAllStringFunc, which
-as per the Go docs, returns a copy of src in which all
-matches of the Regexp have been replaced by the return
-value of function replacer applied to the matched substring.
+This method compiles the input string s into a regular expression and
+returns it. Convert LIKE special characters to regexp special
+characters. Escape regexp special characters. Add start and end
+boundaries.
 */
-func (this *Like) Compile(s string) (*regexp.Regexp, error) {
+func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 	s = regexp.QuoteMeta(s)
 	repl := regexp.MustCompile(`\\|\_|\%|_|%`)
 	s = repl.ReplaceAllStringFunc(s, replacer)
-	s = "^" + s + "$"
 
-	re, err := regexp.Compile(s)
+	part, err = regexp.Compile(s)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return re, nil
+	s = "^" + s + "$"
+	re, err = regexp.Compile(s)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 /*

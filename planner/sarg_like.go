@@ -25,8 +25,10 @@ var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
 
 func newSargLike(cond expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
 	prefix := ""
+
 	if re != nil {
-		prefix, complete := re.LiteralPrefix()
+		var complete bool
+		prefix, complete = re.LiteralPrefix()
 		if complete {
 			eq := expression.NewEq(cond.First(), expression.NewConstant(prefix))
 			return newSargEq(eq.(*expression.Eq))

@@ -132,7 +132,8 @@ expression.
 */
 type RegexpLike struct {
 	BinaryFunctionBase
-	re *regexp.Regexp
+	re   *regexp.Regexp
+	part *regexp.Regexp
 }
 
 /*
@@ -145,9 +146,11 @@ func NewRegexpLike(first, second Expression) Function {
 	rv := &RegexpLike{
 		*NewBinaryFunctionBase("regexp_like", first, second),
 		nil,
+		nil,
 	}
 
 	rv.re, _ = precompileRegexp(second, true)
+	rv.part, _ = precompileRegexp(second, false)
 	rv.expr = rv
 	return rv
 }
@@ -214,9 +217,11 @@ func (this *RegexpLike) Constructor() FunctionConstructor {
 }
 
 /*
-Return the regular expression field in the receiver.
+Return the regular expression without delimiters.
 */
-func (this *RegexpLike) Regexp() *regexp.Regexp { return this.re }
+func (this *RegexpLike) Regexp() *regexp.Regexp {
+	return this.part
+}
 
 ///////////////////////////////////////////////////
 //
