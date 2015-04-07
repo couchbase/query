@@ -61,7 +61,7 @@ func doParse(lex *lexer) {
 }
 
 type lexer struct {
-	nex         yyLexer
+	nex         *Lexer
 	posParam    int
 	errs        []string
 	stmt        algebra.Statement
@@ -69,7 +69,7 @@ type lexer struct {
 	parsingStmt bool
 }
 
-func newLexer(nex yyLexer) *lexer {
+func newLexer(nex *Lexer) *lexer {
 	return &lexer{
 		nex:  nex,
 		errs: make([]string, 0, 16),
@@ -81,6 +81,12 @@ func (this *lexer) Lex(lval *yySymType) int {
 }
 
 func (this *lexer) Error(s string) {
+	if len(this.nex.stack) > 0 {
+		s = s + " - at " + this.nex.Text()
+	} else {
+		s = s + " - at end of input"
+	}
+
 	this.errs = append(this.errs, s)
 }
 
