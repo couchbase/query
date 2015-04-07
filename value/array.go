@@ -52,17 +52,12 @@ and *listValue call arrayEquals with other, and other.slice
 respectively.
 */
 func (this sliceValue) Equals(other Value) bool {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayEquals(this, other)
 	case *listValue:
 		return arrayEquals(this, other.slice)
-	case *ScopeValue:
-		return this.Equals(other.Value)
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	case *parsedValue:
-		return this.Equals(other.parse())
 	default:
 		return false
 	}
@@ -75,17 +70,12 @@ Collate again on the value of the second (parse it for the
 arrayCollate with other, and other.slice respectively.
 */
 func (this sliceValue) Collate(other Value) int {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayCollate(this, other)
 	case *listValue:
 		return arrayCollate(this, other.slice)
-	case *ScopeValue:
-		return this.Collate(other.Value)
-	case *annotatedValue:
-		return this.Collate(other.Value)
-	case *parsedValue:
-		return this.Collate(other.parse())
 	default:
 		return int(ARRAY - other.Type())
 	}
@@ -272,6 +262,10 @@ func (this sliceValue) Successor() Value {
 	return sliceValue(append(this, nil))
 }
 
+func (this sliceValue) unwrap() Value {
+	return this
+}
+
 var _SMALL_ARRAY_VALUE = sliceValue([]interface{}{nil})
 
 /*
@@ -423,6 +417,10 @@ Append a small value.
 */
 func (this *listValue) Successor() Value {
 	return this.slice.Successor()
+}
+
+func (this *listValue) unwrap() Value {
+	return this
 }
 
 /*

@@ -271,6 +271,11 @@ type Value interface {
 	   to account for floating point and other imprecisions.
 	*/
 	Successor() Value
+
+	/*
+	   Returns a value that is not wrapped. For internal use.
+	*/
+	unwrap() Value
 }
 
 /*
@@ -285,21 +290,7 @@ var _CONVERSIONS = []reflect.Type{
 }
 
 /*
-Bring a data object into the Value type system from a Go Type. If the
-input value is nil then we return a NULL_VALUE, and if it is already
-a valid N1QL value then we return it as is. For a float64, string and
-Bool type for val we cast it to the valid N1QL type and return it
-(float is defined as float64 at this time). For a slice of interfaces,
-we return a value of type sliceValue. For a map from string to interface
-it returns an objectValue. For a slice of Value, a slice of interfaces
-of length val is created, and on ranging over the values and we add
-them to it. Finally we cast it to a sliceValue and return it. In the
-event it’s a slice of AnnotatedValue the procedure followed is the same
-as that for a slice of value. If the input type is a slice of bytes then
-we call the function NewValueFromBytes on the value. The default
-behavior is to range over the predefined _Conversions, and check if
-it can be converted to one of these predecfined types. If so, we create
-a NewValue and if not return an error.
+Bring a data object into the Value type system from a Go Type.
 */
 func NewValue(val interface{}) Value {
 	if val == nil {

@@ -65,13 +65,10 @@ by parsing other or Values respectively. If it is any other
 type we return false.
 */
 func (this boolValue) Equals(other Value) bool {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case boolValue:
 		return this == other
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
 	default:
 		return false
 	}
@@ -84,6 +81,7 @@ annotated value call collate again with the value. The default
 behavior is to return the position wrt others type.
 */
 func (this boolValue) Collate(other Value) int {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case boolValue:
 		if this == other {
@@ -93,10 +91,6 @@ func (this boolValue) Collate(other Value) int {
 		} else {
 			return 1
 		}
-	case *parsedValue:
-		return this.Collate(other.parse())
-	case *annotatedValue:
-		return this.Collate(other.Value)
 	default:
 		return int(BOOLEAN - other.Type())
 	}
@@ -195,6 +189,10 @@ func (this boolValue) Successor() Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func (this boolValue) unwrap() Value {
+	return this
 }
 
 var _MIN_NUMBER_VALUE = NewValue(-math.MaxFloat64)

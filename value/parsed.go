@@ -10,19 +10,14 @@
 package value
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
 )
 
 /*
-A structure for storing and manipulating a value. It contains
-three elements. The first is raw which is a slice of bytes,
-the second is parsedType which is of type Type, and finally
-parsed which is a Value.
+A Value with delayed parsing.
 */
 type parsedValue struct {
 	raw        []byte
@@ -30,123 +25,36 @@ type parsedValue struct {
 	parsed     Value
 }
 
-/*
-Check for the receivers parsedType. If it is an object or
-array, call its method MarshalJSON. If it is binary then
-return the raw bytes and an error saying that Marshaling
-a binary value returns raw bytes. The default is to return
-the raw bytes and nil as the error.
-*/
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
-	switch this.parsedType {
-	case OBJECT, ARRAY:
-		return this.parse().MarshalJSON()
-	case BINARY:
-		s := fmt.Sprintf("\"<binary (%d b)>\"", len(this.raw))
-		return []byte(s), nil
-	default:
-		return this.raw, nil
-	}
+	return this.unwrap().MarshalJSON()
 }
 
-/*
-Return the parsedType of the receiver.
-*/
-func (this *parsedValue) Type() Type { return this.parsedType }
+func (this *parsedValue) Type() Type {
+	return this.parsedType
+}
 
-/*
-Check if parsedType is binary. If it is then return the raw
-bytes. Otherwise call the Actual method for the values in
-the receiver.
-*/
 func (this *parsedValue) Actual() interface{} {
-	if this.parsedType == BINARY {
-		return this.raw
-	}
-
-	return this.parse().Actual()
+	return this.unwrap().Actual()
 }
 
-/*
-Checks if the raw bytes in *parsedValue are equal to the input
-Value. Check to see of the parsedType is binary. If it is
-marshal the second value and call bytes.Equal to check if the
-bytes are equal. If not binary, parse it first and then call
-Equals again. The parsedValue has raw bytes and it will
-eventually be parsed. It implements delayed parsing.
-*/
 func (this *parsedValue) Equals(other Value) bool {
-	if this.parsedType == BINARY {
-		b, _ := other.MarshalJSON()
-		return bytes.Equal(this.raw, b)
-	}
-
-	return this.parse().Equals(other)
+	return this.unwrap().Equals(other)
 }
 
-/*
-If the parsedType for the receiver is binary, and the
-other value type is also binary then call MarshalJSON
-on the other value and do a bytes compare. If the other
-is not of type binary, return the relative position of
-that type with respect to binary. Finally if the receiver
-type was not binary parse it, and then call collate again.
-*/
 func (this *parsedValue) Collate(other Value) int {
-	if this.parsedType == BINARY {
-		if other.Type() == BINARY {
-			b, _ := other.MarshalJSON()
-			return bytes.Compare(this.raw, b)
-		} else {
-			return int(BINARY - other.Type())
-		}
-	}
-
-	return this.parse().Collate(other)
+	return this.unwrap().Collate(other)
 }
 
-/*
-Return true if the recievers parsedType is Binary. If not
-,parse the input bytes and then call Truth on it.
-*/
 func (this *parsedValue) Truth() bool {
-	if this.parsedType == BINARY {
-		return true
-	}
-
-	return this.parse().Truth()
+	return this.unwrap().Truth()
 }
 
-/*
-Check if the parsedtype is not binary and it isnt an array
-or object then parse the bytes and call that values
-respective Copy method. If it is binary then set the raw
-variable for a struct to the receivers raw value and
-the parsedType to the receivers parsedType and return a
-pointer to this struct.
-*/
 func (this *parsedValue) Copy() Value {
-	if this.parsedType != BINARY && this.parsedType < ARRAY {
-		return this.parse().Copy()
-	}
-
-	return &parsedValue{
-		raw:        this.raw,
-		parsedType: this.parsedType,
-	}
+	return this.unwrap().Copy()
 }
 
-/*
-If the receivers parsedType is Binary, call the Copy function
-and return. If not, parse the bytes and then call CopyForUpdate
-over that.
-*/
 func (this *parsedValue) CopyForUpdate() Value {
-	if this.parsedType == BINARY {
-		return this.Copy()
-	}
-
-	return this.parse().CopyForUpdate()
+	return this.unwrap().CopyForUpdate()
 }
 
 /*
@@ -193,7 +101,7 @@ func (this *parsedValue) SetField(field string, val interface{}) error {
 		return Unsettable(field)
 	}
 
-	return this.parse().SetField(field, val)
+	return this.unwrap().SetField(field, val)
 }
 
 /*
@@ -205,7 +113,7 @@ func (this *parsedValue) UnsetField(field string) error {
 		return Unsettable(field)
 	}
 
-	return this.parse().UnsetField(field)
+	return this.unwrap().UnsetField(field)
 }
 
 /*
@@ -247,7 +155,7 @@ func (this *parsedValue) SetIndex(index int, val interface{}) error {
 		return Unsettable(index)
 	}
 
-	return this.parse().SetIndex(index, val)
+	return this.unwrap().SetIndex(index, val)
 }
 
 /*
@@ -260,7 +168,7 @@ func (this *parsedValue) Slice(start, end int) (Value, bool) {
 		return NULL_VALUE, false
 	}
 
-	return this.parse().Slice(start, end)
+	return this.unwrap().Slice(start, end)
 }
 
 /*
@@ -273,7 +181,7 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 		return NULL_VALUE, false
 	}
 
-	return this.parse().SliceTail(start)
+	return this.unwrap().SliceTail(start)
 }
 
 /*
@@ -286,47 +194,33 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 		return buffer
 	}
 
-	return this.parse().Descendants(buffer)
+	return this.unwrap().Descendants(buffer)
 }
 
-/*
-Return nil if the parsedType is binary. If not call parse
-and then the Fields method on that value.
-*/
 func (this *parsedValue) Fields() map[string]interface{} {
-	if this.parsedType == BINARY {
-		return nil
-	}
-
-	return this.parse().Fields()
+	return this.unwrap().Fields()
 }
 
-/*
-Return nil if the parsedType is binary; else delegate.
-*/
 func (this *parsedValue) Successor() Value {
-	if this.parsedType == BINARY {
-		return nil
-	}
-
-	return this.parse().Successor()
+	return this.unwrap().Successor()
 }
 
 /*
 Delayed parse.
 */
-func (this *parsedValue) parse() Value {
+func (this *parsedValue) unwrap() Value {
 	if this.parsed == nil {
 		if this.parsedType == BINARY {
-			panic("Attempt to parse non-JSON value.")
-		}
+			this.parsed = binaryValue(this.raw)
+		} else {
+			var p interface{}
+			err := json.Unmarshal(this.raw, &p)
+			if err != nil {
+				panic("Unexpected parse error on valid JSON.")
+			}
 
-		var p interface{}
-		err := json.Unmarshal(this.raw, &p)
-		if err != nil {
-			panic("Unexpected parse error on valid JSON.")
+			this.parsed = NewValue(p)
 		}
-		this.parsed = NewValue(p)
 	}
 
 	return this.parsed

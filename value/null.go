@@ -155,3 +155,7 @@ NULL is succeeded by FALSE.
 func (this *nullValue) Successor() Value {
 	return FALSE_VALUE
 }
+
+func (this *nullValue) unwrap() Value {
+	return this
+}

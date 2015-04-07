@@ -20,23 +20,6 @@ objectValue is a type of map from string to interface.
 */
 type objectValue map[string]interface{}
 
-/*
-The method MarshalJSON checks to see if the receiver of type
-objectValue is nil and if so returns _NULL _BYTES. If not it
-creates a new buffer and writes a ’{‘ to it. We call function
-sortedNames on the receiver to sort the fields. It uses the
-Sort package to sort the keys in the object.  We range over
-all the keys, for each value associated with the keys, if its
-type is missing do not populate the field. If not and the
-iterator is greater than 0, add a ‘,’ to the buffer (since
-that means 1 field has been populated in the buffer). Write
-out a ‘ ” ’, then the key, a ‘ : ‘, and then the value.
-Before the value is written out to the buffer, Marshal it
-and check for errors. Finally once all the fields of the
-object have been marshaled  ‘}’  is written to the buffer and
-the bytes are returned by calling Bytes(). This is in keeping
-with the JSON format to define objects.
-*/
 func (this objectValue) MarshalJSON() ([]byte, error) {
 	if this == nil {
 		return _NULL_BYTES, nil
@@ -86,21 +69,12 @@ func (this objectValue) Actual() interface{} {
 
 /*
 Return true if objects are equal, else false (refer N1QL specs).
-For internal types *scopevalue, *annotatedvalue and *parsedvalue
-call Equals again on the value of other. (For parsed value parse
-the input before calling equals). For type objectvalue call
-objectEquals to do an element by element comparison.
 */
 func (this objectValue) Equals(other Value) bool {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case objectValue:
 		return objectEquals(this, other)
-	case *ScopeValue:
-		return this.Equals(other.Value)
-	case *annotatedValue:
-		return this.Equals(other.Value)
-	case *parsedValue:
-		return this.Equals(other.parse())
 	default:
 		return false
 	}
@@ -108,21 +82,12 @@ func (this objectValue) Equals(other Value) bool {
 
 /*
 Return int representing position of object with other values.
-For *scopeValue, *annotatedValue and *parsedValue call Collate
-on the value of other. (For parsed value parse the input
-before calling Collate). For type objectvalue call
-objectCollate to determine object ordering.
 */
 func (this objectValue) Collate(other Value) int {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case objectValue:
 		return objectCollate(this, other)
-	case *ScopeValue:
-		return this.Collate(other.Value)
-	case *annotatedValue:
-		return this.Collate(other.Value)
-	case *parsedValue:
-		return this.Collate(other.parse())
 	default:
 		return int(OBJECT - other.Type())
 	}
@@ -282,6 +247,10 @@ func (this objectValue) Successor() Value {
 	s[n+"\t"] = nil
 
 	return objectValue(s)
+}
+
+func (this objectValue) unwrap() Value {
+	return this
 }
 
 var _SMALL_OBJECT_VALUE = objectValue(map[string]interface{}{"": nil})

@@ -170,6 +170,10 @@ func (this missingValue) Successor() Value {
 	return NULL_VALUE
 }
 
+func (this missingValue) unwrap() Value {
+	return this
+}
+
 /*
 Cast input field to missingValue.
 */

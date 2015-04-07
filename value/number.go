@@ -63,33 +63,18 @@ func (this floatValue) Actual() interface{} {
 	return float64(this)
 }
 
-/*
-If other is a floatValue, compare it with the receiver.
-If it is a parsedValue or annotated value then call Equals
-by parsing other or Values respectively. If it is any other
-type we return false.
-*/
 func (this floatValue) Equals(other Value) bool {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case floatValue:
 		return this == other
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
 	default:
 		return false
 	}
 }
 
-/*
-If other is a floatValue, subtract it from the receiver.
-If it is less thatn 0.0 return -1, if greater return 1
-and otherwise return 0. For value of type parsedValue and
-annotated value call collate again with the value. The
-default behavior is to return the position wrt others type.
-*/
 func (this floatValue) Collate(other Value) int {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case floatValue:
 		result := float64(this - other)
@@ -100,10 +85,6 @@ func (this floatValue) Collate(other Value) int {
 			return 1
 		}
 		return 0
-	case *parsedValue:
-		return this.Collate(other.parse())
-	case *annotatedValue:
-		return this.Collate(other.Value)
 	default:
 		return int(NUMBER - other.Type())
 	}
@@ -206,6 +187,10 @@ func (this floatValue) Successor() Value {
 	} else {
 		return EMPTY_STRING_VALUE
 	}
+}
+
+func (this floatValue) unwrap() Value {
+	return this
 }
 
 var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-6)

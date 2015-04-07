@@ -46,18 +46,13 @@ func (this stringValue) Actual() interface{} {
 
 /*
 If other is type stringValue and is the same as the receiver
-return true. If it is a parsedValue or annotated value then
-call Equals by parsing other or Values respectively. If it
-is any other type we return false.
+return true.
 */
 func (this stringValue) Equals(other Value) bool {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case stringValue:
 		return this == other
-	case *parsedValue:
-		return this.Equals(other.parse())
-	case *annotatedValue:
-		return this.Equals(other.Value)
 	default:
 		return false
 	}
@@ -72,6 +67,7 @@ value. The default behavior is to return the position wrt
 others type.
 */
 func (this stringValue) Collate(other Value) int {
+	other = other.unwrap()
 	switch other := other.(type) {
 	case stringValue:
 		if this < other {
@@ -81,10 +77,6 @@ func (this stringValue) Collate(other Value) int {
 		} else {
 			return 0
 		}
-	case *parsedValue:
-		return this.Collate(other.parse())
-	case *annotatedValue:
-		return this.Collate(other.Value)
 	default:
 		return int(STRING - other.Type())
 	}
@@ -180,4 +172,8 @@ Append a low-valued byte to string.
 */
 func (this stringValue) Successor() Value {
 	return NewValue(string(this) + "\t")
+}
+
+func (this stringValue) unwrap() Value {
+	return this
 }
