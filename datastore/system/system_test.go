@@ -115,8 +115,8 @@ func TestSystem(t *testing.T) {
 
 	// Fetch on the keyspaces keyspace - expect to not find a value for this key:
 	vals, errs = bb.Fetch([]string{"p0/b5"})
-	if errs != nil {
-		t.Fatalf("error in key fetch %v", errs)
+	if errs == nil {
+		t.Fatalf("Expected not found error for key fetch on %s", "p0/b5")
 	}
 
 	if vals == nil || (len(vals) == 1 && vals[0].Value != nil) {

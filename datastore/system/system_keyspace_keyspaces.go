@@ -105,7 +105,7 @@ func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Er
 
 	namespace, err := b.namespace.store.actualStore.NamespaceById(ids[0])
 	if namespace != nil {
-		keyspace, _ := namespace.KeyspaceById(ids[1])
+		keyspace, err := namespace.KeyspaceById(ids[1])
 		if keyspace != nil {
 			doc := value.NewAnnotatedValue(map[string]interface{}{
 				"id":           keyspace.Id(),
@@ -114,6 +114,9 @@ func (b *keyspaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Er
 				"datastore_id": b.namespace.store.actualStore.Id(),
 			})
 			return doc, nil
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	return nil, err
