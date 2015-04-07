@@ -364,10 +364,12 @@ func newValueFromBytes(bytes []byte) Value {
 			var p interface{}
 			err := json.Unmarshal(bytes, &p)
 			if err != nil {
-				panic("Parse error on JSON data.")
+				panic(fmt.Sprintf("Parse error on JSON data: %v", err))
 			}
 
 			return NewValue(p)
+		case BINARY:
+			return binaryValue(bytes)
 		}
 	}
 

@@ -77,6 +77,10 @@ func (this floatValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
 	case floatValue:
+		if math.IsNaN(float64(other)) {
+			return 1
+		}
+
 		result := float64(this - other)
 		switch {
 		case result < 0.0:
