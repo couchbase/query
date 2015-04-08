@@ -31,21 +31,20 @@ func newSargEq(cond *expression.Eq) *sargEq {
 			span.Range.Low = expression.Expressions{cond.Second().Static()}
 		} else if cond.Second().EquivalentTo(expr2) {
 			span.Range.Low = expression.Expressions{cond.First().Static()}
-		}
-
-		if len(span.Range.Low) == 0 {
+		} else {
 			return nil, nil
 		}
 
+		if span.Range.Low[0] == nil {
+			return _VALUED_SPANS, nil
+		}
+
 		span.Range.Inclusion = datastore.LOW
-		hs := span.Range.Low[0]
-		if hs != nil {
-			hv := hs.Value()
+		hv := span.Range.Low[0].Value()
+		if hv != nil {
+			hv = hv.Successor()
 			if hv != nil {
-				hv = hv.Successor()
-				if hv != nil {
-					span.Range.High = expression.Expressions{expression.NewConstant(hv)}
-				}
+				span.Range.High = expression.Expressions{expression.NewConstant(hv)}
 			}
 		}
 

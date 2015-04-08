@@ -34,10 +34,12 @@ func newSargLT(cond *expression.LT) *sargLT {
 		} else if cond.Second().EquivalentTo(expr2) {
 			exprs = expression.Expressions{cond.First().Static()}
 			span.Range.Low = exprs
+		} else {
+			return nil, nil
 		}
 
-		if len(exprs) == 0 {
-			return nil, nil
+		if len(exprs) == 0 || exprs[0] == nil {
+			return _VALUED_SPANS, nil
 		}
 
 		span.Range.Inclusion = datastore.NEITHER

@@ -45,10 +45,12 @@ func newSargLE(cond *expression.LE) *sargLE {
 			exprs = expression.Expressions{cond.First().Static()}
 			span.Range.Low = exprs
 			span.Range.Inclusion = datastore.LOW
+		} else {
+			return nil, nil
 		}
 
-		if len(exprs) == 0 {
-			return nil, nil
+		if len(exprs) == 0 || exprs[0] == nil {
+			return _VALUED_SPANS, nil
 		}
 
 		return Spans{span}, nil
