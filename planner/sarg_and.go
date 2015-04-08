@@ -21,7 +21,7 @@ type sargAnd struct {
 func newSargAnd(cond *expression.And) *sargAnd {
 	rv := &sargAnd{}
 	rv.sarg = func(expr2 expression.Expression) (spans Spans, err error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 
