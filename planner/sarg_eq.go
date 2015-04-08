@@ -21,7 +21,7 @@ type sargEq struct {
 func newSargEq(cond *expression.Eq) *sargEq {
 	rv := &sargEq{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 

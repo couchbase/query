@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/planner"
@@ -184,6 +185,12 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 	for index, keys := range indexMap {
 		spans := planner.SargFor(where, keys)
+		if len(spans) == 0 {
+			logging.Errorp("Sargable index not sarged", logging.Pair{"where", where}, logging.Pair{"index_keys", keys})
+			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; where=%v, index_keys=%v",
+				where.String(), keys.String()))
+		}
+
 		var scan Operator
 		scan = NewIndexScan(index, node, spans, false, math.MaxInt64)
 		if len(spans) > 1 {

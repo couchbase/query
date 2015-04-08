@@ -49,7 +49,7 @@ func newSargDefault(cond expression.Expression) *sargDefault {
 
 	rv := &sargDefault{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 

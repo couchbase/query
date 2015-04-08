@@ -78,7 +78,11 @@ func (this floatValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case floatValue:
 		if math.IsNaN(float64(other)) {
-			return 1
+			if math.IsNaN(float64(this)) {
+				return 0
+			} else {
+				return 1
+			}
 		}
 
 		result := float64(this - other)
@@ -88,6 +92,7 @@ func (this floatValue) Collate(other Value) int {
 		case result > 0.0:
 			return 1
 		}
+
 		return 0
 	default:
 		return int(NUMBER - other.Type())

@@ -20,15 +20,15 @@ type sargNotMissing struct {
 func newSargNotMissing(cond *expression.IsNotMissing) *sargNotMissing {
 	rv := &sargNotMissing{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if !cond.Operand().EquivalentTo(expr2) {
-			return nil, nil
+		if cond.Operand().EquivalentTo(expr2) {
+			return _FULL_SPANS, nil
 		}
 
-		return _FULL_SPANS, nil
+		return nil, nil
 	}
 
 	return rv

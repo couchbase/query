@@ -21,7 +21,7 @@ type sargLT struct {
 func newSargLT(cond *expression.LT) *sargLT {
 	rv := &sargLT{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 

@@ -31,15 +31,15 @@ type sargNull struct {
 func newSargNull(cond *expression.IsNull) *sargNull {
 	rv := &sargNull{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if !cond.Operand().EquivalentTo(expr2) {
-			return nil, nil
+		if cond.Operand().EquivalentTo(expr2) {
+			return _NULL_SPANS, nil
 		}
 
-		return _NULL_SPANS, nil
+		return nil, nil
 	}
 
 	return rv
@@ -52,15 +52,15 @@ type sargNotNull struct {
 func newSargNotNull(cond *expression.IsNotNull) *sargNotNull {
 	rv := &sargNotNull{}
 	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if cond.EquivalentTo(expr2) {
+		if SubsetOf(cond, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if !cond.Operand().EquivalentTo(expr2) {
-			return nil, nil
+		if cond.Operand().EquivalentTo(expr2) {
+			return _VALUED_SPANS, nil
 		}
 
-		return _VALUED_SPANS, nil
+		return nil, nil
 	}
 
 	return rv
