@@ -333,7 +333,7 @@ val              value.Value
 %type <statement>        index_stmt create_index drop_index alter_index build_index
 
 %type <keyspaceRef>      keyspace_ref
-%type <pairs>            values values_list
+%type <pairs>            values values_list next_values
 %type <expr>             key_expr opt_value_expr
 %type <projection>       returns returning opt_returning
 %type <binding>          update_binding
@@ -1172,7 +1172,7 @@ PRIMARY KEY
 values_list:
 values
 |
-values_list COMMA values
+values_list COMMA next_values
 {
     $$ = append($1, $3...)
 }
@@ -1182,6 +1182,15 @@ values:
 VALUES LPAREN expr COMMA expr RPAREN
 {
     $$ = algebra.Pairs{&algebra.Pair{Key: $3, Value: $5}}
+}
+;
+
+next_values:
+values
+|
+LPAREN expr COMMA expr RPAREN
+{
+    $$ = algebra.Pairs{&algebra.Pair{Key: $2, Value: $4}}
 }
 ;
 

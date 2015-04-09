@@ -16,9 +16,9 @@ keyspace-ref ::= (namespace ':')? keyspace ('AS'? alias)?
 
 keyspace ::= identifier
 
-insert-values ::= ( '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' )? values-clause (',' values-clause)*
+insert-values ::= ( '(' 'PRIMARY'? 'KEY' ',' 'VALUE' ')' )? values-clause
 
-values-clause ::= 'VALUES' '(' expr ',' expr ')'
+values-clause ::= 'VALUES' '(' expr ',' expr ')' (',' 'VALUES'? '(' expr ',' expr ')')*
 
 insert-select ::= '(' 'PRIMARY'? 'KEY' expr ( ',' 'VALUE' expr )? ')' select
 

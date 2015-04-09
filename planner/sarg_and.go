@@ -48,8 +48,8 @@ func constrain(spans1, spans2 Spans) Spans {
 	span1 := spans1[0]
 	span2 := spans2[0]
 
-	if span2.Range.Low != nil {
-		if span1.Range.Low == nil {
+	if len(span2.Range.Low) > 0 {
+		if len(span1.Range.Low) == 0 {
 			span1.Range.Low = span2.Range.Low
 			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
 				(span2.Range.Inclusion & datastore.LOW)
@@ -64,8 +64,8 @@ func constrain(spans1, spans2 Spans) Spans {
 		}
 	}
 
-	if span2.Range.High != nil {
-		if span1.Range.High == nil {
+	if len(span2.Range.High) > 0 {
+		if len(span1.Range.High) == 0 {
 			span1.Range.High = span2.Range.High
 			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
 				(span2.Range.Inclusion & datastore.HIGH)
