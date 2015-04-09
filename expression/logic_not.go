@@ -56,16 +56,16 @@ func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-If the input argument type is greater than NULL, we return the complement
-of its Truth() method's return type. If Null or missing return the argument
-itself.
-*/
 func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() > value.NULL {
-		return value.NewValue(!arg.Truth()), nil
-	} else {
+	switch arg.Type() {
+	case value.MISSING, value.NULL:
 		return arg, nil
+	default:
+		if arg.Truth() {
+			return value.FALSE_VALUE, nil
+		} else {
+			return value.TRUE_VALUE, nil
+		}
 	}
 }
 

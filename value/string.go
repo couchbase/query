@@ -82,6 +82,18 @@ func (this stringValue) Collate(other Value) int {
 	}
 }
 
+func (this stringValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	default:
+		return NewValue(this.Collate(other))
+	}
+}
+
 /*
 If length of string greater than 0, its a valid string.
 Return true.

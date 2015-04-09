@@ -58,22 +58,26 @@ func (this *Between) Evaluate(item value.Value, context Context) (value.Value, e
 	return this.TernaryEval(this, item, context)
 }
 
-/*
-This method evaluates the between comparison operation and returns a
-value representing if item value is in between low and high. If any of
-the input operands are missing, return missing, and if null return null.
-For all other types, check if the item is greater in terms of the N1QL
-collation order, than the low value and smaller than high value, and return
-true. If not return false.
-*/
 func (this *Between) Apply(context Context, item, low, high value.Value) (value.Value, error) {
-	if item.Type() == value.MISSING || low.Type() == value.MISSING || high.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if item.Type() == value.NULL || low.Type() == value.NULL || high.Type() == value.NULL {
-		return value.NULL_VALUE, nil
+	lowCmp := item.Compare(low)
+	if lowCmp.Type() == value.MISSING {
+		return lowCmp, nil
 	}
 
-	return value.NewValue(item.Collate(low) >= 0 && item.Collate(high) <= 0), nil
+	highCmp := item.Compare(high)
+	if highCmp.Type() == value.MISSING {
+		return highCmp, nil
+	}
+
+	switch lowActual := lowCmp.Actual().(type) {
+	case float64:
+		switch highActual := highCmp.Actual().(type) {
+		case float64:
+			return value.NewValue(lowActual >= 0 && highActual <= 0), nil
+		}
+	}
+
+	return value.NULL_VALUE, nil
 }
 
 /*

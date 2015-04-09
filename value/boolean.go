@@ -74,12 +74,6 @@ func (this boolValue) Equals(other Value) bool {
 	}
 }
 
-/*
-If other is type boolValue, return 0 if equal, -1 if receiver
-is false and 1 otherwise. For value of type parsedValue and
-annotated value call collate again with the value. The default
-behavior is to return the position wrt others type.
-*/
 func (this boolValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -93,6 +87,18 @@ func (this boolValue) Collate(other Value) int {
 		}
 	default:
 		return int(BOOLEAN - other.Type())
+	}
+}
+
+func (this boolValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	default:
+		return NewValue(this.Collate(other))
 	}
 }
 

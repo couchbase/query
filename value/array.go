@@ -63,12 +63,6 @@ func (this sliceValue) Equals(other Value) bool {
 	}
 }
 
-/*
-For types *scopevalue, *annotatedvalue and parsedvalue call
-Collate again on the value of the second (parse it for the
-*parsedValue). For type slicevalue and *listValue call
-arrayCollate with other, and other.slice respectively.
-*/
 func (this sliceValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -78,6 +72,22 @@ func (this sliceValue) Collate(other Value) int {
 		return arrayCollate(this, other.slice)
 	default:
 		return int(ARRAY - other.Type())
+	}
+}
+
+func (this sliceValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	case sliceValue:
+		return arrayCompare(this, other)
+	case *listValue:
+		return arrayCompare(this, other.slice)
+	default:
+		return NewValue(int(ARRAY - other.Type()))
 	}
 }
 
@@ -288,30 +298,22 @@ Type ARRAY.
 */
 func (this *listValue) Type() Type { return ARRAY }
 
-/*
-Call implemented Actual method for slice in *listValue.
-*/
 func (this *listValue) Actual() interface{} {
 	return this.slice.Actual()
 }
 
-/*
-Call implemented Equals method for slice in *listValue.
-*/
 func (this *listValue) Equals(other Value) bool {
 	return this.slice.Equals(other)
 }
 
-/*
-Call implemented Collate method for slice in *listValue.
-*/
 func (this *listValue) Collate(other Value) int {
 	return this.slice.Collate(other)
 }
 
-/*
-Call implemented Truth method for slice in *listValue.
-*/
+func (this *listValue) Compare(other Value) Value {
+	return this.slice.Compare(other)
+}
+
 func (this *listValue) Truth() bool {
 	return this.slice.Truth()
 }
@@ -447,16 +449,6 @@ func arrayEquals(array1, array2 []interface{}) bool {
 
 /*
 This code originally taken from https://github.com/couchbaselabs/walrus
-Range over the first array. If the index is greater than the length of
-the second array then return 1 since the first array is greater. If
-not call collate for the elements of both arrays (once being the
-receiver and the other an input parameter). If it returns anything
-except 0 then return that number.(the reason it cant return 0 here is
-that there is a need to compare all the elements of the arrays before
-saying they are equal) once all the elements of array1 have been ranged
-over, subtract the lengths and return. Here it is important to note that
-the value returned in this case is either 0 or a negative int, since
-array1 might be a subset of array2.
 */
 func arrayCollate(array1, array2 []interface{}) int {
 	for i, item1 := range array1 {
@@ -473,11 +465,23 @@ func arrayCollate(array1, array2 []interface{}) int {
 	return len(array1) - len(array2)
 }
 
+func arrayCompare(array1, array2 []interface{}) Value {
+	for i, item1 := range array1 {
+		if i >= len(array2) {
+			return ONE_VALUE
+		}
+
+		cmp := NewValue(item1).Compare(NewValue(array2[i]))
+		if !cmp.Equals(ZERO_VALUE) {
+			return cmp
+		}
+	}
+
+	return NewValue(len(array1) - len(array2))
+}
+
 /*
 It allows for a copy of every element of the array by using a copyFunc.
-If the source is nil then return nil. If not create a result
-slice, range over the source and add it into the result by casting
-it to the copier. Once this is done return the result.
 */
 func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	if source == nil {
@@ -492,15 +496,6 @@ func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	return result
 }
 
-/*
-If the slice is nil then return NULLBYTES as defined earlier
-in null.go. Create a new buffer, and write a ‘[‘ to the buffer.
-Range over the slice, if I is greater than 0, write a ‘,’
-to the buffer since it means that an entry has been made. If not
-create a value out of e, Marshal it and then write it to the buffer
-if there is no error from the marshal. Once looping over the slice
-has been completed, write a ‘]’ to the buffer and return it.
-*/
 func marshalArray(slice []interface{}) (b []byte, err error) {
 	if slice == nil {
 		return _NULL_BYTES, nil

@@ -65,6 +65,16 @@ func (this *nullValue) Collate(other Value) int {
 	return int(NULL - other.Type())
 }
 
+func (this *nullValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	default:
+		return this
+	}
+}
+
 /*
 Returns false.
 */

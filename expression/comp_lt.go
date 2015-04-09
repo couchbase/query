@@ -59,23 +59,14 @@ func (this *LT) Evaluate(item value.Value, context Context) (value.Value, error)
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method evaluates the less than condition and
-returns a value representing if the two operands satisfy it
-or not. If either of the input operands are
-missing, return missing value, and if they are null, then
-return null value. For all other types call the Collate
-method and check if it is less than 0 for the
-two values. If it is, then return true.
-*/
 func (this *LT) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
+	cmp := first.Compare(second)
+	switch actual := cmp.Actual().(type) {
+	case float64:
+		return value.NewValue(actual < 0), nil
 	}
 
-	return value.NewValue(first.Collate(second) < 0), nil
+	return cmp, nil
 }
 
 /*

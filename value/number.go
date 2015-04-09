@@ -25,6 +25,7 @@ The variables ZERO_VALUE and ONE_VALUE are initialized to
 */
 var ZERO_VALUE = NewValue(0.0)
 var ONE_VALUE = NewValue(1.0)
+var NEG_ONE_VALUE = NewValue(-1.0)
 
 /*
 MarshalJSON casts the method receiver to float64, and uses
@@ -98,6 +99,18 @@ func (this floatValue) Collate(other Value) int {
 		return int(NUMBER - other.Type())
 	}
 
+}
+
+func (this floatValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	default:
+		return NewValue(this.Collate(other))
+	}
 }
 
 /*

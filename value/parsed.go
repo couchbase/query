@@ -45,6 +45,10 @@ func (this *parsedValue) Collate(other Value) int {
 	return this.unwrap().Collate(other)
 }
 
+func (this *parsedValue) Compare(other Value) Value {
+	return this.unwrap().Compare(other)
+}
+
 func (this *parsedValue) Truth() bool {
 	return this.unwrap().Truth()
 }

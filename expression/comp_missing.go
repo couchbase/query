@@ -71,7 +71,12 @@ Return true if the input argument value is a missing value,
 else return false.
 */
 func (this *IsMissing) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type() == value.MISSING), nil
+	switch arg.Type() {
+	case value.MISSING:
+		return value.TRUE_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 /*
@@ -116,7 +121,12 @@ func (this *IsNotMissing) PropagatesNull() bool {
 }
 
 func (this *IsNotMissing) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type() != value.MISSING), nil
+	switch arg.Type() {
+	case value.MISSING:
+		return value.FALSE_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
 }
 
 func (this *IsNotMissing) Constructor() FunctionConstructor {

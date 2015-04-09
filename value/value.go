@@ -172,9 +172,19 @@ type Value interface {
 	   sorts less than, equal to, or greater than the input
 	   argument Value to the method. It uses the type order
 	   defined previously.  (This order has also been defined in
-	   the N1QL spec under order by.)
+	   the N1QL spec under ORDER BY.)
 	*/
 	Collate(other Value) int
+
+	/*
+	   Returns –int, 0 or +int depending on if the receiver this
+	   is less than, equal to, or greater than the input argument
+	   Value to the method. MAY return MISSING or NULL per the
+	   N1QL comparison rules. It uses the type order defined
+	   previously.  (This order has also been defined in the N1QL
+	   spec under ORDER BY.)
+	*/
+	Compare(other Value) Value
 
 	/*
 	   Returns the Boolean interpretation of the input this for
@@ -314,6 +324,8 @@ func NewValue(val interface{}) Value {
 		return sliceValue(val)
 	case map[string]interface{}:
 		return objectValue(val)
+	case int:
+		return floatValue(val)
 	case []Value:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {

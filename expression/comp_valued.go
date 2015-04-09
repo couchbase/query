@@ -65,13 +65,13 @@ func (this *IsValued) PropagatesNull() bool {
 	return false
 }
 
-/*
-Evaluates the Is Valued comparison operation for expressions.
-Return true if the input argument value is greater than a null
-value, as per N1QL collation order, else return false.
-*/
 func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type() > value.NULL), nil
+	switch arg.Type() {
+	case value.NULL, value.MISSING:
+		return value.FALSE_VALUE, nil
+	default:
+		return value.TRUE_VALUE, nil
+	}
 }
 
 /*
@@ -116,7 +116,12 @@ func (this *IsNotValued) PropagatesNull() bool {
 }
 
 func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, error) {
-	return value.NewValue(arg.Type() <= value.NULL), nil
+	switch arg.Type() {
+	case value.NULL, value.MISSING:
+		return value.TRUE_VALUE, nil
+	default:
+		return value.FALSE_VALUE, nil
+	}
 }
 
 func (this *IsNotValued) Constructor() FunctionConstructor {

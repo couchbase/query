@@ -49,6 +49,18 @@ func (this binaryValue) Collate(other Value) int {
 	}
 }
 
+func (this binaryValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	default:
+		return NewValue(this.Collate(other))
+	}
+}
+
 func (this binaryValue) Truth() bool {
 	return len(this) > 0
 }

@@ -78,6 +78,10 @@ func (this missingValue) Collate(other Value) int {
 	return int(MISSING - other.Type())
 }
 
+func (this missingValue) Compare(other Value) Value {
+	return this
+}
+
 /*
 As per the N1ql specs the truth-value of a missing evaluates
 to a false, and hence the Truth method returns a false.

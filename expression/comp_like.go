@@ -72,13 +72,8 @@ func (this *Like) Evaluate(item value.Value, context Context) (value.Value, erro
 
 /*
 This method evaluates the between comparison operation and returns a
-value representing if first value is Like the second.If any of
-the input operands are missing, return missing, and if null return null.
-Convert the first and second values into valid Go values. Set the
-regular expression variable re as the Compiled value of the second
-value s. Use the MatchString method from the Regexp package to
-compare it to the first expression. MatchString checks whether a
-textual regular expression matches a string. Return its return value.
+value representing if first value is LIKE the second. If either of
+the input operands is MISSING or NULL, return MISSING or NULL.
 */
 func (this *Like) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
