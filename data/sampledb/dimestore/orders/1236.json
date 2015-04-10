@@ -1,6 +1,6 @@
 {"type":"order",
  "id":"1236",
- "custId":"ccc",
+ "custId":"customer38",
  "shipped-on":null,
  "orderlines":[{"qty":1,"productId":"coffee01"},
                {"qty":1,"productId":"sugar22"}]}
