@@ -69,7 +69,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		gv = item
 		this.groups[gk] = gv
 
-		aggregates := make(map[string]value.Value)
+		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()] = agg.Default()
