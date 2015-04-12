@@ -55,7 +55,9 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 /*
 Type Number
 */
-func (this floatValue) Type() Type { return NUMBER }
+func (this floatValue) Type() Type {
+	return NUMBER
+}
 
 /*
 Cast receiver to float64(Go type).
@@ -64,14 +66,20 @@ func (this floatValue) Actual() interface{} {
 	return float64(this)
 }
 
-func (this floatValue) Equals(other Value) bool {
+func (this floatValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case floatValue:
-		return this == other
-	default:
-		return false
+		if this == other {
+			return TRUE_VALUE
+		}
 	}
+
+	return FALSE_VALUE
 }
 
 func (this floatValue) Collate(other Value) int {
@@ -215,4 +223,4 @@ func (this floatValue) unwrap() Value {
 	return this
 }
 
-var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-6)
+var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-8)

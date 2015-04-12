@@ -363,16 +363,16 @@ the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	if first.Equals(second) {
-		return value.NewValue(math.NaN()), nil
-	} else {
-		return first, nil
+	eq := first.Equals(second)
+	switch eq.Type() {
+	case value.MISSING, value.NULL:
+		return eq, nil
+	default:
+		if eq.Truth() {
+			return _NAN_VALUE, nil
+		} else {
+			return first, nil
+		}
 	}
 }
 
@@ -444,18 +444,20 @@ returns the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	if first.Equals(second) {
-		return value.NewValue(math.Inf(-1)), nil
-	} else {
-		return first, nil
+	eq := first.Equals(second)
+	switch eq.Type() {
+	case value.MISSING, value.NULL:
+		return eq, nil
+	default:
+		if eq.Truth() {
+			return _NEG_INF_VALUE, nil
+		} else {
+			return first, nil
+		}
 	}
 }
+
+var _NEG_INF_VALUE = value.NewValue(math.Inf(-1))
 
 /*
 The constructor returns a NewNegInfIf with the two operands
@@ -525,18 +527,20 @@ returns the first input value. Use the Equals method for the
 two values to determine equality.
 */
 func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	if first.Equals(second) {
-		return value.NewValue(math.Inf(1)), nil
-	} else {
-		return first, nil
+	eq := first.Equals(second)
+	switch eq.Type() {
+	case value.MISSING, value.NULL:
+		return eq, nil
+	default:
+		if eq.Truth() {
+			return _POS_INF_VALUE, nil
+		} else {
+			return first, nil
+		}
 	}
 }
+
+var _POS_INF_VALUE = value.NewValue(math.Inf(1))
 
 /*
 The constructor returns a NewPosInfIf with the two operands

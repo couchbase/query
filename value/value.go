@@ -162,10 +162,9 @@ type Value interface {
 	Actual() interface{}
 
 	/*
-	   Returns a Boolean based on if receiver and input argument
-	   Value are equal. It is faster than Collate().
+	   Equality comparison. It is faster than Collate().
 	*/
-	Equals(other Value) bool
+	Equals(other Value) Value
 
 	/*
 	   Returns –int, 0 or +int depending on if the receiver this

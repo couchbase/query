@@ -223,7 +223,7 @@ func (this *ExpressionBase) ValueEquals(other Expression) bool {
 	otherValue := other.Value()
 
 	return thisValue != nil && otherValue != nil &&
-		thisValue.Equals(otherValue)
+		thisValue.Equals(otherValue).Truth()
 }
 
 /*

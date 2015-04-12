@@ -58,23 +58,26 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 /*
 Type OBJECT.
 */
-func (this objectValue) Type() Type { return OBJECT }
+func (this objectValue) Type() Type {
+	return OBJECT
+}
 
 func (this objectValue) Actual() interface{} {
 	return (map[string]interface{})(this)
 }
 
-/*
-Return true if objects are equal, else false (refer N1QL specs).
-*/
-func (this objectValue) Equals(other Value) bool {
+func (this objectValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case objectValue:
 		return objectEquals(this, other)
-	default:
-		return false
 	}
+
+	return FALSE_VALUE
 }
 
 func (this objectValue) Collate(other Value) int {
@@ -219,19 +222,24 @@ func (this objectValue) unwrap() Value {
 
 var _SMALL_OBJECT_VALUE = objectValue(map[string]interface{}{"": nil})
 
-func objectEquals(obj1, obj2 map[string]interface{}) bool {
+func objectEquals(obj1, obj2 map[string]interface{}) Value {
 	if len(obj1) != len(obj2) {
-		return false
+		return FALSE_VALUE
 	}
 
 	for name1, val1 := range obj1 {
 		val2, ok := obj2[name1]
-		if !ok || !NewValue(val1).Equals(NewValue(val2)) {
-			return false
+		if !ok {
+			return FALSE_VALUE
+		}
+
+		eq := NewValue(val1).Equals(NewValue(val2))
+		if !eq.Truth() {
+			return eq
 		}
 	}
 
-	return true
+	return TRUE_VALUE
 }
 
 /*
@@ -300,7 +308,7 @@ func objectCompare(obj1, obj2 map[string]interface{}) Value {
 
 		// name was in both objects, so compare the corresponding values
 		cmp := NewValue(val1).Compare(NewValue(val2))
-		if !cmp.Equals(ZERO_VALUE) {
+		if !cmp.Equals(ZERO_VALUE).Truth() {
 			return cmp
 		}
 	}

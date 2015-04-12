@@ -42,7 +42,9 @@ func (this *nullValue) MarshalJSON() ([]byte, error) {
 /*
 Type NULL
 */
-func (this *nullValue) Type() Type { return NULL }
+func (this *nullValue) Type() Type {
+	return NULL
+}
 
 /*
 Returns nil.
@@ -54,8 +56,14 @@ func (this *nullValue) Actual() interface{} {
 /*
 Returns false.
 */
-func (this *nullValue) Equals(other Value) bool {
-	return false
+func (this *nullValue) Equals(other Value) Value {
+	other = other.unwrap()
+	switch other.Type() {
+	case MISSING:
+		return other
+	}
+
+	return this
 }
 
 /*

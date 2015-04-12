@@ -53,7 +53,9 @@ func (this missingValue) Error() string {
 /*
 Type MISSING
 */
-func (this missingValue) Type() Type { return MISSING }
+func (this missingValue) Type() Type {
+	return MISSING
+}
 
 /*
 Returns nil, since this is not a valid Go type.
@@ -65,8 +67,8 @@ func (this missingValue) Actual() interface{} {
 /*
 Returns false.
 */
-func (this missingValue) Equals(other Value) bool {
-	return false
+func (this missingValue) Equals(other Value) Value {
+	return this
 }
 
 /*

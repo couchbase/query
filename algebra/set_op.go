@@ -128,7 +128,7 @@ func (this *unionSubresult) Signature() value.Value {
 	first := this.first.Signature()
 	second := this.second.Signature()
 
-	if first.Equals(second) {
+	if first.Equals(second).Truth() {
 		return first
 	}
 
@@ -142,7 +142,7 @@ func (this *unionSubresult) Signature() value.Value {
 	for k, v := range sa {
 		cv, ok := rv.Field(k)
 		if ok {
-			if !value.NewValue(cv).Equals(value.NewValue(v)) {
+			if !value.NewValue(cv).Equals(value.NewValue(v)).Truth() {
 				rv.SetField(k, _JSON_SIGNATURE)
 			}
 		} else {

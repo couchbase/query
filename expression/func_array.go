@@ -336,12 +336,12 @@ func (this *ArrayContains) Apply(context Context, first, second value.Value) (va
 
 	fa := first.Actual().([]interface{})
 	for _, f := range fa {
-		if second.Equals(value.NewValue(f)) {
-			return value.NewValue(true), nil
+		if second.Equals(value.NewValue(f)).Truth() {
+			return value.TRUE_VALUE, nil
 		}
 	}
 
-	return value.NewValue(false), nil
+	return value.FALSE_VALUE, nil
 }
 
 /*
@@ -930,7 +930,7 @@ func (this *ArrayPosition) Apply(context Context, first, second value.Value) (va
 
 	fa := first.Actual().([]interface{})
 	for i, f := range fa {
-		if second.Equals(value.NewValue(f)) {
+		if second.Equals(value.NewValue(f)).Truth() {
 			return value.NewValue(float64(i)), nil
 		}
 	}
@@ -1100,7 +1100,7 @@ func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.V
 	f := first.Actual().([]interface{})
 	for _, a := range f {
 		v := value.NewValue(a)
-		if second.Equals(v) {
+		if second.Equals(v).Truth() {
 			return first, nil
 		}
 	}
@@ -1285,25 +1285,29 @@ func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Valu
 
 /*
 This method removes all the occurences of the second value from the
-first array value. If the first value is MISSING or not an array,
-then return missing or a null value. If the second value is missing
-then return the first array value itself. Range through the array
-and and check for the value, append all unequal values. Return the
-final array.
+first array value.
 */
 func (this *ArrayRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY {
+		return first, nil
+	}
+
+	if first.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
-	} else if second.Type() == value.MISSING {
+	}
+
+	if second.Type() <= value.NULL {
 		return first, nil
 	}
 
 	fa := first.Actual().([]interface{})
+	if len(fa) == 0 {
+		return first, nil
+	}
+
 	ra := make([]interface{}, 0, len(fa))
 	for _, f := range fa {
-		if !second.Equals(value.NewValue(f)) {
+		if !second.Equals(value.NewValue(f)).Truth() {
 			ra = append(ra, f)
 		}
 	}
@@ -1483,10 +1487,8 @@ func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Val
 	ra := make([]interface{}, 0, len(aa))
 	for _, a := range aa {
 		v := value.NewValue(a)
-		if v1.Equals(v) {
-			if v2.Type() != value.MISSING {
-				ra = append(ra, v2)
-			}
+		if v1.Equals(v).Truth() {
+			ra = append(ra, v2)
 		} else {
 			ra = append(ra, v)
 		}

@@ -49,7 +49,9 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 /*
 Type Boolean
 */
-func (this boolValue) Type() Type { return BOOLEAN }
+func (this boolValue) Type() Type {
+	return BOOLEAN
+}
 
 /*
 Cast receiver to bool and return.
@@ -64,14 +66,20 @@ it is a parsedValue or annotated value then call Equals
 by parsing other or Values respectively. If it is any other
 type we return false.
 */
-func (this boolValue) Equals(other Value) bool {
+func (this boolValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case boolValue:
-		return this == other
-	default:
-		return false
+		if this == other {
+			return TRUE_VALUE
+		}
 	}
+
+	return FALSE_VALUE
 }
 
 func (this boolValue) Collate(other Value) int {

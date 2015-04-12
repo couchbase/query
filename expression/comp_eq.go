@@ -60,13 +60,7 @@ func (this *Eq) Evaluate(item value.Value, context Context) (value.Value, error)
 }
 
 func (this *Eq) Apply(context Context, first, second value.Value) (value.Value, error) {
-	cmp := first.Compare(second)
-	switch actual := cmp.Actual().(type) {
-	case float64:
-		return value.NewValue(actual == 0), nil
-	}
-
-	return cmp, nil
+	return first.Equals(second), nil
 }
 
 /*

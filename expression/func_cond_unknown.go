@@ -325,16 +325,16 @@ value. If not it returns the first input value. Use the
 Equals method for the two values to determine equality.
 */
 func (this *MissingIf) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	if first.Equals(second) {
-		return value.MISSING_VALUE, nil
-	} else {
-		return first, nil
+	eq := first.Equals(second)
+	switch eq.Type() {
+	case value.MISSING, value.NULL:
+		return eq, nil
+	default:
+		if eq.Truth() {
+			return value.MISSING_VALUE, nil
+		} else {
+			return first, nil
+		}
 	}
 }
 
@@ -405,16 +405,16 @@ value. If not it returns the first input value. Use the
 Equals method for the two values to determine equality.
 */
 func (this *NullIf) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() == value.NULL || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	if first.Equals(second) {
-		return value.NULL_VALUE, nil
-	} else {
-		return first, nil
+	eq := first.Equals(second)
+	switch eq.Type() {
+	case value.MISSING, value.NULL:
+		return eq, nil
+	default:
+		if eq.Truth() {
+			return value.NULL_VALUE, nil
+		} else {
+			return first, nil
+		}
 	}
 }
 

@@ -29,14 +29,20 @@ func (this binaryValue) Actual() interface{} {
 	return []byte(this)
 }
 
-func (this binaryValue) Equals(other Value) bool {
+func (this binaryValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case binaryValue:
-		return bytes.Equal(this, other)
-	default:
-		return false
+		if bytes.Equal(this, other) {
+			return TRUE_VALUE
+		}
 	}
+
+	return FALSE_VALUE
 }
 
 func (this binaryValue) Collate(other Value) int {

@@ -35,7 +35,9 @@ func (this stringValue) MarshalJSON() ([]byte, error) {
 /*
 Type STRING.
 */
-func (this stringValue) Type() Type { return STRING }
+func (this stringValue) Type() Type {
+	return STRING
+}
 
 /*
 Cast receiver to string and return.
@@ -48,14 +50,20 @@ func (this stringValue) Actual() interface{} {
 If other is type stringValue and is the same as the receiver
 return true.
 */
-func (this stringValue) Equals(other Value) bool {
+func (this stringValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case stringValue:
-		return this == other
-	default:
-		return false
+		if this == other {
+			return TRUE_VALUE
+		}
 	}
+
+	return FALSE_VALUE
 }
 
 /*

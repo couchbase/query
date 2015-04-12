@@ -36,7 +36,9 @@ func (this sliceValue) MarshalJSON() ([]byte, error) {
 /*
 Type ARRAY
 */
-func (this sliceValue) Type() Type { return ARRAY }
+func (this sliceValue) Type() Type {
+	return ARRAY
+}
 
 /*
 Cast receiver to an interface and return it.
@@ -45,22 +47,20 @@ func (this sliceValue) Actual() interface{} {
 	return ([]interface{})(this)
 }
 
-/*
-For types *scopevalue, *annotatedvalue and parsedvalue call
-Equals again on the value of the second.  For type slicevalue
-and *listValue call arrayEquals with other, and other.slice
-respectively.
-*/
-func (this sliceValue) Equals(other Value) bool {
+func (this sliceValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
 	case sliceValue:
 		return arrayEquals(this, other)
 	case *listValue:
 		return arrayEquals(this, other.slice)
-	default:
-		return false
 	}
+
+	return FALSE_VALUE
 }
 
 func (this sliceValue) Collate(other Value) int {
@@ -302,7 +302,7 @@ func (this *listValue) Actual() interface{} {
 	return this.slice.Actual()
 }
 
-func (this *listValue) Equals(other Value) bool {
+func (this *listValue) Equals(other Value) Value {
 	return this.slice.Equals(other)
 }
 
@@ -425,26 +425,19 @@ func (this *listValue) unwrap() Value {
 	return this
 }
 
-/*
-It does an element by element comparison to return true if all elements
-are the same and false if not. If the length of the 2 arrays is not the
-same they are not equal and false is returned. If it is equal then
-range over the first array and call equals to check if the elements of
-the second array are equal to the each item in the first. If not
-return false, else return true.
-*/
-func arrayEquals(array1, array2 []interface{}) bool {
+func arrayEquals(array1, array2 []interface{}) Value {
 	if len(array1) != len(array2) {
-		return false
+		return FALSE_VALUE
 	}
 
 	for i, item1 := range array1 {
-		if !NewValue(item1).Equals(NewValue(array2[i])) {
-			return false
+		eq := NewValue(item1).Equals(NewValue(array2[i]))
+		if !eq.Truth() {
+			return eq
 		}
 	}
 
-	return true
+	return TRUE_VALUE
 }
 
 /*
@@ -472,7 +465,7 @@ func arrayCompare(array1, array2 []interface{}) Value {
 		}
 
 		cmp := NewValue(item1).Compare(NewValue(array2[i]))
-		if !cmp.Equals(ZERO_VALUE) {
+		if !cmp.Equals(ZERO_VALUE).Truth() {
 			return cmp
 		}
 	}

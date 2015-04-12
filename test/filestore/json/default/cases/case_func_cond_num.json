@@ -101,11 +101,7 @@
     "statements":"select NaNIf([1,2,4],[1,2,null])",
     "results": [
         {
-            "$1": [
-                1,
-                2,
-                4
-            ]
+            "$1": null
         }
     ]
  },
@@ -122,11 +118,7 @@
     "statements":"select NaNIf([1,2,null],[1,2,null]) ",
     "results": [
         {
-            "$1": [
-                1,
-                2,
-                null
-            ]
+            "$1": null
         }
     ]
  },
@@ -134,11 +126,7 @@
     "statements":"select PosinfIf([1,2,null],[1,2,null]) ",
     "results": [
         {
-            "$1": [
-                1,
-                2,
-                null
-            ]
+            "$1": null
         }
     ]
  },

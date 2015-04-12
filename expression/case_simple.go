@@ -105,7 +105,7 @@ func (this *SimpleCase) Evaluate(item value.Value, context Context) (value.Value
 			return nil, err
 		}
 
-		if s.Equals(wv) {
+		if s.Equals(wv).Truth() {
 			tv, err := w.Then.Evaluate(item, context)
 			if err != nil {
 				return nil, err

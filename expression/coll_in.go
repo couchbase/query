@@ -73,7 +73,7 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 
 	sa := second.Actual().([]interface{})
 	for _, s := range sa {
-		if first.Equals(value.NewValue(s)) {
+		if first.Equals(value.NewValue(s)).Truth() {
 			return value.TRUE_VALUE, nil
 		}
 	}

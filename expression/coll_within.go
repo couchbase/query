@@ -75,7 +75,7 @@ func (this *Within) Apply(context Context, first, second value.Value) (value.Val
 
 	desc := second.Descendants(make([]interface{}, 0, 64))
 	for _, d := range desc {
-		if first.Equals(value.NewValue(d)) {
+		if first.Equals(value.NewValue(d)).Truth() {
 			return value.TRUE_VALUE, nil
 		}
 	}
