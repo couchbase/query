@@ -25,12 +25,14 @@ import (
 type PrimaryScan struct {
 	readonly
 	index datastore.PrimaryIndex
+	keyspace datastore.Keyspace
 	term  *algebra.KeyspaceTerm
 }
 
-func NewPrimaryScan(index datastore.PrimaryIndex, term *algebra.KeyspaceTerm) *PrimaryScan {
+func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *PrimaryScan {
 	return &PrimaryScan{
 		index: index,
+		keyspace: keyspace,
 		term:  term,
 	}
 }
@@ -45,6 +47,10 @@ func (this *PrimaryScan) New() Operator {
 
 func (this *PrimaryScan) Index() datastore.PrimaryIndex {
 	return this.index
+}
+
+func (this *PrimaryScan) Keyspace() datastore.Keyspace {
+	return this.keyspace
 }
 
 func (this *PrimaryScan) Term() *algebra.KeyspaceTerm {

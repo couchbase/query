@@ -10,6 +10,8 @@
 package datastore
 
 import (
+	"sync/atomic"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/timestamp"
@@ -158,6 +160,32 @@ func NewIndexConnection(context Context) *IndexConnection {
 		stopChannel:  make(StopChannel, 1),
 		context:      context,
 	}
+}
+
+var scanCap int64
+
+func SetScanCap(cap int64) {
+	atomic.StoreInt64(&scanCap, cap)
+}
+
+func GetScanCap() int64 {
+	return atomic.LoadInt64(&scanCap)
+}
+
+func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, errors.Error) {
+	if size <= 0 {
+		return nil, errors.NewIndexScanSizeError(size)
+	}
+	maxSize := GetScanCap()
+	if (maxSize > 0) && (size > maxSize) {
+		size = maxSize
+	}
+
+	return &IndexConnection{
+		entryChannel: make(EntryChannel, size),
+		stopChannel:  make(StopChannel, 1),
+		context:      context,
+	}, nil
 }
 
 func (this *IndexConnection) EntryChannel() EntryChannel {

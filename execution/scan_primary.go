@@ -13,6 +13,7 @@ import (
 	"math"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -51,7 +52,7 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
-	conn := datastore.NewIndexConnection(context)
+	conn := this.newIndexConnection(context)
 	defer notifyConn(conn) // Notify index that I have stopped
 
 	go this.scanEntries(context, conn)
@@ -76,10 +77,30 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		case <-this.stopChannel:
 			return
 		}
+
 	}
 }
 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
 	this.plan.Index().ScanEntries(math.MaxInt64, context.ScanConsistency(), context.ScanVector(), conn)
+}
+
+func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {
+	var conn *datastore.IndexConnection
+
+	// Use keyspace count to create a sized index connection
+	keyspace := this.plan.Keyspace()
+	size, err := keyspace.Count()
+	if err == nil {
+		conn, err = datastore.NewSizedIndexConnection(size, context)
+	}
+
+	// Use non-sized API and log error
+	if err != nil {
+		conn = datastore.NewIndexConnection(context)
+		logging.Errorp("PrimaryScan.newIndexConnection ", logging.Pair{"error", err})
+	}
+
+	return conn
 }

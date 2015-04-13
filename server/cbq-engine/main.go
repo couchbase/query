@@ -43,6 +43,7 @@ var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
+var SCAN_CAP = flag.Int64("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
 var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
@@ -103,6 +104,7 @@ func main() {
 		os.Exit(1)
 	}
 	datastore_package.SetDatastore(datastore)
+	datastore_package.SetScanCap(*SCAN_CAP)
 
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {

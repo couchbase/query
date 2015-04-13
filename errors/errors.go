@@ -559,6 +559,11 @@ func NewCbIndexStateError(msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewIndexScanSizeError(size int64) Error {
+	return &err{level: EXCEPTION, ICode: 12015, IKey: "datastore.index.scan_size_error",
+		InternalMsg: fmt.Sprintf("Unacceptable size for index scan: %d", size), InternalCaller: CallerN(1)}
+}
+
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,

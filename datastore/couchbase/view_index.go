@@ -28,6 +28,8 @@ type viewIndexer struct {
 	nonUsableIndexes []string // indexes that cannot be used
 }
 
+const _BATCH_SIZE = 64 * 1024
+
 func newViewIndexer(keyspace *keyspace) datastore.Indexer {
 	rv := &viewIndexer{
 		keyspace:         keyspace,
@@ -307,7 +309,7 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
 	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket,
-		vi.DDocName(), vi.ViewName(), vi.IsPrimary(), viewOptions, 1000, limit)
+		vi.DDocName(), vi.ViewName(), vi.IsPrimary(), viewOptions, _BATCH_SIZE, limit)
 
 	var viewRow cb.ViewRow
 	var err errors.Error

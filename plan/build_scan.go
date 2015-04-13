@@ -220,7 +220,7 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 			continue
 		}
 
-		scan := NewPrimaryScan(index, node)
+		scan := NewPrimaryScan(index, keyspace, node)
 		return scan, nil
 	}
 
@@ -248,7 +248,7 @@ func (this *builder) selectPrimaryScan(keyspace datastore.Keyspace,
 				continue
 			}
 
-			scan := NewPrimaryScan(index, node)
+			scan := NewPrimaryScan(index, keyspace, node)
 			return scan, nil
 		}
 	}
