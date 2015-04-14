@@ -1,0 +1,21 @@
+[
+ 
+    {
+        "statements": "SELECT DISTINCT custId FROM orders where test_id = \"agg_func\" ORDER BY custId",
+        "results": [
+        {
+            "custId": "customer12"
+        },
+        {
+            "custId": "customer18"
+        },
+        {
+            "custId": "customer312"
+        },
+        {
+            "custId": "customer38"
+        }
+    ]  
+}
+]
+

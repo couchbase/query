@@ -1,0 +1,14 @@
+[
+    {
+        "statements": "this isn't a query",
+        "error": "this is a bad query"
+    },
+    {
+        "statements": "SELECT * FROM",
+        "error": "missing a FROM bucket"
+    },
+    {
+        "statements": "SELECT * FROM product r USE KEYS [\"product1\", \"product10\", \"product100\"] UNNEST product.reviewList r where test_id = \"err_cases\"",
+        "error" : "Duplicate UNNEST alias r"
+    }
+]
