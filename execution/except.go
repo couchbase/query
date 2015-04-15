@@ -92,6 +92,7 @@ func (this *ExceptAll) processItem(item value.AnnotatedValue, context *Context) 
 
 func (this *ExceptAll) afterItems(context *Context) {
 	this.set = nil
+	context.SetSortCount(0)
 }
 
 func (this *ExceptAll) ChildChannel() StopChannel {

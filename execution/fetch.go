@@ -50,6 +50,7 @@ func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool
 
 func (this *Fetch) afterItems(context *Context) {
 	this.flushBatch(context)
+	context.SetSortCount(0)
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {

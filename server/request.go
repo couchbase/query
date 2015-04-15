@@ -316,8 +316,8 @@ func (this *BaseRequest) MutationCount() uint64 {
 	return atomic.LoadUint64(&this.mutationCount)
 }
 
-func (this *BaseRequest) AddSortCount(i uint64) {
-	atomic.AddUint64(&this.sortCount, i)
+func (this *BaseRequest) SetSortCount(i uint64) {
+	atomic.StoreUint64(&this.sortCount, i)
 }
 
 func (this *BaseRequest) SortCount() uint64 {

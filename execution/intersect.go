@@ -92,6 +92,7 @@ func (this *IntersectAll) processItem(item value.AnnotatedValue, context *Contex
 
 func (this *IntersectAll) afterItems(context *Context) {
 	this.set = nil
+	context.SetSortCount(0)
 }
 
 func (this *IntersectAll) ChildChannel() StopChannel {

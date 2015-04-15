@@ -10,8 +10,6 @@
 package execution
 
 import (
-	"strconv"
-
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
@@ -23,6 +21,7 @@ type Order struct {
 	plan    *plan.Order
 	values  value.AnnotatedValues
 	context *Context
+	terms   []string
 }
 
 const _ORDER_CAP = 1024
@@ -66,18 +65,27 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Order) afterItems(context *Context) {
-	defer func() { this.values = nil }()
+	defer func() {
+		this.values = nil
+		this.context = nil
+		this.terms = nil
+	}()
 
 	this.context = context
+	this.terms = make([]string, len(this.plan.Terms()))
+	for i, term := range this.plan.Terms() {
+		this.terms[i] = term.Expression().String()
+	}
+
 	sort.Sort(this)
-	this.context = nil
 
 	for _, av := range this.values {
 		if !this.sendItem(av) {
 			return
 		}
 	}
-	context.AddSortCount(uint64(this.Len()))
+
+	context.SetSortCount(uint64(this.Len()))
 }
 
 func (this *Order) Len() int {
@@ -93,7 +101,7 @@ func (this *Order) Less(i, j int) bool {
 	var e error
 
 	for i, term := range this.plan.Terms() {
-		s := strconv.Itoa(i)
+		s := this.terms[i]
 
 		sv1 := v1.GetAttachment(s)
 		switch sv1 := sv1.(type) {

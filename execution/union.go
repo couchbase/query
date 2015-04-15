@@ -75,6 +75,8 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 				notifyChildren(this.children...)
 			}
 		}
+
+		context.SetSortCount(0)
 	})
 }
 

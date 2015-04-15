@@ -93,17 +93,8 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-
-	var f map[string]interface{}
-	if item.Type() == value.OBJECT {
-		f = item.Copy().Fields()
-	}
-
-	if f == nil {
-		f = make(map[string]interface{}, n)
-	}
-
-	pv := value.NewAnnotatedValue(f)
+	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
+	pv := value.NewAnnotatedValue(sv)
 	pv.SetAttachments(item.Attachments())
 
 	p := value.NewValue(make(map[string]interface{}, n+32))
