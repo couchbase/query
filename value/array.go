@@ -430,14 +430,28 @@ func arrayEquals(array1, array2 []interface{}) Value {
 		return FALSE_VALUE
 	}
 
+	var missing, null Value
 	for i, item1 := range array1 {
 		eq := NewValue(item1).Equals(NewValue(array2[i]))
-		if !eq.Truth() {
-			return eq
+		switch eq.Type() {
+		case MISSING:
+			missing = eq
+		case NULL:
+			null = eq
+		default:
+			if !eq.Truth() {
+				return eq
+			}
 		}
 	}
 
-	return TRUE_VALUE
+	if missing != nil {
+		return missing
+	} else if null != nil {
+		return null
+	} else {
+		return TRUE_VALUE
+	}
 }
 
 /*
