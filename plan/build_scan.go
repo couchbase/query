@@ -44,6 +44,13 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			if err != nil {
 				return nil, err
 			}
+			state, _, er := index.State()
+			if er != nil {
+				logging.Errorp("Scan Selection", logging.Pair{"error", er.Error()})
+			}
+			if state != datastore.ONLINE {
+				continue
+			}
 
 			indexes = append(indexes, index)
 
