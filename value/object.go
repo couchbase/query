@@ -227,19 +227,41 @@ func objectEquals(obj1, obj2 map[string]interface{}) Value {
 		return FALSE_VALUE
 	}
 
+	var null Value
 	for name1, val1 := range obj1 {
 		val2, ok := obj2[name1]
 		if !ok {
 			return FALSE_VALUE
 		}
 
-		eq := NewValue(val1).Equals(NewValue(val2))
-		if !eq.Truth() {
-			return eq
+		v1 := NewValue(val1)
+		v2 := NewValue(val2)
+		eq := v1.Equals(v2)
+		switch eq.Type() {
+		case NULL:
+			null = eq
+		case MISSING:
+			if v1.Type() == MISSING && v2.Type() == MISSING {
+				// both are missing, continue
+			} else if v1.Type() != MISSING && v2.Type() != MISSING {
+				// neither is missing, return missing
+				return eq
+			} else {
+				// one is missing, return false
+				return FALSE_VALUE
+			}
+		default:
+			if !eq.Truth() {
+				return eq
+			}
 		}
 	}
 
-	return TRUE_VALUE
+	if null != nil {
+		return null
+	} else {
+		return TRUE_VALUE
+	}
 }
 
 /*
