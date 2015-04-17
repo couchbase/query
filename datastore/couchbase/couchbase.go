@@ -120,8 +120,9 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	var err error
 
 	if s.CbAuthInit == false {
-		// cbauth is not initialized. No Authorization, access to SASL protected buckets will
-		// not be allowed by couchbase server
+		// cbauth is not initialized. Access to SASL protected buckets will be
+		// denied by the couchbase server
+		logging.Warnf("CbAuth not intialized")
 		return nil
 	}
 
@@ -163,7 +164,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 
 				if strings.EqualFold(un, "Administrator") || strings.EqualFold(userCreds[0], "admin") {
 					authResult, err = doAuth(un, password, keyspace, privilege)
-				} else if un == keyspace {
+				} else if un != "" && password != "" {
 					authResult, err = doAuth(un, password, keyspace, privilege)
 				} else {
 					//try with empty password
@@ -250,6 +251,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 
 	if cbAuthInit == false {
 		// connect without auth
+		logging.Warnf("Unable to intialize cbAuth, access to couchbase buckets may be restricted")
 		cb.HTTPClient = &http.Client{}
 		client, err = cb.Connect(u)
 		if err != nil {
