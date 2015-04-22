@@ -149,14 +149,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	n := runtime.NumCPU()
-	runtime.GOMAXPROCS(n)
+	if os.Getenv("GOMAXPROCS") == "" {
+		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
+
 	go server.Serve()
 
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", VERSION},
 		logging.Pair{"datastore", *DATASTORE},
-		logging.Pair{"threads", n},
+		logging.Pair{"threads", runtime.GOMAXPROCS(0)},
 	)
 
 	// Create http endpoint
