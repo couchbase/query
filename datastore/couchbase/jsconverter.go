@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	stack "github.com/couchbase/query/util"
 	"io"
 	"strings"
@@ -51,7 +52,8 @@ func (this *JSConverter) Visit(expr expression.Expression) string {
 	var buf bytes.Buffer
 	s, err := expr.Accept(this)
 	if err != nil {
-		panic(fmt.Sprintf("Unexpected error in JSConverter: %v", err))
+		logging.Errorf("Unexpected error in JSConverter: %v", err)
+		return ""
 	}
 
 	switch s := s.(type) {
