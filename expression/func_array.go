@@ -1681,6 +1681,99 @@ func (this *ArraySort) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayStar
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_STAR(expr). It converts an
+array of objects into an object of arrays.
+*/
+type ArrayStar struct {
+	UnaryFunctionBase
+}
+
+/*
+Constructor.
+*/
+func NewArrayStar(operand Expression) Function {
+	rv := &ArrayStar{
+		*NewUnaryFunctionBase("array_star", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayStar) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+Result type is OBJECT.
+*/
+func (this *ArrayStar) Type() value.Type {
+	return value.OBJECT
+}
+
+func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *ArrayStar) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	actual := arg.Actual().([]interface{})
+	if len(actual) == 0 {
+		return _EMPTY_OBJECT, nil
+	}
+
+	// Wrap the elements in Values
+	dup := make([]value.Value, len(actual))
+	for i, a := range actual {
+		dup[i] = value.NewValue(a)
+	}
+
+	// Collect all the names in the elements
+	pairs := make(map[string]interface{}, len(dup[0].Fields()))
+	for _, d := range dup {
+		fields := d.Fields()
+		for f, _ := range fields {
+			pairs[f] = nil
+		}
+	}
+
+	// Allocate and populate array for each name
+	for name, _ := range pairs {
+		vals := make([]interface{}, len(dup))
+		pairs[name] = vals
+
+		for i, d := range dup {
+			vals[i], _ = d.Field(name)
+		}
+	}
+
+	return value.NewValue(pairs), nil
+}
+
+/*
+Factory.
+*/
+func (this *ArrayStar) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayStar(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ArraySum
 //
 ///////////////////////////////////////////////////

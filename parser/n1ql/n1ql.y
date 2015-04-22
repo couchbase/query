@@ -1796,6 +1796,11 @@ expr LBRACKET expr COLON expr RBRACKET
     $$ = expression.NewSlice($1, $3, $5)
 }
 |
+expr LBRACKET STAR RBRACKET
+{
+    $$ = expression.NewArrayStar($1)
+}
+|
 /* Arithmetic */
 expr PLUS expr
 {
@@ -2098,6 +2103,11 @@ b_expr LBRACKET expr COLON RBRACKET
 b_expr LBRACKET expr COLON expr RBRACKET
 {
     $$ = expression.NewSlice($1, $3, $5)
+}
+|
+b_expr LBRACKET STAR RBRACKET
+{
+    $$ = expression.NewArrayStar($1)
 }
 |
 /* Arithmetic */

@@ -240,16 +240,6 @@ func objectEquals(obj1, obj2 map[string]interface{}) Value {
 		switch eq.Type() {
 		case NULL:
 			null = eq
-		case MISSING:
-			if v1.Type() == MISSING && v2.Type() == MISSING {
-				// both are missing, continue
-			} else if v1.Type() != MISSING && v2.Type() != MISSING {
-				// neither is missing, return missing
-				return eq
-			} else {
-				// one is missing, return false
-				return FALSE_VALUE
-			}
 		default:
 			if !eq.Truth() {
 				return eq

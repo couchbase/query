@@ -180,6 +180,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_replace":  &ArrayReplace{},
 	"array_reverse":  &ArrayReverse{},
 	"array_sort":     &ArraySort{},
+	"array_star":     &ArrayStar{},
 	"array_sum":      &ArraySum{},
 
 	// Object
