@@ -138,9 +138,6 @@ func (this *HttpEndpoint) closeListener(l net.Listener) error {
 func (this *HttpEndpoint) registerHandlers(staticPath string) {
 	this.mux = mux.NewRouter()
 
-	// Handle static endpoint
-	this.mux.Handle("/", (http.FileServer(http.Dir(staticPath))))
-
 	this.mux.Handle(servicePrefix, this).
 		Methods("GET", "POST")
 
@@ -150,6 +147,9 @@ func (this *HttpEndpoint) registerHandlers(staticPath string) {
 
 	this.registerClusterHandlers()
 	this.registerAccountingHandlers()
+
+	// Handle static endpoint
+	this.mux.PathPrefix("/").Handler(http.FileServer(http.Dir(staticPath)))
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest) {
