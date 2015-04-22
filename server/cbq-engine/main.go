@@ -149,12 +149,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	n := runtime.NumCPU()
+	runtime.GOMAXPROCS(n)
 	go server.Serve()
 
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", VERSION},
 		logging.Pair{"datastore", *DATASTORE},
+		logging.Pair{"threads", n},
 	)
+
 	// Create http endpoint
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
