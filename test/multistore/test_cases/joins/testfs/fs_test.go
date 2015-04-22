@@ -20,24 +20,24 @@ Insert data into thei product bucket created earlier
 using the statements in insert_product.json.
 */
 func TestInsertCaseFiles(t *testing.T) {
-        fmt.Println("\n\nInserting values into Bucket for Joins \n\n ")
-        qc := start()
-        matches, err := filepath.Glob("../insert.json")
-        if err != nil {
-                t.Errorf("glob failed: %v", err)
-        }
-        for _, m := range matches {
-                t.Logf("TestCaseFile: %v\n", m)
-                stmt, err := testCaseFile(m, qc)
-                if err != nil {
-                        t.Errorf("Error received : %s \n", err)
-                        return
-                }
-                if stmt != "" {
-                        t.Logf(" %v\n", stmt)
-                }
-                fmt.Println("\nQuery matched: ", m, "\n\n")
-        }
+	fmt.Println("\n\nInserting values into Bucket for Joins \n\n ")
+	qc := start()
+	matches, err := filepath.Glob("../insert.json")
+	if err != nil {
+		t.Errorf("glob failed: %v", err)
+	}
+	for _, m := range matches {
+		t.Logf("TestCaseFile: %v\n", m)
+		stmt, err := testCaseFile(m, qc)
+		if err != nil {
+			t.Errorf("Error received : %s \n", err)
+			return
+		}
+		if stmt != "" {
+			t.Logf(" %v\n", stmt)
+		}
+		fmt.Println("\nQuery matched: ", m, "\n\n")
+	}
 }
 
 func TestAllCaseFiles(t *testing.T) {
@@ -60,22 +60,21 @@ func TestAllCaseFiles(t *testing.T) {
 	}
 }
 
-
 func TestCleanupData(t *testing.T) {
-        qc := start()
+	qc := start()
 
-        _ , _, errfs := Run_test(qc, "delete from purchase where test_id = \"joins\"")
-        if errfs != nil {
-                t.Errorf("did not expect err %s", errfs.Error())
-        }
+	_, _, errfs := Run_test(qc, "delete from purchase where test_id = \"joins\"")
+	if errfs != nil {
+		t.Errorf("did not expect err %s", errfs.Error())
+	}
 
-        _ , _, errfs = Run_test(qc, "delete from customer where test_id = \"joins\"")
-        if errfs != nil {
-                t.Errorf("did not expect err %s", errfs.Error())
-        }
-         
-         _ , _, errfs = Run_test(qc, "delete from product where test_id = \"joins\"")
-        if errfs != nil {
-                t.Errorf("did not expect err %s", errfs.Error())
-        }
-} 
+	_, _, errfs = Run_test(qc, "delete from customer where test_id = \"joins\"")
+	if errfs != nil {
+		t.Errorf("did not expect err %s", errfs.Error())
+	}
+
+	_, _, errfs = Run_test(qc, "delete from product where test_id = \"joins\"")
+	if errfs != nil {
+		t.Errorf("did not expect err %s", errfs.Error())
+	}
+}

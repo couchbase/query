@@ -9,20 +9,20 @@
 package testcs_datefunc
 
 import (
-        "github.com/couchbase/query/server"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
 	js "github.com/couchbase/query/test/multistore"
-        "github.com/couchbase/query/errors"
 )
 
 func Start_test() *server.Server {
-	return js.Start(js.Site_CBS,js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
+	return js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
 }
 
 func testCaseFile(fname string, qc *server.Server) (fin_stmt string, errstring error) {
-	fin_stmt, errstring = js.FtestCaseFile(fname, qc, js.Namespace_CBS )
+	fin_stmt, errstring = js.FtestCaseFile(fname, qc, js.Namespace_CBS)
 	return
 }
 
 func Run_test(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
-        return js.Run(mockServer,q, js.Namespace_CBS)
+	return js.Run(mockServer, q, js.Namespace_CBS)
 }

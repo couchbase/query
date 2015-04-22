@@ -20,24 +20,24 @@ Insert data into the product bucket created earlier
 using the statements in insert.json.
 */
 func TestInsertCaseFiles(t *testing.T) {
-        fmt.Println("\n\nInserting values into Bucket for Error Cases \n\n ")
-        qc := start()
-        matches, err := filepath.Glob("../insert.json")
-        if err != nil {
-                t.Errorf("glob failed: %v", err)
-        }
-        for _, m := range matches {
-                t.Logf("TestCaseFile: %v\n", m)
-                stmt, err := testCaseFile(m, qc)
-                if err != nil {
-                        t.Errorf("Error received : %s \n", err)
-                        return
-                }
-                if stmt != "" {
-                        t.Logf(" %v\n", stmt)
-                }
-                fmt.Println("\nQuery matched: ", m, "\n\n")
-        }
+	fmt.Println("\n\nInserting values into Bucket for Error Cases \n\n ")
+	qc := start()
+	matches, err := filepath.Glob("../insert.json")
+	if err != nil {
+		t.Errorf("glob failed: %v", err)
+	}
+	for _, m := range matches {
+		t.Logf("TestCaseFile: %v\n", m)
+		stmt, err := testCaseFile(m, qc)
+		if err != nil {
+			t.Errorf("Error received : %s \n", err)
+			return
+		}
+		if stmt != "" {
+			t.Logf(" %v\n", stmt)
+		}
+		fmt.Println("\nQuery matched: ", m, "\n\n")
+	}
 }
 
 func TestAllCaseFiles(t *testing.T) {
@@ -61,10 +61,10 @@ func TestAllCaseFiles(t *testing.T) {
 }
 
 func TestCleanupData(t *testing.T) {
-        qc := start()
+	qc := start()
 
-        _, _, errfs := Run_test(qc, "delete from product where test_id = \"err_cases\"")
-        if errfs != nil {
-                t.Errorf("did not expect err %s", errfs.Error())
-        }
+	_, _, errfs := Run_test(qc, "delete from product where test_id = \"err_cases\"")
+	if errfs != nil {
+		t.Errorf("did not expect err %s", errfs.Error())
+	}
 }

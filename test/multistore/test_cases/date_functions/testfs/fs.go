@@ -9,13 +9,13 @@
 package testfs
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/server"
 	js "github.com/couchbase/query/test/multistore"
-        "github.com/couchbase/query/errors"
 )
 
 func start() *server.Server {
-      return js.Start("dir:","../../../data/", js.Namespace_FS)
+	return js.Start("dir:", "../../../data/", js.Namespace_FS)
 }
 
 func testCaseFile(fname string, qc *server.Server) (fin_stmt string, errstring error) {
@@ -24,5 +24,5 @@ func testCaseFile(fname string, qc *server.Server) (fin_stmt string, errstring e
 }
 
 func Run_test(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
-        return js.Run(mockServer,q, js.Namespace_FS)
+	return js.Run(mockServer, q, js.Namespace_FS)
 }

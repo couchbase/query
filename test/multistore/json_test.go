@@ -17,15 +17,15 @@ import (
 )
 
 /*
-Method to pass in parameters for site, pool and 
+Method to pass in parameters for site, pool and
 namespace to Start method for Datastore.
 */
 func start_ds() *server.Server {
-	return Start("dir:","../../data/sampledb/",Namespace_FS)
+	return Start("dir:", "../../data/sampledb/", Namespace_FS)
 }
 
 /*
-Method to pass in parameters for site, pool and  
+Method to pass in parameters for site, pool and
 namespace to Start method for Couchbase Server.
 */
 func start_cs() *server.Server {
@@ -33,7 +33,7 @@ func start_cs() *server.Server {
 }
 
 /*
-Basic test to ensure connections to both 
+Basic test to ensure connections to both
 Datastore and Couchbase server, work.
 */
 func TestSyntaxErr(t *testing.T) {
@@ -43,7 +43,7 @@ func TestSyntaxErr(t *testing.T) {
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
-	r, _, err = Run(qc, "",Namespace_FS) // empty string query
+	r, _, err = Run(qc, "", Namespace_FS) // empty string query
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}

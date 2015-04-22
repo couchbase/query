@@ -32,10 +32,10 @@ import (
 )
 
 /*
-Global variables accessed by individual test cases for 
-Couchbase server. Site_CBS, Auth_param, Pool_CBS, Namespace_FS 
+Global variables accessed by individual test cases for
+Couchbase server. Site_CBS, Auth_param, Pool_CBS, Namespace_FS
 and Namespace_CBS represent the site, server authentication
-parameters the ip of the couchbase server instance 
+parameters the ip of the couchbase server instance
 and the namespace.
 */
 var Site_CBS = "http://"
@@ -143,7 +143,7 @@ Scan consistency implementation. The default
 is set to REQUEST_PLUS.
 */
 type scanConfigImpl struct {
-	scan_level  datastore.ScanConsistency
+	scan_level datastore.ScanConsistency
 }
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
@@ -159,8 +159,8 @@ func (this *scanConfigImpl) ScanVector() timestamp.Vector {
 }
 
 /*
-This method is used to execute the N1QL query represented by 
-the input argument (q) string using the NewBaseRequest method 
+This method is used to execute the N1QL query represented by
+the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
 func Run(mockServer *server.Server, q, namespace string) ([]interface{}, []errors.Error, errors.Error) {
@@ -234,18 +234,18 @@ func Start(site, pool, namespace string) *server.Server {
 func FtestCaseFile(fname string, qc *server.Server, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
-        /* Reads the input file and returns its contents in the form 
-           of a byte array.
-        */
+	/* Reads the input file and returns its contents in the form
+	   of a byte array.
+	*/
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
 		errstring = go_er.New(fmt.Sprintf("ReadFile failed: %v", err))
 		return
 	}
-	
-        var cases []map[string]interface{}
-	 
-        err = json.Unmarshal(b, &cases)
+
+	var cases []map[string]interface{}
+
+	err = json.Unmarshal(b, &cases)
 	if err != nil {
 		errstring = go_er.New(fmt.Sprintf("couldn't json unmarshal: %v, err: %v", string(b), err))
 		return
@@ -306,7 +306,7 @@ func FtestCaseFile(fname string, qc *server.Server, namespace string) (fin_stmt 
 }
 
 /*
-Matches expected results with the results obtained by 
+Matches expected results with the results obtained by
 running the queries.
 */
 func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int) (errstring error) {
