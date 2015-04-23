@@ -6,3 +6,4 @@ server/cbq-engine/cbq-engine
 tutorial/tutorial
 *.swp
 parser/n1ql/y.go
+test/multistore/data
