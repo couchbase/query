@@ -2,6 +2,8 @@
 
 Sonia now wants to find out which of the orders in the month of April exceeded the unit price of $500. The query on right uses subquery clause to get the desired results
 
+Note: The query examines a lot of document so it might take some time to finish
+
 <pre id="example">
     SELECT purchases.purchaseId, l.product 
         FROM purchases UNNEST purchases.lineItems l 
