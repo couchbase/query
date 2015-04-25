@@ -18,15 +18,19 @@ type sargAnd struct {
 	sargBase
 }
 
-func newSargAnd(cond *expression.And) *sargAnd {
+func newSargAnd(pred *expression.And) *sargAnd {
 	rv := &sargAnd{}
-	rv.sarg = func(expr2 expression.Expression) (spans Spans, err error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (spans Spans, err error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		for _, op := range cond.Operands() {
-			s := SargFor(op, expression.Expressions{expr2})
+		for _, op := range pred.Operands() {
+			s, err := sargFor(op, expr2, rv.MissingHigh())
+			if err != nil {
+				return nil, err
+			}
+
 			if len(s) == 0 {
 				continue
 			}

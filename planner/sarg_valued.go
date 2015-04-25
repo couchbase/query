@@ -17,14 +17,14 @@ type sargValued struct {
 	sargBase
 }
 
-func newSargValued(cond expression.UnaryFunction) *sargValued {
+func newSargValued(pred expression.UnaryFunction) *sargValued {
 	rv := &sargValued{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if cond.Operand().EquivalentTo(expr2) {
+		if pred.Operand().EquivalentTo(expr2) {
 			return _VALUED_SPANS, nil
 		}
 

@@ -10,36 +10,36 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(pred expression.Expression, exprs expression.Expressions) int {
-	s := newSargable(pred)
-	n := len(exprs)
+type Ranges []*Range
 
-	if n > 1 {
-		// Only AND predicates can sarg more than one index key
-		if _, ok := pred.(*expression.And); !ok {
-			n = 1
-		}
-	}
-
-	i := 0
-	for ; i < n; i++ {
-		if exprs[i].Value() != nil {
-			return i
-		}
-
-		r, err := exprs[i].Accept(s)
-		if err != nil || !r.(bool) {
-			return i
-		}
-	}
-
-	return i
+type Range struct {
+	Low       expression.Expressions
+	High      expression.Expressions
+	Inclusion datastore.Inclusion
 }
 
-func newSargable(pred expression.Expression) expression.Visitor {
-	s, _ := pred.Accept(_SARGABLE_FACTORY)
-	return s.(expression.Visitor)
+func (this *Range) Copy() *Range {
+	return &Range{
+		Low:       expression.CopyExpressions(this.Low),
+		High:      expression.CopyExpressions(this.High),
+		Inclusion: this.Inclusion,
+	}
+}
+
+type Spans []*Span
+
+type Span struct {
+	Seek  expression.Expressions
+	Range Range
+}
+
+func (this *Span) Copy() *Span {
+	return &Span{
+		Seek:  expression.CopyExpressions(this.Seek),
+		Range: *(this.Range.Copy()),
+	}
 }

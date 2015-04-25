@@ -146,7 +146,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 			}
 		}
 
-		if !planner.SargableFor(where, keys) {
+		if planner.SargableFor(where, keys) == 0 {
 			// Index not applicable
 			continue
 		}
@@ -191,11 +191,12 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 
 	for index, keys := range indexMap {
-		spans := planner.SargFor(where, keys)
+		spans, err := planner.SargFor(where, keys)
 		if len(spans) == 0 {
-			logging.Errorp("Sargable index not sarged", logging.Pair{"where", where}, logging.Pair{"index_keys", keys})
-			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; where=%v, index_keys=%v",
-				where.String(), keys.String()))
+			logging.Errorp("Sargable index not sarged", logging.Pair{"where", where},
+				logging.Pair{"index_keys", keys}, logging.Pair{"error", err})
+			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; where=%v, index_keys=%v, error=%v",
+				where.String(), keys.String(), err))
 		}
 
 		var scan Operator

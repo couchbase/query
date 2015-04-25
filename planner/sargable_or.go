@@ -17,11 +17,12 @@ type sargableOr struct {
 	predicate
 }
 
-func newSargableOr(cond *expression.Or) *sargableOr {
+func newSargableOr(pred *expression.Or) *sargableOr {
 	rv := &sargableOr{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		for _, child := range cond.Operands() {
-			if !SargableFor(child, expression.Expressions{expr2}) {
+		exprs := expression.Expressions{expr2}
+		for _, child := range pred.Operands() {
+			if SargableFor(child, exprs) == 0 {
 				return false, nil
 			}
 		}

@@ -134,6 +134,7 @@ val              value.Value
 %token HAVING
 %token IF
 %token IGNORE
+%token ILIKE
 %token IN
 %token INCLUDE
 %token INCREMENT

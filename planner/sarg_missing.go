@@ -17,14 +17,14 @@ type sargNotMissing struct {
 	sargBase
 }
 
-func newSargNotMissing(cond *expression.IsNotMissing) *sargNotMissing {
+func newSargNotMissing(pred *expression.IsNotMissing) *sargNotMissing {
 	rv := &sargNotMissing{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if cond.Operand().EquivalentTo(expr2) {
+		if pred.Operand().EquivalentTo(expr2) {
 			return _FULL_SPANS, nil
 		}
 

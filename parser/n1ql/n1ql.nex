@@ -141,6 +141,7 @@
 /[hH][aA][vV][iI][nN][gG]/			 { logToken("HAVING"); return HAVING }
 /[iI][fF]/					 { logToken("IF"); return IF }
 /[iI][gG][nN][oO][rR][eE]/			 { logToken("IGNORE"); return IGNORE }
+/[iI][lL][iI][kK][eE]/				 { logToken("ILIKE"); return ILIKE }
 /[iI][nN]/					 { logToken("IN"); return IN }
 /[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
 /[iI][nN][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("INCREMENT"); return INCREMENT }

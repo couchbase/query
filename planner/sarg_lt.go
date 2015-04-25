@@ -18,21 +18,21 @@ type sargLT struct {
 	sargBase
 }
 
-func newSargLT(cond *expression.LT) *sargLT {
+func newSargLT(pred *expression.LT) *sargLT {
 	rv := &sargLT{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		var exprs expression.Expressions
 		span := &Span{}
 
-		if cond.First().EquivalentTo(expr2) {
-			exprs = expression.Expressions{cond.Second().Static()}
+		if pred.First().EquivalentTo(expr2) {
+			exprs = expression.Expressions{pred.Second().Static()}
 			span.Range.High = exprs
-		} else if cond.Second().EquivalentTo(expr2) {
-			exprs = expression.Expressions{cond.First().Static()}
+		} else if pred.Second().EquivalentTo(expr2) {
+			exprs = expression.Expressions{pred.First().Static()}
 			span.Range.Low = exprs
 		} else {
 			return nil, nil

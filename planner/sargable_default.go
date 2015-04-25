@@ -17,10 +17,10 @@ type sargableDefault struct {
 	predicate
 }
 
-func newSargableDefault(cond expression.Expression) *sargableDefault {
+func newSargableDefault(pred expression.Expression) *sargableDefault {
 	rv := &sargableDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(cond, expr2), nil
+		return SubsetOf(pred, expr2), nil
 	}
 
 	return rv

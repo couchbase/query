@@ -39,21 +39,21 @@ type sargDefault struct {
 	sargBase
 }
 
-func newSargDefault(cond expression.Expression) *sargDefault {
+func newSargDefault(pred expression.Expression) *sargDefault {
 	var spans Spans
-	if cond.PropagatesNull() {
+	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
-	} else if cond.PropagatesMissing() {
+	} else if pred.PropagatesMissing() {
 		spans = _FULL_SPANS
 	}
 
 	rv := &sargDefault{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		if spans != nil && cond.DependsOn(expr2) {
+		if spans != nil && pred.DependsOn(expr2) {
 			return spans, nil
 		}
 

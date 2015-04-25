@@ -18,19 +18,19 @@ type sargEq struct {
 	sargBase
 }
 
-func newSargEq(cond *expression.Eq) *sargEq {
+func newSargEq(pred *expression.Eq) *sargEq {
 	rv := &sargEq{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		span := &Span{}
 
-		if cond.First().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{cond.Second().Static()}
-		} else if cond.Second().EquivalentTo(expr2) {
-			span.Range.Low = expression.Expressions{cond.First().Static()}
+		if pred.First().EquivalentTo(expr2) {
+			span.Range.Low = expression.Expressions{pred.Second().Static()}
+		} else if pred.Second().EquivalentTo(expr2) {
+			span.Range.Low = expression.Expressions{pred.First().Static()}
 		} else {
 			return nil, nil
 		}
@@ -42,7 +42,12 @@ func newSargEq(cond *expression.Eq) *sargEq {
 		span.Range.Inclusion = datastore.LOW
 		hv := span.Range.Low[0].Value()
 		if hv != nil {
-			hv = hv.Successor()
+			if rv.MissingHigh() {
+				hv = hv.Successor()
+			} else if hv != nil {
+				span.Range.Inclusion = datastore.BOTH
+			}
+
 			if hv != nil {
 				span.Range.High = expression.Expressions{expression.NewConstant(hv)}
 			}

@@ -32,8 +32,6 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-var VERSION = "0.7.0" // Build-time overriddable.
-
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
 var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
 var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
@@ -156,7 +154,7 @@ func main() {
 	go server.Serve()
 
 	logging.Infop("cbq-engine started",
-		logging.Pair{"version", VERSION},
+		logging.Pair{"version", util.VERSION},
 		logging.Pair{"datastore", *DATASTORE},
 		logging.Pair{"threads", runtime.GOMAXPROCS(0)},
 	)

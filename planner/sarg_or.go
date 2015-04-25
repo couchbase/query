@@ -17,16 +17,20 @@ type sargOr struct {
 	sargDefault
 }
 
-func newSargOr(cond *expression.Or) *sargOr {
+func newSargOr(pred *expression.Or) *sargOr {
 	rv := &sargOr{}
-	rv.sarg = func(expr2 expression.Expression) (Spans, error) {
-		if SubsetOf(cond, expr2) {
+	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		spans := make(Spans, 0, len(cond.Operands()))
-		for _, child := range cond.Operands() {
-			cspans := SargFor(child, expression.Expressions{expr2})
+		spans := make(Spans, 0, len(pred.Operands()))
+		for _, child := range pred.Operands() {
+			cspans, err := sargFor(child, expr2, rv.MissingHigh())
+			if err != nil {
+				return nil, err
+			}
+
 			if len(cspans) > 0 {
 				spans = append(spans, cspans...)
 			}

@@ -166,6 +166,14 @@ func Copy(expr Expression) Expression {
 	return expr.Copy()
 }
 
+func CopyExpressions(exprs Expressions) Expressions {
+	if exprs == nil {
+		return nil
+	}
+
+	return exprs.Copy()
+}
+
 // Expressions implements Stringer() API.
 func (this Expressions) String() string {
 	var exprText bytes.Buffer
@@ -178,4 +186,14 @@ func (this Expressions) String() string {
 	}
 	exprText.WriteString("]")
 	return exprText.String()
+}
+
+func (this Expressions) Copy() Expressions {
+	if this == nil {
+		return nil
+	}
+
+	rv := make(Expressions, len(this))
+	copy(rv, this)
+	return rv
 }

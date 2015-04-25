@@ -191,7 +191,7 @@ func (this stringValue) Fields() map[string]interface{} {
 Append a low-valued byte to string.
 */
 func (this stringValue) Successor() Value {
-	return NewValue(string(this) + "\t")
+	return NewValue(string(this) + " ")
 }
 
 func (this stringValue) unwrap() Value {
