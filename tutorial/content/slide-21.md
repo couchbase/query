@@ -1,8 +1,9 @@
-## Filtering Grouped Data with HAVING
+## Filtering grouped data with HAVING
 
 Sometimes you want to filter which groups are returned.
 
-Similar to filter documents with the WHERE clause we can filter groups with the HAVING clause.
+Similar to filtering documents with the WHERE clause, we can filter
+groups with the HAVING clause.
 
 Here we filter to only include groups with more than 1 member.
 

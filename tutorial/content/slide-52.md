@@ -1,6 +1,8 @@
 ## Generating scoreboards
 
-In jungleville, head-to-head matchups are a regular affair. Scoreboards can be used to keep track of competition and who has won. 
+In jungleville, head-to-head matchups are a regular
+affair. Scoreboards can be used to keep track of competition and who
+has won.
 
 What does the scoreboard for user_id=0004 look like?
 

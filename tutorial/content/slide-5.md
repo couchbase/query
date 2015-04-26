@@ -1,8 +1,9 @@
-## Performing Simple Arithmetic
+## Performing simple arithmetic
 
 We can also perform basic arithmetic in our expressions.
 
-In this example we calculate Dave's age in dog years by dividing their age by 7.
+In this example we calculate Dave's age in dog years by dividing his
+age by 7.
 
 The common arithmetic operations +, -, *, / and % are supported.
 

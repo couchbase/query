@@ -1,8 +1,10 @@
-## Combining Multiple Conditions with AND
+## Combining multiple conditions with AND
 
-The AND operator allows us to match documents satisfying two or more conditions.
+The AND operator allows us to match documents satisfying two or more
+conditions.
 
-In the example on the right we only return people having at least one child and having a gmail address.
+In the example on the right we only return people having at least one
+child and having a gmail address.
 
 Try changing AND to OR.
 

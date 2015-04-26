@@ -1,10 +1,12 @@
 ## Merchant - Generating the month-over-month sales report
 
-Sonia, the general manager of dimestore, has asked her sales staff to put together a month-on-month sales report.
+Sonia, the general manager of dimestore, has asked her sales staff to
+put together a month-over-month sales report.
 
 ![ScreenShot](./images/salesmam.png)
 
-Rudy runs the N1QL query to generate the data needed for his report. Try it out.
+Rudy runs the N1QL query to generate the data needed for his
+report. Try it out.
 
 <pre id="example">
 SELECT SUBSTR(purchases.purchasedAt, 0, 7) as month, 

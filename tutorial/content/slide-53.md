@@ -1,8 +1,10 @@
 ## Generating global leaderboards
 
-Do we have a leader of the jungle? Leaderboards show global rankings, ordered by the number of wins and the player level. 
+Do we have a leader of the jungle? Leaderboards show global rankings,
+ordered by the number of wins and the player level.
 
-How does the leaderboard for jungleville look like today? Run the query to figure it out.
+How does the leaderboard for jungleville look like today? Run the
+query to figure it out.
 
 <pre id="example">
 SELECT player.name, 

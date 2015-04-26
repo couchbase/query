@@ -1,9 +1,14 @@
 ## DELETE
-This feature is currently experimental and not for use in production.
 
-Keys can be deleted using the DELETE clause. The returning clause in the example query on the right will return the list of keys that were deleted from the bucket
+Documents can be deleted using the DELETE clause. The RETURNING clause
+in the example query on the right will return the list of keys that
+were deleted from the bucket.
 
-The example below will delete all documents where tutorial.title = "Mrs"
+Currently, this statement only provides document-level atomicity, so
+it is not supported for use in production.
+
+The example below would delete all documents where tutorial.title =
+"Mrs".
 
 <span style="color: red">
 EXPLAIN DELETE FROM tutorial t WHERE t.title = "Mrs"

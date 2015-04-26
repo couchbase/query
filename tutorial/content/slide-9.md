@@ -1,12 +1,15 @@
-## Pattern Matching with LIKE
+## Pattern matching with LIKE
 
-Inexact string matching can be accomplished using the LIKE operator in the WHERE clause.
+String matching can be accomplished using the LIKE operator in the
+WHERE clause.
 
-The argument on the right hand side of the keyword LIKE is the pattern that the expression must match.
-In these patterns `%` is a wildcard which will match 0 or more characters.  Also `_` can be used to match
-exactly 1 character.
+The argument on the right hand side of the keyword LIKE is the pattern
+that the expression must match.  In these patterns `%` is a wildcard
+that matches zero or more characters, and `_` is a wildcard that
+matches exactly one character.
 
-In the example on the right we look for people who have a yahoo.com email address.
+In the example on the right we look for people who have a yahoo.com
+email address.
 
 Try changing LIKE to NOT LIKE.
 

@@ -1,10 +1,12 @@
 ## UPDATE
-This feature is currently experimental and not for use in production.
 
-UPDATE replaces a document that already exists with updated values
+UPDATE modifies an existing document.
 
-The example on the right would have changed the type of the document "baldwin" from 
-"contact" to "actor"
+Currently, this statement only provides document-level atomicity, so
+it is not supported for use in production.
+
+The example on the right would change the type of the document
+"baldwin" from "contact" to "actor".
 
 <pre id="example">
     EXPLAIN 

@@ -1,9 +1,12 @@
-## <b>Section 1. N1QL Basics</b>
-Welcome to the Couchbase N1QL tutorial!
+## <b>Section 1. SQL for Documents (N1QL) Basics</b>
 
-N1QL (pronounced as “nickel”) is Couchbase’s next generation query language. N1QL aims to meet the query needs of distributed document-oriented databases. This document specifies the syntax and semantics of the SELECT statement in N1QL.
+## Welcome
 
-The N1QL data model derives its name from the non-first normal form, which is a superset and generalization of the relational first normal form (1NF). 
+Welcome to the Couchbase query tutorial!
+
+SQL for Documents, codenamed N1QL (pronounced “nickel”), is the new
+query language from Couchbase. It extends SQL to JSON document
+databases.
 
 On the right hand side you see a query editor.
 

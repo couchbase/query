@@ -1,10 +1,13 @@
-## Pagination with LIMIT/OFFSET
+## Pagination with LIMIT and OFFSET
 
-Sometimes queries return a large number of results and it can be helpful to process them in smaller batches.  After processing a smaller batch, you also want to skip over a batch to process the next one.
+Sometimes queries return a large number of results, and you want to
+process them in smaller batches.  After processing a smaller batch,
+you also want to skip over a batch to process the next one.
 
-In the example on the right we ask that it return no more than 2 results.
+In the example on the right we specify that there should be at most 2
+results.
 
-Try adding OFFSET 2 to get the next 2 results.
+Try adding OFFSET 4 to skip 4 results.
 
 <pre id="example">
 SELECT fname, age

@@ -1,8 +1,10 @@
 ##  Listing messages sent by a user 
 
-In jungleville, players can send messages to other players. 
+In jungleville, players can send messages to other players.
 
-How do you get a list of all the messages sent by a player zid-jungle-0001 to all other players? Run this N1QL query to find out all the messages sent by player zid-jungle-0001. 
+How do you get a list of all the messages sent by a player
+zid-jungle-0001 to all other players? Run this N1QL query to find out
+all the messages sent by player zid-jungle-0001.
 
 <pre id="example">
 SELECT player.name, inbox.messages

@@ -1,8 +1,12 @@
 ## Chaining JOINs
 
-JOINS can be chained and combined with UNNEST as many times as desired. 
+JOIN, NEST, and UNNEST can be chained and combined, in any order, as
+many times as desired.
 
-In the example on the right we perform an in-document join to generate a complete order that contains the order Ids along with the users details. This is then JOINED with the order decriptions from the users_with_orders bucket.
+In the example on the right, we perform an UNNEST to generate a
+complete order that contains the order Ids along with the user
+details. This is then JOINed with the orders from the
+users_with_orders bucket.
 
 <pre id="example">
     SELECT  u.personal_details.display_name name, s AS order_no, o.product_details  

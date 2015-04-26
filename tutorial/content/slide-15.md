@@ -1,13 +1,16 @@
-## Array Operations and Slicing 
+## Array operations and slicing 
 
-Array slicing refers to using a subset of an array. N1QL allows slices to appear anywhere that other expressions can appear. 
+Array slicing refers to using a subset of an array. N1QL allows slices
+to appear anywhere that other expressions can appear.
 
-The query on the right will return all the children between offset 0 and 2
+The query on the right will return all the children between offset 0
+and 2.
 
-N1QL also supports ARRAY functions such as ARRAY_PREPEND, ARRAY_APPEND and ARRAY_CONCAT. Try typing out the following query
+N1QL also supports ARRAY functions such as ARRAY_PREPEND, ARRAY_APPEND
+and ARRAY_CONCAT. Try typing out the following query:
 
-<span style="color: red">
-SELECT ARRAY_CONCAT(children[0:1], children[1:]) FROM tutorial
+<span>
+SELECT ARRAY_CONCAT(children[0:1], children[0:1]) FROM tutorial
 </span>
 
 <pre id="example">
