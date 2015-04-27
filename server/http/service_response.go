@@ -58,6 +58,7 @@ func mapErrorToHttpResponse(err errors.Error) int {
 
 func (this *httpRequest) Failed(srvr *server.Server) {
 	defer this.Stop(server.FATAL)
+	defer this.stopCloseNotifier()
 
 	this.writeString("{\n")
 	this.writeRequestID()
@@ -72,6 +73,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
 	defer this.Stop(server.COMPLETED)
+	defer this.stopCloseNotifier()
 
 	this.NotifyStop(stopNotify)
 
@@ -84,6 +86,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 func (this *httpRequest) Expire() {
 	defer this.Stop(server.TIMEOUT)
+	defer this.stopCloseNotifier()
 
 	if this.httpRespCode == 0 {
 		this.httpRespCode = http.StatusOK
@@ -91,6 +94,13 @@ func (this *httpRequest) Expire() {
 	}
 	this.writeSuffix(true, server.TIMEOUT)
 	this.writer.noMoreData()
+}
+
+func (this *httpRequest) stopCloseNotifier() {
+	select {
+	case this.requestNotify <- false:
+	default:
+	}
 }
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
@@ -373,6 +383,7 @@ func (this *bufferedWriter) noMoreData() {
 	}
 
 	w := this.req.resp // our request's response writer
+	r := this.req.req  // our request's http request
 	// calculate and set the Content-Length header:
 	content_len := strconv.Itoa(len(this.buffer.Bytes()))
 	w.Header().Set("Content-Length", content_len)
@@ -381,6 +392,7 @@ func (this *bufferedWriter) noMoreData() {
 	io.Copy(w, this.buffer)
 	// no more data in the response => return buffer to pool:
 	this.buffer_pool.PutBuffer(this.buffer)
+	r.Body.Close()
 	this.closed = true
 }
 
@@ -420,5 +432,7 @@ func (this *directWriter) noMoreData() {
 	if this.closed {
 		return
 	}
+	r := this.req.req // our request's http request
+	r.Body.Close()
 	this.closed = true
 }

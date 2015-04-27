@@ -32,14 +32,15 @@ const MAX_REQUEST_BYTES = 1 << 20
 
 type httpRequest struct {
 	server.BaseRequest
-	resp         http.ResponseWriter
-	req          *http.Request
-	writer       responseDataManager
-	httpRespCode int
-	resultCount  int
-	resultSize   int
-	errorCount   int
-	warningCount int
+	resp          http.ResponseWriter
+	req           *http.Request
+	requestNotify chan bool
+	writer        responseDataManager
+	httpRespCode  int
+	resultCount   int
+	resultSize    int
+	errorCount    int
+	warningCount  int
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) *httpRequest {
@@ -168,9 +169,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		namespace, readonly, metrics, signature, consistency, client_id, creds)
 
 	rv := &httpRequest{
-		BaseRequest: *base,
-		resp:        resp,
-		req:         req,
+		BaseRequest:   *base,
+		resp:          resp,
+		req:           req,
+		requestNotify: make(chan bool, 1),
 	}
 
 	rv.SetTimeout(rv, timeout)
@@ -180,12 +182,18 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)
 
-	// Abort if client closes connection
+	// Abort if client closes connection; alternatively, return when request completes.
 	closeNotify := resp.(http.CloseNotifier).CloseNotify()
-	go func() {
-		<-closeNotify
-		rv.Stop(server.TIMEOUT)
-	}()
+	closeNotifier := func() {
+		select {
+		case <-closeNotify:
+			rv.Stop(server.TIMEOUT)
+			return
+		case <-rv.requestNotify:
+			return
+		}
+	}
+	go closeNotifier()
 
 	if err != nil {
 		rv.Fail(err)
