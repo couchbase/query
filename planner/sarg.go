@@ -14,15 +14,15 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargFor(pred expression.Expression, exprs expression.Expressions) (Spans, error) {
-	n := SargableFor(pred, exprs)
+func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (Spans, error) {
+	n := len(sargKeys)
 	s := newSarg(pred)
-	s.SetMissingHigh(n < len(exprs))
+	s.SetMissingHigh(n < total)
 	var ns Spans
 
 	// Sarg compositive indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		r, err := exprs[i].Accept(s)
+		r, err := sargKeys[i].Accept(s)
 		if err != nil || r == nil {
 			return nil, err
 		}

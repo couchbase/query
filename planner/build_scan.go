@@ -135,8 +135,9 @@ func allIndexes(keyspace datastore.Keyspace) ([]datastore.Index, error) {
 }
 
 type indexEntry struct {
-	keys expression.Expressions
-	cond expression.Expression
+	sargKeys expression.Expressions
+	total    int
+	cond     expression.Expression
 }
 
 func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
@@ -191,7 +192,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 
 		n := SargableFor(pred, keys)
 		if n > 0 {
-			sargables[index] = &indexEntry{keys[0:n], cond}
+			sargables[index] = &indexEntry{keys[0:n], len(keys), cond}
 		}
 	}
 
@@ -214,12 +215,12 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 
 	minimals := make(map[datastore.Index]Spans, len(sargables))
 	for s, se := range sargables {
-		spans, err := SargFor(pred, se.keys)
+		spans, err := SargFor(pred, se.sargKeys, se.total)
 		if err != nil || len(spans) == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
-				logging.Pair{"index_keys", se.keys}, logging.Pair{"error", err})
-			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, index_keys=%v, error=%v",
-				pred.String(), se.keys.String(), err))
+				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
+			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+				pred.String(), se.sargKeys.String(), err))
 			return nil, err
 		}
 
@@ -230,7 +231,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 }
 
 func narrowerOrEquivalent(se, te *indexEntry) bool {
-	if len(te.keys) > len(se.keys) {
+	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
 	}
 
@@ -239,8 +240,8 @@ func narrowerOrEquivalent(se, te *indexEntry) bool {
 	}
 
 outer:
-	for _, tk := range te.keys {
-		for _, sk := range se.keys {
+	for _, tk := range te.sargKeys {
+		for _, sk := range se.sargKeys {
 			if SubsetOf(sk, tk) {
 				continue outer
 			}
