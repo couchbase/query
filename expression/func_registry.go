@@ -196,8 +196,9 @@ var _FUNCTIONS = map[string]Function{
 	"poly_length":  &PolyLength{},
 
 	// Comparison
-	"greatest": &Greatest{},
-	"least":    &Least{},
+	"greatest":  &Greatest{},
+	"least":     &Least{},
+	"successor": &Successor{},
 
 	// Conditional for unknowns
 	"ifmissing":       &IfMissing{},

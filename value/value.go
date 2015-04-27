@@ -101,6 +101,22 @@ var _TYPE_NAMES = []string{
 	BINARY:  "binary",
 }
 
+func (this Type) Successor() Type {
+	return _TYPE_SUCCESSORS[this]
+}
+
+var _TYPE_SUCCESSORS = []Type{
+	MISSING: NULL,
+	NULL:    BOOLEAN,
+	BOOLEAN: JSON,
+	NUMBER:  NUMBER,
+	STRING:  STRING,
+	ARRAY:   ARRAY,
+	OBJECT:  OBJECT,
+	JSON:    JSON,
+	BINARY:  BINARY,
+}
+
 /*
 When you try to set a nested property or index that does not exist,
 the return error will be Unsettable.

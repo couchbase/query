@@ -136,15 +136,6 @@ type Expression interface {
 	Copy() Expression
 }
 
-/*
-This function is used to map one expression to another. It takes as
-input a Mapper(defined later in expression/map.go) and returns an
-error. The method receiver is of type Expressions. Range over the
-receiver. It returns an index and an expression. Call Map using the
-mapper to map expression e to expr. If there is an error while
-mapping we return it, otherwise we set the ith value in this to the
-expr (reset to new expr) and return.
-*/
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
 	for i, e := range this {
 		expr, err := mapper.Map(e)
@@ -156,6 +147,40 @@ func (this Expressions) MapExpressions(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+// Expressions implements Stringer() API.
+func (this Expressions) String() string {
+	var exprText bytes.Buffer
+	exprText.WriteString("[")
+	for i, expr := range this {
+		if i > 0 {
+			exprText.WriteString(", ")
+		}
+		exprText.WriteString(expr.String())
+	}
+	exprText.WriteString("]")
+	return exprText.String()
+}
+
+func (this Expressions) Copy() Expressions {
+	rv := make(Expressions, len(this))
+	copy(rv, this)
+	return rv
+}
+
+func (this Expressions) EquivalentTo(other Expressions) bool {
+	if len(this) != len(other) {
+		return false
+	}
+
+	for i, expr := range this {
+		if !expr.EquivalentTo(other[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func Copy(expr Expression) Expression {
@@ -174,26 +199,7 @@ func CopyExpressions(exprs Expressions) Expressions {
 	return exprs.Copy()
 }
 
-// Expressions implements Stringer() API.
-func (this Expressions) String() string {
-	var exprText bytes.Buffer
-	exprText.WriteString("[")
-	for i, expr := range this {
-		if i > 0 {
-			exprText.WriteString(", ")
-		}
-		exprText.WriteString(expr.String())
-	}
-	exprText.WriteString("]")
-	return exprText.String()
-}
-
-func (this Expressions) Copy() Expressions {
-	if this == nil {
-		return nil
-	}
-
-	rv := make(Expressions, len(this))
-	copy(rv, this)
-	return rv
+func Equivalent(expr1, expr2 Expression) bool {
+	return (expr1 == nil && expr2 == nil) ||
+		(expr1 != nil && expr2 != nil && expr1.EquivalentTo(expr2))
 }

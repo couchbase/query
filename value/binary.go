@@ -116,7 +116,7 @@ func (this binaryValue) Fields() map[string]interface{} {
 }
 
 func (this binaryValue) Successor() Value {
-	return nil
+	return binaryValue(append(this, byte(0)))
 }
 
 func (this binaryValue) unwrap() Value {

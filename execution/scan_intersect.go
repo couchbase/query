@@ -104,7 +104,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		this.values = nil
 		if n == len(this.scans) {
 			this.notifyScans()
 		}

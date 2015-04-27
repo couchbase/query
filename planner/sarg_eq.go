@@ -39,18 +39,12 @@ func newSargEq(pred *expression.Eq) *sargEq {
 			return _VALUED_SPANS, nil
 		}
 
-		span.Range.Inclusion = datastore.LOW
-		hv := span.Range.Low[0].Value()
-		if hv != nil {
-			if rv.MissingHigh() {
-				hv = hv.Successor()
-			} else if hv != nil {
-				span.Range.Inclusion = datastore.BOTH
-			}
-
-			if hv != nil {
-				span.Range.High = expression.Expressions{expression.NewConstant(hv)}
-			}
+		if rv.MissingHigh() {
+			span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
+			span.Range.Inclusion = datastore.LOW
+		} else {
+			span.Range.High = span.Range.Low
+			span.Range.Inclusion = datastore.BOTH
 		}
 
 		return Spans{span}, nil

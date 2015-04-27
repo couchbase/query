@@ -31,19 +31,14 @@ func newSargLE(pred *expression.LE) *sargLE {
 		if pred.First().EquivalentTo(expr2) {
 			hs := pred.Second().Static()
 			if hs != nil {
-				hv := hs.Value()
-				if hv != nil {
-					if rv.MissingHigh() {
-						hv = hv.Successor()
-					} else if hv != nil {
-						span.Range.Inclusion = datastore.HIGH
-					}
-
-					if hv != nil {
-						exprs = expression.Expressions{expression.NewConstant(hv)}
-						span.Range.High = exprs
-					}
+				if rv.MissingHigh() {
+					exprs = expression.Expressions{expression.NewSuccessor(hs)}
+				} else {
+					exprs = expression.Expressions{hs}
+					span.Range.Inclusion = datastore.HIGH
 				}
+
+				span.Range.High = exprs
 			}
 		} else if pred.Second().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.First().Static()}

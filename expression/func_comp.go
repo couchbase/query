@@ -199,3 +199,44 @@ func (this *Least) MaxArgs() int { return math.MaxInt16 }
 The constructor returns a NewLeast FunctionConstructor.
 */
 func (this *Least) Constructor() FunctionConstructor { return NewLeast }
+
+///////////////////////////////////////////////////
+//
+// Successor
+//
+///////////////////////////////////////////////////
+
+type Successor struct {
+	UnaryFunctionBase
+}
+
+func NewSuccessor(operand Expression) Function {
+	rv := &Successor{
+		*NewUnaryFunctionBase("successor", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *Successor) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Successor) Type() value.Type {
+	return this.Operand().Type().Successor()
+}
+
+func (this *Successor) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Successor) Apply(context Context, arg value.Value) (value.Value, error) {
+	return arg.Successor(), nil
+}
+
+func (this *Successor) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewSuccessor(operands[0])
+	}
+}

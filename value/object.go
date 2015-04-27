@@ -198,7 +198,7 @@ func (this objectValue) Fields() map[string]interface{} {
 }
 
 /*
-Return a longer object.
+Return a successor object.
 */
 func (this objectValue) Successor() Value {
 	if len(this) == 0 {
@@ -206,13 +206,9 @@ func (this objectValue) Successor() Value {
 	}
 
 	s := copyMap(this, self)
-
-	// To add a unique name, append a small byte to the greatest
-	// name
 	names := sortedNames(this)
 	n := names[len(names)-1]
-	s[n+"\t"] = nil
-
+	s[n] = NewValue(this[n]).Successor()
 	return objectValue(s)
 }
 
