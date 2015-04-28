@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -157,7 +156,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	var creds datastore.Credentials
 	if err == nil {
-		creds, err = getCredentials(httpArgs, req.URL.User, req.Header["Authorization"])
+		creds, err = getCredentials(httpArgs, req.Header["Authorization"])
 	}
 
 	client_id := ""
@@ -316,21 +315,31 @@ func getFormat(a httpRequestArgs) (Format, errors.Error) {
 	return format, err
 }
 
-func getCredentials(a httpRequestArgs,
-	hdrCreds *url.Userinfo, auths []string) (datastore.Credentials, errors.Error) {
-	var creds datastore.Credentials
+func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, errors.Error) {
+	creds := datastore.Credentials{}
 
-	if hdrCreds != nil {
-		// Credentials are in the request URL:
-		username := hdrCreds.Username()
-		password, _ := hdrCreds.Password()
-		creds = make(datastore.Credentials)
-		creds[username] = password
+	cred_data, err := a.getCredentials()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cred_data) > 0 {
+		// Credentials are in request parameters:
+		for _, cred := range cred_data {
+			user, user_ok := cred["user"]
+			pass, pass_ok := cred["pass"]
+			if user_ok && pass_ok {
+				creds[user] = pass
+			} else {
+				err = errors.NewServiceErrorMissingValue("user or pass")
+				break
+			}
+		}
 		return creds, nil
 	}
+
 	if len(auths) > 0 {
-		// Credentials are in the request header:
-		// TODO: implement non-Basic auth (digest, ntlm)
+		// Credentials are in http header:
 		auth := auths[0]
 		if strings.HasPrefix(auth, "Basic ") {
 			encoded_creds := strings.Split(auth, " ")[1]
@@ -343,10 +352,8 @@ func getCredentials(a httpRequestArgs,
 			u_details := strings.Split(string(decoded_creds), ":")
 			switch len(u_details) {
 			case 2:
-				creds = make(datastore.Credentials)
 				creds[u_details[0]] = u_details[1]
 			case 3:
-				creds = make(datastore.Credentials)
 				// Support usernames like "local:xxx" or "admin:xxx"
 				creds[strings.Join(u_details[:2], ":")] = u_details[2]
 			default:
@@ -354,23 +361,8 @@ func getCredentials(a httpRequestArgs,
 				return creds, errors.NewServiceErrorBadValue(nil, CREDS)
 			}
 		}
-		return creds, nil
 	}
-	// Credentials may be in request arguments:
-	cred_data, err := a.getCredentials()
-	if err == nil && len(cred_data) > 0 {
-		creds = make(datastore.Credentials)
-		for _, cred := range cred_data {
-			user, user_ok := cred["user"]
-			pass, pass_ok := cred["pass"]
-			if user_ok && pass_ok {
-				creds[user] = pass
-			} else {
-				err = errors.NewServiceErrorMissingValue("user or pass")
-				break
-			}
-		}
-	}
+
 	return creds, err
 }
 
