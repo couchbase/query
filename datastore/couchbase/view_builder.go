@@ -19,10 +19,11 @@ import (
 
 type ddocJSON struct {
 	cb.DDoc
-	IndexOn       []string `json:"indexOn"`
-	Condition     string   `json:"condition"`
-	IndexChecksum int      `json:"indexChecksum"`
-	PrimaryIndex  bool     `json:"primaryIndex"`
+	IndexOn       []string               `json:"indexOn"`
+	Condition     string                 `json:"condition"`
+	IndexChecksum int                    `json:"indexChecksum"`
+	PrimaryIndex  bool                   `json:"primaryIndex"`
+	Options       map[string]interface{} `json:"options"`
 }
 
 func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, view *viewIndexer) (*viewIndex, error) {
@@ -331,6 +332,9 @@ func (idx *viewIndex) putDesignDoc() error {
 	put.Views[idx.name] = view
 	put.IndexChecksum = idx.ddoc.checksum()
 	put.PrimaryIndex = idx.IsPrimary()
+
+	// add view update options
+	put.Options = map[string]interface{}{"updateMinChanges": 1}
 
 	put.IndexOn = make([]string, len(idx.on))
 	for idx, expr := range idx.on {
