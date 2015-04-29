@@ -10,6 +10,7 @@
 package server
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -92,6 +93,7 @@ type ScanConfiguration interface {
 }
 
 type BaseRequest struct {
+	sync.RWMutex
 	id             *requestIDImpl
 	client_id      *clientContextIDImpl
 	statement      string
@@ -250,10 +252,14 @@ func (this *BaseRequest) ServiceTime() time.Time {
 }
 
 func (this *BaseRequest) SetState(state State) {
+	this.Lock()
+	defer this.Unlock()
 	this.state = state
 }
 
 func (this *BaseRequest) State() State {
+	this.RLock()
+	defer this.RUnlock()
 	return this.state
 }
 
@@ -350,7 +356,7 @@ func (this *BaseRequest) Stop(state State) {
 	defer sendStop(this.stopResult)
 	defer sendStop(this.stopExecute)
 
-	this.state = state
+	this.SetState(state)
 }
 
 func sendStop(ch chan bool) {

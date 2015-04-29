@@ -32,7 +32,8 @@ func (this *httpRequest) Output() execution.Output {
 func (this *httpRequest) Fail(err errors.Error) {
 	this.SetState(server.FATAL)
 	// Determine the appropriate http response code based on the error
-	this.httpRespCode = mapErrorToHttpResponse(err)
+	httpRespCode := mapErrorToHttpResponse(err)
+	this.setHttpCode(httpRespCode)
 	// Put the error on the errors channel
 	this.Errors() <- err
 }
@@ -56,6 +57,18 @@ func mapErrorToHttpResponse(err errors.Error) int {
 	}
 }
 
+func (this *httpRequest) httpCode() int {
+	this.RLock()
+	defer this.RUnlock()
+	return this.httpRespCode
+}
+
+func (this *httpRequest) setHttpCode(httpRespCode int) {
+	this.Lock()
+	defer this.Unlock()
+	this.httpRespCode = httpRespCode
+}
+
 func (this *httpRequest) Failed(srvr *server.Server) {
 	defer this.Stop(server.FATAL)
 	defer this.stopCloseNotifier()
@@ -77,7 +90,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.NotifyStop(stopNotify)
 
-	this.httpRespCode = http.StatusOK
+	this.setHttpCode(http.StatusOK)
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults()
 	this.writeSuffix(srvr.Metrics(), "")
@@ -88,8 +101,8 @@ func (this *httpRequest) Expire() {
 	defer this.Stop(server.TIMEOUT)
 	defer this.stopCloseNotifier()
 
-	if this.httpRespCode == 0 {
-		this.httpRespCode = http.StatusOK
+	if this.httpCode() == 0 {
+		this.setHttpCode(http.StatusOK)
 		this.writePrefix(&server.Server{}, nil)
 	}
 	this.writeSuffix(true, server.TIMEOUT)
@@ -359,7 +372,7 @@ func (this *bufferedWriter) writeString(s string) bool {
 	if len(s)+len(this.buffer.Bytes()) > this.buffer_pool.BufferCapacity() { // threshold exceeded
 		w := this.req.resp // our request's response writer
 		// write response header and data buffered so far using request's response writer:
-		w.WriteHeader(this.req.httpRespCode)
+		w.WriteHeader(this.req.httpCode())
 		io.Copy(w, this.buffer)
 		// switch to non-buffered mode; change our request's responseDataManager to be a directWriter:
 		this.req.writer = NewDirectWriter(this.req)
@@ -388,7 +401,7 @@ func (this *bufferedWriter) noMoreData() {
 	content_len := strconv.Itoa(len(this.buffer.Bytes()))
 	w.Header().Set("Content-Length", content_len)
 	// write response header and data buffered so far:
-	w.WriteHeader(this.req.httpRespCode)
+	w.WriteHeader(this.req.httpCode())
 	io.Copy(w, this.buffer)
 	// no more data in the response => return buffer to pool:
 	this.buffer_pool.PutBuffer(this.buffer)

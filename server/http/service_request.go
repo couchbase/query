@@ -186,7 +186,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	closeNotifier := func() {
 		select {
 		case <-closeNotify:
-			rv.Stop(server.TIMEOUT)
+			rv.Expire()
 			return
 		case <-rv.requestNotify:
 			return
