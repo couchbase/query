@@ -1,7 +1,7 @@
 # Query README
 
 * Latest: [Query README](https://github.com/couchbase/query/blob/master/README.md)
-* Modified: 2014-11-20
+* Modified: 2015-04-25
 
 ## Introduction
 
@@ -11,10 +11,9 @@ Developer Preview 4, Beta and GA.
 
 ## Goals
 
-The goals of this DP4 implementation are:
+The goals of this implementation are:
 
-* Language completeness for GA (as opposed to system and operational
-  completeness)
+* Language completeness for GA
 
 * GA code base
 
@@ -25,7 +24,7 @@ The goals of this DP4 implementation are:
 
 ## Features
 
-The N1QL DP4 implementation provides the following features:
+This N1QL implementation provides the following features:
 
 * __Read__
     + __SELECT__
@@ -36,10 +35,9 @@ The N1QL DP4 implementation provides the following features:
     + __CREATE PRIMARY INDEX__
 
 * __DML__
-    + __INSERT__
-    + __UPSERT__
     + __UPDATE__
     + __DELETE__
+    + __INSERT__
     + __UPSERT__
     + __MERGE__
 
@@ -437,7 +435,7 @@ data-parallelization and serialization points.
 1. SendUpdate
 1. Returning (Projection)
 
-## Steps to create a DP4 build.
+## Steps to create a build
 
 ### Get a working repository
 
@@ -447,23 +445,24 @@ data-parallelization and serialization points.
      $ mkdir bin pkg
      $ cd $GOPATH/src/github.com/couchbase/
 
-Clone the git repo into the current working directory, to get the source, so as to be able to make a build. This clones it into query:
+Clone the git repo into the current working directory, to get the
+source, so as to be able to make a build. This clones it into query:
 
      $ git clone https://github.com/couchbase/query query
      $ cd query 
      $ ./build.sh
 
-All the builds exist in their respective directories. You can find the cbq and cbq-engine binaries in the shell and server directories. 
+All the builds exist in their respective directories. You can find the
+cbq and cbq-engine binaries in the shell and server directories.
 
+### Creating a local build using local json files:
 
-###Creating a local build using local json files:
-
-####Pre-requisites: 
+#### Pre-requisites: 
 cbq-engine binary
 cbq binary
 Data sample set zip file(sample set of json documents)
 
-####Steps to run :
+#### Steps to run:
 1.	Create a directory  
         
         $ mkdir ~/sample_build/tutorial/data
@@ -489,7 +488,7 @@ Data sample set zip file(sample set of json documents)
 
 8.	TIME TO EXPERIMENT ☺ 
 
-###Using the Admin UI 
+### Using the Admin UI 
 1.	Download the Couchbase server and install it (for the mac add it to the Applications folder)
 2.	Open up localhost:8091 and follow setup instructions
 3.	Create your own buckets and fill in data.
@@ -504,5 +503,5 @@ Data sample set zip file(sample set of json documents)
 
 6.	Run N1QL queries on the CLI.
 
-NOTE : Ctrl + c should allow you to exit the running cbq and cbq-engine processes.
+NOTE: Ctrl + D should allow you to exit the running cbq and cbq-engine processes.
 
