@@ -200,6 +200,7 @@ val              value.Value
 %token SCHEMA
 %token SELECT
 %token SELF
+%token SEMI
 %token SET
 %token SHOW
 %token SOME
@@ -369,7 +370,7 @@ val              value.Value
 %%
 
 input:
-stmt
+stmt opt_trailer
 {
     yylex.(*lexer).setStatement($1)
 }
@@ -378,6 +379,14 @@ expr
 {
     yylex.(*lexer).setExpression($1)
 }
+;
+
+opt_trailer:
+{
+  /* nothing */
+}
+|
+opt_trailer SEMI
 ;
 
 stmt:

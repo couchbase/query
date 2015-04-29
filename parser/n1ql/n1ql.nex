@@ -79,6 +79,7 @@
 /\[/		  { logToken("LBRACKET"); return LBRACKET }
 /\]/		  { logToken("RBRACKET"); return RBRACKET }
 /\]i/		  { logToken("RBRACKET_ICASE"); return RBRACKET_ICASE }
+/;/		  { logToken("SEMI"); return SEMI }
 
 /[aA][lL][lL]/	    			  	 { logToken("ALL"); return ALL }
 /[aA][lL][tT][eE][rR]/				 { logToken("ALTER"); return ALTER }

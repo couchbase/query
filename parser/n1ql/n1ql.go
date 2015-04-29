@@ -18,7 +18,9 @@ import (
 )
 
 func ParseStatement(input string) (algebra.Statement, error) {
-	lex := newLexer(NewLexer(strings.NewReader(input)))
+	input = strings.TrimSpace(input)
+	reader := strings.NewReader(input)
+	lex := newLexer(NewLexer(reader))
 	lex.parsingStmt = true
 	doParse(lex)
 
@@ -37,7 +39,9 @@ func ParseStatement(input string) (algebra.Statement, error) {
 }
 
 func ParseExpression(input string) (expression.Expression, error) {
-	lex := newLexer(NewLexer(strings.NewReader(input)))
+	input = strings.TrimSpace(input)
+	reader := strings.NewReader(input)
+	lex := newLexer(NewLexer(reader))
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
