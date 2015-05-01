@@ -259,18 +259,30 @@ func buildPrimaryScan(keyspace datastore.Keyspace, hintIndexes, otherIndexes []d
 
 	// Prefer hints
 	for _, index := range hintIndexes {
+		if !index.IsPrimary() {
+			continue
+		}
+
 		primary, ok = index.(datastore.PrimaryIndex)
 		if ok {
 			return
+		} else {
+			return nil, fmt.Errorf("Unable to cast primary index %s", index.Name())
 		}
 	}
 
 	// Consider other primary indexes
 	if otherIndexes != nil {
 		for _, index := range otherIndexes {
+			if !index.IsPrimary() {
+				continue
+			}
+
 			primary, ok = index.(datastore.PrimaryIndex)
 			if ok {
 				return
+			} else {
+				return nil, fmt.Errorf("Unable to cast primary index %s", index.Name())
 			}
 		}
 	}
