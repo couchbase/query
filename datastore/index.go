@@ -45,9 +45,11 @@ type Indexer interface {
 type IndexState string
 
 const (
-	PENDING IndexState = "pending" // The index is being built or rebuilt
-	ONLINE  IndexState = "online"  // The index is available for use
-	OFFLINE IndexState = "offline" // The index requires manual intervention
+	DEFERRED IndexState = "deferred" // The index has not been built
+	BUILDING IndexState = "building" // The index is being built or rebuilt
+	PENDING  IndexState = "pending"  // The index is in progress but is not yet ready for use
+	ONLINE   IndexState = "online"   // The index is available for use
+	OFFLINE  IndexState = "offline"  // The index requires manual intervention
 )
 
 func (indexState IndexState) String() string {
