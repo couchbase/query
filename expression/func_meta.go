@@ -268,7 +268,13 @@ func (this *Version) Type() value.Type { return value.STRING }
 Return the current server version, wrapped in a value.
 */
 func (this *Version) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return value.NewValue(util.VERSION), nil
+	return _VERSION_VALUE, nil
+}
+
+var _VERSION_VALUE = value.NewValue(util.VERSION)
+
+func (this *Version) Value() value.Value {
+	return _VERSION_VALUE
 }
 
 func (this *Version) Indexable() bool {
@@ -314,7 +320,13 @@ func (this *MinVersion) Type() value.Type { return value.STRING }
 Return the current minimum version, wrapped in a value.
 */
 func (this *MinVersion) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return value.NewValue(util.MIN_VERSION), nil
+	return _MIN_VERSION_VALUE, nil
+}
+
+var _MIN_VERSION_VALUE = value.NewValue(util.MIN_VERSION)
+
+func (this *MinVersion) Value() value.Value {
+	return _MIN_VERSION_VALUE
 }
 
 func (this *MinVersion) Indexable() bool {
