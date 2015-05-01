@@ -31,12 +31,6 @@ type Base64 struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewBase64 takes as input an expression and returns
-a pointer to the Base64 struct that calls NewUnaryFunctionBase to
-create a function named BASE64 with an input operand as the
-expression.
-*/
 func NewBase64(operand Expression) Function {
 	rv := &Base64{
 		*NewUnaryFunctionBase("base64", operand),
@@ -46,34 +40,16 @@ func NewBase64(operand Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Base64) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a String value.
-*/
 func (this *Base64) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method takes in an operand value and context and returns a value.
-If the type of operand is missing then return it. Call MarshalJSON
-to get the bytes, and then use Go's encoding/base64 package to
-encode the bytes to string. Create a newValue using the string and
-return it.
-*/
 func (this *Base64) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
@@ -84,10 +60,6 @@ func (this *Base64) Apply(context Context, operand value.Value) (value.Value, er
 	return value.NewValue(str), nil
 }
 
-/*
-The constructor returns a NewBase64 with an operand cast to a
-Function as the FunctionConstructor.
-*/
 func (this *Base64) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewBase64(operands[0])
@@ -124,34 +96,20 @@ func NewMeta(operand Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a OBJECT value.
-*/
 func (this *Meta) Type() value.Type { return value.OBJECT }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method takes in an operand value and context and returns a value.
-If the type of operand is missing then return it. If the operand
-type is AnnotatedValue then we call NewValue using the GetAttachment
-method on the operand with input string meta. In the event the there
-is no attachment present, the default case is to return a NULL value.
-*/
+func (this *Meta) Indexable() bool {
+	return false
+}
+
 func (this *Meta) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
@@ -165,10 +123,6 @@ func (this *Meta) Apply(context Context, operand value.Value) (value.Value, erro
 	}
 }
 
-/*
-The constructor returns a NewMeta with an operand cast to a
-Function as the FunctionConstructor.
-*/
 func (this *Meta) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMeta(operands[0])
@@ -207,10 +161,6 @@ func NewSelf() Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Self) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -227,9 +177,10 @@ func (this *Self) Evaluate(item value.Value, context Context) (value.Value, erro
 	return item, nil
 }
 
-/*
-Return the receiver as FunctionConstructor.
-*/
+func (this *Self) Indexable() bool {
+	return false
+}
+
 func (this *Self) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _SELF }
 }
@@ -249,10 +200,6 @@ type Uuid struct {
 	NullaryFunctionBase
 }
 
-/*
-The function NewUuid returns a pointer to the NewNullaryFunctionBase
-to create a function named UUID. It has no input arguments.
-*/
 func NewUuid() Function {
 	rv := &Uuid{
 		*NewNullaryFunctionBase("uuid"),
@@ -263,17 +210,10 @@ func NewUuid() Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Uuid) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a string value.
-*/
 func (this *Uuid) Type() value.Type { return value.STRING }
 
 /*
@@ -289,10 +229,6 @@ func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, erro
 	return value.NewValue(u), nil
 }
 
-/*
-The constructor returns a NewUuid by casting the receiver to a
-Function as the FunctionConstructor.
-*/
 func (this *Uuid) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return this
@@ -307,51 +243,38 @@ func (this *Uuid) Constructor() FunctionConstructor {
 
 /*
 This represents the Meta function VERSION(). It returns
-the current version of the N1QL server
+the current version of N1QL.
 */
 type Version struct {
 	NullaryFunctionBase
 }
 
-/*
-The function NewVersion returns a pointer to the NewNullaryFunctionBase
-to create a function named Version. It has no input arguments.
-*/
 func NewVersion() Function {
 	rv := &Version{
 		*NewNullaryFunctionBase("version"),
 	}
 
-	rv.volatile = true
 	rv.expr = rv
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Version) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a string value.
-*/
 func (this *Version) Type() value.Type { return value.STRING }
 
 /*
 Return the current server version, wrapped in a value.
 */
 func (this *Version) Evaluate(item value.Value, context Context) (value.Value, error) {
-	v := util.VERSION
-	return value.NewValue(v), nil
+	return value.NewValue(util.VERSION), nil
 }
 
-/*
-The constructor returns a NewVersion by casting the receiver to a
-Function as the FunctionConstructor.
-*/
+func (this *Version) Indexable() bool {
+	return false
+}
+
 func (this *Version) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return this
@@ -365,38 +288,26 @@ func (this *Version) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Meta function MIN_VERSION(). It returns
-the current minimum supported version of the N1QL server
+This represents the function MIN_VERSION(). It returns
+the current minimum supported version of N1QL.
 */
 type MinVersion struct {
 	NullaryFunctionBase
 }
 
-/*
-The function NewMinVersion returns a pointer to the NewNullaryFunctionBase
-to create a function named MinVersion. It has no input arguments.
-*/
 func NewMinVersion() Function {
 	rv := &MinVersion{
-		*NewNullaryFunctionBase("version"),
+		*NewNullaryFunctionBase("min_version"),
 	}
 
-	rv.volatile = true
 	rv.expr = rv
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *MinVersion) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a string value.
-*/
 func (this *MinVersion) Type() value.Type { return value.STRING }
 
 /*
@@ -406,10 +317,10 @@ func (this *MinVersion) Evaluate(item value.Value, context Context) (value.Value
 	return value.NewValue(util.MIN_VERSION), nil
 }
 
-/*
-The constructor returns a NewMinVersion by casting the receiver to a
-Function as the FunctionConstructor.
-*/
+func (this *MinVersion) Indexable() bool {
+	return false
+}
+
 func (this *MinVersion) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return this

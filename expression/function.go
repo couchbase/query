@@ -126,11 +126,6 @@ type FunctionBase struct {
 	operands Expressions
 }
 
-/*
-The method NewFunctionBase returns a pointer to a
-FunctionBase struct, initializing the name and operand
-field to the input name and operand expressions.
-*/
 func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	return &FunctionBase{
 		name:     name,
@@ -138,12 +133,6 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	}
 }
 
-/*
-The method Eval evaluates the function. Create a set of values with
-length as the number of operands called arguments. Populate this
-slice by ranging over the operands and evaluating each operand using
-the input item and context. Return the result.
-*/
 func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
 	result value.Value, err error) {
 	args := make(value.Values, len(this.operands))
@@ -158,13 +147,6 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 	return applied.Apply(context, args...)
 }
 
-/*
-Returns a boolean value that represents if the given value is
-indexable or not. If the method receiver is volatile, then
-return false. Range over the operands of the function and
-check if the operands are indexable. If any one of them is
-not then return false; else true.
-*/
 func (this *FunctionBase) Indexable() bool {
 	if this.volatile {
 		return false
@@ -179,11 +161,6 @@ func (this *FunctionBase) Indexable() bool {
 	return true
 }
 
-/*
-Returns a boolean value representing if the function
-expressions are equivalent to the input other expression
-and if its value is changeable.
-*/
 func (this *FunctionBase) EquivalentTo(other Expression) bool {
 	return !this.volatile && this.ExpressionBase.EquivalentTo(other)
 }
