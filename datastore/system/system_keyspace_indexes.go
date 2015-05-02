@@ -171,6 +171,10 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			doc.SetField("condition", cond.String())
 		}
 
+		if index.IsPrimary() {
+			doc.SetField("is_primary", true)
+		}
+
 		rv = append(rv, datastore.AnnotatedPair{key, doc})
 	}
 
