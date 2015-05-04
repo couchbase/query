@@ -46,6 +46,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	var httpArgs httpRequestArgs
 	var err errors.Error
 
+	// Limit body size in case of denial-of-service attack
+	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)
+
 	e := req.ParseForm()
 	if e != nil {
 		err = errors.NewServiceErrorBadValue(e, "request form")
@@ -177,9 +180,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	rv.SetTimeout(rv, timeout)
 
 	rv.writer = NewBufferedWriter(rv, bp)
-
-	// Limit body size in case of denial-of-service attack
-	req.Body = http.MaxBytesReader(resp, req.Body, MAX_REQUEST_BYTES)
 
 	// Abort if client closes connection; alternatively, return when request completes.
 	closeNotify := resp.(http.CloseNotifier).CloseNotify()
