@@ -20,7 +20,6 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -91,12 +90,6 @@ func (this *HttpEndpoint) ListenTLS() error {
 // If the server channel is full and we are unable to queue a request,
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	// Content negotiation
-	if !this.doContentNegotiation(resp, req) {
-		resp.WriteHeader(http.StatusNotAcceptable)
-		return
-	}
-
 	request := newHttpRequest(resp, req, this.bufpool)
 
 	defer this.doStats(request)
@@ -164,35 +157,4 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 func GetServiceURL(host string, port int) string {
 	urlParts := []string{"http://", host, ":", strconv.Itoa(port), servicePrefix}
 	return strings.Join(urlParts, "")
-}
-
-const acceptType = "application/json"
-const versionTag = "version="
-const version = acceptType + "; " + versionTag + util.VERSION
-
-func (this *HttpEndpoint) doContentNegotiation(resp http.ResponseWriter, req *http.Request) bool {
-	// set content type to current version
-	resp.Header().Set("Content-Type", version)
-	accept := req.Header["Accept"]
-	// if no media type specified, default to current version
-	if accept == nil || accept[0] == "*/*" {
-		return true
-	}
-	desiredContent := accept[0]
-	// media type must be application/json at least
-	if !strings.HasPrefix(desiredContent, acceptType) {
-		return false
-	}
-	versionIndex := strings.Index(desiredContent, versionTag)
-	// no version specified, default to current version
-	if versionIndex == -1 {
-		return true
-	}
-	// check if requested version is supported
-	requestVersion := desiredContent[versionIndex+len(versionTag):]
-	if requestVersion >= util.MIN_VERSION && requestVersion <= util.VERSION {
-		resp.Header().Set("Content-Type", desiredContent)
-		return true
-	}
-	return false
 }

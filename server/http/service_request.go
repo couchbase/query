@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -57,6 +58,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 	if err != nil && req.Method != "GET" && req.Method != "POST" {
 		err = errors.NewServiceErrorHTTPMethod(req.Method)
 	}
+
+	err = contentNegotiation(resp, req)
 
 	if err == nil {
 		httpArgs, err = getRequestParams(req)
@@ -392,6 +395,37 @@ func getClientID(a httpRequestArgs) (string, errors.Error) {
 		}
 	}
 	return client_id, nil
+}
+
+const acceptType = "application/json"
+const versionTag = "version="
+const version = acceptType + "; " + versionTag + util.VERSION
+
+func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Error {
+	// set content type to current version
+	resp.Header().Set("Content-Type", version)
+	accept := req.Header["Accept"]
+	// if no media type specified, default to current version
+	if accept == nil || accept[0] == "*/*" {
+		return nil
+	}
+	desiredContent := accept[0]
+	// media type must be application/json at least
+	if !strings.HasPrefix(desiredContent, acceptType) {
+		return errors.NewServiceErrorMediaType(desiredContent)
+	}
+	versionIndex := strings.Index(desiredContent, versionTag)
+	// no version specified, default to current version
+	if versionIndex == -1 {
+		return nil
+	}
+	// check if requested version is supported
+	requestVersion := desiredContent[versionIndex+len(versionTag):]
+	if requestVersion >= util.MIN_VERSION && requestVersion <= util.VERSION {
+		resp.Header().Set("Content-Type", desiredContent)
+		return nil
+	}
+	return errors.NewServiceErrorMediaType(desiredContent)
 }
 
 // httpRequestArgs is an interface for getting the arguments in a http request

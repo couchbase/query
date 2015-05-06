@@ -225,6 +225,11 @@ func NewServiceErrorClientID(id string) Error {
 		InternalMsg: "forbidden character (\\ or \") in client_context_id", InternalCaller: CallerN(1)}
 }
 
+func NewServiceErrorMediaType(mediaType string) Error {
+	return &err{level: EXCEPTION, ICode: 1120, IKey: "service.io.request.media_type",
+		InternalMsg: fmt.Sprintf("Unsupported media type: %s", mediaType), InternalCaller: CallerN(1)}
+}
+
 // admin level errors - errors that are created in the clustering and accounting packages
 
 func NewAdminConnectionError(e error, msg string) Error {
