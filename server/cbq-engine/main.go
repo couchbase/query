@@ -41,6 +41,7 @@ var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
+var REQUEST_SIZE_CAP = flag.String("request-size-cap", http.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int64("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
 var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
@@ -140,6 +141,7 @@ func main() {
 	}
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
+	http.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
 		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
 	if err != nil {
