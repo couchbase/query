@@ -55,7 +55,7 @@ func SetRequestSizeCap(requested string) {
 		setting = MAX_REQUEST_BYTES_DEFAULT
 	}
 	if setting <= 0 {
-		setting = math.MaxInt64
+		setting = math.MaxInt32
 	}
 	atomic.StoreInt64(&maxRequestBytes, int64(setting))
 	logging.Infop("Request Size Cap", logging.Pair{"bytes", GetRequestSizeCap()})
