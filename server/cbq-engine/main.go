@@ -60,6 +60,8 @@ var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 func main() {
+	HideConsole(true)
+	defer HideConsole(false)
 	flag.Parse()
 
 	var f *os.File
