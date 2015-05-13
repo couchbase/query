@@ -11,6 +11,7 @@ package couchbase
 
 import (
 	"net/http"
+	"time"
 
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
@@ -19,6 +20,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	"sync"
 )
 
 type viewIndexer struct {
@@ -26,6 +28,7 @@ type viewIndexer struct {
 	indexes          map[string]datastore.Index
 	primary          map[string]datastore.PrimaryIndex
 	nonUsableIndexes []string // indexes that cannot be used
+	sync.RWMutex
 }
 
 const _BATCH_SIZE = 64 * 1024
@@ -38,7 +41,20 @@ func newViewIndexer(keyspace *keyspace) datastore.Indexer {
 		nonUsableIndexes: make([]string, 0, 10),
 	}
 
+	go rv.keepIndexesFresh()
 	return rv
+}
+
+func (view *viewIndexer) keepIndexesFresh() {
+
+	tickChan := time.Tick(500 * time.Millisecond)
+
+	for _ = range tickChan {
+		if view.keyspace.deleted == true {
+			return
+		}
+		view.Refresh()
+	}
 }
 
 func (view *viewIndexer) KeyspaceId() string {
@@ -54,8 +70,10 @@ func (view *viewIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 }
 
 func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
-	view.Refresh()
+	view.RLock()
 	index, ok := view.indexes[name]
+	view.RUnlock()
+
 	if !ok {
 		return nil, errors.NewCbViewNotFoundError(nil, name)
 	}
@@ -63,7 +81,9 @@ func (view *viewIndexer) IndexByName(name string) (datastore.Index, errors.Error
 }
 
 func (view *viewIndexer) IndexNames() ([]string, errors.Error) {
-	view.Refresh()
+	view.RLock()
+	defer view.RUnlock()
+
 	rv := make([]string, 0, len(view.indexes))
 	for name, _ := range view.indexes {
 		rv = append(rv, name)
@@ -76,7 +96,9 @@ func (view *viewIndexer) IndexIds() ([]string, errors.Error) {
 }
 
 func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
-	view.Refresh()
+	view.RLock()
+	defer view.RUnlock()
+
 	logging.Infof(" Number of primary indexes on b0 %v", len(view.primary))
 	rv := make([]datastore.PrimaryIndex, 0, len(view.primary))
 	for _, index := range view.primary {
@@ -86,7 +108,9 @@ func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Erro
 }
 
 func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
-	view.Refresh()
+	view.RLock()
+	defer view.RUnlock()
+
 	rv := make([]datastore.Index, 0, len(view.indexes))
 	for _, index := range view.indexes {
 		rv = append(rv, index)
@@ -124,6 +148,9 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 		return nil, errors.NewCbViewCreateError(err, name)
 	}
 
+	view.Lock()
+	defer view.Unlock()
+
 	view.indexes[idx.Name()] = idx
 	view.primary[idx.Name()] = idx
 	return idx, nil
@@ -154,12 +181,53 @@ func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.
 	if err != nil {
 		return nil, errors.NewCbViewCreateError(err, name)
 	}
+
+	view.Lock()
+	defer view.Unlock()
+
 	view.indexes[idx.Name()] = idx
 	return idx, nil
 }
 
 func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
 	return errors.NewCbViewsNotSupportedError(nil, "BUILD INDEXES is not supported for VIEW.")
+}
+
+func (view *viewIndexer) indexesUpdated(a, b map[string]datastore.Index) bool {
+
+	if len(a) != len(b) {
+		return true
+	}
+
+	view.RLock()
+	defer view.RUnlock()
+
+	defer func() {
+		if err := recover(); err != nil {
+			logging.Errorf("Panic in compare", err)
+		}
+	}()
+
+	// if the checksum of each index is the same
+	for name, idx_a := range a {
+		idx_b, ok := b[name]
+		if !ok {
+			return true
+		}
+
+		switch idx_a.(type) {
+		case *primaryIndex:
+			if idx_a.(*primaryIndex).signature() != idx_b.(*primaryIndex).signature() {
+				return true
+			}
+		default:
+			if idx_a.(*viewIndex).signature() != idx_b.(*viewIndex).signature() {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (view *viewIndexer) loadViewIndexes() errors.Error {
@@ -169,8 +237,16 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	primary := make(map[string]datastore.PrimaryIndex)
 
 	defer func() {
-		view.primary = primary
-		view.indexes = indexes
+
+		// only if the indexes have changed then update
+		if view.indexesUpdated(view.indexes, indexes) {
+			logging.Infof("Indexes updated ")
+
+			view.Lock()
+			view.indexes = indexes
+			view.primary = primary
+			view.Unlock()
+		}
 	}()
 
 	indexList, err := loadViewIndexes(view)
@@ -179,15 +255,16 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	}
 
 	if len(indexList) == 0 {
-		logging.Infof("No view indexes found for bucket %s", view.keyspace.Name())
+		logging.Debugf("No view indexes found for bucket %s", view.keyspace.Name())
 		return nil
 	}
 
 	for _, index := range indexList {
-		logging.Infof("Found index on keyspace %s", (*index).KeyspaceId())
+		logging.Debugf("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
 		indexes[name] = *index
-		if (*index).(*viewIndex).IsPrimary() == true {
+		switch (*index).(type) {
+		case *primaryIndex:
 			primary[name] = (*index).(datastore.PrimaryIndex)
 		}
 	}
@@ -197,7 +274,7 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 
 func (view *viewIndexer) Refresh() errors.Error {
 	// trigger refresh of this indexer
-	logging.Infof("Refreshing Indexes in keyspace %s", view.keyspace.Name())
+	logging.Debugf("Refreshing Indexes in keyspace %s", view.keyspace.Name())
 
 	err := view.loadViewIndexes()
 	if err != nil {
@@ -224,6 +301,7 @@ type designdoc struct {
 	viewname string
 	mapfn    string
 	reducefn string
+	cksum    int
 }
 
 func (vi *viewIndex) KeyspaceId() string {
@@ -290,6 +368,10 @@ func (vi *viewIndex) Drop() errors.Error {
 		return errors.NewCbViewsDropIndexError(err, vi.Name())
 	}
 	// TODO need mutex
+
+	vi.view.Lock()
+	vi.view.Unlock()
+
 	delete(vi.view.indexes, vi.name)
 	if vi.IsPrimary() == true {
 		logging.Infof(" Primary index being dropped ")
@@ -369,4 +451,8 @@ func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 
 	logging.Infof("Number of entries fetched from the index %d", numRows)
 
+}
+
+func (vi *viewIndex) signature() int {
+	return vi.ddoc.cksum
 }

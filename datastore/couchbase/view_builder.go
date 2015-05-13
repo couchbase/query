@@ -186,17 +186,34 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 		var index datastore.Index
 
-		logging.Infof("Found index name %v keyspace %v Primary index %v", iname, b.Name(), jdoc.PrimaryIndex)
-		index = &viewIndex{
-			name:      iname,
-			keyspace:  b,
-			view:      v,
-			using:     datastore.VIEW,
-			ddoc:      &ddoc,
-			on:        exprlist,
-			where:     conditionExpr,
-			isPrimary: jdoc.PrimaryIndex,
+		logging.Debugf("Found index name %v keyspace %v Primary index %v", iname, b.Name(), jdoc.PrimaryIndex)
+		if jdoc.PrimaryIndex == true {
+			index = &primaryIndex{
+				viewIndex{
+					name:      iname,
+					keyspace:  b,
+					view:      v,
+					using:     datastore.VIEW,
+					ddoc:      &ddoc,
+					on:        exprlist,
+					where:     conditionExpr,
+					isPrimary: jdoc.PrimaryIndex,
+				},
+			}
+
+		} else {
+			index = &viewIndex{
+				name:      iname,
+				keyspace:  b,
+				view:      v,
+				using:     datastore.VIEW,
+				ddoc:      &ddoc,
+				on:        exprlist,
+				where:     conditionExpr,
+				isPrimary: jdoc.PrimaryIndex,
+			}
 		}
+
 		indexes = append(indexes, &index)
 
 	}
@@ -378,7 +395,8 @@ func (idx *viewIndex) putDesignDoc() error {
 func (ddoc *designdoc) checksum() int {
 	mapSum := crc32.ChecksumIEEE([]byte(ddoc.mapfn))
 	reduceSum := crc32.ChecksumIEEE([]byte(ddoc.reducefn))
-	return int(mapSum + reduceSum)
+	ddoc.cksum = int(mapSum + reduceSum)
+	return ddoc.cksum
 }
 
 func getDesignDoc(b *keyspace, ddocname string) (*ddocJSON, error) {

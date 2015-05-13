@@ -364,34 +364,6 @@ func (p *namespace) KeyspaceByName(name string) (b datastore.Keyspace, e errors.
 		p.lock.Lock()
 		defer p.lock.Unlock()
 		p.keyspaceCache[name] = b
-	} else {
-		// check if the keyspace is still fresh
-		newbucket, err := p.cbNamespace.GetBucket(name)
-		if err != nil {
-			b.(*keyspace).deleted = true
-			logging.Errorf(" Error retrieving bucket %s %s", name, err.Error())
-			delete(p.keyspaceCache, name)
-
-			// special case error, where the cached bucket UUID is not valid
-			if strings.ContainsAny(err.Error(), "uuid does not match") {
-				b, err = newKeyspace(p, name)
-				if err == nil {
-					// new incarnation of the keyspace
-					return b, nil
-				}
-			}
-
-			return nil, errors.NewCbKeyspaceNotFoundError(err, name)
-		} else if b.(*keyspace).cbbucket.UUID != newbucket.UUID {
-			logging.Infof(" UUid of keyspace %v uuid now %v", b.(*keyspace).cbbucket.UUID, newbucket.UUID)
-			b.(*keyspace).cbbucket = newbucket
-		} else if len(newbucket.HealthyNodes()) != len(b.(*keyspace).cbbucket.HealthyNodes()) ||
-			!compareNodeAddress(newbucket.NodeAddresses(), b.(*keyspace).cbbucket.NodeAddresses()) {
-
-			logging.Infof(" node list or addresses changed now %v before %v", len(newbucket.HealthyNodes()), len(b.(*keyspace).cbbucket.HealthyNodes()))
-			b.(*keyspace).cbbucket = newbucket
-		}
-
 	}
 	return b, nil
 }
@@ -549,7 +521,27 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	}
 
+	// Create a bucket updater that will keep the couchbase bucket fresh.
+	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
+
 	return rv, nil
+}
+
+// Called by go-couchbase if a configured keyspace is deleted
+func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	ks, ok := p.keyspaceCache[name]
+	if ok {
+		logging.Infof("Keyspace %v being deleted", name)
+		ks.(*keyspace).deleted = true
+		delete(p.keyspaceCache, name)
+
+	} else {
+		logging.Warnf("Keyspace %v not configured on this server", name)
+	}
 }
 
 func (b *keyspace) NamespaceId() string {
