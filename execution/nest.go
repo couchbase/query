@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -17,7 +19,8 @@ import (
 
 type Nest struct {
 	base
-	plan *plan.Nest
+	plan     *plan.Nest
+	duration time.Duration
 }
 
 func NewNest(plan *plan.Nest) *Nest {
@@ -35,10 +38,14 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Nest) Copy() Operator {
-	return &Nest{this.base.copy(), this.plan}
+	return &Nest{
+		base: this.base.copy(),
+		plan: this.plan,
+	}
 }
 
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
+	defer context.AddPhaseTime("nest", this.duration)
 	this.runConsumer(this, context, parent)
 }
 
@@ -74,8 +81,13 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		}
 	}
 
+	timer := time.Now()
+
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
+
+	this.duration += time.Since(timer)
+
 	fetchOk := true
 	for _, err := range errs {
 		context.Error(err)

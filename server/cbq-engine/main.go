@@ -51,6 +51,7 @@ var HTTPS_ADDR = flag.String("https", ":18093", "HTTPS service address")
 var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
+var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
@@ -94,10 +95,20 @@ func main() {
 
 	if *DEBUG {
 		logging.SetLevel(logging.Debug)
-		logging.Debugp("Debug mode enabled")
 	} else {
-		logging.SetLevel(logging.Info)
+		level := logging.Info
+
+		if *LOG_LEVEL != "" {
+			lvl, ok := logging.ParseLevel(*LOG_LEVEL)
+			if ok {
+				level = lvl
+			}
+		}
+
+		logging.SetLevel(level)
 	}
+
+	logging.Infof("Setting log level to %s", logging.LogLevel().String())
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {

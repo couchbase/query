@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -83,8 +84,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
+	timer := time.Now()
+
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
+
+	context.AddPhaseTime("fetch", time.Since(timer))
+
 	fetchOk := true
 	for _, err := range errs {
 		context.Error(err)

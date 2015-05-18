@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
@@ -77,7 +79,11 @@ func (this *Order) afterItems(context *Context) {
 		this.terms[i] = term.Expression().String()
 	}
 
+	timer := time.Now()
+
 	sort.Sort(this)
+
+	context.AddPhaseTime("sort", time.Since(timer))
 
 	for _, av := range this.values {
 		if !this.sendItem(av) {

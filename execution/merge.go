@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -24,6 +25,7 @@ type Merge struct {
 	delete       Operator
 	insert       Operator
 	childChannel StopChannel
+	duration     time.Duration
 }
 
 func NewMerge(plan *plan.Merge, update, delete, insert Operator) *Merge {
@@ -60,6 +62,8 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+
+		defer context.AddPhaseTime("merge", this.duration)
 
 		if context.Readonly() {
 			return
@@ -155,8 +159,13 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 		return false
 	}
 
+	timer := time.Now()
+
 	fetchOk := true
 	bvs, errs := this.plan.Keyspace().Fetch([]string{k})
+
+	this.duration += time.Since(timer)
+
 	for _, err := range errs {
 		context.Error(err)
 		if err.IsFatal() {

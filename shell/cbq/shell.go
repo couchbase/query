@@ -10,9 +10,9 @@
 package main
 
 import (
-        "fmt"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -27,7 +27,7 @@ func main() {
 	if strings.HasSuffix(*tiServer, "/") == false {
 		*tiServer = *tiServer + "/"
 	}
-        fmt.Printf("Couchbase query shell connected to %v . Type Ctrl-D to exit.\n", *tiServer)
+	fmt.Printf("Couchbase query shell connected to %v . Type Ctrl-D to exit.\n", *tiServer)
 	HandleInteractiveMode(*tiServer, filepath.Base(os.Args[0]))
 }
 

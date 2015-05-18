@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -17,7 +19,8 @@ import (
 
 type Join struct {
 	base
-	plan *plan.Join
+	plan     *plan.Join
+	duration time.Duration
 }
 
 func NewJoin(plan *plan.Join) *Join {
@@ -35,10 +38,14 @@ func (this *Join) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Join) Copy() Operator {
-	return &Join{this.base.copy(), this.plan}
+	return &Join{
+		base: this.base.copy(),
+		plan: this.plan,
+	}
 }
 
 func (this *Join) RunOnce(context *Context, parent value.Value) {
+	defer context.AddPhaseTime("join", this.duration)
 	this.runConsumer(this, context, parent)
 }
 
@@ -74,8 +81,13 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		}
 	}
 
+	timer := time.Now()
+
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
+
+	this.duration += time.Since(timer)
+
 	fetchOk := true
 	for _, err := range errs {
 		context.Error(err)

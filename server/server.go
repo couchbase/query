@@ -182,6 +182,10 @@ func (this *Server) serviceRequest(request Request) {
 		request.ScanConsistency(), request.ScanVector(),
 		request.Output())
 	operator.RunOnce(context, nil)
+
+	if logging.LogLevel() >= logging.Trace {
+		logPhases(request)
+	}
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
@@ -197,7 +201,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewPlanError(err, "")
 		}
 	}
-	if logging.LogLevel() >= logging.Trace {
+	if logging.LogLevel() >= logging.Debug {
 		// log EXPLAIN for the request
 		logExplain(prepared)
 	}
@@ -215,4 +219,19 @@ func logExplain(prepared *plan.Prepared) {
 	}
 	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
 
+}
+
+func logPhases(request Request) {
+	phaseTimes := request.Output().PhaseTimes()
+	if len(phaseTimes) == 0 {
+		return
+	}
+
+	pairs := make([]logging.Pair, 0, len(phaseTimes)+1)
+	pairs = append(pairs, logging.Pair{"req_id", request.Id()})
+	for k, v := range phaseTimes {
+		pairs = append(pairs, logging.Pair{k, v})
+	}
+
+	logging.Tracep("Phase aggregates", pairs...)
 }

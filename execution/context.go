@@ -35,6 +35,8 @@ type Output interface {
 	MutationCount() uint64
 	SetSortCount(uint64)
 	SortCount() uint64
+	AddPhaseTime(phase string, duration time.Duration)
+	PhaseTimes() map[string]time.Duration
 }
 
 type Context struct {
@@ -136,6 +138,10 @@ func (this *Context) SetSortCount(i uint64) {
 
 func (this *Context) SortCount() uint64 {
 	return this.output.SortCount()
+}
+
+func (this *Context) AddPhaseTime(phase string, duration time.Duration) {
+	this.output.AddPhaseTime(phase, duration)
 }
 
 func (this *Context) Result(item value.Value) bool {

@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -116,8 +117,12 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	dpairs = dpairs[0:i]
 	this.batch = nil
 
+	timer := time.Now()
+
 	// Perform the actual UPSERT
 	keys, e := this.plan.Keyspace().Upsert(dpairs)
+
+	context.AddPhaseTime("upsert", time.Since(timer))
 
 	// Update mutation count with number of upserted docs
 	context.AddMutationCount(uint64(len(keys)))

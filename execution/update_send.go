@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -129,7 +130,11 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
+	timer := time.Now()
+
 	pairs, e := this.plan.Keyspace().Update(pairs)
+
+	context.AddPhaseTime("update", time.Since(timer))
 
 	// Update mutation count with number of updated docs
 	context.AddMutationCount(uint64(len(pairs)))

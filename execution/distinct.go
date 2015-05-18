@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -63,7 +65,13 @@ func (this *Distinct) afterItems(context *Context) {
 		return
 	}
 
-	for _, av := range this.set.Values() {
+	timer := time.Now()
+
+	values := this.set.Values()
+
+	context.AddPhaseTime("distinct", time.Since(timer))
+
+	for _, av := range values {
 		if !this.sendItem(value.NewAnnotatedValue(av)) {
 			return
 		}

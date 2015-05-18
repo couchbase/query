@@ -9,7 +9,10 @@
 
 package logging
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 type Level int
 
@@ -25,25 +28,34 @@ const (
 )
 
 func (level Level) String() string {
-	switch level {
-	case Debug:
-		return "DEBUG"
-	case Trace:
-		return "TRACE"
-	case Request:
-		return "REQUEST"
-	case Info:
-		return "INFO"
-	case Warn:
-		return "WARN"
-	case Error:
-		return "ERROR"
-	case Severe:
-		return "SEVERE"
-	case None:
-		return "NONE"
-	}
-	return "UNKNOWN"
+	return _LEVEL_NAMES[level]
+}
+
+var _LEVEL_NAMES = []string{
+	Debug:   "DEBUG",
+	Trace:   "TRACE",
+	Request: "REQUEST",
+	Info:    "INFO",
+	Warn:    "WARN",
+	Error:   "ERROR",
+	Severe:  "SEVERE",
+	None:    "NONE",
+}
+
+var _LEVEL_MAP = map[string]Level{
+	"debug":   Debug,
+	"trace":   Trace,
+	"request": Request,
+	"info":    Info,
+	"warn":    Warn,
+	"error":   Error,
+	"severe":  Severe,
+	"none":    None,
+}
+
+func ParseLevel(name string) (level Level, ok bool) {
+	level, ok = _LEVEL_MAP[strings.ToLower(name)]
+	return
 }
 
 /*

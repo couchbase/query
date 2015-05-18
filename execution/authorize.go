@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -53,6 +55,8 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
+		timer := time.Now()
+
 		ds := datastore.GetDatastore()
 		if ds != nil {
 			err := ds.Authorize(this.plan.Privileges(), context.Credentials())
@@ -61,6 +65,8 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 		}
+
+		context.AddPhaseTime("authorize", time.Since(timer))
 
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)

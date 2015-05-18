@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -121,6 +122,10 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		conn := datastore.NewIndexConnection(context)
 		defer notifyConn(conn) // Notify index that I have stopped
 
+		var duration time.Duration
+		timer := time.Now()
+		defer context.AddPhaseTime("scan", time.Since(timer)-duration)
+
 		go this.scan(context, conn)
 
 		var entry *datastore.IndexEntry
@@ -134,12 +139,16 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case entry, ok = <-conn.EntryChannel():
+				t := time.Now()
+
 				if ok {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
 					av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 					ok = this.sendItem(av)
 				}
+
+				duration += time.Since(t)
 			case <-this.stopChannel:
 				return
 			}

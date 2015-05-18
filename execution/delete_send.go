@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -109,7 +110,11 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		keys[i] = key
 	}
 
+	timer := time.Now()
+
 	deleted_keys, e := this.plan.Keyspace().Delete(keys)
+
+	context.AddPhaseTime("delete", time.Since(timer))
 
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(deleted_keys)))

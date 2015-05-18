@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -106,12 +107,13 @@ type BaseRequest struct {
 	signature      value.Tristate
 	metrics        value.Tristate
 	consistency    ScanConfiguration
+	credentials    datastore.Credentials
 	mutationCount  uint64
 	sortCount      uint64
+	phaseTimes     map[string]time.Duration
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
-	credentials    datastore.Credentials
 	results        value.ValueChannel
 	errors         errors.ErrorChannel
 	warnings       errors.ErrorChannel
@@ -170,6 +172,11 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
 	}
+
+	if logging.LogLevel() >= logging.Trace {
+		rv.phaseTimes = make(map[string]time.Duration, 8)
+	}
+
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
 	rv.client_id = newClientContextIDImpl(client_id)
@@ -328,6 +335,20 @@ func (this *BaseRequest) SetSortCount(i uint64) {
 
 func (this *BaseRequest) SortCount() uint64 {
 	return atomic.LoadUint64(&this.sortCount)
+}
+
+func (this *BaseRequest) AddPhaseTime(phase string, duration time.Duration) {
+	if this.phaseTimes == nil {
+		return
+	}
+
+	this.Lock()
+	defer this.Unlock()
+	this.phaseTimes[phase] = duration + this.phaseTimes[phase]
+}
+
+func (this *BaseRequest) PhaseTimes() map[string]time.Duration {
+	return this.phaseTimes
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {
