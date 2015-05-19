@@ -164,11 +164,10 @@ the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
 func Run(mockServer *server.Server, q, namespace string) ([]interface{}, []errors.Error, errors.Error) {
-
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, namespace, value.FALSE, metrics, value.TRUE, consistency, "", nil)
+	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, value.FALSE, metrics, value.TRUE, consistency, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

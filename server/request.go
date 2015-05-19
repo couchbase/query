@@ -10,6 +10,7 @@
 package server
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,6 +51,7 @@ type Request interface {
 	PositionalArgs() value.Values
 	Namespace() string
 	Timeout() time.Duration
+	MaxParallelism() int
 	Readonly() value.Tristate
 	Metrics() value.Tristate
 	Signature() value.Tristate
@@ -103,6 +105,7 @@ type BaseRequest struct {
 	positionalArgs value.Values
 	namespace      string
 	timeout        time.Duration
+	maxParallelism int
 	readonly       value.Tristate
 	signature      value.Tristate
 	metrics        value.Tristate
@@ -149,7 +152,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, readonly, metrics, signature value.Tristate, consistency ScanConfiguration,
+	namespace string, maxParallelism int, readonly, metrics, signature value.Tristate, consistency ScanConfiguration,
 	client_id string, creds datastore.Credentials) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
@@ -157,6 +160,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
 		namespace:      namespace,
+		maxParallelism: maxParallelism,
 		readonly:       readonly,
 		signature:      signature,
 		metrics:        metrics,
@@ -171,6 +175,10 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		closeNotify:    make(chan bool, 1),
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
+	}
+
+	if rv.maxParallelism <= 0 {
+		rv.maxParallelism = runtime.NumCPU()
 	}
 
 	if logging.LogLevel() >= logging.Trace {
@@ -222,6 +230,10 @@ func (this *BaseRequest) Namespace() string {
 
 func (this *BaseRequest) Timeout() time.Duration {
 	return this.timeout
+}
+
+func (this *BaseRequest) MaxParallelism() int {
+	return this.maxParallelism
 }
 
 func (this *BaseRequest) Readonly() value.Tristate {

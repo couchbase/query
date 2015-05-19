@@ -134,6 +134,19 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		timeout, err = httpArgs.getDuration(TIMEOUT)
 	}
 
+	var max_parallelism int
+	if err == nil {
+		var maxp string
+		maxp, err = httpArgs.getString(MAX_PARALLELISM, "")
+		if err == nil && maxp != "" {
+			var e error
+			max_parallelism, e = strconv.Atoi(maxp)
+			if e != nil {
+				err = errors.NewServiceErrorBadValue(e, "max parallelism")
+			}
+		}
+	}
+
 	var readonly value.Tristate
 	if err == nil {
 		readonly, err = httpArgs.getTristate(READONLY)
@@ -205,8 +218,8 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 		client_id, err = getClientID(httpArgs)
 	}
 
-	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs,
-		namespace, readonly, metrics, signature, consistency, client_id, creds)
+	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
+		max_parallelism, readonly, metrics, signature, consistency, client_id, creds)
 
 	rv := &httpRequest{
 		BaseRequest:   *base,
@@ -240,6 +253,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 }
 
 const ( // Request argument names
+	MAX_PARALLELISM   = "max_parallelism"
 	READONLY          = "readonly"
 	METRICS           = "metrics"
 	NAMESPACE         = "namespace"

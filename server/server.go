@@ -10,10 +10,10 @@
 package server
 
 import (
+	"encoding/json"
+	"math"
 	"os"
 	"runtime"
-
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -183,8 +183,10 @@ func (this *Server) serviceRequest(request Request) {
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
+	maxParallelism := int(math.Min(float64(this.maxParallelism), float64(request.MaxParallelism())))
+
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
-		this.readonly, this.maxParallelism, request.NamedArgs(), request.PositionalArgs(),
+		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
 		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
 	operator.RunOnce(context, nil)
 
