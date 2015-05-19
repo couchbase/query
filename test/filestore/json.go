@@ -168,8 +168,8 @@ func Start(site, pool string) *server.Server {
 	}
 
 	channel := make(server.RequestChannel, 10)
-	server, err := server.NewServer(datastore, configstore, acctstore, "json", false, channel,
-		4, 0, false, false, server.KEEP_ALIVE_DEFAULT)
+	server, err := server.NewServer(datastore, configstore, acctstore, "json",
+		false, channel, 4, 0, 0, false, false, server.KEEP_ALIVE_DEFAULT)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

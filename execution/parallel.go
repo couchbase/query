@@ -50,7 +50,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		n := runtime.NumCPU()
+		n := context.MaxParallelism()
 
 		children := make([]Operator, n)
 
@@ -58,7 +58,10 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		// child. This ensures that the children are
 		// identical, as produced by Copy().
 		for i := 0; i < n; i++ {
-			child := this.child.Copy()
+			child := this.child
+			if n > 1 {
+				child = this.child.Copy()
+			}
 			child.SetInput(this.input)
 			child.SetOutput(this.output)
 			child.SetParent(this)

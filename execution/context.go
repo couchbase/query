@@ -44,6 +44,7 @@ type Context struct {
 	systemstore    datastore.Datastore
 	namespace      string
 	readonly       bool
+	maxParallelism int
 	now            time.Time
 	namedArgs      map[string]value.Value
 	positionalArgs value.Values
@@ -56,14 +57,15 @@ type Context struct {
 }
 
 func NewContext(datastore, systemstore datastore.Datastore, namespace string,
-	readonly bool, namedArgs map[string]value.Value, positionalArgs value.Values,
-	credentials datastore.Credentials, consistency datastore.ScanConsistency,
-	vector timestamp.Vector, output Output) *Context {
-	return &Context{
+	readonly bool, maxParallelism int, namedArgs map[string]value.Value,
+	positionalArgs value.Values, credentials datastore.Credentials,
+	consistency datastore.ScanConsistency, vector timestamp.Vector, output Output) *Context {
+	rv := &Context{
 		datastore:      datastore,
 		systemstore:    systemstore,
 		namespace:      namespace,
 		readonly:       readonly,
+		maxParallelism: maxParallelism,
 		now:            time.Now(),
 		namedArgs:      namedArgs,
 		positionalArgs: positionalArgs,
@@ -74,6 +76,12 @@ func NewContext(datastore, systemstore datastore.Datastore, namespace string,
 		subplans:       newSubqueryMap(),
 		subresults:     newSubqueryMap(),
 	}
+
+	if rv.maxParallelism <= 0 {
+		rv.maxParallelism = runtime.NumCPU()
+	}
+
+	return rv
 }
 
 func (this *Context) Datastore() datastore.Datastore {
@@ -90,6 +98,10 @@ func (this *Context) Namespace() string {
 
 func (this *Context) Readonly() bool {
 	return this.readonly
+}
+
+func (this *Context) MaxParallelism() int {
+	return this.maxParallelism
 }
 
 func (this *Context) Now() time.Time {

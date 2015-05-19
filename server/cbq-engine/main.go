@@ -44,6 +44,7 @@ var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number 
 var REQUEST_SIZE_CAP = flag.String("request-size-cap", http.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int64("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
 var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
+var MAX_PARALLELISM = flag.Int("max-parallelism", 0, "Maximum parallelism per query; use zero or negative value to disable")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
 var HTTP_ADDR = flag.String("http", ":8093", "HTTP service address")
@@ -156,7 +157,7 @@ func main() {
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	http.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*THREAD_COUNT, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
+		*THREAD_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

@@ -30,19 +30,20 @@ import (
 )
 
 type Server struct {
-	datastore   datastore.Datastore
-	systemstore datastore.Datastore
-	configstore clustering.ConfigurationStore
-	acctstore   accounting.AccountingStore
-	namespace   string
-	readonly    bool
-	channel     RequestChannel
-	threadCount int
-	timeout     time.Duration
-	signature   bool
-	metrics     bool
-	keepAlive   int
-	once        sync.Once
+	datastore      datastore.Datastore
+	systemstore    datastore.Datastore
+	configstore    clustering.ConfigurationStore
+	acctstore      accounting.AccountingStore
+	namespace      string
+	readonly       bool
+	channel        RequestChannel
+	threadCount    int
+	maxParallelism int
+	timeout        time.Duration
+	signature      bool
+	metrics        bool
+	keepAlive      int
+	once           sync.Once
 }
 
 // Default Keep Alive Length
@@ -51,20 +52,25 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
-	channel RequestChannel, threadCount int, timeout time.Duration,
+	channel RequestChannel, threadCount, maxParallelism int, timeout time.Duration,
 	signature, metrics bool, keepAlive int) (*Server, errors.Error) {
 	rv := &Server{
-		datastore:   store,
-		configstore: config,
-		acctstore:   acctng,
-		namespace:   namespace,
-		readonly:    readonly,
-		channel:     channel,
-		threadCount: threadCount,
-		timeout:     timeout,
-		signature:   signature,
-		metrics:     metrics,
-		keepAlive:   keepAlive,
+		datastore:      store,
+		configstore:    config,
+		acctstore:      acctng,
+		namespace:      namespace,
+		readonly:       readonly,
+		channel:        channel,
+		threadCount:    threadCount,
+		maxParallelism: maxParallelism,
+		timeout:        timeout,
+		signature:      signature,
+		metrics:        metrics,
+		keepAlive:      keepAlive,
+	}
+
+	if rv.maxParallelism <= 0 {
+		rv.maxParallelism = runtime.NumCPU()
 	}
 
 	sys, err := system.NewDatastore(store)
@@ -178,9 +184,8 @@ func (this *Server) serviceRequest(request Request) {
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
-		this.readonly, request.NamedArgs(), request.PositionalArgs(), request.Credentials(),
-		request.ScanConsistency(), request.ScanVector(),
-		request.Output())
+		this.readonly, this.maxParallelism, request.NamedArgs(), request.PositionalArgs(),
+		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
 	operator.RunOnce(context, nil)
 
 	if logging.LogLevel() >= logging.Trace {
@@ -228,7 +233,7 @@ func logPhases(request Request) {
 	}
 
 	pairs := make([]logging.Pair, 0, len(phaseTimes)+1)
-	pairs = append(pairs, logging.Pair{"req_id", request.Id()})
+	pairs = append(pairs, logging.Pair{"_id", request.Id()})
 	for k, v := range phaseTimes {
 		pairs = append(pairs, logging.Pair{k, v})
 	}
