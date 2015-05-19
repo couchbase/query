@@ -46,19 +46,27 @@ func (this *MockQuery) Fail(err errors.Error) {
 }
 
 func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
-	defer this.Stop(server.COMPLETED)
+	defer this.stopAndClose(server.COMPLETED)
+
 	this.NotifyStop(stopNotify)
 	this.writeResults()
 	close(this.response.done)
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
+	this.stopAndClose(server.FATAL)
 }
 
 func (this *MockQuery) Expire() {
-	defer this.Stop(server.TIMEOUT)
+	defer this.stopAndClose(server.TIMEOUT)
+
 	this.response.err = errors.NewError(nil, "Query timed out")
 	close(this.response.done)
+}
+
+func (this *MockQuery) stopAndClose(state server.State) {
+	this.Stop(state)
+	this.Close()
 }
 
 func (this *MockQuery) writeResults() bool {

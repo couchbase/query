@@ -72,8 +72,7 @@ func (this *httpRequest) setHttpCode(httpRespCode int) {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
-	defer this.Stop(server.FATAL)
-	defer this.stopCloseNotifier()
+	defer this.stopAndClose(server.FATAL)
 
 	this.writeString("{\n")
 	this.writeRequestID()
@@ -87,8 +86,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
-	defer this.Stop(server.COMPLETED)
-	defer this.stopCloseNotifier()
+	defer this.stopAndClose(server.COMPLETED)
 
 	this.NotifyStop(stopNotify)
 
@@ -100,8 +98,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 }
 
 func (this *httpRequest) Expire() {
-	defer this.Stop(server.TIMEOUT)
-	defer this.stopCloseNotifier()
+	defer this.stopAndClose(server.TIMEOUT)
 
 	if this.httpCode() == 0 {
 		this.setHttpCode(http.StatusOK)
@@ -109,6 +106,12 @@ func (this *httpRequest) Expire() {
 	}
 	this.writeSuffix(true, server.TIMEOUT)
 	this.writer.noMoreData()
+}
+
+func (this *httpRequest) stopAndClose(state server.State) {
+	this.Stop(state)
+	this.stopCloseNotifier()
+	this.Close()
 }
 
 func (this *httpRequest) stopCloseNotifier() {

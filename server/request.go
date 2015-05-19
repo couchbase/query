@@ -376,7 +376,15 @@ func (this *BaseRequest) Warnings() errors.ErrorChannel {
 }
 
 func (this *BaseRequest) NotifyStop(ch chan bool) {
+	this.Lock()
+	defer this.Unlock()
 	this.stopNotify = ch
+}
+
+func (this *BaseRequest) StopNotify() chan bool {
+	this.RLock()
+	defer this.RUnlock()
+	return this.stopNotify
 }
 
 func (this *BaseRequest) StopExecute() chan bool {
@@ -384,12 +392,15 @@ func (this *BaseRequest) StopExecute() chan bool {
 }
 
 func (this *BaseRequest) Stop(state State) {
-	defer sendStop(this.closeNotify)
-	defer sendStop(this.stopNotify)
+	defer sendStop(this.StopNotify())
 	defer sendStop(this.stopResult)
 	defer sendStop(this.stopExecute)
 
 	this.SetState(state)
+}
+
+func (this *BaseRequest) Close() {
+	sendStop(this.closeNotify)
 }
 
 func sendStop(ch chan bool) {
