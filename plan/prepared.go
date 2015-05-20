@@ -10,13 +10,14 @@
 package plan
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"sync"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -34,6 +35,7 @@ func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Data
 type Prepared struct {
 	Operator
 	signature value.Value
+	name      string
 }
 
 func newPrepared(operator Operator, signature value.Value) *Prepared {
@@ -44,9 +46,10 @@ func newPrepared(operator Operator, signature value.Value) *Prepared {
 }
 
 func (this *Prepared) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]interface{}, 3)
 	r["operator"] = this.Operator
 	r["signature"] = this.signature
+	r["name"] = this.name
 
 	return json.Marshal(r)
 }
@@ -55,6 +58,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Operator  json.RawMessage `json:"operator"`
 		Signature json.RawMessage `json:"signature"`
+		Name      string          `json:"name"`
 	}
 
 	var op_type struct {
@@ -72,6 +76,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	}
 
 	this.signature = value.NewValue(_unmarshalled.Signature)
+	this.name = _unmarshalled.Name
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -81,45 +86,91 @@ func (this *Prepared) Signature() value.Value {
 	return this.signature
 }
 
-type cacheType struct {
+func (this *Prepared) Name() string {
+	return this.name
+}
+
+type preparedCache struct {
 	sync.RWMutex
 	prepareds map[string]*Prepared
 }
 
-var preparedCache = &cacheType{
-	prepareds: make(map[string]*Prepared),
+const (
+	_CACHE_SIZE = 1 << 10
+	_MAX_SIZE   = _CACHE_SIZE * 16
+)
+
+var cache = &preparedCache{
+	prepareds: make(map[string]*Prepared, _CACHE_SIZE),
 }
 
-func PreparedCache() *cacheType {
-	return preparedCache
-}
-
-func (this *cacheType) GetPrepared(value value.Value) (*Prepared, error) {
-	json_bytes, err := value.MarshalJSON()
-	if err != nil {
-		return nil, err
+func (this *preparedCache) get(name value.Value) *Prepared {
+	if name.Type() != value.STRING || !name.Truth() {
+		return nil
 	}
-	key := makeKey(json_bytes)
 	this.RLock()
-	prepared := this.prepareds[key]
+	rv := this.prepareds[name.Actual().(string)]
 	this.RUnlock()
-	return prepared, nil
+	return rv
 }
 
-func (this *cacheType) AddPrepared(plan *Prepared) error {
-	json_bytes, err := plan.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	key := makeKey(json_bytes)
+func (this *preparedCache) add(prepared *Prepared) {
 	this.Lock()
-	this.prepareds[key] = plan
+	if len(this.prepareds) > _MAX_SIZE {
+		this.prepareds = make(map[string]*Prepared, _CACHE_SIZE)
+	}
+	this.prepareds[prepared.Name()] = prepared
 	this.Unlock()
+}
+
+func (this *preparedCache) peek(name string) bool {
+	this.RLock()
+	_, has_name := this.prepareds[name]
+	this.RUnlock()
+	return has_name
+}
+
+func AddPrepared(prepared *Prepared) errors.Error {
+	name, err := util.UUID()
+	if err != nil {
+		return errors.NewPreparedNameError(err.Error())
+	}
+	if cache.peek(name) {
+		return errors.NewPreparedNameError("duplicate name")
+	}
+	prepared.name = name
+	cache.add(prepared)
 	return nil
 }
 
-func makeKey(body []byte) string {
-	hasher := md5.New()
-	hasher.Write(body)
-	return hex.EncodeToString(hasher.Sum(nil))
+func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
+	switch prepared_stmt.Type() {
+	case value.STRING:
+		prepared := cache.get(prepared_stmt)
+		if prepared == nil {
+			return nil, errors.NewNoSuchPreparedError(prepared_stmt.Actual().(string))
+		}
+		return prepared, nil
+	case value.OBJECT:
+		name_value, has_name := prepared_stmt.Field("name")
+		prepared := cache.get(name_value)
+		if prepared != nil {
+			return prepared, nil
+		}
+		prepared_bytes, err := prepared_stmt.MarshalJSON()
+		if err != nil {
+			return nil, errors.NewUnrecognizedPreparedError()
+		}
+		prepared = &Prepared{}
+		err = prepared.UnmarshalJSON(prepared_bytes)
+		if err != nil {
+			return nil, errors.NewUnrecognizedPreparedError()
+		}
+		if has_name {
+			cache.add(prepared)
+		}
+		return prepared, nil
+	default:
+		return nil, errors.NewUnrecognizedPreparedError()
+	}
 }

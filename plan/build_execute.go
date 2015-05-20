@@ -9,33 +9,16 @@
 
 package plan
 
-import "github.com/couchbase/query/algebra"
+import (
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
+)
 
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
-
-	// stmt contains a JSON representation of a plan.Prepared
-	prepared_object := stmt.Prepared()
-
-	// check if there is a plan.Prepared already in the cache
-	prepared, err := PreparedCache().GetPrepared(prepared_object)
-	if err != nil {
-		return nil, err
+	expr := stmt.Prepared()
+	if (expr == nil) || expr.Type() != value.STRING && expr.Type() != value.OBJECT {
+		return nil, errors.NewUnrecognizedPreparedError()
 	}
-	if prepared != nil {
-		return prepared, nil
-	} else {
-		prepared = &Prepared{}
-	}
-
-	// no cached plan.Prepared => create it
-	op_bytes, err := prepared_object.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	err = prepared.UnmarshalJSON(op_bytes)
-	if err == nil {
-		PreparedCache().AddPrepared(prepared)
-	}
-
-	return prepared, err
+	return GetPrepared(expr)
 }

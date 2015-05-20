@@ -20,7 +20,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		return nil, err
 	}
 
-	PreparedCache().AddPrepared(plan)
+	AddPrepared(plan)
 
 	json_bytes, err := plan.MarshalJSON()
 	if err != nil {

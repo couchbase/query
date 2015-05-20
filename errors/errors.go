@@ -355,6 +355,21 @@ func NewSubqueryMissingKeysError(keyspace string) Error {
 		InternalMsg: fmt.Sprintf("FROM in subquery must use KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
 }
 
+func NewNoSuchPreparedError(name string) Error {
+	return &err{level: EXCEPTION, ICode: 4040, IKey: "plan.build_prepared.no_such_name",
+		InternalMsg: fmt.Sprintf("No such prepared statement: %s", name), InternalCaller: CallerN(1)}
+}
+
+func NewUnrecognizedPreparedError() Error {
+	return &err{level: EXCEPTION, ICode: 4050, IKey: "plan.build_prepared.unrecognized_prepared",
+		InternalMsg: "Unrecognizable prepared statement", InternalCaller: CallerN(1)}
+}
+
+func NewPreparedNameError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: 4060, IKey: "plan.build_prepared.no_such_name",
+		InternalMsg: fmt.Sprintf("Unable to add name: %s", msg), InternalCaller: CallerN(1)}
+}
+
 // Execution errors - errors that are created in the execution package
 
 func NewEvaluationError(e error, termType string) Error {

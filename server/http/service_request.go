@@ -278,32 +278,7 @@ func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
 	if err != nil || prepared_field == nil {
 		return nil, err
 	}
-
-	prepared, e := plan.PreparedCache().GetPrepared(prepared_field)
-	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, PREPARED)
-	}
-	if prepared != nil {
-		return prepared, nil
-	}
-
-	prepared = &plan.Prepared{}
-	json_bytes, e := prepared_field.MarshalJSON()
-	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, PREPARED)
-	}
-
-	e = prepared.UnmarshalJSON(json_bytes)
-	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, PREPARED)
-	}
-
-	e = plan.PreparedCache().AddPrepared(prepared)
-	if e != nil {
-		return nil, errors.NewServiceErrorBadValue(e, PREPARED)
-	}
-
-	return prepared, nil
+	return plan.GetPrepared(prepared_field)
 }
 
 func getCompression(a httpRequestArgs) (Compression, errors.Error) {
