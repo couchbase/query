@@ -50,6 +50,7 @@ type builder struct {
 	systemstore     datastore.Datastore
 	namespace       string
 	subquery        bool
+	maxParallelism  int
 	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY

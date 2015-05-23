@@ -32,6 +32,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	unionAll := NewUnionAll(first.(Operator), second.(Operator))
 	return NewSequence(unionAll, NewDistinct()), nil
 }
@@ -50,6 +51,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	return NewUnionAll(first.(Operator), second.(Operator)), nil
 }
 
@@ -72,6 +74,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	return NewIntersectAll(first.(Operator), second.(Operator)), nil
 }
 
@@ -94,6 +97,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	return NewIntersectAll(first.(Operator), second.(Operator)), nil
 }
 
@@ -116,6 +120,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	return NewExceptAll(first.(Operator), second.(Operator)), nil
 }
 
@@ -138,5 +143,6 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 		return nil, err
 	}
 
+	this.maxParallelism = 0
 	return NewExceptAll(first.(Operator), second.(Operator)), nil
 }

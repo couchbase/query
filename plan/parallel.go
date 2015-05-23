@@ -9,14 +9,18 @@
 
 package plan
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"runtime"
+)
 
 type Parallel struct {
-	child Operator
+	child          Operator
+	maxParallelism int
 }
 
-func NewParallel(child Operator) *Parallel {
-	return &Parallel{child}
+func NewParallel(child Operator, maxParallelism int) *Parallel {
+	return &Parallel{child, maxParallelism}
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
@@ -35,16 +39,31 @@ func (this *Parallel) Child() Operator {
 	return this.child
 }
 
+func (this *Parallel) MaxParallelism() int {
+	if this.maxParallelism <= 0 {
+		return runtime.NumCPU()
+	}
+
+	return this.maxParallelism
+}
+
 func (this *Parallel) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Parallel"}
 	r["~child"] = this.child
+	/*
+	           TODO / FIXME: Uncomment this
+	   	if this.maxParallelism > 0 {
+	   		r["maxParallelism"] = this.maxParallelism
+	   	}
+	*/
 	return json.Marshal(r)
 }
 
 func (this *Parallel) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string          `json:"#operator"`
-		Child json.RawMessage `json:"~child"`
+		_              string          `json:"#operator"`
+		Child          json.RawMessage `json:"~child"`
+		MaxParallelism int             `json:"maxParallelism"`
 	}
 	var child_type struct {
 		Operator string `json:"#operator"`
@@ -60,7 +79,7 @@ func (this *Parallel) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	this.maxParallelism = _unmarshalled.MaxParallelism
 	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
-
 	return err
 }

@@ -222,7 +222,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-// KeyScan is used for KEYS clauses (except after JOIN / NEST).
+// KeyScan is used for USE KEYS clauses.
 type KeyScan struct {
 	readonly
 	keys expression.Expression

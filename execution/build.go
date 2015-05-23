@@ -285,7 +285,7 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 		return nil, err
 	}
 
-	return NewParallel(child.(Operator)), nil
+	return NewParallel(plan, child.(Operator)), nil
 }
 
 // Sequence

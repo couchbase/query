@@ -11,7 +11,6 @@ package server
 
 import (
 	"encoding/json"
-	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -183,7 +183,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
-	maxParallelism := int(math.Min(float64(this.maxParallelism), float64(request.MaxParallelism())))
+	maxParallelism := util.MinInt(this.maxParallelism, request.MaxParallelism())
 
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),

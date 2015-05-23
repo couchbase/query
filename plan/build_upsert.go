@@ -48,7 +48,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		subChildren = append(subChildren, NewDiscard())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...))
+	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
 	children = append(children, parallel)
 	return NewSequence(children...), nil
 }

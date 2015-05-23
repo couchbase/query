@@ -14,11 +14,30 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace,
 	node *algebra.KeyspaceTerm) (op Operator, err error) {
+	keys := node.Keys()
+	if keys != nil {
+		switch keys := keys.(type) {
+		case *expression.ArrayConstruct:
+			this.maxParallelism = util.MaxInt(1, len(keys.Operands()))
+		case *algebra.NamedParameter, *algebra.PositionalParameter:
+			this.maxParallelism = 0
+		default:
+			this.maxParallelism = 1
+		}
+
+		scan := NewKeyScan(keys)
+		return scan, nil
+	}
+
+	this.maxParallelism = 0 // Default behavior for index scans
+
 	secondary, primary, err := planner.BuildScan(keyspace, node, this.where)
 	if err != nil {
 		return nil, err

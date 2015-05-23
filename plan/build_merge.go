@@ -111,7 +111,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...))
+	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
 	children = append(children, parallel)
 
 	if stmt.Limit() != nil {

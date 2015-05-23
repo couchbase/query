@@ -12,18 +12,22 @@ package execution
 import (
 	"runtime"
 
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type Parallel struct {
 	base
+	plan         *plan.Parallel
 	child        Operator
 	childChannel StopChannel
 }
 
-func NewParallel(child Operator) *Parallel {
+func NewParallel(plan *plan.Parallel, child Operator) *Parallel {
 	rv := &Parallel{
 		base:         newBase(),
+		plan:         plan,
 		child:        child,
 		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
@@ -39,6 +43,7 @@ func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
 func (this *Parallel) Copy() Operator {
 	return &Parallel{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		child:        this.child.Copy(),
 		childChannel: make(StopChannel, runtime.NumCPU()),
 	}
@@ -50,28 +55,10 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		n := context.MaxParallelism()
-
+		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		children := make([]Operator, n)
-
-		// Explicitly make copies, even for the first
-		// child. This ensures that the children are
-		// identical, as produced by Copy().
-		for i := 0; i < n; i++ {
-			child := this.child
-			if n > 1 {
-				child = this.child.Copy()
-			}
-			child.SetInput(this.input)
-			child.SetOutput(this.output)
-			child.SetParent(this)
-			child.SetStop(nil)
-			children[i] = child
-		}
-
-		// Run children in parallel
-		for i := 0; i < n; i++ {
-			go children[i].RunOnce(context, parent)
+		for i := n - 1; i >= 0; i-- {
+			go this.runChild(children, i, context, parent)
 		}
 
 		for n > 0 {
@@ -89,4 +76,21 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 func (this *Parallel) ChildChannel() StopChannel {
 	return this.childChannel
+}
+
+// Optionally copy the child, and then run it.
+func (this *Parallel) runChild(children []Operator, i int, context *Context, parent value.Value) {
+	var child Operator
+	if i > 0 {
+		child = this.child.Copy()
+	} else {
+		child = this.child
+	}
+
+	children[i] = child
+	child.SetInput(this.input)
+	child.SetOutput(this.output)
+	child.SetParent(this)
+	child.SetStop(nil)
+	child.RunOnce(context, parent)
 }

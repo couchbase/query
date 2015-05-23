@@ -34,7 +34,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...))
+	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
 	this.children = append(this.children, parallel)
 
 	if stmt.Limit() != nil {

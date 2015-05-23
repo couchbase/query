@@ -29,7 +29,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if count {
-		// do nothing
+		this.maxParallelism = 1
 	} else if node.From() != nil {
 		_, err := node.From().Accept(this)
 		if err != nil {
@@ -39,6 +39,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		// No FROM clause
 		scan := NewDummyScan()
 		this.children = append(this.children, scan)
+		this.maxParallelism = 1
 	}
 
 	aggs := make(map[string]algebra.Aggregate)
@@ -107,7 +108,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Parallelize the subChildren
-	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
+	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...), this.maxParallelism))
 
 	// Final DISTINCT (serial)
 	if projection.Distinct() || this.distinct {
@@ -141,7 +142,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	}
 
 	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggv))
-	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...)))
+	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...), this.maxParallelism))
 	this.children = append(this.children, NewIntermediateGroup(group.By(), aggv))
 	this.children = append(this.children, NewFinalGroup(group.By(), aggv))
 	this.subChildren = make([]Operator, 0, 4)
@@ -162,21 +163,16 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
-	if node.Keys() != nil {
-		scan := NewKeyScan(node.Keys())
-		this.children = append(this.children, scan)
-	} else {
-		if this.subquery {
-			return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
-		}
-
-		scan, err := this.selectScan(keyspace, node)
-		if err != nil {
-			return nil, err
-		}
-
-		this.children = append(this.children, scan)
+	if this.subquery && node.Keys() == nil {
+		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
+
+	scan, err := this.selectScan(keyspace, node)
+	if err != nil {
+		return nil, err
+	}
+
+	this.children = append(this.children, scan)
 
 	fetch := NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
