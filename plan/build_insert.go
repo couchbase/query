@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
@@ -28,6 +29,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 
 	if stmt.Values() != nil {
 		children = append(children, NewValueScan(stmt.Values()))
+		this.maxParallelism = util.MaxInt(1, len(stmt.Values()))
 	} else if stmt.Select() != nil {
 		sel, err := stmt.Select().Accept(this)
 		if err != nil {
