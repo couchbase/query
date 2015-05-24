@@ -13,24 +13,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
-
 	"github.com/couchbase/query/value"
 )
-
-func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (*Prepared, error) {
-	operator, err := Build(stmt, datastore, systemstore, namespace, subquery)
-	if err != nil {
-		return nil, err
-	}
-
-	signature := stmt.Signature()
-	return newPrepared(operator, signature), nil
-}
 
 type Prepared struct {
 	Operator
@@ -38,7 +24,7 @@ type Prepared struct {
 	name      string
 }
 
-func newPrepared(operator Operator, signature value.Value) *Prepared {
+func NewPrepared(operator Operator, signature value.Value) *Prepared {
 	return &Prepared{
 		Operator:  operator,
 		signature: signature,

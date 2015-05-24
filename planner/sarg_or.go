@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargOr struct {
@@ -19,12 +20,12 @@ type sargOr struct {
 
 func newSargOr(pred *expression.Or) *sargOr {
 	rv := &sargOr{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		spans := make(Spans, 0, len(pred.Operands()))
+		spans := make(plan.Spans, 0, len(pred.Operands()))
 		for _, child := range pred.Operands() {
 			cspans, err := sargFor(child, expr2, rv.MissingHigh())
 			if err != nil {

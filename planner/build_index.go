@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"fmt"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -24,7 +25,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 		return nil, err
 	}
 
-	return NewCreatePrimaryIndex(keyspace, stmt), nil
+	return plan.NewCreatePrimaryIndex(keyspace, stmt), nil
 }
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
@@ -34,7 +35,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		return nil, err
 	}
 
-	return NewCreateIndex(keyspace, stmt), nil
+	return plan.NewCreateIndex(keyspace, stmt), nil
 }
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
@@ -54,7 +55,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, er
 	}
 
-	return NewDropIndex(index, stmt), nil
+	return plan.NewDropIndex(index, stmt), nil
 }
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
@@ -81,7 +82,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	return NewAlterIndex(index, stmt), nil
+	return plan.NewAlterIndex(index, stmt), nil
 }
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
@@ -91,7 +92,7 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 		return nil, err
 	}
 
-	return NewBuildIndexes(keyspace, stmt), nil
+	return plan.NewBuildIndexes(keyspace, stmt), nil
 }
 
 func (this *builder) getNameKeyspace(ns, ks string) (datastore.Keyspace, error) {

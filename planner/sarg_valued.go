@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargValued struct {
@@ -19,7 +20,7 @@ type sargValued struct {
 
 func newSargValued(pred expression.UnaryFunction) *sargValued {
 	rv := &sargValued{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}

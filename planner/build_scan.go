@@ -11,16 +11,66 @@ package planner
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
+func (this *builder) selectScan(keyspace datastore.Keyspace,
+	node *algebra.KeyspaceTerm) (op plan.Operator, err error) {
+	keys := node.Keys()
+	if keys != nil {
+		switch keys := keys.(type) {
+		case *expression.ArrayConstruct:
+			this.maxParallelism = util.MaxInt(1, len(keys.Operands()))
+		case *algebra.NamedParameter, *algebra.PositionalParameter:
+			this.maxParallelism = 0
+		default:
+			this.maxParallelism = 1
+		}
+
+		scan := plan.NewKeyScan(keys)
+		return scan, nil
+	}
+
+	this.maxParallelism = 0 // Default behavior for index scans
+
+	secondary, primary, err := BuildScan(keyspace, node, this.where)
+	if err != nil {
+		return nil, err
+	}
+
+	if primary != nil {
+		return plan.NewPrimaryScan(primary, keyspace, node), nil
+	}
+
+	scans := make([]plan.Operator, 0, len(secondary))
+	var scan plan.Operator
+	for index, spans := range secondary {
+		scan = plan.NewIndexScan(index, node, spans, false, math.MaxInt64)
+		if len(spans) > 1 {
+			// Use UnionScan to de-dup multiple spans
+			scan = plan.NewUnionScan(scan)
+		}
+
+		scans = append(scans, scan)
+	}
+
+	if len(scans) > 1 {
+		return plan.NewIntersectScan(scans...), nil
+	} else {
+		return scans[0], nil
+	}
+}
+
 func BuildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression) (
-	secondary map[datastore.Index]Spans, primary datastore.PrimaryIndex, err error) {
+	secondary map[datastore.Index]plan.Spans, primary datastore.PrimaryIndex, err error) {
 	var indexes, hintIndexes, otherIndexes []datastore.Index
 	hints := node.Indexes()
 	if hints != nil {
@@ -200,7 +250,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
-	map[datastore.Index]Spans, error) {
+	map[datastore.Index]plan.Spans, error) {
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
@@ -213,7 +263,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 		}
 	}
 
-	minimals := make(map[datastore.Index]Spans, len(sargables))
+	minimals := make(map[datastore.Index]plan.Spans, len(sargables))
 	for s, se := range sargables {
 		spans, err := SargFor(pred, se.sargKeys, se.total)
 		if err != nil || len(spans) == 0 {

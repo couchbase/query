@@ -7,12 +7,13 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 )
 
 // SELECT
@@ -46,8 +47,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		return sub, nil
 	}
 
-	children := make([]Operator, 0, 5)
-	children = append(children, sub.(Operator))
+	children := make([]plan.Operator, 0, 5)
+	children = append(children, sub.(plan.Operator))
 
 	if order != nil {
 		if this.order == nil {
@@ -61,21 +62,21 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			}
 		}
 
-		children = append(children, NewOrder(order))
+		children = append(children, plan.NewOrder(order))
 	}
 
 	if offset != nil {
-		children = append(children, NewOffset(offset))
+		children = append(children, plan.NewOffset(offset))
 	}
 
 	if limit != nil {
-		children = append(children, NewLimit(limit))
+		children = append(children, plan.NewLimit(limit))
 	}
 
 	// Perform the delayed final projection now, after the ORDER BY
 	if this.delayProjection {
-		children = append(children, NewFinalProject())
+		children = append(children, plan.NewFinalProject())
 	}
 
-	return NewSequence(children...), nil
+	return plan.NewSequence(children...), nil
 }

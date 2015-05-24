@@ -12,16 +12,17 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
-var _NULL_SPANS Spans
+var _NULL_SPANS plan.Spans
 
 func init() {
-	span := &Span{}
+	span := &plan.Span{}
 	span.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	span.Range.High = span.Range.Low
 	span.Range.Inclusion = datastore.BOTH
-	_NULL_SPANS = Spans{span}
+	_NULL_SPANS = plan.Spans{span}
 }
 
 type sargNull struct {
@@ -30,7 +31,7 @@ type sargNull struct {
 
 func newSargNull(pred *expression.IsNull) *sargNull {
 	rv := &sargNull{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
@@ -51,7 +52,7 @@ type sargNotNull struct {
 
 func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
 	rv := &sargNotNull{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}

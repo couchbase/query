@@ -7,12 +7,13 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
@@ -20,8 +21,8 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	ksref.SetDefaultNamespace(this.namespace)
 	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), keys, indexes)
 
-	this.children = make([]Operator, 0, 8)
-	this.subChildren = make([]Operator, 0, 8)
+	this.children = make([]plan.Operator, 0, 8)
+	this.subChildren = make([]plan.Operator, 0, 8)
 
 	scan, err := this.selectScan(keyspace, term)
 	if err != nil {
@@ -30,11 +31,11 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	this.children = append(this.children, scan)
 
-	fetch := NewFetch(keyspace, term)
+	fetch := plan.NewFetch(keyspace, term)
 	this.subChildren = append(this.subChildren, fetch)
 
 	if where != nil {
-		this.subChildren = append(this.subChildren, NewFilter(where))
+		this.subChildren = append(this.subChildren, plan.NewFilter(where))
 	}
 
 	return nil

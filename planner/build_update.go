@@ -7,10 +7,11 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
@@ -28,32 +29,32 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	subChildren := this.subChildren
-	subChildren = append(subChildren, NewClone(ksref.Alias()))
+	subChildren = append(subChildren, plan.NewClone(ksref.Alias()))
 
 	if stmt.Set() != nil {
-		subChildren = append(subChildren, NewSet(stmt.Set()))
+		subChildren = append(subChildren, plan.NewSet(stmt.Set()))
 	}
 
 	if stmt.Unset() != nil {
-		subChildren = append(subChildren, NewUnset(stmt.Unset()))
+		subChildren = append(subChildren, plan.NewUnset(stmt.Unset()))
 	}
 
-	subChildren = append(subChildren, NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
+	subChildren = append(subChildren, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
+		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
+	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
 	this.children = append(this.children, parallel)
 
 	if stmt.Limit() != nil {
-		this.children = append(this.children, NewLimit(stmt.Limit()))
+		this.children = append(this.children, plan.NewLimit(stmt.Limit()))
 	}
 
 	if stmt.Returning() == nil {
-		this.children = append(this.children, NewDiscard())
+		this.children = append(this.children, plan.NewDiscard())
 	}
 
-	return NewSequence(this.children...), nil
+	return plan.NewSequence(this.children...), nil
 }

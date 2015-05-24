@@ -7,16 +7,17 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 )
 
-func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
+func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
@@ -25,10 +26,10 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		return nil, err
 	}
 
-	children := make([]Operator, 0, 4)
+	children := make([]plan.Operator, 0, 4)
 
 	if stmt.Values() != nil {
-		children = append(children, NewValueScan(stmt.Values()))
+		children = append(children, plan.NewValueScan(stmt.Values()))
 		this.maxParallelism = util.MaxInt(1, len(stmt.Values()))
 	} else if stmt.Select() != nil {
 		sel, err := stmt.Select().Accept(this)
@@ -36,21 +37,21 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 			return nil, err
 		}
 
-		children = append(children, sel.(Operator))
+		children = append(children, sel.(plan.Operator))
 	} else {
-		return nil, fmt.Errorf("UPSERT missing both VALUES and SELECT.")
+		return nil, fmt.Errorf("INSERT missing both VALUES and SELECT.")
 	}
 
-	subChildren := make([]Operator, 0, 4)
-	subChildren = append(subChildren, NewSendUpsert(keyspace, ksref.Alias(), stmt.Key(), stmt.Value()))
+	subChildren := make([]plan.Operator, 0, 4)
+	subChildren = append(subChildren, plan.NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), stmt.Value(), nil))
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
+		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
 	} else {
-		subChildren = append(subChildren, NewDiscard())
+		subChildren = append(subChildren, plan.NewDiscard())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
+	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
 	children = append(children, parallel)
-	return NewSequence(children...), nil
+	return plan.NewSequence(children...), nil
 }

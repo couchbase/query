@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargLE struct {
@@ -20,13 +21,13 @@ type sargLE struct {
 
 func newSargLE(pred *expression.LE) *sargLE {
 	rv := &sargLE{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		var exprs expression.Expressions
-		span := &Span{}
+		span := &plan.Span{}
 
 		if pred.First().EquivalentTo(expr2) {
 			hs := pred.Second().Static()
@@ -52,7 +53,7 @@ func newSargLE(pred *expression.LE) *sargLE {
 			return _VALUED_SPANS, nil
 		}
 
-		return Spans{span}, nil
+		return plan.Spans{span}, nil
 	}
 
 	return rv

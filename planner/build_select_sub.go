@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"fmt"
@@ -16,12 +16,13 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	this.where = node.Where()
-	this.children = make([]Operator, 0, 16)    // top-level children, executed sequentially
-	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
+	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
+	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	count, err := this.fastCount(node)
 	if err != nil {
@@ -37,7 +38,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	} else {
 		// No FROM clause
-		scan := NewDummyScan()
+		scan := plan.NewDummyScan()
 		this.children = append(this.children, scan)
 		this.maxParallelism = 1
 	}
@@ -52,7 +53,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			}
 		}
 
-		this.subChildren = append(this.subChildren, NewLet(node.Let()))
+		this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
 	}
 
 	if node.Where() != nil {
@@ -61,7 +62,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			return nil, fmt.Errorf("Aggregates not allowed in WHERE.")
 		}
 
-		this.subChildren = append(this.subChildren, NewFilter(node.Where()))
+		this.subChildren = append(this.subChildren, plan.NewFilter(node.Where()))
 	}
 
 	// Check for aggregates
@@ -95,28 +96,28 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.visitGroup(group, aggs)
 	}
 
-	this.subChildren = append(this.subChildren, NewInitialProject(projection))
+	this.subChildren = append(this.subChildren, plan.NewInitialProject(projection))
 
 	// Initial DISTINCT (parallel)
 	if projection.Distinct() || this.distinct {
-		this.subChildren = append(this.subChildren, NewDistinct())
+		this.subChildren = append(this.subChildren, plan.NewDistinct())
 	}
 
 	if !this.delayProjection {
 		// Perform the final projection if there is no subsequent ORDER BY
-		this.subChildren = append(this.subChildren, NewFinalProject())
+		this.subChildren = append(this.subChildren, plan.NewFinalProject())
 	}
 
 	// Parallelize the subChildren
-	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...), this.maxParallelism))
+	this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
 
 	// Final DISTINCT (serial)
 	if projection.Distinct() || this.distinct {
-		this.children = append(this.children, NewDistinct())
+		this.children = append(this.children, plan.NewDistinct())
 	}
 
 	// Serialize the top-level children
-	return NewSequence(this.children...), nil
+	return plan.NewSequence(this.children...), nil
 }
 
 func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Aggregate) {
@@ -141,18 +142,18 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 		aggv[i] = aggs[n]
 	}
 
-	this.subChildren = append(this.subChildren, NewInitialGroup(group.By(), aggv))
-	this.children = append(this.children, NewParallel(NewSequence(this.subChildren...), this.maxParallelism))
-	this.children = append(this.children, NewIntermediateGroup(group.By(), aggv))
-	this.children = append(this.children, NewFinalGroup(group.By(), aggv))
-	this.subChildren = make([]Operator, 0, 4)
+	this.subChildren = append(this.subChildren, plan.NewInitialGroup(group.By(), aggv))
+	this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
+	this.children = append(this.children, plan.NewIntermediateGroup(group.By(), aggv))
+	this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
+	this.subChildren = make([]plan.Operator, 0, 4)
 
 	if letting != nil {
-		this.subChildren = append(this.subChildren, NewLet(letting))
+		this.subChildren = append(this.subChildren, plan.NewLet(letting))
 	}
 
 	if having != nil {
-		this.subChildren = append(this.subChildren, NewFilter(having))
+		this.subChildren = append(this.subChildren, plan.NewFilter(having))
 	}
 }
 
@@ -174,7 +175,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	this.children = append(this.children, scan)
 
-	fetch := NewFetch(keyspace, node)
+	fetch := plan.NewFetch(keyspace, node)
 	this.subChildren = append(this.subChildren, fetch)
 	return nil, nil
 }
@@ -185,9 +186,9 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		return nil, err
 	}
 
-	this.children = make([]Operator, 0, 16)    // top-level children, executed sequentially
-	this.subChildren = make([]Operator, 0, 16) // sub-children, executed across data-parallel streams
-	this.children = append(this.children, sel.(Operator), NewAlias(node.Alias()))
+	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
+	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
+	this.children = append(this.children, sel.(plan.Operator), plan.NewAlias(node.Alias()))
 	return nil, nil
 }
 
@@ -209,7 +210,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
-	join := NewJoin(keyspace, node)
+	join := plan.NewJoin(keyspace, node)
 	this.subChildren = append(this.subChildren, join)
 	return nil, nil
 }
@@ -232,7 +233,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
-	nest := NewNest(keyspace, node)
+	nest := plan.NewNest(keyspace, node)
 	this.subChildren = append(this.subChildren, nest)
 	return nil, nil
 }
@@ -243,7 +244,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		return nil, err
 	}
 
-	unnest := NewUnnest(node)
+	unnest := plan.NewUnnest(node)
 	this.subChildren = append(this.subChildren, unnest)
 	return nil, nil
 }
@@ -293,7 +294,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		}
 	}
 
-	scan := NewCountScan(keyspace, from)
+	scan := plan.NewCountScan(keyspace, from)
 	this.children = append(this.children, scan)
 	return true, nil
 }

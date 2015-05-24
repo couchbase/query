@@ -12,27 +12,28 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
-var _SELF_SPANS Spans
-var _FULL_SPANS Spans
-var _VALUED_SPANS Spans
+var _SELF_SPANS plan.Spans
+var _FULL_SPANS plan.Spans
+var _VALUED_SPANS plan.Spans
 
 func init() {
-	sspan := &Span{}
+	sspan := &plan.Span{}
 	sspan.Range.Low = expression.Expressions{expression.TRUE_EXPR}
 	sspan.Range.Inclusion = datastore.LOW
-	_SELF_SPANS = Spans{sspan}
+	_SELF_SPANS = plan.Spans{sspan}
 
-	fspan := &Span{}
+	fspan := &plan.Span{}
 	fspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	fspan.Range.Inclusion = datastore.LOW
-	_FULL_SPANS = Spans{fspan}
+	_FULL_SPANS = plan.Spans{fspan}
 
-	vspan := &Span{}
+	vspan := &plan.Span{}
 	vspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	vspan.Range.Inclusion = datastore.NEITHER
-	_VALUED_SPANS = Spans{vspan}
+	_VALUED_SPANS = plan.Spans{vspan}
 }
 
 type sargDefault struct {
@@ -40,7 +41,7 @@ type sargDefault struct {
 }
 
 func newSargDefault(pred expression.Expression) *sargDefault {
-	var spans Spans
+	var spans plan.Spans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if pred.PropagatesMissing() {
@@ -48,7 +49,7 @@ func newSargDefault(pred expression.Expression) *sargDefault {
 	}
 
 	rv := &sargDefault{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}

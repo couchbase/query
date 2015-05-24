@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargBase struct {
@@ -26,7 +27,7 @@ func (this *sargBase) MissingHigh() bool {
 	return this.missingHigh
 }
 
-type sargFunc func(expression.Expression) (Spans, error)
+type sargFunc func(expression.Expression) (plan.Spans, error)
 
 // Arithmetic
 

@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -43,7 +45,12 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
+		timer := time.Now()
+
 		count, e := this.plan.Keyspace().Count()
+
+		context.AddPhaseTime("count", time.Since(timer))
+
 		if e != nil {
 			context.Error(e)
 			return

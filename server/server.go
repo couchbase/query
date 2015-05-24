@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -203,7 +204,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
 
-		prepared, err = plan.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
+		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}

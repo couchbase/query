@@ -10,27 +10,15 @@
 package planner
 
 import (
-	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
 )
 
-type sargNotMissing struct {
-	sargBase
-}
-
-func newSargNotMissing(pred *expression.IsNotMissing) *sargNotMissing {
-	rv := &sargNotMissing{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if pred.Operand().EquivalentTo(expr2) {
-			return _FULL_SPANS, nil
-		}
-
-		return nil, nil
+func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+	op, err := stmt.Statement().Accept(this)
+	if err != nil {
+		return nil, err
 	}
 
-	return rv
+	return plan.NewExplain(op.(plan.Operator)), nil
 }

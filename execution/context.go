@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -186,7 +187,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	if !planFound {
 		var err error
-		subplan, err = plan.Build(query, this.datastore, this.systemstore, this.namespace, true)
+		subplan, err = planner.Build(query, this.datastore, this.systemstore, this.namespace, true)
 		if err != nil {
 			return nil, err
 		}

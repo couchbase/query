@@ -7,10 +7,11 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
@@ -33,8 +34,8 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	}
 
 	this.maxParallelism = 0
-	unionAll := NewUnionAll(first.(Operator), second.(Operator))
-	return NewSequence(unionAll, NewDistinct()), nil
+	unionAll := plan.NewUnionAll(first.(plan.Operator), second.(plan.Operator))
+	return plan.NewSequence(unionAll, plan.NewDistinct()), nil
 }
 
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
@@ -52,7 +53,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	}
 
 	this.maxParallelism = 0
-	return NewUnionAll(first.(Operator), second.(Operator)), nil
+	return plan.NewUnionAll(first.(plan.Operator), second.(plan.Operator)), nil
 }
 
 func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
@@ -75,7 +76,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	}
 
 	this.maxParallelism = 0
-	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator)), nil
 }
 
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
@@ -98,7 +99,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	}
 
 	this.maxParallelism = 0
-	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator)), nil
 }
 
 func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
@@ -121,7 +122,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	}
 
 	this.maxParallelism = 0
-	return NewExceptAll(first.(Operator), second.(Operator)), nil
+	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator)), nil
 }
 
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
@@ -144,5 +145,5 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	}
 
 	this.maxParallelism = 0
-	return NewExceptAll(first.(Operator), second.(Operator)), nil
+	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator)), nil
 }

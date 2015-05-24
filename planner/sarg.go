@@ -12,13 +12,14 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
-func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (Spans, error) {
+func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (plan.Spans, error) {
 	n := len(sargKeys)
 	s := newSarg(pred)
 	s.SetMissingHigh(n < total)
-	var ns Spans
+	var ns plan.Spans
 
 	// Sarg compositive indexes right to left
 	for i := n - 1; i >= 0; i-- {
@@ -27,7 +28,7 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 			return nil, err
 		}
 
-		rs := r.(Spans)
+		rs := r.(plan.Spans)
 		if len(rs) == 0 {
 			// Should not reach here
 			return nil, nil
@@ -51,7 +52,7 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 		}
 
 		// Cross product of prev and next spans
-		sp := make(Spans, 0, len(rs)*len(ns))
+		sp := make(plan.Spans, 0, len(rs)*len(ns))
 	prevs:
 		for _, prev := range rs {
 			// Full span subsumes others
@@ -96,7 +97,7 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 	return ns, nil
 }
 
-func sargFor(pred, expr expression.Expression, missingHigh bool) (Spans, error) {
+func sargFor(pred, expr expression.Expression, missingHigh bool) (plan.Spans, error) {
 	s := newSarg(pred)
 	s.SetMissingHigh(missingHigh)
 
@@ -105,7 +106,7 @@ func sargFor(pred, expr expression.Expression, missingHigh bool) (Spans, error) 
 		return nil, err
 	}
 
-	rs := r.(Spans)
+	rs := r.(plan.Spans)
 	return rs, nil
 }
 

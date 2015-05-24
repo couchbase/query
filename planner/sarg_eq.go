@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargEq struct {
@@ -20,12 +21,12 @@ type sargEq struct {
 
 func newSargEq(pred *expression.Eq) *sargEq {
 	rv := &sargEq{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
-		span := &Span{}
+		span := &plan.Span{}
 
 		if pred.First().EquivalentTo(expr2) {
 			span.Range.Low = expression.Expressions{pred.Second().Static()}
@@ -47,7 +48,7 @@ func newSargEq(pred *expression.Eq) *sargEq {
 			span.Range.Inclusion = datastore.BOTH
 		}
 
-		return Spans{span}, nil
+		return plan.Spans{span}, nil
 	}
 
 	return rv

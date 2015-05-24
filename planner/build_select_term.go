@@ -7,17 +7,12 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
-	op, err := stmt.Statement().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewExplain(op.(Operator)), nil
+func (this *builder) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+	return node.Select().Accept(this)
 }

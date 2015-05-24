@@ -19,7 +19,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/planner"
 )
 
 type PrimaryScan struct {
@@ -112,13 +111,13 @@ type IndexScan struct {
 	readonly
 	index    datastore.Index
 	term     *algebra.KeyspaceTerm
-	spans    planner.Spans
+	spans    Spans
 	distinct bool
 	limit    int64
 }
 
 func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
-	spans planner.Spans, distinct bool, limit int64) *IndexScan {
+	spans Spans, distinct bool, limit int64) *IndexScan {
 	return &IndexScan{
 		index:    index,
 		term:     term,
@@ -144,7 +143,7 @@ func (this *IndexScan) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *IndexScan) Spans() planner.Spans {
+func (this *IndexScan) Spans() Spans {
 	return this.spans
 }
 

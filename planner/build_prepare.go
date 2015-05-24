@@ -7,12 +7,28 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
-func (this *builder) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
-	return node.Select().Accept(this)
+func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+	pl, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false)
+	if err != nil {
+		return nil, err
+	}
+
+	plan.AddPrepared(pl)
+
+	json_bytes, err := pl.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	value := value.NewValue(json_bytes)
+
+	return plan.NewPrepare(value), nil
 }

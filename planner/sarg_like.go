@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargLike struct {
@@ -36,7 +37,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 	}
 
 	rv := &sargLike{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
@@ -45,7 +46,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 			return nil, nil
 		}
 
-		span := &Span{}
+		span := &plan.Span{}
 		span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
 
 		last := len(prefix) - 1
@@ -58,7 +59,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 		}
 
 		span.Range.Inclusion = datastore.LOW
-		return Spans{span}, nil
+		return plan.Spans{span}, nil
 	}
 
 	return rv

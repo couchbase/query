@@ -7,17 +7,18 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
-	children := make([]Operator, 0, 8)
-	subChildren := make([]Operator, 0, 8)
+	children := make([]plan.Operator, 0, 8)
+	subChildren := make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
 	if source.Select() != nil {
@@ -26,7 +27,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			return nil, err
 		}
 
-		children = append(children, sel.(Operator))
+		children = append(children, sel.(plan.Operator))
 	} else {
 		if source.From() == nil {
 			return nil, fmt.Errorf("MERGE missing source.")
@@ -44,7 +45,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	if source.As() != "" {
-		subChildren = append(subChildren, NewAlias(source.As()))
+		subChildren = append(subChildren, plan.NewAlias(source.As()))
 	}
 
 	ksref := stmt.KeyspaceRef()
@@ -56,71 +57,71 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	actions := stmt.Actions()
-	var update, delete, insert Operator
+	var update, delete, insert plan.Operator
 
 	if actions.Update() != nil {
 		act := actions.Update()
-		ops := make([]Operator, 0, 5)
+		ops := make([]plan.Operator, 0, 5)
 
 		if act.Where() != nil {
-			ops = append(ops, NewFilter(act.Where()))
+			ops = append(ops, plan.NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewClone(ksref.Alias()))
+		ops = append(ops, plan.NewClone(ksref.Alias()))
 
 		if act.Set() != nil {
-			ops = append(ops, NewSet(act.Set()))
+			ops = append(ops, plan.NewSet(act.Set()))
 		}
 
 		if act.Unset() != nil {
-			ops = append(ops, NewUnset(act.Unset()))
+			ops = append(ops, plan.NewUnset(act.Unset()))
 		}
 
-		ops = append(ops, NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
-		update = NewSequence(ops...)
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
+		update = plan.NewSequence(ops...)
 	}
 
 	if actions.Delete() != nil {
 		act := actions.Delete()
-		ops := make([]Operator, 0, 4)
+		ops := make([]plan.Operator, 0, 4)
 
 		if act.Where() != nil {
-			ops = append(ops, NewFilter(act.Where()))
+			ops = append(ops, plan.NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
-		delete = NewSequence(ops...)
+		ops = append(ops, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
+		delete = plan.NewSequence(ops...)
 	}
 
 	if actions.Insert() != nil {
 		act := actions.Insert()
-		ops := make([]Operator, 0, 4)
+		ops := make([]plan.Operator, 0, 4)
 
 		if act.Where() != nil {
-			ops = append(ops, NewFilter(act.Where()))
+			ops = append(ops, plan.NewFilter(act.Where()))
 		}
 
-		ops = append(ops, NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), act.Value(), stmt.Limit()))
-		insert = NewSequence(ops...)
+		ops = append(ops, plan.NewSendInsert(keyspace, ksref.Alias(), stmt.Key(), act.Value(), stmt.Limit()))
+		insert = plan.NewSequence(ops...)
 	}
 
-	merge := NewMerge(keyspace, ksref, stmt.Key(), update, delete, insert)
+	merge := plan.NewMerge(keyspace, ksref, stmt.Key(), update, delete, insert)
 	subChildren = append(subChildren, merge)
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, NewInitialProject(stmt.Returning()), NewFinalProject())
+		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
 	}
 
-	parallel := NewParallel(NewSequence(subChildren...), this.maxParallelism)
+	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
 	children = append(children, parallel)
 
 	if stmt.Limit() != nil {
-		children = append(children, NewLimit(stmt.Limit()))
+		children = append(children, plan.NewLimit(stmt.Limit()))
 	}
 
 	if stmt.Returning() == nil {
-		children = append(children, NewDiscard())
+		children = append(children, plan.NewDiscard())
 	}
 
-	return NewSequence(children...), nil
+	return plan.NewSequence(children...), nil
 }

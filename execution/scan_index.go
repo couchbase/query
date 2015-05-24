@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/value"
 )
 
@@ -90,10 +89,10 @@ func (this *IndexScan) ChildChannel() StopChannel {
 type spanScan struct {
 	base
 	plan *plan.IndexScan
-	span *planner.Span
+	span *plan.Span
 }
 
-func newSpanScan(parent *IndexScan, span *planner.Span) *spanScan {
+func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
 	rv := &spanScan{
 		base: newRedirectBase(),
 		plan: parent.plan,
@@ -170,7 +169,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		context.ScanConsistency(), context.ScanVector(), conn)
 }
 
-func evalSpan(ps *planner.Span, context *Context) (*datastore.Span, error) {
+func evalSpan(ps *plan.Span, context *Context) (*datastore.Span, error) {
 	var err error
 	ds := &datastore.Span{}
 

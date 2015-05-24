@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargLT struct {
@@ -20,13 +21,13 @@ type sargLT struct {
 
 func newSargLT(pred *expression.LT) *sargLT {
 	rv := &sargLT{}
-	rv.sarger = func(expr2 expression.Expression) (Spans, error) {
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
 
 		var exprs expression.Expressions
-		span := &Span{}
+		span := &plan.Span{}
 
 		if pred.First().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.Second().Static()}
@@ -43,7 +44,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 		}
 
 		span.Range.Inclusion = datastore.NEITHER
-		return Spans{span}, nil
+		return plan.Spans{span}, nil
 	}
 
 	return rv

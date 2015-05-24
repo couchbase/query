@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package plan
+package planner
 
 import (
 	"strings"
@@ -15,10 +15,11 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery bool) (Operator, error) {
+	namespace string, subquery bool) (plan.Operator, error) {
 	builder := newBuilder(datastore, systemstore, namespace, subquery)
 	o, err := stmt.Accept(builder)
 
@@ -26,8 +27,8 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		return nil, err
 	}
 
-	op := o.(Operator)
-	_, is_prepared := o.(*Prepared)
+	op := o.(plan.Operator)
+	_, is_prepared := o.(*plan.Prepared)
 
 	if !subquery && !is_prepared {
 		privs, er := stmt.Privileges()
@@ -36,10 +37,10 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		}
 
 		if len(privs) > 0 {
-			op = NewAuthorize(privs, op)
+			op = plan.NewAuthorize(privs, op)
 		}
 
-		return NewSequence(op, NewStream()), nil
+		return plan.NewSequence(op, plan.NewStream()), nil
 	} else {
 		return op, nil
 	}
@@ -55,8 +56,8 @@ type builder struct {
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY
 	distinct        bool
-	children        []Operator
-	subChildren     []Operator
+	children        []plan.Operator
+	subChildren     []plan.Operator
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {

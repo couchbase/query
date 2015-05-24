@@ -12,6 +12,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 type sargAnd struct {
@@ -20,7 +21,7 @@ type sargAnd struct {
 
 func newSargAnd(pred *expression.And) *sargAnd {
 	rv := &sargAnd{}
-	rv.sarger = func(expr2 expression.Expression) (spans Spans, err error) {
+	rv.sarger = func(expr2 expression.Expression) (spans plan.Spans, err error) {
 		if SubsetOf(pred, expr2) {
 			return _SELF_SPANS, nil
 		}
@@ -48,7 +49,7 @@ func newSargAnd(pred *expression.And) *sargAnd {
 	return rv
 }
 
-func constrain(spans1, spans2 Spans) Spans {
+func constrain(spans1, spans2 plan.Spans) plan.Spans {
 	span1 := spans1[0]
 	span2 := spans2[0]
 
