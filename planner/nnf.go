@@ -10,6 +10,8 @@
 package planner
 
 import (
+	"math"
+
 	"github.com/couchbase/query/expression"
 )
 
@@ -53,6 +55,45 @@ func (this *NNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 
 	return expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
 		expression.NewLE(expr.First(), expr.Third())), nil
+}
+
+func (this *NNF) VisitLike(expr *expression.Like) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	re := expr.Regexp()
+	if re == nil {
+		return expr, nil
+	}
+
+	prefix, complete := re.LiteralPrefix()
+	if complete {
+		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
+		return eq, nil
+	}
+
+	if prefix == "" {
+		return expr, nil
+	}
+
+	var and expression.Expression
+	le := expression.NewLE(expression.NewConstant(prefix), expr.First())
+	last := len(prefix) - 1
+	if prefix[last] < math.MaxUint8 {
+		bytes := []byte(prefix)
+		bytes[last]++
+		and = expression.NewAnd(le, expression.NewLT(
+			expr.First(),
+			expression.NewConstant(string(bytes))))
+	} else {
+		and = expression.NewAnd(le, expression.NewLT(
+			expr.First(),
+			expression.EMPTY_ARRAY_EXPR))
+	}
+
+	return and, nil
 }
 
 func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {

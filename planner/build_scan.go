@@ -41,7 +41,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 
 	this.maxParallelism = 0 // Default behavior for index scans
 
-	secondary, primary, err := BuildScan(keyspace, node, this.where)
+	secondary, primary, err := buildScan(keyspace, node, this.where)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 }
 
-func BuildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression) (
+func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression) (
 	secondary map[datastore.Index]plan.Spans, primary datastore.PrimaryIndex, err error) {
 	var indexes, hintIndexes, otherIndexes []datastore.Index
 	hints := node.Indexes()
