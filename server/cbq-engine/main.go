@@ -109,8 +109,6 @@ func main() {
 		logging.SetLevel(level)
 	}
 
-	logging.Infof("Setting log level to %s", logging.LogLevel().String())
-
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -173,6 +171,7 @@ func main() {
 		logging.Pair{"version", util.VERSION},
 		logging.Pair{"datastore", *DATASTORE},
 		logging.Pair{"threads", runtime.GOMAXPROCS(0)},
+		logging.Pair{"loglevel", logging.LogLevel().String()},
 	)
 
 	// Create http endpoint

@@ -164,9 +164,14 @@ func (this *Server) serviceRequest(request Request) {
 	var operator execution.Operator
 	if request.State() != FATAL {
 		var err error
+		build := time.Now()
 		operator, err = execution.Build(prepared)
 		if err != nil {
 			request.Fail(errors.NewError(err, ""))
+		}
+
+		if logging.LogLevel() >= logging.Trace {
+			request.Output().AddPhaseTime("instantiate", time.Since(build))
 		}
 	}
 
@@ -189,9 +194,12 @@ func (this *Server) serviceRequest(request Request) {
 	context := execution.NewContext(this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
 		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
+
+	run := time.Now()
 	operator.RunOnce(context, nil)
 
 	if logging.LogLevel() >= logging.Trace {
+		request.Output().AddPhaseTime("run", time.Since(run))
 		logPhases(request)
 	}
 }
@@ -199,34 +207,41 @@ func (this *Server) serviceRequest(request Request) {
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
 	prepared := request.Prepared()
 	if prepared == nil {
+		parse := time.Now()
 		stmt, err := n1ql.ParseStatement(request.Statement())
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
 
+		prep := time.Now()
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}
+
+		if logging.LogLevel() >= logging.Trace {
+			request.Output().AddPhaseTime("plan", time.Since(prep))
+			request.Output().AddPhaseTime("parse", prep.Sub(parse))
+		}
 	}
+
 	if logging.LogLevel() >= logging.Debug {
 		// log EXPLAIN for the request
 		logExplain(prepared)
 	}
+
 	return prepared, nil
 }
 
 func logExplain(prepared *plan.Prepared) {
-	var plan plan.Operator
-
-	plan = prepared
-	explain, err := json.MarshalIndent(plan, "", "    ")
+	var pl plan.Operator = prepared
+	explain, err := json.MarshalIndent(pl, "", "    ")
 	if err != nil {
 		logging.Tracep("Error logging explain", logging.Pair{"error", err})
 		return
 	}
-	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
 
+	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
 }
 
 func logPhases(request Request) {
