@@ -42,17 +42,12 @@ type Aggregate interface {
 	/*
 	   Represents the aggregate function.
 	*/
-	expression.Function
+	expression.UnaryFunction
 
 	/*
 	   Returned if there is no input data to the function.
 	*/
 	Default() value.Value
-
-	/*
-	   Single operand to this function.
-	*/
-	Operand() expression.Expression
 
 	/*
 	   Aggregates input data.

@@ -10,8 +10,6 @@
 package planner
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
 )
@@ -51,17 +49,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	children = append(children, sub.(plan.Operator))
 
 	if order != nil {
-		if this.order == nil {
-			// Disallow aggregates in ORDER BY
-			aggs := make(map[string]algebra.Aggregate)
-			for _, term := range order.Terms() {
-				collectAggregates(aggs, term.Expression())
-				if len(aggs) > 0 {
-					return nil, fmt.Errorf("Aggregates not available for this ORDER BY.")
-				}
-			}
-		}
-
 		children = append(children, plan.NewOrder(order))
 	}
 
