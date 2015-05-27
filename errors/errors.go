@@ -546,7 +546,7 @@ func NewCbNoKeysFetchError(e error, msg string) Error {
 
 func NewCbBulkGetError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12008, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
-		InternalMsg: "Error performing buck get " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbDMLError(e error, msg string) Error {
