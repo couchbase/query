@@ -215,14 +215,14 @@ func (this *base) allocateBatch(n int) {
 
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
 	if this.batch == nil {
-		this.allocateBatch(1024)
+		this.allocateBatch(16)
 	} else if len(this.batch) == cap(this.batch) {
 		if !b.flushBatch(context) {
 			return false
 		}
 
 		if len(this.batch) == cap(this.batch) {
-			this.allocateBatch(1024)
+			this.allocateBatch(16)
 		}
 	}
 

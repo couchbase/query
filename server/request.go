@@ -27,8 +27,7 @@ import (
 
 type RequestChannel chan Request
 
-const RESULT_CAP = 1 << 14
-const ERROR_CAP = 1 << 10
+const _ERROR_CAP = 4
 
 type State string
 
@@ -169,9 +168,8 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		requestTime:    time.Now(),
 		serviceTime:    time.Now(),
 		state:          RUNNING,
-		results:        make(value.ValueChannel, RESULT_CAP),
-		errors:         make(errors.ErrorChannel, ERROR_CAP),
-		warnings:       make(errors.ErrorChannel, ERROR_CAP),
+		errors:         make(errors.ErrorChannel, _ERROR_CAP),
+		warnings:       make(errors.ErrorChannel, _ERROR_CAP),
 		closeNotify:    make(chan bool, 1),
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
@@ -180,6 +178,8 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	if rv.maxParallelism <= 0 {
 		rv.maxParallelism = runtime.NumCPU()
 	}
+
+	rv.results = make(value.ValueChannel, rv.maxParallelism)
 
 	if logging.LogLevel() >= logging.Trace {
 		rv.phaseTimes = make(map[string]time.Duration, 8)
