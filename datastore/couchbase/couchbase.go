@@ -649,12 +649,12 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 		}
 		Value.SetAttachment("meta", map[string]interface{}{
 			"id":    k,
-			"cas":   float64(v.Cas),
+			"cas":   v.Cas,
 			"type":  meta_type,
 			"flags": float64(meta_flags),
 		})
 
-		logging.Debugf("CAS Value for key %v is %v", k, float64(v.Cas))
+		logging.Debugf("CAS Value for key %v is %v", k, uint64(v.Cas))
 
 		doc.Value = Value
 		rv[i] = doc
@@ -721,13 +721,21 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			// check if the key exists and if so then use the cas value
 			// to update the key
 			var meta map[string]interface{}
-			var cas float64
+			var cas uint64
 
 			an := kv.Value.(value.AnnotatedValue)
 			meta = an.GetAttachment("meta").(map[string]interface{})
 
-			cas = meta["cas"].(float64)
-			logging.Debugf("CAS Value (Update) for key %v is %v", key, float64(cas))
+			switch meta["cas"].(type) {
+			case uint64:
+				cas = meta["cas"].(uint64)
+			default:
+				logging.Errorf("Wrong type for CAS value. key %v meta %v", key, meta)
+				err = fmt.Errorf("Wrong type of CAS value for key %v", key)
+				goto done
+
+			}
+			logging.Debugf("CAS Value (Update) for key %v is %v", key, uint64(cas))
 			if cas != 0 {
 				err = b.cbbucket.Cas(key, 0, uint64(cas), val)
 			} else {
@@ -739,6 +747,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			err = b.cbbucket.Set(key, 0, val)
 		}
 
+	done:
 		if err != nil {
 			logging.Errorf("Failed to perform %s on key %s Error %v", opToString(op), key, err)
 		} else {
