@@ -23,9 +23,9 @@ import (
 ///////////////////////////////////////////////////
 
 /*
-This represents the Meta function BASE64(expr). It returns
-the base64-encoding of expr. Type Base64 is a struct that
-implements UnaryFunctionBase.
+This represents the function BASE64(expr). It returns the
+base64-encoding of expr. Type Base64 is a struct that implements
+UnaryFunctionBase.
 */
 type Base64 struct {
 	UnaryFunctionBase
@@ -107,7 +107,7 @@ func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, erro
 }
 
 func (this *Meta) Indexable() bool {
-	return false
+	return true
 }
 
 func (this *Meta) Apply(context Context, operand value.Value) (value.Value, error) {
