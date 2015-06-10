@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -457,8 +458,9 @@ func (this *JsStatement) Visit(bucketName string, e expression.Expression) (expr
 
 	stringer := NewJSConverter().Visit(e)
 	if stringer != "" {
-		if strings.Contains(stringer, "meta") {
-			// if the expression contains a meta do not add .doc and also
+		re := regexp.MustCompile("\\(meta[.][\\S]*\\)")
+		if re.FindString(stringer) != "" {
+			// if the expression contains a meta.`something` do not add .doc and also
 			// strip out the bucket name
 			stringer = strings.Replace(stringer, ".`"+bucketName+"`", "", -1)
 		} else {
