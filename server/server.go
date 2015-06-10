@@ -38,7 +38,7 @@ type Server struct {
 	namespace      string
 	readonly       bool
 	channel        RequestChannel
-	threadCount    int
+	servicerCount  int
 	maxParallelism int
 	timeout        time.Duration
 	signature      bool
@@ -53,7 +53,7 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
-	channel RequestChannel, threadCount, maxParallelism int, timeout time.Duration,
+	channel RequestChannel, servicerCount, maxParallelism int, timeout time.Duration,
 	signature, metrics bool, keepAlive int) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:      store,
@@ -62,7 +62,7 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 		namespace:      namespace,
 		readonly:       readonly,
 		channel:        channel,
-		threadCount:    threadCount,
+		servicerCount:  servicerCount,
 		maxParallelism: maxParallelism,
 		timeout:        timeout,
 		signature:      signature,
@@ -117,7 +117,7 @@ func (this *Server) Serve() {
 		// goroutine for each request, as that would be
 		// unbounded and could degrade performance of already
 		// executing queries.
-		for i := 0; i < this.threadCount; i++ {
+		for i := 0; i < this.servicerCount; i++ {
 			go this.doServe()
 		}
 	})

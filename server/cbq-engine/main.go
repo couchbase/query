@@ -43,7 +43,7 @@ var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
 var REQUEST_SIZE_CAP = flag.String("request-size-cap", http.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int64("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
-var THREAD_COUNT = flag.Int("threads", runtime.NumCPU()<<6, "Thread count")
+var SERVICER_COUNT = flag.Int("servicers", runtime.NumCPU()<<13, "Servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 0, "Maximum parallelism per query; use zero or negative value to disable")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
@@ -155,7 +155,7 @@ func main() {
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	http.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*THREAD_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
+		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
@@ -170,7 +170,7 @@ func main() {
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", util.VERSION},
 		logging.Pair{"datastore", *DATASTORE},
-		logging.Pair{"threads", runtime.GOMAXPROCS(0)},
+		logging.Pair{"max-parallelism", runtime.GOMAXPROCS(0)},
 		logging.Pair{"loglevel", logging.LogLevel().String()},
 	)
 
