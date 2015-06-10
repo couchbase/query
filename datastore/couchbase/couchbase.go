@@ -592,30 +592,26 @@ func (b *keyspace) Count() (int64, errors.Error) {
 }
 
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-
-	// view indexer will always be available
 	switch name {
-	case datastore.VIEW:
-		return b.viewIndexer, nil
 	case datastore.GSI, datastore.DEFAULT:
 		if b.gsiIndexer != nil {
 			return b.gsiIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))
+	case datastore.VIEW:
+		return b.viewIndexer, nil
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
 }
 
 func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-
-	// view indexer will always be available
 	indexers := make([]datastore.Indexer, 0, 2)
-	indexers = append(indexers, b.viewIndexer)
 	if b.gsiIndexer != nil {
 		indexers = append(indexers, b.gsiIndexer)
 	}
 
+	indexers = append(indexers, b.viewIndexer)
 	return indexers, nil
 }
 
