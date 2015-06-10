@@ -595,9 +595,9 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 
 	// view indexer will always be available
 	switch name {
-	case datastore.VIEW, datastore.DEFAULT:
+	case datastore.VIEW:
 		return b.viewIndexer, nil
-	case datastore.GSI:
+	case datastore.GSI, datastore.DEFAULT:
 		if b.gsiIndexer != nil {
 			return b.gsiIndexer, nil
 		}
