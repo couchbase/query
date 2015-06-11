@@ -12,8 +12,10 @@ package execution
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -28,11 +30,29 @@ type base struct {
 	batch       []value.AnnotatedValue
 }
 
-const _ITEM_CAP = 8 * 1024
+const _ITEM_CAP = 512
+
+var pipelineCap int64
+
+func init() {
+	pipelineCap = _ITEM_CAP
+}
+
+func SetPipelineCap(cap int) {
+	if cap < 1 {
+		cap = _ITEM_CAP
+	}
+	atomic.StoreInt64(&pipelineCap, int64(cap))
+	logging.Infop("Pipeline Cap", logging.Pair{"items", GetPipelineCap()})
+}
+
+func GetPipelineCap() int64 {
+	return atomic.LoadInt64(&pipelineCap)
+}
 
 func newBase() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, _ITEM_CAP),
+		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
 		stopChannel: make(StopChannel, 1),
 	}
 }
@@ -88,7 +108,7 @@ func (this *base) SetParent(parent Parent) {
 
 func (this *base) copy() base {
 	return base{
-		itemChannel: make(value.AnnotatedChannel, _ITEM_CAP),
+		itemChannel: make(value.AnnotatedChannel, GetPipelineCap()),
 		stopChannel: make(StopChannel, 1),
 		input:       this.input,
 		output:      this.output,
