@@ -1,0 +1,143 @@
+[
+  {
+        "statements": "SELECT IFMISSING(`shipped-on`,\"MISSING\") as mis FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY mis",
+        "results": [
+      {
+            "mis": null
+        },
+        {
+            "mis": "2012/01/02"
+        },
+        {
+            "mis": "MISSING"
+        },
+        {
+            "mis": "MISSING"
+        }
+   ]
+    },
+
+    {
+        "statements": "SELECT IFNULL(`shipped-on`,\"NULL\") as nu FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY nu",
+        "results": [
+        {},
+        {},
+        {
+            "nu": "2012/01/02"
+        },
+        {
+            "nu": "NULL"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT IFMISSINGORNULL(`shipped-on`,\"NOT THERE\") as m_or_n FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY m_or_n",
+        "results": [
+        {
+            "m_or_n": "2012/01/02"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        },
+        {
+            "m_or_n": "NOT THERE"
+        }
+    ]
+    },
+   {
+     "statements":"SELECT NULLIF(orderlines[0].qty, 2) as n_if FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY n_if",
+     "results": [
+        {
+            "n_if": null
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        }
+    ]  
+   },
+   {
+        "statements": "SELECT NULLIF(orderlines[0].qty , 1) as n_if FROM orders WHERE id>\"1235\" AND test_id=\"cond_unkn_func\" ORDER BY n_if",
+         "results": [
+        {
+            "n_if": null
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT MISSINGIF(orderlines[0].qty , 1) as n_if FROM orders WHERE id>\"1235\" AND test_id=\"cond_unkn_func\" ORDER BY n_if",
+        "results": [
+        {}
+    ]
+    },
+   {
+      "statements":"SELECT MISSINGIF(orderlines[0].qty, 2) as n_if FROM orders WHERE test_id=\"cond_unkn_func\" ORDER BY n_if",
+      "results": [
+        {},
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        },
+        {
+            "n_if": 1
+        }
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(null,\"n1ql\")",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(missing,\"n1ql\")",
+     "results": [
+        {}
+    ]
+  },
+  {
+     "statements":"SELECT MISSINGIF(12,\"n1ql\") ",
+     "results": [
+        {
+            "$1": 12
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(null,\"n1ql\") ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(missing,\"n1ql\") ",
+    "results": [
+        {}
+    ]
+  },
+  {
+    "statements":"SELECT NULLIF(12,\"n1ql\") ",
+    "results": [
+        {
+            "$1": 12
+        }
+    ]
+  }
+  
+]

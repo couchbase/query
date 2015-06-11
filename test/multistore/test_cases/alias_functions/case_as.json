@@ -1,0 +1,163 @@
+[
+
+    {
+        "statements": "SELECT customerId AS Cid , ccInfo.cardNumber AS CaNum , ccInfo.cardType AS CaTyp, firstName AS fnam FROM customer WHERE state = \"CA\" AND test_id=\"alias_func\" ORDER BY CaNum, Cid LIMIT 3",
+        "results": [
+        {
+            "CaNum": "1211-1221-1234-2201",
+            "CaTyp": "americanexpress",
+            "Cid": "customer355",
+            "fnam": "Jordon"
+        },
+        {
+            "CaNum": "1211-1221-1234-2201",
+            "CaTyp": "americanexpress",
+            "Cid": "customer56",
+            "fnam": "Trevor"
+        },
+        {
+            "CaNum": "1211-1221-1234-2201",
+            "CaTyp": "americanexpress",
+            "Cid": "customer967",
+            "fnam": "Forest"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT firstName AS _1 FROM customer WHERE test_id=\"alias_func\" ORDER BY _1, customerId limit 3",
+        "results": [
+        {
+            "_1": "Abagail"
+        },
+        {
+            "_1": "Abdullah"
+        },
+        {
+            "_1": "Abe"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT customerId AS Cid, length(customerId) AS len FROM customer WHERE test_id=\"alias_func\" ORDER BY len, Cid DESC limit 3",
+        "results": [
+        {
+            "Cid": "customer9",
+            "len": 9
+        },
+        {
+            "Cid": "customer8",
+            "len": 9
+        },
+        {
+            "Cid": "customer7",
+            "len": 9
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT customerId AS `$1`, ccInfo.cardType FROM customer WHERE test_id=\"alias_func\" ORDER BY `$1` LIMIT 3",
+        "results": [
+        {
+            "$1": "customer0",
+            "cardType": "discover"
+        },
+        {
+            "$1": "customer1",
+            "cardType": "visa"
+        },
+        {
+            "$1": "customer10",
+            "cardType": "discover"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT customerId AS `$2`, ccInfo.cardType FROM customer WHERE test_id=\"alias_func\" ORDER BY customerId LIMIT 3",
+        "results": [
+        {
+            "$2": "customer0",
+            "cardType": "discover"
+        },
+        {
+            "$2": "customer1",
+            "cardType": "visa"
+        },
+        {
+            "$2": "customer10",
+            "cardType": "discover"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT customerId AS `$A`, customerId AS `A$`, customerId AS `_A`, customerId AS `A_` FROM customer WHERE test_id=\"alias_func\" ORDER BY customerId limit 3",
+        "results": [
+        {
+            "$A": "customer0",
+            "A$": "customer0",
+            "A_": "customer0",
+            "_A": "customer0"
+        },
+        {
+            "$A": "customer1",
+            "A$": "customer1",
+            "A_": "customer1",
+            "_A": "customer1"
+        },
+        {
+            "$A": "customer10",
+            "A$": "customer10",
+            "A_": "customer10",
+            "_A": "customer10"
+        }
+    ]
+    },
+
+
+    {
+        "statements": "SELECT ccInfo.cardExpiry AS exp, state AS _state, firstName AS fname FROM customer WHERE test_id=\"alias_func\" ORDER BY fname DESC, exp LIMIT 3",
+        "results": [
+        {
+            "_state": "NC",
+            "exp": "2012-11-12",
+            "fname": "Zoie"
+        },
+        {
+            "_state": "MT",
+            "exp": "2012-11-12",
+            "fname": "Zion"
+        },
+        {
+            "_state": "GU",
+            "exp": "2012-11-12",
+            "fname": "Zetta"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT C.customerId AS Cid, C.emailAddress AS _email, C.lastName AS L FROM customer AS C WHERE test_id=\"alias_func\" ORDER BY emailAddress, Cid limit 3",
+        "results": [
+        {
+            "Cid": "customer608",
+            "L": "Marquardt",
+            "_email": "aaliyah@lowe.net"
+        },
+        {
+            "Cid": "customer993",
+            "L": "Botsford",
+            "_email": "abbey@berge.net"
+        },
+        {
+            "Cid": "customer420",
+            "L": "Casper",
+            "_email": "abdullah@stracke.org"
+        }
+    ]
+    }
+]
+

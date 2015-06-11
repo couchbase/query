@@ -1,0 +1,559 @@
+[
+    {
+      "statements": "select ARRAY_APPEND((ARRAY ol.productId FOR ol IN orderlines END), \"GreanTea\") AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+      "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "GreanTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "GreanTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                "GreanTea"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                "GreanTea"
+            ]
+        }
+    ]
+  },
+  {
+     "statements": "SELECT productId, ARRAY_LENGTH(ARRAY sale.productId FOR sale IN orders.orderlines END) AS D FROM orders WHERE POLY_LENGTH(orderlines[0].productId) > 0 AND test_id=\"array_func\" ORDER BY D, productId desc",
+    "results": [
+        {
+            "D": 2
+        },
+        {
+            "D": 2
+        },
+        {
+            "D": 2
+        },
+        {
+            "D": 2
+        }
+    ]
+  },
+  {
+     "statements": "SELECT array_avg(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\" ORDER BY 1",
+     "results": [
+        {
+            "$1": 10.25
+        }
+    ]  
+  },
+  {
+     "description":"Object in an array hence avg returns null for each entry",
+     "statements":"SELECT custId, LENGTH(custId) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "results": [
+        {
+            "$1": 10,
+            "custId": "customer12"
+        },
+        {
+            "$1": 10,
+            "custId": "customer18"
+        },
+        {
+            "$1": 11,
+            "custId": "customer312"
+        },
+        {
+            "$1": 10,
+            "custId": "customer38"
+        }
+    ]
+  },
+  {
+     "description":"Object in an array hence avg returns null for each entry",
+     "statements":"SELECT id, ARRAY_AVG(LENGTH(orderlines[0: ])) FROM orders WHERE test_id=\"array_func\" ORDER BY id",
+     "results": [
+        {
+            "$1": null,
+            "id": "1200"
+        },
+        {
+            "$1": null,
+            "id": "1234"
+        },
+        {
+            "$1": null,
+            "id": "1235"
+        },
+        {
+            "$1": null,
+            "id": "1236"
+        }
+    ]   
+  },
+  {
+     "statements":"select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+     "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1200"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1236"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                "1234"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                "1235"
+            ]
+        }
+    ]
+  },
+  {
+     "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(custId)), 10) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "results": [
+        {
+            "$1": true
+        }
+    ]
+  },
+  {
+     "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "results": [
+        {
+            "$1": 4
+        }
+    ]
+  },
+  {
+    "statements":"SELECT array_concat(array_agg(LENGTH(custId)),[16,18,54]) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "results": [
+        {
+            "$1": [
+                10,
+                10,
+                10,
+                11,
+                16,
+                18,
+                54
+            ]
+        }
+    ]
+  },
+ {
+   "description":"Distinct gives inconsistent results, hence sort",
+   "statements":"SELECT array_sort(array_distinct(array_concat(array_agg(LENGTH(custId)),[16,18,54]))) FROM orders WHERE test_id=\"array_func\" ORDER BY id",
+   "results": [
+        {
+            "$1": [
+                10,
+                11,
+                16,
+                18,
+                54
+            ]
+        }
+    ] 
+ },
+ {
+   "description":"Output before Distinct",
+   "statements":"select array_sort(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"])) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+   "results": [
+        {
+            "A": [
+                "coffee01",
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "coffee01",
+                "tea111"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "tea111"
+            ]
+        }
+    ]
+ },
+ { 
+   "description":"Distinct gives inconsistent results, hence sort",
+   "statements":" select array_sort(ARRAY_DISTINCT(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"]))) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+   "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "tea111"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111"
+            ]
+        }
+    ]
+ },
+ {
+   "description":"If prev example is an array of slices then the result is as follows.",
+   "statements":"select array_sort(ARRAY_DISTINCT(array_agg(ARRAY ol.productId FOR ol IN orderlines END) ) ) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+   "results": [
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "sugar22"
+                ],
+                [
+                    "coffee01",
+                    "tea111"
+                ],
+                [
+                    "tea111",
+                    "sugar22"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+     "statements":"select ARRAY_IFNULL([null, null, null, \"append\", \"avg\", null, \"max\"])",
+     "results": [
+        {
+            "$1": "append"
+        }
+    ]
+  },
+  {
+     "statements":"select ARRAY_LENGTH([null, null, null, \"append\", \"avg\", null, \"max\"])",
+     "results": [
+        {
+            "$1": 7
+        }
+    ]
+  },
+  {
+     "statements":"select array_max(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+     "results": [
+        {
+            "A": "sugar22"
+        },
+        {
+            "A": "sugar22"
+        },
+        {
+            "A": "tea111"
+        },
+        {
+            "A": "tea111"
+        }
+    ]
+  },
+ {
+    "statements":"select array_min(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+    "results": [
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "coffee01"
+        },
+        {
+            "A": "sugar22"
+        }
+    ]
+ },
+ {
+    "statements":"select array_position(array_agg(array_min(ARRAY ol.productId FOR ol IN orderlines END) ) , \"sugar22\" ) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+    "results": [
+        {
+            "A": 3
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_PREPEND((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+     "results": [
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "sugar22"
+                ],
+                "1200"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "sugar22"
+                ],
+                "1236"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "tea111"
+                ],
+                "1234"
+            ]
+        },
+        {
+            "A": [
+                [
+                    "tea111",
+                    "sugar22"
+                ],
+                "1235"
+            ]
+        }
+    ]    
+ },
+ {
+    "statements":"select ARRAY_PUT((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+    "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                [
+                    "1200"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                [
+                    "1236"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                [
+                    "1234"
+                ]
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                [
+                    "1235"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"])  AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+    "results": [
+        {
+            "A": [
+                [
+                    "coffee01",
+                    "tea111"
+                ],
+                [
+                    "tea111",
+                    "sugar22"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select ARRAY_REVERSE( ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"]))  AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+    "results": [
+        {
+            "A": [
+                [
+                    "tea111",
+                    "sugar22"
+                ],
+                [
+                    "coffee01",
+                    "tea111"
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_range(-3,10,2) ",
+    "results": [
+        {
+            "$1": [
+                -3,
+                -1,
+                1,
+                3,
+                5,
+                7,
+                9
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_range(-3,10) ",
+    "results": [
+        {
+            "$1": [
+                -3,
+                -2,
+                -1,
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",-1) ",
+    "results": [
+        {
+            "$1": null
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",0) ",
+    "results": [
+        {
+            "$1": []
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat(\"N1ql\",3) ",
+     "results": [
+        {
+            "$1": [
+                "N1ql",
+                "N1ql",
+                "N1ql"
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_repeat([\"N1ql\",4],3)",
+    "results": [
+        {
+            "$1": [
+                [
+                    "N1ql",
+                    4
+                ],
+                [
+                    "N1ql",
+                    4
+                ],
+                [
+                    "N1ql",
+                    4
+                ]
+            ]
+        }
+    ]
+ },
+ {
+    "statements":"select array_replace([\"2010\",\"2011\",2012, 2013,\"2013\"], \"2013\", [2013, 2014] ) ",
+ "results": [
+        {
+            "$1": [
+                "2010",
+                "2011",
+                2012,
+                2013,
+                [
+                    2013,
+                    2014
+                ]
+            ]
+        }
+    ]
+},
+{
+   "statements":"select array_sum(array_range(-3,5)) as sum ",
+   "results": [
+        {
+            "sum": 4
+        }
+    ]
+}
+]
+
+

@@ -1,0 +1,130 @@
+[
+{
+	"statements": "SELECT firstName, OBJECT_LENGTH(customer.ccInfo) AS infolen FROM customer WHERE test_id=\"obj_func\" ORDER BY objlen, firstName LIMIT 3",
+	"results": [
+        {
+            "firstName": "Abagail",
+            "infolen": 3
+        },
+        {
+            "firstName": "Abdullah",
+            "infolen": 3
+        },
+        {
+            "firstName": "Abe",
+            "infolen": 3
+        }
+    ]
+},
+
+{
+	"statements": "SELECT OBJECT_NAMES(ccInfo) as infonames FROM customer WHERE test_id=\"obj_func\" limit 3",
+	"results": [
+        {
+            "infonames": [
+                "cardExpiry",
+                "cardNumber",
+                "cardType"
+            ]
+        },
+        {
+            "infonames": [
+                "cardExpiry",
+                "cardNumber",
+                "cardType"
+            ]
+        },
+        {
+            "infonames": [
+                "cardExpiry",
+                "cardNumber",
+                "cardType"
+            ]
+        }
+    ]
+},
+
+{
+	"statements": "SELECT OBJECT_PAIRS(ccInfo) as infopairs FROM customer WHERE test_id=\"obj_func\" ORDER BY infopairs, firstname LIMIT 3",
+	"results": [
+        {
+            "infopairs": [
+                {
+                    "name": "cardExpiry",
+                    "value": "2011-10-12"
+                },
+                {
+                    "name": "cardNumber",
+                    "value": "1211-1221-1234-2201"
+                },
+                {
+                    "name": "cardType",
+                    "value": "americanexpress"
+                }
+            ]
+        },
+        {
+            "infopairs": [
+                {
+                    "name": "cardExpiry",
+                    "value": "2011-10-12"
+                },
+                {
+                    "name": "cardNumber",
+                    "value": "1211-1221-1234-2201"
+                },
+                {
+                    "name": "cardType",
+                    "value": "americanexpress"
+                }
+            ]
+        },
+        {
+            "infopairs": [
+                {
+                    "name": "cardExpiry",
+                    "value": "2011-10-12"
+                },
+                {
+                    "name": "cardNumber",
+                    "value": "1211-1221-1234-2201"
+                },
+                {
+                    "name": "cardType",
+                    "value": "americanexpress"
+                }
+            ]
+        }
+    ]
+},
+
+{
+	"statements": "SELECT firstName, OBJECT_VALUES(ccInfo) as infovals FROM customer WHERE test_id=\"obj_func\" ORDER BY infovals, firstName LIMIT 3",
+	"results": [
+        {
+            "firstName": "Celestine",
+            "infovals": [
+                "2011-10-12",
+                "1211-1221-1234-2201",
+                "americanexpress"
+            ]
+        },
+        {
+            "firstName": "Ed",
+            "infovals": [
+                "2011-10-12",
+                "1211-1221-1234-2201",
+                "americanexpress"
+            ]
+        },
+        {
+            "firstName": "Forest",
+            "infovals": [
+                "2011-10-12",
+                "1211-1221-1234-2201",
+                "americanexpress"
+            ]
+        }
+    ]
+}
+]

@@ -1,0 +1,510 @@
+[
+{
+	"statements": "SELECT DISTINCT LOWER(state) AS lostate FROM customer where test_id=\"str_func\" ORDER BY lostate limit 5",
+	"results": [
+        {
+            "lostate": "aa"
+        },
+        {
+            "lostate": "ae"
+        },
+        {
+            "lostate": "ak"
+        },
+        {
+            "lostate": "al"
+        },
+        {
+            "lostate": "ap"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT LOWER(ccInfo.cardType) as cardname, LOWER(firstName) as fnamelo FROM customer where test_id=\"str_func\" ORDER BY fnamelo limit 5",
+	"results": [
+        {
+            "cardname": "mastercard",
+            "fnamelo": "abagail"
+        },
+        {
+            "cardname": "mastercard",
+            "fnamelo": "abdullah"
+        },
+        {
+            "cardname": "discover",
+            "fnamelo": "abe"
+        },
+        {
+            "cardname": "discover",
+            "fnamelo": "abe"
+        },
+        {
+            "cardname": "visa",
+            "fnamelo": "abigail"
+        }
+    ]	
+},
+
+{	
+    "statements": "SELECT lower(orderlines[0].productId) AS ordlines FROM orders where test_id=\"str_func\" ORDER BY ordlines limit 3",
+    "results": [
+        {
+            "ordlines": "coffee01"
+        },
+        {
+            "ordlines": "coffee01"
+        },
+        {
+            "ordlines": "coffee01"
+        }
+    ]
+},
+
+{	
+	"statements": "select LOWER(ccInfo) as cclo FROM customer  where test_id=\"str_func\" ORDER by firstName limit 5",
+	"results": [
+        {
+            "cclo": null
+        },
+        {
+            "cclo": null
+        },
+        {
+            "cclo": null
+        },
+        {
+            "cclo": null
+        },
+        {
+            "cclo": null
+        }
+    ]
+},
+
+
+{
+	"statements":"SELECT upper(orderlines[0].productId) AS ordlines FROM orders where test_id=\"str_func\" ORDER BY ordlines limit 3",
+    "results": [
+        {
+            "ordlines": "COFFEE01"
+        },
+        {
+            "ordlines": "COFFEE01"
+        },
+        {
+            "ordlines": "COFFEE01"
+        }
+    ]
+
+},
+
+{
+	"statements": "SELECT UPPER(ccInfo.cardType) as cardname, UPPER(firstName) as fnamehi FROM customer where test_id=\"str_func\" ORDER BY fnamehi limit 5",
+	"results": [
+        {
+            "cardname": "MASTERCARD",
+            "fnamehi": "ABAGAIL"
+        },
+        {
+            "cardname": "MASTERCARD",
+            "fnamehi": "ABDULLAH"
+        },
+        {
+            "cardname": "DISCOVER",
+            "fnamehi": "ABE"
+        },
+        {
+            "cardname": "DISCOVER",
+            "fnamehi": "ABE"
+        },
+        {
+            "cardname": "VISA",
+            "fnamehi": "ABIGAIL"
+        }
+    ]
+},
+
+{	
+	"statements": "SELECT lower(orderlines[0].productId) AS ordlines FROM orders where test_id=\"str_func\" ORDER BY ordlines limit 3",
+        "results": [
+        {
+            "ordlines": "coffee01"
+        },
+        {
+            "ordlines": "coffee01"
+        },
+        {
+            "ordlines": "coffee01"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT substr(lastName, 0) as subs FROM customer where test_id=\"str_func\" ORDER BY lastName LIMIT 5",
+	"results": [
+        {
+            "subs": "Abbott"
+        },
+        {
+            "subs": "Abernathy"
+        },
+        {
+            "subs": "Abernathy"
+        },
+        {
+            "subs": "Abernathy"
+        },
+        {
+            "subs": "Abernathy"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT substr(lastName, 1) as subs FROM customer where test_id=\"str_func\" ORDER BY lastName LIMIT 5",
+	"results": [
+        {
+            "subs": "bbott"
+        },
+        {
+            "subs": "bernathy"
+        },
+        {
+            "subs": "bernathy"
+        },
+        {
+            "subs": "bernathy"
+        },
+        {
+            "subs": "bernathy"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT substr(lastName, 4) as subs FROM customer where test_id=\"str_func\" ORDER BY lastName LIMIT 5",
+	"results": [
+        {
+            "subs": "tt"
+        },
+        {
+            "subs": "nathy"
+        },
+        {
+            "subs": "nathy"
+        },
+        {
+            "subs": "nathy"
+        },
+        {
+            "subs": "nathy"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT TRIM(firstName,\"l\") as trimmed FROM customer where test_id=\"str_func\" ORDER BY trimmed LIMIT 5",
+	"results": [
+        {
+            "trimmed": "Abagai"
+        },
+        {
+            "trimmed": "Abdullah"
+        },
+        {
+            "trimmed": "Abe"
+        },
+        {
+            "trimmed": "Abe"
+        },
+        {
+            "trimmed": "Abigai"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT LTRIM(firstName, \"A\") AS lefttrim FROM customer where test_id=\"str_func\" ORDER BY lefttrim LIMIT 5",
+	"results": [
+        {
+            "lefttrim": "Barton"
+        },
+        {
+            "lefttrim": "Belle"
+        },
+        {
+            "lefttrim": "Benedict"
+        },
+        {
+            "lefttrim": "Berenice"
+        },
+        {
+            "lefttrim": "Bernardo"
+        }
+    ]
+},
+
+{	
+	"statements": "SELECT RTRIM(firstName, \"e\") as righttrim FROM customer where test_id=\"str_func\" ORDER BY righttrim LIMIT 5",
+	"results": [
+        {
+            "righttrim": "Ab"
+        },
+        {
+            "righttrim": "Ab"
+        },
+        {
+            "righttrim": "Abagail"
+        },
+        {
+            "righttrim": "Abdullah"
+        },
+        {
+            "righttrim": "Abigail"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT emailAddress, LENGTH(emailAddress) AS addlen FROM customer WHERE LENGTH(customer.emailAddress) <= 15 AND test_id=\"str_func\" ORDER BY addlen, emailAddress limit 5",
+	"results": [
+        {
+            "addlen": 11,
+            "emailAddress": "guy@kub.net"
+        },
+        {
+            "addlen": 13,
+            "emailAddress": "dee@tromp.net"
+        },
+        {
+            "addlen": 13,
+            "emailAddress": "eve@marks.biz"
+        },
+        {
+            "addlen": 13,
+            "emailAddress": "giles@toy.org"
+        },
+        {
+            "addlen": 13,
+            "emailAddress": "ila@frami.net"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT CONTAINS(\"Couchbaseisdope\",\"chbaseisdo\") AS dope",
+	"results": [
+        {
+            "dope": true
+        }
+    ]
+},
+
+{
+	"statements": "select INITCAP(\"couchbase is the superior nosql database\") AS truthz",
+	"results": [
+        {
+            "truthz": "Couchbase Is The Superior Nosql Database"
+        }
+    ]
+},
+
+{
+	"statements":"select TITLE(\"couchbase is the superior nosql database\") AS truthz",
+	"results": [
+        {
+            "truthz": "Couchbase Is The Superior Nosql Database"
+        }
+    ]	
+},
+
+{
+	"statements": "SELECT firstName from customer WHERE LENGTH(customer.firstName) < 5 AND test_id= \"str_func\" ORDER BY firstName LIMIT 5",
+	"results": [
+        {
+            "firstName": "Abe"
+        },
+        {
+            "firstName": "Abe"
+        },
+        {
+            "firstName": "Adah"
+        },
+        {
+            "firstName": "Adah"
+        },
+        {
+            "firstName": "Adan"
+        }
+    ]
+},
+
+{
+	"statements":"select LOWER(\"THIS Is a N1Ql QuErY\") as lower",
+	"results": [
+        {
+            "lower": "this is a n1ql query"
+        }
+    ]
+},
+
+{
+	"statements": "select LTRIM(\"       THIS Is a N1Ql QuErY\", \" T\") as ltr",
+	"results": [
+        {
+            "ltr": "HIS Is a N1Ql QuErY"
+        }
+    ]
+},
+
+{
+	"statements":"select POSITION(\"       THIS Is a N1Ql QuErY\", \"N1Ql\") as pos",
+	"results": [
+        {
+            "pos": 17
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_CONTAINS(\"Thisisabigsubquery\",\"query\") as regex",
+	"results": [
+        {
+            "regex": true
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_LIKE(\"Thisisabigsubquery\",\"query%\") AS liketru",
+	"results": [
+        {
+            "liketru": false
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_LIKE(\"query\",\"query\") AS liketru",
+	"results": [
+        {
+            "liketru": true
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_LIKE(\"query\",\"query.*\") AS liketru",
+	"results": [
+        {
+            "liketru": true
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_POSITION(\"Thisisabigsubquery\",\"query\") AS pos",
+	"results": [
+        {
+            "pos": 13
+        }
+    ]
+},
+
+{
+	"statements": "SELECT UPPER(firstName) hifirst, TITLE(ccInfo.cardType) titlecard FROM customer WHERE LENGTH(firstName) < 4 AND test_id=\"str_func\" ORDER BY LENGTH(firstName), firstName, titlecard LIMIT 5",
+        "results": [
+        {
+            "hifirst": "BO",
+            "titlecard": "Discover"
+        },
+        {
+            "hifirst": "ED",
+            "titlecard": "Americanexpress"
+        },
+        {
+            "hifirst": "ED",
+            "titlecard": "Discover"
+        },
+        {
+            "hifirst": "ED",
+            "titlecard": "Mastercard"
+        },
+        {
+            "hifirst": "JO",
+            "titlecard": "Americanexpress"
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_REPLACE(\"Thisisaqueryisasubqandisnotisnull\",\"is\",\"IS\") AS rep",
+	"results": [
+        {
+            "rep": "ThISISaqueryISasubqandISnotISnull"
+        }
+    ]
+},
+
+{
+	"statements":"select REGEXP_REPLACE(\"Thisisaqueryisasubqandisnotisnull\",\"is\",\"IS\", 4) AS rep",
+	"results": [
+        {
+            "rep": "ThISISaqueryISasubqandISnotisnull"
+        }
+    ]
+},
+
+{
+	"statements":"SELECT regexp_replace(\"esgFSdfa3rjs84tha5gref4\", \"[a-z]\",\"9\" ) AS azreplace",
+	"results": [
+        {
+            "azreplace": "999FS999399984999599994"
+        }
+    ]
+},
+
+{
+	"statements":"SELECT replace(\"esgFSdfa3rjs84tha5gref4  [a-z]\", \"[a-z]\",\"9\" ) AS stringrep",	
+	"results": [
+        {
+            "stringrep": "esgFSdfa3rjs84tha5gref4  9"
+        }
+    ]
+},
+
+{
+	"statements": "select REPEAT(\"N1QL\",5) AS niqlrep",
+	"results": [
+        {
+            "niqlrep": "N1QLN1QLN1QLN1QLN1QL"
+        }
+    ]
+},
+
+{
+	"statements":"select SPLIT(\"Thisisaqueryisasubqandisnotisnull\",\"is\") AS splitsub",
+	"results": [
+        {
+            "splitsub": [
+                "Th",
+                "",
+                "aquery",
+                "asubqand",
+                "not",
+                "null"
+            ]
+        }
+    ]
+},
+
+{
+	"statements":"select SUBSTR(\"Thisisasubquery\", 5, 10) as smallstr",
+	"results": [
+        {
+            "smallstr": "sasubquery"
+        }
+    ]
+}
+]

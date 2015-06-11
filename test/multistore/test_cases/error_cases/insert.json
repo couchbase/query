@@ -1,6 +1,6 @@
 [
 {
- "statements":"CREATE PRIMARY INDEX ON product"
+ "statements":"CREATE PRIMARY INDEX ON product USING VIEW"
 },
 { 
  "statements":"INSERT INTO product  (KEY,VALUE) VALUES(\"product0_err_cases\", {\"dateAdded\": \"2014-02-05T15:52:18Z\", \"description\": \"This product is available on <a target=\\\"_blank\\\" href=\\\"http://www.amazon.com/gp/product/B003VTZ6LA/ref=s9_hps_bw_g198_ir01?pf_rd_m=ATVPDKIKX0DER&pf_rd_s=merchandised-search-5&pf_rd_r=D182EDFE2F434403B401&pf_rd_t=101&pf_rd_p=1486061902&pf_rd_i=15743161\\\">Amazon.com</a>.\", \"color\": \"grey\", \"unitPrice\": 367.2, \"imageURL\": \"http://ecx.images-amazon.com/images/I/41i6-Jg3D8L._SL300_.jpg\", \"reviewList\": [\"review660\", \"review1332\", \"review1575\", \"review2054\", \"review2566\", \"review2752\", \"review4974\", \"review5566\", \"review6550\", \"review7926\", \"review8226\", \"review8786\"], \"productId\": \"product0\", \"type\": \"product\", \"dateModified\": \"2014-05-06T15:52:18Z\", \"categories\": [\"Luggage\"], \"name\": \"Briggs & Riley 17 Inch Executive Expandable Rolling Briefcase\", \"test_id\" : \"err_cases\" })"
@@ -2701,5 +2701,10 @@
  },
 { 
  "statements":"INSERT INTO product  (KEY,VALUE) VALUES(\"product99_err_cases\", {\"dateAdded\": \"2013-07-10T15:52:18Z\", \"description\": \"This product is available on <a target=\\\"_blank\\\" href=\\\"http://www.amazon.com/gp/product/B0018M8H04/ref=s9_ri_bw_g201_ir018?pf_rd_m=ATVPDKIKX0DER&pf_rd_s=merchandised-search-11&pf_rd_r=1C0DBDE1A6234FF8A9DB&pf_rd_t=101&pf_rd_p=1405136162&pf_rd_i=284507\\\">Amazon.com</a>.\", \"color\": \"salmon\", \"unitPrice\": 5.25, \"imageURL\": \"http://ecx.images-amazon.com/images/I/31KvguvvONL._SL300_.jpg\", \"reviewList\": [\"review826\", \"review2910\", \"review3665\", \"review3881\", \"review4140\", \"review5084\", \"review5802\", \"review6859\", \"review8124\", \"review9013\", \"review9629\"], \"productId\": \"product99\", \"type\": \"product\", \"dateModified\": \"2014-05-06T15:52:18Z\", \"categories\": [\"Kitchen & Dining\"], \"name\": \"Darice 35745, Knife and Server Set, Faux Crystal\", \"test_id\" : \"err_cases\" })"
- }
+ },
+{ "statements":"CREATE PRIMARY INDEX ON orders USING VIEW"},
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1235_err_cases\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"tea111\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer12\", \"id\": \"1235\", \"test_id\" : \"err_cases\" })" } ,
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1234_err_cases\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 2, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"tea111\"}], \"custId\": \"customer312\", \"id\": \"1234\", \"test_id\" : \"err_cases\" })" } ,
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1200_err_cases\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer18\", \"id\": \"1200\", \"shipped-on\": \"2012/01/02\", \"test_id\" : \"err_cases\" })" } ,
+{ "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1236_err_cases\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer38\", \"id\": \"1236\", \"shipped-on\": null, \"test_id\" : \"err_cases\" })" } 
 ]

@@ -1,6 +1,6 @@
 [
 {
- "statements":"CREATE PRIMARY INDEX ON orders"
+ "statements":"CREATE PRIMARY INDEX ON orders USING VIEW"
 },
 {
  "statements":"INSERT INTO orders (KEY,VALUE) VALUES(\"1200_date_func\", {\"type\": \"order\", \"orderlines\": [{\"qty\": 1, \"productId\": \"coffee01\"}, {\"qty\": 1, \"productId\": \"sugar22\"}], \"custId\": \"customer18\", \"id\": \"1200\", \"shipped-on\": \"2012/01/02\", \"test_id\" : \"datefunc\" })"

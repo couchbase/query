@@ -1,0 +1,150 @@
+[
+
+{   
+    "statements": "SELECT purchase.purchaseId, META(customer).id custID, META(product).id prodID, cardio FROM purchase USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN purchase.lineItems END AS pID INNER JOIN product ON KEYS pID INNER JOIN customer ON KEYS (purchase.customerId || \"_\" || \"joins\") UNNEST customer.ccInfo.cardNumber AS cardio ORDER BY productId",
+    "results": [
+        {
+            "cardio": "1234-2121-1221-1211",
+            "custID": "customer498_joins",
+            "prodID": "product390_joins",
+            "purchaseId": "purchase1018"
+        },
+        {
+            "cardio": "1234-2121-1221-1211",
+            "custID": "customer498_joins",
+            "prodID": "product109_joins",
+            "purchaseId": "purchase1018"
+        },
+        {
+            "cardio": "1234-2121-1221-1211",
+            "custID": "customer498_joins",
+            "prodID": "product666_joins",
+            "purchaseId": "purchase1018"
+        },
+        {
+            "cardio": "1234-2121-1221-1211",
+            "custID": "customer498_joins",
+            "prodID": "product746_joins",
+            "purchaseId": "purchase1018"
+        }
+    ]
+},
+{
+   "statements": "SELECT * from purchase USE KEYS \"purchase7759_joins\" UNNEST lineItems ORDER BY purchase.purchaseId",
+   "results": [
+        {
+            "lineItems": {
+                "count": 1,
+                "product": "product671"
+            },
+            "purchase": {
+                "customerId": "customer178",
+                "lineItems": [
+                    {
+                        "count": 1,
+                        "product": "product671"
+                    }
+                ],
+                "purchaseId": "purchase7759",
+                "purchasedAt": "2013-07-10T15:52:42Z",
+                "test_id": "joins",
+                "type": "purchase"
+            }
+        }
+    ]
+},
+
+{   
+    "statements": "SELECT pu.customerId, product.unitPrice, product.productId from purchase pu USE KEYS \"purchase1018_joins\" INNER JOIN product ON KEYS ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN pu.lineItems END ORDER BY product.unitPrice DESC",
+    "results": [
+        {
+            "customerId": "customer498",
+            "productId": "product390",
+            "unitPrice": 63.75
+        },
+        {
+            "customerId": "customer498",
+            "productId": "product746",
+            "unitPrice": 13.99
+        },
+        {
+            "customerId": "customer498",
+            "productId": "product109",
+            "unitPrice": 9.25
+        },
+        {
+            "customerId": "customer498",
+            "productId": "product666",
+            "unitPrice": 5.99
+        }
+    ]
+},
+
+{   
+    "statements": "SELECT pID, product.unitPrice from purchase pu USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product|| \"_\" || \"joins\") FOR pl IN pu.lineItems END AS pID INNER JOIN product ON KEYS pID ORDER BY pID",
+    "results": [
+        {
+            "pID": "product109_joins",
+            "unitPrice": 9.25
+        },
+        {
+            "pID": "product390_joins",
+            "unitPrice": 63.75
+        },
+        {
+            "pID": "product666_joins",
+            "unitPrice": 5.99
+        },
+        {
+            "pID": "product746_joins",
+            "unitPrice": 13.99
+        }
+    ]
+},
+
+{   
+    "statements": "SELECT DISTINCT productId, pu.customerId, customer.firstName FROM purchase pu UNNEST ARRAY (pl.product|| \"_\" || \"joins\") FOR pl IN pu.lineItems END AS productId INNER JOIN customer ON KEYS (pu.customerId|| \"_\" || \"joins\") WHERE pu.customerId=\"customer498\" ORDER BY productId limit 8",
+    "results": [
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product109_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product156_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product168_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product182_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product203_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product342_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product345_joins"
+        },
+        {
+            "customerId": "customer498",
+            "firstName": "Jake",
+            "productId": "product390_joins"
+        }
+    ]
+}
+]

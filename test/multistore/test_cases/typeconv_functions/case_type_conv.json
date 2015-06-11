@@ -1,0 +1,150 @@
+[
+ {
+   "statements":"select TOARRAY(orders.id) as a from orders WHERE test_id=\"typeconv_func\" order by a",
+   "results": [
+        {
+            "a": [
+                "1200"
+            ]
+        },
+        {
+            "a": [
+                "1234"
+            ]
+        },
+        {
+            "a": [
+                "1235"
+            ]
+        },
+        {
+            "a": [
+                "1236"
+            ]
+        }
+    ]
+  },
+  {
+     "statements":"select TOATOM(TOARRAY(orders.id)) AS a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+     "results": [
+        {
+            "a": "1200"
+        },
+        {
+            "a": "1234"
+        },
+        {
+            "a": "1235"
+        },
+        {
+            "a": "1236"
+        }
+    ] 
+  },
+  {
+    "statements":"select TONUMBER(id) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {
+            "a": 1200
+        },
+        {
+            "a": 1234
+        },
+        {
+            "a": 1235
+        },
+        {
+            "a": 1236
+        }
+    ]
+  },
+  {
+    "statements":"select TOSTRING(TONUMBER(id)) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {
+            "a": "1200"
+        },
+        {
+            "a": "1234"
+        },
+        {
+            "a": "1235"
+        },
+        {
+            "a": "1236"
+        }
+    ]
+  },
+  {
+    "statements":"select TOOBJECT(orders.`shipped-on`) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {},
+        {},
+        {
+            "a": null
+        },
+        {
+            "a": {}
+        }
+    ]
+  },
+  {
+    "statements":"select TOOBJECT(orders.orderlines[1]) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {
+            "a": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "a": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "a": {
+                "productId": "sugar22",
+                "qty": 1
+            }
+        },
+        {
+            "a": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+  },
+  {
+    "statements":"select TOBOOLEAN(orders.orderlines[1]) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        },
+        {
+            "a": true
+        }
+    ]
+  },
+  {
+    "statements":"select TOBOOLEAN(orders.`shipped-on`) as a from orders WHERE test_id=\"typeconv_func\" ORDER BY a",
+    "results": [
+        {},
+        {},
+        {
+            "a": null
+        },
+        {
+            "a": true
+        }
+    ]
+  } 
+]

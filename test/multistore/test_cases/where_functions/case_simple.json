@@ -1,0 +1,42 @@
+[
+    {
+        "statements": "SELECT * FROM product WHERE name = \"SODIAL(TM) Mickey Mouse Face Shape Cookie Cutter\" AND test_id=\"where_func\" ORDER BY 1",
+        "results": [
+        {
+            "product": {
+                "categories": [
+                    "Kitchen \u0026 Dining"
+                ],
+                "color": "fuchsia",
+                "dateAdded": "2013-06-10T15:52:18Z",
+                "dateModified": "2014-05-06T15:52:18Z",
+                "description": "This product is available on \u003ca target=\"_blank\" href=\"http://www.amazon.com/gp/product/B008RULTL4/ref=s9_ri_bw_g79_ir02?pf_rd_m=ATVPDKIKX0DER\u0026pf_rd_s=merchandised-search-9\u0026pf_rd_r=1C0DBDE1A6234FF8A9DB\u0026pf_rd_t=101\u0026pf_rd_p=1405104882\u0026pf_rd_i=284507\"\u003eAmazon.com\u003c/a\u003e.",
+                "imageURL": "http://ecx.images-amazon.com/images/I/31VyPF%2BIbGL._SL300_.jpg",
+                "name": "SODIAL(TM) Mickey Mouse Face Shape Cookie Cutter",
+                "productId": "product43",
+                "reviewList": [
+                    "review173",
+                    "review1275",
+                    "review3729",
+                    "review4266",
+                    "review4485",
+                    "review6338",
+                    "review7045",
+                    "review7882",
+                    "review8388",
+                    "review9141",
+                    "review9570"
+                ],
+                "test_id": "where_func",
+                "type": "product",
+                "unitPrice": 0.69
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM product WHERE name = \"nEvErPoSSIble\" AND test_id=\"where_func\" ORDER BY 1",
+        "results": [
+    ]
+    }
+]

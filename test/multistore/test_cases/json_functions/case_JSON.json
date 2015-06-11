@@ -1,0 +1,159 @@
+[
+{
+	"statements":"SELECT DECODE_JSON(\"2\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
+	"statements":"select DECODE_JSON([1,2,3])",
+	 "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select DECODE_JSON(\"\")",
+	"results": [
+        {}
+    ]
+},
+
+{
+	"statements": "SELECT ENCODE_JSON(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"results": [
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODE_JSON([1,2,3])",
+	"results": [
+        {
+            "$1": "[1,2,3]"
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODE_JSON(\"\")",
+	"results": [
+        {
+            "$1": "\"\""
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODED_SIZE(\"\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
+	"statements":"select ENCODED_SIZE([1,2,3])",
+	"results": [
+        {
+            "$1": 7
+        }
+    ]	
+},
+
+{
+	"statements": "SELECT ENCODED_SIZE(ccInfo) as es from customer ORDER BY es, firstName LIMIT 3",
+	"results": [
+        {
+            "es": 80
+        },
+        {
+            "es": 80
+        },
+        {
+            "es": 80
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(\"\")",
+	"results": [
+        {
+            "$1": 0
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH([1,2,3])",
+  	"results": [
+        {
+            "$1": 3
+        }
+    ]
+},
+
+{
+	"statements": "SELECT POLY_LENGTH(ccInfo) as ccpoly FROM customer ORDER BY firstName LIMIT 3",	
+	"results": [
+        {
+            "ccpoly": 3
+        },
+        {
+            "ccpoly": 3
+        },
+        {
+            "ccpoly": 3
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(missing)",
+  	"results": [
+        {}
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(null)",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(decode_json(\"o\"))",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+},
+
+{
+	"statements":"select POLY_LENGTH(NaN())",
+  	"results": [
+        {
+            "$1": null
+        }
+    ]
+}
+]	

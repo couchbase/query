@@ -1,0 +1,120 @@
+[
+    {
+        "statements": "SELECT ord.orderlines[0] AS ol FROM orders AS ord WHERE test_id=\"from_func\" ORDER BY ol, id",
+        "results": [
+        {
+            "ol": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "ol": {
+                "productId": "coffee01",
+                "qty": 1
+            }
+        },
+        {
+            "ol": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        },
+        {
+            "ol": {
+                "productId": "tea111",
+                "qty": 1
+            }
+        }
+    ]
+    },
+
+    {
+        "statements": "select orderlines[0].productId AS productId from orders AS olz WHERE test_id=\"from_func\" order by productId",
+        "results": [
+        {
+            "productId": "coffee01"
+        },
+        {
+            "productId": "coffee01"
+        },
+        {
+            "productId": "coffee01"
+        },
+        {
+            "productId": "tea111"
+        }
+    ]
+    },
+
+    {
+        "statements": "select orderlines[0].productId as pId from orders where orderlines[0].productId = \"tea111\" AND test_id=\"from_func\" order by pId",
+        "results": [
+        {
+            "pId": "tea111"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT orderlines[0] olz FROM orders WHERE orderlines[0].qty > 1 AND test_id=\"from_func\" ORDER BY olz.qty",
+         "results": [
+        {
+            "olz": {
+                "productId": "coffee01",
+                "qty": 2
+            }
+        }
+         ]
+    },
+
+    {
+        "statements": "SELECT orderlines[0].hello AS hello FROM orders olz WHERE test_id=\"from_func\" ORDER BY hello",
+        "results": [
+        {},
+        {},
+        {},
+        {}
+    ]
+    },
+
+    {
+        "statements": "SELECT orderlines[1].productId AS pId1s FROM orders WHERE test_id=\"from_func\" ORDER BY pId1s, id",
+        "results": [
+        {
+            "pId1s": "sugar22"
+        },
+        {
+            "pId1s": "sugar22"
+        },
+        {
+            "pId1s": "sugar22"
+        },
+        {
+            "pId1s": "tea111"
+        }
+    ]
+    },
+
+    {
+        "statements": "SELECT woot.custId, woot.id FROM orders AS woot WHERE test_id=\"from_func\" ORDER BY woot.custId",
+        "results": [
+        {
+            "custId": "customer12",
+            "id": "1235"
+        },
+        {
+            "custId": "customer18",
+            "id": "1200"
+        },
+        {
+            "custId": "customer312",
+            "id": "1234"
+        },
+        {
+            "custId": "customer38",
+            "id": "1236"
+        }
+    ]
+    }
+]
