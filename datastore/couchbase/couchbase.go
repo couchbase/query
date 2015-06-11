@@ -745,7 +745,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 
 	done:
 		if err != nil {
-			logging.Errorf("Failed to perform %s on key %s Error %v", opToString(op), key, err)
+			logging.Errorf("Failed to perform %s on key %s for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
 		} else {
 			insertedKeys = append(insertedKeys, kv)
 		}
