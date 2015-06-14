@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 )
 
@@ -389,15 +390,23 @@ func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, 
 	var buf bytes.Buffer
 	buf.WriteString("{")
 
+	// Sort names
+	names := make(sort.StringSlice, 0, len(expr.bindings))
+	for name, _ := range expr.bindings {
+		names = append(names, name)
+	}
+	names.Sort()
+
 	i := 0
-	for k, v := range expr.bindings {
+	for _, n := range names {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
 
-		kb, _ := json.Marshal(k)
-		buf.Write(kb)
+		nb, _ := json.Marshal(n)
+		buf.Write(nb)
 		buf.WriteString(": ")
+		v := expr.bindings[n]
 		buf.WriteString(this.Visit(v))
 		i++
 	}

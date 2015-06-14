@@ -11,6 +11,7 @@ package expression
 
 import (
 	"encoding/json"
+	"sort"
 )
 
 /*
@@ -141,4 +142,22 @@ func (this Bindings) Copy() Bindings {
 	}
 
 	return copies
+}
+
+// Implement sort.Interface
+
+func (this Bindings) Len() int {
+	return len(this)
+}
+
+func (this Bindings) Less(i, j int) bool {
+	return this[i].variable < this[j].variable
+}
+
+func (this Bindings) Swap(i, j int) {
+	this[i], this[j] = this[j], this[i]
+}
+
+func (this Bindings) Sort() {
+	sort.Sort(this)
 }
