@@ -205,7 +205,8 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 func (this *httpRequest) writeValue(item value.Value) bool {
 	bytes, err := json.MarshalIndent(item, "    ", "    ")
 	if err != nil {
-		panic(err.Error())
+		s := fmt.Sprintf("\"ERROR: %v\"", err)
+		return this.writeString(s)
 	}
 
 	return this.writeString(string(bytes))

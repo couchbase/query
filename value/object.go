@@ -39,11 +39,15 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 			buf.WriteString(",")
 		}
 
-		buf.WriteString("\"")
-		buf.WriteString(n)
-		buf.WriteString("\":")
+		b, err := json.Marshal(n)
+		if err != nil {
+			return nil, err
+		}
 
-		b, err := json.Marshal(v)
+		buf.Write(b)
+		buf.WriteString(":")
+
+		b, err = json.Marshal(v)
 		if err != nil {
 			return nil, err
 		}
