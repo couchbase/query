@@ -26,6 +26,17 @@ func newSubsetAnd(expr *expression.And) *subsetAnd {
 			}
 		}
 
+		switch expr2 := expr2.(type) {
+		case *expression.And:
+			for _, child2 := range expr2.Operands() {
+				if !SubsetOf(expr, child2) {
+					return false, nil
+				}
+			}
+
+			return true, nil
+		}
+
 		return false, nil
 	}
 
