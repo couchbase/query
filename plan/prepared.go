@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -76,6 +75,10 @@ func (this *Prepared) Name() string {
 	return this.name
 }
 
+func (this *Prepared) SetName(name string) {
+	this.name = name
+}
+
 type preparedCache struct {
 	sync.RWMutex
 	prepareds map[string]*Prepared
@@ -117,14 +120,9 @@ func (this *preparedCache) peek(name string) bool {
 }
 
 func AddPrepared(prepared *Prepared) errors.Error {
-	name, err := util.UUID()
-	if err != nil {
-		return errors.NewPreparedNameError(err.Error())
-	}
-	if cache.peek(name) {
+	if cache.peek(prepared.Name()) {
 		return errors.NewPreparedNameError("duplicate name")
 	}
-	prepared.name = name
 	cache.add(prepared)
 	return nil
 }

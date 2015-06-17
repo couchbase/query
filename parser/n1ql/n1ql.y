@@ -283,7 +283,7 @@ val              value.Value
 %type <binding>          binding
 %type <bindings>         bindings
 
-%type <s>                alias as_alias opt_as_alias variable
+%type <s>                alias as_alias opt_as_alias variable opt_name
 
 %type <expr>             case_expr simple_or_searched_case simple_case searched_case opt_else
 %type <whenTerms>        when_thens
@@ -411,10 +411,33 @@ EXPLAIN stmt
 ;
 
 prepare:
-PREPARE stmt
+PREPARE opt_name stmt
 {
-    $$ = algebra.NewPrepare($2)
+    $$ = algebra.NewPrepare($2, $3)
 }
+;
+
+opt_name:
+/* empty */
+{
+    $$ = ""
+}
+|
+IDENTIFIER from_or_as
+{
+    $$ = $1
+}
+|
+STRING from_or_as
+{
+    $$ = $1
+}
+;
+
+from_or_as:
+FROM
+|
+AS
 ;
 
 execute:

@@ -33,8 +33,17 @@ The function NewExecute returns a pointer to the Execute
 struct with the input argument expressions value as a field.
 */
 func NewExecute(prepared expression.Expression) *Execute {
+	var preparedValue value.Value
+
+	switch prepared := prepared.(type) {
+	case *expression.Identifier:
+		preparedValue = value.NewValue(prepared.Alias())
+	default:
+		preparedValue = prepared.Value()
+	}
+
 	rv := &Execute{
-		prepared: prepared.Value(),
+		prepared: preparedValue,
 	}
 
 	rv.stmt = rv

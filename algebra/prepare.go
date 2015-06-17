@@ -23,6 +23,7 @@ struct that contains a statement (json statement).
 type Prepare struct {
 	statementBase
 
+	name string    `json:"name"`
 	stmt Statement `json:"stmt"`
 }
 
@@ -31,8 +32,9 @@ The function NewPrepare returns a pointer to the
 Prepare struct with the input argument statement
 as a field.
 */
-func NewPrepare(stmt Statement) *Prepare {
+func NewPrepare(name string, stmt Statement) *Prepare {
 	rv := &Prepare{
+		name: name,
 		stmt: stmt,
 	}
 
@@ -89,4 +91,11 @@ Return the prepared statement.
 */
 func (this *Prepare) Statement() Statement {
 	return this.stmt
+}
+
+/*
+Return the prepared statement name.
+*/
+func (this *Prepare) Name() string {
+	return this.name
 }

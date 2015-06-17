@@ -11,7 +11,9 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -19,6 +21,16 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	pl, err := BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace, false)
 	if err != nil {
 		return nil, err
+	}
+
+	if stmt.Name() == "" {
+		uuid, err := util.UUID()
+		if err != nil {
+			return nil, errors.NewPreparedNameError(err.Error())
+		}
+		pl.SetName(uuid)
+	} else {
+		pl.SetName(stmt.Name())
 	}
 
 	plan.AddPrepared(pl)
