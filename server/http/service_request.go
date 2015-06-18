@@ -295,25 +295,36 @@ func getCompression(a httpRequestArgs) (Compression, errors.Error) {
 }
 
 func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
-	var sc scanConfigImpl
 
 	scan_consistency_field, err := a.getString(SCAN_CONSISTENCY, "NOT_BOUNDED")
-	if err == nil {
-		sc.scan_level = newScanConsistency(scan_consistency_field)
-		if sc.scan_level == server.UNDEFINED_CONSISTENCY {
-			err = errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
-		}
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		sc.scan_wait, err = a.getDuration(SCAN_WAIT)
+
+	scan_level := newScanConsistency(scan_consistency_field)
+	if scan_level == server.UNDEFINED_CONSISTENCY {
+		return nil, errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
 	}
-	if err == nil {
-		sc.scan_vector, err = a.getScanVector()
+
+	scan_wait, err := a.getDuration(SCAN_WAIT)
+	if err != nil {
+		return nil, err
 	}
-	if err == nil && sc.scan_level == server.AT_PLUS && sc.scan_vector == nil {
-		err = errors.NewServiceErrorMissingValue(SCAN_VECTOR)
+
+	scan_vector, err := a.getScanVector()
+	if err != nil {
+		return nil, err
 	}
-	return &sc, err
+
+	if scan_level == server.AT_PLUS && scan_vector == nil {
+		return nil, errors.NewServiceErrorMissingValue(SCAN_VECTOR)
+	}
+
+	return &scanConfigImpl{
+		scan_level:  scan_level,
+		scan_wait:   scan_wait,
+		scan_vector: scan_vector,
+	}, nil
 }
 
 func getEncoding(a httpRequestArgs) (Encoding, errors.Error) {
@@ -343,8 +354,6 @@ func getFormat(a httpRequestArgs) (Format, errors.Error) {
 }
 
 func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, errors.Error) {
-	creds := datastore.Credentials{}
-
 	cred_data, err := a.getCredentials()
 	if err != nil {
 		return nil, err
@@ -352,6 +361,7 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
+		creds := datastore.Credentials{}
 		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
@@ -372,11 +382,12 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 			encoded_creds := strings.Split(auth, " ")[1]
 			decoded_creds, err := base64.StdEncoding.DecodeString(encoded_creds)
 			if err != nil {
-				return creds, errors.NewServiceErrorBadValue(err, CREDS)
+				return nil, errors.NewServiceErrorBadValue(err, CREDS)
 			}
 			// Authorization header is in format "user:pass"
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
 			u_details := strings.Split(string(decoded_creds), ":")
+			creds := datastore.Credentials{}
 			switch len(u_details) {
 			case 2:
 				creds[u_details[0]] = u_details[1]
@@ -385,12 +396,12 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 				creds[strings.Join(u_details[:2], ":")] = u_details[2]
 			default:
 				// Authorization header format is incorrect
-				return creds, errors.NewServiceErrorBadValue(nil, CREDS)
+				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
 			}
 		}
 	}
 
-	return creds, err
+	return nil, err
 }
 
 const MAX_CLIENTID = 64
