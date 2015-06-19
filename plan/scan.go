@@ -79,7 +79,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	k, err := datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil, nil)
 
-	indexer, err := k.Indexer(_unmarshalled.Using)
+	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
 	}
