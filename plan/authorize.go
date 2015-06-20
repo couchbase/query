@@ -40,6 +40,10 @@ func (this *Authorize) Privileges() datastore.Privileges {
 	return this.privs
 }
 
+func (this *Authorize) Readonly() bool {
+	return this.child.Readonly()
+}
+
 func (this *Authorize) Child() Operator {
 	return this.child
 }

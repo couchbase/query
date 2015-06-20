@@ -149,11 +149,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) 
 
 	var readonly value.Tristate
 	if err == nil {
-		readonly, err = httpArgs.getTristate(READONLY)
-	}
-	if err == nil && readonly == value.FALSE && req.Method == "GET" {
-		err = errors.NewServiceErrorReadonly(
-			fmt.Sprintf("%s=false cannot be used with HTTP GET method.", READONLY))
+		readonly, err = getReadonly(httpArgs, req.Method == "GET")
 	}
 
 	var metrics value.Tristate
@@ -387,6 +383,20 @@ func getFormat(a httpRequestArgs) (Format, errors.Error) {
 		}
 	}
 	return format, err
+}
+
+func getReadonly(a httpRequestArgs, isGet bool) (value.Tristate, errors.Error) {
+	readonly, err := a.getTristate(READONLY)
+	if err == nil && isGet {
+		switch readonly {
+		case value.NONE:
+			readonly = value.TRUE
+		case value.FALSE:
+			err = errors.NewServiceErrorReadonly(
+				fmt.Sprintf("%s=false cannot be used with HTTP GET method.", READONLY))
+		}
+	}
+	return readonly, err
 }
 
 func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, errors.Error) {
