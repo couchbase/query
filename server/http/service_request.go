@@ -273,6 +273,42 @@ const ( // Request argument names
 	CLIENT_CONTEXT_ID = "client_context_id"
 )
 
+var _PARAMETERS = []string{
+	STATEMENT,
+	PREPARED,
+	CREDS,
+	ARGS,
+	TIMEOUT,
+	SCAN_CONSISTENCY,
+	SCAN_WAIT,
+	SCAN_VECTOR,
+	MAX_PARALLELISM,
+	READONLY,
+	METRICS,
+	NAMESPACE,
+	FORMAT,
+	ENCODING,
+	COMPRESSION,
+	SIGNATURE,
+	PRETTY,
+	CLIENT_CONTEXT_ID,
+}
+
+func isValidParameter(a string) bool {
+	if a == "" {
+		return false
+	}
+	if strings.IndexRune(a, '$') == 0 {
+		return true
+	}
+	for _, p := range _PARAMETERS {
+		if strings.EqualFold(p, a) {
+			return true
+		}
+	}
+	return false
+}
+
 func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
 	prepared_field, err := a.getValue(PREPARED)
 	if err != nil || prepared_field == nil {
@@ -499,13 +535,22 @@ func getRequestParams(req *http.Request) (httpRequestArgs, errors.Error) {
 		return newJsonArgs(req)
 	}
 
-	return &urlArgs{req: req}, nil
+	return newUrlArgs(req)
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
 // request arguments from a url-encoded http request
 type urlArgs struct {
 	req *http.Request
+}
+
+func newUrlArgs(req *http.Request) (*urlArgs, errors.Error) {
+	for arg, _ := range req.Form {
+		if !isValidParameter(arg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(arg)
+		}
+	}
+	return &urlArgs{req: req}, nil
 }
 
 func (this *urlArgs) getStatement() (string, errors.Error) {
@@ -662,8 +707,17 @@ func (this *urlArgs) getValue(field string) (value.Value, errors.Error) {
 	return val, err
 }
 
+func (this *urlArgs) getField(field string) []string {
+	for name, value := range this.req.Form {
+		if strings.EqualFold(field, name) {
+			return value
+		}
+	}
+	return nil
+}
+
 func (this *urlArgs) formValue(field string) (string, errors.Error) {
-	values := this.req.Form[field]
+	values := this.getField(field)
 
 	switch len(values) {
 	case 0:
@@ -690,8 +744,22 @@ func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 	if err != nil {
 		return nil, errors.NewServiceErrorBadValue(err, "JSON request body")
 	}
+	for arg, _ := range p.args {
+		if !isValidParameter(arg) {
+			return nil, errors.NewServiceErrorUnrecognizedParameter(arg)
+		}
+	}
 	p.req = req
 	return &p, nil
+}
+
+func (this *jsonArgs) getField(field string) (interface{}, bool) {
+	for name, value := range this.args {
+		if strings.EqualFold(field, name) {
+			return value, true
+		}
+	}
+	return nil, false
 }
 
 func (this *jsonArgs) getStatement() (string, errors.Error) {
@@ -712,7 +780,7 @@ func (this *jsonArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
 func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
 	var positionalArgs value.Values
 
-	args_field, in_request := this.args[ARGS]
+	args_field, in_request := this.getField(ARGS)
 	if !in_request {
 		return positionalArgs, nil
 	}
@@ -734,7 +802,7 @@ func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
 func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
 	var creds_data []map[string]string
 
-	creds_field, in_request := this.args[CREDS]
+	creds_field, in_request := this.getField(CREDS)
 	if !in_request {
 		return creds_data, nil
 	}
@@ -750,7 +818,7 @@ func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
 func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	var type_ok bool
 
-	scan_vector_data_field, in_request := this.args[SCAN_VECTOR]
+	scan_vector_data_field, in_request := this.getField(SCAN_VECTOR)
 	if !in_request {
 		return nil, nil
 	}
@@ -831,7 +899,7 @@ func (this *jsonArgs) getDuration(f string) (time.Duration, errors.Error) {
 
 func (this *jsonArgs) getTristate(f string) (value.Tristate, errors.Error) {
 	value_tristate := value.NONE
-	value_field, in_request := this.args[f]
+	value_field, in_request := this.getField(f)
 	if !in_request {
 		return value_tristate, nil
 	}
@@ -847,7 +915,7 @@ func (this *jsonArgs) getTristate(f string) (value.Tristate, errors.Error) {
 
 // helper function to get a string type argument
 func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
-	value_field, in_request := this.args[f]
+	value_field, in_request := this.getField(f)
 	if !in_request {
 		return dflt, nil
 	}
@@ -861,7 +929,7 @@ func (this *jsonArgs) getString(f string, dflt string) (string, errors.Error) {
 
 func (this *jsonArgs) getValue(f string) (value.Value, errors.Error) {
 	var val value.Value
-	value_field, in_request := this.args[f]
+	value_field, in_request := this.getField(f)
 	if !in_request {
 		return val, nil
 	}

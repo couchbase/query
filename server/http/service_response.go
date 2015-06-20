@@ -44,7 +44,7 @@ func mapErrorToHttpResponse(err errors.Error) int {
 		return http.StatusForbidden
 	case 1010: // unsupported http method
 		return http.StatusMethodNotAllowed
-	case 1020, 1030, 1040, 1050, 1060, 1070:
+	case 1020, 1030, 1040, 1050, 1060, 1065, 1070:
 		return http.StatusBadRequest
 	case 1120:
 		return http.StatusNotAcceptable

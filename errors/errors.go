@@ -210,6 +210,11 @@ func NewServiceErrorMultipleValues(feature string) Error {
 		InternalMsg: fmt.Sprintf("Multiple values for %s.", feature), InternalCaller: CallerN(1)}
 }
 
+func NewServiceErrorUnrecognizedParameter(parameter string) Error {
+	return &err{level: EXCEPTION, ICode: 1065, IKey: "service.io.request.unrecognized_parameter",
+		InternalMsg: fmt.Sprintf("Unrecognized parameter in request: %s", parameter), InternalCaller: CallerN(1)}
+}
+
 func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 	return &err{level: EXCEPTION, ICode: 1070, IKey: "service.io.request.type_mismatch",
 		InternalMsg: fmt.Sprintf("%s has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
