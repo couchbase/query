@@ -140,10 +140,7 @@ func (this sliceValue) UnsetField(field string) error {
 
 /*
 If the input index is negative then count the index from
-the last element. If it is positive and less than the
-length, return the element at that index and true saying
-a value was returned and if not, return a missing value
-and false.
+the last element.
 */
 func (this sliceValue) Index(index int) (Value, bool) {
 	if index < 0 {

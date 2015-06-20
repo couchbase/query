@@ -137,6 +137,10 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 	}
 
 	if this.raw != nil {
+		if index < 0 {
+			return this.unwrap().Index(index)
+		}
+
 		res, err := jsonpointer.Find(this.raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
