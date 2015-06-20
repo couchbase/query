@@ -11,7 +11,7 @@ package testcs_json
 
 import (
 	"fmt"
-	"path/filepath" 
+	"path/filepath"
 	"testing"
 )
 

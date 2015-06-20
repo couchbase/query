@@ -11,7 +11,7 @@ package testcs_key_func
 
 import (
 	"fmt"
-	"path/filepath" 
+	"path/filepath"
 	"testing"
 )
 
@@ -69,4 +69,3 @@ func TestCleanupData(t *testing.T) {
 	}
 
 }
-

@@ -67,8 +67,8 @@ func TestCleanupData(t *testing.T) {
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
-        _, _, errcs = Run_test(qc, "delete from customer where test_id = \"str_func\"")
-        if errcs != nil {
-             t.Errorf("did not expect err %s", errcs.Error())
-        }
+	_, _, errcs = Run_test(qc, "delete from customer where test_id = \"str_func\"")
+	if errcs != nil {
+		t.Errorf("did not expect err %s", errcs.Error())
+	}
 }

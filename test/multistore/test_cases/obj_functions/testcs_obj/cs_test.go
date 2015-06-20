@@ -11,7 +11,7 @@ package testcs_obj
 
 import (
 	"fmt"
-	"path/filepath" 
+	"path/filepath"
 	"testing"
 )
 
