@@ -15,9 +15,9 @@ import (
 // Shell errors -- errors in the command line shell
 
 const (
-	CANNOT_CONNECT = 100
+	CONNECTION_REFUSED = 100
 )
 
 func NewShellErrorCannotConnect(msg string) Error {
-	return &err{level: EXCEPTION, ICode: CANNOT_CONNECT, IKey: "shell.cannot_connect", InternalMsg: msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: CONNECTION_REFUSED, IKey: "shell.connection.refused", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
