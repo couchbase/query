@@ -1637,13 +1637,7 @@ func (this *Round) Evaluate(item value.Value, context Context) (value.Value, err
 /*
 This method takes in operand values and a context and rounds it of
 to the given number of digits to the right or left of the decimal
-point. If the input arg is missing or not a number, return a
-missing value or a null value respectively. Round the value of
-the input value using the method roundFloat. If it has more
-than one arg then check the type. Again if missing or not a
-number return a missing value/null value respectively. Make
-sure this precision value is an absolute integer value. Call
-the roundFloat method using the precision and return.
+point.
 */
 func (this *Round) Apply(context Context, args ...value.Value) (value.Value, error) {
 	arg := args[0]

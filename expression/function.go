@@ -135,6 +135,7 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 
 func (this *FunctionBase) Eval(applied Applied, item value.Value, context Context) (
 	result value.Value, err error) {
+	// TODO: Use sync.Pool
 	args := make(value.Values, len(this.operands))
 
 	for i, op := range this.operands {
@@ -195,6 +196,7 @@ func (this *FunctionBase) Copy() Expression {
 		return function.Constructor()()
 	}
 
+	// TODO: Use sync.Pool
 	copies := make(Expressions, len(operands))
 	for i, op := range operands {
 		if op != nil {
@@ -359,6 +361,7 @@ function. Return Apply's return value.
 */
 func (this *BinaryFunctionBase) BinaryEval(applied BinaryApplied, item value.Value, context Context) (
 	result value.Value, err error) {
+	// TODO: Use arrays instead of slices
 	args := make(value.Values, len(this.operands))
 
 	for i, op := range this.operands {
@@ -467,6 +470,7 @@ func NewTernaryFunctionBase(name string, first, second, third Expression) *Terna
 
 func (this *TernaryFunctionBase) TernaryEval(applied TernaryApplied, item value.Value, context Context) (
 	result value.Value, err error) {
+	// TODO: Use arrays instead of slices
 	args := make(value.Values, len(this.operands))
 
 	for i, op := range this.operands {
@@ -557,6 +561,7 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
+	// TODO: Use sync.Pool
 	found := make([]bool, len(this.operands))
 
 	for _, first := range this.operands {

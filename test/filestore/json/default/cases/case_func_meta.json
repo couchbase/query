@@ -37,8 +37,19 @@
     },
    {
 
-        "statements": "SELECT  META()  FROM default:contacts AS contact UNNEST contact.children AS child",
-        "error": "the META() function requires exactly 1 argument"
+        "statements": "SELECT  META(contact) as meta_c FROM default:contacts AS contact UNNEST contact.children AS child WHERE contact.name = \"dave\"",
+        "results": [
+       {
+            "meta_c": {
+                "id": "dave"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "dave"
+            }
+        }
+   ]
     },
 
      {

@@ -73,12 +73,10 @@ func (this *Base64) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Meta function META(expr). It returns
-the meta data for the document expr. Type Meta is a struct
-that implements UnaryFunctionBase.
+This represents the Meta function META(expr).
 */
 type Meta struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
 /*
@@ -87,9 +85,9 @@ a pointer to the Meta struct that calls NewUnaryFunctionBase to
 create a function named META with an input operand as the
 expression.
 */
-func NewMeta(operand Expression) Function {
+func NewMeta(operands ...Expression) Function {
 	rv := &Meta{
-		*NewUnaryFunctionBase("meta", operand),
+		*NewFunctionBase("meta", operands...),
 	}
 
 	rv.expr = rv
@@ -103,30 +101,39 @@ func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 func (this *Meta) Type() value.Type { return value.OBJECT }
 
 func (this *Meta) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
+	val := item
+
+	if len(this.operands) > 0 {
+		arg, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+
+		val = arg
+	}
+
+	if val.Type() == value.MISSING {
+		return val, nil
+	}
+
+	switch val := val.(type) {
+	case value.AnnotatedValue:
+		return value.NewValue(val.GetAttachment("meta")), nil
+	default:
+		return value.NULL_VALUE, nil
+	}
 }
 
 func (this *Meta) Indexable() bool {
 	return true
 }
 
-func (this *Meta) Apply(context Context, operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
-		return operand, nil
-	}
+func (this *Meta) MinArgs() int { return 0 }
 
-	switch operand := operand.(type) {
-	case value.AnnotatedValue:
-		return value.NewValue(operand.GetAttachment("meta")), nil
-	default:
-		return value.NULL_VALUE, nil
-	}
-}
+func (this *Meta) MaxArgs() int { return 1 }
 
 func (this *Meta) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewMeta(operands[0])
-	}
+	return NewMeta
 }
 
 ///////////////////////////////////////////////////
