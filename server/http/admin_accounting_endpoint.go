@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/gorilla/mux"
 )
 
@@ -34,6 +35,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	statHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doStat)
 	}
+	notFoundHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doNotFound)
+	}
 
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -49,6 +53,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 	this.mux.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
 
+	this.mux.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 }
 
 func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -108,6 +113,17 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	default:
 		return nil, nil
 	}
+}
+
+func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	acctStore := endpoint.server.AccountingStore()
+	reg := acctStore.MetricRegistry()
+	if reg == nil {
+		logging.Errorf("http.NotFoundHandler - nil metric registry")
+	} else {
+		reg.Counter(accounting.INVALID_REQUESTS).Inc(1)
+	}
+	return nil, nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {

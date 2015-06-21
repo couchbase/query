@@ -179,24 +179,25 @@ type MetricReporter interface {
 
 // Define names for all the metrics we are interested in:
 const (
-	REQUESTS        = "requests"
-	SELECTS         = "selects"
-	UPDATES         = "updates"
-	INSERTS         = "inserts"
-	DELETES         = "deletes"
-	ACTIVE_REQUESTS = "active_requests"
-	QUEUED_REQUESTS = "queued_requests"
-	REQUEST_TIME    = "request_time"
-	SERVICE_TIME    = "service_time"
-	RESULT_COUNT    = "result_count"
-	RESULT_SIZE     = "result_size"
-	ERRORS          = "errors"
-	WARNINGS        = "warnings"
-	MUTATIONS       = "mutations"
-	REQUESTS_250MS  = "requests_250ms"
-	REQUESTS_500MS  = "requests_500ms"
-	REQUESTS_1000MS = "requests_1000ms"
-	REQUESTS_5000MS = "requests_5000ms"
+	REQUESTS         = "requests"
+	SELECTS          = "selects"
+	UPDATES          = "updates"
+	INSERTS          = "inserts"
+	DELETES          = "deletes"
+	ACTIVE_REQUESTS  = "active_requests"
+	QUEUED_REQUESTS  = "queued_requests"
+	INVALID_REQUESTS = "invalid_requests"
+	REQUEST_TIME     = "request_time"
+	SERVICE_TIME     = "service_time"
+	RESULT_COUNT     = "result_count"
+	RESULT_SIZE      = "result_size"
+	ERRORS           = "errors"
+	WARNINGS         = "warnings"
+	MUTATIONS        = "mutations"
+	REQUESTS_250MS   = "requests_250ms"
+	REQUESTS_500MS   = "requests_500ms"
+	REQUESTS_1000MS  = "requests_1000ms"
+	REQUESTS_5000MS  = "requests_5000ms"
 
 	DURATION_250MS  = 250 * time.Millisecond
 	DURATION_500MS  = 500 * time.Millisecond
@@ -205,7 +206,7 @@ const (
 )
 
 var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS,
-	QUEUED_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
+	QUEUED_REQUESTS, INVALID_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
 	REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS, REQUESTS_5000MS,
 	WARNINGS, MUTATIONS}
 

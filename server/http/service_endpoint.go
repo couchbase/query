@@ -140,9 +140,15 @@ func (this *HttpEndpoint) registerHandlers(staticPath string) {
 
 	this.registerClusterHandlers()
 	this.registerAccountingHandlers()
+	this.registerStaticHandlers(staticPath)
+}
 
-	// Handle static endpoint
-	this.mux.PathPrefix("/").Handler(http.FileServer(http.Dir(staticPath)))
+func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
+	this.mux.Handle("/", http.FileServer(http.Dir(staticPath)))
+	pathPrefix := "/tutorial/"
+	pathValue := staticPath + pathPrefix
+	this.mux.PathPrefix(pathPrefix).Handler(http.StripPrefix(pathPrefix,
+		http.FileServer(http.Dir(pathValue))))
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest) {
