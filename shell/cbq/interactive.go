@@ -11,12 +11,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/couchbase/query/errors"
+	"github.com/sbinet/liner"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-
-	"github.com/sbinet/liner"
 )
 
 const (
@@ -27,6 +27,25 @@ const (
 
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
+
+func handleError(err error, tiServer string) errors.Error {
+
+	if strings.Contains(strings.ToLower(err.Error()), "connection refused") {
+		return errors.NewShellErrorCannotConnect("Unable to connect to query service " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "unsupported protocol") {
+		return errors.NewShellErrorUnsupportedProtocol("Unsupported Protocol Scheme " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "no such host") {
+		return errors.NewShellErrorNoSuchHost("No such Host " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "unknown port tcp") {
+		return errors.NewShellErrorUnknownPorttcp("Unknown port " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "no host in request url") {
+		return errors.NewShellErrorNoHostInRequestUrl("No Host in request URL " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "no route to host") {
+		return errors.NewShellErrorNoRouteToHost("No Route to host " + tiServer)
+	} else {
+		return errors.NewError(err, "")
+	}
+}
 
 func HandleInteractiveMode(tiServer, prompt string) {
 
@@ -76,7 +95,7 @@ func HandleInteractiveMode(tiServer, prompt string) {
 				UpdateHistory(liner, homeDir, queryString+QRY_EOL)
 				err = execute_internal(tiServer, queryString, os.Stdout)
 				if err != nil {
-					fmt.Println(fgRed, "ERROR", ": ", err, reset)
+					fmt.Println(fgRed, handleError(err, tiServer), reset)
 				}
 			}
 			// reset state for multi-line query

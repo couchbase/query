@@ -9,15 +9,39 @@
 
 package errors
 
-import (
-)
+import ()
 
 // Shell errors -- errors in the command line shell
 
 const (
-	CONNECTION_REFUSED = 100
+	CONNECTION_REFUSED   = 100
+	UNSUPPORTED_PROTOCOL = 101
+	NO_SUCH_HOST         = 102
+	NO_HOST_IN_URL       = 103
+	UNKNOWN_PORT_TCP     = 104
+	NO_ROUTE_TO_HOST     = 105
 )
 
 func NewShellErrorCannotConnect(msg string) Error {
 	return &err{level: EXCEPTION, ICode: CONNECTION_REFUSED, IKey: "shell.connection.refused", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorUnsupportedProtocol(msg string) Error {
+	return &err{level: EXCEPTION, ICode: UNSUPPORTED_PROTOCOL, IKey: "shell.unsupported.protocol", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorNoSuchHost(msg string) Error {
+	return &err{level: EXCEPTION, ICode: NO_SUCH_HOST, IKey: "shell.no.such.host", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorNoHostInRequestUrl(msg string) Error {
+	return &err{level: EXCEPTION, ICode: NO_HOST_IN_URL, IKey: "shell.no.host.in.request.url", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorUnknownPorttcp(msg string) Error {
+	return &err{level: EXCEPTION, ICode: UNKNOWN_PORT_TCP, IKey: "shell.unknown.port.tcp", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorNoRouteToHost(msg string) Error {
+	return &err{level: EXCEPTION, ICode: NO_ROUTE_TO_HOST, IKey: "shell.no.route.to.host", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
