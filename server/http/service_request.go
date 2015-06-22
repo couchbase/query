@@ -444,6 +444,7 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 				// Authorization header format is incorrect
 				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
 			}
+			return creds, nil
 		}
 	}
 
