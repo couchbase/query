@@ -539,7 +539,7 @@ func getRequestParams(req *http.Request) (httpRequestArgs, errors.Error) {
 	}
 
 	if strings.HasPrefix(content_type, URL_CONTENT) {
-		return &urlArgs{req: req}, nil
+		return newUrlArgs(req)
 	}
 
 	if strings.HasPrefix(content_type, JSON_CONTENT) {
