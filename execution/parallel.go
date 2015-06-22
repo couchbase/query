@@ -80,13 +80,7 @@ func (this *Parallel) ChildChannel() StopChannel {
 
 // Optionally copy the child, and then run it.
 func (this *Parallel) runChild(children []Operator, i int, context *Context, parent value.Value) {
-	var child Operator
-	if i > 0 {
-		child = this.child.Copy()
-	} else {
-		child = this.child
-	}
-
+	child := this.child.Copy()
 	children[i] = child
 	child.SetInput(this.input)
 	child.SetOutput(this.output)
