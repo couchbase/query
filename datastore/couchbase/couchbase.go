@@ -82,7 +82,7 @@ func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Err
 
 func doAuth(username, password, bucket string, requested datastore.Privilege) (bool, error) {
 
-	logging.Debugf(" Authenticating for bucket %s username %s", bucket, username)
+	logging.Debugf(" Authenticating for bucket %s username %s password %s", bucket, username, password)
 	creds, err := cbauth.Auth(username, password)
 	if err != nil {
 		return false, err
@@ -711,7 +711,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			added, err = b.cbbucket.Add(key, 0, val)
 			if added == false {
 				// false => given key aready exists in the bucket
-				err = errors.NewError(err, "Duplicate Key "+key)
+				err = errors.NewError(err, "Key "+key)
 			}
 		case UPDATE:
 			// check if the key exists and if so then use the cas value
