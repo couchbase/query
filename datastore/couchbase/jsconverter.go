@@ -57,6 +57,16 @@ func (this *JSConverter) Visit(expr expression.Expression) string {
 	}
 
 	switch s := s.(type) {
+	case string:
+		buf.WriteString(s)
+		for this.stack.Size() != 0 {
+			funcExpr := this.stack.Pop().(*funcExpr)
+			buf.WriteString(funcExpr.name)
+			if funcExpr.operands.Front() != nil {
+				buf.WriteString(writeOperands(funcExpr.operands))
+			}
+		}
+
 	case []byte:
 		buf.WriteString(string(s))
 		for this.stack.Size() != 0 {
@@ -70,17 +80,6 @@ func (this *JSConverter) Visit(expr expression.Expression) string {
 	default:
 		buf.WriteString(s.(string))
 	}
-
-	// if the stack is not empty, pop the function
-	/*
-		for this.stack.Size() != 0 {
-			funcExpr := this.stack.Pop().(*funcExpr)
-			buf.WriteString(funcExpr.name)
-			if funcExpr.operands.Front() != nil {
-				buf.WriteString(writeOperands(funcExpr.operands))
-			}
-		}
-	*/
 
 	return buf.String()
 }
@@ -490,21 +489,31 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 
 	functionExpr := &funcExpr{operands: list.New()}
 
-	buf.WriteString("(")
+	//buf.WriteString("(")
 	var nopush bool
 	var nobracket bool
 	var pushOperands bool
+	var writeLater bool
+	var functionName string
 
 	switch strings.ToLower(expr.Name()) {
 	case "lower":
-		functionExpr.name = ".toLowerCase()"
-		this.stack.Push(functionExpr)
+		functionName = ".toLowerCase()"
+		writeLater = true
 	case "upper":
-		functionExpr.name = ".toUpperCase()"
-		this.stack.Push(functionExpr)
+		functionName = ".toUpperCase()"
+		writeLater = true
+	case "object_length":
+		fallthrough
+	case "array_length":
+		fallthrough
+	case "poly_length":
+		fallthrough
+	case "string_length":
+		fallthrough
 	case "length":
-		functionExpr.name = ".length"
-		this.stack.Push(functionExpr)
+		functionName = ".length"
+		writeLater = true
 	case "str_to_millis":
 		fallthrough
 	case "millis":
@@ -560,9 +569,11 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 	}
 
 	if nopush == true && nobracket == false {
-		buf.WriteString("))")
-	} else {
 		buf.WriteString(")")
+	}
+
+	if writeLater == true {
+		buf.WriteString(functionName)
 	}
 
 	return buf.String(), nil

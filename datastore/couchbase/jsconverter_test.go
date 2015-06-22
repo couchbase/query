@@ -55,39 +55,39 @@ func TestConverter(t *testing.T) {
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewLength(constant("abc")))
-	s2 = "(\"abc\".length)"
+	s2 = "\"abc\".length"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewUpper(constant("abc")))
-	s2 = "(\"abc\".toUpperCase())"
+	s2 = "\"abc\".toUpperCase()"
 
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewStrToMillis(constant("Wed, 09 Aug 1995 00:00:00")))
-	s2 = "(Date.parse(\"Wed, 09 Aug 1995 00:00:00\"))"
+	s2 = "Date.parse(\"Wed, 09 Aug 1995 00:00:00\")"
 
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewContains(constant("dfgabc"), constant("abc")))
-	s2 = "(\"dfgabc\".indexOf(\"abc\"))"
+	s2 = "\"dfgabc\".indexOf(\"abc\")"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewSubstr(constant("dfgabc"), constant(1), constant(4)))
-	s2 = "(\"dfgabc\".substring(1,4))"
+	s2 = "\"dfgabc\".substring(1,4)"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewAdd(expression.NewContains(constant("dfgabc"), constant("abc")), expression.NewSubstr(constant("dfgabc"), constant(1), constant(4))))
-	s2 = "((\"dfgabc\".indexOf(\"abc\")) + (\"dfgabc\".substring(1,4)))"
+	s2 = "(\"dfgabc\".indexOf(\"abc\") + \"dfgabc\".substring(1,4))"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
@@ -99,7 +99,7 @@ func TestConverter(t *testing.T) {
 	s1 = NewJSConverter().Visit(expression.NewOr(
 		expression.NewUpper(m1), expression.NewLower(m2)))
 
-	s2 = "((`bucket`.`id`.toUpperCase()) || (`bucket`.`type`.toLowerCase()))"
+	s2 = "(`bucket`.`id`.toUpperCase() || `bucket`.`type`.toLowerCase())"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
@@ -124,7 +124,7 @@ func TestConverter(t *testing.T) {
 	}
 
 	s1 = NewJSConverter().Visit(expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type"))))
-	s2 = "(`bucket`[`type`].length)"
+	s2 = "`bucket`[`type`].length"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
