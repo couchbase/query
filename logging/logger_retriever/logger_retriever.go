@@ -57,13 +57,13 @@ func (rl *RetrieverLogger) Debug(args ...interface{}) {
 
 func (rl *RetrieverLogger) Log(level logging.Level, args ...interface{}) {
 	switch level {
-	case logging.Error:
+	case logging.ERROR:
 		rl.Error(args)
-	case logging.Warn:
+	case logging.WARN:
 		rl.Warn(args)
-	case logging.Info:
+	case logging.INFO:
 		rl.Info(args)
-	case logging.Debug:
+	case logging.DEBUG:
 		rl.Debug(args)
 	}
 }
@@ -71,13 +71,13 @@ func (rl *RetrieverLogger) Log(level logging.Level, args ...interface{}) {
 // change log level
 func (rl *RetrieverLogger) SetLevel(level logging.Level) {
 	switch level {
-	case logging.Error:
+	case logging.ERROR:
 		rl.logWriter.SetLogLevel(logger.LevelError)
-	case logging.Warn:
+	case logging.WARN:
 		rl.logWriter.SetLogLevel(logger.LevelWarn)
-	case logging.Info:
+	case logging.INFO:
 		rl.logWriter.SetLogLevel(logger.LevelInfo)
-	case logging.Debug:
+	case logging.DEBUG:
 		rl.logWriter.SetLogLevel(logger.LevelDebug)
 	}
 }

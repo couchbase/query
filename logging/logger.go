@@ -17,14 +17,14 @@ import (
 type Level int
 
 const (
-	None    = Level(iota) // Disable all logging
-	Severe                // System is in severe error state and cannot recover reliably
-	Error                 // System is in error state but can recover and continue reliably
-	Warn                  // System approaching error state, or is in a correct but undesirable state
-	Info                  // System-level events and status, in correct states
-	Request               // Request-level events, with request-specific rlevel
-	Trace                 // Trace detailed system execution, e.g. function entry / exit
-	Debug                 // Debug
+	NONE    = Level(iota) // Disable all logging
+	SEVERE                // System is in severe error state and cannot recover reliably
+	ERROR                 // System is in error state but can recover and continue reliably
+	WARN                  // System approaching error state, or is in a correct but undesirable state
+	INFO                  // System-level events and status, in correct states
+	REQUEST               // Request-level events, with request-specific rlevel
+	TRACE                 // Trace detailed system execution, e.g. function entry / exit
+	DEBUG                 // Debug
 )
 
 func (level Level) String() string {
@@ -32,25 +32,25 @@ func (level Level) String() string {
 }
 
 var _LEVEL_NAMES = []string{
-	Debug:   "DEBUG",
-	Trace:   "TRACE",
-	Request: "REQUEST",
-	Info:    "INFO",
-	Warn:    "WARN",
-	Error:   "ERROR",
-	Severe:  "SEVERE",
-	None:    "NONE",
+	DEBUG:   "DEBUG",
+	TRACE:   "TRACE",
+	REQUEST: "REQUEST",
+	INFO:    "INFO",
+	WARN:    "WARN",
+	ERROR:   "ERROR",
+	SEVERE:  "SEVERE",
+	NONE:    "NONE",
 }
 
 var _LEVEL_MAP = map[string]Level{
-	"debug":   Debug,
-	"trace":   Trace,
-	"request": Request,
-	"info":    Info,
-	"warn":    Warn,
-	"error":   Error,
-	"severe":  Severe,
-	"none":    None,
+	"debug":   DEBUG,
+	"trace":   TRACE,
+	"request": REQUEST,
+	"info":    INFO,
+	"warn":    WARN,
+	"error":   ERROR,
+	"severe":  SEVERE,
+	"none":    NONE,
 }
 
 func ParseLevel(name string) (level Level, ok bool) {

@@ -21,7 +21,7 @@ import (
 func NewLogger(uri string) (logging.Logger, errors.Error) {
 	var logger logging.Logger
 	if strings.HasPrefix(uri, "golog") {
-		logger = logger_golog.NewLogger(os.Stderr, logging.Info, false)
+		logger = logger_golog.NewLogger(os.Stderr, logging.INFO, false)
 		logging.SetLogger(logger)
 		return logger, nil
 	}
@@ -29,6 +29,6 @@ func NewLogger(uri string) (logging.Logger, errors.Error) {
 }
 
 func init() {
-	logger := logger_golog.NewLogger(os.Stderr, logging.Info, false)
+	logger := logger_golog.NewLogger(os.Stderr, logging.INFO, false)
 	logging.SetLogger(logger)
 }

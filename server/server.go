@@ -170,7 +170,7 @@ func (this *Server) serviceRequest(request Request) {
 			request.Fail(errors.NewError(err, ""))
 		}
 
-		if logging.LogLevel() >= logging.Trace {
+		if logging.LogLevel() >= logging.TRACE {
 			request.Output().AddPhaseTime("instantiate", time.Since(build))
 		}
 	}
@@ -198,7 +198,7 @@ func (this *Server) serviceRequest(request Request) {
 	run := time.Now()
 	operator.RunOnce(context, nil)
 
-	if logging.LogLevel() >= logging.Trace {
+	if logging.LogLevel() >= logging.TRACE {
 		request.Output().AddPhaseTime("run", time.Since(run))
 		logPhases(request)
 	}
@@ -219,13 +219,13 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			return nil, errors.NewPlanError(err, "")
 		}
 
-		if logging.LogLevel() >= logging.Trace {
+		if logging.LogLevel() >= logging.TRACE {
 			request.Output().AddPhaseTime("plan", time.Since(prep))
 			request.Output().AddPhaseTime("parse", prep.Sub(parse))
 		}
 	}
 
-	if logging.LogLevel() >= logging.Debug {
+	if logging.LogLevel() >= logging.DEBUG {
 		// log EXPLAIN for the request
 		logExplain(prepared)
 	}

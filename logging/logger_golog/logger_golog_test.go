@@ -18,7 +18,7 @@ import (
 )
 
 func TestStub(t *testing.T) {
-	logger := NewLogger(os.Stdout, logging.Debug, false)
+	logger := NewLogger(os.Stdout, logging.DEBUG, false)
 	logging.SetLogger(logger)
 
 	logger.Infof("This is a message from %s", "test")
@@ -29,18 +29,18 @@ func TestStub(t *testing.T) {
 	logger.Infom("This is a message from ", logging.Map{"name": "test", "Queue Size": 10, "Debug Mode": false})
 	logging.Infom("This is a message from ", logging.Map{"name": "test"})
 
-	logger.Requestf(logging.Warn, "This is a Request from %s", "test")
-	logging.Requestf(logging.Info, "This is a Request from %s", "test")
-	logger.Requestp(logging.Debug, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.Error, "This is a Request from ", logging.Pair{"name", "test"})
+	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
+	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
+	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
+	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
 
-	logger.SetLevel(logging.Warn)
+	logger.SetLevel(logging.WARN)
 	fmt.Printf("Log level is %s\n", logger.Level())
 
-	logger.Requestf(logging.Warn, "This is a Request from %s", "test")
-	logging.Requestf(logging.Info, "This is a Request from %s", "test")
-	logger.Requestp(logging.Debug, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.Error, "This is a Request from ", logging.Pair{"name", "test"})
+	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
+	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
+	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
+	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
 
 	logger.Warnf("This is a message from %s", "test")
 	logging.Infof("This is a message from %s", "test")
@@ -49,7 +49,7 @@ func TestStub(t *testing.T) {
 
 	fmt.Printf("Changing to json formatter\n")
 	logger.entryFormatter = &jsonFormatter{}
-	logger.SetLevel(logging.Debug)
+	logger.SetLevel(logging.DEBUG)
 
 	logger.Infof("This is a message from %s", "test")
 	logging.Infof("This is a message from %s", "test")
@@ -59,8 +59,8 @@ func TestStub(t *testing.T) {
 	logger.Infom("This is a message from ", logging.Map{"name": "test", "Queue Size": 10, "Debug Mode": false})
 	logging.Infom("This is a message from ", logging.Map{"name": "test"})
 
-	logger.Requestf(logging.Warn, "This is a Request from %s", "test")
-	logging.Requestf(logging.Info, "This is a Request from %s", "test")
-	logger.Requestp(logging.Debug, "This is a Request from ", logging.Pair{"name", "test"})
-	logging.Requestp(logging.Error, "This is a Request from ", logging.Pair{"name", "test"})
+	logger.Requestf(logging.WARN, "This is a Request from %s", "test")
+	logging.Requestf(logging.INFO, "This is a Request from %s", "test")
+	logger.Requestp(logging.DEBUG, "This is a Request from ", logging.Pair{"name", "test"})
+	logging.Requestp(logging.ERROR, "This is a Request from ", logging.Pair{"name", "test"})
 }

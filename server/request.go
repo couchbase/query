@@ -181,7 +181,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 
 	rv.results = make(value.ValueChannel, rv.maxParallelism)
 
-	if logging.LogLevel() >= logging.Trace {
+	if logging.LogLevel() >= logging.TRACE {
 		rv.phaseTimes = make(map[string]time.Duration, 8)
 	}
 

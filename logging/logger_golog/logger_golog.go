@@ -58,19 +58,19 @@ func (gl *goLogger) Logp(level logging.Level, msg string, kv ...logging.Pair) {
 }
 
 func (gl *goLogger) Debugp(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Debug, msg, kv...)
+	gl.Logp(logging.DEBUG, msg, kv...)
 }
 
 func (gl *goLogger) Tracep(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Trace, msg, kv...)
+	gl.Logp(logging.TRACE, msg, kv...)
 }
 
 func (gl *goLogger) Requestp(rlevel logging.Level, msg string, kv ...logging.Pair) {
 	if gl.logger == nil {
 		return
 	}
-	if logging.Request <= gl.level {
-		e := newLogEntry(msg, logging.Request)
+	if logging.REQUEST <= gl.level {
+		e := newLogEntry(msg, logging.REQUEST)
 		e.Rlevel = rlevel
 		copyPairs(e, kv)
 		gl.log(e)
@@ -78,19 +78,19 @@ func (gl *goLogger) Requestp(rlevel logging.Level, msg string, kv ...logging.Pai
 }
 
 func (gl *goLogger) Infop(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Info, msg, kv...)
+	gl.Logp(logging.INFO, msg, kv...)
 }
 
 func (gl *goLogger) Warnp(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Warn, msg, kv...)
+	gl.Logp(logging.WARN, msg, kv...)
 }
 
 func (gl *goLogger) Errorp(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Error, msg, kv...)
+	gl.Logp(logging.ERROR, msg, kv...)
 }
 
 func (gl *goLogger) Severep(msg string, kv ...logging.Pair) {
-	gl.Logp(logging.Error, msg, kv...)
+	gl.Logp(logging.ERROR, msg, kv...)
 }
 
 func (gl *goLogger) Logm(level logging.Level, msg string, kv logging.Map) {
@@ -105,19 +105,19 @@ func (gl *goLogger) Logm(level logging.Level, msg string, kv logging.Map) {
 }
 
 func (gl *goLogger) Debugm(msg string, kv logging.Map) {
-	gl.Logm(logging.Debug, msg, kv)
+	gl.Logm(logging.DEBUG, msg, kv)
 }
 
 func (gl *goLogger) Tracem(msg string, kv logging.Map) {
-	gl.Logm(logging.Trace, msg, kv)
+	gl.Logm(logging.TRACE, msg, kv)
 }
 
 func (gl *goLogger) Requestm(rlevel logging.Level, msg string, kv logging.Map) {
 	if gl.logger == nil {
 		return
 	}
-	if logging.Request <= gl.level {
-		e := newLogEntry(msg, logging.Request)
+	if logging.REQUEST <= gl.level {
+		e := newLogEntry(msg, logging.REQUEST)
 		e.Rlevel = rlevel
 		e.Data = kv
 		gl.log(e)
@@ -125,19 +125,19 @@ func (gl *goLogger) Requestm(rlevel logging.Level, msg string, kv logging.Map) {
 }
 
 func (gl *goLogger) Infom(msg string, kv logging.Map) {
-	gl.Logm(logging.Info, msg, kv)
+	gl.Logm(logging.INFO, msg, kv)
 }
 
 func (gl *goLogger) Warnm(msg string, kv logging.Map) {
-	gl.Logm(logging.Warn, msg, kv)
+	gl.Logm(logging.WARN, msg, kv)
 }
 
 func (gl *goLogger) Errorm(msg string, kv logging.Map) {
-	gl.Logm(logging.Error, msg, kv)
+	gl.Logm(logging.ERROR, msg, kv)
 }
 
 func (gl *goLogger) Severem(msg string, kv logging.Map) {
-	gl.Logm(logging.Severe, msg, kv)
+	gl.Logm(logging.SEVERE, msg, kv)
 }
 
 func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}) {
@@ -151,38 +151,38 @@ func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}
 }
 
 func (gl *goLogger) Debugf(format string, args ...interface{}) {
-	gl.Logf(logging.Debug, format, args...)
+	gl.Logf(logging.DEBUG, format, args...)
 }
 
 func (gl *goLogger) Tracef(format string, args ...interface{}) {
-	gl.Logf(logging.Trace, format, args...)
+	gl.Logf(logging.TRACE, format, args...)
 }
 
 func (gl *goLogger) Requestf(rlevel logging.Level, format string, args ...interface{}) {
 	if gl.logger == nil {
 		return
 	}
-	if logging.Request <= gl.level {
-		e := newLogEntry(fmt.Sprintf(format, args...), logging.Request)
+	if logging.REQUEST <= gl.level {
+		e := newLogEntry(fmt.Sprintf(format, args...), logging.REQUEST)
 		e.Rlevel = rlevel
 		gl.log(e)
 	}
 }
 
 func (gl *goLogger) Infof(format string, args ...interface{}) {
-	gl.Logf(logging.Info, format, args...)
+	gl.Logf(logging.INFO, format, args...)
 }
 
 func (gl *goLogger) Warnf(format string, args ...interface{}) {
-	gl.Logf(logging.Warn, format, args...)
+	gl.Logf(logging.WARN, format, args...)
 }
 
 func (gl *goLogger) Errorf(format string, args ...interface{}) {
-	gl.Logf(logging.Error, format, args...)
+	gl.Logf(logging.ERROR, format, args...)
 }
 
 func (gl *goLogger) Severef(format string, args ...interface{}) {
-	gl.Logf(logging.Severe, format, args...)
+	gl.Logf(logging.SEVERE, format, args...)
 }
 
 func (gl *goLogger) Level() logging.Level {
@@ -210,7 +210,7 @@ func newLogEntry(msg string, level logging.Level) *logEntry {
 	return &logEntry{
 		Time:    time.Now().Format(time.RFC3339),
 		Level:   level,
-		Rlevel:  logging.None,
+		Rlevel:  logging.NONE,
 		Message: msg,
 	}
 }
@@ -233,7 +233,7 @@ func (*textFormatter) format(newEntry *logEntry) string {
 	b := &bytes.Buffer{}
 	appendKeyValue(b, _TIME, newEntry.Time)
 	appendKeyValue(b, _LEVEL, newEntry.Level.String())
-	if newEntry.Rlevel != logging.None {
+	if newEntry.Rlevel != logging.NONE {
 		appendKeyValue(b, _RLEVEL, newEntry.Rlevel.String())
 	}
 	appendKeyValue(b, _MSG, newEntry.Message)
@@ -262,7 +262,7 @@ func (*jsonFormatter) format(newEntry *logEntry) string {
 	}
 	newEntry.Data[_TIME] = newEntry.Time
 	newEntry.Data[_LEVEL] = newEntry.Level.String()
-	if newEntry.Rlevel != logging.None {
+	if newEntry.Rlevel != logging.NONE {
 		newEntry.Data[_RLEVEL] = newEntry.Rlevel.String()
 	}
 	newEntry.Data[_MSG] = newEntry.Message

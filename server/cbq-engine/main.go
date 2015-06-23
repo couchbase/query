@@ -97,9 +97,9 @@ func main() {
 	}
 
 	if *DEBUG {
-		logging.SetLevel(logging.Debug)
+		logging.SetLevel(logging.DEBUG)
 	} else {
-		level := logging.Info
+		level := logging.INFO
 
 		if *LOG_LEVEL != "" {
 			lvl, ok := logging.ParseLevel(*LOG_LEVEL)
