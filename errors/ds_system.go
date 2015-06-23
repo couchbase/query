@@ -9,8 +9,7 @@
 
 package errors
 
-import (
-)
+import ()
 
 // System datastore error codes
 

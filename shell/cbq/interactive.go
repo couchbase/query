@@ -11,12 +11,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbase/query/errors"
-	"github.com/sbinet/liner"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/couchbase/query/errors"
+	"github.com/sbinet/liner"
 )
 
 const (

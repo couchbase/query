@@ -9,8 +9,7 @@
 
 package errors
 
-import (
-)
+import ()
 
 // Couchbase authorization error
 func NewDatastoreAuthorizationError(e error, msg string) Error {

@@ -9,8 +9,7 @@
 
 package errors
 
-import (
-)
+import ()
 
 // Parse errors - errors that are created in the parse package
 func NewParseSyntaxError(e error, msg string) Error {
