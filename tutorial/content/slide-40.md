@@ -3,8 +3,8 @@
 Don wants to know what are the top 10 best selling products on the
 dimestore website.
 
-Thanks to SQL for Documents (N1QL), we can now easily query the data
-in Couchbase to produce that list.
+Thanks to N1QL, we can now easily query the data in Couchbase to
+produce that list.
 
 ![ScreenShot](./images/top10.png)
 

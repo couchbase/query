@@ -1,12 +1,11 @@
-## <b>Section 1. SQL for Documents (N1QL) Basics</b>
+## <b>Section 1. N1QL Basics</b>
 
 ## Welcome
 
 Welcome to the Couchbase query tutorial!
 
-SQL for Documents, codename N1QL (pronounced “nickel”), is the new
-query language from Couchbase. It extends SQL to JSON document
-databases.
+N1QL (pronounced “nickel”), SQL for JSON, is the new query language
+from Couchbase. It extends SQL to JSON document databases.
 
 On the right hand side you see a query editor.
 
