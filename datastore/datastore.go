@@ -24,6 +24,7 @@ package datastore
 
 import (
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -39,6 +40,7 @@ type Datastore interface {
 	NamespaceById(id string) (Namespace, errors.Error)     // Find a namespace in this datastore using the namespace's Id
 	NamespaceByName(name string) (Namespace, errors.Error) // Find a namespace in this datastore using the namespace's name
 	Authorize(Privileges, Credentials) errors.Error        // Perform authorization and return nil if successful
+	SetLogLevel(level logging.Level)                       // Set log level of in-process indexers
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

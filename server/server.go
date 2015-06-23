@@ -70,6 +70,8 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 		keepAlive:      keepAlive,
 	}
 
+	store.SetLogLevel(logging.LogLevel())
+
 	if rv.maxParallelism <= 0 {
 		rv.maxParallelism = runtime.NumCPU()
 	}

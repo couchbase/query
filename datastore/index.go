@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -40,6 +41,7 @@ type Indexer interface {
 		where expression.Expression, with value.Value) (Index, errors.Error)
 	BuildIndexes(name ...string) errors.Error // Build indexes that were deferred at creation
 	Refresh() errors.Error                    // Refresh list of indexes from metadata
+	SetLogLevel(level logging.Level)          // Set log level for in-process logging
 }
 
 type IndexState string
@@ -92,9 +94,13 @@ PrimaryIndex represents primary key indexes.
 */
 type PrimaryIndex interface {
 	Index
-
 	ScanEntries(limit int64, cons ScanConsistency, vector timestamp.Vector,
 		conn *IndexConnection) // Perform a scan of all the entries in this index
+}
+
+type SizedIndex interface {
+	Index
+	SizeFromStatistics(int64, errors.Error)
 }
 
 type Range struct {

@@ -192,6 +192,23 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	return nil
 }
 
+func (s *site) SetLogLevel(level logging.Level) {
+	for _, n := range s.namespaceCache {
+		defer n.lock.Unlock()
+		n.lock.Lock()
+		for _, k := range n.keyspaceCache {
+			indexers, _ := k.Indexers()
+			if len(indexers) > 0 {
+				for _, idxr := range indexers {
+					idxr.SetLogLevel(level)
+				}
+
+				return
+			}
+		}
+	}
+}
+
 func initCbAuth(url string) (*cb.Client, error) {
 
 	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)

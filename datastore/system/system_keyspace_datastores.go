@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -204,6 +205,10 @@ func (mi *systemIndexer) BuildIndexes(names ...string) errors.Error {
 
 func (mi *systemIndexer) Refresh() errors.Error {
 	return nil
+}
+
+func (mi *systemIndexer) SetLogLevel(level logging.Level) {
+	// No-op, uses query engine logger
 }
 
 type storeIndex struct {

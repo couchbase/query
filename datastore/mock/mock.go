@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -74,6 +75,10 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 
 func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
 	return nil
+}
+
+func (s *store) SetLogLevel(level logging.Level) {
+	// No-op. Uses query engine logger.
 }
 
 // namespace represents a mock-based Namespace.
@@ -301,6 +306,10 @@ func (mi *mockIndexer) BuildIndexes(names ...string) errors.Error {
 
 func (mi *mockIndexer) Refresh() errors.Error {
 	return nil
+}
+
+func (mi *mockIndexer) SetLogLevel(level logging.Level) {
+	// No-op, uses query engine logger
 }
 
 // NewDatastore creates a new mock store for the given "path".  The

@@ -285,6 +285,10 @@ func (view *viewIndexer) Refresh() errors.Error {
 	return nil
 }
 
+func (view *viewIndexer) SetLogLevel(level logging.Level) {
+	// No-op, uses query engine logger
+}
+
 type viewIndex struct {
 	name      string
 	using     datastore.IndexType

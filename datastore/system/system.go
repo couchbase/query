@@ -12,6 +12,7 @@ package system
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 )
 
 const NAMESPACE_ID = "#system"
@@ -69,6 +70,10 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 
 func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
 	return nil
+}
+
+func (s *store) SetLogLevel(level logging.Level) {
+	// No-op. Uses query engine logger.
 }
 
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
