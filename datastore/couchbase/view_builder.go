@@ -469,7 +469,7 @@ func (this *JsStatement) Visit(bucketName string, e expression.Expression) (expr
 		stringer = strings.Replace(stringer, "`", "", -1)
 		this.js.WriteString(stringer)
 	} else {
-		return e, errors.New("This Expression is not supported by indexing")
+		return e, errors.New("This Expression is not supported by view indexes")
 	}
 
 	return e, nil
@@ -491,7 +491,7 @@ func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) 
 		stringer = strings.Replace(stringer, bucketName, "doc", -1)
 		this.js.WriteString(stringer)
 	} else {
-		return e, errors.New("This Expression is not supported by indexing")
+		return e, errors.New("This Expression is not supported by view indexes")
 	}
 
 	return e, nil
