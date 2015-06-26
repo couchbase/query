@@ -13,11 +13,27 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"sync"
 )
+
+var uuidPool *sync.Pool
+
+const _UUID_SIZE = 16
+
+func init() {
+	uuidPool = &sync.Pool{
+		New: func() interface{} {
+			b := make([]byte, _UUID_SIZE, _UUID_SIZE)
+			return b
+		},
+	}
+}
 
 // UUID generates a random UUID according to RFC 4122
 func UUID() (string, error) {
-	uuid := make([]byte, 16)
+	uuid := uuidPool.Get().([]byte)
+	defer uuidPool.Put(uuid)
+
 	n, err := io.ReadFull(rand.Reader, uuid)
 	if n != len(uuid) || err != nil {
 		return "", err
