@@ -106,6 +106,7 @@
 /[cC][oO][mM][mM][iI][tT]/			 { logToken("COMMIT"); return COMMIT }
 /[cC][oO][nN][nN][eE][cC][tT]/			 { logToken("CONNECT"); return CONNECT }
 /[cC][oO][nN][tT][iI][nN][uU][eE]/		 { logToken("CONTINUE"); return CONTINUE }
+/[cC][oO][rR][rR][eE][lL][aA][tT][eE]/		 { logToken("CORRELATE"); return CORRELATE }
 /[cC][rR][eE][aA][tT][eE]/			 { logToken("CREATE"); return CREATE }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/		 { logToken("DATABASE"); return DATABASE }
 /[dD][aA][tT][aA][sS][eE][tT]/			 { logToken("DATASET"); return DATASET }
@@ -184,6 +185,7 @@
 /[oO][rR][dD][eE][rR]/				 { logToken("ORDER"); return ORDER }
 /[oO][uU][tT][eE][rR]/				 { logToken("OUTER"); return OUTER }
 /[oO][vV][eE][rR]/				 { logToken("OVER"); return OVER }
+/[pP][aA][rR][sS][eE]/				 { logToken("PARSE"); return PARSE }
 /[pP][aA][rR][tT][iI][tT][iI][oO][nN]/		 { logToken("PARTITION"); return PARTITION }
 /[pP][aA][sS][sS][wW][oO][rR][dD]/		 { logToken("PASSWORD"); return PASSWORD }
 /[pP][aA][tT][hH]/				 { logToken("PATH"); return PATH }
@@ -231,6 +233,7 @@
 /[uU][sS][eE]/					 { logToken("USE"); return USE }
 /[uU][sS][eE][rR]/				 { logToken("USER"); return USER }
 /[uU][sS][iI][nN][gG]/				 { logToken("USING"); return USING }
+/[vV][aA][lL][iI][dD][aA][tT][eE]/		 { logToken("VALIDATE"); return VALIDATE }
 /[vV][aA][lL][uU][eE]/				 { logToken("VALUE"); return VALUE }
 /[vV][aA][lL][uU][eE][dD]/			 { logToken("VALUED"); return VALUED }
 /[vV][aA][lL][uU][eE][sS]/			 { logToken("VALUES"); return VALUES }

@@ -98,6 +98,7 @@ val              value.Value
 %token COMMIT
 %token CONNECT
 %token CONTINUE
+%token CORRELATE
 %token CREATE
 %token DATABASE
 %token DATASET
@@ -176,6 +177,7 @@ val              value.Value
 %token ORDER
 %token OUTER
 %token OVER
+%token PARSE
 %token PARTITION
 %token PASSWORD
 %token PATH
@@ -224,6 +226,7 @@ val              value.Value
 %token USE
 %token USER
 %token USING
+%token VALIDATE
 %token VALUE
 %token VALUED
 %token VALUES
