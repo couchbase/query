@@ -17,9 +17,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
@@ -50,6 +52,9 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 	nodeHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doNode)
 	}
+	settingsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doSettings)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -57,6 +62,7 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 		adminPrefix + "/ping":                      {handler: pingHandler, methods: []string{"GET"}},
 		adminPrefix + "/config":                    {handler: configHandler, methods: []string{"GET"}},
 		adminPrefix + "/ssl_cert":                  {handler: sslCertHandler, methods: []string{"POST"}},
+		adminPrefix + "/settings":                  {handler: settingsHandler, methods: []string{"GET", "POST"}},
 		clustersPrefix:                             {handler: clustersHandler, methods: []string{"GET", "POST"}},
 		clustersPrefix + "/{cluster}":              {handler: clusterHandler, methods: []string{"GET", "PUT", "DELETE"}},
 		clustersPrefix + "/{cluster}/nodes":        {handler: nodesHandler, methods: []string{"GET", "POST"}},
@@ -67,6 +73,46 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
 	}
 
+}
+
+func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
+	// retrieve the credentials from the request; the credentials must be specified
+	// using basic authorization format. An error is returned if there is a step that
+	// prevents retrieval of the credentials.
+	authHdr := req.Header["Authorization"]
+	if len(authHdr) == 0 {
+		return errors.NewAdminAuthError(nil, "basic authorization required")
+	}
+
+	auth := authHdr[0]
+	basicPrefix := "Basic "
+	if !strings.HasPrefix(auth, basicPrefix) {
+		return errors.NewAdminAuthError(nil, "basic authorization required")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(auth[len(basicPrefix):])
+	if err != nil {
+		return errors.NewAdminDecodingError(err)
+	}
+
+	colonIndex := bytes.IndexByte(decoded, ':')
+	if colonIndex == -1 {
+		return errors.NewAdminAuthError(nil, "incorrect authorization header")
+	}
+
+	user := string(decoded[:colonIndex])
+	password := string(decoded[colonIndex+1:])
+	creds := map[string]string{user: password}
+
+	// Attempt authorization with the cluster
+	configstore := this.server.ConfigurationStore()
+	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
+	authErr := configstore.Authorize(creds, sslPrivs)
+	if authErr != nil {
+		return authErr
+	}
+
+	return nil
 }
 
 var pingStatus = struct {
@@ -211,40 +257,10 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 	if endpoint.httpsAddr == "" {
 		return nil, errors.NewAdminNotSSLEnabledError()
 	}
-	// retrieve the credentials from the request; the credentials must be specified
-	// using basic authorization format. An error is returned if there is a step that
-	// prevents retrieval of the credentials.
-	authHdr := req.Header["Authorization"]
-	if len(authHdr) == 0 {
-		return nil, errors.NewAdminAuthError(nil, "ssl reload requres basic authorization")
-	}
 
-	auth := authHdr[0]
-	basicPrefix := "Basic "
-	if !strings.HasPrefix(auth, basicPrefix) {
-		return nil, errors.NewAdminAuthError(nil, "ssl reload requres basic authorization")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(auth[len(basicPrefix):])
+	err := endpoint.hasAdminAuth(req)
 	if err != nil {
-		return nil, errors.NewAdminDecodingError(err)
-	}
-
-	colonIndex := bytes.IndexByte(decoded, ':')
-	if colonIndex == -1 {
-		return nil, errors.NewAdminAuthError(nil, "incorrect authorization header")
-	}
-
-	user := string(decoded[:colonIndex])
-	password := string(decoded[colonIndex+1:])
-	creds := map[string]string{user: password}
-
-	// Attempt authorization with the cluster
-	configstore := endpoint.server.ConfigurationStore()
-	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
-	authErr := configstore.Authorize(creds, sslPrivs)
-	if authErr != nil {
-		return nil, authErr
+		return nil, err
 	}
 
 	// Auth clear: restart TLS listener to reload the SSL cert.
@@ -265,6 +281,145 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 	sslStatus["certfile"] = endpoint.certFile
 
 	return sslStatus, nil
+}
+
+const (
+	_CPUPROFILE      = "cpuprofile"
+	_DEBUG           = "debug"
+	_KEEPALIVELENGTH = "keep-alive-length"
+	_MAXPARALLELISM  = "max-parallelism"
+	_MEMPROFILE      = "memprofile"
+	_REQUESTSIZECAP  = "request-size-cap"
+	_PIPELINECAP     = "pipeline-cap"
+	_SCANCAP         = "scan-cap"
+	_SERVICERS       = "servicers"
+	_TIMEOUT         = "timeout"
+)
+
+type checker func(interface{}) bool
+
+func checkBool(val interface{}) bool {
+	_, ok := val.(bool)
+	return ok
+}
+
+func checkNumber(val interface{}) bool {
+	_, ok := val.(float64)
+	return ok
+}
+
+func checkString(val interface{}) bool {
+	_, ok := val.(string)
+	return ok
+}
+
+var _CHECKERS = map[string]checker{
+	_CPUPROFILE:      checkString,
+	_DEBUG:           checkBool,
+	_KEEPALIVELENGTH: checkNumber,
+	_MAXPARALLELISM:  checkNumber,
+	_MEMPROFILE:      checkString,
+	_REQUESTSIZECAP:  checkNumber,
+	_PIPELINECAP:     checkNumber,
+	_SCANCAP:         checkNumber,
+	_SERVICERS:       checkNumber,
+	_TIMEOUT:         checkNumber,
+}
+
+type setter func(*server.Server, interface{})
+
+var _SETTERS = map[string]setter{
+	_CPUPROFILE: func(s *server.Server, o interface{}) {
+		value, _ := o.(string)
+		s.SetCpuprofile(value)
+	},
+	_DEBUG: func(s *server.Server, o interface{}) {
+		value, _ := o.(bool)
+		s.SetDebug(value)
+	},
+	_KEEPALIVELENGTH: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetKeepAlive(int(value))
+	},
+	_MAXPARALLELISM: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetMaxParallelism(int(value))
+	},
+	_MEMPROFILE: func(s *server.Server, o interface{}) {
+		value, _ := o.(string)
+		s.SetMemprofile(value)
+	},
+	_PIPELINECAP: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetPipelineCap(int(value))
+	},
+	_REQUESTSIZECAP: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetRequestSizeCap(int(value))
+	},
+	_SCANCAP: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetScanCap(int(value))
+	},
+	_SERVICERS: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetServicers(int(value))
+	},
+	_TIMEOUT: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetTimeout(time.Duration(value))
+	},
+}
+
+func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	// Admin auth required
+	err := endpoint.hasAdminAuth(req)
+	if err != nil {
+		return nil, err
+	}
+
+	settings := map[string]interface{}{}
+	srvr := endpoint.server
+	switch req.Method {
+	case "GET":
+		return fillSettings(settings, srvr), nil
+	case "POST":
+		decoder := json.NewDecoder(req.Body)
+		err := decoder.Decode(&settings)
+		if err != nil {
+			return nil, errors.NewAdminDecodingError(err)
+		}
+		for setting, value := range settings {
+			if check_it, ok := _CHECKERS[setting]; !ok {
+				return nil, errors.NewAdminUnknownSettingError(setting)
+			} else {
+				if !check_it(value) {
+					return nil, errors.NewAdminSettingTypeError(setting, value)
+				}
+			}
+		}
+		for setting, value := range settings {
+			set_it := _SETTERS[setting]
+			set_it(srvr, value)
+		}
+		return fillSettings(settings, srvr), nil
+	default:
+		return nil, nil
+	}
+}
+
+func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
+	settings[_CPUPROFILE] = srvr.Cpuprofile()
+	settings[_MEMPROFILE] = srvr.Memprofile()
+	settings[_SERVICERS] = srvr.Servicers()
+	settings[_SCANCAP] = srvr.ScanCap()
+	settings[_REQUESTSIZECAP] = srvr.RequestSizeCap()
+	settings[_DEBUG] = srvr.Debug()
+	settings[_PIPELINECAP] = srvr.PipelineCap()
+	settings[_MAXPARALLELISM] = srvr.MaxParallelism()
+	settings[_TIMEOUT] = srvr.Timeout()
+	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
+	return settings
 }
 
 func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error) {

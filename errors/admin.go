@@ -35,6 +35,16 @@ func NewAdminEncodingError(e error) Error {
 		InternalMsg: "Error in JSON encoding", InternalCaller: CallerN(1)}
 }
 
+func NewAdminUnknownSettingError(setting string) Error {
+	return &err{level: EXCEPTION, ICode: 2032, IKey: "admin.unknown_setting",
+		InternalMsg: fmt.Sprintf("Unknown setting: %s", setting), InternalCaller: CallerN(1)}
+}
+
+func NewAdminSettingTypeError(setting string, value interface{}) Error {
+	return &err{level: EXCEPTION, ICode: 2032, IKey: "admin.setting_type_error",
+		InternalMsg: fmt.Sprintf("Incorrect value %v for setting: %s", value, setting), InternalCaller: CallerN(1)}
+}
+
 func NewAdminGetClusterError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 2040, IKey: "admin.clustering.get_cluster_error", ICause: e,
 		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}

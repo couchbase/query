@@ -16,7 +16,6 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
-	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -42,8 +40,8 @@ var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", runtime.NumCPU()<<16, "Maximum number of queued requests")
-var REQUEST_SIZE_CAP = flag.String("request-size-cap", http.MAX_REQUEST_SIZE, "Maximum size of a request")
-var SCAN_CAP = flag.Int64("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
+var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
+var SCAN_CAP = flag.Int("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
 var SERVICER_COUNT = flag.Int("servicers", runtime.NumCPU()<<7, "Servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 0, "Maximum parallelism per query; use zero or negative value to disable")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
@@ -55,7 +53,7 @@ var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
-var KEEP_ALIVE_LENGTH = flag.String("keep-alive-length", strconv.Itoa(server.KEEP_ALIVE_DEFAULT), "maximum size of buffered result")
+var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
 
@@ -64,27 +62,9 @@ var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 func main() {
-	HideConsole(true)
-	defer HideConsole(false)
+	//HideConsole(true)
+	//defer HideConsole(false)
 	flag.Parse()
-
-	var f *os.File
-	if *MEM_PROFILE != "" {
-		var err error
-		f, err = os.Create(*MEM_PROFILE)
-		if err != nil {
-			fmt.Printf("Cannot start mem profiler %v\n", err)
-		}
-	}
-
-	if *CPU_PROFILE != "" {
-		f, err := os.Create(*CPU_PROFILE)
-		if err != nil {
-			fmt.Printf("Cannot start cpu profiler %v\n", err)
-		} else {
-			pprof.StartCPUProfile(f)
-		}
-	}
 
 	if *LOGGER != "" {
 		logger, _ := log_resolver.NewLogger(*LOGGER)
@@ -117,7 +97,6 @@ func main() {
 		os.Exit(1)
 	}
 	datastore_package.SetDatastore(datastore)
-	datastore_package.SetScanCap(*SCAN_CAP)
 
 	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
@@ -137,37 +116,24 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
-	keep_alive_length, e := util.ParseQuantity(*KEEP_ALIVE_LENGTH)
-
-	if e != nil {
-		logging.Errorp("Error parsing keep alive length; reverting to default",
-			logging.Pair{"keep alive length", *KEEP_ALIVE_LENGTH},
-			logging.Pair{"error", e},
-			logging.Pair{"default", server.KEEP_ALIVE_DEFAULT},
-		)
-	}
-
-	if e == nil && keep_alive_length < 1 {
-		logging.Infop("Negative or zero keep alive length; reverting to default",
-			logging.Pair{"keep alive length", *KEEP_ALIVE_LENGTH},
-			logging.Pair{"default", server.KEEP_ALIVE_DEFAULT},
-		)
-	}
-
 	channel := make(server.RequestChannel, *REQUEST_CAP)
-	http.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, keep_alive_length)
+		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 
+	server.SetCpuprofile(*CPU_PROFILE)
+	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
+	server.SetMemprofile(*MEM_PROFILE)
+	server.SetPipelineCap(*PIPELINE_CAP)
+	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
+	server.SetScanCap(*SCAN_CAP)
+
 	if os.Getenv("GOMAXPROCS") == "" {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
-
-	execution.SetPipelineCap(*PIPELINE_CAP)
 
 	go server.Serve()
 
@@ -176,6 +142,10 @@ func main() {
 		logging.Pair{"datastore", *DATASTORE},
 		logging.Pair{"max-parallelism", runtime.GOMAXPROCS(0)},
 		logging.Pair{"loglevel", logging.LogLevel().String()},
+		logging.Pair{"servicers", server.Servicers()},
+		logging.Pair{"pipeline-cap", server.PipelineCap()},
+		logging.Pair{"request-size-cap", server.RequestSizeCap()},
+		logging.Pair{"timeout", server.Timeout()},
 	)
 
 	// Create http endpoint
@@ -199,11 +169,11 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	signalCatcher(server, endpoint, *CPU_PROFILE != "", f)
+	signalCatcher(server, endpoint)
 }
 
 // signalCatcher blocks until a signal is recieved and then takes appropriate action
-func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint, writeCPUprof bool, f *os.File) {
+func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
 	sig_chan := make(chan os.Signal, 4)
 	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
 
@@ -211,21 +181,27 @@ func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint, writeCPUp
 	select {
 	case s = <-sig_chan:
 	}
-	if writeCPUprof {
-		logging.Infop("Stopping CPU profiling...")
+	if server.Cpuprofile() != "" {
+		logging.Infop("Stopping CPU profile")
 		pprof.StopCPUProfile()
 	}
-	if f != nil {
-		logging.Infop("Stopping Memory profiling...")
-		pprof.WriteHeapProfile(f)
-		f.Close()
+	if server.Memprofile() != "" {
+		f, err := os.Create(server.Memprofile())
+		if err != nil {
+			logging.Errorp("Cannot create memory profile file", logging.Pair{"error", err})
+		} else {
+
+			logging.Infop("Writing  Memory profile")
+			pprof.WriteHeapProfile(f)
+			f.Close()
+		}
 	}
 	if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
-		logging.Infop("cbq-engine shutting down immediately...")
+		logging.Infop("Shutting down immediately")
 		os.Exit(0)
 	}
-	logging.Infop("cbq-engine attempting graceful...")
+	logging.Infop("Attempting graceful exit")
 	// Stop accepting new requests
 	err := endpoint.Close()
 	if err != nil {
@@ -235,5 +211,4 @@ func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint, writeCPUp
 	if err != nil {
 		logging.Errorp("error closing https listener", logging.Pair{"err", err})
 	}
-	// TODO: wait until server requests have all completed
 }

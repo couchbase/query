@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -43,7 +42,6 @@ func SetPipelineCap(cap int) {
 		cap = _ITEM_CAP
 	}
 	atomic.StoreInt64(&pipelineCap, int64(cap))
-	logging.Infop("Pipeline Cap", logging.Pair{"items", GetPipelineCap()})
 }
 
 func GetPipelineCap() int64 {

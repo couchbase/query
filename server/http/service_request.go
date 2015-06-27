@@ -14,56 +14,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-const (
-	MEGABYTE                  = 1 << 20
-	MAX_REQUEST_BYTES_DEFAULT = 64 * MEGABYTE
-	MAX_REQUEST_SIZE          = "64mb"
-)
-
-var maxRequestBytes int64
-
-func init() {
-	maxRequestBytes = MAX_REQUEST_BYTES_DEFAULT
-}
-
-func SetRequestSizeCap(requested string) {
-	var setting int
-
-	if requested == "" {
-		requested = MAX_REQUEST_SIZE
-	}
-	setting, err := util.ParseQuantity(requested)
-	if err != nil {
-		logging.Errorp("Error parsing request size cap; reverting to default")
-		setting = MAX_REQUEST_BYTES_DEFAULT
-	}
-	if setting <= 0 {
-		setting = math.MaxInt32
-	}
-	atomic.StoreInt64(&maxRequestBytes, int64(setting))
-	logging.Infop("Request Size Cap", logging.Pair{"bytes", GetRequestSizeCap()})
-}
-
-func GetRequestSizeCap() int64 {
-	return atomic.LoadInt64(&maxRequestBytes)
-}
 
 type httpRequest struct {
 	server.BaseRequest
@@ -78,12 +41,12 @@ type httpRequest struct {
 	warningCount  int
 }
 
-func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool) *httpRequest {
+func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error
 
 	// Limit body size in case of denial-of-service attack
-	req.Body = http.MaxBytesReader(resp, req.Body, GetRequestSizeCap())
+	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
 
 	e := req.ParseForm()
 	if e != nil {

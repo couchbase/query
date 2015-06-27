@@ -90,7 +90,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 // If the server channel is full and we are unable to queue a request,
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	request := newHttpRequest(resp, req, this.bufpool)
+	request := newHttpRequest(resp, req, this.bufpool, this.server.RequestSizeCap())
 
 	defer this.doStats(request)
 

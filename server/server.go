@@ -11,9 +11,12 @@ package server
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"runtime"
+	"runtime/pprof"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -31,6 +34,7 @@ import (
 )
 
 type Server struct {
+	sync.RWMutex
 	datastore      datastore.Datastore
 	systemstore    datastore.Datastore
 	configstore    clustering.ConfigurationStore
@@ -38,13 +42,17 @@ type Server struct {
 	namespace      string
 	readonly       bool
 	channel        RequestChannel
-	servicerCount  int
-	maxParallelism int
+	done           chan bool
+	servicerCount  int64
+	maxParallelism int64
 	timeout        time.Duration
 	signature      bool
 	metrics        bool
-	keepAlive      int
-	once           sync.Once
+	keepAlive      int64
+	wg             sync.WaitGroup
+	memprofile     string
+	cpuprofile     string
+	requestSize    int64
 }
 
 // Default Keep Alive Length
@@ -54,27 +62,23 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	channel RequestChannel, servicerCount, maxParallelism int, timeout time.Duration,
-	signature, metrics bool, keepAlive int) (*Server, errors.Error) {
+	signature, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
-		datastore:      store,
-		configstore:    config,
-		acctstore:      acctng,
-		namespace:      namespace,
-		readonly:       readonly,
-		channel:        channel,
-		servicerCount:  servicerCount,
-		maxParallelism: maxParallelism,
-		timeout:        timeout,
-		signature:      signature,
-		metrics:        metrics,
-		keepAlive:      keepAlive,
+		datastore:     store,
+		configstore:   config,
+		acctstore:     acctng,
+		namespace:     namespace,
+		readonly:      readonly,
+		channel:       channel,
+		servicerCount: int64(servicerCount),
+		signature:     signature,
+		timeout:       timeout,
+		metrics:       metrics,
+		done:          make(chan bool),
 	}
 
 	store.SetLogLevel(logging.LogLevel())
-
-	if rv.maxParallelism <= 0 {
-		rv.maxParallelism = runtime.NumCPU()
-	}
+	rv.SetMaxParallelism(maxParallelism)
 
 	sys, err := system.NewDatastore(store)
 	if err != nil {
@@ -110,24 +114,153 @@ func (this *Server) Metrics() bool {
 }
 
 func (this *Server) KeepAlive() int {
-	return this.keepAlive
+	return int(atomic.LoadInt64(&this.keepAlive))
+}
+
+func (this *Server) SetKeepAlive(keepAlive int) {
+	if keepAlive <= 0 {
+		keepAlive = KEEP_ALIVE_DEFAULT
+	}
+	atomic.StoreInt64(&this.keepAlive, int64(keepAlive))
+}
+
+func (this *Server) MaxParallelism() int {
+	return int(atomic.LoadInt64(&this.maxParallelism))
+}
+
+func (this *Server) SetMaxParallelism(maxParallelism int) {
+	if maxParallelism <= 0 {
+		maxParallelism = runtime.NumCPU()
+	}
+	atomic.StoreInt64(&this.maxParallelism, int64(maxParallelism))
+}
+
+func (this *Server) Memprofile() string {
+	this.RLock()
+	defer this.RUnlock()
+	return this.memprofile
+}
+
+func (this *Server) SetMemprofile(memprofile string) {
+	this.Lock()
+	defer this.Unlock()
+	this.memprofile = memprofile
+}
+
+func (this *Server) Cpuprofile() string {
+	this.RLock()
+	defer this.RUnlock()
+	return this.cpuprofile
+}
+
+func (this *Server) SetCpuprofile(cpuprofile string) {
+	this.Lock()
+	defer this.Unlock()
+	this.cpuprofile = cpuprofile
+	if this.cpuprofile == "" {
+		return
+	}
+	f, err := os.Create(this.cpuprofile)
+	if err != nil {
+		logging.Errorp("Cannot start cpu profiler", logging.Pair{"error", err})
+		this.cpuprofile = ""
+	} else {
+		pprof.StartCPUProfile(f)
+	}
+}
+
+func (this *Server) PipelineCap() int {
+	return int(execution.GetPipelineCap())
+}
+
+func (this *Server) SetPipelineCap(pipeline_cap int) {
+	execution.SetPipelineCap(pipeline_cap)
+}
+
+func (this *Server) Debug() bool {
+	return logging.LogLevel() == logging.DEBUG
+}
+
+func (this *Server) SetDebug(debug bool) {
+	if debug {
+		logging.SetLevel(logging.DEBUG)
+	} else {
+		logging.SetLevel(logging.INFO)
+	}
+}
+
+const (
+	MAX_REQUEST_SIZE = 64 * (1 << 20)
+)
+
+func (this *Server) RequestSizeCap() int {
+	return int(atomic.LoadInt64(&this.requestSize))
+}
+
+func (this *Server) SetRequestSizeCap(requestSize int) {
+	if requestSize <= 0 {
+		requestSize = math.MaxInt32
+	}
+	atomic.StoreInt64(&this.requestSize, int64(requestSize))
+}
+
+func (this *Server) ScanCap() int {
+	return int(datastore.GetScanCap())
+}
+
+func (this *Server) SetScanCap(size int) {
+	datastore.SetScanCap(int64(size))
+}
+
+func (this *Server) Servicers() int {
+	return int(atomic.LoadInt64(&this.servicerCount))
+}
+
+func (this *Server) SetServicers(servicerCount int) {
+	this.Lock()
+	defer this.Unlock()
+	// Stop the current set of servicers
+	close(this.done)
+	logging.Infop("SetServicers - waiting for current servicers to finish")
+	this.wg.Wait()
+	// Set servicer count and recreate servicer channel
+	atomic.StoreInt64(&this.servicerCount, int64(servicerCount))
+	logging.Infop("SetServicers - starting new servicers")
+	// Start new set of servicers
+	this.done = make(chan bool)
+	go this.Serve()
+}
+
+func (this *Server) Timeout() time.Duration {
+	return this.timeout
+}
+
+func (this *Server) SetTimeout(timeout time.Duration) {
+	this.timeout = timeout
 }
 
 func (this *Server) Serve() {
-	this.once.Do(func() {
-		// Use a threading model. Do not spawn a separate
-		// goroutine for each request, as that would be
-		// unbounded and could degrade performance of already
-		// executing queries.
-		for i := 0; i < this.servicerCount; i++ {
-			go this.doServe()
-		}
-	})
+	// Use a threading model. Do not spawn a separate
+	// goroutine for each request, as that would be
+	// unbounded and could degrade performance of already
+	// executing queries.
+	servicers := this.Servicers()
+	this.wg.Add(servicers)
+	for i := 0; i < servicers; i++ {
+		go this.doServe()
+	}
 }
 
 func (this *Server) doServe() {
-	for request := range this.channel {
-		this.serviceRequest(request)
+	defer this.wg.Done()
+	ok := true
+	for ok {
+		select {
+		case request := <-this.channel:
+			this.serviceRequest(request)
+		case <-this.done:
+			ok = false
+		}
 	}
 }
 
@@ -184,14 +317,14 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	// Apply server execution timeout
-	if this.timeout > 0 {
-		timer := time.AfterFunc(this.timeout, func() { request.Expire() })
+	if this.Timeout() > 0 {
+		timer := time.AfterFunc(this.Timeout(), func() { request.Expire() })
 		defer timer.Stop()
 	}
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
 
-	maxParallelism := util.MinInt(this.maxParallelism, request.MaxParallelism())
+	maxParallelism := util.MinInt(this.MaxParallelism(), request.MaxParallelism())
 
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
