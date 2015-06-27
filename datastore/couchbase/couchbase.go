@@ -874,20 +874,21 @@ func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err err
 	return pi.viewIndex.State()
 }
 
-func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
-	return pi.viewIndex.Statistics(span)
+func (pi *primaryIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
+	return pi.viewIndex.Statistics(requestId, span)
 }
 
-func (pi *primaryIndex) Drop() errors.Error {
-	return pi.viewIndex.Drop()
+func (pi *primaryIndex) Drop(requestId string) errors.Error {
+	return pi.viewIndex.Drop(requestId)
 }
 
-func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.viewIndex.Scan(span, distinct, limit, cons, vector, conn)
+	pi.viewIndex.Scan(requestId, span, distinct, limit, cons, vector, conn)
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.viewIndex.ScanEntries(limit, cons, vector, conn)
+	pi.viewIndex.ScanEntries(requestId, limit, cons, vector, conn)
 }

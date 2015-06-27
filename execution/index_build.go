@@ -56,7 +56,7 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		err = indexer.BuildIndexes(node.Names()...)
+		err = indexer.BuildIndexes(context.RequestId(), node.Names()...)
 		if err != nil {
 			context.Error(err)
 		}

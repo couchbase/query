@@ -170,15 +170,16 @@ func (pi *namespaceIndex) State() (state datastore.IndexState, msg string, err e
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *namespaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *namespaceIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *namespaceIndex) Drop() errors.Error {
+func (pi *namespaceIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
-func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *namespaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -200,7 +201,7 @@ func (pi *namespaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *namespaceIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *namespaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

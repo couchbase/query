@@ -104,7 +104,7 @@ func TestFile(t *testing.T) {
 	context := &testingContext{t}
 	conn := datastore.NewIndexConnection(context)
 
-	go index.ScanEntries(math.MaxInt64, datastore.UNBOUNDED, nil, conn)
+	go index.ScanEntries("", math.MaxInt64, datastore.UNBOUNDED, nil, conn)
 
 	ok := true
 	for ok {

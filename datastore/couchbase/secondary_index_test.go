@@ -126,7 +126,7 @@ func Test2iStatistics(t *testing.T) {
 			Inclusion: datastore.BOTH,
 		},
 	}
-	out, err := index.Statistics(span)
+	out, err := index.Statistics("", span)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func Test2iScanRange(t *testing.T) {
 	entrych := conn.EntryChannel()
 	quitch := conn.StopChannel()
 
-	go index.Scan(span, false, 10000, conn)
+	go index.Scan("", span, false, 10000, conn)
 
 	count := 0
 loop:

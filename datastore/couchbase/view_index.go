@@ -118,7 +118,8 @@ func (view *viewIndexer) Indexes() ([]datastore.Index, errors.Error) {
 	return rv, nil
 }
 
-func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
+func (view *viewIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (
+	datastore.PrimaryIndex, errors.Error) {
 
 	// if name is not provided then use default name #primary
 	if name == "" {
@@ -156,7 +157,7 @@ func (view *viewIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 	return idx, nil
 }
 
-func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+func (view *viewIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 
 	view.Refresh()
@@ -189,7 +190,7 @@ func (view *viewIndexer) CreateIndex(name string, equalKey, rangeKey expression.
 	return idx, nil
 }
 
-func (view *viewIndexer) BuildIndexes(names ...string) errors.Error {
+func (view *viewIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
 	return errors.NewCbViewsNotSupportedError(nil, "BUILD INDEXES is not supported for VIEW.")
 }
 
@@ -356,16 +357,17 @@ func (vi *viewIndex) State() (state datastore.IndexState, msg string, err errors
 	return datastore.ONLINE, "", nil
 }
 
-func (vi *viewIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (vi *viewIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (vi *viewIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (vi *viewIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	vi.Scan(nil, false, limit, cons, vector, conn)
+	vi.Scan(requestId, nil, false, limit, cons, vector, conn)
 }
 
-func (vi *viewIndex) Drop() errors.Error {
+func (vi *viewIndex) Drop(requestId string) errors.Error {
 
 	err := vi.DropViewIndex()
 	if err != nil {
@@ -384,7 +386,7 @@ func (vi *viewIndex) Drop() errors.Error {
 	return nil
 }
 
-func (vi *viewIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 	// For primary indexes, bounds must always be strings, so we

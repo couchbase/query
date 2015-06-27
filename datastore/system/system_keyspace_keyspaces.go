@@ -194,15 +194,16 @@ func (pi *keyspaceIndex) State() (state datastore.IndexState, msg string, err er
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *keyspaceIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *keyspaceIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *keyspaceIndex) Drop() errors.Error {
+func (pi *keyspaceIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
-func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -234,7 +235,7 @@ func (pi *keyspaceIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *keyspaceIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

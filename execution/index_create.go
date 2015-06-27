@@ -61,7 +61,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		_, err = indexer.CreateIndex(node.Name(), equalKey,
+		_, err = indexer.CreateIndex(context.RequestId(), node.Name(), equalKey,
 			node.Expressions(), node.Where(), node.With())
 		if err != nil {
 			context.Error(err)

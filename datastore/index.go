@@ -28,20 +28,20 @@ const (
 )
 
 type Indexer interface {
-	KeyspaceId() string                                                            // Id of the keyspace to which this indexer belongs
-	Name() IndexType                                                               // Unique within a Keyspace.
-	IndexIds() ([]string, errors.Error)                                            // Ids of the indexes defined on this keyspace
-	IndexNames() ([]string, errors.Error)                                          // Names of the indexes defined on this keyspace
-	IndexById(id string) (Index, errors.Error)                                     // Find an index on this keyspace using the index's id
-	IndexByName(name string) (Index, errors.Error)                                 // Find an index on this keyspace using the index's name
-	PrimaryIndexes() ([]PrimaryIndex, errors.Error)                                // Returns the server-recommended primary index
-	Indexes() ([]Index, errors.Error)                                              // Returns all the indexes defined on this keyspace
-	CreatePrimaryIndex(name string, with value.Value) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
-	CreateIndex(name string, equalKey, rangeKey expression.Expressions,            // Create a secondary index on this keyspace
+	KeyspaceId() string                                                                       // Id of the keyspace to which this indexer belongs
+	Name() IndexType                                                                          // Unique within a Keyspace.
+	IndexIds() ([]string, errors.Error)                                                       // Ids of the indexes defined on this keyspace
+	IndexNames() ([]string, errors.Error)                                                     // Names of the indexes defined on this keyspace
+	IndexById(id string) (Index, errors.Error)                                                // Find an index on this keyspace using the index's id
+	IndexByName(name string) (Index, errors.Error)                                            // Find an index on this keyspace using the index's name
+	PrimaryIndexes() ([]PrimaryIndex, errors.Error)                                           // Returns the server-recommended primary index
+	Indexes() ([]Index, errors.Error)                                                         // Returns all the indexes defined on this keyspace
+	CreatePrimaryIndex(requestId, name string, with value.Value) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
+	CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,            // Create a secondary index on this keyspace
 		where expression.Expression, with value.Value) (Index, errors.Error)
-	BuildIndexes(name ...string) errors.Error // Build indexes that were deferred at creation
-	Refresh() errors.Error                    // Refresh list of indexes from metadata
-	SetLogLevel(level logging.Level)          // Set log level for in-process logging
+	BuildIndexes(requestId string, name ...string) errors.Error // Build indexes that were deferred at creation
+	Refresh() errors.Error                                      // Refresh list of indexes from metadata
+	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
 }
 
 type IndexState string
@@ -74,19 +74,19 @@ type Indexes []Index
 Index is the base type for indexes, which may be distributed.
 */
 type Index interface {
-	KeyspaceId() string                                      // Id of the keyspace to which this index belongs
-	Id() string                                              // Id of this index
-	Name() string                                            // Name of this index
-	Type() IndexType                                         // Type of this index
-	SeekKey() expression.Expressions                         // Equality keys
-	RangeKey() expression.Expressions                        // Range keys
-	Condition() expression.Expression                        // Condition, if any
-	IsPrimary() bool                                         // Is this a primary index
-	State() (state IndexState, msg string, err errors.Error) // Obtain state of this index
-	Statistics(span *Span) (Statistics, errors.Error)        // Obtain statistics for this index
-	Drop() errors.Error                                      // Drop / delete this index
-	Scan(span *Span, distinct bool, limit int64, cons ScanConsistency, vector timestamp.Vector,
-		conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
+	KeyspaceId() string                                                 // Id of the keyspace to which this index belongs
+	Id() string                                                         // Id of this index
+	Name() string                                                       // Name of this index
+	Type() IndexType                                                    // Type of this index
+	SeekKey() expression.Expressions                                    // Equality keys
+	RangeKey() expression.Expressions                                   // Range keys
+	Condition() expression.Expression                                   // Condition, if any
+	IsPrimary() bool                                                    // Is this a primary index
+	State() (state IndexState, msg string, err errors.Error)            // Obtain state of this index
+	Statistics(requestId string, span *Span) (Statistics, errors.Error) // Obtain statistics for this index
+	Drop(requestId string) errors.Error                                 // Drop / delete this index
+	Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency,
+		vector timestamp.Vector, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
 /*
@@ -94,13 +94,13 @@ PrimaryIndex represents primary key indexes.
 */
 type PrimaryIndex interface {
 	Index
-	ScanEntries(limit int64, cons ScanConsistency, vector timestamp.Vector,
-		conn *IndexConnection) // Perform a scan of all the entries in this index
+	ScanEntries(requestId string, limit int64, cons ScanConsistency,
+		vector timestamp.Vector, conn *IndexConnection) // Perform a scan of all the entries in this index
 }
 
 type SizedIndex interface {
 	Index
-	SizeFromStatistics(int64, errors.Error)
+	SizeFromStatistics(requestId string) (int64, errors.Error)
 }
 
 type Range struct {

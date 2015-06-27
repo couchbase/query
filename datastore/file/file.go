@@ -429,7 +429,7 @@ func newKeyspace(p *namespace, dir string) (b *keyspace, e errors.Error) {
 	}
 
 	b.fi = newFileIndexer(b)
-	b.fi.CreatePrimaryIndex("#primary", nil)
+	b.fi.CreatePrimaryIndex("", "#primary", nil)
 
 	return
 }
@@ -492,7 +492,7 @@ func (fi *fileIndexer) Indexes() ([]datastore.Index, errors.Error) {
 	return []datastore.Index{fi.primary}, nil
 }
 
-func (fi *fileIndexer) CreatePrimaryIndex(name string, with value.Value) (
+func (fi *fileIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (
 	datastore.PrimaryIndex, errors.Error) {
 	if fi.primary == nil {
 		pi := new(primaryIndex)
@@ -505,12 +505,12 @@ func (fi *fileIndexer) CreatePrimaryIndex(name string, with value.Value) (
 	return fi.primary, nil
 }
 
-func (b *fileIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+func (b *fileIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewFileNotSupported(nil, "CREATE INDEX is not supported for file-based datastore.")
 }
 
-func (b *fileIndexer) BuildIndexes(names ...string) errors.Error {
+func (b *fileIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
 	return errors.NewFileNotSupported(nil, "BUILD INDEXES is not supported for file-based datastore.")
 }
 
@@ -565,15 +565,16 @@ func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err err
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *primaryIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *primaryIndex) Drop() errors.Error {
+func (pi *primaryIndex) Drop(requestId string) errors.Error {
 	return errors.NewFilePrimaryIdxNoDropError(nil, pi.Name())
 }
 
-func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -643,7 +644,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

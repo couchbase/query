@@ -41,6 +41,7 @@ type Output interface {
 }
 
 type Context struct {
+	requestId      string
 	datastore      datastore.Datastore
 	systemstore    datastore.Datastore
 	namespace      string
@@ -57,11 +58,12 @@ type Context struct {
 	subresults     *subqueryMap
 }
 
-func NewContext(datastore, systemstore datastore.Datastore, namespace string,
-	readonly bool, maxParallelism int, namedArgs map[string]value.Value,
+func NewContext(requestId string, datastore, systemstore datastore.Datastore,
+	namespace string, readonly bool, maxParallelism int, namedArgs map[string]value.Value,
 	positionalArgs value.Values, credentials datastore.Credentials,
 	consistency datastore.ScanConsistency, vector timestamp.Vector, output Output) *Context {
 	rv := &Context{
+		requestId:      requestId,
 		datastore:      datastore,
 		systemstore:    systemstore,
 		namespace:      namespace,
@@ -83,6 +85,10 @@ func NewContext(datastore, systemstore datastore.Datastore, namespace string,
 	}
 
 	return rv
+}
+
+func (this *Context) RequestId() string {
+	return this.requestId
 }
 
 func (this *Context) Datastore() datastore.Datastore {

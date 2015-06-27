@@ -165,7 +165,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		return
 	}
 
-	this.plan.Index().Scan(dspan, this.plan.Distinct(), this.plan.Limit(),
+	this.plan.Index().Scan(context.RequestId(), dspan, this.plan.Distinct(), this.plan.Limit(),
 		context.ScanConsistency(), context.ScanVector(), conn)
 }
 

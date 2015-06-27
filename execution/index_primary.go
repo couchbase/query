@@ -55,7 +55,7 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		_, err = indexer.CreatePrimaryIndex(node.Name(), node.With())
+		_, err = indexer.CreatePrimaryIndex(context.RequestId(), node.Name(), node.With())
 		if err != nil {
 			context.Error(err)
 		}

@@ -119,7 +119,7 @@ func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
 	b.name = KEYSPACE_NAME_DATASTORES
 
 	b.si = newSystemIndexer(b)
-	b.si.CreatePrimaryIndex("#primary", nil)
+	b.si.CreatePrimaryIndex("", "#primary", nil)
 
 	return b, nil
 }
@@ -182,7 +182,8 @@ func (si *systemIndexer) Indexes() ([]datastore.Index, errors.Error) {
 	return []datastore.Index{si.primary}, nil
 }
 
-func (si *systemIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
+func (si *systemIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (
+	datastore.PrimaryIndex, errors.Error) {
 	if si.primary == nil {
 		pi := new(storeIndex)
 		si.primary = pi
@@ -194,12 +195,12 @@ func (si *systemIndexer) CreatePrimaryIndex(name string, with value.Value) (data
 	return si.primary, nil
 }
 
-func (mi *systemIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+func (mi *systemIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewSystemNotSupportedError(nil, "CREATE INDEX is not supported for system datastore.")
 }
 
-func (mi *systemIndexer) BuildIndexes(names ...string) errors.Error {
+func (mi *systemIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
 	return errors.NewSystemNotSupportedError(nil, "BUILD INDEXES is not supported for system datastore.")
 }
 
@@ -252,15 +253,16 @@ func (pi *storeIndex) State() (state datastore.IndexState, msg string, err error
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *storeIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *storeIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *storeIndex) Drop() errors.Error {
+func (pi *storeIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, pi.Name())
 }
 
-func (pi *storeIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *storeIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -281,7 +283,7 @@ func (pi *storeIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *storeIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *storeIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

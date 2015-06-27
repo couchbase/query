@@ -92,7 +92,8 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
-	this.plan.Index().ScanEntries(math.MaxInt64, context.ScanConsistency(), context.ScanVector(), conn)
+	this.plan.Index().ScanEntries(context.RequestId(), math.MaxInt64,
+		context.ScanConsistency(), context.ScanVector(), conn)
 }
 
 func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {

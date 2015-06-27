@@ -193,7 +193,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	maxParallelism := util.MinInt(this.maxParallelism, request.MaxParallelism())
 
-	context := execution.NewContext(this.datastore, this.systemstore, namespace,
+	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
 		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
 

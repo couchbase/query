@@ -48,7 +48,7 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Actually drop index
-		err := this.plan.Index().Drop()
+		err := this.plan.Index().Drop(context.RequestId())
 		if err != nil {
 			context.Error(err)
 		}

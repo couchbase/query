@@ -283,7 +283,7 @@ func (mi *mockIndexer) Indexes() ([]datastore.Index, errors.Error) {
 	return []datastore.Index{mi.primary}, nil
 }
 
-func (mi *mockIndexer) CreatePrimaryIndex(name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
+func (mi *mockIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (datastore.PrimaryIndex, errors.Error) {
 	if mi.primary == nil {
 		pi := new(primaryIndex)
 		mi.primary = pi
@@ -295,12 +295,12 @@ func (mi *mockIndexer) CreatePrimaryIndex(name string, with value.Value) (datast
 	return mi.primary, nil
 }
 
-func (mi *mockIndexer) CreateIndex(name string, equalKey, rangeKey expression.Expressions,
+func (mi *mockIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewOtherNotSupportedError(nil, "CREATE INDEX is not supported for mock datastore.")
 }
 
-func (mi *mockIndexer) BuildIndexes(names ...string) errors.Error {
+func (mi *mockIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
 	return errors.NewOtherNotSupportedError(nil, "BUILD INDEXES is not supported for mock datastore.")
 }
 
@@ -348,7 +348,7 @@ func NewDatastore(path string) (datastore.Datastore, errors.Error) {
 			b := &keyspace{namespace: p, name: "b" + strconv.Itoa(j), nitems: nitems}
 
 			b.mi = newMockIndexer(b)
-			b.mi.CreatePrimaryIndex("#primary", nil)
+			b.mi.CreatePrimaryIndex("", "#primary", nil)
 			p.keyspaces[b.name] = b
 			p.keyspaceNames = append(p.keyspaceNames, b.name)
 		}
@@ -408,15 +408,16 @@ func (pi *primaryIndex) State() (state datastore.IndexState, msg string, err err
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *primaryIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *primaryIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *primaryIndex) Drop() errors.Error {
+func (pi *primaryIndex) Drop(requestId string) errors.Error {
 	return errors.NewOtherIdxNoDrop(nil, "This primary index cannot be dropped for Mock datastore.")
 }
 
-func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -474,7 +475,7 @@ func (pi *primaryIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *primaryIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

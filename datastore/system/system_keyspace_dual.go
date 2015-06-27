@@ -153,15 +153,16 @@ func (pi *dualIndex) State() (state datastore.IndexState, msg string, err errors
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *dualIndex) Statistics(span *datastore.Span) (datastore.Statistics, errors.Error) {
+func (pi *dualIndex) Statistics(requestId string, span *datastore.Span) (
+	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *dualIndex) Drop() errors.Error {
+func (pi *dualIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "For system:dual")
 }
 
-func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64,
+func (pi *dualIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
@@ -182,7 +183,7 @@ func (pi *dualIndex) Scan(span *datastore.Span, distinct bool, limit int64,
 	}
 }
 
-func (pi *dualIndex) ScanEntries(limit int64, cons datastore.ScanConsistency,
+func (pi *dualIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
