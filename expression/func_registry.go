@@ -112,13 +112,16 @@ var _FUNCTIONS = map[string]Function{
 	"lower":           &Lower{},
 	"ltrim":           &LTrim{},
 	"position":        &Position{},
+	"pos":             &Position{},
 	"regex_contains":  &RegexpContains{},
 	"regex_like":      &RegexpLike{},
 	"regex_position":  &RegexpPosition{},
+	"regex_pos":       &RegexpPosition{},
 	"regex_replace":   &RegexpReplace{},
 	"regexp_contains": &RegexpContains{},
 	"regexp_like":     &RegexpLike{},
 	"regexp_position": &RegexpPosition{},
+	"regexp_pos":      &RegexpPosition{},
 	"regexp_replace":  &RegexpReplace{},
 	"repeat":          &Repeat{},
 	"replace":         &Replace{},
@@ -172,6 +175,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_max":      &ArrayMax{},
 	"array_min":      &ArrayMin{},
 	"array_position": &ArrayPosition{},
+	"array_pos":      &ArrayPosition{},
 	"array_prepend":  &ArrayPrepend{},
 	"array_put":      &ArrayPut{},
 	"array_range":    &ArrayRange{},
@@ -273,4 +277,8 @@ var _FUNCTIONS = map[string]Function{
 	"toobject":   &ToObject{},
 	"tostr":      &ToString{},
 	"tostring":   &ToString{},
+
+	// Unnest
+	"unnest_position": &UnnestPosition{},
+	"unnest_pos":      &UnnestPosition{},
 }

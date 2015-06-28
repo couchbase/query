@@ -97,3 +97,8 @@ func NewUpdateMissingClone() Error {
 	return &err{level: EXCEPTION, ICode: 5120, IKey: "execution.update_missing_clone",
 		InternalMsg: "Missing UPDATE clone.", InternalCaller: CallerN(1)}
 }
+
+func NewUnnestInvalidPosition(pos interface{}) Error {
+	return &err{level: EXCEPTION, ICode: 5180, IKey: "execution.unnest_invalid_position",
+		InternalMsg: fmt.Sprintf("Invalid UNNEST position of type %T.", pos), InternalCaller: CallerN(1)}
+}

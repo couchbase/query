@@ -73,7 +73,9 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 			av = item
 		}
 
-		av.SetField(this.plan.Alias(), value.NewValue(act))
+		actv := value.NewAnnotatedValue(act)
+		actv.SetAttachment("unnest_position", i)
+		av.SetField(this.plan.Alias(), actv)
 
 		if !this.sendItem(av) {
 			return false
