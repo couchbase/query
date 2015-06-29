@@ -34,6 +34,8 @@ func newSargOr(pred *expression.Or) *sargOr {
 
 			if len(cspans) > 0 {
 				spans = append(spans, cspans...)
+			} else {
+				return _FULL_SPANS, nil
 			}
 		}
 
