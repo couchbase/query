@@ -20,6 +20,8 @@ const (
 	NO_HOST_IN_URL       = 103
 	UNKNOWN_PORT_TCP     = 104
 	NO_ROUTE_TO_HOST     = 105
+	UNREACHABLE_NETWORK  = 106
+	OPERATION_TIMEOUT    = 120
 )
 
 func NewShellErrorCannotConnect(msg string) Error {
@@ -44,4 +46,12 @@ func NewShellErrorUnknownPorttcp(msg string) Error {
 
 func NewShellErrorNoRouteToHost(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_ROUTE_TO_HOST, IKey: "shell.no.route.to.host", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorOperationTimeout(msg string) Error {
+        return &err{level: EXCEPTION, ICode: OPERATION_TIMEOUT, IKey: "shell.operation.timeout", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorUnreachableNetwork(msg string) Error {
+        return &err{level: EXCEPTION, ICode: UNREACHABLE_NETWORK, IKey: "shell.unreachable.network", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
