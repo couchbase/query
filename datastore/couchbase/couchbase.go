@@ -664,10 +664,10 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 			"id":    k,
 			"cas":   v.Cas,
 			"type":  meta_type,
-			"flags": float64(meta_flags),
+			"flags": uint32(meta_flags),
 		})
 
-		logging.Debugf("CAS Value for key %v is %v", k, uint64(v.Cas))
+		logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
 
 		doc.Value = Value
 		rv[i] = doc
@@ -702,6 +702,30 @@ func opToString(op int) string {
 
 func isNotFoundError(err error) bool {
 	return cb.IsKeyNoEntError(err)
+}
+
+func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Recovered in f", r)
+		}
+	}()
+
+	if _, ok := meta["cas"]; ok {
+		cas = meta["cas"].(uint64)
+	} else {
+		return 0, 0, fmt.Errorf("Cas value not found for key %v", key)
+	}
+
+	if _, ok := meta["flags"]; ok {
+		flags = meta["flags"].(uint32)
+	} else {
+		return 0, 0, fmt.Errorf("Flags value not found for key %v", key)
+	}
+
+	return cas, flags, nil
+
 }
 
 func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
@@ -739,32 +763,25 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			// to update the key
 			var meta map[string]interface{}
 			var cas uint64
+			var flags uint32
 
 			an := kv.Value.(value.AnnotatedValue)
 			meta = an.GetAttachment("meta").(map[string]interface{})
 
-			switch meta["cas"].(type) {
-			case uint64:
-				cas = meta["cas"].(uint64)
-			default:
-				logging.Errorf("Wrong type for CAS value. key %v meta %v", key, meta)
-				err = fmt.Errorf("Wrong type of CAS value for key %v", key)
-				goto done
-
-			}
-			logging.Debugf("CAS Value (Update) for key %v is %v", key, uint64(cas))
-			if cas != 0 {
-				err = b.cbbucket.Cas(key, 0, uint64(cas), val)
+			cas, flags, err = getMeta(key, meta)
+			if err != nil {
+				// Don't perform the update if the meta values are not found
+				logging.Errorf("Failed to get meta values for key %v, error %v", key, err)
 			} else {
-				logging.Warnf("Warning: Cas value not found for key %v", key)
-				err = b.cbbucket.Set(key, 0, val)
+
+				logging.Debugf("CAS Value (Update) for key %v is %v flags %v value %v", key, uint64(cas), flags, val)
+				err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
 			}
 
 		case UPSERT:
 			err = b.cbbucket.Set(key, 0, val)
 		}
 
-	done:
 		if err != nil {
 			logging.Errorf("Failed to perform %s on key %s for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
 		} else {
