@@ -230,6 +230,7 @@ val              value.Value
 %token VALUE
 %token VALUED
 %token VALUES
+%token VIA
 %token VIEW
 %token WHEN
 %token WHERE

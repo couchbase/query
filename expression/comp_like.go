@@ -144,7 +144,7 @@ boundaries.
 */
 func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 	s = regexp.QuoteMeta(s)
-	repl := regexp.MustCompile(`\\|\_|\%|_|%`)
+	repl := regexp.MustCompile(`\\_|\\%|_|%`)
 	s = repl.ReplaceAllStringFunc(s, replacer)
 
 	part, err = regexp.Compile(s)
@@ -174,15 +174,13 @@ All these characters need to be replaced correctly.
 */
 func replacer(s string) string {
 	switch s {
-	case `\\`:
-		return "\\"
 	case `\_`:
 		return "_"
 	case `\%`:
 		return "%"
-	case "_":
+	case `_`:
 		return "(.)"
-	case "%":
+	case `%`:
 		return "(.*)"
 	default:
 		return s
