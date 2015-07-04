@@ -49,9 +49,9 @@ func NewShellErrorNoRouteToHost(msg string) Error {
 }
 
 func NewShellErrorOperationTimeout(msg string) Error {
-        return &err{level: EXCEPTION, ICode: OPERATION_TIMEOUT, IKey: "shell.operation.timeout", InternalMsg: msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: OPERATION_TIMEOUT, IKey: "shell.operation.timeout", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnreachableNetwork(msg string) Error {
-        return &err{level: EXCEPTION, ICode: UNREACHABLE_NETWORK, IKey: "shell.unreachable.network", InternalMsg: msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: UNREACHABLE_NETWORK, IKey: "shell.unreachable.network", InternalMsg: msg, InternalCaller: CallerN(1)}
 }

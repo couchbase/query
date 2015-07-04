@@ -44,9 +44,9 @@ func handleError(err error, tiServer string) errors.Error {
 	} else if strings.Contains(strings.ToLower(err.Error()), "no route to host") {
 		return errors.NewShellErrorNoRouteToHost("No Route to host " + tiServer)
 	} else if strings.Contains(strings.ToLower(err.Error()), "operation timed out") {
-                return errors.NewShellErrorOperationTimeout("Operation timed out. Check query service url " + tiServer)
-        } else if strings.Contains(strings.ToLower(err.Error()), "network is unreachable") {
-                return errors.NewShellErrorUnreachableNetwork("Network is unreachable " + tiServer)
+		return errors.NewShellErrorOperationTimeout("Operation timed out. Check query service url " + tiServer)
+	} else if strings.Contains(strings.ToLower(err.Error()), "network is unreachable") {
+		return errors.NewShellErrorUnreachableNetwork("Network is unreachable " + tiServer)
 	} else {
 		return errors.NewError(err, "")
 	}
@@ -101,7 +101,7 @@ func HandleInteractiveMode(tiServer, prompt string) {
 				err = execute_internal(tiServer, queryString, os.Stdout)
 				if err != nil {
 					s_err := handleError(err, tiServer)
-					fmt.Println(fgRed,"ERROR", s_err.Code(),":", s_err, reset)
+					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 				}
 			}
 			// reset state for multi-line query
