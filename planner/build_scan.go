@@ -98,7 +98,7 @@ func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred exp
 		primaryKey := expression.Expressions{
 			expression.NewField(
 				expression.NewMeta(expression.NewConstant(node.Alias())),
-				expression.NewFieldName("id")),
+				expression.NewFieldName("id", false)),
 		}
 
 		sargables, er := sargableIndexes(indexes, pred, primaryKey, nnf, formalizer)

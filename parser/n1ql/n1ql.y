@@ -1767,12 +1767,12 @@ IDENTIFIER
 |
 path DOT IDENTIFIER
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3))
+    $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
 path DOT IDENTIFIER_ICASE
 {
-    field := expression.NewField($1, expression.NewFieldName($3))
+    field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
     $$ = field
 }
@@ -1796,12 +1796,12 @@ c_expr
 /* Nested */
 expr DOT IDENTIFIER
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3))
+    $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
 expr DOT IDENTIFIER_ICASE
 {
-    field := expression.NewField($1, expression.NewFieldName($3))
+    field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
     $$ = field
 }
@@ -2071,6 +2071,14 @@ IDENTIFIER
     $$ = expression.NewIdentifier($1)
 }
 |
+/* Identifier */
+IDENTIFIER_ICASE
+{
+    ident := expression.NewIdentifier($1)
+    ident.SetCaseInsensitive(true)
+    $$ = ident
+}
+|
 /* Self */
 SELF
 {
@@ -2105,12 +2113,12 @@ c_expr
 /* Nested */
 b_expr DOT IDENTIFIER
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3))
+    $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
 b_expr DOT IDENTIFIER_ICASE
 {
-    field := expression.NewField($1, expression.NewFieldName($3))
+    field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
     $$ = field
 }

@@ -21,14 +21,15 @@ of type string that represents identifiers.
 */
 type Identifier struct {
 	ExpressionBase
-	identifier string
+	identifier      string
+	caseInsensitive bool
 }
 
 /*
 This method returns a pointer to an Identifier structure
 that has its identifier field populated by the input argument.
 */
-func NewIdentifier(identifier string) Path {
+func NewIdentifier(identifier string) *Identifier {
 	rv := &Identifier{
 		identifier: identifier,
 	}
@@ -52,11 +53,7 @@ It returns JSON value that is all-encompassing.
 func (this *Identifier) Type() value.Type { return value.JSON }
 
 /*
-Call the Field method using the item value input argument on the
-receiver. This returns a value. To evaluate an identifier, look
-into the current item, find a field whose name is the
-identifier, and return the value of that field within the current
-item.
+Evaluate this as a top-level identifier.
 */
 func (this *Identifier) Evaluate(item value.Value, context Context) (value.Value, error) {
 	rv, _ := item.Field(this.identifier)
@@ -94,7 +91,8 @@ false.
 func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Identifier:
-		return this.identifier == other.identifier
+		return (this.identifier == other.identifier) &&
+			(this.caseInsensitive == other.caseInsensitive)
 	default:
 		return false
 	}
@@ -146,4 +144,16 @@ using the receiver.
 */
 func (this *Identifier) Identifier() string {
 	return this.identifier
+}
+
+/*
+ */
+func (this *Identifier) CaseInsensitive() bool {
+	return this.caseInsensitive
+}
+
+/*
+ */
+func (this *Identifier) SetCaseInsensitive(insensitive bool) {
+	this.caseInsensitive = insensitive
 }

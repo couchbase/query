@@ -93,8 +93,8 @@ func TestConverter(t *testing.T) {
 	}
 
 	doc := expression.NewIdentifier("bucket")
-	m1 := expression.NewField(doc, expression.NewFieldName("id"))
-	m2 := expression.NewField(doc, expression.NewFieldName("type"))
+	m1 := expression.NewField(doc, expression.NewFieldName("id", false))
+	m2 := expression.NewField(doc, expression.NewFieldName("type", false))
 
 	s1 = NewJSConverter().Visit(expression.NewOr(
 		expression.NewUpper(m1), expression.NewLower(m2)))
@@ -105,8 +105,8 @@ func TestConverter(t *testing.T) {
 	}
 
 	doc = expression.NewIdentifier("bucket")
-	m1 = expression.NewField(doc, expression.NewFieldName("geo"))
-	m2 = expression.NewField(m1, expression.NewFieldName("accuracy"))
+	m1 = expression.NewField(doc, expression.NewFieldName("geo", false))
+	m2 = expression.NewField(m1, expression.NewFieldName("accuracy", false))
 
 	s1 = NewJSConverter().Visit(m2)
 	s2 = "`bucket`.`geo`.`accuracy`"
@@ -115,7 +115,7 @@ func TestConverter(t *testing.T) {
 	}
 
 	doc = expression.NewIdentifier("bucket")
-	m1 = expression.NewField(doc, expression.NewElement(expression.NewFieldName("address"), constant(0)))
+	m1 = expression.NewField(doc, expression.NewElement(expression.NewFieldName("address", false), constant(0)))
 
 	s1 = NewJSConverter().Visit(m1)
 	s2 = "`bucket`.`address`[0]"
@@ -123,7 +123,7 @@ func TestConverter(t *testing.T) {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)
 	}
 
-	s1 = NewJSConverter().Visit(expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type"))))
+	s1 = NewJSConverter().Visit(expression.NewLength(expression.NewElement(doc, expression.NewFieldName("type", false))))
 	s2 = "`bucket`[`type`].length"
 	if s1 != s2 {
 		t.Errorf(" mismatch s1 %s s2 %s", s1, s2)

@@ -148,7 +148,7 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			if jdoc.PrimaryIndex == true {
 				doc := expression.NewIdentifier(b.Name())
 				meta := expression.NewMeta(doc)
-				mdid := expression.NewField(meta, expression.NewFieldName("id"))
+				mdid := expression.NewField(meta, expression.NewFieldName("id", false))
 				exprlist = append(exprlist, mdid)
 			} else {
 				expr, err := parser.Parse(ser)
@@ -231,7 +231,7 @@ func newViewPrimaryIndex(v *viewIndexer, name string) (*primaryIndex, error) {
 	ddoc := newPrimaryDDoc(name)
 	doc := expression.NewIdentifier(v.keyspace.Name())
 	meta := expression.NewMeta(doc)
-	mdid := expression.NewField(meta, expression.NewFieldName("id"))
+	mdid := expression.NewField(meta, expression.NewFieldName("id", false))
 
 	inst := primaryIndex{
 		viewIndex{

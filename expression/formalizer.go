@@ -146,7 +146,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 
 	return NewField(
 			NewIdentifier(this.Keyspace),
-			NewFieldName(expr.Identifier())),
+			NewFieldName(expr.Identifier(), expr.CaseInsensitive())),
 		nil
 }
 

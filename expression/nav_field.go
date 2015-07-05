@@ -36,6 +36,11 @@ func NewField(first, second Expression) *Field {
 		BinaryFunctionBase: *NewBinaryFunctionBase("field", first, second),
 	}
 
+	switch second := second.(type) {
+	case *Identifier:
+		rv.caseInsensitive = second.CaseInsensitive()
+	}
+
 	rv.expr = rv
 	return rv
 }
@@ -69,17 +74,19 @@ func (this *Field) Alias() string {
 	return this.Second().Alias()
 }
 
+func (this *Field) EquivalentTo(other Expression) bool {
+	switch other := other.(type) {
+	case *Field:
+		return (this.caseInsensitive == other.caseInsensitive) &&
+			this.First().EquivalentTo(other.First()) &&
+			this.Second().EquivalentTo(other.Second())
+	default:
+		return false
+	}
+}
+
 /*
-This method evaluates the Field using the first and second value
-and returns the result value. If the second operand type is a
-missing return a missing value. If it is a string, and the
-field is case insensitive, then convert the second operand to
-lower case, range through the fields of the first and compare,
-each field with the second. When equal, return the value. If
-the field is case sensitive, use the Field method to directly
-access the field and return it. For all other types, if the
-first operand expression is missing, return missing, else return
-null.
+Perform either case-sensitive or case-insensitive field lookup.
 */
 func (this *Field) Apply(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
@@ -189,24 +196,27 @@ func (this *Field) SetCaseInsensitive(insensitive bool) {
 }
 
 /*
-FieldName represents the Field. It implements Constand and has a
-field name as string.
+FieldName represents the Field. It implements Constant and has a field
+name as string. This class overrides the Alias() method so that the
+field name is used as the alias.
 */
 type FieldName struct {
 	Constant
-	name string
+	name            string
+	caseInsensitive bool
 }
 
 /*
 The function NewFieldName returns a pointer to a FieldName that
 sets the name to the input expression.
 */
-func NewFieldName(name string) Expression {
+func NewFieldName(name string, caseInsensitive bool) Expression {
 	rv := &FieldName{
 		Constant: Constant{
 			value: value.NewValue(name),
 		},
-		name: name,
+		name:            name,
+		caseInsensitive: caseInsensitive,
 	}
 
 	rv.expr = rv
@@ -228,9 +238,23 @@ func (this *FieldName) Alias() string {
 	return this.name
 }
 
+func (this *FieldName) EquivalentTo(other Expression) bool {
+	switch other := other.(type) {
+	case *FieldName:
+		return (this.name == other.name) &&
+			(this.caseInsensitive == other.caseInsensitive)
+	default:
+		return this.ValueEquals(other)
+	}
+}
+
 /*
 Constants are not transformed, so no need to copy.
 */
 func (this *FieldName) Copy() Expression {
 	return this
+}
+
+func (this *FieldName) CaseInsensitive() bool {
+	return this.caseInsensitive
 }

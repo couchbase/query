@@ -365,6 +365,11 @@ func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	buf.WriteString("`")
 	buf.WriteString(expr.identifier)
 	buf.WriteString("`")
+
+	if expr.CaseInsensitive() {
+		buf.WriteString("i")
+	}
+
 	return buf.String(), nil
 }
 
@@ -499,6 +504,11 @@ func (this *Stringer) VisitFieldName(expr *FieldName) (interface{}, error) {
 	buf.WriteString("`")
 	buf.WriteString(expr.name)
 	buf.WriteString("`")
+
+	if expr.CaseInsensitive() {
+		buf.WriteString("i")
+	}
+
 	return buf.String(), nil
 }
 

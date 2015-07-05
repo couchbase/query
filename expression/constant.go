@@ -96,7 +96,12 @@ Indicates if this expression is equivalent to the other expression.
 False negatives are allowed.
 */
 func (this *Constant) EquivalentTo(other Expression) bool {
-	return this.ValueEquals(other)
+	switch other := other.(type) {
+	case *FieldName:
+		return !other.caseInsensitive && (this.value == other.value)
+	default:
+		return this.ValueEquals(other)
+	}
 }
 
 /*
