@@ -13,7 +13,6 @@ import "github.com/couchbase/query/value"
 import qp "github.com/couchbase/indexing/secondary/queryport"
 import c "github.com/couchbase/indexing/secondary/common"
 import "github.com/couchbase/indexing/secondary/protobuf"
-import "code.google.com/p/goprotobuf/proto"
 
 type testingContext struct {
 	t *testing.T
