@@ -199,6 +199,7 @@ const (
 	REQUESTS_1000MS  = "requests_1000ms"
 	REQUESTS_5000MS  = "requests_5000ms"
 
+	DURATION_0MS    = 0 * time.Millisecond
 	DURATION_250MS  = 250 * time.Millisecond
 	DURATION_500MS  = 500 * time.Millisecond
 	DURATION_1000MS = 1000 * time.Millisecond
@@ -209,6 +210,15 @@ var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_
 	QUEUED_REQUESTS, INVALID_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
 	REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS, REQUESTS_5000MS,
 	WARNINGS, MUTATIONS}
+
+// Map each duration to its metrics
+var slowMetricsMap = map[time.Duration][]string{
+	DURATION_5000MS: {REQUESTS_5000MS, REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
+	DURATION_1000MS: {REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
+	DURATION_500MS:  {REQUESTS_500MS, REQUESTS_250MS},
+	DURATION_250MS:  {REQUESTS_250MS},
+	DURATION_0MS:    {},
+}
 
 // Use the give AccountingStore to create counters for all the metrics we are interested in:
 func RegisterMetrics(acctstore AccountingStore) {
@@ -232,16 +242,23 @@ func RecordMetrics(acctstore AccountingStore,
 	ms.Counter(ERRORS).Inc(int64(error_count))
 	ms.Counter(WARNINGS).Inc(int64(warn_count))
 
+	// Determine slow metrics based on request duration
+	slowMetrics := slowMetricsMap[DURATION_0MS]
+
 	switch {
 	case request_time >= DURATION_5000MS:
-		ms.Counter(REQUESTS_5000MS).Inc(1)
+		slowMetrics = slowMetricsMap[DURATION_5000MS]
 	case request_time >= DURATION_1000MS:
-		ms.Counter(REQUESTS_1000MS).Inc(1)
+		slowMetrics = slowMetricsMap[DURATION_1000MS]
 	case request_time >= DURATION_500MS:
-		ms.Counter(REQUESTS_500MS).Inc(1)
+		slowMetrics = slowMetricsMap[DURATION_500MS]
 	case request_time >= DURATION_250MS:
-		ms.Counter(REQUESTS_250MS).Inc(1)
+		slowMetrics = slowMetricsMap[DURATION_250MS]
 	default:
+	}
+
+	for _, durationMetric := range slowMetrics {
+		ms.Counter(durationMetric).Inc(1)
 	}
 
 	// Do not record the type of request if errors
