@@ -23,14 +23,17 @@ var _BUF_POOL = &sync.Pool{
 }
 
 func allocateBuf() *bytes.Buffer {
-	return _BUF_POOL.Get().(*bytes.Buffer)
+	//TODO: FIXME: return _BUF_POOL.Get().(*bytes.Buffer)
+	return bytes.NewBuffer(make([]byte, 0, _BUF_SIZE))
 }
 
 func releaseBuf(b *bytes.Buffer) {
-	if b == nil {
-		return
-	}
+	/*
+		if b == nil {
+			return
+		}
 
-	b.Reset()
-	_BUF_POOL.Put(b)
+		b.Reset()
+		_BUF_POOL.Put(b)
+	*/
 }
