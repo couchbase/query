@@ -55,13 +55,17 @@ func (this *Fetch) afterItems(context *Context) {
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
 	if len(this.batch) == 0 {
 		return true
 	}
 
 	// Build list of keys
-	keys := make([]string, len(this.batch))
-	for i, av := range this.batch {
+	keys := allocateStringBatch()
+	defer releaseStringBatch(keys)
+
+	for _, av := range this.batch {
 		meta := av.GetAttachment("meta")
 
 		switch meta := meta.(type) {
@@ -70,7 +74,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			act := value.NewValue(key).Actual()
 			switch act := act.(type) {
 			case string:
-				keys[i] = act
+				keys = append(keys, act)
 			default:
 				context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
@@ -133,11 +137,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		item.SetField(this.plan.Term().Alias(), fv)
 
 		if !this.sendItem(item) {
-			this.batch = nil
 			return false
 		}
 	}
 
-	this.batch = this.batch[:0]
 	return fetchOk
 }

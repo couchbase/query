@@ -222,25 +222,44 @@ func (this *base) notifyStop() {
 }
 
 type batcher interface {
-	allocateBatch(n int)
+	allocateBatch()
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
 	flushBatch(context *Context) bool
+	releaseBatch()
 }
 
-func (this *base) allocateBatch(n int) {
-	this.batch = make([]value.AnnotatedValue, 0, n)
+var _BATCH_SIZE = 64
+
+var _BATCH_POOL = &sync.Pool{
+	New: func() interface{} {
+		return make([]value.AnnotatedValue, 0, _BATCH_SIZE)
+	},
+}
+
+func (this *base) allocateBatch() {
+	pooled := _BATCH_POOL.Get()
+	this.batch = pooled.([]value.AnnotatedValue)
+}
+
+func (this *base) releaseBatch() {
+	if cap(this.batch) != _BATCH_SIZE {
+		return
+	}
+
+	_BATCH_POOL.Put(this.batch[0:0])
+	this.batch = nil
 }
 
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
 	if this.batch == nil {
-		this.allocateBatch(16)
+		this.allocateBatch()
 	} else if len(this.batch) == cap(this.batch) {
 		if !b.flushBatch(context) {
 			return false
 		}
 
 		if len(this.batch) == cap(this.batch) {
-			this.allocateBatch(16)
+			this.allocateBatch()
 		}
 	}
 

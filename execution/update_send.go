@@ -86,6 +86,8 @@ func (this *SendUpdate) afterItems(context *Context) {
 }
 
 func (this *SendUpdate) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
 	if len(this.batch) == 0 {
 		return true
 	}
@@ -145,12 +147,10 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	for _, item := range this.batch {
 		if !this.sendItem(item) {
-			this.batch = nil
 			return false
 		}
 	}
 
-	this.batch = this.batch[:0]
 	return true
 }
 

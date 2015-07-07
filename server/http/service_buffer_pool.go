@@ -58,6 +58,7 @@ func (bp *syncPoolBufPool) GetBuffer() (b *bytes.Buffer) {
 }
 
 func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
+	b.Reset()
 	bp.pool.Put(b)
 }
 
@@ -95,6 +96,8 @@ func (bp *chanBufferPool) GetBuffer() (b *bytes.Buffer) {
 }
 
 func (bp *chanBufferPool) PutBuffer(b *bytes.Buffer) {
+	b.Reset()
+
 	select {
 	case bp.pool <- b: // put buffer back in pool
 	default:

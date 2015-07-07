@@ -85,6 +85,8 @@ func (this *SendInsert) afterItems(context *Context) {
 }
 
 func (this *SendInsert) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
 	if len(this.batch) == 0 {
 		return true
 	}
@@ -166,12 +168,10 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		av.SetAttachment("meta", map[string]interface{}{"id": k})
 		av.SetField(this.plan.Alias(), dpairs[i].Value)
 		if !this.sendItem(av) {
-			this.batch = nil
 			return false
 		}
 	}
 
-	this.batch = this.batch[:0]
 	return true
 }
 

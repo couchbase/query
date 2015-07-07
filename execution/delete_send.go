@@ -84,13 +84,16 @@ func (this *SendDelete) afterItems(context *Context) {
 }
 
 func (this *SendDelete) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
 	if len(this.batch) == 0 {
 		return true
 	}
 
-	keys := make([]string, len(this.batch))
+	keys := allocateStringBatch()
+	defer releaseStringBatch(keys)
 
-	for i, item := range this.batch {
+	for _, item := range this.batch {
 		dv, ok := item.Field(this.plan.Alias())
 		if !ok {
 			context.Error(errors.NewDeleteAliasMissingError(this.plan.Alias()))
@@ -107,7 +110,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		if !ok {
 			return false
 		}
-		keys[i] = key
+
+		keys = append(keys, key)
 	}
 
 	timer := time.Now()
@@ -125,12 +129,10 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	for _, item := range this.batch {
 		if !this.sendItem(item) {
-			this.batch = nil
 			return false
 		}
 	}
 
-	this.batch = this.batch[:0]
 	return true
 }
 

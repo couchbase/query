@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"sync"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -21,10 +23,20 @@ type Collect struct {
 
 const _COLLECT_CAP = 64
 
+var _COLLECT_POOL = &sync.Pool{
+	New: func() interface{} {
+		return make([]interface{}, 0, _COLLECT_CAP)
+	},
+}
+
+func allocateCollectPooled() []interface{} {
+	return _COLLECT_POOL.Get().([]interface{})
+}
+
 func NewCollect() *Collect {
 	rv := &Collect{
 		base:   newBase(),
-		values: make([]interface{}, 0, _COLLECT_CAP),
+		values: allocateCollectPooled(),
 	}
 
 	rv.output = rv
@@ -38,11 +50,12 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) Copy() Operator {
 	return &Collect{
 		base:   this.base.copy(),
-		values: make([]interface{}, 0, _COLLECT_CAP),
+		values: allocateCollectPooled(),
 	}
 }
 
 func (this *Collect) RunOnce(context *Context, parent value.Value) {
+	defer this.releaseValues()
 	this.runConsumer(this, context, parent)
 }
 
@@ -50,6 +63,7 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 	if len(this.values) == cap(this.values) {
 		values := make([]interface{}, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
+		this.releaseValues()
 		this.values = values
 	}
 
@@ -59,4 +73,13 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 
 func (this *Collect) Values() value.Value {
 	return value.NewValue(this.values)
+}
+
+func (this *Collect) releaseValues() {
+	if cap(this.values) != _COLLECT_CAP {
+		return
+	}
+
+	_COLLECT_POOL.Put(this.values[0:0])
+	this.values = nil
 }

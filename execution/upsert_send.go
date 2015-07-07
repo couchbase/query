@@ -55,6 +55,8 @@ func (this *SendUpsert) afterItems(context *Context) {
 }
 
 func (this *SendUpsert) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
 	if len(this.batch) == 0 {
 		return true
 	}
@@ -115,7 +117,6 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	}
 
 	dpairs = dpairs[0:i]
-	this.batch = nil
 
 	timer := time.Now()
 

@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -28,11 +29,30 @@ type Order struct {
 
 const _ORDER_CAP = 1024
 
+var _ORDER_POOL = &sync.Pool{
+	New: func() interface{} {
+		return make(value.AnnotatedValues, 0, _ORDER_CAP)
+	},
+}
+
+func allocateOrderValues() value.AnnotatedValues {
+	return _ORDER_POOL.Get().(value.AnnotatedValues)
+}
+
+func (this *Order) releaseValues() {
+	if cap(this.values) != _ORDER_CAP {
+		return
+	}
+
+	_ORDER_POOL.Put(this.values[0:0])
+	this.values = nil
+}
+
 func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{
 		base:   newBase(),
 		plan:   plan,
-		values: make(value.AnnotatedValues, 0, _ORDER_CAP),
+		values: allocateOrderValues(),
 	}
 
 	rv.output = rv
@@ -47,11 +67,12 @@ func (this *Order) Copy() Operator {
 	return &Order{
 		base:   this.base.copy(),
 		plan:   this.plan,
-		values: make(value.AnnotatedValues, 0, _ORDER_CAP),
+		values: allocateOrderValues(),
 	}
 }
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
+	defer this.releaseValues()
 	this.runConsumer(this, context, parent)
 }
 
@@ -59,6 +80,7 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 	if len(this.values) == cap(this.values) {
 		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
+		this.releaseValues()
 		this.values = values
 	}
 
@@ -67,8 +89,8 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Order) afterItems(context *Context) {
+	defer this.releaseValues()
 	defer func() {
-		this.values = nil
 		this.context = nil
 		this.terms = nil
 	}()
@@ -80,9 +102,7 @@ func (this *Order) afterItems(context *Context) {
 	}
 
 	timer := time.Now()
-
 	sort.Sort(this)
-
 	context.AddPhaseTime("sort", time.Since(timer))
 
 	for _, av := range this.values {

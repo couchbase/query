@@ -10,7 +10,6 @@
 package value
 
 import (
-	"bytes"
 	"encoding/json"
 )
 
@@ -505,7 +504,9 @@ func marshalArray(slice []interface{}) (b []byte, err error) {
 		return _NULL_BYTES, nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, 1<<8))
+	buf := allocateBuf()
+	defer releaseBuf(buf)
+
 	buf.WriteString("[")
 
 	for i, e := range slice {

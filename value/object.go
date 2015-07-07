@@ -10,7 +10,6 @@
 package value
 
 import (
-	"bytes"
 	"encoding/json"
 	"sort"
 )
@@ -25,7 +24,9 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		return _NULL_BYTES, nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, 1<<8))
+	buf := allocateBuf()
+	defer releaseBuf(buf)
+
 	buf.WriteString("{")
 
 	names := sortedNames(this)
