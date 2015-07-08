@@ -56,6 +56,7 @@ type Context struct {
 	output         Output
 	subplans       *subqueryMap
 	subresults     *subqueryMap
+	mutex          sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
@@ -76,11 +77,11 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		consistency:    consistency,
 		vector:         vector,
 		output:         output,
-		subplans:       newSubqueryMap(),
-		subresults:     newSubqueryMap(),
+		subplans:       nil,
+		subresults:     nil,
 	}
 
-	if rv.maxParallelism <= 0 {
+	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
 		rv.maxParallelism = runtime.NumCPU()
 	}
 
@@ -184,12 +185,14 @@ func (this *Context) Warning(wrn errors.Error) {
 }
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
-	subresult, ok := this.subresults.get(query)
+	subresults := this.getSubresults()
+	subresult, ok := subresults.get(query)
 	if ok {
 		return subresult.(value.Value), nil
 	}
 
-	subplan, planFound := this.subplans.get(query)
+	subplans := this.getSubplans()
+	subplan, planFound := subplans.get(query)
 
 	if !planFound {
 		var err error
@@ -199,10 +202,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		}
 
 		// Cache plan
-		this.subplans.set(query, subplan)
+		subplans.set(query, subplan)
 	}
 
-	pipeline, err := Build(subplan.(plan.Operator))
+	pipeline, err := Build(subplan.(plan.Operator), this)
 	if err != nil {
 		return nil, err
 	}
@@ -222,10 +225,42 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	// Cache results
 	if !planFound && !query.Subresult().IsCorrelated() {
-		this.subresults.set(query, results)
+		subresults.set(query, results)
 	}
 
 	return results, nil
+}
+
+func (this *Context) getSubplans() *subqueryMap {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+
+	if this.subplans == nil {
+		this.mutex.Lock()
+		defer this.mutex.Unlock()
+
+		if this.subplans == nil {
+			this.subplans = newSubqueryMap()
+		}
+	}
+
+	return this.subplans
+}
+
+func (this *Context) getSubresults() *subqueryMap {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+
+	if this.subresults == nil {
+		this.mutex.Lock()
+		defer this.mutex.Unlock()
+
+		if this.subresults == nil {
+			this.subresults = newSubqueryMap()
+		}
+	}
+
+	return this.subresults
 }
 
 // Synchronized map

@@ -7,33 +7,38 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package value
+package datastore
 
 import (
-	"bytes"
 	"sync"
 )
 
-const _BUF_SIZE = 512
-
-var _BUF_POOL = &sync.Pool{
-	New: func() interface{} {
-		return bytes.NewBuffer(make([]byte, 0, _BUF_SIZE))
-	},
+type PairPool struct {
+	pool *sync.Pool
+	size int
 }
 
-func allocateBuf() *bytes.Buffer {
-	//TODO: FIXME: return _BUF_POOL.Get().(*bytes.Buffer)
-	return bytes.NewBuffer(make([]byte, 0, _BUF_SIZE))
+func NewPairPool(size int) *PairPool {
+	rv := &PairPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]Pair, 0, size)
+			},
+		},
+		size: size,
+	}
+
+	return rv
 }
 
-func releaseBuf(b *bytes.Buffer) {
-	/*
-		if b == nil {
-			return
-		}
+func (this *PairPool) Get() []Pair {
+	return this.pool.Get().([]Pair)
+}
 
-		b.Reset()
-		_BUF_POOL.Put(b)
-	*/
+func (this *PairPool) Put(s []Pair) {
+	if cap(s) != this.size {
+		return
+	}
+
+	this.pool.Put(s[0:0])
 }

@@ -11,11 +11,12 @@ package execution
 
 import (
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 // Build a query execution pipeline from a query plan.
-func Build(plan plan.Operator) (Operator, error) {
-	builder := &builder{}
+func Build(plan plan.Operator, context *Context) (Operator, error) {
+	builder := &builder{context}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
@@ -27,6 +28,7 @@ func Build(plan plan.Operator) (Operator, error) {
 }
 
 type builder struct {
+	context *Context
 }
 
 // Scan
@@ -59,30 +61,30 @@ func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	scans := make([]Operator, len(plan.Scans()))
+	scans := _SCAN_POOL.Get()
 
-	for i, p := range plan.Scans() {
+	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
 		if e != nil {
 			return nil, e
 		}
 
-		scans[i] = s.(Operator)
+		scans = append(scans, s.(Operator))
 	}
 
 	return NewIntersectScan(scans), nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
-	scans := make([]Operator, len(plan.Scans()))
+	scans := _SCAN_POOL.Get()
 
-	for i, p := range plan.Scans() {
+	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
 		if e != nil {
 			return nil, e
 		}
 
-		scans[i] = s.(Operator)
+		scans = append(scans, s.(Operator))
 	}
 
 	return NewUnionScan(scans), nil
@@ -145,14 +147,15 @@ func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 
 // Set operators
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
-	children := make([]Operator, len(plan.Children()))
-	for i, child := range plan.Children() {
+	children := _UNION_POOL.Get()
+
+	for _, child := range plan.Children() {
 		c, e := child.Accept(this)
 		if e != nil {
 			return nil, e
 		}
 
-		children[i] = c.(Operator)
+		children = append(children, c.(Operator))
 	}
 
 	return NewUnionAll(children...), nil
@@ -285,20 +288,26 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 		return nil, err
 	}
 
-	return NewParallel(plan, child.(Operator)), nil
+	maxParallelism := util.MinInt(plan.MaxParallelism(), this.context.MaxParallelism())
+
+	if maxParallelism == 1 {
+		return child, nil
+	} else {
+		return NewParallel(plan, child.(Operator)), nil
+	}
 }
 
 // Sequence
 func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	children := make([]Operator, len(plan.Children()))
+	children := _SEQUENCE_POOL.Get()
 
-	for i, pchild := range plan.Children() {
+	for _, pchild := range plan.Children() {
 		child, err := pchild.Accept(this)
 		if err != nil {
 			return nil, err
 		}
 
-		children[i] = child.(Operator)
+		children = append(children, child.(Operator))
 	}
 
 	return NewSequence(children...), nil

@@ -10,7 +10,6 @@
 package execution
 
 import (
-	"sync"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -29,30 +28,13 @@ type Order struct {
 
 const _ORDER_CAP = 1024
 
-var _ORDER_POOL = &sync.Pool{
-	New: func() interface{} {
-		return make(value.AnnotatedValues, 0, _ORDER_CAP)
-	},
-}
-
-func allocateOrderValues() value.AnnotatedValues {
-	return _ORDER_POOL.Get().(value.AnnotatedValues)
-}
-
-func (this *Order) releaseValues() {
-	if cap(this.values) != _ORDER_CAP {
-		return
-	}
-
-	_ORDER_POOL.Put(this.values[0:0])
-	this.values = nil
-}
+var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
 func NewOrder(plan *plan.Order) *Order {
 	rv := &Order{
 		base:   newBase(),
 		plan:   plan,
-		values: allocateOrderValues(),
+		values: _ORDER_POOL.Get(),
 	}
 
 	rv.output = rv
@@ -67,7 +49,7 @@ func (this *Order) Copy() Operator {
 	return &Order{
 		base:   this.base.copy(),
 		plan:   this.plan,
-		values: allocateOrderValues(),
+		values: _ORDER_POOL.Get(),
 	}
 }
 
@@ -112,6 +94,11 @@ func (this *Order) afterItems(context *Context) {
 	}
 
 	context.SetSortCount(uint64(this.Len()))
+}
+
+func (this *Order) releaseValues() {
+	_ORDER_POOL.Put(this.values)
+	this.values = nil
 }
 
 func (this *Order) Len() int {

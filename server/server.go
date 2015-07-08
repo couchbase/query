@@ -29,7 +29,6 @@ import (
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -296,22 +295,31 @@ func (this *Server) serviceRequest(request Request) {
 			" and cannot accept this write statement."))
 	}
 
-	var operator execution.Operator
-	if request.State() != FATAL {
-		var err error
-		build := time.Now()
-		operator, err = execution.Build(prepared)
-		if err != nil {
-			request.Fail(errors.NewError(err, ""))
-		}
+	if request.State() == FATAL {
+		request.Failed(this)
+		return
+	}
 
-		if logging.LogLevel() >= logging.TRACE {
-			request.Output().AddPhaseTime("instantiate", time.Since(build))
-		}
+	maxParallelism := request.MaxParallelism()
+	if maxParallelism <= 0 {
+		maxParallelism = this.MaxParallelism()
+	}
+
+	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
+		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
+		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
+
+	build := time.Now()
+	operator, er := execution.Build(prepared, context)
+	if er != nil {
+		request.Fail(errors.NewError(err, ""))
+	}
+
+	if logging.LogLevel() >= logging.TRACE {
+		request.Output().AddPhaseTime("instantiate", time.Since(build))
 	}
 
 	if request.State() == FATAL {
-		// Fail the request - Write out response - and return
 		request.Failed(this)
 		return
 	}
@@ -323,12 +331,6 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	go request.Execute(this, prepared.Signature(), operator.StopChannel())
-
-	maxParallelism := util.MinInt(this.MaxParallelism(), request.MaxParallelism())
-
-	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
-		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
-		request.Credentials(), request.ScanConsistency(), request.ScanVector(), request.Output())
 
 	run := time.Now()
 	operator.RunOnce(context, nil)

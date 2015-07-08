@@ -40,3 +40,5 @@ func notifyConn(conn *datastore.IndexConnection) {
 	default:
 	}
 }
+
+var _SCAN_POOL = NewOperatorPool(16)

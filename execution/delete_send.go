@@ -90,8 +90,8 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		return true
 	}
 
-	keys := allocateStringBatch()
-	defer releaseStringBatch(keys)
+	keys := _STRING_POOL.Get()
+	defer _STRING_POOL.Put(keys)
 
 	for _, item := range this.batch {
 		dv, ok := item.Field(this.plan.Alias())

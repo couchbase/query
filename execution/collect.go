@@ -10,8 +10,7 @@
 package execution
 
 import (
-	"sync"
-
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -23,20 +22,12 @@ type Collect struct {
 
 const _COLLECT_CAP = 64
 
-var _COLLECT_POOL = &sync.Pool{
-	New: func() interface{} {
-		return make([]interface{}, 0, _COLLECT_CAP)
-	},
-}
-
-func allocateCollectPooled() []interface{} {
-	return _COLLECT_POOL.Get().([]interface{})
-}
+var _COLLECT_POOL = util.NewInterfacePool(_COLLECT_CAP)
 
 func NewCollect() *Collect {
 	rv := &Collect{
 		base:   newBase(),
-		values: allocateCollectPooled(),
+		values: _COLLECT_POOL.Get(),
 	}
 
 	rv.output = rv
@@ -50,7 +41,7 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) Copy() Operator {
 	return &Collect{
 		base:   this.base.copy(),
-		values: allocateCollectPooled(),
+		values: _COLLECT_POOL.Get(),
 	}
 }
 
@@ -76,10 +67,6 @@ func (this *Collect) Values() value.Value {
 }
 
 func (this *Collect) releaseValues() {
-	if cap(this.values) != _COLLECT_CAP {
-		return
-	}
-
-	_COLLECT_POOL.Put(this.values[0:0])
+	_COLLECT_POOL.Put(this.values)
 	this.values = nil
 }

@@ -56,10 +56,16 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
-		children := make([]Operator, n)
-		for i := n - 1; i >= 0; i-- {
-			go this.runChild(children, i, context, parent)
+		children := _PARALLEL_POOL.Get()[0:n]
+		defer _PARALLEL_POOL.Put(children)
+
+		for i := 1; i < n; i++ {
+			children[i] = this.child.Copy()
+			go this.runChild(children[i], context, parent)
 		}
+
+		children[0] = this.child
+		go this.runChild(children[0], context, parent)
 
 		for n > 0 {
 			select {
@@ -78,13 +84,12 @@ func (this *Parallel) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-// Optionally copy the child, and then run it.
-func (this *Parallel) runChild(children []Operator, i int, context *Context, parent value.Value) {
-	child := this.child.Copy()
-	children[i] = child
+func (this *Parallel) runChild(child Operator, context *Context, parent value.Value) {
 	child.SetInput(this.input)
 	child.SetOutput(this.output)
 	child.SetParent(this)
 	child.SetStop(nil)
 	child.RunOnce(context, parent)
 }
+
+var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

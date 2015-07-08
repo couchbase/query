@@ -7,29 +7,38 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execution
+package value
 
 import (
-	"github.com/couchbase/query/util"
+	"sync"
 )
 
-func notifyChildren(children ...Operator) {
-	for _, child := range children {
-		if child != nil {
-			select {
-			case child.StopChannel() <- false:
-			default:
-			}
-		}
-	}
+type AnnotatedPool struct {
+	pool *sync.Pool
+	size int
 }
 
-func copyOperator(op Operator) Operator {
-	if op == nil {
-		return nil
-	} else {
-		return op.Copy()
+func NewAnnotatedPool(size int) *AnnotatedPool {
+	rv := &AnnotatedPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make(AnnotatedValues, 0, size)
+			},
+		},
+		size: size,
 	}
+
+	return rv
 }
 
-var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
+func (this *AnnotatedPool) Get() AnnotatedValues {
+	return this.pool.Get().(AnnotatedValues)
+}
+
+func (this *AnnotatedPool) Put(s AnnotatedValues) {
+	if cap(s) != this.size {
+		return
+	}
+
+	this.pool.Put(s[0:0])
+}

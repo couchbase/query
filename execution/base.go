@@ -230,23 +230,14 @@ type batcher interface {
 
 var _BATCH_SIZE = 64
 
-var _BATCH_POOL = &sync.Pool{
-	New: func() interface{} {
-		return make([]value.AnnotatedValue, 0, _BATCH_SIZE)
-	},
-}
+var _BATCH_POOL = value.NewAnnotatedPool(_BATCH_SIZE)
 
 func (this *base) allocateBatch() {
-	pooled := _BATCH_POOL.Get()
-	this.batch = pooled.([]value.AnnotatedValue)
+	this.batch = _BATCH_POOL.Get()
 }
 
 func (this *base) releaseBatch() {
-	if cap(this.batch) != _BATCH_SIZE {
-		return
-	}
-
-	_BATCH_POOL.Put(this.batch[0:0])
+	_BATCH_POOL.Put(this.batch)
 	this.batch = nil
 }
 

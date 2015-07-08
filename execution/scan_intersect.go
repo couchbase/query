@@ -40,9 +40,10 @@ func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntersectScan) Copy() Operator {
-	scans := make([]Operator, len(this.scans))
-	for i, s := range this.scans {
-		scans[i] = s.Copy()
+	scans := _SCAN_POOL.Get()
+
+	for _, s := range this.scans {
+		scans = append(scans, s.Copy())
 	}
 
 	return &IntersectScan{
@@ -57,8 +58,12 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() { this.counts = nil }()
-		defer func() { this.values = nil }()
+		defer func() {
+			_SCAN_POOL.Put(this.scans)
+			this.scans = nil
+			this.counts = nil
+			this.values = nil
+		}()
 
 		this.counts = make(map[string]int, 1024)
 		this.values = make(map[string]value.AnnotatedValue, 1024)

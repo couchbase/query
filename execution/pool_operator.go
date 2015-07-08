@@ -10,26 +10,35 @@
 package execution
 
 import (
-	"github.com/couchbase/query/util"
+	"sync"
 )
 
-func notifyChildren(children ...Operator) {
-	for _, child := range children {
-		if child != nil {
-			select {
-			case child.StopChannel() <- false:
-			default:
-			}
-		}
-	}
+type OperatorPool struct {
+	pool *sync.Pool
+	size int
 }
 
-func copyOperator(op Operator) Operator {
-	if op == nil {
-		return nil
-	} else {
-		return op.Copy()
+func NewOperatorPool(size int) *OperatorPool {
+	rv := &OperatorPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]Operator, 0, size)
+			},
+		},
+		size: size,
 	}
+
+	return rv
 }
 
-var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
+func (this *OperatorPool) Get() []Operator {
+	return this.pool.Get().([]Operator)
+}
+
+func (this *OperatorPool) Put(s []Operator) {
+	if cap(s) != this.size {
+		return
+	}
+
+	this.pool.Put(s[0:0])
+}

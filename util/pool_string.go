@@ -7,46 +7,38 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package execution
+package util
 
 import (
 	"sync"
-
-	"github.com/couchbase/query/datastore"
 )
 
-var _STRING_POOL = &sync.Pool{
-	New: func() interface{} {
-		return make([]string, 0, _BATCH_SIZE)
-	},
+type StringPool struct {
+	pool *sync.Pool
+	size int
 }
 
-func allocateStringBatch() []string {
-	return _STRING_POOL.Get().([]string)
+func NewStringPool(size int) *StringPool {
+	rv := &StringPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]string, 0, size)
+			},
+		},
+		size: size,
+	}
+
+	return rv
 }
 
-func releaseStringBatch(s []string) {
-	if cap(s) != _BATCH_SIZE {
+func (this *StringPool) Get() []string {
+	return this.pool.Get().([]string)
+}
+
+func (this *StringPool) Put(s []string) {
+	if cap(s) != this.size {
 		return
 	}
 
-	_STRING_POOL.Put(s[0:0])
-}
-
-var _PAIR_POOL = &sync.Pool{
-	New: func() interface{} {
-		return make([]datastore.Pair, 0, _BATCH_SIZE)
-	},
-}
-
-func allocatePairBatch() []datastore.Pair {
-	return _PAIR_POOL.Get().([]datastore.Pair)
-}
-
-func releasePairBatch(p []datastore.Pair) {
-	if cap(p) != _BATCH_SIZE {
-		return
-	}
-
-	_PAIR_POOL.Put(p[0:0])
+	this.pool.Put(s[0:0])
 }

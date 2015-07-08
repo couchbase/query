@@ -40,9 +40,10 @@ func (this *UnionAll) Copy() Operator {
 		childChannel: make(StopChannel, len(this.children)),
 	}
 
-	children := make([]Operator, len(this.children))
-	for i, c := range this.children {
-		children[i] = c.Copy()
+	children := _UNION_POOL.Get()
+
+	for _, c := range this.children {
+		children = append(children, c.Copy())
 	}
 
 	rv.children = children
@@ -54,6 +55,10 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+		defer func() {
+			_UNION_POOL.Put(this.children)
+			this.children = nil
+		}()
 
 		n := len(this.children)
 
@@ -83,3 +88,5 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 func (this *UnionAll) ChildChannel() StopChannel {
 	return this.childChannel
 }
+
+var _UNION_POOL = NewOperatorPool(4)

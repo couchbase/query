@@ -39,7 +39,8 @@ func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *UnionScan) Copy() Operator {
-	scans := make([]Operator, len(this.scans))
+	scans := _SCAN_POOL.Get()
+
 	for i, s := range this.scans {
 		scans[i] = s.Copy()
 	}
@@ -56,7 +57,11 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() { this.values = nil }()
+		defer func() {
+			_SCAN_POOL.Put(this.scans)
+			this.scans = nil
+			this.values = nil
+		}()
 
 		this.values = make(map[string]value.AnnotatedValue, 1024)
 

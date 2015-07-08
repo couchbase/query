@@ -61,9 +61,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		return true
 	}
 
-	// Build list of keys
-	keys := allocateStringBatch()
-	defer releaseStringBatch(keys)
+	keys := _STRING_POOL.Get()
+	defer _STRING_POOL.Put(keys)
 
 	for _, av := range this.batch {
 		meta := av.GetAttachment("meta")

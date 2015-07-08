@@ -175,11 +175,11 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		stopExecute:    make(chan bool, 1),
 	}
 
-	if rv.maxParallelism <= 0 {
-		rv.maxParallelism = runtime.NumCPU()
+	if maxParallelism <= 0 {
+		maxParallelism = runtime.NumCPU()
 	}
 
-	rv.results = make(value.ValueChannel, rv.maxParallelism)
+	rv.results = make(value.ValueChannel, maxParallelism)
 
 	if logging.LogLevel() >= logging.TRACE {
 		rv.phaseTimes = make(map[string]time.Duration, 8)

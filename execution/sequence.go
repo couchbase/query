@@ -35,10 +35,10 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
-	children := make([]Operator, len(this.children))
+	children := _SEQUENCE_POOL.Get()
 
-	for i, child := range this.children {
-		children[i] = child.Copy()
+	for _, child := range this.children {
+		children = append(children, child.Copy())
 	}
 
 	return &Sequence{
@@ -53,6 +53,10 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+		defer func() {
+			_SEQUENCE_POOL.Put(this.children)
+			this.children = nil
+		}()
 
 		first_child := this.children[0]
 		first_child.SetInput(this.input)
@@ -92,3 +96,5 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 func (this *Sequence) ChildChannel() StopChannel {
 	return this.childChannel
 }
+
+var _SEQUENCE_POOL = NewOperatorPool(32)
