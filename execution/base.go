@@ -12,8 +12,8 @@ package execution
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -31,10 +31,10 @@ type base struct {
 
 const _ITEM_CAP = 512
 
-var pipelineCap int64
+var pipelineCap atomic.AlignedInt64
 
 func init() {
-	pipelineCap = _ITEM_CAP
+	atomic.StoreInt64(&pipelineCap, int64(_ITEM_CAP))
 }
 
 func SetPipelineCap(cap int) {

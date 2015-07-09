@@ -10,8 +10,7 @@
 package datastore
 
 import (
-	"sync/atomic"
-
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -170,7 +169,7 @@ func NewIndexConnection(context Context) *IndexConnection {
 	}
 }
 
-var scanCap int64
+var scanCap atomic.AlignedInt64
 
 func SetScanCap(cap int64) {
 	atomic.StoreInt64(&scanCap, cap)

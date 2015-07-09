@@ -16,9 +16,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
@@ -33,25 +33,28 @@ import (
 )
 
 type Server struct {
+	// due to alignment issues on x86 platforms these atomic
+	// variables need to right at the beginning of the structure
+	servicerCount  atomic.AlignedInt64
+	maxParallelism atomic.AlignedInt64
+	keepAlive      atomic.AlignedInt64
+	requestSize    atomic.AlignedInt64
+
 	sync.RWMutex
-	datastore      datastore.Datastore
-	systemstore    datastore.Datastore
-	configstore    clustering.ConfigurationStore
-	acctstore      accounting.AccountingStore
-	namespace      string
-	readonly       bool
-	channel        RequestChannel
-	done           chan bool
-	servicerCount  int64
-	maxParallelism int64
-	timeout        time.Duration
-	signature      bool
-	metrics        bool
-	keepAlive      int64
-	wg             sync.WaitGroup
-	memprofile     string
-	cpuprofile     string
-	requestSize    int64
+	datastore   datastore.Datastore
+	systemstore datastore.Datastore
+	configstore clustering.ConfigurationStore
+	acctstore   accounting.AccountingStore
+	namespace   string
+	readonly    bool
+	channel     RequestChannel
+	done        chan bool
+	timeout     time.Duration
+	signature   bool
+	metrics     bool
+	wg          sync.WaitGroup
+	memprofile  string
+	cpuprofile  string
 }
 
 // Default Keep Alive Length
@@ -63,18 +66,20 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	channel RequestChannel, servicerCount, maxParallelism int, timeout time.Duration,
 	signature, metrics bool) (*Server, errors.Error) {
 	rv := &Server{
-		datastore:     store,
-		configstore:   config,
-		acctstore:     acctng,
-		namespace:     namespace,
-		readonly:      readonly,
-		channel:       channel,
-		servicerCount: int64(servicerCount),
-		signature:     signature,
-		timeout:       timeout,
-		metrics:       metrics,
-		done:          make(chan bool),
+		datastore:   store,
+		configstore: config,
+		acctstore:   acctng,
+		namespace:   namespace,
+		readonly:    readonly,
+		channel:     channel,
+		signature:   signature,
+		timeout:     timeout,
+		metrics:     metrics,
+		done:        make(chan bool),
 	}
+
+	// special case handling for the atomic specfic stuff
+	atomic.StoreInt64(&rv.servicerCount, int64(servicerCount))
 
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)

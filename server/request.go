@@ -12,9 +12,9 @@ package server
 import (
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -95,6 +95,11 @@ type ScanConfiguration interface {
 }
 
 type BaseRequest struct {
+	// Aligned ints need to be delared right at the top
+	// of the struct to avoid alignment issues on x86 platforms
+	mutationCount atomic.AlignedUint64
+	sortCount     atomic.AlignedUint64
+
 	sync.RWMutex
 	id             *requestIDImpl
 	client_id      *clientContextIDImpl
@@ -110,8 +115,6 @@ type BaseRequest struct {
 	metrics        value.Tristate
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
-	mutationCount  uint64
-	sortCount      uint64
 	phaseTimes     map[string]time.Duration
 	requestTime    time.Time
 	serviceTime    time.Time
