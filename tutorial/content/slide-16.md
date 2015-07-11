@@ -8,7 +8,7 @@ their children over the age of 10.  For each person satisfying these
 requirements, we display their full name, email address, and the full
 list of children.
 
-Try appending the expression USE KEYS ["dave", "ian"] after the FROM
+Try appending the expression USE KEYS ['dave', 'ian'] after the FROM
 expression to restrict the scope of the query to primary keys "dave"
 and "ian".
 
