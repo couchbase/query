@@ -103,6 +103,10 @@ func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexCo
 	keyspace := this.plan.Keyspace()
 	size, err := keyspace.Count()
 	if err == nil {
+		if size <= 0 {
+			size = 1
+		}
+
 		conn, err = datastore.NewSizedIndexConnection(size, context)
 	}
 
