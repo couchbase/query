@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -42,3 +43,5 @@ func notifyConn(conn *datastore.IndexConnection) {
 }
 
 var _SCAN_POOL = NewOperatorPool(16)
+var _COUNT_POOL = util.NewStringIntPool(1024)
+var _VALUE_POOL = value.NewStringAnnotatedPool(1024)

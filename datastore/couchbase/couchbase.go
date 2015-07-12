@@ -734,7 +734,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		return nil, nil
 	}
 
-	insertedKeys := make([]datastore.Pair, 0)
+	insertedKeys := make([]datastore.Pair, 0, len(inserts))
 	var err error
 
 	for _, kv := range inserts {

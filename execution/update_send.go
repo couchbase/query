@@ -92,7 +92,8 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		return true
 	}
 
-	pairs := make([]datastore.Pair, len(this.batch))
+	pairs := _UPDATE_POOL.Get()
+	defer _UPDATE_POOL.Put(pairs)
 
 	for i, item := range this.batch {
 		uv, ok := item.Field(this.plan.Alias())
@@ -112,6 +113,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			return false
 		}
 
+		pairs = pairs[0 : i+1]
 		pairs[i].Key = key
 
 		clone := item.GetAttachment("clone")
@@ -157,3 +159,5 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 func (this *SendUpdate) readonly() bool {
 	return false
 }
+
+var _UPDATE_POOL = datastore.NewPairPool(_BATCH_SIZE)

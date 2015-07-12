@@ -61,12 +61,14 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer func() {
 			_SCAN_POOL.Put(this.scans)
 			this.scans = nil
+			_COUNT_POOL.Put(this.counts)
 			this.counts = nil
+			_VALUE_POOL.Put(this.values)
 			this.values = nil
 		}()
 
-		this.counts = make(map[string]int, 1024)
-		this.values = make(map[string]value.AnnotatedValue, 1024)
+		this.counts = _COUNT_POOL.Get()
+		this.values = _VALUE_POOL.Get()
 
 		channel := NewChannel()
 

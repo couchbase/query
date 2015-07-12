@@ -91,15 +91,18 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return true
 	}
 
+	dpairs := _INSERT_POOL.Get()
+	defer _INSERT_POOL.Put(dpairs)
+
 	keyExpr := this.plan.Key()
 	valExpr := this.plan.Value()
-	dpairs := make([]datastore.Pair, len(this.batch))
 	var key, val value.Value
 	var err error
 	var ok bool
 	i := 0
 
 	for _, av := range this.batch {
+		dpairs = dpairs[0 : i+1]
 		dpair := &dpairs[i]
 
 		if keyExpr != nil {
@@ -178,3 +181,5 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 func (this *SendInsert) readonly() bool {
 	return false
 }
+
+var _INSERT_POOL = datastore.NewPairPool(_BATCH_SIZE)
