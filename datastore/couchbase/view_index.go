@@ -10,6 +10,7 @@
 package couchbase
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -99,7 +100,7 @@ func (view *viewIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Erro
 	view.RLock()
 	defer view.RUnlock()
 
-	logging.Infof(" Number of primary indexes on b0 %v", len(view.primary))
+	logging.Debugf(" Number of primary indexes on b0 %v", len(view.primary))
 	rv := make([]datastore.PrimaryIndex, 0, len(view.primary))
 	for _, index := range view.primary {
 		rv = append(rv, index)
@@ -142,7 +143,7 @@ func (view *viewIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
 	}
 
-	logging.Infof("Creating primary index %s", name)
+	logging.Debugf("Creating primary index %s", name)
 
 	idx, err := newViewPrimaryIndex(view, name)
 	if err != nil {
@@ -176,7 +177,7 @@ func (view *viewIndexer) CreateIndex(requestId, name string, equalKey, rangeKey 
 		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
 	}
 
-	logging.Infof("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
+	logging.Debugf("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
 
 	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
 	if err != nil {
@@ -256,12 +257,10 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 	}
 
 	if len(indexList) == 0 {
-		logging.Debugf("No view indexes found for bucket %s", view.keyspace.Name())
 		return nil
 	}
 
 	for _, index := range indexList {
-		logging.Debugf("Found index on keyspace %s", (*index).KeyspaceId())
 		name := (*index).Name()
 		indexes[name] = *index
 		switch (*index).(type) {
@@ -275,11 +274,8 @@ func (view *viewIndexer) loadViewIndexes() errors.Error {
 
 func (view *viewIndexer) Refresh() errors.Error {
 	// trigger refresh of this indexer
-	logging.Debugf("Refreshing Indexes in keyspace %s", view.keyspace.Name())
-
 	err := view.loadViewIndexes()
 	if err != nil {
-		logging.Errorf(" Error loading indexes for bucket %s", view.keyspace.Name())
 		return errors.NewCbViewIndexesLoadingError(err, view.keyspace.Name())
 	}
 
@@ -404,6 +400,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 	sentRows := false
 	ok := true
 	numRows := 0
+	errs := make([]error, 0, 10)
 	for ok {
 		select {
 		case viewRow, ok = <-viewRowChannel:
@@ -416,7 +413,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 					if err == nil {
 						entry.EntryKey = lookupValue
 					} else {
-						logging.Debugf("unable to convert index key to lookup value err:%v key %v", err, viewRow.Key)
+						errs = append(errs, fmt.Errorf("unable to convert index key to lookup value err:%v key %v", err, entry))
 					}
 				}
 
@@ -429,7 +426,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 				logging.Errorf("%v", err)
 				// check to possibly detect a bucket that was already deleted
 				if !sentRows {
-					logging.Infof("Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
+					logging.Debugf("Checking bucket URI: %v", vi.keyspace.cbbucket.URI)
 					_, err := http.Get(vi.keyspace.cbbucket.URI)
 					if err != nil {
 						logging.Errorf("%v", err)
@@ -455,7 +452,11 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 		}
 	}
 
-	logging.Infof("Number of entries fetched from the index %d", numRows)
+	if errs != nil {
+		logging.Debugf("Errors with converting lookup value to entry key. num errrs %v", len(errs))
+	}
+
+	logging.Debugf("Number of entries fetched from the index %d", numRows)
 
 }
 

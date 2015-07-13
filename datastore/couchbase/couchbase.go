@@ -247,7 +247,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 			}
 
 			// intialize cb_auth variables manually
-			logging.Infof(" Trying to init cbauth with credentials %s %s %s", url.Host, url.User.Username(), password)
+			logging.Infof(" Trying to init cbauth with credentials %s %s", url.Host, url.User.Username())
 			set, err := cbauth.InternalRetryDefaultInit(url.Host, url.User.Username(), password)
 			if set == false || err != nil {
 				logging.Errorf(" Unable to initialize cbauth variables. Error %v", err)
@@ -419,7 +419,7 @@ func (p *namespace) getPool() cb.Pool {
 
 func (p *namespace) refresh(changed bool) {
 	// trigger refresh of this pool
-	logging.Infof("Refreshing pool %s", p.name)
+	logging.Debugf("Refreshing pool %s", p.name)
 
 	newpool, err := p.site.client.GetPool(p.name)
 	if err != nil {
@@ -456,7 +456,7 @@ func (p *namespace) refresh(changed bool) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	for name, ks := range p.keyspaceCache {
-		logging.Infof(" Checking keyspace %s", name)
+		logging.Debugf(" Checking keyspace %s", name)
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			changed = true
@@ -466,7 +466,7 @@ func (p *namespace) refresh(changed bool) {
 
 		} else if ks.(*keyspace).cbbucket.UUID != newbucket.UUID {
 
-			logging.Infof(" UUid of keyspace %v uuid now %v", ks.(*keyspace).cbbucket.UUID, newbucket.UUID)
+			logging.Debugf(" UUid of keyspace %v uuid now %v", ks.(*keyspace).cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
 			ks.(*keyspace).cbbucket = newbucket
 		}
@@ -667,7 +667,8 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 			"flags": uint32(meta_flags),
 		})
 
-		logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
+		// Uncomment when needed
+		//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
 
 		doc.Value = Value
 		rv[i] = doc

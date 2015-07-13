@@ -187,7 +187,6 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 		var index datastore.Index
 
-		logging.Debugf("Found index name %v keyspace %v Primary index %v", iname, b.Name(), jdoc.PrimaryIndex)
 		if jdoc.PrimaryIndex == true {
 			index = &primaryIndex{
 				viewIndex{

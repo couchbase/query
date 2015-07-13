@@ -39,7 +39,7 @@ func ViewTotalRows(bucket *cb.Bucket, ddoc string, view string, options map[stri
 
 	logURL, err := bucket.ViewURL(ddoc, view, options)
 	if err == nil {
-		logging.Infof("Request View: %v", logURL)
+		logging.Debugf("Request View: %v", logURL)
 	}
 	vres, err := bucket.View(ddoc, view, options)
 	if err != nil {
@@ -113,7 +113,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, bucket *c
 			ok = false
 		}
 	}
-	logging.Infof("View %s: %d rows fetched, %d rows sent", view, numRead, numSent)
+	logging.Debugf("View %s: %d rows fetched, %d rows sent", view, numRead, numSent)
 }
 
 func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) map[string]interface{} {
@@ -121,7 +121,7 @@ func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) m
 
 	if span != nil {
 
-		logging.Infof("Scan range. %v", span)
+		logging.Debugf("Scan range. %v", span)
 		low := span.Range.Low
 		high := span.Range.High
 		inclusion := span.Range.Inclusion
