@@ -151,6 +151,18 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 }
 
 /*
+Formalize META() function defined on indexes.
+*/
+func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
+	meta, ok := expr.(*Meta)
+	if ok && len(meta.Operands()) == 0 && this.Keyspace != "" {
+		expr = NewMeta(NewIdentifier(this.Keyspace))
+	}
+
+	return expr, expr.MapChildren(this.mapper)
+}
+
+/*
 Visitor method for Subqueries. Call formalize.
 */
 func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
