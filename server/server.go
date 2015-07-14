@@ -187,10 +187,26 @@ func (this *Server) Debug() bool {
 
 func (this *Server) SetDebug(debug bool) {
 	if debug {
-		logging.SetLevel(logging.DEBUG)
+		this.SetLogLevel("debug")
 	} else {
-		logging.SetLevel(logging.INFO)
+		this.SetLogLevel("info")
 	}
+}
+
+func (this *Server) LogLevel() string {
+	return logging.LogLevel().String()
+}
+
+func (this *Server) SetLogLevel(level string) {
+	lvl, ok := logging.ParseLevel(level)
+	if !ok {
+		logging.Errorp("SetLogLevel: unrecognized level", logging.Pair{"level", level})
+		return
+	}
+	if this.datastore != nil {
+		this.datastore.SetLogLevel(lvl)
+	}
+	logging.SetLevel(lvl)
 }
 
 const (

@@ -21,6 +21,7 @@ import (
 
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
@@ -287,6 +288,7 @@ const (
 	_CPUPROFILE      = "cpuprofile"
 	_DEBUG           = "debug"
 	_KEEPALIVELENGTH = "keep-alive-length"
+	_LOGLEVEL        = "loglevel"
 	_MAXPARALLELISM  = "max-parallelism"
 	_MEMPROFILE      = "memprofile"
 	_REQUESTSIZECAP  = "request-size-cap"
@@ -313,10 +315,20 @@ func checkString(val interface{}) bool {
 	return ok
 }
 
+func checkLogLevel(val interface{}) bool {
+	level, is_string := val.(string)
+	if !is_string {
+		return false
+	}
+	_, ok := logging.ParseLevel(level)
+	return ok
+}
+
 var _CHECKERS = map[string]checker{
 	_CPUPROFILE:      checkString,
 	_DEBUG:           checkBool,
 	_KEEPALIVELENGTH: checkNumber,
+	_LOGLEVEL:        checkLogLevel,
 	_MAXPARALLELISM:  checkNumber,
 	_MEMPROFILE:      checkString,
 	_REQUESTSIZECAP:  checkNumber,
@@ -340,6 +352,10 @@ var _SETTERS = map[string]setter{
 	_KEEPALIVELENGTH: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
 		s.SetKeepAlive(int(value))
+	},
+	_LOGLEVEL: func(s *server.Server, o interface{}) {
+		value, _ := o.(string)
+		s.SetLogLevel(value)
 	},
 	_MAXPARALLELISM: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
@@ -419,6 +435,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_MAXPARALLELISM] = srvr.MaxParallelism()
 	settings[_TIMEOUT] = srvr.Timeout()
 	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
+	settings[_LOGLEVEL] = srvr.LogLevel()
 	return settings
 }
 
