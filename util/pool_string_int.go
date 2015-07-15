@@ -15,6 +15,7 @@ import (
 
 type StringIntPool struct {
 	pool *sync.Pool
+	size int
 }
 
 func NewStringIntPool(size int) *StringIntPool {
@@ -24,6 +25,7 @@ func NewStringIntPool(size int) *StringIntPool {
 				return make(map[string]int, size)
 			},
 		},
+		size: size,
 	}
 
 	return rv
@@ -34,7 +36,7 @@ func (this *StringIntPool) Get() map[string]int {
 }
 
 func (this *StringIntPool) Put(s map[string]int) {
-	if s == nil {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

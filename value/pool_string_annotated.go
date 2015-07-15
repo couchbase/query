@@ -15,6 +15,7 @@ import (
 
 type StringAnnotatedPool struct {
 	pool *sync.Pool
+	size int
 }
 
 func NewStringAnnotatedPool(size int) *StringAnnotatedPool {
@@ -24,6 +25,7 @@ func NewStringAnnotatedPool(size int) *StringAnnotatedPool {
 				return make(map[string]AnnotatedValue, size)
 			},
 		},
+		size: size,
 	}
 
 	return rv
@@ -34,7 +36,7 @@ func (this *StringAnnotatedPool) Get() map[string]AnnotatedValue {
 }
 
 func (this *StringAnnotatedPool) Put(s map[string]AnnotatedValue) {
-	if s == nil {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

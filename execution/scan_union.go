@@ -60,10 +60,13 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer func() {
 			_SCAN_POOL.Put(this.scans)
 			this.scans = nil
-			this.values = nil
 		}()
 
-		this.values = make(map[string]value.AnnotatedValue, 1024)
+		this.values = _VALUE_POOL.Get()
+		defer func() {
+			_VALUE_POOL.Put(this.values)
+			this.values = nil
+		}()
 
 		channel := NewChannel()
 
