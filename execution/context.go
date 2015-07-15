@@ -232,35 +232,45 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 }
 
 func (this *Context) getSubplans() *subqueryMap {
+	if this.contextSubplans() == nil {
+		this.initSubplans()
+	}
+	return this.contextSubplans()
+}
+
+func (this *Context) initSubplans() {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.subplans == nil {
+		this.subplans = newSubqueryMap()
+	}
+}
+
+func (this *Context) contextSubplans() *subqueryMap {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
-
-	if this.subplans == nil {
-		this.mutex.Lock()
-		defer this.mutex.Unlock()
-
-		if this.subplans == nil {
-			this.subplans = newSubqueryMap()
-		}
-	}
-
 	return this.subplans
 }
 
 func (this *Context) getSubresults() *subqueryMap {
+	if this.contextSubresults() == nil {
+		this.initSubresults()
+	}
+	return this.contextSubresults()
+}
+
+func (this *Context) contextSubresults() *subqueryMap {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
-
-	if this.subresults == nil {
-		this.mutex.Lock()
-		defer this.mutex.Unlock()
-
-		if this.subresults == nil {
-			this.subresults = newSubqueryMap()
-		}
-	}
-
 	return this.subresults
+}
+
+func (this *Context) initSubresults() {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.subresults == nil {
+		this.subresults = newSubqueryMap()
+	}
 }
 
 // Synchronized map
