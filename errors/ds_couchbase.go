@@ -66,7 +66,7 @@ func NewCbBulkGetError(e error, msg string) Error {
 
 func NewCbDMLError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e,
-		InternalMsg: "DML Error" + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "DML Error, possible causes include CAS mismatch or concurrent modification" + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbNoKeysInsertError(e error, msg string) Error {

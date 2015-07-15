@@ -705,6 +705,10 @@ func isNotFoundError(err error) bool {
 	return cb.IsKeyNoEntError(err)
 }
 
+func isEExistError(err error) bool {
+	return cb.IsKeyEExistsError(err)
+}
+
 func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32, err error) {
 
 	defer func() {
@@ -784,7 +788,11 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 		}
 
 		if err != nil {
-			logging.Errorf("Failed to perform %s on key %s for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
+			if isEExistError(err) {
+				logging.Errorf("Failed to perform update on key %s. CAS mismatch due to concurrent modifications", key)
+			} else {
+				logging.Errorf("Failed to perform %s on key %s for Keyspace %s Error %v", opToString(op), key, b.Name(), err)
+			}
 		} else {
 			insertedKeys = append(insertedKeys, kv)
 		}
