@@ -56,14 +56,16 @@ var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
+var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 func main() {
-	//HideConsole(true)
-	//defer HideConsole(false)
+	HideConsole(true)
+	defer HideConsole(false)
+
 	flag.Parse()
 
 	if *LOGGER != "" {
@@ -118,7 +120,7 @@ func main() {
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS)
+		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
@@ -131,8 +133,14 @@ func main() {
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 
-	if os.Getenv("GOMAXPROCS") == "" {
+	if server.Enterprise() && os.Getenv("GOMAXPROCS") == "" {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
+
+	if !server.Enterprise() {
+		numCPU := runtime.GOMAXPROCS(0)
+		// Use at most 4 cpus in non-enterprise mode
+		runtime.GOMAXPROCS(util.MinInt(numCPU, 4))
 	}
 
 	go server.Serve()
@@ -159,7 +167,7 @@ func main() {
 		)
 		os.Exit(1)
 	}
-	if *CERT_FILE != "" && *KEY_FILE != "" {
+	if server.Enterprise() && *CERT_FILE != "" && *KEY_FILE != "" {
 		er := endpoint.ListenTLS()
 		if er != nil {
 			logging.Errorp("cbq-engine exiting with error",

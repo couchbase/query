@@ -55,6 +55,7 @@ type Server struct {
 	wg          sync.WaitGroup
 	memprofile  string
 	cpuprofile  string
+	enterprise  bool
 }
 
 // Default Keep Alive Length
@@ -64,7 +65,7 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	channel RequestChannel, servicerCount, maxParallelism int, timeout time.Duration,
-	signature, metrics bool) (*Server, errors.Error) {
+	signature, metrics bool, enterprise bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		configstore: config,
@@ -76,6 +77,7 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 		timeout:     timeout,
 		metrics:     metrics,
 		done:        make(chan bool),
+		enterprise:  enterprise,
 	}
 
 	// special case handling for the atomic specfic stuff
@@ -257,6 +259,10 @@ func (this *Server) Timeout() time.Duration {
 
 func (this *Server) SetTimeout(timeout time.Duration) {
 	this.timeout = timeout
+}
+
+func (this *Server) Enterprise() bool {
+	return this.enterprise
 }
 
 func (this *Server) Serve() {
