@@ -156,7 +156,7 @@ Formalize META() function defined on indexes.
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	meta, ok := expr.(*Meta)
 	if ok && len(meta.Operands()) == 0 && this.Keyspace != "" {
-		expr = NewMeta(NewIdentifier(this.Keyspace))
+		return NewMeta(NewIdentifier(this.Keyspace)), nil
 	}
 
 	return expr, expr.MapChildren(this.mapper)
