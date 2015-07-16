@@ -97,3 +97,14 @@ func (this Spans) UnmarshalJSON(body []byte) error {
 
 	return nil
 }
+
+func (this Spans) Copy() Spans {
+	spans := make(Spans, len(this))
+	for i, s := range this {
+		if s != nil {
+			spans[i] = s.Copy()
+		}
+	}
+
+	return spans
+}

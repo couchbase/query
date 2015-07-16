@@ -69,11 +69,8 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 				}
 			}
 
-			for j, next := range ns {
-				pre := prev
-				if j < len(ns)-1 {
-					pre = pre.Copy()
-				}
+			for _, next := range ns {
+				pre := prev.Copy()
 
 				if len(pre.Range.Low) > 0 && len(next.Range.Low) > 0 {
 					pre.Range.Low = append(pre.Range.Low, next.Range.Low...)

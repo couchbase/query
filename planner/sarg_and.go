@@ -50,6 +50,7 @@ func newSargAnd(pred *expression.And) *sargAnd {
 }
 
 func constrain(spans1, spans2 plan.Spans) plan.Spans {
+	spans1 = spans1.Copy()
 	span1 := spans1[0]
 	span2 := spans2[0]
 
