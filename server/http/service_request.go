@@ -77,6 +77,10 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		err = errors.NewServiceErrorMissingValue("statement or prepared")
 	}
 
+	if err != nil && err.Code() == errors.NOSUCH_PREPARED && statement != "" {
+		err = nil
+	}
+
 	var namedArgs map[string]value.Value
 	if err == nil {
 		namedArgs, err = httpArgs.getNamedArgs()

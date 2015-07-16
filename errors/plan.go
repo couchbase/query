@@ -45,8 +45,10 @@ func NewSubqueryMissingKeysError(keyspace string) Error {
 		InternalMsg: fmt.Sprintf("FROM in subquery must use KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
 }
 
+const NOSUCH_PREPARED = 4040
+
 func NewNoSuchPreparedError(name string) Error {
-	return &err{level: EXCEPTION, ICode: 4040, IKey: "plan.build_prepared.no_such_name",
+	return &err{level: EXCEPTION, ICode: NOSUCH_PREPARED, IKey: "plan.build_prepared.no_such_name",
 		InternalMsg: fmt.Sprintf("No such prepared statement: %s", name), InternalCaller: CallerN(1)}
 }
 
