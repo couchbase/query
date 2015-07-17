@@ -94,6 +94,13 @@ func NewCbIndexStateError(msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+const INDEX_SCAN_TIMEOUT = 12015
+
+func NewCbIndexScanTimeoutError(e error) Error {
+	return &err{level: EXCEPTION, ICode: INDEX_SCAN_TIMEOUT, IKey: "datastore.couchbase.index_scan_timeout", ICause: e,
+		InternalMsg: "Index scan timed out", InternalCaller: CallerN(1)}
+}
+
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,
