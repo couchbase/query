@@ -125,6 +125,10 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 		}
 	}
 
+	if len(terms) == 0 {
+		return expression.TRUE_EXPR, nil
+	}
+
 	if len(terms) < len(expr.Operands()) {
 		expr = expression.NewAnd(terms...)
 	}
@@ -177,6 +181,10 @@ func (this *NNF) VisitOr(expr *expression.Or) (interface{}, error) {
 		if val.Truth() {
 			return expression.TRUE_EXPR, nil
 		}
+	}
+
+	if len(terms) == 0 {
+		return expression.FALSE_EXPR, nil
 	}
 
 	if len(terms) < len(expr.Operands()) {
