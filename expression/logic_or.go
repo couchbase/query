@@ -26,7 +26,7 @@ type Or struct {
 The function NewOr calls NewCommutativeFunctionBase to define OR
 with input operand expressions as input.
 */
-func NewOr(operands ...Expression) Function {
+func NewOr(operands ...Expression) *Or {
 	rv := &Or{
 		*NewCommutativeFunctionBase("or", operands...),
 	}
@@ -93,5 +93,7 @@ func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error)
 Returns NewOr as FunctionConstructor.
 */
 func (this *Or) Constructor() FunctionConstructor {
-	return NewOr
+	return func(operands ...Expression) Function {
+		return NewOr(operands...)
+	}
 }

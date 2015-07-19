@@ -96,6 +96,96 @@ func (this *NNF) VisitLike(expr *expression.Like) (interface{}, error) {
 	return and, nil
 }
 
+/*
+Apply Disjunctive Normal Form.
+
+Convert ANDs of ORs to ORs of ANDs. For example:
+
+(A OR B) AND C => (A AND C) OR (B AND C)
+
+Also apply constant folding. Remove any constant terms.
+*/
+func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	terms := make(expression.Expressions, 0, len(expr.Operands()))
+
+	for _, term := range expr.Operands() {
+		val := term.Value()
+		if val == nil {
+			terms = append(terms, term)
+			continue
+		}
+
+		if !val.Truth() {
+			return expression.FALSE_EXPR, nil
+		}
+	}
+
+	if len(terms) < len(expr.Operands()) {
+		expr = expression.NewAnd(terms...)
+	}
+
+	for i, aterm := range expr.Operands() {
+		switch aterm := aterm.(type) {
+		case *expression.Or:
+			na := len(expr.Operands())
+			oterms := make(expression.Expressions, len(aterm.Operands()))
+
+			for j, oterm := range aterm.Operands() {
+				aterms := make(expression.Expressions, na)
+				for ii, atrm := range expr.Operands() {
+					if ii == i {
+						aterms[ii] = oterm
+					} else {
+						aterms[ii] = atrm
+					}
+				}
+
+				oterms[j] = expression.NewAnd(aterms...)
+			}
+
+			rv := expression.NewOr(oterms...)
+			return rv, rv.MapChildren(this)
+		}
+	}
+
+	return expr, nil
+}
+
+/*
+Apply constant folding. Remove any constant terms.
+*/
+func (this *NNF) VisitOr(expr *expression.Or) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	terms := make(expression.Expressions, 0, len(expr.Operands()))
+
+	for _, term := range expr.Operands() {
+		val := term.Value()
+		if val == nil {
+			terms = append(terms, term)
+			continue
+		}
+
+		if val.Truth() {
+			return expression.TRUE_EXPR, nil
+		}
+	}
+
+	if len(terms) < len(expr.Operands()) {
+		expr = expression.NewOr(terms...)
+	}
+
+	return expr, nil
+}
+
 func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {

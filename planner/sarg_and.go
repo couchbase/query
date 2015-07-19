@@ -51,6 +51,11 @@ func newSargAnd(pred *expression.And) *sargAnd {
 
 func constrain(spans1, spans2 plan.Spans) plan.Spans {
 	spans1 = spans1.Copy()
+	if len(spans1) > 1 || len(spans2) > 1 {
+		// DNF prevents us from reaching here
+		return append(spans1, spans2...)
+	}
+
 	span1 := spans1[0]
 	span2 := spans2[0]
 

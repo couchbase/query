@@ -26,7 +26,7 @@ type And struct {
 The function NewAnd calls NewCommutativeFunctionBase to define AND
 with input operand expressions as input.
 */
-func NewAnd(operands ...Expression) Function {
+func NewAnd(operands ...Expression) *And {
 	rv := &And{
 		*NewCommutativeFunctionBase("and", operands...),
 	}
@@ -92,5 +92,7 @@ func (this *And) Apply(context Context, args ...value.Value) (value.Value, error
 Returns NewAnd as FunctionConstructor.
 */
 func (this *And) Constructor() FunctionConstructor {
-	return NewAnd
+	return func(operands ...Expression) Function {
+		return NewAnd(operands...)
+	}
 }
