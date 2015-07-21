@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -62,8 +63,11 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 	go this.scanEntries(context, conn)
 
-	var entry *datastore.IndexEntry
+	var entry, lastEntry *datastore.IndexEntry
+
 	ok := true
+	nitems := 0
+
 	for ok {
 		select {
 		case <-this.stopChannel:
@@ -80,6 +84,8 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 				av := value.NewAnnotatedValue(cv)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 				ok = this.sendItem(av)
+				lastEntry = entry
+				nitems++
 			}
 
 			duration += time.Since(t)
@@ -88,11 +94,83 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		}
 
 	}
+
+	if conn.Timeout() {
+		logging.Errorp("Primary index scan timeout - resorting to chunked scan",
+			logging.Pair{"chunkSize", nitems},
+			logging.Pair{"startingEntry", lastEntry})
+		if lastEntry == nil {
+			// no key for chunked scans (primary scan returned 0 items)
+			context.Error(errors.NewCbIndexScanTimeoutError(nil))
+		}
+		// do chunked scans; nitems gives the chunk size, and lastEntry the starting point
+		for lastEntry != nil {
+			lastEntry = this.scanPrimaryChunk(context, parent, nitems, lastEntry)
+		}
+	}
+}
+
+func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, chunkSize int, indexEntry *datastore.IndexEntry) *datastore.IndexEntry {
+	conn, _ := datastore.NewSizedIndexConnection(int64(chunkSize), context)
+	conn.SetPrimary()
+	defer notifyConn(conn) // Notify index that I have stopped
+
+	var duration time.Duration
+	timer := time.Now()
+	defer context.AddPhaseTime("scan", time.Since(timer)-duration)
+
+	go this.scanChunk(context, conn, chunkSize, indexEntry)
+
+	var entry, lastEntry *datastore.IndexEntry
+
+	ok := true
+	nitems := 0
+
+	for ok {
+		select {
+		case <-this.stopChannel:
+			return nil
+		default:
+		}
+
+		select {
+		case entry, ok = <-conn.EntryChannel():
+			t := time.Now()
+
+			if ok {
+				cv := value.NewScopeValue(make(map[string]interface{}), parent)
+				av := value.NewAnnotatedValue(cv)
+				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+				ok = this.sendItem(av)
+				lastEntry = entry
+				nitems++
+			}
+
+			duration += time.Since(t)
+		case <-this.stopChannel:
+			return nil
+		}
+
+	}
+	logging.Debugp("Primary index chunked scan", logging.Pair{"chunkSize", nitems}, logging.Pair{"lastKey", lastEntry})
+	return lastEntry
 }
 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
 	this.plan.Index().ScanEntries(context.RequestId(), math.MaxInt64,
+		context.ScanConsistency(), context.ScanVector(), conn)
+}
+
+func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {
+	defer context.Recover() // Recover from any panic
+	ds := &datastore.Span{}
+	// do the scan starting from, but not including, the given index entry:
+	ds.Range = datastore.Range{
+		Inclusion: datastore.NEITHER,
+		Low:       []value.Value{value.NewValue(indexEntry.PrimaryKey)},
+	}
+	this.plan.Index().Scan(context.RequestId(), ds, true, int64(chunkSize),
 		context.ScanConsistency(), context.ScanVector(), conn)
 }
 
@@ -108,11 +186,13 @@ func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexCo
 		}
 
 		conn, err = datastore.NewSizedIndexConnection(size, context)
+		conn.SetPrimary()
 	}
 
 	// Use non-sized API and log error
 	if err != nil {
 		conn = datastore.NewIndexConnection(context)
+		conn.SetPrimary()
 		logging.Errorp("PrimaryScan.newIndexConnection ", logging.Pair{"error", err})
 	}
 

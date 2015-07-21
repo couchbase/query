@@ -157,6 +157,8 @@ type IndexConnection struct {
 	entryChannel EntryChannel // Closed by the index when the scan is completed or aborted.
 	stopChannel  StopChannel  // Notifies index to stop scanning. Never closed, just garbage-collected.
 	context      Context
+	timeout      bool
+	primary      bool
 }
 
 const _ENTRY_CAP = 256 // Index scan request size
@@ -208,9 +210,21 @@ func (this *IndexConnection) Fatal(err errors.Error) {
 }
 
 func (this *IndexConnection) Error(err errors.Error) {
+	if this.primary && err.Code() == errors.INDEX_SCAN_TIMEOUT {
+		this.timeout = true
+		return
+	}
 	this.context.Error(err)
 }
 
 func (this *IndexConnection) Warning(wrn errors.Error) {
 	this.context.Warning(wrn)
+}
+
+func (this *IndexConnection) SetPrimary() {
+	this.primary = true
+}
+
+func (this *IndexConnection) Timeout() bool {
+	return this.timeout
 }
