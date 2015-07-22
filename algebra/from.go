@@ -175,10 +175,10 @@ func (this *KeyspaceTerm) toString(join bool) string {
 	s := ""
 
 	if this.namespace != "" {
-		s += this.namespace + ":"
+		s += "`" + this.namespace + "`:"
 	}
 
-	s += this.keyspace
+	s += "`" + this.keyspace + "`"
 
 	if this.projection != nil {
 		s += "." + this.projection.String()

@@ -46,7 +46,6 @@ func (this *Collect) Copy() Operator {
 }
 
 func (this *Collect) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
 	this.runConsumer(this, context, parent)
 }
 
@@ -62,7 +61,8 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 	return true
 }
 
-func (this *Collect) Values() value.Value {
+func (this *Collect) ValuesOnce() value.Value {
+	defer this.releaseValues()
 	return value.NewValue(this.values)
 }
 
