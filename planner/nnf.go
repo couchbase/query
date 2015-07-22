@@ -111,11 +111,15 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 		return nil, err
 	}
 
-	terms := make(expression.Expressions, 0, len(expr.Operands()))
-
+	// Constant folding
+	var terms expression.Expressions
 	for _, term := range expr.Operands() {
 		val := term.Value()
 		if val == nil {
+			if terms == nil {
+				terms = make(expression.Expressions, 0, len(expr.Operands()))
+			}
+
 			terms = append(terms, term)
 			continue
 		}
@@ -133,6 +137,18 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 		expr = expression.NewAnd(terms...)
 	}
 
+	// DNF
+	return applyDNF(expr), nil
+}
+
+/*
+Internally apply Disjunctive Normal Form.
+
+Convert ANDs of ORs to ORs of ANDs. For example:
+
+(A OR B) AND C => (A AND C) OR (B AND C)
+*/
+func applyDNF(expr *expression.And) expression.Expression {
 	for i, aterm := range expr.Operands() {
 		switch aterm := aterm.(type) {
 		case *expression.Or:
@@ -149,15 +165,15 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 					}
 				}
 
-				oterms[j] = expression.NewAnd(aterms...)
+				oterms[j] = applyDNF(expression.NewAnd(aterms...))
 			}
 
 			rv := expression.NewOr(oterms...)
-			return rv, rv.MapChildren(this)
+			return rv
 		}
 	}
 
-	return expr, nil
+	return expr
 }
 
 /*
@@ -169,11 +185,15 @@ func (this *NNF) VisitOr(expr *expression.Or) (interface{}, error) {
 		return nil, err
 	}
 
-	terms := make(expression.Expressions, 0, len(expr.Operands()))
-
+	// Constant folding
+	var terms expression.Expressions
 	for _, term := range expr.Operands() {
 		val := term.Value()
 		if val == nil {
+			if terms == nil {
+				terms = make(expression.Expressions, 0, len(expr.Operands()))
+			}
+
 			terms = append(terms, term)
 			continue
 		}
