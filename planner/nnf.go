@@ -138,7 +138,11 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	}
 
 	// DNF
-	return applyDNF(expr), nil
+	if dnfComplexity(expr, 16) >= 16 {
+		return expr, nil
+	} else {
+		return applyDNF(expr, 0), nil
+	}
 }
 
 /*
@@ -150,7 +154,7 @@ Convert ANDs of ORs to ORs of ANDs. For example:
 
 (A OR B) AND C => (A AND C) OR (B AND C)
 */
-func applyDNF(expr *expression.And) expression.Expression {
+func applyDNF(expr *expression.And, level int) expression.Expression {
 	na := len(expr.Operands())
 	if na > 4 {
 		return expr
@@ -176,7 +180,11 @@ func applyDNF(expr *expression.And) expression.Expression {
 					}
 				}
 
-				oterms[j] = applyDNF(expression.NewAnd(aterms...))
+				if level > 2 {
+					oterms[j] = expression.NewAnd(aterms...)
+				} else {
+					oterms[j] = applyDNF(expression.NewAnd(aterms...), level+1)
+				}
 			}
 
 			rv := expression.NewOr(oterms...)
@@ -185,6 +193,28 @@ func applyDNF(expr *expression.And) expression.Expression {
 	}
 
 	return expr
+}
+
+func dnfComplexity(expr expression.Expression, max int) int {
+	comp := 0
+
+	switch expr := expr.(type) {
+	case *expression.Or:
+		comp = len(expr.Operands())
+	}
+
+	if comp < max {
+		children := expr.Children()
+		for _, child := range children {
+			childComp := dnfComplexity(child, max-comp)
+			comp += childComp
+			if comp >= max {
+				break
+			}
+		}
+	}
+
+	return comp
 }
 
 /*
