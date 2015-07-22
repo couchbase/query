@@ -138,7 +138,13 @@ func main() {
 	}
 
 	if !server.Enterprise() {
-		numCPU := runtime.GOMAXPROCS(0)
+		var numCPU int
+		if os.Getenv("GOMAXPROCS") == "" {
+			numCPU = runtime.NumCPU()
+		} else {
+			numCPU = runtime.GOMAXPROCS(0)
+		}
+
 		// Use at most 4 cpus in non-enterprise mode
 		runtime.GOMAXPROCS(util.MinInt(numCPU, 4))
 	}
