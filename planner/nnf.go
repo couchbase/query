@@ -142,6 +142,8 @@ func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
 }
 
 /*
+Bounded DNF, to mitigate combinatorial worst-case.
+
 Internally apply Disjunctive Normal Form.
 
 Convert ANDs of ORs to ORs of ANDs. For example:
@@ -149,11 +151,20 @@ Convert ANDs of ORs to ORs of ANDs. For example:
 (A OR B) AND C => (A AND C) OR (B AND C)
 */
 func applyDNF(expr *expression.And) expression.Expression {
+	na := len(expr.Operands())
+	if na > 4 {
+		return expr
+	}
+
 	for i, aterm := range expr.Operands() {
 		switch aterm := aterm.(type) {
 		case *expression.Or:
-			na := len(expr.Operands())
-			oterms := make(expression.Expressions, len(aterm.Operands()))
+			no := len(aterm.Operands())
+			if no*na > 8 {
+				return expr
+			}
+
+			oterms := make(expression.Expressions, no)
 
 			for j, oterm := range aterm.Operands() {
 				aterms := make(expression.Expressions, na)
