@@ -26,8 +26,9 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			return _SELF_SPANS, nil
 		}
 
+		var s plan.Spans
 		for _, op := range pred.Operands() {
-			s, err := sargFor(op, expr2, rv.MissingHigh())
+			s, err = sargFor(op, expr2, rv.MissingHigh())
 			if err != nil {
 				return nil, err
 			}
@@ -37,9 +38,9 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			}
 
 			if len(spans) == 0 {
-				spans = s
+				spans = s.Copy()
 			} else {
-				spans = constrain(spans, s)
+				spans = constrainSpans(spans, s)
 			}
 		}
 
@@ -49,16 +50,24 @@ func newSargAnd(pred *expression.And) *sargAnd {
 	return rv
 }
 
-func constrain(spans1, spans2 plan.Spans) plan.Spans {
-	spans1 = spans1.Copy()
-	if len(spans1) > 1 || len(spans2) > 1 {
-		// DNF prevents us from reaching here
-		return append(spans1, spans2...)
+func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
+	if len(spans2) != 1 {
+		if len(spans1) == 1 {
+			spans1, spans2 = spans2.Copy(), spans1
+		} else {
+			return spans1
+		}
 	}
 
-	span1 := spans1[0]
 	span2 := spans2[0]
+	for _, span1 := range spans1 {
+		constrainSpan(span1, span2)
+	}
 
+	return spans1
+}
+
+func constrainSpan(span1, span2 *plan.Span) {
 	if len(span2.Range.Low) > 0 {
 		if len(span1.Range.Low) == 0 {
 			span1.Range.Low = span2.Range.Low
@@ -90,6 +99,4 @@ func constrain(spans1, spans2 plan.Spans) plan.Spans {
 			}
 		}
 	}
-
-	return spans1
 }

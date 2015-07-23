@@ -22,6 +22,7 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 	var ns plan.Spans
 
 	// Sarg compositive indexes right to left
+keys:
 	for i := n - 1; i >= 0; i-- {
 		r, err := sargKeys[i].Accept(s)
 		if err != nil || r == nil {
@@ -53,42 +54,72 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 
 		// Cross product of prev and next spans
 		sp := make(plan.Spans, 0, len(rs)*len(ns))
-	prevs:
+
 		for _, prev := range rs {
 			// Full span subsumes others
+			if prev == _FULL_SPANS[0] {
+				sp = append(sp, prev)
+				ns = sp
+				continue keys
+			}
+		}
+
+	prevs:
+		for _, prev := range rs {
 			if len(prev.Range.Low) == 0 && len(prev.Range.High) == 0 {
+				sp = append(sp, prev)
+				continue
+			}
+
+			// Limit fan-out
+			if len(ns) > 16 {
 				sp = append(sp, prev)
 				continue
 			}
 
 			for _, next := range ns {
 				// Full span subsumes others
-				if len(next.Range.Low) == 0 && len(next.Range.High) == 0 {
+				if next == _FULL_SPANS[0] || (len(next.Range.Low) == 0 && len(next.Range.High) == 0) {
 					sp = append(sp, prev)
 					continue prevs
 				}
 			}
 
+			added := false
 			for _, next := range ns {
+				add := false
 				pre := prev.Copy()
 
 				if len(pre.Range.Low) > 0 && len(next.Range.Low) > 0 {
 					pre.Range.Low = append(pre.Range.Low, next.Range.Low...)
 					pre.Range.Inclusion = (datastore.LOW & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.HIGH & pre.Range.Inclusion)
+					add = true
 				}
 
 				if len(pre.Range.High) > 0 && len(next.Range.High) > 0 {
 					pre.Range.High = append(pre.Range.High, next.Range.High...)
 					pre.Range.Inclusion = (datastore.HIGH & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.LOW & pre.Range.Inclusion)
+					add = true
 				}
 
-				sp = append(sp, pre)
+				if add {
+					sp = append(sp, pre)
+					added = true
+				}
+			}
+
+			if !added {
+				sp = append(sp, prev)
 			}
 		}
 
 		ns = sp
+	}
+
+	if len(ns) > 256 {
+		return _FULL_SPANS, nil
 	}
 
 	return ns, nil
