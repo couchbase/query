@@ -32,7 +32,7 @@ func newSargOr(pred *expression.Or) *sargOr {
 				return nil, err
 			}
 
-			if len(cspans) > 0 {
+			if len(cspans) > 0 && len(spans)+len(cspans) <= 32 {
 				spans = append(spans, cspans...)
 			} else {
 				return _FULL_SPANS, nil
