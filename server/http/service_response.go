@@ -50,7 +50,7 @@ func mapErrorToHttpResponse(err errors.Error) int {
 		return http.StatusNotAcceptable
 	case 3000: // parse error range
 		return http.StatusBadRequest
-	case 4000: // plan error range
+	case 4000, errors.NO_SUCH_PREPARED: // plan error range
 		return http.StatusNotFound
 	case 5000:
 		return http.StatusInternalServerError

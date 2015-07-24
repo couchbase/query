@@ -10,7 +10,12 @@
 package plan
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"sync"
 
 	"github.com/couchbase/query/errors"
@@ -127,6 +132,8 @@ func AddPrepared(prepared *Prepared) errors.Error {
 	return nil
 }
 
+var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
+
 func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	switch prepared_stmt.Type() {
 	case value.STRING:
@@ -137,24 +144,51 @@ func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 		return prepared, nil
 	case value.OBJECT:
 		name_value, has_name := prepared_stmt.Field("name")
-		prepared := cache.get(name_value)
-		if prepared != nil {
-			return prepared, nil
+		if has_name {
+			if prepared := cache.get(name_value); prepared != nil {
+				return prepared, nil
+			}
 		}
 		prepared_bytes, err := prepared_stmt.MarshalJSON()
 		if err != nil {
-			return nil, errors.NewUnrecognizedPreparedError()
+			return nil, errors.NewUnrecognizedPreparedError(err)
 		}
-		prepared = &Prepared{}
-		err = prepared.UnmarshalJSON(prepared_bytes)
-		if err != nil {
-			return nil, errors.NewUnrecognizedPreparedError()
-		}
-		if has_name {
-			cache.add(prepared)
-		}
-		return prepared, nil
+		return unmarshalPrepared(prepared_bytes)
 	default:
-		return nil, errors.NewUnrecognizedPreparedError()
+		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
+}
+
+func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
+	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
+	if err != nil {
+		return nil, errors.NewPreparedDecodingError(err)
+	}
+	var buf bytes.Buffer
+	buf.Write(decoded)
+	reader, err := gzip.NewReader(&buf)
+	if err != nil {
+		return nil, errors.NewPreparedDecodingError(err)
+	}
+	prepared_bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, errors.NewPreparedDecodingError(err)
+	}
+	prepared, err := unmarshalPrepared(prepared_bytes)
+	if err != nil {
+		return nil, errors.NewPreparedDecodingError(err)
+	}
+	return prepared, nil
+}
+
+func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
+	prepared := &Prepared{}
+	err := prepared.UnmarshalJSON(bytes)
+	if err != nil {
+		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
+	}
+	if prepared.Name() != "" {
+		cache.add(prepared)
+	}
+	return prepared, nil
 }

@@ -73,12 +73,19 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		prepared, err = getPrepared(httpArgs)
 	}
 
-	if err == nil && statement == "" && prepared == nil {
-		err = errors.NewServiceErrorMissingValue("statement or prepared")
+	if err != nil && err.Code() == errors.NO_SUCH_PREPARED {
+		plan, plan_err := getEncodedPlan(httpArgs)
+		if plan_err != nil {
+			err = plan_err
+		}
+		if plan_err == nil && plan != nil {
+			prepared = plan
+			err = nil
+		}
 	}
 
-	if err != nil && err.Code() == errors.NO_SUCH_PREPARED && statement != "" {
-		err = nil
+	if err == nil && statement == "" && prepared == nil {
+		err = errors.NewServiceErrorMissingValue("statement or prepared")
 	}
 
 	var namedArgs map[string]value.Value
@@ -223,6 +230,7 @@ const ( // Request argument names
 	TIMEOUT           = "timeout"
 	ARGS              = "args"
 	PREPARED          = "prepared"
+	ENCODED_PLAN      = "encoded_plan"
 	STATEMENT         = "statement"
 	FORMAT            = "format"
 	ENCODING          = "encoding"
@@ -239,6 +247,7 @@ const ( // Request argument names
 var _PARAMETERS = []string{
 	STATEMENT,
 	PREPARED,
+	ENCODED_PLAN,
 	CREDS,
 	ARGS,
 	TIMEOUT,
@@ -278,6 +287,14 @@ func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
 		return nil, err
 	}
 	return plan.GetPrepared(prepared_field)
+}
+
+func getEncodedPlan(a httpRequestArgs) (*plan.Prepared, errors.Error) {
+	prepared_field, err := a.getString(ENCODED_PLAN, "")
+	if err != nil || prepared_field == "" {
+		return nil, err
+	}
+	return plan.DecodePrepared(prepared_field)
 }
 
 func getCompression(a httpRequestArgs) (Compression, errors.Error) {

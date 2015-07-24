@@ -10,6 +10,10 @@
 package planner
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -40,7 +44,17 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		return nil, err
 	}
 
-	value := value.NewValue(json_bytes)
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	w.Write(json_bytes)
+	w.Close()
+	str := base64.StdEncoding.EncodeToString(b.Bytes())
 
-	return plan.NewPrepare(value), nil
+	val := value.NewValue(json_bytes)
+	err = val.SetField("encoded_plan", value.NewValue(str))
+	if err != nil {
+		return nil, err
+	}
+
+	return plan.NewPrepare(val), nil
 }

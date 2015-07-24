@@ -10,16 +10,20 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
+var errBadFormat = fmt.Errorf("prepared must be a json string or object")
+
 func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 	expr := stmt.Prepared()
 	if (expr == nil) || expr.Type() != value.STRING && expr.Type() != value.OBJECT {
-		return nil, errors.NewUnrecognizedPreparedError()
+		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
 	return plan.GetPrepared(expr)
 }
