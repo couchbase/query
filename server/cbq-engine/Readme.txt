@@ -26,4 +26,4 @@ password as part of the url
 
 To run cbq-engine without cbauth the Administrator credentials need not
 be provided as part of the datastore url. In this scenario the engine will
-not have access to SASL protected buckets
+not have access to SASL protected buckets.
