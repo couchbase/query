@@ -78,6 +78,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 		cfg := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
 			ClientAuth:   tls.NoClientCert,
+			MinVersion:   tls.VersionTLS10,
 		}
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
