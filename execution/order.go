@@ -87,13 +87,13 @@ func (this *Order) afterItems(context *Context) {
 	sort.Sort(this)
 	context.AddPhaseTime("sort", time.Since(timer))
 
+	context.SetSortCount(uint64(this.Len()))
+
 	for _, av := range this.values {
 		if !this.sendItem(av) {
 			return
 		}
 	}
-
-	context.SetSortCount(uint64(this.Len()))
 }
 
 func (this *Order) releaseValues() {
