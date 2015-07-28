@@ -24,8 +24,10 @@ import (
 
 type Prepared struct {
 	Operator
-	signature value.Value
-	name      string
+	signature    value.Value
+	name         string
+	encoded_plan string
+	text         string
 }
 
 func NewPrepared(operator Operator, signature value.Value) *Prepared {
@@ -40,15 +42,19 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 	r["operator"] = this.Operator
 	r["signature"] = this.signature
 	r["name"] = this.name
+	r["encoded_plan"] = this.encoded_plan
+	r["text"] = this.text
 
 	return json.Marshal(r)
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Operator  json.RawMessage `json:"operator"`
-		Signature json.RawMessage `json:"signature"`
-		Name      string          `json:"name"`
+		Operator    json.RawMessage `json:"operator"`
+		Signature   json.RawMessage `json:"signature"`
+		Name        string          `json:"name"`
+		EncodedPlan string          `json:"encoded_plan"`
+		Text        string          `json:"text"`
 	}
 
 	var op_type struct {
@@ -67,6 +73,8 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 
 	this.signature = value.NewValue(_unmarshalled.Signature)
 	this.name = _unmarshalled.Name
+	this.encoded_plan = _unmarshalled.EncodedPlan
+	this.text = _unmarshalled.Text
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
 	return err
@@ -82,6 +90,22 @@ func (this *Prepared) Name() string {
 
 func (this *Prepared) SetName(name string) {
 	this.name = name
+}
+
+func (this *Prepared) Text() string {
+	return this.text
+}
+
+func (this *Prepared) SetText(text string) {
+	this.text = text
+}
+
+func (this *Prepared) EncodedPlan() string {
+	return this.encoded_plan
+}
+
+func (this *Prepared) SetEncodedPlan(encoded_plan string) {
+	this.encoded_plan = encoded_plan
 }
 
 type preparedCache struct {
@@ -117,16 +141,20 @@ func (this *preparedCache) add(prepared *Prepared) {
 	this.Unlock()
 }
 
-func (this *preparedCache) peek(name string) bool {
+func (this *preparedCache) peek(prepared *Prepared) bool {
 	this.RLock()
-	_, has_name := this.prepareds[name]
+	cached := this.prepareds[prepared.Name()]
 	this.RUnlock()
-	return has_name
+	if cached != nil && cached.Text() != prepared.Text() {
+		return true
+	}
+	return false
 }
 
 func AddPrepared(prepared *Prepared) errors.Error {
-	if cache.peek(prepared.Name()) {
-		return errors.NewPreparedNameError("duplicate name")
+	if cache.peek(prepared) {
+		return errors.NewPreparedNameError(
+			fmt.Sprintf("duplicate name: %s", prepared.Name()))
 	}
 	cache.add(prepared)
 	return nil

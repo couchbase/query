@@ -69,18 +69,24 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	var prepared *plan.Prepared
+
 	if err == nil {
 		prepared, err = getPrepared(httpArgs)
-	}
-
-	if err != nil && err.Code() == errors.NO_SUCH_PREPARED {
 		plan, plan_err := getEncodedPlan(httpArgs)
-		if plan_err != nil {
+		if err != nil && err.Code() == errors.NO_SUCH_PREPARED {
+			if plan_err != nil {
+				err = plan_err
+			}
+			if plan_err == nil && plan != nil {
+				prepared = plan
+				err = nil
+			}
+		}
+		if err == nil && plan_err != nil {
 			err = plan_err
 		}
-		if plan_err == nil && plan != nil {
-			prepared = plan
-			err = nil
+		if prepared != nil && plan != nil && prepared.EncodedPlan() != plan.EncodedPlan() {
+			err = errors.NewPreparedEncodingMismatchError(prepared.Name())
 		}
 	}
 

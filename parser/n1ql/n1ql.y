@@ -417,7 +417,7 @@ EXPLAIN stmt
 prepare:
 PREPARE opt_name stmt
 {
-    $$ = algebra.NewPrepare($2, $3)
+    $$ = algebra.NewPrepare($2, $3, yylex.(*lexer).getText())
 }
 ;
 

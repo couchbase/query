@@ -66,3 +66,8 @@ func NewPreparedDecodingError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 4070, IKey: "plan.build_prepared.decoding",
 		ICause: e, InternalMsg: "Unable to decode prepared statement", InternalCaller: CallerN(1)}
 }
+
+func NewPreparedEncodingMismatchError(name string) Error {
+	return &err{level: EXCEPTION, ICode: 4080, IKey: "plan.build_prepared.name_encoded_plan_mismatch",
+		InternalMsg: fmt.Sprintf("Encoded plan parameter does not match encoded plan of %s", name), InternalCaller: CallerN(1)}
+}

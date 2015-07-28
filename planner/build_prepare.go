@@ -37,7 +37,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		pl.SetName(stmt.Name())
 	}
 
-	plan.AddPrepared(pl)
+	pl.SetText(stmt.Text())
 
 	json_bytes, err := pl.MarshalJSON()
 	if err != nil {
@@ -49,9 +49,14 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	w.Write(json_bytes)
 	w.Close()
 	str := base64.StdEncoding.EncodeToString(b.Bytes())
-
+	pl.SetEncodedPlan(str)
 	val := value.NewValue(json_bytes)
 	err = val.SetField("encoded_plan", value.NewValue(str))
+	if err != nil {
+		return nil, err
+	}
+
+	err = plan.AddPrepared(pl)
 	if err != nil {
 		return nil, err
 	}

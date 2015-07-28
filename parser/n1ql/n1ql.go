@@ -22,6 +22,7 @@ func ParseStatement(input string) (algebra.Statement, error) {
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
 	lex.parsingStmt = true
+	lex.text = input
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
@@ -71,6 +72,7 @@ type lexer struct {
 	stmt        algebra.Statement
 	expr        expression.Expression
 	parsingStmt bool
+	text        string
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -103,6 +105,8 @@ func (this *lexer) setExpression(expr expression.Expression) {
 }
 
 func (this *lexer) parsingStatement() bool { return this.parsingStmt }
+
+func (this *lexer) getText() string { return this.text }
 
 func (this *lexer) nextParam() int {
 	this.posParam++
