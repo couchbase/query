@@ -12,6 +12,7 @@ package execution
 import (
 	"fmt"
 	"sync"
+	go_atomic "sync/atomic"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
@@ -35,6 +36,8 @@ var pipelineCap atomic.AlignedInt64
 
 func init() {
 	atomic.StoreInt64(&pipelineCap, int64(_ITEM_CAP))
+	p := value.NewAnnotatedPool(_BATCH_SIZE)
+	_BATCH_POOL.Store(p)
 }
 
 func SetPipelineCap(cap int) {
@@ -230,14 +233,27 @@ type batcher interface {
 
 var _BATCH_SIZE = 64
 
-var _BATCH_POOL = value.NewAnnotatedPool(_BATCH_SIZE)
+func SetPipelineBatch(size int) {
+	if size < 1 {
+		size = _BATCH_SIZE
+	}
+
+	p := value.NewAnnotatedPool(size)
+	_BATCH_POOL.Store(p)
+}
+
+var _BATCH_POOL go_atomic.Value
+
+func getBatchPool() *value.AnnotatedPool {
+	return _BATCH_POOL.Load().(*value.AnnotatedPool)
+}
 
 func (this *base) allocateBatch() {
-	this.batch = _BATCH_POOL.Get()
+	this.batch = getBatchPool().Get()
 }
 
 func (this *base) releaseBatch() {
-	_BATCH_POOL.Put(this.batch)
+	getBatchPool().Put(this.batch)
 	this.batch = nil
 }
 

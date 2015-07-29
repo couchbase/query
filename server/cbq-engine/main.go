@@ -24,6 +24,7 @@ import (
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -56,6 +57,7 @@ var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
 var PIPELINE_CAP = flag.Int("pipeline-cap", 512, "Maximum number of items each execution operator can buffer")
+var PIPELINE_BATCH = flag.Int("pipeline-batch", 16, "Number of items execution operators can batch")
 var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 
 //cpu and memory profiling flags
@@ -117,6 +119,8 @@ func main() {
 		// Make metrics available
 		acctstore.MetricReporter().Start(1, 1)
 	}
+
+	execution.SetPipelineBatch(*PIPELINE_BATCH)
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
