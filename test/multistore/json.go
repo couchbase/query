@@ -227,8 +227,9 @@ func Start(site, pool, namespace string) *server.Server {
 	}
 
 	channel := make(server.RequestChannel, 10)
+	plusChannel := make(server.RequestChannel, 10)
 	server, err := server.NewServer(datastore, configstore, acctstore, namespace,
-		false, channel, 4, 0, 0, false, false, false)
+		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

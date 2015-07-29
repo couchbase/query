@@ -43,7 +43,8 @@ var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var REQUEST_CAP = flag.Int("request-cap", 1024, "Maximum number of queued requests")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
-var SERVICER_COUNT = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
+var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
+var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to disable")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
@@ -123,16 +124,18 @@ func main() {
 	execution.SetPipelineBatch(*PIPELINE_BATCH)
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
-	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE, *READONLY, channel,
-		*SERVICER_COUNT, *MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE)
+	plusChannel := make(server.RequestChannel, *REQUEST_CAP)
+	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE,
+		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
+		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 
-	server.SetCpuprofile(*CPU_PROFILE)
+	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
-	server.SetMemprofile(*MEM_PROFILE)
+	server.SetMemProfile(*MEM_PROFILE)
 	server.SetPipelineCap(*PIPELINE_CAP)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
@@ -154,6 +157,7 @@ func main() {
 	}
 
 	go server.Serve()
+	go server.PlusServe()
 
 	logging.Infop("cbq-engine started",
 		logging.Pair{"version", util.VERSION},
@@ -199,12 +203,12 @@ func signalCatcher(server *server.Server, endpoint *http.HttpEndpoint) {
 	select {
 	case s = <-sig_chan:
 	}
-	if server.Cpuprofile() != "" {
+	if server.CpuProfile() != "" {
 		logging.Infop("Stopping CPU profile")
 		pprof.StopCPUProfile()
 	}
-	if server.Memprofile() != "" {
-		f, err := os.Create(server.Memprofile())
+	if server.MemProfile() != "" {
+		f, err := os.Create(server.MemProfile())
 		if err != nil {
 			logging.Errorp("Cannot create memory profile file", logging.Pair{"error", err})
 		} else {

@@ -35,7 +35,8 @@ import (
 type Server struct {
 	// due to alignment issues on x86 platforms these atomic
 	// variables need to right at the beginning of the structure
-	servicerCount  atomic.AlignedInt64
+	servicers      atomic.AlignedInt64
+	plusServicers  atomic.AlignedInt64
 	maxParallelism atomic.AlignedInt64
 	keepAlive      atomic.AlignedInt64
 	requestSize    atomic.AlignedInt64
@@ -48,11 +49,14 @@ type Server struct {
 	namespace   string
 	readonly    bool
 	channel     RequestChannel
+	plusChannel RequestChannel
 	done        chan bool
+	plusDone    chan bool
 	timeout     time.Duration
 	signature   bool
 	metrics     bool
 	wg          sync.WaitGroup
+	plusWg      sync.WaitGroup
 	memprofile  string
 	cpuprofile  string
 	enterprise  bool
@@ -64,8 +68,8 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 
 func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
-	channel RequestChannel, servicerCount, maxParallelism int, timeout time.Duration,
-	signature, metrics bool, enterprise bool) (*Server, errors.Error) {
+	channel, plusChannel RequestChannel, servicers, plusServicers, maxParallelism int,
+	timeout time.Duration, signature, metrics bool, enterprise bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		configstore: config,
@@ -73,15 +77,18 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 		namespace:   namespace,
 		readonly:    readonly,
 		channel:     channel,
+		plusChannel: plusChannel,
 		signature:   signature,
 		timeout:     timeout,
 		metrics:     metrics,
 		done:        make(chan bool),
+		plusDone:    make(chan bool),
 		enterprise:  enterprise,
 	}
 
 	// special case handling for the atomic specfic stuff
-	atomic.StoreInt64(&rv.servicerCount, int64(servicerCount))
+	atomic.StoreInt64(&rv.servicers, int64(servicers))
+	atomic.StoreInt64(&rv.plusServicers, int64(plusServicers))
 
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
@@ -109,6 +116,10 @@ func (this *Server) AccountingStore() accounting.AccountingStore {
 
 func (this *Server) Channel() RequestChannel {
 	return this.channel
+}
+
+func (this *Server) PlusChannel() RequestChannel {
+	return this.plusChannel
 }
 
 func (this *Server) Signature() bool {
@@ -141,25 +152,25 @@ func (this *Server) SetMaxParallelism(maxParallelism int) {
 	atomic.StoreInt64(&this.maxParallelism, int64(maxParallelism))
 }
 
-func (this *Server) Memprofile() string {
+func (this *Server) MemProfile() string {
 	this.RLock()
 	defer this.RUnlock()
 	return this.memprofile
 }
 
-func (this *Server) SetMemprofile(memprofile string) {
+func (this *Server) SetMemProfile(memprofile string) {
 	this.Lock()
 	defer this.Unlock()
 	this.memprofile = memprofile
 }
 
-func (this *Server) Cpuprofile() string {
+func (this *Server) CpuProfile() string {
 	this.RLock()
 	defer this.RUnlock()
 	return this.cpuprofile
 }
 
-func (this *Server) SetCpuprofile(cpuprofile string) {
+func (this *Server) SetCpuProfile(cpuprofile string) {
 	this.Lock()
 	defer this.Unlock()
 	this.cpuprofile = cpuprofile
@@ -235,22 +246,41 @@ func (this *Server) SetScanCap(size int) {
 }
 
 func (this *Server) Servicers() int {
-	return int(atomic.LoadInt64(&this.servicerCount))
+	return int(atomic.LoadInt64(&this.servicers))
 }
 
-func (this *Server) SetServicers(servicerCount int) {
+func (this *Server) SetServicers(servicers int) {
 	this.Lock()
 	defer this.Unlock()
 	// Stop the current set of servicers
 	close(this.done)
 	logging.Infop("SetServicers - waiting for current servicers to finish")
 	this.wg.Wait()
-	// Set servicer count and recreate servicer channel
-	atomic.StoreInt64(&this.servicerCount, int64(servicerCount))
+	// Set servicer count and recreate servicers
+	atomic.StoreInt64(&this.servicers, int64(servicers))
 	logging.Infop("SetServicers - starting new servicers")
 	// Start new set of servicers
 	this.done = make(chan bool)
 	go this.Serve()
+}
+
+func (this *Server) PlusServicers() int {
+	return int(atomic.LoadInt64(&this.plusServicers))
+}
+
+func (this *Server) SetPlusServicers(plusServicers int) {
+	this.Lock()
+	defer this.Unlock()
+	// Stop the current set of servicers
+	close(this.plusDone)
+	logging.Infop("SetPlusServicers - waiting for current plusServicers to finish")
+	this.plusWg.Wait()
+	// Set plus servicer count and recreate plus servicers
+	atomic.StoreInt64(&this.plusServicers, int64(plusServicers))
+	logging.Infop("SetPlusServicers - starting new plusServicers")
+	// Start new set of servicers
+	this.plusDone = make(chan bool)
+	go this.PlusServe()
 }
 
 func (this *Server) Timeout() time.Duration {
@@ -285,6 +315,31 @@ func (this *Server) doServe() {
 		case request := <-this.channel:
 			this.serviceRequest(request)
 		case <-this.done:
+			ok = false
+		}
+	}
+}
+
+func (this *Server) PlusServe() {
+	// Use a threading model. Do not spawn a separate
+	// goroutine for each request, as that would be
+	// unbounded and could degrade performance of already
+	// executing queries.
+	plusServicers := this.PlusServicers()
+	this.plusWg.Add(plusServicers)
+	for i := 0; i < plusServicers; i++ {
+		go this.doPlusServe()
+	}
+}
+
+func (this *Server) doPlusServe() {
+	defer this.plusWg.Done()
+	ok := true
+	for ok {
+		select {
+		case request := <-this.plusChannel:
+			this.serviceRequest(request)
+		case <-this.plusDone:
 			ok = false
 		}
 	}

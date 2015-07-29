@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
@@ -101,15 +102,25 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	select {
-	case this.server.Channel() <- request:
-		// Wait until the request exits.
-		<-request.CloseNotify()
-	default:
-		// Timeout.
-		resp.WriteHeader(http.StatusServiceUnavailable)
+	if request.ScanConsistency() == datastore.UNBOUNDED {
+		select {
+		case this.server.Channel() <- request:
+			// Wait until the request exits.
+			<-request.CloseNotify()
+		default:
+			// Buffer is full.
+			resp.WriteHeader(http.StatusServiceUnavailable)
+		}
+	} else {
+		select {
+		case this.server.PlusChannel() <- request:
+			// Wait until the request exits.
+			<-request.CloseNotify()
+		default:
+			// Buffer is full.
+			resp.WriteHeader(http.StatusServiceUnavailable)
+		}
 	}
-
 }
 
 func (this *HttpEndpoint) Close() error {

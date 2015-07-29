@@ -343,7 +343,7 @@ type setter func(*server.Server, interface{})
 var _SETTERS = map[string]setter{
 	_CPUPROFILE: func(s *server.Server, o interface{}) {
 		value, _ := o.(string)
-		s.SetCpuprofile(value)
+		s.SetCpuProfile(value)
 	},
 	_DEBUG: func(s *server.Server, o interface{}) {
 		value, _ := o.(bool)
@@ -363,7 +363,7 @@ var _SETTERS = map[string]setter{
 	},
 	_MEMPROFILE: func(s *server.Server, o interface{}) {
 		value, _ := o.(string)
-		s.SetMemprofile(value)
+		s.SetMemProfile(value)
 	},
 	_PIPELINECAP: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
@@ -425,8 +425,8 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
-	settings[_CPUPROFILE] = srvr.Cpuprofile()
-	settings[_MEMPROFILE] = srvr.Memprofile()
+	settings[_CPUPROFILE] = srvr.CpuProfile()
+	settings[_MEMPROFILE] = srvr.MemProfile()
 	settings[_SERVICERS] = srvr.Servicers()
 	settings[_SCANCAP] = srvr.ScanCap()
 	settings[_REQUESTSIZECAP] = srvr.RequestSizeCap()
