@@ -42,3 +42,7 @@ func (this *AnnotatedPool) Put(s AnnotatedValues) {
 
 	this.pool.Put(s[0:0])
 }
+
+func (this *AnnotatedPool) Size() int {
+	return this.size
+}

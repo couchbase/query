@@ -27,7 +27,6 @@ import (
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
-	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -127,8 +126,6 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
-	execution.SetPipelineBatch(*PIPELINE_BATCH)
-
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	plusChannel := make(server.RequestChannel, *REQUEST_CAP)
 	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE,
@@ -143,6 +140,7 @@ func main() {
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
 	server.SetMemProfile(*MEM_PROFILE)
 	server.SetPipelineCap(*PIPELINE_CAP)
+	server.SetPipelineBatch(*PIPELINE_BATCH)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
 

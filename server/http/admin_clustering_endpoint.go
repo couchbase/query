@@ -292,6 +292,7 @@ const (
 	_MAXPARALLELISM  = "max-parallelism"
 	_MEMPROFILE      = "memprofile"
 	_REQUESTSIZECAP  = "request-size-cap"
+	_PIPELINEBATCH   = "pipeline-batch"
 	_PIPELINECAP     = "pipeline-cap"
 	_SCANCAP         = "scan-cap"
 	_SERVICERS       = "servicers"
@@ -332,6 +333,7 @@ var _CHECKERS = map[string]checker{
 	_MAXPARALLELISM:  checkNumber,
 	_MEMPROFILE:      checkString,
 	_REQUESTSIZECAP:  checkNumber,
+	_PIPELINEBATCH:   checkNumber,
 	_PIPELINECAP:     checkNumber,
 	_SCANCAP:         checkNumber,
 	_SERVICERS:       checkNumber,
@@ -368,6 +370,10 @@ var _SETTERS = map[string]setter{
 	_PIPELINECAP: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
 		s.SetPipelineCap(int(value))
+	},
+	_PIPELINEBATCH: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		s.SetPipelineBatch(int(value))
 	},
 	_REQUESTSIZECAP: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
@@ -431,6 +437,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_SCANCAP] = srvr.ScanCap()
 	settings[_REQUESTSIZECAP] = srvr.RequestSizeCap()
 	settings[_DEBUG] = srvr.Debug()
+	settings[_PIPELINEBATCH] = srvr.PipelineBatch()
 	settings[_PIPELINECAP] = srvr.PipelineCap()
 	settings[_MAXPARALLELISM] = srvr.MaxParallelism()
 	settings[_TIMEOUT] = srvr.Timeout()

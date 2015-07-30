@@ -233,6 +233,8 @@ type batcher interface {
 
 var _BATCH_SIZE = 64
 
+var _BATCH_POOL go_atomic.Value
+
 func SetPipelineBatch(size int) {
 	if size < 1 {
 		size = _BATCH_SIZE
@@ -242,7 +244,9 @@ func SetPipelineBatch(size int) {
 	_BATCH_POOL.Store(p)
 }
 
-var _BATCH_POOL go_atomic.Value
+func PipelineBatchSize() int {
+	return _BATCH_POOL.Load().(*value.AnnotatedPool).Size()
+}
 
 func getBatchPool() *value.AnnotatedPool {
 	return _BATCH_POOL.Load().(*value.AnnotatedPool)

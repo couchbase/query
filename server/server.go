@@ -194,6 +194,14 @@ func (this *Server) SetPipelineCap(pipeline_cap int) {
 	execution.SetPipelineCap(pipeline_cap)
 }
 
+func (this *Server) SetPipelineBatch(pipeline_batch int) {
+	execution.SetPipelineBatch(pipeline_batch)
+}
+
+func (this *Server) PipelineBatch() int {
+	return execution.PipelineBatchSize()
+}
+
 func (this *Server) Debug() bool {
 	return logging.LogLevel() == logging.DEBUG
 }
