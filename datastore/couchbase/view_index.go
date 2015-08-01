@@ -385,6 +385,7 @@ func (vi *viewIndex) Drop(requestId string) errors.Error {
 func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
+
 	// For primary indexes, bounds must always be strings, so we
 	// can just enforce that directly
 
@@ -392,7 +393,10 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 	viewOptions = generateViewOptions(cons, span) /*span.Range.Low, span.Range.High, span.Range.Inclusion) */
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
-	go WalkViewInBatches(viewRowChannel, viewErrChannel, vi.keyspace.cbbucket,
+	doneChannel := make(chan bool)
+	defer close(doneChannel)
+
+	go WalkViewInBatches(viewRowChannel, viewErrChannel, doneChannel, vi.keyspace.cbbucket,
 		vi.DDocName(), vi.ViewName(), vi.IsPrimary(), viewOptions, _BATCH_SIZE, limit)
 
 	var viewRow cb.ViewRow
@@ -416,10 +420,14 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 						errs = append(errs, fmt.Errorf("unable to convert index key to lookup value err:%v key %v", err, entry))
 					}
 				}
-
-				conn.EntryChannel() <- &entry
-				sentRows = true
-				numRows++
+				select {
+				case conn.EntryChannel() <- &entry:
+					sentRows = true
+					numRows++
+				case <-conn.StopChannel():
+					logging.Debugf(" Asked to stop after sending %v rows", numRows)
+					ok = false
+				}
 			}
 		case err, ok = <-viewErrChannel:
 			if err != nil {

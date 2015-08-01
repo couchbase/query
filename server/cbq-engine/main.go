@@ -19,6 +19,9 @@ import (
 	"syscall"
 	"time"
 
+	go_http "net/http"
+	_ "net/http/pprof"
+
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
@@ -68,6 +71,9 @@ var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this fi
 func main() {
 	HideConsole(true)
 	defer HideConsole(false)
+
+	// useful for getting list of go-routines
+	go go_http.ListenAndServe("localhost:6060", nil)
 
 	flag.Parse()
 
