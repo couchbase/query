@@ -279,7 +279,8 @@ func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
 			operands[i] = expression.NewNot(op)
 		}
 
-		exp = expression.NewAnd(operands...)
+		and := expression.NewAnd(operands...)
+		return this.VisitAnd(and)
 	case *expression.Eq:
 		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
 			expression.NewLT(operand.Second(), operand.First()))
