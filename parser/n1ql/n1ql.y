@@ -240,7 +240,7 @@ val              value.Value
 %token WORK
 %token XOR
 
-%token INT NUMBER STRING IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
+%token INT NUM STR IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -271,10 +271,10 @@ val              value.Value
 %left           LPAREN RPAREN
 
 /* Types */
-%type <s>                STRING
+%type <s>                STR
 %type <s>                IDENTIFIER IDENTIFIER_ICASE
 %type <s>                NAMED_PARAM
-%type <f>                NUMBER
+%type <f>                NUM
 %type <n>                INT
 %type <n>                POSITIONAL_PARAM NEXT_PARAM
 %type <expr>             literal construction_expr object array
@@ -432,7 +432,7 @@ IDENTIFIER from_or_as
     $$ = $1
 }
 |
-STRING from_or_as
+STR from_or_as
 {
     $$ = $1
 }
@@ -1992,66 +1992,6 @@ expr IS NOT VALUED
     $$ = expression.NewIsNotValued($1)
 }
 |
-expr IS BOOLEAN
-{
-    $$ = expression.NewIsBoolean($1)
-}
-|
-expr IS NOT BOOLEAN
-{
-    $$ = expression.NewNot(expression.NewIsBoolean($1))
-}
-|
-expr IS NUMBER
-{
-    $$ = expression.NewIsNumber($1)
-}
-|
-expr IS NOT NUMBER
-{
-    $$ = expression.NewNot(expression.NewIsNumber($1))
-}
-|
-expr IS STRING
-{
-    $$ = expression.NewIsString($1)
-}
-|
-expr IS NOT STRING
-{
-    $$ = expression.NewNot(expression.NewIsString($1))
-}
-|
-expr IS ARRAY
-{
-    $$ = expression.NewIsArray($1)
-}
-|
-expr IS NOT ARRAY
-{
-    $$ = expression.NewNot(expression.NewIsArray($1))
-}
-|
-expr IS OBJECT
-{
-    $$ = expression.NewIsObject($1)
-}
-|
-expr IS NOT OBJECT
-{
-    $$ = expression.NewNot(expression.NewIsObject($1))
-}
-|
-expr IS BINARY
-{
-    $$ = expression.NewIsBinary($1)
-}
-|
-expr IS NOT BINARY
-{
-    $$ = expression.NewNot(expression.NewIsBinary($1))
-}
-|
 EXISTS expr
 {
     $$ = expression.NewExists($2)
@@ -2216,7 +2156,7 @@ TRUE
     $$ = expression.TRUE_EXPR
 }
 |
-NUMBER
+NUM
 {
     $$ = expression.NewConstant(value.NewValue($1))
 }
@@ -2226,7 +2166,7 @@ INT
     $$ = expression.NewConstant(value.NewValue($1))
 }
 |
-STRING
+STR
 {
     $$ = expression.NewConstant(value.NewValue($1))
 }
@@ -2274,7 +2214,7 @@ members COMMA member
 ;
 
 member:
-STRING COLON expr
+STR COLON expr
 {
     $$ = expression.NewBinding($1, $3)
 }

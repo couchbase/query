@@ -1,13 +1,13 @@
 /\"((\\\")|[^\"])*\"/ {
 		    lval.s, _ = UnmarshalDoubleQuoted(yylex.Text())
-		    logToken("STRING - %s", lval.s)
-		    return STRING
+		    logToken("STR - %s", lval.s)
+		    return STR
 		  }
 
 /'(('')|[^'])*'/ {
 		    lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
-		    logToken("STRING - %s", lval.s)
-		    return STRING
+		    logToken("STR - %s", lval.s)
+		    return STR
 		  }
 
 /`((``)|[^`])+`i/ {
@@ -27,21 +27,21 @@
 		  }
 
 /(0|[1-9][0-9]*)\.[0-9]+([eE][+\-]?[0-9]+)?/ {
-		  // We differentiate NUMBER from INT
+		  // We differentiate NUM from INT
 		    lval.f,_ = strconv.ParseFloat(yylex.Text(), 64)
-		    logToken("NUMBER - %f", lval.f)
-		    return NUMBER
+		    logToken("NUM - %f", lval.f)
+		    return NUM
 		  }
 
 /(0|[1-9][0-9]*)[eE][+\-]?[0-9]+/ {
-		  // We differentiate NUMBER from INT
+		  // We differentiate NUM from INT
 		    lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-		    logToken("NUMBER - %f", lval.f)
-		    return NUMBER
+		    logToken("NUM - %f", lval.f)
+		    return NUM
 		  }
 
 /0|[1-9][0-9]*/ {
-		  // We differentiate NUMBER from INT
+		  // We differentiate NUM from INT
 		    lval.n, _ = strconv.Atoi(yylex.Text())
 		    logToken("INT - %d", lval.n)
 		    return INT
