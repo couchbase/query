@@ -37,7 +37,7 @@ func newSargEq(pred *expression.Eq) *sargEq {
 		}
 
 		if span.Range.Low[0] == nil {
-			return _VALUED_SPANS, nil
+			return nil, nil
 		}
 
 		if rv.MissingHigh() {

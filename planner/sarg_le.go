@@ -50,7 +50,7 @@ func newSargLE(pred *expression.LE) *sargLE {
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {
-			return _VALUED_SPANS, nil
+			return nil, nil
 		}
 
 		return plan.Spans{span}, nil

@@ -40,7 +40,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {
-			return _VALUED_SPANS, nil
+			return nil, nil
 		}
 
 		span.Range.Inclusion = datastore.NEITHER

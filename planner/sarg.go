@@ -31,8 +31,8 @@ keys:
 
 		rs := r.(plan.Spans)
 		if len(rs) == 0 {
-			// Should not reach here
-			return nil, nil
+			ns = nil
+			continue
 		}
 
 		// Notify prev key that this key is missing a high bound
@@ -85,7 +85,7 @@ keys:
 				}
 			}
 
-			added := false
+			pn := make(plan.Spans, 0, len(ns))
 			for _, next := range ns {
 				add := false
 				pre := prev.Copy()
@@ -105,12 +105,15 @@ keys:
 				}
 
 				if add {
-					sp = append(sp, pre)
-					added = true
+					pn = append(pn, pre)
+				} else {
+					break
 				}
 			}
 
-			if !added {
+			if len(pn) == len(ns) {
+				sp = append(sp, pn...)
+			} else {
 				sp = append(sp, prev)
 			}
 		}
@@ -118,7 +121,7 @@ keys:
 		ns = sp
 	}
 
-	if len(ns) > 256 {
+	if len(ns) == 0 || len(ns) > 256 {
 		return _FULL_SPANS, nil
 	}
 
