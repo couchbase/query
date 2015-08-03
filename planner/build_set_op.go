@@ -22,6 +22,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -41,6 +42,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -64,6 +66,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -82,6 +85,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -110,6 +114,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {
@@ -128,6 +133,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
 	this.order = nil             // Disable aggregates from ORDER BY
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
+	this.limit = nil
 
 	first, err := node.First().Accept(this)
 	if err != nil {

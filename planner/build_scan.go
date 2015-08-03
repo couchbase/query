@@ -11,7 +11,6 @@ package planner
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -22,8 +21,8 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-func (this *builder) selectScan(keyspace datastore.Keyspace,
-	node *algebra.KeyspaceTerm) (op plan.Operator, err error) {
+func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	limit expression.Expression) (op plan.Operator, err error) {
 	keys := node.Keys()
 	if keys != nil {
 		switch keys := keys.(type) {
@@ -47,13 +46,13 @@ func (this *builder) selectScan(keyspace datastore.Keyspace,
 	}
 
 	if primary != nil {
-		return plan.NewPrimaryScan(primary, keyspace, node), nil
+		return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
 	}
 
 	scans := make([]plan.Operator, 0, len(secondary))
 	var scan plan.Operator
 	for index, spans := range secondary {
-		scan = plan.NewIndexScan(index, node, spans, false, math.MaxInt64)
+		scan = plan.NewIndexScan(index, node, spans, false, limit)
 		if len(spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
 			scan = plan.NewUnionScan(scan)

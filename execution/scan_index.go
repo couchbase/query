@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -167,7 +168,15 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		return
 	}
 
-	this.plan.Index().Scan(context.RequestId(), dspan, this.plan.Distinct(), this.plan.Limit(),
+	limit := int64(math.MaxInt64)
+	if this.plan.Limit() != nil {
+		lv, err := this.plan.Limit().Evaluate(nil, context)
+		if err == nil && lv.Type() == value.NUMBER {
+			limit = int64(lv.Actual().(float64))
+		}
+	}
+
+	this.plan.Index().Scan(context.RequestId(), dspan, this.plan.Distinct(), limit,
 		context.ScanConsistency(), context.ScanVector(), conn)
 }
 

@@ -23,7 +23,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Where())
+	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Where(), stmt.Limit())
 	if err != nil {
 		return nil, err
 	}

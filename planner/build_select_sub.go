@@ -44,6 +44,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if count {
 		this.maxParallelism = 1
 	} else if node.From() != nil {
+		if this.where != nil || group != nil {
+			this.limit = nil
+		}
+
 		_, err := node.From().Accept(this)
 		if err != nil {
 			return nil, err
@@ -132,7 +136,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
 
-	scan, err := this.selectScan(keyspace, node)
+	scan, err := this.selectScan(keyspace, node, this.limit)
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +161,8 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
+	this.limit = nil
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -203,6 +209,8 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
+	this.limit = nil
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err

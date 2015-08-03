@@ -20,9 +20,11 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	// Restore previous values when exiting. VisitSelect()
 	// can be called multiple times by set operators
 	prevOrder := this.order
+	prevLimit := this.limit
 	prevProjection := this.delayProjection
 	defer func() {
 		this.order = prevOrder
+		this.limit = prevLimit
 		this.delayProjection = prevProjection
 	}()
 
@@ -30,10 +32,16 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	offset := stmt.Offset()
 	limit := stmt.Limit()
 
-	// If there is an ORDER BY, delay the final projection
+	this.order = order
 	if order != nil {
-		this.order = order
+		// If there is an ORDER BY, delay the final projection
 		this.delayProjection = true
+	}
+
+	if order != nil || offset != nil {
+		this.limit = nil
+	} else if limit != nil {
+		this.limit = limit
 	}
 
 	sub, err := stmt.Subresult().Accept(this)

@@ -17,14 +17,18 @@ import (
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	keys expression.Expression, indexes algebra.IndexRefs, where expression.Expression) error {
+	keys expression.Expression, indexes algebra.IndexRefs, where, limit expression.Expression) error {
 	ksref.SetDefaultNamespace(this.namespace)
 	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), keys, indexes)
 
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	scan, err := this.selectScan(keyspace, term)
+	if where != nil {
+		limit = nil
+	}
+
+	scan, err := this.selectScan(keyspace, term, limit)
 	if err != nil {
 		return err
 	}

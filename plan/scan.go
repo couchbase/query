@@ -12,7 +12,6 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -26,13 +25,16 @@ type PrimaryScan struct {
 	index    datastore.PrimaryIndex
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
+	limit    expression.Expression
 }
 
-func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace, term *algebra.KeyspaceTerm) *PrimaryScan {
+func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace,
+	term *algebra.KeyspaceTerm, limit expression.Expression) *PrimaryScan {
 	return &PrimaryScan{
 		index:    index,
 		keyspace: keyspace,
 		term:     term,
+		limit:    limit,
 	}
 }
 
@@ -56,12 +58,21 @@ func (this *PrimaryScan) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
+func (this *PrimaryScan) Limit() expression.Expression {
+	return this.limit
+}
+
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "PrimaryScan"}
 	r["index"] = this.index.Name()
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	return json.Marshal(r)
 }
 
@@ -72,11 +83,19 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		Names string              `json:"namespace"`
 		Keys  string              `json:"keyspace"`
 		Using datastore.IndexType `json:"using"`
+		Limit string              `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
+	}
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
 	}
 
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
@@ -113,11 +132,11 @@ type IndexScan struct {
 	term     *algebra.KeyspaceTerm
 	spans    Spans
 	distinct bool
-	limit    int64
+	limit    expression.Expression
 }
 
 func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
-	spans Spans, distinct bool, limit int64) *IndexScan {
+	spans Spans, distinct bool, limit expression.Expression) *IndexScan {
 	return &IndexScan{
 		index:    index,
 		term:     term,
@@ -151,7 +170,7 @@ func (this *IndexScan) Distinct() bool {
 	return this.distinct
 }
 
-func (this *IndexScan) Limit() int64 {
+func (this *IndexScan) Limit() expression.Expression {
 	return this.limit
 }
 
@@ -167,8 +186,8 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 		r["distinct"] = this.distinct
 	}
 
-	if this.limit >= 0 {
-		r["limit"] = this.limit
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
 	return json.Marshal(r)
@@ -183,7 +202,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Using    datastore.IndexType `json:"using"`
 		Spans    json.RawMessage     `json:"spans"`
 		Distinct bool                `json:"distinct"`
-		Limit    float64             `json:"limit"`
+		Limit    string              `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -206,10 +225,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.distinct = _unmarshalled.Distinct
-	if _unmarshalled.Limit >= math.MaxInt64 {
-		this.limit = math.MaxInt64
-	} else {
-		this.limit = int64(_unmarshalled.Limit)
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
 	}
 
 	indexer, err := k.Indexer(_unmarshalled.Using)

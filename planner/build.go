@@ -55,6 +55,7 @@ type builder struct {
 	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY
+	limit           expression.Expression // Used for LIMIT pushdown
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator

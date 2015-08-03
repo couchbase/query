@@ -158,7 +158,16 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
-	this.plan.Index().ScanEntries(context.RequestId(), math.MaxInt64,
+
+	limit := int64(math.MaxInt64)
+	if this.plan.Limit() != nil {
+		lv, err := this.plan.Limit().Evaluate(nil, context)
+		if err == nil && lv.Type() == value.NUMBER {
+			limit = int64(lv.Actual().(float64))
+		}
+	}
+
+	this.plan.Index().ScanEntries(context.RequestId(), limit,
 		context.ScanConsistency(), context.ScanVector(), conn)
 }
 
