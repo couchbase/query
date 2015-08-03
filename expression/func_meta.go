@@ -238,7 +238,7 @@ func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, erro
 
 func (this *Uuid) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return this
+		return NewUuid()
 	}
 }
 
@@ -290,7 +290,7 @@ func (this *Version) Indexable() bool {
 
 func (this *Version) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return this
+		return NewVersion()
 	}
 }
 
@@ -342,6 +342,6 @@ func (this *MinVersion) Indexable() bool {
 
 func (this *MinVersion) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return this
+		return NewMinVersion()
 	}
 }

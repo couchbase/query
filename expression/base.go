@@ -23,6 +23,7 @@ type ExpressionBase struct {
 	expr        Expression
 	value       *value.Value
 	conditional bool
+	volatile    bool
 }
 
 var _NIL_VALUE value.Value
@@ -44,6 +45,11 @@ return nil.
 func (this *ExpressionBase) Value() value.Value {
 	if this.value != nil {
 		return *this.value
+	}
+
+	if this.volatile {
+		this.value = &_NIL_VALUE
+		return nil
 	}
 
 	propMissing := this.expr.PropagatesMissing()

@@ -11,10 +11,12 @@ package n1ql
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 )
 
 func ParseStatement(input string) (algebra.Statement, error) {
@@ -58,7 +60,12 @@ func doParse(lex *lexer) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			lex.Error("Errors while parsing.")
+			lex.Error(fmt.Sprintf("Error while parsing: %v", r))
+
+			// Log this error
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			logging.Errorf("Error while parsing: %v\n%s", r, string(buf[0:n]))
 		}
 	}()
 

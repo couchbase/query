@@ -122,7 +122,6 @@ operands of the functions which are of type expressions.
 type FunctionBase struct {
 	ExpressionBase
 	name     string
-	volatile bool
 	operands Expressions
 }
 
