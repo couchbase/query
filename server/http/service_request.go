@@ -893,9 +893,9 @@ func (this *jsonArgs) getDuration(f string) (time.Duration, errors.Error) {
 	var timeout time.Duration
 	t, err := this.getString(f, "0s")
 	if err != nil {
-		timeout, err = newDuration(t)
+		return timeout, err
 	}
-	return timeout, err
+	return newDuration(t)
 }
 
 func (this *jsonArgs) getTristate(f string) (value.Tristate, errors.Error) {
