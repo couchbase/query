@@ -104,6 +104,10 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	}
 }
 
+func (this *Constant) CoveredBy(exprs Expressions) bool {
+	return true
+}
+
 /*
 Constant expressions do not have children. Hence return nil.
 */

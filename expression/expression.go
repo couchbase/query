@@ -49,11 +49,16 @@ type Expression interface {
 	Type() value.Type
 
 	/*
-	   It is used to evaluate the expression for a given value
-	   and a particular context. It has input parameters Value
-	   and Context and returns a Value and an error.
+	   Evaluate the expression for a given input and a particular
+	   context.
 	*/
 	Evaluate(item value.Value, context Context) (value.Value, error)
+
+	/*
+	   Evaluate the expression for an indexing context. Support
+	   multiple return values for array indexing.
+	*/
+	EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error)
 
 	/*
 	   Value() returns the static / constant value of this
@@ -114,6 +119,13 @@ type Expression interface {
 	   selection.
 	*/
 	DependsOn(other Expression) bool
+
+	/*
+	   Indicates if this expression is covered by the list of
+	   expressions; that is, this expression does not depend on
+	   any stored data beyond the expressions.
+	*/
+	CoveredBy(exprs Expressions) bool
 
 	/*
 	   It is a utility function that returns the children of the

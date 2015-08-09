@@ -98,6 +98,16 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
+func (this *Identifier) CoveredBy(exprs Expressions) bool {
+	for _, expr := range exprs {
+		if this.EquivalentTo(expr) {
+			return true
+		}
+	}
+
+	return false
+}
+
 /*
 Since identifiers dont have children this returns nil.
 */

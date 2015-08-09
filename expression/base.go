@@ -38,6 +38,18 @@ func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
 }
 
 /*
+Evaluate the expression for an indexing context. Support multiple
+return values for array indexing.
+
+By default, just call Evaluate().
+*/
+func (this *ExpressionBase) EvaluateForIndex(item value.Value, context Context) (
+	value.Value, value.Values, error) {
+	val, err := this.expr.Evaluate(item, context)
+	return val, nil, err
+}
+
+/*
 Value() returns the static / constant value of this Expression, or
 nil. Expressions that depend on data, clocks, or random numbers must
 return nil.
@@ -207,6 +219,24 @@ func (this *ExpressionBase) DependsOn(other Expression) bool {
 	}
 
 	return false
+}
+
+func (this *ExpressionBase) CoveredBy(exprs Expressions) bool {
+	for _, expr := range exprs {
+		if this.expr.EquivalentTo(expr) {
+			return true
+		}
+	}
+
+	children := this.expr.Children()
+
+	for _, child := range children {
+		if !child.CoveredBy(exprs) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

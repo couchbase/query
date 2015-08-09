@@ -261,6 +261,10 @@ func (this *NullaryFunctionBase) Indexable() bool {
 	return false
 }
 
+func (this *NullaryFunctionBase) CoveredBy(exprs Expressions) bool {
+	return true
+}
+
 /*
 Minimum input arguments required is 0.
 */
