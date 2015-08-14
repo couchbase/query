@@ -206,6 +206,7 @@ func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
+	prepared.SetEncodedPlan(prepared_stmt)
 	return prepared, nil
 }
 
