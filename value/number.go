@@ -10,8 +10,8 @@
 package value
 
 import (
-	"encoding/json"
 	"math"
+	"strconv"
 )
 
 /*
@@ -48,7 +48,8 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 			f = 0
 		}
 
-		return json.Marshal(f)
+		s := strconv.FormatFloat(f, 'f', -1, 64)
+		return []byte(s), nil
 	}
 }
 
