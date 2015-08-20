@@ -213,3 +213,8 @@ func (this *predicate) VisitNamedParameter(expr expression.NamedParameter) (inte
 func (this *predicate) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
 	return this.test(expr)
 }
+
+// Cover
+func (this *predicate) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}

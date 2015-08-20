@@ -234,6 +234,11 @@ func (this *TraverserBase) VisitPositionalParameter(expr PositionalParameter) (i
 	return nil, this.TraverseList(expr.Children())
 }
 
+// Cover
+func (this *TraverserBase) VisitCover(expr *Cover) (interface{}, error) {
+	return nil, this.TraverseList(expr.Children())
+}
+
 // Init
 func (this *TraverserBase) SetTraverser(traverser Traverser) {
 	if this.traverser == nil {

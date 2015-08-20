@@ -229,6 +229,11 @@ func (this *MapperBase) VisitPositionalParameter(expr PositionalParameter) (inte
 	return expr, expr.MapChildren(this.mapper)
 }
 
+// Cover
+func (this *MapperBase) VisitCover(expr *Cover) (interface{}, error) {
+	return expr, expr.MapChildren(this.mapper)
+}
+
 // Init
 func (this *MapperBase) SetMapper(mapper Mapper) {
 	if this.mapper == nil {

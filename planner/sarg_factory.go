@@ -211,3 +211,8 @@ func (this *sargFactory) VisitNamedParameter(expr expression.NamedParameter) (in
 func (this *sargFactory) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
 	return newSargDefault(expr), nil
 }
+
+// Cover
+func (this *sargFactory) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}

@@ -594,6 +594,11 @@ func (this *JSConverter) VisitPositionalParameter(expr expression.PositionalPara
 	return nil, fmt.Errorf("Parameters cannot be index expressions")
 }
 
+// Cover
+func (this *JSConverter) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}
+
 // Bindings
 
 func (this *JSConverter) visitBindings(bindings expression.Bindings, w io.Writer, in, within string) {

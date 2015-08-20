@@ -211,3 +211,8 @@ func (this *subsetFactory) VisitNamedParameter(expr expression.NamedParameter) (
 func (this *subsetFactory) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
 	return newSubsetDefault(expr), nil
 }
+
+// Cover
+func (this *subsetFactory) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}

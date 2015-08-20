@@ -123,4 +123,9 @@ type Visitor interface {
 	*/
 	VisitNamedParameter(expr NamedParameter) (interface{}, error)
 	VisitPositionalParameter(expr PositionalParameter) (interface{}, error)
+
+	/*
+	   Cover
+	*/
+	VisitCover(expr *Cover) (interface{}, error)
 }

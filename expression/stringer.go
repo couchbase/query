@@ -569,6 +569,15 @@ func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interf
 	return "$" + strconv.Itoa(expr.Position()), nil
 }
 
+// Cover
+func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("cover(")
+	buf.WriteString(this.Visit(expr.Covered()))
+	buf.WriteString(")")
+	return buf.String(), nil
+}
+
 // Bindings
 func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within string) {
 	for i, b := range bindings {

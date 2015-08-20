@@ -99,6 +99,7 @@ val              value.Value
 %token CONNECT
 %token CONTINUE
 %token CORRELATE
+%token COVER
 %token CREATE
 %token DATABASE
 %token DATASET
@@ -123,6 +124,7 @@ val              value.Value
 %token EXISTS
 %token EXPLAIN
 %token FALSE
+%token FETCH
 %token FIRST
 %token FLATTEN
 %token FOR
@@ -264,6 +266,7 @@ val              value.Value
 %left           STAR DIV MOD
 
 /* Unary operators */
+%right          COVER
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
 
@@ -2045,6 +2048,12 @@ collection_expr
 |
 /* Grouping and subquery */
 paren_expr
+|
+/* For covering indexes */
+COVER expr
+{
+    $$ = expression.NewCover($2)
+}
 ;
 
 b_expr:

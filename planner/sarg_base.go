@@ -217,3 +217,8 @@ func (this *sargBase) VisitNamedParameter(expr expression.NamedParameter) (inter
 func (this *sargBase) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
 	return this.sarger(expr)
 }
+
+// Cover
+func (this *sargBase) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}

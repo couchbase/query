@@ -107,6 +107,7 @@
 /[cC][oO][nN][nN][eE][cC][tT]/			 { logToken("CONNECT"); return CONNECT }
 /[cC][oO][nN][tT][iI][nN][uU][eE]/		 { logToken("CONTINUE"); return CONTINUE }
 /[cC][oO][rR][rR][eE][lL][aA][tT][eE]/		 { logToken("CORRELATE"); return CORRELATE }
+/[cC][oO][vV][eE][rR]/				 { logToken("COVER"); return COVER }
 /[cC][rR][eE][aA][tT][eE]/			 { logToken("CREATE"); return CREATE }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/		 { logToken("DATABASE"); return DATABASE }
 /[dD][aA][tT][aA][sS][eE][tT]/			 { logToken("DATASET"); return DATASET }
@@ -131,6 +132,7 @@
 /[eE][xX][iI][sS][tT][sS]/			 { logToken("EXISTS"); return EXISTS }
 /[eE][xX][pP][lL][aA][iI][nN]/			 { logToken("EXPLAIN"); return EXPLAIN }
 /[fF][aA][lL][sS][eE]/				 { logToken("FALSE"); return FALSE }
+/[fF][eE][tT][cC][hH]/				 { logToken("FETCH"); return FETCH }
 /[fF][iI][rR][sS][tT]/				 { logToken("FIRST"); return FIRST }
 /[fF][lL][aA][tT][tT][eE][nN]/			 { logToken("FLATTEN"); return FLATTEN }
 /[fF][oO][rR]/					 { logToken("FOR"); return FOR }

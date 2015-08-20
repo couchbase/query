@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
-	"github.com/couchbase/query/logging"
 )
 
 type PrimaryScan struct {
@@ -200,13 +199,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Names    string              `json:"namespace"`
 		Keys     string              `json:"keyspace"`
 		Using    datastore.IndexType `json:"using"`
-		Spans    json.RawMessage     `json:"spans"`
+		Spans    Spans               `json:"spans"`
 		Distinct bool                `json:"distinct"`
 		Limit    string              `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
-	logging.Infop("IndexScan.Unmarshal", logging.Pair{"err", err})
 	if err != nil {
 		return err
 	}
@@ -219,11 +217,8 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil, nil)
-	err = this.spans.UnmarshalJSON(_unmarshalled.Spans)
-	if err != nil {
-		return err
-	}
 
+	this.spans = _unmarshalled.Spans
 	this.distinct = _unmarshalled.Distinct
 
 	if _unmarshalled.Limit != "" {

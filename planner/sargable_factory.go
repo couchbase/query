@@ -211,3 +211,8 @@ func (this *sargableFactory) VisitNamedParameter(expr expression.NamedParameter)
 func (this *sargableFactory) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
 	return newSargableDefault(expr), nil
 }
+
+// Cover
+func (this *sargableFactory) VisitCover(expr *expression.Cover) (interface{}, error) {
+	return expr.Covered().Accept(this)
+}
