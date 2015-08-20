@@ -10,11 +10,8 @@
 package plan
 
 import (
-	"encoding/json"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Ranges []*Range
@@ -45,57 +42,6 @@ func (this *Span) Copy() *Span {
 		Seek:  expression.CopyExpressions(this.Seek),
 		Range: *(this.Range.Copy()),
 	}
-}
-
-// Spans implements json.Unmarshaller to enable prepared statement execution
-func (this Spans) UnmarshalJSON(body []byte) error {
-	var _unmarshalled []*struct {
-		Seek  []string
-		Range struct {
-			Low       []string
-			High      []string
-			Inclusion datastore.Inclusion
-		}
-	}
-
-	err := json.Unmarshal(body, &_unmarshalled)
-	if err != nil {
-		return err
-	}
-
-	this = make(Spans, len(_unmarshalled))
-	for i, span := range _unmarshalled {
-		var s Span
-		s.Seek = make(expression.Expressions, len(span.Seek))
-		for j, seekExpr := range span.Seek {
-			s.Seek[j], err = parser.Parse(seekExpr)
-			if err != nil {
-				return err
-			}
-
-			s.Range.Low = make(expression.Expressions, len(span.Range.Low))
-			for l, lowExpr := range span.Range.Low {
-				s.Range.Low[l], err = parser.Parse(lowExpr)
-				if err != nil {
-					return err
-				}
-			}
-
-			s.Range.High = make(expression.Expressions, len(span.Range.High))
-			for h, hiExpr := range span.Range.High {
-				s.Range.Low[h], err = parser.Parse(hiExpr)
-				if err != nil {
-					return err
-				}
-			}
-
-			s.Range.Inclusion = span.Range.Inclusion
-		}
-
-		this[i] = &s
-	}
-
-	return nil
 }
 
 func (this Spans) Copy() Spans {

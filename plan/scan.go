@@ -18,7 +18,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
-	"github.com/couchbase/query/logging"
 )
 
 type PrimaryScan struct {
@@ -176,18 +175,24 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string              `json:"#operator"`
-		Index    string              `json:"index"`
-		Names    string              `json:"namespace"`
-		Keys     string              `json:"keyspace"`
-		Using    datastore.IndexType `json:"using"`
-		Spans    json.RawMessage     `json:"spans"`
-		Distinct bool                `json:"distinct"`
-		Limit    float64             `json:"limit"`
+		_     string              `json:"#operator"`
+		Index string              `json:"index"`
+		Names string              `json:"namespace"`
+		Keys  string              `json:"keyspace"`
+		Using datastore.IndexType `json:"using"`
+		Spans []*struct {
+			Seek  []string
+			Range struct {
+				Low       []string
+				High      []string
+				Inclusion datastore.Inclusion
+			}
+		} `json:"spans"`
+		Distinct bool    `json:"distinct"`
+		Limit    float64 `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
-	logging.Infop("IndexScan.Unmarshal", logging.Pair{"err", err})
 	if err != nil {
 		return err
 	}
@@ -200,9 +205,37 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(
 		_unmarshalled.Names, _unmarshalled.Keys,
 		nil, "", nil, nil)
-	err = this.spans.UnmarshalJSON(_unmarshalled.Spans)
-	if err != nil {
-		return err
+
+	this.spans = make(Spans, len(_unmarshalled.Spans))
+	for i, span := range _unmarshalled.Spans {
+		var s Span
+		s.Seek = make(expression.Expressions, len(span.Seek))
+		for j, seekExpr := range span.Seek {
+			s.Seek[j], err = parser.Parse(seekExpr)
+			if err != nil {
+				return err
+			}
+		}
+
+		s.Range.Low = make(expression.Expressions, len(span.Range.Low))
+		for l, lowExpr := range span.Range.Low {
+			s.Range.Low[l], err = parser.Parse(lowExpr)
+			if err != nil {
+				return err
+			}
+		}
+
+		s.Range.High = make(expression.Expressions, len(span.Range.High))
+		for h, hiExpr := range span.Range.High {
+			s.Range.High[h], err = parser.Parse(hiExpr)
+			if err != nil {
+				return err
+			}
+		}
+
+		s.Range.Inclusion = span.Range.Inclusion
+
+		this.spans[i] = &s
 	}
 
 	this.distinct = _unmarshalled.Distinct
