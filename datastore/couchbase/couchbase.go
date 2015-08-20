@@ -780,7 +780,7 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 			} else {
 
 				logging.Debugf("CAS Value (Update) for key %v is %v flags %v value %v", key, uint64(cas), flags, val)
-				err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
+				_, err = b.cbbucket.CasWithMeta(key, int(flags), 0, uint64(cas), val)
 			}
 
 		case UPSERT:
