@@ -15,19 +15,17 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type NNF struct {
+type DNF struct {
 	expression.MapperBase
 }
 
-func NewNNF() *NNF {
-	rv := &NNF{}
+func NewDNF() *DNF {
+	rv := &DNF{}
 	rv.SetMapper(rv)
 	return rv
 }
 
-func (this *NNF) MapBindings() bool { return false }
-
-func (this *NNF) VisitIn(expr *expression.In) (interface{}, error) {
+func (this *DNF) VisitIn(expr *expression.In) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -47,7 +45,7 @@ func (this *NNF) VisitIn(expr *expression.In) (interface{}, error) {
 	return expression.NewOr(operands...), nil
 }
 
-func (this *NNF) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -57,7 +55,7 @@ func (this *NNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 		expression.NewLE(expr.First(), expr.Third())), nil
 }
 
-func (this *NNF) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *DNF) VisitLike(expr *expression.Like) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -105,7 +103,7 @@ Convert ANDs of ORs to ORs of ANDs. For example:
 
 Also apply constant folding. Remove any constant terms.
 */
-func (this *NNF) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -220,7 +218,7 @@ func dnfComplexity(expr expression.Expression, max int) int {
 /*
 Apply constant folding. Remove any constant terms.
 */
-func (this *NNF) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -255,7 +253,7 @@ func (this *NNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -298,7 +296,7 @@ func (this *NNF) VisitNot(expr *expression.Not) (interface{}, error) {
 var _EMPTY_OBJECT_EXPR = expression.NewConstant(map[string]interface{}{})
 var _MIN_BINARY_EXPR = expression.NewConstant([]byte{})
 
-func (this *NNF) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	var exp expression.Expression = expr
 
 	switch expr := expr.(type) {

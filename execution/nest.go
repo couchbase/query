@@ -121,7 +121,7 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 			}
 
 			nv = value.NewAnnotatedValue(projectedItem)
-			nv.SetAttachments(nestItem.Attachments())
+			nv.SetAnnotations(nestItem)
 		} else {
 			nv = nestItem
 		}

@@ -59,6 +59,8 @@ type builder struct {
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator
+	cover           algebra.Statement
+	coveringScan    *plan.IndexScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {

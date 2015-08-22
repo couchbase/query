@@ -127,7 +127,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			}
 
 			fv = value.NewAnnotatedValue(projectedItem)
-			fv.SetAttachments(pv.Attachments())
+			fv.SetAnnotations(pv)
 		} else {
 			fv = pv
 		}

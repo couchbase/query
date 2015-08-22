@@ -41,11 +41,6 @@ func NewFormalizer() *Formalizer {
 }
 
 /*
-Returns false for MapBindings.
-*/
-func (this *Formalizer) MapBindings() bool { return false }
-
-/*
 Visitor method for an Any Range Predicate that maps the
 children of the input ANY expression.
 */

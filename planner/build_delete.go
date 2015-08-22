@@ -15,6 +15,7 @@ import (
 )
 
 func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
+	this.cover = stmt
 	this.where = stmt.Where()
 
 	ksref := stmt.KeyspaceRef()
@@ -23,7 +24,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Where(), stmt.Limit())
+	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit())
 	if err != nil {
 		return nil, err
 	}

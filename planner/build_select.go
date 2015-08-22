@@ -19,15 +19,18 @@ import (
 func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	// Restore previous values when exiting. VisitSelect()
 	// can be called multiple times by set operators
+	prevCover := this.cover
 	prevOrder := this.order
 	prevLimit := this.limit
 	prevProjection := this.delayProjection
 	defer func() {
+		this.cover = prevCover
 		this.order = prevOrder
 		this.limit = prevLimit
 		this.delayProjection = prevProjection
 	}()
 
+	this.cover = stmt
 	order := stmt.Order()
 	offset := stmt.Offset()
 	limit := stmt.Limit()

@@ -53,11 +53,9 @@ func (this *collMap) MapChildren(mapper Mapper) (err error) {
 		return
 	}
 
-	if mapper.MapBindings() {
-		err = this.bindings.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
+	err = this.bindings.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
 	if this.when != nil {
@@ -106,11 +104,9 @@ Map one set of expressions to another expression.
 the satisfies expression if it exists ).
 */
 func (this *collPred) MapChildren(mapper Mapper) (err error) {
-	if mapper.MapBindings() {
-		err = this.bindings.MapExpressions(mapper)
-		if err != nil {
-			return
-		}
+	err = this.bindings.MapExpressions(mapper)
+	if err != nil {
+		return
 	}
 
 	this.satisfies, err = mapper.Map(this.satisfies)

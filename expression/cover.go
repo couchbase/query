@@ -10,17 +10,25 @@
 package expression
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
 type Cover struct {
 	ExpressionBase
 	covered Expression
+	text    string
 }
 
 func NewCover(covered Expression) *Cover {
+	switch covered := covered.(type) {
+	case *Cover:
+		return covered
+	}
+
 	rv := &Cover{
 		covered: covered,
+		text:    covered.String(),
 	}
 
 	rv.expr = rv
@@ -36,7 +44,17 @@ func (this *Cover) Type() value.Type {
 }
 
 func (this *Cover) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return nil, nil
+	var rv value.Value
+	switch item := item.(type) {
+	case value.AnnotatedValue:
+		rv = item.GetCover(this.text)
+	}
+
+	if rv == nil {
+		return value.MISSING_VALUE, errors.NewEvaluationError(nil, "cover("+this.text+")")
+	}
+
+	return rv, nil
 }
 
 func (this *Cover) Value() value.Value {
@@ -80,8 +98,12 @@ func (this *Cover) Children() Expressions {
 }
 
 func (this *Cover) MapChildren(mapper Mapper) error {
-	var err error
-	this.covered, err = mapper.Map(this.covered)
+	c, err := mapper.Map(this.covered)
+	if err == nil && c != this.covered {
+		this.covered = c
+		this.text = c.String()
+	}
+
 	return err
 }
 
@@ -91,4 +113,8 @@ func (this *Cover) Copy() Expression {
 
 func (this *Cover) Covered() Expression {
 	return this.covered
+}
+
+func (this *Cover) Text() string {
+	return this.text
 }

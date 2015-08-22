@@ -17,14 +17,14 @@ import (
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	keys expression.Expression, indexes algebra.IndexRefs, where, limit expression.Expression) error {
+	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression) error {
 	ksref.SetDefaultNamespace(this.namespace)
 	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), keys, indexes)
 
 	this.children = make([]plan.Operator, 0, 8)
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	if where != nil {
+	if this.where != nil {
 		limit = nil
 	}
 
@@ -35,11 +35,26 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	this.children = append(this.children, scan)
 
-	fetch := plan.NewFetch(keyspace, term)
-	this.subChildren = append(this.subChildren, fetch)
+	if this.coveringScan != nil {
+		coverer := expression.NewCoverer(this.coveringScan.Covers())
+		err = this.cover.MapExpressions(coverer)
+		if err != nil {
+			return err
+		}
 
-	if where != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(where))
+		if this.where != nil {
+			this.where, err = coverer.Map(this.where)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		fetch := plan.NewFetch(keyspace, term)
+		this.subChildren = append(this.subChildren, fetch)
+	}
+
+	if this.where != nil {
+		this.subChildren = append(this.subChildren, plan.NewFilter(this.where))
 	}
 
 	return nil

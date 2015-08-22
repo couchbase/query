@@ -146,7 +146,14 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 				if ok {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
-					av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
+					meta := map[string]interface{}{"id": entry.PrimaryKey}
+					av.SetAttachment("meta", meta)
+
+					covers := this.plan.Covers()
+					for i, c := range covers {
+						av.SetCover(c.Text(), entry.EntryKey[i])
+					}
+
 					ok = this.sendItem(av)
 				}
 

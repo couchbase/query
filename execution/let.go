@@ -46,7 +46,7 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Bindings())
 	cv := value.NewScopeValue(make(map[string]interface{}, n), item)
 	lv := value.NewAnnotatedValue(cv)
-	lv.SetAttachments(item.Attachments())
+	lv.SetAnnotations(item)
 
 	for _, b := range this.plan.Bindings() {
 		v, e := b.Expression().Evaluate(item, context)

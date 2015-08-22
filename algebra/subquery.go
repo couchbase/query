@@ -92,6 +92,13 @@ func (this *Subquery) SubsetOf(other expression.Expression) bool {
 }
 
 /*
+Return true.
+*/
+func (this *Subquery) CoveredBy(exprs expression.Expressions) bool {
+	return true
+}
+
+/*
 Return inner query's Expressions.
 */
 func (this *Subquery) Children() expression.Expressions {

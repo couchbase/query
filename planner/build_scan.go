@@ -34,42 +34,25 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 			this.maxParallelism = 1
 		}
 
-		scan := plan.NewKeyScan(keys)
-		return scan, nil
+		return plan.NewKeyScan(keys), nil
 	}
 
-	this.maxParallelism = 0 // Default behavior for index scans
+	this.maxParallelism = 0 // Use default parallelism for index scans
 
-	secondary, primary, err := buildScan(keyspace, node, this.where)
+	secondary, primary, err := this.buildScan(keyspace, node, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	if primary != nil {
-		return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
-	}
-
-	scans := make([]plan.Operator, 0, len(secondary))
-	var scan plan.Operator
-	for index, spans := range secondary {
-		scan = plan.NewIndexScan(index, node, spans, false, limit)
-		if len(spans) > 1 {
-			// Use UnionScan to de-dup multiple spans
-			scan = plan.NewUnionScan(scan)
-		}
-
-		scans = append(scans, scan)
-	}
-
-	if len(scans) > 1 {
-		return plan.NewIntersectScan(scans...), nil
+	if secondary != nil {
+		return secondary, nil
 	} else {
-		return scans[0], nil
+		return primary, nil
 	}
 }
 
-func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression) (
-	secondary map[datastore.Index]plan.Spans, primary datastore.PrimaryIndex, err error) {
+func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, limit expression.Expression) (
+	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 	var indexes, hintIndexes, otherIndexes []datastore.Index
 	hints := node.Indexes()
 	if hints != nil {
@@ -84,10 +67,11 @@ func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred exp
 		return
 	}
 
+	pred := this.where
 	if pred != nil {
-		nnf := NewNNF()
+		dnf := NewDNF()
 		pred = pred.Copy()
-		pred, err = nnf.Map(pred)
+		pred, err = dnf.Map(pred)
 		if err != nil {
 			return
 		}
@@ -100,7 +84,7 @@ func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred exp
 				expression.NewFieldName("id", false)),
 		}
 
-		sargables, er := sargableIndexes(indexes, pred, primaryKey, nnf, formalizer)
+		sargables, er := sargableIndexes(indexes, pred, primaryKey, dnf, formalizer)
 		if er != nil {
 			return nil, nil, er
 		}
@@ -111,16 +95,13 @@ func buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred exp
 		}
 
 		if len(minimals) > 0 {
-			return minimals, nil, nil
+			secondary, err = this.buildSecondaryScan(minimals, node, limit)
+			return secondary, nil, err
 		}
 	}
 
-	primary, err = buildPrimaryScan(keyspace, hintIndexes, otherIndexes)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return
+	primary, err = this.buildPrimaryScan(keyspace, node, limit, hintIndexes, otherIndexes)
+	return nil, primary, err
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs) ([]datastore.Index, error) {
@@ -184,13 +165,14 @@ func allIndexes(keyspace datastore.Keyspace) ([]datastore.Index, error) {
 }
 
 type indexEntry struct {
+	keys     expression.Expressions
 	sargKeys expression.Expressions
-	total    int
 	cond     expression.Expression
+	spans    plan.Spans
 }
 
 func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
-	primaryKey expression.Expressions, nnf *NNF, formalizer *expression.Formalizer) (
+	primaryKey expression.Expressions, dnf *DNF, formalizer *expression.Formalizer) (
 	map[datastore.Index]*indexEntry, error) {
 	var err error
 	var keys expression.Expressions
@@ -211,7 +193,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 					return nil, err
 				}
 
-				key, err = nnf.Map(key)
+				key, err = dnf.Map(key)
 				if err != nil {
 					return nil, err
 				}
@@ -229,7 +211,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 				return nil, err
 			}
 
-			cond, err = nnf.Map(cond)
+			cond, err = dnf.Map(cond)
 			if err != nil {
 				return nil, err
 			}
@@ -241,7 +223,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 
 		n := SargableFor(pred, keys)
 		if n > 0 {
-			sargables[index] = &indexEntry{keys[0:n], len(keys), cond}
+			sargables[index] = &indexEntry{keys, keys[0:n], cond, nil}
 		}
 	}
 
@@ -249,7 +231,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
-	map[datastore.Index]plan.Spans, error) {
+	map[datastore.Index]*indexEntry, error) {
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
@@ -262,9 +244,9 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 		}
 	}
 
-	minimals := make(map[datastore.Index]plan.Spans, len(sargables))
+	minimals := make(map[datastore.Index]*indexEntry, len(sargables))
 	for s, se := range sargables {
-		spans, err := SargFor(pred, se.sargKeys, se.total)
+		spans, err := SargFor(pred, se.sargKeys, len(se.keys))
 		if err != nil || len(spans) == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
@@ -273,7 +255,8 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 			return nil, err
 		}
 
-		minimals[s] = spans
+		se.spans = spans
+		minimals[s] = se
 	}
 
 	return minimals, nil
@@ -302,7 +285,45 @@ outer:
 	return true
 }
 
-func buildPrimaryScan(keyspace datastore.Keyspace, hintIndexes, otherIndexes []datastore.Index) (
+func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, limit expression.Expression) (scan plan.Operator, err error) {
+	if this.cover != nil {
+		scan, err = this.buildCoveringScan(secondaries, node, limit)
+		if scan != nil || err != nil {
+			return
+		}
+	}
+
+	scans := make([]plan.Operator, 0, len(secondaries))
+	var op plan.Operator
+	for index, entry := range secondaries {
+		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil)
+		if len(entry.spans) > 1 {
+			// Use UnionScan to de-dup multiple spans
+			op = plan.NewUnionScan(op)
+		}
+
+		scans = append(scans, op)
+	}
+
+	if len(scans) > 1 {
+		return plan.NewIntersectScan(scans...), nil
+	} else {
+		return scans[0], nil
+	}
+}
+
+func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	limit expression.Expression, hintIndexes, otherIndexes []datastore.Index) (scan *plan.PrimaryScan, err error) {
+	primary, err := buildPrimaryIndex(keyspace, hintIndexes, otherIndexes)
+	if err != nil {
+		return nil, err
+	}
+
+	return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
+}
+
+func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []datastore.Index) (
 	primary datastore.PrimaryIndex, err error) {
 	ok := false
 
@@ -367,4 +388,33 @@ func buildPrimaryScan(keyspace datastore.Keyspace, hintIndexes, otherIndexes []d
 	}
 
 	return nil, fmt.Errorf("Primary index %s not online.", primary.Name())
+}
+
+func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, limit expression.Expression) (scan *plan.IndexScan, err error) {
+	if this.cover == nil {
+		return nil, nil
+	}
+
+	exprs := this.cover.Expressions()
+
+outer:
+	for index, entry := range secondaries {
+		for _, expr := range exprs {
+			if !expr.CoveredBy(entry.keys) {
+				continue outer
+			}
+		}
+
+		covered := make([]*expression.Cover, len(entry.keys))
+		for i, key := range entry.keys {
+			covered[i] = expression.NewCover(key)
+		}
+
+		scan = plan.NewIndexScan(index, node, entry.spans, false, limit, covered)
+		this.coveringScan = scan
+		return
+	}
+
+	return nil, nil
 }

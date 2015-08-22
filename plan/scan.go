@@ -132,16 +132,18 @@ type IndexScan struct {
 	spans    Spans
 	distinct bool
 	limit    expression.Expression
+	covers   []*expression.Cover
 }
 
-func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm,
-	spans Spans, distinct bool, limit expression.Expression) *IndexScan {
+func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans,
+	distinct bool, limit expression.Expression, covers []*expression.Cover) *IndexScan {
 	return &IndexScan{
 		index:    index,
 		term:     term,
 		spans:    spans,
 		distinct: distinct,
 		limit:    limit,
+		covers:   covers,
 	}
 }
 
@@ -173,6 +175,14 @@ func (this *IndexScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *IndexScan) Covers() []*expression.Cover {
+	return this.covers
+}
+
+func (this *IndexScan) Covering() bool {
+	return len(this.covers) > 0
+}
+
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IndexScan"}
 	r["index"] = this.index.Name()
@@ -189,19 +199,24 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.covers != nil {
+		r["covers"] = this.covers
+	}
+
 	return json.Marshal(r)
 }
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string              `json:"#operator"`
-		Index    string              `json:"index"`
-		Names    string              `json:"namespace"`
-		Keys     string              `json:"keyspace"`
-		Using    datastore.IndexType `json:"using"`
-		Spans    Spans               `json:"spans"`
-		Distinct bool                `json:"distinct"`
-		Limit    string              `json:"limit"`
+		_         string              `json:"#operator"`
+		Index     string              `json:"index"`
+		Namespace string              `json:"namespace"`
+		Keyspace  string              `json:"keyspace"`
+		Using     datastore.IndexType `json:"using"`
+		Spans     Spans               `json:"spans"`
+		Distinct  bool                `json:"distinct"`
+		Limit     string              `json:"limit"`
+		Covers    []string            `json:"covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -209,13 +224,13 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	k, err := datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
+	k, err := datastore.GetKeyspace(_unmarshalled.Namespace, _unmarshalled.Keyspace)
 	if err != nil {
 		return err
 	}
 
 	this.term = algebra.NewKeyspaceTerm(
-		_unmarshalled.Names, _unmarshalled.Keys,
+		_unmarshalled.Namespace, _unmarshalled.Keyspace,
 		nil, "", nil, nil)
 
 	this.spans = _unmarshalled.Spans
@@ -225,6 +240,18 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)
 		if err != nil {
 			return err
+		}
+	}
+
+	if _unmarshalled.Covers != nil {
+		this.covers = make([]*expression.Cover, len(_unmarshalled.Covers))
+		for i, c := range _unmarshalled.Covers {
+			expr, err := parser.Parse(c)
+			if err != nil {
+				return err
+			}
+
+			this.covers[i] = expression.NewCover(expr)
 		}
 	}
 

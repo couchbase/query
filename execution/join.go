@@ -113,7 +113,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			}
 
 			jv = value.NewAnnotatedValue(projectedItem)
-			jv.SetAttachments(joinItem.Attachments())
+			jv.SetAnnotations(joinItem)
 		} else {
 			jv = joinItem
 		}

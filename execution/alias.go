@@ -43,7 +43,7 @@ func (this *Alias) RunOnce(context *Context, parent value.Value) {
 
 func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool {
 	av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-	av.SetAttachments(item.Attachments())
+	av.SetAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
 	return this.sendItem(av)
 }

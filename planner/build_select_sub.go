@@ -59,6 +59,21 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.maxParallelism = 1
 	}
 
+	if this.coveringScan != nil {
+		coverer := expression.NewCoverer(this.coveringScan.Covers())
+		err = this.cover.MapExpressions(coverer)
+		if err != nil {
+			return nil, err
+		}
+
+		if this.where != nil {
+			this.where, err = coverer.Map(this.where)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if node.Let() != nil {
 		this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
 	}
@@ -143,8 +158,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	this.children = append(this.children, scan)
 
-	fetch := plan.NewFetch(keyspace, node)
-	this.subChildren = append(this.subChildren, fetch)
+	if this.coveringScan == nil {
+		fetch := plan.NewFetch(keyspace, node)
+		this.subChildren = append(this.subChildren, fetch)
+	}
+
 	return nil, nil
 }
 
