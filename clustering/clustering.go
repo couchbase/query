@@ -90,7 +90,9 @@ type QueryNode interface {
 	Cluster() Cluster          // The Cluster that this QueryNode belongs to
 	Name() string              // Name of this QueryNode (unique within the cluster)
 	QueryEndpoint() string     // Endpoint for serving N1QL queries
-	ClusterEndpoint() string   // Endpoint for serving cluster management commands
+	ClusterEndpoint() string   // Endpoint for serving admin commands
+	QuerySecure() string       // Endpoint for serving secure N1QL queries
+	ClusterSecure() string     // Endpoint for serving secure admin commands
 	Standalone() Standalone    // The QueryNode's configuration when unclustered
 	Options() QueryNodeOptions // The command line options the query node was started with
 }

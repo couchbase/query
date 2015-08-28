@@ -13,8 +13,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -182,7 +180,6 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 		request.resultSize, request.errorCount, request.warningCount, request.Statement())
 }
 
-func GetServiceURL(host string, port int) string {
-	urlParts := []string{"http://", host, ":", strconv.Itoa(port), servicePrefix}
-	return strings.Join(urlParts, "")
+func ServicePrefix() string {
+	return servicePrefix
 }

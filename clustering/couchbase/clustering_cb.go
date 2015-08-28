@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server/http"
-	"github.com/couchbase/query/util"
 )
 
 const _PREFIX = "couchbase:"
@@ -52,80 +52,86 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 }
 
 // Implement Stringer interface
-func (c *cbConfigStore) String() string {
-	return fmt.Sprintf("url=%v", c.adminUrl)
+func (this *cbConfigStore) String() string {
+	return fmt.Sprintf("url=%v", this.adminUrl)
 }
 
 // Implement clustering.ConfigurationStore interface
-func (c *cbConfigStore) Id() string {
-	return c.URL()
+func (this *cbConfigStore) Id() string {
+	return this.URL()
 }
 
-func (c *cbConfigStore) URL() string {
-	return c.adminUrl
+func (this *cbConfigStore) URL() string {
+	return this.adminUrl
 }
 
-func (c *cbConfigStore) ClusterNames() ([]string, errors.Error) {
+func (this *cbConfigStore) ClusterNames() ([]string, errors.Error) {
 	clusterIds := []string{}
-	// TODO: refresh pools (is it likely to go stale over lifetime of n1ql process?):
-	for _, pool := range c.cbConn.Info.Pools {
+	for _, pool := range this.cbConn.Info.Pools {
 		clusterIds = append(clusterIds, pool.Name)
 	}
 	return clusterIds, nil
 }
 
-func (c *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
-	_, err := c.cbConn.GetPool(name)
+func (this *cbConfigStore) ClusterByName(name string) (clustering.Cluster, errors.Error) {
+	_, err := this.cbConn.GetPool(name)
 	if err != nil {
 		return nil, errors.NewAdminGetClusterError(err, name)
 	}
 	return &cbCluster{
-		configStore:    c,
+		configStore:    this,
 		ClusterName:    name,
-		ConfigstoreURI: c.URL(),
-		DatastoreURI:   c.URL(),
+		ConfigstoreURI: this.URL(),
+		DatastoreURI:   this.URL(),
 	}, nil
 }
 
-func (c *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
-	return c
+func (this *cbConfigStore) ConfigurationManager() clustering.ConfigurationManager {
+	return this
 }
 
-// helper method to get all the services in a pool
-func (c *cbConfigStore) getPoolServices(name string) (couchbase.PoolServices, errors.Error) {
-	poolServices, err := c.cbConn.GetPoolServices(name)
+// Helper method to retrieve Couchbase services data (/pools/default/nodeServices)
+// and Couchbase pool (cluster) data (/pools/default)
+//
+func (this *cbConfigStore) getPoolServices(name string) (*couchbase.Pool, *couchbase.PoolServices, errors.Error) {
+	nodeServices, err := this.cbConn.GetPoolServices(name)
 	if err != nil {
-		return poolServices, errors.NewAdminGetClusterError(err, name)
+		return nil, nil, errors.NewAdminGetClusterError(err, name)
 	}
-	return poolServices, nil
+
+	pool, err := this.cbConn.GetPool(name)
+	if err != nil {
+		return nil, nil, errors.NewAdminGetClusterError(err, name)
+	}
+
+	return &pool, &nodeServices, nil
 }
 
 // cbConfigStore also implements clustering.ConfigurationManager interface
-func (c *cbConfigStore) ConfigurationStore() clustering.ConfigurationStore {
-	return c
+func (this *cbConfigStore) ConfigurationStore() clustering.ConfigurationStore {
+	return this
 }
 
-func (c *cbConfigStore) AddCluster(l clustering.Cluster) (clustering.Cluster, errors.Error) {
+func (this *cbConfigStore) AddCluster(l clustering.Cluster) (clustering.Cluster, errors.Error) {
 	// NOP. This is a read-only implementation
 	return nil, nil
 }
 
-func (c *cbConfigStore) RemoveCluster(l clustering.Cluster) (bool, errors.Error) {
+func (this *cbConfigStore) RemoveCluster(l clustering.Cluster) (bool, errors.Error) {
 	// NOP. This is a read-only implementation
 	return false, nil
 }
 
-func (c *cbConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
+func (this *cbConfigStore) RemoveClusterByName(name string) (bool, errors.Error) {
 	// NOP. This is a read-only implementation
 	return false, nil
 }
 
-func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
+func (this *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	clusters := []clustering.Cluster{}
-	// foreach name n in  c.ClusterNames(), add c.ClusterByName(n) to clusters
-	clusterNames, _ := c.ClusterNames()
+	clusterNames, _ := this.ClusterNames()
 	for _, name := range clusterNames {
-		cluster, err := c.ClusterByName(name)
+		cluster, err := this.ClusterByName(name)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +140,7 @@ func (c *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	return clusters, nil
 }
 
-func (c *cbConfigStore) Authorize(credentials map[string]string, privileges []clustering.Privilege) errors.Error {
+func (this *cbConfigStore) Authorize(credentials map[string]string, privileges []clustering.Privilege) errors.Error {
 
 	if len(credentials) == 0 {
 		return errors.NewAdminAuthError(nil, "no credentials provided")
@@ -167,6 +173,20 @@ func (c *cbConfigStore) Authorize(credentials map[string]string, privileges []cl
 	return errors.NewAdminAuthError(nil, "unrecognized authorization request")
 }
 
+// Type services associates a protocol with a port number
+type services map[string]int
+
+const (
+	_HTTP  = "http"
+	_HTTPS = "https"
+)
+
+// n1qlProtocols associates Couchbase query service names with a protocol
+var n1qlProtocols = map[string]string{
+	"n1ql":    _HTTP,
+	"n1qlSSL": _HTTPS,
+}
+
 // cbCluster implements clustering.Cluster
 type cbCluster struct {
 	sync.Mutex
@@ -180,7 +200,7 @@ type cbCluster struct {
 	version        clustering.Version            `json:"-"`
 	VersionString  string                        `json:"version"`
 	queryNodeNames []string                      `json:"-"`
-	queryNodes     map[string]int                `json:"-"`
+	queryNodes     map[string]services           `json:"-"`
 	poolSrvRev     int                           `json:"-"`
 }
 
@@ -216,63 +236,79 @@ func makeCbCluster(name string,
 }
 
 // cbCluster implements Stringer interface
-func (c *cbCluster) String() string {
-	return getJsonString(c)
+func (this *cbCluster) String() string {
+	return getJsonString(this)
 }
 
 // cbCluster implements clustering.Cluster interface
-func (c *cbCluster) ConfigurationStoreId() string {
-	return c.configStore.Id()
+func (this *cbCluster) ConfigurationStoreId() string {
+	return this.configStore.Id()
 }
 
-func (c *cbCluster) Name() string {
-	return c.ClusterName
+func (this *cbCluster) Name() string {
+	return this.ClusterName
 }
 
-func (c *cbCluster) QueryNodeNames() ([]string, errors.Error) {
+func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
 	// Get a handle of the go-couchbase connection:
-	cbConn, ok := c.configStore.(*cbConfigStore)
+	cbConn, ok := this.configStore.(*cbConfigStore)
 	if !ok {
-		return nil, errors.NewAdminConnectionError(nil, c.ConfigurationStoreId())
+		return nil, errors.NewAdminConnectionError(nil, this.ConfigurationStoreId())
 	}
-	poolServices, err := cbConn.getPoolServices(c.ClusterName)
+
+	pool, poolServices, err := cbConn.getPoolServices(this.ClusterName)
 	if err != nil {
 		return queryNodeNames, err
 	}
-	// If the go-couchbase pool services rev matches the cluster's rev, return cluster's query node names:
-	if poolServices.Rev == c.poolSrvRev {
-		return c.queryNodeNames, nil
-	}
-	// If the rev numbers do not match, update the cluster's rev and query node data:
-	queryNodeNames = []string{}
-	queryNodes := make(map[string]int)
-	for _, ns := range poolServices.NodesExt {
-		n1qlPort := ns.Services["n1ql"]
-		hostname := ns.Hostname
 
-		if n1qlPort == 0 { // no n1ql service in this node
+	// If pool services rev matches the cluster's rev, return cluster's query node names:
+	if poolServices.Rev == this.poolSrvRev {
+		return this.queryNodeNames, nil
+	}
+
+	// If pool services and cluster rev do not match, update the cluster's rev and query node data:
+	queryNodeNames = []string{}
+	queryNodes := map[string]services{}
+	for _, nodeServices := range poolServices.NodesExt {
+		var queryServices services
+		for name, protocol := range n1qlProtocols {
+			if nodeServices.Services[name] != 0 {
+				if queryServices == nil {
+					queryServices = services{}
+				}
+				queryServices[protocol] = nodeServices.Services[name]
+			}
+		}
+
+		if len(queryServices) == 0 { // no n1ql service at this node
 			continue
 		}
 
-		// TODO: check ns.ThisNode also
-		if hostname == "" {
-			hostname, _ = getHostnameFromURI(c.configStore.URL())
+		hostname := nodeServices.Hostname
+		if nodeServices.ThisNode {
+			for _, node := range pool.Nodes {
+				if node.ThisNode {
+					tokens := strings.Split(node.Hostname, ":")
+					hostname = tokens[0]
+					break
+				}
+			}
 		}
 		queryNodeNames = append(queryNodeNames, hostname)
-		queryNodes[hostname] = n1qlPort
+		queryNodes[hostname] = queryServices
 	}
 
-	c.Lock()
-	defer c.Unlock()
-	c.queryNodeNames = queryNodeNames
-	c.queryNodes = queryNodes
-	c.poolSrvRev = poolServices.Rev
-	return c.queryNodeNames, nil
+	this.Lock()
+	defer this.Unlock()
+	this.queryNodeNames = queryNodeNames
+	this.queryNodes = queryNodes
+	this.poolSrvRev = poolServices.Rev
+	return this.queryNodeNames, nil
 }
 
-func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
-	qryNodeNames, err := c.QueryNodeNames()
+func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
+	qryNodeNames, err := this.QueryNodeNames()
 	if err != nil {
 		return nil, err
 	}
@@ -286,65 +322,76 @@ func (c *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, errors.E
 	if qryNodeName == "" {
 		return nil, errors.NewAdminNoNodeError(name)
 	}
-	return &cbQueryNodeConfig{
-		ClusterName:      c.Name(),
-		QueryNodeName:    qryNodeName,
-		QueryEndpointURL: http.GetServiceURL(qryNodeName, c.queryNodes[qryNodeName]),
-		AdminEndpointURL: http.GetAdminURL(qryNodeName, c.queryNodes[qryNodeName]),
-	}, nil
-}
 
-func (c *cbCluster) Datastore() datastore.Datastore {
-	return c.dataStore
-}
-
-func (c *cbCluster) AccountingStore() accounting.AccountingStore {
-	return c.acctStore
-}
-
-func (c *cbCluster) ConfigurationStore() clustering.ConfigurationStore {
-	return c.configStore
-}
-
-func (c *cbCluster) Version() clustering.Version {
-	if c.version == nil {
-		c.version = clustering.NewVersion(c.VersionString)
+	qryNode := &cbQueryNodeConfig{
+		ClusterName:   this.Name(),
+		QueryNodeName: qryNodeName,
 	}
-	return c.version
+
+	for protocol, port := range this.queryNodes[qryNodeName] {
+		switch protocol {
+		case _HTTP:
+			qryNode.Query = makeURL(protocol, qryNodeName, port, http.ServicePrefix())
+			qryNode.Admin = makeURL(protocol, qryNodeName, port, http.AdminPrefix())
+		case _HTTPS:
+			qryNode.QuerySSL = makeURL(protocol, qryNodeName, port, http.ServicePrefix())
+			qryNode.AdminSSL = makeURL(protocol, qryNodeName, port, http.AdminPrefix())
+		}
+	}
+
+	return qryNode, nil
 }
 
-func (c *cbCluster) ClusterManager() clustering.ClusterManager {
-	return c
+func (this *cbCluster) Datastore() datastore.Datastore {
+	return this.dataStore
+}
+
+func (this *cbCluster) AccountingStore() accounting.AccountingStore {
+	return this.acctStore
+}
+
+func (this *cbCluster) ConfigurationStore() clustering.ConfigurationStore {
+	return this.configStore
+}
+
+func (this *cbCluster) Version() clustering.Version {
+	if this.version == nil {
+		this.version = clustering.NewVersion(this.VersionString)
+	}
+	return this.version
+}
+
+func (this *cbCluster) ClusterManager() clustering.ClusterManager {
+	return this
 }
 
 // cbCluster implements clustering.ClusterManager interface
-func (c *cbCluster) Cluster() clustering.Cluster {
-	return c
+func (this *cbCluster) Cluster() clustering.Cluster {
+	return this
 }
 
-func (c *cbCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
+func (this *cbCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
 	// NOP. This is a read-only implementation
 	return nil, nil
 }
 
-func (c *cbCluster) RemoveQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
-	return c.RemoveQueryNodeByName(n.Name())
+func (this *cbCluster) RemoveQueryNode(n clustering.QueryNode) (clustering.QueryNode, errors.Error) {
+	return this.RemoveQueryNodeByName(n.Name())
 }
 
-func (c *cbCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
+func (this *cbCluster) RemoveQueryNodeByName(name string) (clustering.QueryNode, errors.Error) {
 	// NOP. This is a read-only implementation
 	return nil, nil
 }
 
-func (c *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
+func (this *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	qryNodes := []clustering.QueryNode{}
-	// for each name n in c.QueryNodeNames(), add c.QueryNodeByName(n) to qryNodes
-	names, err := c.QueryNodeNames()
+	names, err := this.QueryNodeNames()
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range names {
-		qryNode, err := c.QueryNodeByName(name)
+		qryNode, err := this.QueryNodeByName(name)
 		if err != nil {
 			return nil, err
 		}
@@ -355,55 +402,53 @@ func (c *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 
 // cbQueryNodeConfig implements clustering.QueryNode
 type cbQueryNodeConfig struct {
-	ClusterName      string                    `json:"cluster"`
-	QueryNodeName    string                    `json:"name"`
-	QueryEndpointURL string                    `json:"queryEndpoint"`
-	AdminEndpointURL string                    `json:"adminEndpoint"`
-	ClusterRef       *cbCluster                `json:"-"`
-	StandaloneRef    *clustering.StdStandalone `json:"-"`
-	OptionsCL        *clustering.ClOptions     `json:"options"`
+	ClusterName   string                    `json:"cluster"`
+	QueryNodeName string                    `json:"name"`
+	Query         string                    `json:"queryEndpoint,omitempty"`
+	Admin         string                    `json:"adminEndpoint,omitempty"`
+	QuerySSL      string                    `json:"querySecure,omitempty"`
+	AdminSSL      string                    `json:"adminSecure,omitempty"`
+	ClusterRef    *cbCluster                `json:"-"`
+	StandaloneRef *clustering.StdStandalone `json:"-"`
+	OptionsCL     *clustering.ClOptions     `json:"options"`
 }
 
 // cbQueryNodeConfig implements Stringer interface
-func (c *cbQueryNodeConfig) String() string {
-	return getJsonString(c)
+func (this *cbQueryNodeConfig) String() string {
+	return getJsonString(this)
 }
 
 // cbQueryNodeConfig implements clustering.QueryNode interface
-func (c *cbQueryNodeConfig) Cluster() clustering.Cluster {
-	return c.ClusterRef
+func (this *cbQueryNodeConfig) Cluster() clustering.Cluster {
+	return this.ClusterRef
 }
 
-func (c *cbQueryNodeConfig) Name() string {
-	return c.QueryNodeName
+func (this *cbQueryNodeConfig) Name() string {
+	return this.QueryNodeName
 }
 
-func (c *cbQueryNodeConfig) QueryEndpoint() string {
-	return c.QueryEndpointURL
+func (this *cbQueryNodeConfig) QueryEndpoint() string {
+	return this.Query
 }
 
-func (c *cbQueryNodeConfig) ClusterEndpoint() string {
-	return c.AdminEndpointURL
+func (this *cbQueryNodeConfig) ClusterEndpoint() string {
+	return this.Admin
 }
 
-func (c *cbQueryNodeConfig) Standalone() clustering.Standalone {
-	return c.StandaloneRef
+func (this *cbQueryNodeConfig) QuerySecure() string {
+	return this.QuerySSL
 }
 
-func (c *cbQueryNodeConfig) Options() clustering.QueryNodeOptions {
-	return c.OptionsCL
+func (this *cbQueryNodeConfig) ClusterSecure() string {
+	return this.AdminSSL
 }
 
-func getHostnameFromURI(uri string) (hostname string, err error) {
-	tokens := strings.Split(uri, ":")
-	name := strings.Split(tokens[1], "//")
-	switch strings.ToLower(name[1]) {
-	case "localhost", "127.0.0.1":
-		hostname, err = util.ExternalIP()
-	default:
-		hostname, err = name[1], nil
-	}
-	return
+func (this *cbQueryNodeConfig) Standalone() clustering.Standalone {
+	return this.StandaloneRef
+}
+
+func (this *cbQueryNodeConfig) Options() clustering.QueryNodeOptions {
+	return this.OptionsCL
 }
 
 func getJsonString(i interface{}) string {
@@ -437,4 +482,12 @@ func pollStdin() {
 			os.Exit(0)
 		}
 	}
+}
+
+func makeURL(protocol string, host string, port int, endpoint string) string {
+	if port == 0 {
+		return ""
+	}
+	urlParts := []string{protocol, "://", host, ":", strconv.Itoa(port), endpoint}
+	return strings.Join(urlParts, "")
 }

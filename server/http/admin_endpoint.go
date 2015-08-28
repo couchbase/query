@@ -12,8 +12,6 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/couchbase/query/errors"
 )
@@ -72,7 +70,6 @@ func mapErrorToHttpStatus(err errors.Error) int {
 	}
 }
 
-func GetAdminURL(host string, port int) string {
-	urlParts := []string{"http://", host, ":", strconv.Itoa(port), adminPrefix}
-	return strings.Join(urlParts, "")
+func AdminPrefix() string {
+	return adminPrefix
 }

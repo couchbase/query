@@ -168,6 +168,14 @@ func (QueryNodeStub) ClusterEndpoint() string {
 	return QUERY_NODE_STUB_CLUSTER_ENDPOINT
 }
 
+func (QueryNodeStub) QuerySecure() string {
+	return QUERY_NODE_STUB_QUERY_ENDPOINT
+}
+
+func (QueryNodeStub) ClusterSecure() string {
+	return QUERY_NODE_STUB_CLUSTER_ENDPOINT
+}
+
 func (QueryNodeStub) Standalone() clustering.Standalone {
 	return nil
 }

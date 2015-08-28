@@ -94,6 +94,12 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 			if errCheck != nil {
 				t.Fatalf("Unexpected Error retrieving query node by name: ", errCheck)
 			}
+			if qryNode.QueryEndpoint() == "" {
+				t.Logf("Query node %s does not have QueryEndpoint", qryNode.Name())
+			}
+			if qryNode.QuerySecure() == "" {
+				t.Logf("Query node %s does not have QuerySecure", qryNode.Name())
+			}
 			json_node, json_err := json.Marshal(qryNode)
 			if json_err != nil {
 				t.Fatalf("Unexpected Error marshalling query node: ", json_err)

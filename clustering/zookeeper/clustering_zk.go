@@ -416,6 +416,14 @@ func (z *zkQueryNodeConfig) ClusterEndpoint() string {
 	return z.AdminEndpointURL
 }
 
+func (z *zkQueryNodeConfig) QuerySecure() string {
+	return z.QueryEndpointURL
+}
+
+func (z *zkQueryNodeConfig) ClusterSecure() string {
+	return z.AdminEndpointURL
+}
+
 func (z *zkQueryNodeConfig) Standalone() clustering.Standalone {
 	return z.StandaloneRef
 }
