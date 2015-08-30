@@ -282,15 +282,15 @@ outer:
 		return false
 	}
 
-	return true
+	return len(se.keys) <= len(te.keys)
 }
 
 func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, limit expression.Expression) (scan plan.Operator, err error) {
+	node *algebra.KeyspaceTerm, limit expression.Expression) (plan.Operator, error) {
 	if this.cover != nil {
-		scan, err = this.buildCoveringScan(secondaries, node, limit)
+		scan, err := this.buildCoveringScan(secondaries, node, limit)
 		if scan != nil || err != nil {
-			return
+			return scan, err
 		}
 	}
 
@@ -391,7 +391,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []
 }
 
 func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, limit expression.Expression) (scan *plan.IndexScan, err error) {
+	node *algebra.KeyspaceTerm, limit expression.Expression) (*plan.IndexScan, error) {
 	if this.cover == nil {
 		return nil, nil
 	}
@@ -411,9 +411,9 @@ outer:
 			covered[i] = expression.NewCover(key)
 		}
 
-		scan = plan.NewIndexScan(index, node, entry.spans, false, limit, covered)
+		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covered)
 		this.coveringScan = scan
-		return
+		return scan, nil
 	}
 
 	return nil, nil
