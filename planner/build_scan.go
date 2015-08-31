@@ -282,7 +282,8 @@ outer:
 		return false
 	}
 
-	return len(se.keys) <= len(te.keys)
+	return len(se.sargKeys) > len(te.sargKeys) ||
+		len(se.keys) <= len(te.keys)
 }
 
 func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
