@@ -177,7 +177,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	request_time := time.Since(request.RequestTime())
 	acctstore := this.server.AccountingStore()
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
-		request.resultSize, request.errorCount, request.warningCount, request.Statement())
+		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
+		request.Prepared())
 }
 
 func ServicePrefix() string {

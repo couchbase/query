@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 )
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
@@ -184,6 +185,7 @@ const (
 	UPDATES          = "updates"
 	INSERTS          = "inserts"
 	DELETES          = "deletes"
+	UNKNOWN          = "unknown"
 	ACTIVE_REQUESTS  = "active_requests"
 	QUEUED_REQUESTS  = "queued_requests"
 	INVALID_REQUESTS = "invalid_requests"
@@ -206,10 +208,9 @@ const (
 	DURATION_5000MS = 5000 * time.Millisecond
 )
 
-var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS,
-	QUEUED_REQUESTS, INVALID_REQUESTS, REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS,
-	REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS, REQUESTS_5000MS,
-	WARNINGS, MUTATIONS}
+var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
+	REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS, REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS,
+	REQUESTS_5000MS, WARNINGS, MUTATIONS}
 
 // Map each duration to its metrics
 var slowMetricsMap = map[time.Duration][]string{
@@ -231,7 +232,7 @@ func RegisterMetrics(acctstore AccountingStore) {
 func RecordMetrics(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
-	error_count int, warn_count int, stmt string) {
+	error_count int, warn_count int, stmt string, prepared *plan.Prepared) {
 
 	ms := acctstore.MetricRegistry()
 	ms.Counter(REQUESTS).Inc(1)
@@ -261,25 +262,38 @@ func RecordMetrics(acctstore AccountingStore,
 		ms.Counter(durationMetric).Inc(1)
 	}
 
-	// Do not record the type of request if errors
-	if error_count > 0 {
-		return
+	// record the type of request if 0 errors
+	if error_count == 0 {
+		if t := requestType(stmt, prepared); t != UNKNOWN {
+			ms.Counter(t).Inc(1)
+		}
+	}
+}
+
+func requestType(stmt string, prepared *plan.Prepared) string {
+	var tokens []string
+
+	if prepared != nil && prepared.Text() != "" {
+		// Second or fourth token determines type of statment
+		tokens = strings.Split(strings.TrimSpace(prepared.Text()), " ")[1:]
+	} else {
+		if stmt != "" {
+			// First token determines type of statement
+			tokens = strings.Split(strings.TrimSpace(stmt), " ")[0:1]
+		}
 	}
 
-	stmt_tokens := strings.Split(strings.TrimSpace(stmt), " ")
-	if len(stmt_tokens) < 1 {
-		return
+	for _, token := range tokens {
+		switch strings.ToLower(token) {
+		case "select":
+			return SELECTS
+		case "update":
+			return UPDATES
+		case "insert":
+			return INSERTS
+		case "delete":
+			return DELETES
+		}
 	}
-
-	switch strings.ToLower(stmt_tokens[0]) {
-	case "select":
-		ms.Counter(SELECTS).Inc(1)
-	case "update":
-		ms.Counter(UPDATES).Inc(1)
-	case "insert":
-		ms.Counter(INSERTS).Inc(1)
-	case "delete":
-		ms.Counter(DELETES).Inc(1)
-	}
-
+	return UNKNOWN
 }
