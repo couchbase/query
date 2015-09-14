@@ -1,18 +1,18 @@
 [
 
 {   
-    "statements": "SELECT purchase.purchaseId, META(customer).id custID, META(product).id prodID, cardio FROM purchase USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN purchase.lineItems END AS pID INNER JOIN product ON KEYS pID INNER JOIN customer ON KEYS (purchase.customerId || \"_\" || \"joins\") UNNEST customer.ccInfo.cardNumber AS cardio ORDER BY productId",
+    "statements": "SELECT purchase.purchaseId, META(customer).id custID, META(product).id prodID, cardio FROM purchase USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN purchase.lineItems END AS pID INNER JOIN product ON KEYS pID INNER JOIN customer ON KEYS (purchase.customerId || \"_\" || \"joins\") UNNEST customer.ccInfo.cardNumber AS cardio ORDER BY prodID",
     "results": [
         {
             "cardio": "1234-2121-1221-1211",
             "custID": "customer498_joins",
-            "prodID": "product390_joins",
+            "prodID": "product109_joins",
             "purchaseId": "purchase1018"
         },
         {
             "cardio": "1234-2121-1221-1211",
             "custID": "customer498_joins",
-            "prodID": "product109_joins",
+            "prodID": "product390_joins",
             "purchaseId": "purchase1018"
         },
         {

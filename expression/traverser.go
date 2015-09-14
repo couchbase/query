@@ -213,6 +213,12 @@ func (this *TraverserBase) VisitSlice(expr *Slice) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
+// Self
+
+func (this *TraverserBase) VisitSelf(expr *Self) (interface{}, error) {
+	return nil, nil
+}
+
 // Function
 
 func (this *TraverserBase) VisitFunction(expr Function) (interface{}, error) {

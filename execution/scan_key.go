@@ -10,8 +10,6 @@
 package execution
 
 import (
-	_ "fmt"
-
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"

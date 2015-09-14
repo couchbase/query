@@ -11,6 +11,7 @@ package execution
 
 import (
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 func notifyChildren(children ...Operator) {
@@ -33,3 +34,4 @@ func copyOperator(op Operator) Operator {
 }
 
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
+var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)

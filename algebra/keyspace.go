@@ -48,7 +48,7 @@ func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 		return
 	}
 
-	allowed := value.NewValue(make(map[string]interface{}))
+	allowed := value.NewScopeValue(make(map[string]interface{}), nil)
 	allowed.SetField(keyspace, keyspace)
 
 	f = expression.NewFormalizer()

@@ -10,7 +10,6 @@
 package execution
 
 import (
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -22,12 +21,10 @@ type Collect struct {
 
 const _COLLECT_CAP = 64
 
-var _COLLECT_POOL = util.NewInterfacePool(_COLLECT_CAP)
-
 func NewCollect() *Collect {
 	rv := &Collect{
 		base:   newBase(),
-		values: _COLLECT_POOL.Get(),
+		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 
 	rv.output = rv
@@ -41,7 +38,7 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) Copy() Operator {
 	return &Collect{
 		base:   this.base.copy(),
-		values: _COLLECT_POOL.Get(),
+		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 }
 
@@ -53,7 +50,6 @@ func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bo
 	if len(this.values) == cap(this.values) {
 		values := make([]interface{}, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
-		this.releaseValues()
 		this.values = values
 	}
 
@@ -67,6 +63,5 @@ func (this *Collect) ValuesOnce() value.Value {
 }
 
 func (this *Collect) releaseValues() {
-	_COLLECT_POOL.Put(this.values)
 	this.values = nil
 }

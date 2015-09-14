@@ -29,10 +29,11 @@ clause.
 type Select struct {
 	statementBase
 
-	subresult Subresult             `json:"subresult"`
-	order     *Order                `json:"order"`
-	offset    expression.Expression `json:"offset"`
-	limit     expression.Expression `json:"limit"`
+	subresult  Subresult             `json:"subresult"`
+	order      *Order                `json:"order"`
+	offset     expression.Expression `json:"offset"`
+	limit      expression.Expression `json:"limit"`
+	correlated bool                  `json:"correlated"`
 }
 
 /*
@@ -181,34 +182,61 @@ namely the subresult, order, limit and offset within a subquery.
 For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
-func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
-	formalizer, err := this.subresult.Formalize(parent)
+func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
+	f, err := this.subresult.Formalize(parent)
 	if err != nil {
 		return err
 	}
 
-	if this.order != nil && formalizer.Keyspace != "" {
-		err = this.order.MapExpressions(formalizer)
+	this.correlated = this.subresult.IsCorrelated()
+
+	if this.order != nil {
+		err = this.order.MapExpressions(f)
 		if err != nil {
-			return
+			return err
 		}
+
+		if !this.correlated {
+			// Determine if this is a correlated subquery
+			immediate := f.Allowed.GetValue().Fields()
+			for ident, _ := range f.Identifiers {
+				if _, ok := immediate[ident]; !ok {
+					this.correlated = true
+					break
+				}
+			}
+		}
+	}
+
+	if this.limit == nil && this.offset == nil {
+		return err
+	}
+
+	if !this.correlated {
+		prevIdentifiers := parent.Identifiers
+		defer parent.SetIdentifiers(prevIdentifiers)
+		parent.SetIdentifiers(make(map[string]bool))
 	}
 
 	if this.limit != nil {
 		_, err = this.limit.Accept(parent)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	if this.offset != nil {
 		_, err = this.offset.Accept(parent)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	if !this.correlated {
+		this.correlated = len(parent.Identifiers) > 0
+	}
+
+	return err
 }
 
 /*
@@ -240,11 +268,14 @@ func (this *Select) Limit() expression.Expression {
 }
 
 /*
-This method sets the limit expression for the select
-statement.
+Sets the limit expression for the select statement.
 */
 func (this *Select) SetLimit(limit expression.Expression) {
 	this.limit = limit
+}
+
+func (this *Select) IsCorrelated() bool {
+	return this.correlated
 }
 
 /*
@@ -277,6 +308,11 @@ type Subresult interface {
 	   Returns all contained Expressions.
 	*/
 	Expressions() expression.Expressions
+
+	/*
+	   Result terms.
+	*/
+	ResultTerms() ResultTerms
 
 	/*
 	   Returns all required privileges.

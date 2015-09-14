@@ -198,6 +198,11 @@ func (this *sargBase) VisitSlice(expr *expression.Slice) (interface{}, error) {
 	return this.sarger(expr)
 }
 
+// Self
+func (this *sargBase) VisitSelf(expr *expression.Self) (interface{}, error) {
+	return this.sarger(expr)
+}
+
 // Function
 func (this *sargBase) VisitFunction(expr expression.Function) (interface{}, error) {
 	return this.sarger(expr)

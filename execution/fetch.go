@@ -64,6 +64,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	keys := _STRING_POOL.Get()
 	defer _STRING_POOL.Put(keys)
 
+	batchMap := _STRING_ANNOTATED_POOL.Get()
+	defer _STRING_ANNOTATED_POOL.Put(batchMap)
+
 	for _, av := range this.batch {
 		meta := av.GetAttachment("meta")
 
@@ -74,6 +77,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			switch act := act.(type) {
 			case string:
 				keys = append(keys, act)
+				batchMap[act] = av
 			default:
 				context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 					"Missing or invalid primary key %v of type %T.",
@@ -102,7 +106,10 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	// Attach meta and send
+	fetchMap := _STRING_ANNOTATED_POOL.Get()
+	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
+
+	// Attach meta
 	for _, pair := range pairs {
 		pv, ok := pair.Value.(value.AnnotatedValue)
 		if !ok {
@@ -132,7 +139,17 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			fv = pv
 		}
 
-		item := value.NewAnnotatedValue(make(map[string]interface{}))
+		fetchMap[pair.Key] = fv
+	}
+
+	// Preserve order of keys
+	for _, key := range keys {
+		fv := fetchMap[key]
+		if fv == nil {
+			continue
+		}
+
+		item := batchMap[key]
 		item.SetField(this.plan.Term().Alias(), fv)
 
 		if !this.sendItem(item) {

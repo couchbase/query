@@ -483,6 +483,11 @@ func (this *JSConverter) VisitSlice(expr *expression.Slice) (interface{}, error)
 	return buf.String(), nil
 }
 
+// Self
+func (this *JSConverter) VisitSelf(expr *expression.Self) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
+}
+
 // Function
 func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, error) {
 	var buf bytes.Buffer

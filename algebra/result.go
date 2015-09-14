@@ -165,13 +165,15 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 		aliases[term.alias] = true
 	}
 
-	f = expression.NewFormalizer()
-	f.Allowed = in.Allowed.Copy()
-	f.Keyspace = in.Keyspace
-
-	err = this.MapExpressions(f)
+	err = this.MapExpressions(in)
 	if err != nil {
 		return
+	}
+
+	if len(aliases) > 0 {
+		f = in.Copy()
+	} else {
+		f = in
 	}
 
 	// Exempt explicit aliases from being formalized
@@ -261,6 +263,10 @@ to the fields of the struct. The value of alias string
 is not set here.
 */
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
+	if expr == nil {
+		expr = expression.SELF
+	}
+
 	return &ResultTerm{
 		expr: expr,
 		star: star,

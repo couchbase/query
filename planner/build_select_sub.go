@@ -20,6 +20,19 @@ import (
 )
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+	prevCover := this.cover
+	prevCorrelated := this.correlated
+	defer func() {
+		this.cover = prevCover
+		this.correlated = prevCorrelated
+	}()
+
+	this.correlated = node.IsCorrelated()
+
+	if this.cover == nil {
+		this.cover = node
+	}
+
 	aggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
@@ -147,7 +160,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
-	if this.subquery && node.Keys() == nil {
+	if this.subquery && this.correlated && node.Keys() == nil {
 		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
 	}
 

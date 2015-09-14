@@ -423,14 +423,12 @@ func (this *SubqueryTerm) Subquery() *Select {
 }
 
 /*
-Represents the join clause. Joins create new input
-objects by combining two or more source objects.
-They can be chained. Type Join is a struct containing
-fields left and right that represent the two source
-objects being joined (one is a from term and the
-other a keyspace term), and outer which is a bool
-value representing if the join is an outer or inner
-join.
+Represents the join clause. Joins create new input objects by
+combining two or more source objects.  They can be chained. Type Join
+is a struct containing fields left and right that represent the two
+source objects being joined (one is a from term and the other a
+keyspace term), and outer which is a bool value representing if the
+join is an outer or inner join.
 */
 type Join struct {
 	left  FromTerm

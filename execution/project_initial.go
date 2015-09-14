@@ -11,6 +11,7 @@ package execution
 
 import (
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -61,7 +62,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	result := terms[0].Result()
 	expr := result.Expression()
 
-	if expr == nil {
+	if result.Star() && (expr == expression.SELF || expr == nil) {
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
 			return this.sendItem(item)

@@ -152,7 +152,7 @@ type Self struct {
 	NullaryFunctionBase
 }
 
-var _SELF = NewSelf()
+var SELF = NewSelf()
 
 /*
 The function NewSelf returns a pointer to the
@@ -169,7 +169,7 @@ func NewSelf() Function {
 }
 
 func (this *Self) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
+	return visitor.VisitSelf(this)
 }
 
 /*
@@ -188,8 +188,12 @@ func (this *Self) Indexable() bool {
 	return false
 }
 
+func (this *Self) CoveredBy(keyspace string, exprs Expressions) bool {
+	return false
+}
+
 func (this *Self) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function { return _SELF }
+	return func(operands ...Expression) Function { return SELF }
 }
 
 ///////////////////////////////////////////////////

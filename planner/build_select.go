@@ -30,7 +30,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.delayProjection = prevProjection
 	}()
 
-	this.cover = stmt
 	order := stmt.Order()
 	offset := stmt.Offset()
 	limit := stmt.Limit()
@@ -39,6 +38,9 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	if order != nil {
 		// If there is an ORDER BY, delay the final projection
 		this.delayProjection = true
+		this.cover = stmt
+	} else {
+		this.cover = nil
 	}
 
 	if order != nil || offset != nil {

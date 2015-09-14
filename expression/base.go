@@ -221,7 +221,7 @@ func (this *ExpressionBase) DependsOn(other Expression) bool {
 	return false
 }
 
-func (this *ExpressionBase) CoveredBy(exprs Expressions) bool {
+func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions) bool {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
 			return true
@@ -229,9 +229,8 @@ func (this *ExpressionBase) CoveredBy(exprs Expressions) bool {
 	}
 
 	children := this.expr.Children()
-
 	for _, child := range children {
-		if !child.CoveredBy(exprs) {
+		if !child.CoveredBy(keyspace, exprs) {
 			return false
 		}
 	}

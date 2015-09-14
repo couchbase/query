@@ -1,14 +1,26 @@
 [
     {
-        "statements" : "SELECT * from default:orders3 LEFT JOIN default:contacts ON KEYS orders3.customers ORDER BY name LIMIT 4",
+        "statements" : "SELECT * from default:orders3 LEFT JOIN default:contacts ON KEYS orders3.customers ORDER BY orders3.id, contacts.name  LIMIT 4",
         "results": [
         {
             "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
                 "hobbies": [
                     "golf",
                     "surfing"
                 ],
-                "name": "fred",
+                "name": "dave",
                 "type": "contact"
             },
             "orders3": {
@@ -32,23 +44,11 @@
         },
         {
             "contacts": {
-                "children": [
-                    {
-                        "age": 17,
-                        "gender": "m",
-                        "name": "aiden"
-                    },
-                    {
-                        "age": 2,
-                        "gender": "f",
-                        "name": "bill"
-                    }
-                ],
                 "hobbies": [
                     "golf",
                     "surfing"
                 ],
-                "name": "dave",
+                "name": "fred",
                 "type": "contact"
             },
             "orders3": {

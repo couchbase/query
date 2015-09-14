@@ -194,6 +194,11 @@ func (this *predicate) VisitSlice(expr *expression.Slice) (interface{}, error) {
 	return this.test(expr)
 }
 
+// Self
+func (this *predicate) VisitSelf(expr *expression.Self) (interface{}, error) {
+	return this.test(expr)
+}
+
 // Function
 func (this *predicate) VisitFunction(expr expression.Function) (interface{}, error) {
 	return this.test(expr)

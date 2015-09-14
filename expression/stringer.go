@@ -528,6 +528,11 @@ func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
 	return buf.String(), nil
 }
 
+// Self
+func (this *Stringer) VisitSelf(expr *Self) (interface{}, error) {
+	return "self", nil
+}
+
 // Function
 func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	var buf bytes.Buffer

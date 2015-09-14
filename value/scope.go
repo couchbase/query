@@ -19,10 +19,6 @@ type ScopeValue struct {
 	parent Value
 }
 
-/*
-Return a pointer to a new ScopeValue populated using the input
-arguments value and parent.
-*/
 func NewScopeValue(val interface{}, parent Value) *ScopeValue {
 	return &ScopeValue{
 		Value:  NewValue(val),
@@ -30,18 +26,10 @@ func NewScopeValue(val interface{}, parent Value) *ScopeValue {
 	}
 }
 
-/*
-Call the Values MarshalJSON implementation.
-*/
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
 }
 
-/*
-Return a pointer to the ScopeValue, where the Value field
-is the receivers value Copy and the parent is the receivers
-parent.
-*/
 func (this *ScopeValue) Copy() Value {
 	return &ScopeValue{
 		Value:  this.Value.Copy(),
@@ -49,11 +37,6 @@ func (this *ScopeValue) Copy() Value {
 	}
 }
 
-/*
-Return a pointer to the ScopeValue, where the Value field
-calls the CopyForUpdate the receivers value, and the parent
-is assigned to the parent field in the receiver.
-*/
 func (this *ScopeValue) CopyForUpdate() Value {
 	return &ScopeValue{
 		Value:  this.Value.CopyForUpdate(),
@@ -81,25 +64,19 @@ func (this *ScopeValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
-/*
-Flattens out the fields from the parent and value into a map
-and returns it. If the parent in scopeValue is nil then,
-return the fields in the value. If not, create a map that
-contains both the parents’ fields and the values fields and return that map.
-*/
 func (this *ScopeValue) Fields() map[string]interface{} {
 	if this.parent == nil {
 		return this.Value.Fields()
 	}
 
-	rv := make(map[string]interface{})
-
 	p := this.parent.Fields()
+	v := this.Value.Fields()
+	rv := make(map[string]interface{}, len(p)+len(v))
+
 	for pf, pv := range p {
 		rv[pf] = pv
 	}
 
-	v := this.Value.Fields()
 	for vf, vv := range v {
 		rv[vf] = vv
 	}

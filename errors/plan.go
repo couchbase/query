@@ -42,7 +42,7 @@ const SUBQUERY_MISSING_KEYS = 4030
 
 func NewSubqueryMissingKeysError(keyspace string) Error {
 	return &err{level: EXCEPTION, ICode: SUBQUERY_MISSING_KEYS, IKey: "plan.build_select.subquery_missing_keys",
-		InternalMsg: fmt.Sprintf("FROM in subquery must use KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("FROM in correlated subquery must have USE KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
 }
 
 const NO_SUCH_PREPARED = 4040

@@ -98,7 +98,11 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Identifier) CoveredBy(exprs Expressions) bool {
+func (this *Identifier) CoveredBy(keyspace string, exprs Expressions) bool {
+	if this.identifier != keyspace {
+		return true
+	}
+
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
 			return true

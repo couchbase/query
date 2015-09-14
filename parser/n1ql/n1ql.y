@@ -674,7 +674,7 @@ projects COMMA project
 project:
 STAR
 {
-    $$ = algebra.NewResultTerm(nil, true, "")
+    $$ = algebra.NewResultTerm(expression.SELF, true, "")
 }
 |
 expr DOT STAR

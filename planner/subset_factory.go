@@ -187,6 +187,11 @@ func (this *subsetFactory) VisitSlice(expr *expression.Slice) (interface{}, erro
 	return newSubsetDefault(expr), nil
 }
 
+// Self
+func (this *subsetFactory) VisitSelf(expr *expression.Self) (interface{}, error) {
+	return newSubsetDefault(expr), nil
+}
+
 // Function
 func (this *subsetFactory) VisitFunction(expr expression.Function) (interface{}, error) {
 	switch expr := expr.(type) {

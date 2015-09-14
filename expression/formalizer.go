@@ -23,8 +23,9 @@ Allowed and keyspace of type value and string.
 type Formalizer struct {
 	MapperBase
 
-	Allowed  value.Value
-	Keyspace string
+	Allowed     *value.ScopeValue
+	Keyspace    string
+	Identifiers map[string]bool
 }
 
 /*
@@ -33,7 +34,7 @@ with Allowed set to a new map of type string to interface.
 */
 func NewFormalizer() *Formalizer {
 	rv := &Formalizer{
-		Allowed: value.NewValue(make(map[string]interface{})),
+		Allowed: value.NewScopeValue(make(map[string]interface{}), nil),
 	}
 
 	rv.mapper = rv
@@ -121,17 +122,20 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 }
 
 /*
-Visitor method for an Identifier expressions. Check if the
-expression Identifier is a field (in an object). If it is
-return the expression. If the Keyspace string is empty
-for the receiver, there is an ambiguous reference to
-the field identifier. Hence throw an error. Return a new
-Field with an identifier with the name Keyspace and Field
-name set to the Identifier() return value.
+Visitor method for an Identifier expressions. Check if the expression
+Identifier is a field (in an object). If it is return the
+expression. If the Keyspace string is empty for the receiver, there is
+an ambiguous reference to the field identifier. Hence throw an
+error. Return a new Field with an identifier with the name Keyspace
+and Field name set to the Identifier() return value.
 */
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	_, ok := this.Allowed.Field(expr.Identifier())
 	if ok {
+		if this.Identifiers != nil {
+			this.Identifiers[expr.Identifier()] = true
+		}
+
 		return expr, nil
 	}
 
@@ -199,8 +203,25 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 }
 
 /*
-Set scope as parents scope.
+Set scope to parent's scope.
 */
 func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
-	this.Allowed = sv.Parent()
+	parent := sv.Parent()
+	if parent == nil {
+		this.Allowed = nil
+	}
+
+	this.Allowed = sv.Parent().(*value.ScopeValue)
+}
+
+func (this *Formalizer) SetIdentifiers(identifiers map[string]bool) {
+	this.Identifiers = identifiers
+}
+
+func (this *Formalizer) Copy() *Formalizer {
+	f := NewFormalizer()
+	f.Allowed = this.Allowed.Copy().(*value.ScopeValue)
+	f.Keyspace = this.Keyspace
+	f.Identifiers = this.Identifiers
+	return f
 }

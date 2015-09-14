@@ -60,6 +60,13 @@ func (this *setOp) Expressions() expression.Expressions {
 }
 
 /*
+   Result terms.
+*/
+func (this *setOp) ResultTerms() ResultTerms {
+	return append(this.first.ResultTerms(), this.second.ResultTerms()...)
+}
+
+/*
 Returns all required privileges.
 */
 func (this *setOp) Privileges() (datastore.Privileges, errors.Error) {
@@ -81,8 +88,8 @@ func (this *setOp) Privileges() (datastore.Privileges, errors.Error) {
 Fully qualifies the identifiers in the first and second sub-result
 using the input parent.
 */
-func (this *setOp) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	_, err = this.first.Formalize(parent)
+func (this *setOp) Formalize(parent *expression.Formalizer) (*expression.Formalizer, error) {
+	_, err := this.first.Formalize(parent)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +99,17 @@ func (this *setOp) Formalize(parent *expression.Formalizer) (f *expression.Forma
 		return nil, err
 	}
 
-	return expression.NewFormalizer(), nil
+	terms := this.ResultTerms()
+	f := expression.NewFormalizer()
+	if parent != nil {
+		f.Allowed = value.NewScopeValue(make(map[string]interface{}, len(terms)), parent.Allowed)
+	}
+
+	for _, term := range terms {
+		f.Allowed.SetField(term.Alias(), term.Alias())
+	}
+
+	return f, nil
 }
 
 /*

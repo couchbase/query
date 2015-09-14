@@ -35,9 +35,9 @@ func ParseStatement(input string) (algebra.Statement, error) {
 		err := lex.stmt.Formalize()
 		if err != nil {
 			return nil, err
-		} else {
-			return lex.stmt, nil
 		}
+
+		return lex.stmt, nil
 	}
 }
 

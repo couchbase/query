@@ -184,9 +184,6 @@ func (this *FunctionBase) MapChildren(mapper Mapper) error {
 	return nil
 }
 
-/*
-Return the operands of the function.
-*/
 func (this *FunctionBase) Copy() Expression {
 	function := this.expr.(Function)
 	operands := function.Operands()
@@ -261,8 +258,13 @@ func (this *NullaryFunctionBase) Indexable() bool {
 	return false
 }
 
-func (this *NullaryFunctionBase) CoveredBy(exprs Expressions) bool {
+func (this *NullaryFunctionBase) CoveredBy(keyspace string, exprs Expressions) bool {
 	return true
+}
+
+func (this *NullaryFunctionBase) Copy() Expression {
+	function := this.expr.(Function)
+	return function.Constructor()()
 }
 
 /*

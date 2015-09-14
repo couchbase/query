@@ -104,7 +104,7 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	}
 }
 
-func (this *Constant) CoveredBy(exprs Expressions) bool {
+func (this *Constant) CoveredBy(keyspace string, exprs Expressions) bool {
 	return true
 }
 

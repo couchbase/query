@@ -29,6 +29,7 @@ type Subselect struct {
 	where      expression.Expression `json:"where"`
 	group      *Group                `json:"group"`
 	projection *Projection           `json:"projection"`
+	correlated bool                  `json:"correlated"`
 }
 
 /*
@@ -36,7 +37,7 @@ Constructor.
 */
 func NewSubselect(from FromTerm, let expression.Bindings, where expression.Expression,
 	group *Group, projection *Projection) *Subselect {
-	return &Subselect{from, let, where, group, projection}
+	return &Subselect{from, let, where, group, projection, false}
 }
 
 /*
@@ -65,11 +66,16 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	if this.from != nil {
 		f, err = this.from.Formalize(parent)
 		if err != nil {
-			return
+			return nil, err
 		}
 	} else {
 		f = parent
 	}
+
+	// Determine if this is a correlated subquery
+	prevIdentifiers := f.Identifiers
+	f.SetIdentifiers(make(map[string]bool))
+	defer f.SetIdentifiers(prevIdentifiers)
 
 	if this.let != nil {
 		_, err = f.PushBindings(this.let)
@@ -86,7 +92,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	}
 
 	if this.group != nil {
-		f, err = this.group.Formalize(f)
+		err = this.group.Formalize(f)
 		if err != nil {
 			return nil, err
 		}
@@ -95,6 +101,16 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	f, err = this.projection.Formalize(f)
 	if err != nil {
 		return nil, err
+	}
+
+	// Determine if this is a correlated subquery
+	this.correlated = false
+	immediate := f.Allowed.GetValue().Fields()
+	for ident, _ := range f.Identifiers {
+		if _, ok := immediate[ident]; !ok {
+			this.correlated = true
+			break
+		}
 	}
 
 	return f, nil
@@ -164,6 +180,13 @@ func (this *Subselect) Expressions() expression.Expressions {
 }
 
 /*
+Result terms.
+*/
+func (this *Subselect) ResultTerms() ResultTerms {
+	return this.projection.Terms()
+}
+
+/*
 Returns all required privileges.
 */
 func (this *Subselect) Privileges() (datastore.Privileges, errors.Error) {
@@ -228,12 +251,8 @@ func (this *Subselect) String() string {
 	return s
 }
 
-/*
-Returns bool value that depicts if query is correlated
-or not.
-*/
 func (this *Subselect) IsCorrelated() bool {
-	return true // FIXME
+	return this.correlated
 }
 
 /*

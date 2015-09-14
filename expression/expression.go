@@ -28,6 +28,11 @@ type CompositeExpressions is defined as a slice of Expressions.
 type Expressions []Expression
 type CompositeExpressions []Expressions
 
+type HasExpressions interface {
+	Expressions() Expressions
+	MapExpressions(mapper Mapper) error
+}
+
 /*
 The Expression interface represents N1QL expressions.
 */
@@ -121,11 +126,12 @@ type Expression interface {
 	DependsOn(other Expression) bool
 
 	/*
-	   Indicates if this expression is covered by the list of
-	   expressions; that is, this expression does not depend on
-	   any stored data beyond the expressions.
+	   Indicates if this expression is based on the keyspace and
+	   is covered by the list of expressions; that is, this
+	   expression does not depend on any stored data beyond the
+	   expressions.
 	*/
-	CoveredBy(exprs Expressions) bool
+	CoveredBy(keyspace string, exprs Expressions) bool
 
 	/*
 	   It is a utility function that returns the children of the

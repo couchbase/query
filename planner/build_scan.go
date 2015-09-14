@@ -397,12 +397,13 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 		return nil, nil
 	}
 
+	alias := node.Alias()
 	exprs := this.cover.Expressions()
 
 outer:
 	for index, entry := range secondaries {
 		for _, expr := range exprs {
-			if !expr.CoveredBy(entry.keys) {
+			if !expr.CoveredBy(alias, entry.keys) {
 				continue outer
 			}
 		}

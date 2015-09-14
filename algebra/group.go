@@ -45,14 +45,14 @@ func NewGroup(by expression.Expressions, letting expression.Bindings, having exp
 This method qualifies identifiers for all the constituent clauses,
 namely the by, letting and having expressions by mapping them.
 */
-func (this *Group) Formalize(f *expression.Formalizer) (*expression.Formalizer, error) {
+func (this *Group) Formalize(f *expression.Formalizer) error {
 	var err error
 
 	if this.by != nil {
 		for i, b := range this.by {
 			this.by[i], err = f.Map(b)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
@@ -60,18 +60,18 @@ func (this *Group) Formalize(f *expression.Formalizer) (*expression.Formalizer, 
 	if this.letting != nil {
 		_, err = f.PushBindings(this.letting)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if this.having != nil {
 		this.having, err = f.Map(this.having)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return f, nil
+	return nil
 }
 
 /*

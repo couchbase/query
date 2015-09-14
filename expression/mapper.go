@@ -214,6 +214,12 @@ func (this *MapperBase) VisitSlice(expr *Slice) (interface{}, error) {
 	return this.visit(expr)
 }
 
+// Self
+
+func (this *MapperBase) VisitSelf(expr *Self) (interface{}, error) {
+	return this.visit(expr)
+}
+
 // Function
 
 func (this *MapperBase) VisitFunction(expr Function) (interface{}, error) {

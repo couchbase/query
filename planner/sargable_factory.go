@@ -187,6 +187,11 @@ func (this *sargableFactory) VisitSlice(expr *expression.Slice) (interface{}, er
 	return newSargableDefault(expr), nil
 }
 
+// Self
+func (this *sargableFactory) VisitSelf(expr *expression.Self) (interface{}, error) {
+	return newSargableDefault(expr), nil
+}
+
 // Function
 func (this *sargableFactory) VisitFunction(expr expression.Function) (interface{}, error) {
 	switch expr := expr.(type) {

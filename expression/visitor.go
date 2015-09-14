@@ -99,12 +99,17 @@ type Visitor interface {
 
 	/*
 	   Navigation. Used to navigate through objects and
-	   slices(arrays).
+	   arrays.
 	*/
 	VisitElement(expr *Element) (interface{}, error)
 	VisitField(expr *Field) (interface{}, error)
 	VisitFieldName(expr *FieldName) (interface{}, error)
 	VisitSlice(expr *Slice) (interface{}, error)
+
+	/*
+	   Self.
+	*/
+	VisitSelf(expr *Self) (interface{}, error)
 
 	/*
 	   Function. Refer to N1QL for a list of supported functions.

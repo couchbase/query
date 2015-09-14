@@ -74,6 +74,13 @@ func (this *SelectTerm) Expressions() expression.Expressions {
 }
 
 /*
+   Result terms.
+*/
+func (this *SelectTerm) ResultTerms() ResultTerms {
+	return this.query.Subresult().ResultTerms()
+}
+
+/*
 Returns all required privileges.
 */
 func (this *SelectTerm) Privileges() (datastore.Privileges, errors.Error) {

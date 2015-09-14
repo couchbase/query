@@ -51,6 +51,7 @@ type builder struct {
 	systemstore     datastore.Datastore
 	namespace       string
 	subquery        bool
+	correlated      bool
 	maxParallelism  int
 	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
 	where           expression.Expression // Used for index selection
@@ -59,7 +60,7 @@ type builder struct {
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator
-	cover           algebra.Statement
+	cover           expression.HasExpressions
 	coveringScan    *plan.IndexScan
 }
 

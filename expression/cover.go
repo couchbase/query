@@ -89,8 +89,8 @@ func (this *Cover) DependsOn(other Expression) bool {
 	return this.covered.DependsOn(other)
 }
 
-func (this *Cover) CoveredBy(exprs Expressions) bool {
-	return this.covered.CoveredBy(exprs)
+func (this *Cover) CoveredBy(keyspace string, exprs Expressions) bool {
+	return this.covered.CoveredBy(keyspace, exprs)
 }
 
 func (this *Cover) Children() Expressions {
