@@ -114,13 +114,17 @@ func (this *SearchedCase) Evaluate(item value.Value, context Context) (value.Val
 	return ev, nil
 }
 
-/*
-Create a slice of expression with length equal to twice the number of
-when terms+1. Range over the when terms and append the when and then
-terms to the slice. If an Else term is present, append it to the slice
-as well. Return the Expressions. These represent the children of the
-case expression.
-*/
+func (this *SearchedCase) DependsOn(other Expression) bool {
+	for _, w := range this.whenTerms {
+		if !w.When.DependsOn(other) {
+			return false
+		}
+	}
+
+	return this.elseTerm == nil ||
+		this.elseTerm.DependsOn(other)
+}
+
 func (this *SearchedCase) Children() Expressions {
 	rv := make(Expressions, 0, 1+(len(this.whenTerms)<<1))
 

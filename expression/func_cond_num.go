@@ -58,12 +58,13 @@ It returns a value type NUMBER.
 */
 func (this *IfInf) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *IfInf) DependsOn(other Expression) bool {
+	return len(this.operands) > 0 &&
+		this.operands[0].DependsOn(other)
 }
 
 /*
@@ -154,12 +155,13 @@ It returns a value type NUMBER.
 */
 func (this *IfNaN) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *IfNaN) DependsOn(other Expression) bool {
+	return len(this.operands) > 0 &&
+		this.operands[0].DependsOn(other)
 }
 
 /*
@@ -249,12 +251,13 @@ It returns a value type NUMBER.
 */
 func (this *IfNaNOrInf) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *IfNaNOrInf) DependsOn(other Expression) bool {
+	return len(this.operands) > 0 &&
+		this.operands[0].DependsOn(other)
 }
 
 /*
