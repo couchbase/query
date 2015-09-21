@@ -227,12 +227,13 @@ It returns a value type JSON.
 */
 func (this *IfNull) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *IfNull) DependsOn(other Expression) bool {
+	return len(this.operands) > 0 &&
+		this.operands[0].DependsOn(other)
 }
 
 /*

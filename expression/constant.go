@@ -104,6 +104,10 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	}
 }
 
+func (this *Constant) DependsOn(other Expression) bool {
+	return false
+}
+
 func (this *Constant) CoveredBy(keyspace string, exprs Expressions) bool {
 	return true
 }
