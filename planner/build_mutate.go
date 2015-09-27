@@ -17,7 +17,7 @@ import (
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression) error {
+	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression, isDelete bool) error {
 	ksref.SetDefaultNamespace(this.namespace)
 	term := algebra.NewKeyspaceTerm(ksref.Namespace(), ksref.Keyspace(), nil, ksref.As(), keys, indexes)
 
@@ -49,7 +49,12 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 			}
 		}
 	} else {
-		fetch := plan.NewFetch(keyspace, term)
+		var fetch plan.Operator
+		if isDelete && this.where == nil && isKeyScan(scan) {
+			fetch = plan.NewDummyFetch(keyspace, term)
+		} else {
+			fetch = plan.NewFetch(keyspace, term)
+		}
 		this.subChildren = append(this.subChildren, fetch)
 	}
 
@@ -58,4 +63,9 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	}
 
 	return nil
+}
+
+func isKeyScan(scan plan.Operator) bool {
+	_, rv := scan.(*plan.KeyScan)
+	return rv
 }
