@@ -159,3 +159,43 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	return fetchOk
 }
+
+type DummyFetch struct {
+	base
+	plan *plan.DummyFetch
+}
+
+func NewDummyFetch(plan *plan.DummyFetch) *DummyFetch {
+	rv := &DummyFetch{
+		base: newBase(),
+		plan: plan,
+	}
+
+	rv.output = rv
+	return rv
+}
+
+func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDummyFetch(this)
+}
+
+func (this *DummyFetch) Copy() Operator {
+	return &DummyFetch{this.base.copy(), this.plan}
+}
+
+func (this *DummyFetch) RunOnce(context *Context, parent value.Value) {
+	this.runConsumer(this, context, parent)
+}
+
+func (this *DummyFetch) processItem(item value.AnnotatedValue, context *Context) bool {
+	item.SetField(this.plan.Term().Alias(), item)
+	if !this.sendItem(item) {
+		return false
+	}
+
+	return true
+}
+
+func (this *DummyFetch) afterItems(context *Context) {
+	context.SetSortCount(0)
+}

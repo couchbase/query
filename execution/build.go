@@ -95,6 +95,11 @@ func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil
 }
 
+// DummyFetch
+func (this *builder) VisitDummyFetch(plan *plan.DummyFetch) (interface{}, error) {
+	return NewDummyFetch(plan), nil
+}
+
 // Join
 func (this *builder) VisitJoin(plan *plan.Join) (interface{}, error) {
 	return NewJoin(plan), nil

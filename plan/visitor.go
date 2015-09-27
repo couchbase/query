@@ -23,6 +23,7 @@ type Visitor interface {
 
 	// Fetch
 	VisitFetch(op *Fetch) (interface{}, error)
+	VisitDummyFetch(op *DummyFetch) (interface{}, error)
 
 	// Join
 	VisitJoin(op *Join) (interface{}, error)

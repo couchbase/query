@@ -78,6 +78,7 @@ var _OPERATORS = map[string]Operator{
 	"ValueScan":          &ValueScan{},
 	"CountScan":          &CountScan{},
 	"DummyScan":          &DummyScan{},
+	"DummyFetch":         &DummyFetch{},
 	"IntersectScan":      &IntersectScan{},
 	"Sequence":           &Sequence{},
 	"Stream":             &Stream{},
