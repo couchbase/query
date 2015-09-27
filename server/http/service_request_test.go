@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -30,9 +31,28 @@ import (
 	"github.com/couchbase/query/server"
 )
 
-var test_server *httptest.Server
-var query_server *server.Server
-var query_request *httpRequest
+type testServer struct {
+	http_server   *httptest.Server
+	query_server  *server.Server
+	query_request *httpRequest
+}
+
+func newTestServer() *testServer {
+	var rv testServer
+	rv.query_server = makeMockServer()
+	rv.http_server = httptest.NewServer(rv.testHandler())
+	return &rv
+}
+
+func (this *testServer) URL() string {
+	return this.http_server.URL
+}
+
+func (this *testServer) request() *httpRequest {
+	return this.query_request
+}
+
+var test_server *testServer
 
 func init() {
 	logger, _ := log_resolver.NewLogger("golog")
@@ -41,26 +61,20 @@ func init() {
 		os.Exit(1)
 	}
 	logging.SetLogger(logger)
-	query_server = makeMockServer()
-	test_server = httptest.NewServer(testHandler())
+	test_server = newTestServer()
 }
 
 func TestRequestDefaults(t *testing.T) {
 	statement := "select 1"
-	payload := url.Values{}
-	payload.Set("statement", statement)
-
-	_, err := doUrlEncodedPost(payload)
-	if err != nil {
-		t.Errorf("Unexpected error in HTTP request: %v", err)
+	logging.Infop("message", logging.Pair{"statement", statement})
+	doUrlRequest(t, map[string]string{
+		"statement": statement,
+	})
+	if test_server.request().State() != server.COMPLETED {
+		t.Errorf("Expected request state: %v, actual: %v\n", server.COMPLETED, test_server.request().State())
 	}
-
-	if query_request.State() != server.COMPLETED {
-		t.Errorf("Expected request state: %v, actual: %v\n", server.COMPLETED, query_request.State())
-	}
-
-	if query_request.Statement() != statement {
-		t.Errorf("Expected request statement: %v, actual: %v\n", statement, query_request.Statement())
+	if test_server.request().Statement() != statement {
+		t.Errorf("Expected request statement: %v, actual: %v\n", statement, test_server.request().Statement())
 	}
 }
 
@@ -78,26 +92,42 @@ func TestRequestWithTimeout(t *testing.T) {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
-	if query_request.Timeout() != expected_timeout {
-		t.Errorf("Expected timeout: %v, actual: %v\n", expected_timeout, query_request.Timeout())
+	if test_server.request().Timeout() != expected_timeout {
+		t.Errorf("Expected timeout: %v, actual: %v\n", expected_timeout, test_server.request().Timeout())
 	}
 }
 
-func TestPrepared(t *testing.T) {
-	name := "name"
-	stmt1 := "SELECT 1"
+func TestPrepareStatments(t *testing.T) {
+	preparedSequence(t, "doSelect", "SELECT b FROM p0:b0 LIMIT 5")
+	preparedSequence(t, "doInsert", "INSERT INTO p0:b0 VALUES ($1, $2)")
+}
 
-	// Verify the following sequence of requests:
+func preparedSequence(t *testing.T, name string, stmt string) {
+	// Verify a sequence of requests:
+
 	// { "prepared": "name" }  fails with "no such name" error
-	// { "statement": "prepare name as SELECT 1" succeeds
-	// { "prepared": "name" }  succeeds
-	// { "prepared": "name", "encoded_plan": "<<encoded plan>>" }  succeeds
-
 	doNoSuchPrepared(t, name)
-	doPrepare(t, name, stmt1)
-	doPreparedNameOnly(t, name)
+
+	// { "statement": "prepare name as <<N1QL statment>>" }  succeeds
+	doPrepare(t, name, stmt)
+
+	// { "prepared": "name" }  succeeds
+	doJsonRequest(t, map[string]interface{}{
+		"prepared": name,
+	})
+
 	prepared, _ := plan.GetPrepared(value.NewValue(name))
-	doPreparedWithPlan(t, name, prepared.EncodedPlan())
+	if prepared == nil {
+		t.Errorf("Expected to resolve prepared statement with name %v", name)
+		return
+	}
+
+	// { "prepared": "name", "encoded_plan": "<<encoded plan>>" }  succeeds
+	doJsonRequest(t, map[string]interface{}{
+		"prepared":     name,
+		"encoded_plan": prepared.EncodedPlan(),
+	})
+
 }
 
 func doNoSuchPrepared(t *testing.T, name string) {
@@ -111,7 +141,7 @@ func doNoSuchPrepared(t *testing.T, name string) {
 	}
 
 	select {
-	case err := <-query_request.Errors():
+	case err := <-test_server.request().Errors():
 		if err.Code() != errors.NO_SUCH_PREPARED {
 			t.Errorf("Expected error condition: no such prepared. Recieved: %v", err)
 		}
@@ -121,18 +151,9 @@ func doNoSuchPrepared(t *testing.T, name string) {
 }
 
 func doPrepare(t *testing.T, name string, stmt string) {
-	payload := map[string]interface{}{
+	doJsonRequest(t, map[string]interface{}{
 		"statement": "prepare " + name + " as " + stmt,
-	}
-
-	_, err := doJsonEncodedPost(payload)
-	if err != nil {
-		t.Errorf("Unexpected error in HTTP request: %v", err)
-	}
-
-	if query_request.State() != server.COMPLETED {
-		t.Errorf("Expected request state: %v, actual: %v\n", server.COMPLETED, query_request.State())
-	}
+	})
 
 	// Verify the name is in the prepared cache:
 	prepared, err := plan.GetPrepared(value.NewValue(name))
@@ -141,55 +162,65 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	}
 
 	if prepared == nil {
-		t.Errorf("Expected to resolve prepared statement")
+		t.Errorf("Expected to resolve prepared statement with name %s", name)
 	}
 }
 
 func doPreparedWithPlan(t *testing.T, name string, encoded_plan string) {
-	payload := map[string]interface{}{
+	doJsonRequest(t, map[string]interface{}{
 		"prepared":     name,
 		"encoded_plan": encoded_plan,
-	}
+	})
+}
 
+func doPreparedNameOnly(t *testing.T, name string) {
+	doJsonRequest(t, map[string]interface{}{
+		"prepared": name,
+	})
+}
+
+func doJsonRequest(t *testing.T, payload map[string]interface{}) {
 	_, err := doJsonEncodedPost(payload)
 	if err != nil {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
 	select {
-	case err = <-query_request.Errors():
+	case err = <-test_server.request().Errors():
 		t.Errorf("Unexpected error: %v", err)
 	default:
 	}
 }
 
-func doPreparedNameOnly(t *testing.T, name string) {
-	payload := map[string]interface{}{
-		"prepared": name,
+func doUrlRequest(t *testing.T, params map[string]string) {
+	payload := url.Values{}
+	for param, value := range params {
+		payload.Set(param, value)
 	}
 
-	_, err := doJsonEncodedPost(payload)
+	_, err := doUrlEncodedPost(payload)
 	if err != nil {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
 	}
 
 	select {
-	case err = <-query_request.Errors():
+	case err = <-test_server.request().Errors():
 		t.Errorf("Unexpected error: %v", err)
 	default:
 	}
 }
 
 func makeMockServer() *server.Server {
-	datastore, err := resolver.NewDatastore("http://localhost:8091")
+	store, err := resolver.NewDatastore("mock:")
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
 
+	datastore.SetDatastore(store)
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
-	server, err := server.NewServer(datastore, nil, nil, "default",
+	server, err := server.NewServer(store, nil, nil, "default",
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -201,23 +232,23 @@ func makeMockServer() *server.Server {
 	return server
 }
 
-func testHandler() http.Handler {
+func (this *testServer) testHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query_request = newHttpRequest(w, r, NewSyncPool(1024), 1024)
-		if query_request.State() == server.FATAL {
+		this.query_request = newHttpRequest(w, r, NewSyncPool(1024), 1024)
+		if this.query_request.State() == server.FATAL {
 			return
 		}
 		select {
-		case query_server.Channel() <- query_request:
+		case this.query_server.Channel() <- this.query_request:
 			// Wait until the request exits.
-			<-query_request.CloseNotify()
+			<-this.query_request.CloseNotify()
 		default:
 		}
 	})
 }
 
 func doUrlEncodedPost(payload url.Values) (*http.Response, error) {
-	u, err := url.ParseRequestURI(test_server.URL)
+	u, err := url.ParseRequestURI(test_server.URL())
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +276,7 @@ func doJsonEncodedPost(payload map[string]interface{}) (*http.Response, error) {
 		return nil, err
 	}
 
-	u, err := url.ParseRequestURI(test_server.URL)
+	u, err := url.ParseRequestURI(test_server.URL())
 	if err != nil {
 		return nil, err
 	}
