@@ -225,22 +225,30 @@ func encodeObjectAsCompoundArray(obj map[string]interface{}) []interface{} {
 func decodeCompoundArrayAsObject(ca []interface{}) (map[string]interface{}, error) {
 	rv := map[string]interface{}{}
 
-	if len(ca)%2 != 0 {
-		return nil, fmt.Errorf("compound object array must be even length")
+	if len(ca) != 2 {
+		return nil, fmt.Errorf("Incorrectly formatted compound array object")
 	}
-	midpoint := len(ca) / 2
-	for i := 0; i < midpoint; i++ {
-		key, ok := ca[i].(string)
-		if !ok {
-			return nil, fmt.Errorf("compound object array contains non-string in key position")
-		}
-		val := ca[i+midpoint]
-		// recursively decode object contents
+
+	key_array, ok := ca[0].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Key array is not an array but type %T", ca[0], ca[0])
+	}
+
+	val_array, ok := ca[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Value array is not an array but type %T", val_array)
+	}
+
+	for i, key := range key_array {
+
+		key := key.(string)
+		val := val_array[i]
 		decodedVal, err := convertCouchbaseViewKeyEntryToValue(val)
 		if err != nil {
 			return nil, err
 		}
 		rv[key] = decodedVal
+
 	}
 	return rv, nil
 }
@@ -267,10 +275,6 @@ func convertCouchbaseViewKeyEntryToValue(keyEntry interface{}) (value.Value, err
 
 	switch keyEntry := keyEntry.(type) {
 	case []interface{}:
-		// key-entries MUST also be arrays at the top-level
-		if len(keyEntry) != 2 {
-			return nil, fmt.Errorf("Key entries array must have length 2. Current length %d", len(keyEntry))
-		}
 		keyEntryType, ok := keyEntry[0].(float64)
 		if !ok {
 			return nil, fmt.Errorf("Key entry type must be number")

@@ -10,10 +10,10 @@
 package couchbase
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
+	"fmt"
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -404,7 +404,6 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 	sentRows := false
 	ok := true
 	numRows := 0
-	errs := make([]error, 0, 10)
 	for ok {
 		select {
 		case viewRow, ok = <-viewRowChannel:
@@ -412,12 +411,12 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 				entry := datastore.IndexEntry{PrimaryKey: viewRow.ID}
 
 				// try to add the view row key as the entry key (unless this is _all_docs)
-				if vi.DDocName() != "" /* FIXME && vi.IsPrimary() == false */ {
+				if vi.IsPrimary() == false {
 					lookupValue, err := convertCouchbaseViewKeyToLookupValue(viewRow.Key)
 					if err == nil {
 						entry.EntryKey = lookupValue
 					} else {
-						errs = append(errs, fmt.Errorf("unable to convert index key to lookup value err:%v key %v", err, entry))
+						conn.Error(errors.NewError(err, "View Row "+fmt.Sprintf("%v", viewRow.Key)))
 					}
 				}
 				select {
@@ -458,10 +457,6 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 				return
 			}
 		}
-	}
-
-	if errs != nil {
-		logging.Debugf("Errors with converting lookup value to entry key. num errrs %v", len(errs))
 	}
 
 	logging.Debugf("Number of entries fetched from the index %d", numRows)
