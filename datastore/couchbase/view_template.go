@@ -27,14 +27,23 @@ const templFunctions = `
       if (val instanceof Array) {
         return [$array, val];
       } else {
-        innerKeys = [];
+        var innerKeys = [];
         for (var k in val) {
           innerKeys.push(k);
         }
         innerKeys.sort()
-        innerVals = [];
+        var innerVals = [];
         for (var i in innerKeys) {
-          innerVals.push(indexFormattedValue(val[innerKeys[i]]));
+          if (typeof val[innerKeys[i]] == "object" && 
+            (val[innerKeys[i]] === null || Object.keys(val[innerKeys[i]]).length === 0)) {
+            if (val[innerKeys[i]] === null) {
+                innerVals.push([$null])
+            } else if (Object.keys(val[innerKeys[i]]).length === 0) {
+              innerVals.push([$object, [[], []]]);
+            }
+          } else {
+            innerVals.push(indexFormattedValue(val[innerKeys[i]]));
+          }
         }
         return [$object, [innerKeys, innerVals]];
       }
