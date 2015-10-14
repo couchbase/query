@@ -14,11 +14,12 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	stack "github.com/couchbase/query/util"
-	"io"
-	"strings"
 )
 
 type JSConverter struct {

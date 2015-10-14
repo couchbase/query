@@ -10,10 +10,11 @@
 package couchbase
 
 import (
+	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
-	"fmt"
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -21,7 +22,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	"sync"
 )
 
 type viewIndexer struct {
