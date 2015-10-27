@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -133,6 +134,7 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
+		logging.Infof("Indexer returned error %v", err)
 		return nil, err
 	}
 
@@ -307,8 +309,10 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 								for _, indexer := range indexers {
 									err = indexer.Refresh()
 									if err != nil {
+										logging.Errorf("Refreshing indexes failed %v", err)
 										conn.Error(errors.NewSystemDatastoreError(err, ""))
-										return
+										// don't return here but continue processing, because other keyspaces may still be responsive. MB-15834
+										continue
 									}
 
 									indexIds, err := indexer.IndexIds()
