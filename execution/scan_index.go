@@ -150,8 +150,12 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 					av.SetAttachment("meta", meta)
 
 					covers := this.plan.Covers()
-					for i, c := range covers {
-						av.SetCover(c.Text(), entry.EntryKey[i])
+					if len(covers) > 0 {
+						for i, c := range covers {
+							av.SetCover(c.Text(), entry.EntryKey[i])
+						}
+
+						av.SetField(this.plan.Term().Alias(), av)
 					}
 
 					ok = this.sendItem(av)
