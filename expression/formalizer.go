@@ -122,12 +122,7 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 }
 
 /*
-Visitor method for an Identifier expressions. Check if the expression
-Identifier is a field (in an object). If it is return the
-expression. If the Keyspace string is empty for the receiver, there is
-an ambiguous reference to the field identifier. Hence throw an
-error. Return a new Field with an identifier with the name Keyspace
-and Field name set to the Identifier() return value.
+Formalize Identifier.
 */
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	_, ok := this.Allowed.Field(expr.Identifier())
@@ -150,7 +145,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 }
 
 /*
-Formalize META() function defined on indexes.
+Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	meta, ok := expr.(*Meta)

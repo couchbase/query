@@ -79,12 +79,6 @@ type Meta struct {
 	FunctionBase
 }
 
-/*
-The function NewMeta takes as input an expression and returns
-a pointer to the Meta struct that calls NewUnaryFunctionBase to
-create a function named META with an input operand as the
-expression.
-*/
 func NewMeta(operands ...Expression) Function {
 	rv := &Meta{
 		*NewFunctionBase("meta", operands...),

@@ -14,6 +14,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type Covers []*Cover
+
 type Cover struct {
 	ExpressionBase
 	covered Expression

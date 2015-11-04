@@ -38,6 +38,13 @@ func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
 		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
 }
 
+const UNKNOWN_FOR = 4025
+
+func NewUnknownForError(termType string, keyFor string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: UNKNOWN_FOR, IKey: iKey,
+		InternalMsg: fmt.Sprintf("Unknown %s for alias %s", termType, keyFor), InternalCaller: CallerN(1)}
+}
+
 const SUBQUERY_MISSING_KEYS = 4030
 
 func NewSubqueryMissingKeysError(keyspace string) Error {
@@ -70,4 +77,11 @@ func NewPreparedDecodingError(e error) Error {
 func NewPreparedEncodingMismatchError(name string) Error {
 	return &err{level: EXCEPTION, ICode: 4080, IKey: "plan.build_prepared.name_encoded_plan_mismatch",
 		InternalMsg: fmt.Sprintf("Encoded plan parameter does not match encoded plan of %s", name), InternalCaller: CallerN(1)}
+}
+
+const NO_INDEX_JOIN = 4100
+
+func NewNoIndexJoinError(alias, op string) Error {
+	return &err{level: EXCEPTION, ICode: NO_INDEX_JOIN, IKey: fmt.Sprintf("plan.index_%s.no_index", op),
+		InternalMsg: fmt.Sprintf("No index available for join term %s", alias), InternalCaller: CallerN(1)}
 }

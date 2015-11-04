@@ -222,10 +222,10 @@ var _FUNCTIONS = map[string]Function{
 	// Meta
 	"base64":      &Base64{},
 	"meta":        &Meta{},
+	"min_version": &MinVersion{},
 	"self":        &Self{},
 	"uuid":        &Uuid{},
 	"version":     &Version{},
-	"min_version": &MinVersion{},
 
 	// Type checking
 	"is_array":   &IsArray{},

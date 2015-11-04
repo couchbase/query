@@ -68,15 +68,8 @@ func (this *IfInf) DependsOn(other Expression) bool {
 }
 
 /*
-This method returns the first non missing, non infinity
-number in the input argument values. Range over the args
-and check its type. If missing, skip that value, and if
-that value is not a number, then return a NULL. In the
-event a number is first encountered, check whether f is
-an infinity according to the second argument (since it
-is 0 IsInf reports whether f is either infinity as per
-the math package in the Go Docs). If none of the above
-cases are satisfied return a Null value.
+First non missing, non infinity number in the input argument values,
+or null.
 */
 func (this *IfInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
@@ -101,9 +94,8 @@ Minimum input arguments required is 2
 func (this *IfInf) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined for the IfInf
-function is MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+Maximum number of input arguments defined for the IfInf function is
+MaxInt16 = 1<<15 - 1.
 */
 func (this *IfInf) MaxArgs() int { return math.MaxInt16 }
 
@@ -119,9 +111,8 @@ func (this *IfInf) Constructor() FunctionConstructor { return NewIfInf }
 ///////////////////////////////////////////////////
 
 /*
-This represents the Conditional function IFNAN(expr1, expr2, ...).
-It returns the first non-MISSING, non-NaN number or NULL. Type IfNaN
-is a struct that implements FunctionBase.
+This represents the Conditional function IFNAN(expr1, expr2, ...).  It
+returns the first non-MISSING, non-NaN number or NULL.
 */
 type IfNaN struct {
 	FunctionBase
@@ -192,7 +183,7 @@ func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, err
 }
 
 /*
-Minimum input arguments required is 2
+Minimum input arguments required is 2.
 */
 func (this *IfNaN) MinArgs() int { return 2 }
 

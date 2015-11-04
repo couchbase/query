@@ -97,6 +97,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	found := len(pairs) > 0
+	projection := this.plan.Term().Projection()
 
 	// Attach and send
 	for i, pair := range pairs {
@@ -104,7 +105,6 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 		var jv value.AnnotatedValue
 
 		// Apply projection, if any
-		projection := this.plan.Term().Projection()
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(joinItem, context)
 			if e != nil {

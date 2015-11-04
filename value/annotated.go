@@ -16,6 +16,18 @@ import (
 type AnnotatedChannel chan AnnotatedValue
 type AnnotatedValues []AnnotatedValue
 
+func (this AnnotatedValues) Append(val AnnotatedValue, pool *AnnotatedPool) AnnotatedValues {
+	if len(this) == cap(this) {
+		avs := make(AnnotatedValues, len(this), len(this)<<1)
+		copy(avs, this)
+		pool.Put(this)
+		this = avs
+	}
+
+	this = append(this, val)
+	return this
+}
+
 /*
 AnnotatedValue is a Value that can hold attachments and can hold data
 from covering indexes.

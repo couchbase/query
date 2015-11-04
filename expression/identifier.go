@@ -142,7 +142,7 @@ func (this *Identifier) Set(item, val value.Value, context Context) bool {
 }
 
 /*
-Call UnsetFiled using item value and unset the identifier.
+Call UnsetField using item value and unset the identifier.
 (delete it). The UnsetField returns a boolean value. If it
 is nil return true since no error was encountered while
 setting the field.
@@ -152,22 +152,14 @@ func (this *Identifier) Unset(item value.Value, context Context) bool {
 	return er == nil
 }
 
-/*
-This method is used to access the identifier string
-using the receiver.
-*/
 func (this *Identifier) Identifier() string {
 	return this.identifier
 }
 
-/*
- */
 func (this *Identifier) CaseInsensitive() bool {
 	return this.caseInsensitive
 }
 
-/*
- */
 func (this *Identifier) SetCaseInsensitive(insensitive bool) {
 	this.caseInsensitive = insensitive
 }

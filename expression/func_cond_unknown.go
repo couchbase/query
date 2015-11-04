@@ -59,8 +59,8 @@ It returns a value type JSON.
 func (this *IfMissing) Type() value.Type { return value.JSON }
 
 /*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
+Calls the Eval method for the receiver and passes in the receiver,
+current item and current context.
 */
 func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
@@ -88,9 +88,7 @@ Minimum input arguments required is 2
 func (this *IfMissing) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined is
-MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 */
 func (this *IfMissing) MaxArgs() int { return math.MaxInt16 }
 
@@ -106,10 +104,8 @@ func (this *IfMissing) Constructor() FunctionConstructor { return NewIfMissing }
 ///////////////////////////////////////////////////
 
 /*
-This represents the Conditional function
-IFMISSINGORNULL(expr1, expr2, ...). It returns the first
-non-NULL, non-MISSING value. Type IfMissingOrNull is a
-struct that implements FunctionBase.
+This represents the Conditional function IFMISSINGORNULL(expr1, expr2,
+...). It returns the first non-NULL, non-MISSING value.
 */
 type IfMissingOrNull struct {
 	FunctionBase
@@ -130,10 +126,6 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -144,18 +136,15 @@ It returns a value type JSON.
 func (this *IfMissingOrNull) Type() value.Type { return value.JSON }
 
 /*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
+Calls the Eval method for the receiver and passes in the receiver,
+current item and current context.
 */
 func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
 /*
-This method returns the first non-NULL, non-MISSING value.
-Range over input and check for its type. For all values
-greater than null return the value itself. For Missing and
-null return a Null value.
+This method returns the first non-NULL, non-MISSING value, or null.
 */
 func (this *IfMissingOrNull) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
@@ -168,14 +157,12 @@ func (this *IfMissingOrNull) Apply(context Context, args ...value.Value) (value.
 }
 
 /*
-Minimum input arguments required is 2
+Minimum input arguments required is 2.
 */
 func (this *IfMissingOrNull) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined is
-MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 */
 func (this *IfMissingOrNull) MaxArgs() int { return math.MaxInt16 }
 
@@ -237,10 +224,7 @@ func (this *IfNull) DependsOn(other Expression) bool {
 }
 
 /*
-This method returns the first non null value. Range over
-the input arguments and check for its type. For all values
-other than a null, return the value itself. Otherwise
-return a Null.
+This method returns the first non null value, or null.
 */
 func (this *IfNull) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
@@ -253,14 +237,12 @@ func (this *IfNull) Apply(context Context, args ...value.Value) (value.Value, er
 }
 
 /*
-Minimum input arguments required is 2
+Minimum input arguments required is 2.
 */
 func (this *IfNull) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined is
-MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 */
 func (this *IfNull) MaxArgs() int { return math.MaxInt16 }
 
@@ -276,18 +258,16 @@ func (this *IfNull) Constructor() FunctionConstructor { return NewIfNull }
 ///////////////////////////////////////////////////
 
 /*
-This represents the Conditional function MISSINGIF(expr1, expr2).
-It returns MISSING if expr1 = expr2, else expr1. Type MissingIf
-is a struct that implements BinaryFunctionBase.
+This represents the Conditional function MISSINGIF(expr1, expr2).  It
+returns MISSING if expr1 = expr2, else expr1.
 */
 type MissingIf struct {
 	BinaryFunctionBase
 }
 
 /*
-The function NewMissingIf calls NewBinaryFunctionBase to
-create a function named MISSINGIF with the two
-expressions as input.
+The function NewMissingIf calls NewBinaryFunctionBase to create a
+function named MISSINGIF with the two expressions as input.
 */
 func NewMissingIf(first, second Expression) Function {
 	rv := &MissingIf{
@@ -298,10 +278,6 @@ func NewMissingIf(first, second Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -312,18 +288,18 @@ It returns a value type JSON.
 func (this *MissingIf) Type() value.Type { return value.JSON }
 
 /*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
+Calls the Eval method for binary functions and passes in the receiver,
+current item and current context.
 */
 func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-This method checks to see if the values of the two input
-expressions are equal, and if true then returns a missing
-value. If not it returns the first input value. Use the
-Equals method for the two values to determine equality.
+This method checks to see if the values of the two input expressions
+are equal, and if true then returns a missing value. If not it returns
+the first input value. Use the Equals method for the two values to
+determine equality.
 */
 func (this *MissingIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	eq := first.Equals(second)
@@ -340,8 +316,8 @@ func (this *MissingIf) Apply(context Context, first, second value.Value) (value.
 }
 
 /*
-The constructor returns a NewMissingIf with the two operands
-cast to a Function as the FunctionConstructor.
+The constructor returns a NewMissingIf with the two operands cast to a
+Function as the FunctionConstructor.
 */
 func (this *MissingIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -356,18 +332,16 @@ func (this *MissingIf) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the Conditional function NULLIF(expr1, expr2).
-It returns a NULL if expr1 = expr2; else expr1. Type NullIf
-is a struct that implements BinaryFunctionBase.
+This represents the Conditional function NULLIF(expr1, expr2).  It
+returns a NULL if expr1 = expr2; else expr1.
 */
 type NullIf struct {
 	BinaryFunctionBase
 }
 
 /*
-The function NewNullIf calls NewBinaryFunctionBase to
-create a function named NULLIF with the two
-expressions as input.
+The function NewNullIf calls NewBinaryFunctionBase to create a
+function named NULLIF with the two expressions as input.
 */
 func NewNullIf(first, second Expression) Function {
 	rv := &NullIf{
@@ -378,10 +352,6 @@ func NewNullIf(first, second Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -392,18 +362,18 @@ It returns a value type JSON.
 func (this *NullIf) Type() value.Type { return value.JSON }
 
 /*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
+Calls the Eval method for binary functions and passes in the receiver,
+current item and current context.
 */
 func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-This method checks to see if the values of the two input
-expressions are equal, and if true then returns a null
-value. If not it returns the first input value. Use the
-Equals method for the two values to determine equality.
+This method checks to see if the values of the two input expressions
+are equal, and if true then returns a null value. If not it returns
+the first input value. Use the Equals method for the two values to
+determine equality.
 */
 func (this *NullIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	eq := first.Equals(second)
@@ -420,8 +390,8 @@ func (this *NullIf) Apply(context Context, first, second value.Value) (value.Val
 }
 
 /*
-The constructor returns a NewNullIf with the two operands
-cast to a Function as the FunctionConstructor.
+The constructor returns a NewNullIf with the two operands cast to a
+Function as the FunctionConstructor.
 */
 func (this *NullIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

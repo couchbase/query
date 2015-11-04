@@ -24,11 +24,6 @@ EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 */
 var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
 
-/*
-MarshalJSON calls the local function marshalArray on the receiver.
-The function marshalArray has input as a slice and output as a
-slice of bytes and an error.
-*/
 func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
 }
