@@ -242,7 +242,7 @@ val              value.Value
 %token WORK
 %token XOR
 
-%token INT NUM STR IDENTIFIER IDENTIFIER_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
+%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -275,7 +275,7 @@ val              value.Value
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENTIFIER IDENTIFIER_ICASE
+%type <s>                IDENT IDENT_ICASE
 %type <s>                NAMED_PARAM
 %type <f>                NUM
 %type <n>                INT
@@ -313,13 +313,13 @@ val              value.Value
 %type <subselect>        select_from
 %type <subselect>        from_select
 %type <fromTerm>         from_term from opt_from
-%type <keyspaceTerm>     keyspace_term join_term
+%type <keyspaceTerm>     keyspace_term join_term index_join_term
 %type <subqueryTerm>     subquery_term
 %type <b>                opt_join_type
 %type <path>             path opt_subpath
 %type <s>                namespace_name keyspace_name
 %type <use>              opt_use
-%type <expr>             use_keys on_keys
+%type <expr>             use_keys on_keys on_key
 %type <indexRefs>        use_index index_refs
 %type <indexRef>         index_ref
 %type <bindings>         opt_let let
@@ -430,7 +430,7 @@ opt_name:
     $$ = ""
 }
 |
-IDENTIFIER from_or_as
+IDENT from_or_as
 {
     $$ = $1
 }
@@ -707,7 +707,7 @@ AS alias
 ;
 
 alias:
-IDENTIFIER
+IDENT
 ;
 
 
@@ -749,9 +749,19 @@ from_term opt_join_type JOIN join_term
     $$ = algebra.NewJoin($1, $2, $4)
 }
 |
+from_term opt_join_type JOIN index_join_term FOR IDENT
+{
+    $$ = algebra.NewIndexJoin($1, $2, $4, $6)
+}
+|
 from_term opt_join_type NEST join_term
 {
     $$ = algebra.NewNest($1, $2, $4)
+}
+|
+from_term opt_join_type NEST index_join_term FOR IDENT
+{
+    $$ = algebra.NewIndexNest($1, $2, $4, $6)
 }
 |
 from_term opt_join_type unnest expr opt_as_alias
@@ -811,12 +821,29 @@ SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_keys
 }
 ;
 
+index_join_term:
+keyspace_name opt_subpath opt_as_alias on_key
+{
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4, nil)
+}
+|
+namespace_name COLON keyspace_name opt_subpath opt_as_alias on_key
+{
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6, nil)
+}
+|
+SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_key
+{
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6, nil)
+}
+;
+
 namespace_name:
-IDENTIFIER
+IDENT
 ;
 
 keyspace_name:
-IDENTIFIER
+IDENT
 ;
 
 opt_subpath:
@@ -913,6 +940,13 @@ OUTER
 
 on_keys:
 ON opt_primary KEYS expr
+{
+    $$ = $4
+}
+;
+
+on_key:
+ON opt_primary KEY expr
 {
     $$ = $4
 }
@@ -1405,7 +1439,7 @@ variable WITHIN path_expr
 ;
 
 variable:
-IDENTIFIER
+IDENT
 ;
 
 path_expr:
@@ -1585,7 +1619,7 @@ index_name
 ;
 
 index_name:
-IDENTIFIER
+IDENT
 ;
 
 named_keyspace_ref:
@@ -1763,17 +1797,17 @@ index_names COMMA index_name
  *************************************************/
 
 path:
-IDENTIFIER
+IDENT
 {
     $$ = expression.NewIdentifier($1)
 }
 |
-path DOT IDENTIFIER
+path DOT IDENT
 {
     $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
-path DOT IDENTIFIER_ICASE
+path DOT IDENT_ICASE
 {
     field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
@@ -1797,12 +1831,12 @@ expr:
 c_expr
 |
 /* Nested */
-expr DOT IDENTIFIER
+expr DOT IDENT
 {
     $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
-expr DOT IDENTIFIER_ICASE
+expr DOT IDENT_ICASE
 {
     field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
@@ -2009,13 +2043,13 @@ literal
 construction_expr
 |
 /* Identifier */
-IDENTIFIER
+IDENT
 {
     $$ = expression.NewIdentifier($1)
 }
 |
 /* Identifier */
-IDENTIFIER_ICASE
+IDENT_ICASE
 {
     ident := expression.NewIdentifier($1)
     ident.SetCaseInsensitive(true)
@@ -2060,12 +2094,12 @@ b_expr:
 c_expr
 |
 /* Nested */
-b_expr DOT IDENTIFIER
+b_expr DOT IDENT
 {
     $$ = expression.NewField($1, expression.NewFieldName($3, false))
 }
 |
-b_expr DOT IDENTIFIER_ICASE
+b_expr DOT IDENT_ICASE
 {
     field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
@@ -2392,7 +2426,7 @@ function_name LPAREN STAR RPAREN
 ;
 
 function_name:
-IDENTIFIER
+IDENT
 ;
 
 

@@ -84,7 +84,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 				expression.NewFieldName("id", false)),
 		}
 
-		sargables, er := sargableIndexes(indexes, pred, primaryKey, dnf, formalizer)
+		sargables, er := sargableIndexes(indexes, pred, pred, primaryKey, dnf, formalizer)
 		if er != nil {
 			return nil, nil, er
 		}
@@ -171,7 +171,7 @@ type indexEntry struct {
 	spans    plan.Spans
 }
 
-func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
+func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, dnf *DNF, formalizer *expression.Formalizer) (
 	map[datastore.Index]*indexEntry, error) {
 	var err error
@@ -204,6 +204,10 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 
 		cond := index.Condition()
 		if cond != nil {
+			if subset == nil {
+				continue
+			}
+
 			cond = cond.Copy()
 
 			cond, err = formalizer.Map(cond)
@@ -216,7 +220,7 @@ func sargableIndexes(indexes []datastore.Index, pred expression.Expression,
 				return nil, err
 			}
 
-			if !SubsetOf(pred, cond) {
+			if !SubsetOf(subset, cond) {
 				continue
 			}
 		}
@@ -408,12 +412,16 @@ outer:
 			}
 		}
 
-		covered := make([]*expression.Cover, len(entry.keys))
-		for i, key := range entry.keys {
-			covered[i] = expression.NewCover(key)
+		covers := make(expression.Covers, 0, len(entry.keys)+1)
+		covers = append(covers, expression.NewCover(expression.NewField(
+			expression.NewMeta(expression.NewIdentifier(node.Alias())),
+			expression.NewFieldName("id", false))))
+
+		for _, key := range entry.keys {
+			covers = append(covers, expression.NewCover(key))
 		}
 
-		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covered)
+		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)
 		this.coveringScan = scan
 		return scan, nil
 	}

@@ -18,43 +18,43 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
-type Join struct {
+type Nest struct {
 	readonly
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
 	outer    bool
 }
 
-func NewJoin(keyspace datastore.Keyspace, join *algebra.Join) *Join {
-	return &Join{
+func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest) *Nest {
+	return &Nest{
 		keyspace: keyspace,
-		term:     join.Right(),
-		outer:    join.Outer(),
+		term:     nest.Right(),
+		outer:    nest.Outer(),
 	}
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitJoin(this)
+func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitNest(this)
 }
 
-func (this *Join) New() Operator {
-	return &Join{}
+func (this *Nest) New() Operator {
+	return &Nest{}
 }
 
-func (this *Join) Keyspace() datastore.Keyspace {
+func (this *Nest) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
 
-func (this *Join) Term() *algebra.KeyspaceTerm {
+func (this *Nest) Term() *algebra.KeyspaceTerm {
 	return this.term
 }
 
-func (this *Join) Outer() bool {
+func (this *Nest) Outer() bool {
 	return this.outer
 }
 
-func (this *Join) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"#operator": "Join"}
+func (this *Nest) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "Nest"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["on_keys"] = expression.NewStringer().Visit(this.term.Keys())
@@ -69,7 +69,7 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Join) UnmarshalJSON(body []byte) error {
+func (this *Nest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
 		Names string `json:"namespace"`
@@ -97,4 +97,5 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 		nil, _unmarshalled.As, keys_expr, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	return err
+
 }

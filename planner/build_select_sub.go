@@ -14,7 +14,6 @@ import (
 	"sort"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
@@ -49,27 +48,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	count, err := this.fastCount(node)
+	err = this.visitFrom(node, group)
 	if err != nil {
 		return nil, err
-	}
-
-	if count {
-		this.maxParallelism = 1
-	} else if node.From() != nil {
-		if this.where != nil || group != nil {
-			this.limit = nil
-		}
-
-		_, err := node.From().Accept(this)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// No FROM clause
-		scan := plan.NewDummyScan()
-		this.children = append(this.children, scan)
-		this.maxParallelism = 1
 	}
 
 	if this.coveringScan != nil {
@@ -153,105 +134,6 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	}
 }
 
-func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	node.SetDefaultNamespace(this.namespace)
-	keyspace, err := this.getTermKeyspace(node)
-	if err != nil {
-		return nil, err
-	}
-
-	if this.subquery && this.correlated && node.Keys() == nil {
-		return nil, errors.NewSubqueryMissingKeysError(node.Keyspace())
-	}
-
-	scan, err := this.selectScan(keyspace, node, this.limit)
-	if err != nil {
-		return nil, err
-	}
-
-	this.children = append(this.children, scan)
-
-	if this.coveringScan == nil {
-		fetch := plan.NewFetch(keyspace, node)
-		this.subChildren = append(this.subChildren, fetch)
-	}
-
-	return nil, nil
-}
-
-func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	sel, err := node.Subquery().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
-	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
-	this.children = append(this.children, sel.(plan.Operator), plan.NewAlias(node.Alias()))
-	return nil, nil
-}
-
-func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.limit = nil
-
-	_, err := node.Left().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	right := node.Right()
-	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
-
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
-	join := plan.NewJoin(keyspace, node)
-	this.subChildren = append(this.subChildren, join)
-	return nil, nil
-}
-
-func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	_, err := node.Left().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	right := node.Right()
-	right.SetDefaultNamespace(this.namespace)
-	namespace, err := this.datastore.NamespaceByName(right.Namespace())
-	if err != nil {
-		return nil, err
-	}
-
-	keyspace, err := namespace.KeyspaceByName(right.Keyspace())
-	if err != nil {
-		return nil, err
-	}
-
-	nest := plan.NewNest(keyspace, node)
-	this.subChildren = append(this.subChildren, nest)
-	return nil, nil
-}
-
-func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	this.limit = nil
-
-	_, err := node.Left().Accept(this)
-	if err != nil {
-		return nil, err
-	}
-
-	unnest := plan.NewUnnest(node)
-	this.subChildren = append(this.subChildren, unnest)
-	return nil, nil
-}
-
 func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]algebra.Aggregate, error) {
 	aggs := make(map[string]algebra.Aggregate)
 
@@ -328,36 +210,6 @@ func collectAggregates(aggs map[string]algebra.Aggregate, exprs ...expression.Ex
 			}
 		}
 	}
-}
-
-func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
-	if node.From() == nil ||
-		node.Where() != nil ||
-		node.Group() != nil {
-		return false, nil
-	}
-
-	from, ok := node.From().(*algebra.KeyspaceTerm)
-	if !ok || from.Projection() != nil {
-		return false, nil
-	}
-
-	from.SetDefaultNamespace(this.namespace)
-	keyspace, err := this.getTermKeyspace(from)
-	if err != nil {
-		return false, err
-	}
-
-	for _, term := range node.Projection().Terms() {
-		count, ok := term.Expression().(*algebra.Count)
-		if !ok || count.Operand() != nil {
-			return false, nil
-		}
-	}
-
-	scan := plan.NewCountScan(keyspace, from)
-	this.children = append(this.children, scan)
-	return true, nil
 }
 
 /*

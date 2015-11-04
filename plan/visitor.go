@@ -27,7 +27,9 @@ type Visitor interface {
 
 	// Join
 	VisitJoin(op *Join) (interface{}, error)
+	VisitIndexJoin(op *IndexJoin) (interface{}, error)
 	VisitNest(op *Nest) (interface{}, error)
+	VisitIndexNest(op *IndexNest) (interface{}, error)
 	VisitUnnest(op *Unnest) (interface{}, error)
 
 	// Let + Letting

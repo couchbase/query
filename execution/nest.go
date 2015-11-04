@@ -96,19 +96,22 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 		}
 	}
 
-	found := len(pairs) > 0
-
-	if !found && !this.plan.Outer() {
-		return true
+	if len(pairs) == 0 {
+		if this.plan.Outer() {
+			item.SetField(this.plan.Term().Alias(), value.EMPTY_ARRAY_VALUE)
+			return this.sendItem(item) && fetchOk
+		} else {
+			return true
+		}
 	}
 
+	projection := this.plan.Term().Projection()
 	nvs := make([]interface{}, 0, len(pairs))
 	for _, pair := range pairs {
 		nestItem := pair.Value
 		var nv value.AnnotatedValue
 
 		// Apply projection, if any
-		projection := this.plan.Term().Projection()
 		if projection != nil {
 			projectedItem, e := projection.Evaluate(nestItem, context)
 			if e != nil {

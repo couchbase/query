@@ -163,7 +163,7 @@ type Value interface {
 	   convert to JSON byte encoding; and returns a byte array of
 	   valid JSON values. error is always nil.
 	*/
-	MarshalJSON() ([]byte, error)
+	json.Marshaler
 
 	/*
 	   Returns the type of the input based on the previously

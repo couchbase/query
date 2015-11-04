@@ -105,8 +105,16 @@ func (this *builder) VisitJoin(plan *plan.Join) (interface{}, error) {
 	return NewJoin(plan), nil
 }
 
+func (this *builder) VisitIndexJoin(plan *plan.IndexJoin) (interface{}, error) {
+	return NewIndexJoin(plan), nil
+}
+
 func (this *builder) VisitNest(plan *plan.Nest) (interface{}, error) {
 	return NewNest(plan), nil
+}
+
+func (this *builder) VisitIndexNest(plan *plan.IndexNest) (interface{}, error) {
+	return NewIndexNest(plan), nil
 }
 
 func (this *builder) VisitUnnest(plan *plan.Unnest) (interface{}, error) {
