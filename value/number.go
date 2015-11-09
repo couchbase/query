@@ -27,6 +27,10 @@ var ZERO_VALUE = NewValue(0.0)
 var ONE_VALUE = NewValue(1.0)
 var NEG_ONE_VALUE = NewValue(-1.0)
 
+var _NAN_BYTES = []byte("\"NaN\"")
+var _POS_INF_BYTES = []byte("\"+Infinity\"")
+var _NEG_INF_BYTES = []byte("\"-Infinity\"")
+
 /*
 MarshalJSON casts the method receiver to float64, and uses
 the math package functions to check if its NaN, +infinity
@@ -38,11 +42,11 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 	f := float64(this)
 
 	if math.IsNaN(f) {
-		return []byte("\"NaN\""), nil
+		return _NAN_BYTES, nil
 	} else if math.IsInf(f, 1) {
-		return []byte("\"+Infinity\""), nil
+		return _POS_INF_BYTES, nil
 	} else if math.IsInf(f, -1) {
-		return []byte("\"-Infinity\""), nil
+		return _NEG_INF_BYTES, nil
 	} else {
 		if f == -0 {
 			f = 0
