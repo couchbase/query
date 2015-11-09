@@ -77,10 +77,6 @@ loop:
 	}
 
 	this.set = distinct.Set()
-	if this.set.Len() == 0 {
-		return false
-	}
-
 	this.SetInput(this.first.Output())
 	this.SetStop(this.first)
 	return true

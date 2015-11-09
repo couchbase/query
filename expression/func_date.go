@@ -385,6 +385,7 @@ func (this *DateAddStr) Constructor() FunctionConstructor {
 // DateDiffMillis
 //
 ///////////////////////////////////////////////////
+
 /*
 This represents the Date function DATE_DIFF_MILLIS(expr1,expr2,part).
 It performs date arithmetic. It returns the elapsed time between two
@@ -431,15 +432,6 @@ func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.V
 	return this.TernaryEval(this, item, context)
 }
 
-/*
-This method takes two dates and part as input values and returns a value.
-If any of these are missing then return a missing value. If the dates
-arent numbers or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and cast the dates to
-float64(N1QL valid number type) and part to string. Call the dateDiff
-method with the two dates converted to time format using method
-millisToTime and return the difference as a value.
-*/
 func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -473,6 +465,7 @@ func (this *DateDiffMillis) Constructor() FunctionConstructor {
 // DateDiffStr
 //
 ///////////////////////////////////////////////////
+
 /*
 This represents the Date function DATE_DIFF_STR(expr1,expr2,part).
 It performs date arithmetic and returns the elapsed time between two
