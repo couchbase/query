@@ -396,7 +396,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []
 }
 
 func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, limit expression.Expression) (*plan.IndexScan, error) {
+	node *algebra.KeyspaceTerm, limit expression.Expression) (plan.Operator, error) {
 	if this.cover == nil {
 		return nil, nil
 	}
@@ -423,6 +423,12 @@ outer:
 
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)
 		this.coveringScan = scan
+
+		if len(entry.spans) > 1 {
+			// Use UnionScan to de-dup multiple spans
+			return plan.NewUnionScan(scan), nil
+		}
+
 		return scan, nil
 	}
 
