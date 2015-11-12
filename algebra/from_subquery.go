@@ -13,7 +13,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/value"
 )
 
 type SubqueryTerm struct {
@@ -85,12 +84,9 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
-	allowed := value.NewScopeValue(make(map[string]interface{}), parent.Allowed)
-	allowed.SetField(alias, alias)
-
-	f = expression.NewFormalizer()
+	f = expression.NewFormalizer(parent)
 	f.Keyspace = alias
-	f.Allowed = allowed
+	f.Allowed.SetField(alias, alias)
 	return
 }
 

@@ -71,7 +71,7 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Select) Formalize() (err error) {
-	return this.FormalizeSubquery(expression.NewFormalizer())
+	return this.FormalizeSubquery(expression.NewFormalizer(nil))
 }
 
 /*

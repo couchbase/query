@@ -120,15 +120,14 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 	f.Allowed.SetField(alias, alias)
 	f.Keyspace = ""
 
-	var p *expression.Formalizer
-	if parent != nil {
-		p = parent.Copy()
-	} else {
-		p = expression.NewFormalizer()
-	}
-
+	p := expression.NewFormalizer(parent)
 	p.Allowed.SetField(alias, alias)
 	this.right.keys, err = p.Map(this.right.keys)
+
+	for ident, val := range p.Identifiers {
+		f.Identifiers[ident] = val
+	}
+
 	return
 }
 
