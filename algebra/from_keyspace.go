@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/value"
 )
 
 /*
@@ -149,8 +148,9 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return
 	}
 
+	f = expression.NewFormalizer(parent)
 	if this.keys != nil {
-		_, err = this.keys.Accept(parent)
+		_, err = this.keys.Accept(f)
 		if err != nil {
 			return
 		}
@@ -162,12 +162,8 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
-	allowed := value.NewScopeValue(make(map[string]interface{}), parent.Allowed)
-	allowed.SetField(keyspace, keyspace)
-
-	f = expression.NewFormalizer()
+	f.Allowed.SetField(keyspace, keyspace)
 	f.Keyspace = keyspace
-	f.Allowed = allowed
 	return
 }
 

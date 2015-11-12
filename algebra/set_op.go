@@ -100,11 +100,7 @@ func (this *setOp) Formalize(parent *expression.Formalizer) (*expression.Formali
 	}
 
 	terms := this.ResultTerms()
-	f := expression.NewFormalizer()
-	if parent != nil {
-		f.Allowed = value.NewScopeValue(make(map[string]interface{}, len(terms)), parent.Allowed)
-	}
-
+	f := expression.NewFormalizer(parent)
 	for _, term := range terms {
 		f.Allowed.SetField(term.Alias(), term.Alias())
 	}

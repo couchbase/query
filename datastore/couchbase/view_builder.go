@@ -498,7 +498,7 @@ func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) 
 
 // Formalize e by prefixing field names with the bucketName
 func (this *JsStatement) formalize(bucketName string, e expression.Expression) (expression.Expression, error) {
-	f := expression.NewFormalizer()
+	f := expression.NewFormalizer(nil)
 	f.Keyspace = bucketName
 	f.Allowed.SetField(bucketName, true)
 	return f.Map(e.Copy())

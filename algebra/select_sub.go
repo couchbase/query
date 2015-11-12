@@ -69,13 +69,8 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 			return nil, err
 		}
 	} else {
-		f = parent
+		f = expression.NewFormalizer(parent)
 	}
-
-	// Determine if this is a correlated subquery
-	prevIdentifiers := f.Identifiers
-	f.SetIdentifiers(make(map[string]bool))
-	defer f.SetIdentifiers(prevIdentifiers)
 
 	if this.let != nil {
 		_, err = f.PushBindings(this.let)
@@ -106,6 +101,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	// Determine if this is a correlated subquery
 	this.correlated = false
 	immediate := f.Allowed.GetValue().Fields()
+
 	for ident, _ := range f.Identifiers {
 		if _, ok := immediate[ident]; !ok {
 			this.correlated = true

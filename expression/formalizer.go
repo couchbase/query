@@ -32,9 +32,15 @@ type Formalizer struct {
 This method returns a pointer to a Formalizer struct
 with Allowed set to a new map of type string to interface.
 */
-func NewFormalizer() *Formalizer {
+func NewFormalizer(parent *Formalizer) *Formalizer {
+	var pv value.Value
+	if parent != nil {
+		pv = parent.Allowed
+	}
+
 	rv := &Formalizer{
-		Allowed: value.NewScopeValue(make(map[string]interface{}), nil),
+		Allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
+		Identifiers: make(map[string]bool),
 	}
 
 	rv.mapper = rv
@@ -214,9 +220,13 @@ func (this *Formalizer) SetIdentifiers(identifiers map[string]bool) {
 }
 
 func (this *Formalizer) Copy() *Formalizer {
-	f := NewFormalizer()
+	f := NewFormalizer(nil)
 	f.Allowed = this.Allowed.Copy().(*value.ScopeValue)
 	f.Keyspace = this.Keyspace
-	f.Identifiers = this.Identifiers
+
+	for ident, val := range this.Identifiers {
+		f.Identifiers[ident] = val
+	}
+
 	return f
 }

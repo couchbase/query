@@ -187,7 +187,7 @@ func (this *Update) Formalize() (err error) {
 		return err
 	}
 
-	empty := expression.NewFormalizer()
+	empty := expression.NewFormalizer(nil)
 
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
