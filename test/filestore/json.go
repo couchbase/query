@@ -12,6 +12,7 @@ package test
 import (
 	"encoding/json"
 	"os"
+	"runtime"
 
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
@@ -27,6 +28,7 @@ import (
 func init() {
 	logger, _ := log_resolver.NewLogger("golog")
 	logging.SetLogger(logger)
+	runtime.GOMAXPROCS(1)
 }
 
 type MockQuery struct {
