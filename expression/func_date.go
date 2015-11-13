@@ -1920,7 +1920,7 @@ a negative value, return a negative result.
 */
 func dateDiff(t1, t2 time.Time, part string) (int64, error) {
 	var diff *date
-	if t1.String() > t2.String() {
+	if t1.String() >= t2.String() {
 		diff = diffDates(t1, t2)
 		return diffPart(t1, t2, diff, part)
 	} else {
@@ -1931,6 +1931,10 @@ func dateDiff(t1, t2 time.Time, part string) (int64, error) {
 		}
 		return result, e
 	}
+}
+
+func GetQuarter(t time.Time) int {
+	return (int(t.Month()) + 2) / 3
 }
 
 /*
@@ -1979,6 +1983,19 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 			return 0, e
 		}
 		return day / 7, nil
+	case "month":
+		diff_month := (int64(t1.Year())*12 + int64(t1.Month())) - (int64(t2.Year())*12 + int64(t2.Month()))
+		if diff_month < 0 {
+			diff_month = -diff_month
+		}
+		return diff_month, nil
+	case "quarter":
+		diff_quarter := (int64(t1.Year())*4 + int64(GetQuarter(t1))) - (int64(t2.Year())*4 + int64(GetQuarter(t2)))
+
+		if diff_quarter < 0 {
+			diff_quarter = -diff_quarter
+		}
+		return diff_quarter, nil
 	case "year":
 		return int64(diff.year), nil
 	case "decade":

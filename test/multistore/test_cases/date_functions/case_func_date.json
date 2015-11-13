@@ -216,5 +216,102 @@
             "a": null
         }
     ]
+   },
+   {
+     "description":"corner cases for date_diff_str",
+     "statements":"select date_diff_str('2014-12-01','2015-01-01', 'quarter')",
+     "results": [
+        {
+            "$1": -1
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2015-01-01','2014-12-01', 'quarter')",
+     "results": [
+        {
+            "$1": 1
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2013-12-01','2015-01-01', 'quarter')",
+     "results": [
+        {
+            "$1": -5
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2013-10-01','2015-01-01', 'quarter')",
+     "results": [
+        {
+            "$1": -5
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2014-12-01','2015-05-30', 'quarter')",
+     "results": [
+        {
+            "$1": -2
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2014-10-01','2014-12-01', 'quarter')",
+     "results": [
+        {
+            "$1": 0
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2015-11-01','2014-10-01', 'month')",
+     "results": [
+        {
+            "$1": 13
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2015-01-01','2014-12-01', 'month')",
+     "results": [
+        {
+            "$1": 1
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2013-12-01','2015-01-01', 'month')",
+     "results": [
+        {
+            "$1": -13
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2013-01-01','2015-01-01', 'month')",
+     "results": [
+        {
+            "$1": -24
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2013-10-01','2015-01-01', 'month')",
+     "results": [
+        {
+            "$1": -15
+        }
+    ]
+   },
+   {
+     "statements":"select date_diff_str('2014-12-01','2015-01-01', 'month')",
+     "results": [
+        {
+            "$1": -1
+        }
+    ]
    }
   ]
