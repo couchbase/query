@@ -10,7 +10,6 @@
 package expression
 
 import (
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -53,7 +52,7 @@ func (this *Cover) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	if rv == nil {
-		return value.MISSING_VALUE, errors.NewEvaluationError(nil, "cover("+this.text+")")
+		return value.MISSING_VALUE, nil
 	}
 
 	return rv, nil
