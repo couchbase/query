@@ -542,8 +542,16 @@ func (this *ToString) Apply(context Context, arg value.Value) (value.Value, erro
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:
 		return arg, nil
-	case value.BOOLEAN, value.NUMBER:
+	case value.BOOLEAN:
 		return value.NewValue(fmt.Sprint(arg.Actual())), nil
+	case value.NUMBER:
+		f := arg.Actual().(float64)
+		if f == -0 {
+			f = 0
+		}
+
+		s := strconv.FormatFloat(f, 'f', -1, 64)
+		return value.NewValue(s), nil
 	case value.BINARY:
 		raw, ok := arg.Actual().([]byte)
 		if !ok {
