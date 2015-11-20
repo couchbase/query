@@ -173,13 +173,17 @@ func (view *viewIndexer) CreateIndex(requestId, name string, equalKey, rangeKey 
 		}
 	}
 
-	if with != nil {
-		return nil, errors.NewCbViewsWithNotAllowedError(nil, "")
-	}
-
 	logging.Debugf("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
 
-	idx, err := newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
+	var idx datastore.Index
+	var err error
+
+	if with != nil {
+		idx, err = newViewIndexFromExistingMap(name, with.Actual().(string), datastore.IndexKey(rangeKey), view)
+	} else {
+		idx, err = newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
+	}
+
 	if err != nil {
 		return nil, errors.NewCbViewCreateError(err, name)
 	}

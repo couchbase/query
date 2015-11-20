@@ -89,6 +89,61 @@ func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, wher
 	return &doc, nil
 }
 
+func newViewIndexFromExistingMap(name, ddName string, on datastore.IndexKey, view *viewIndexer) (*viewIndex, error) {
+
+	var doc designdoc
+
+	mapfn, err := getMapFunction(view, ddName)
+	if err != nil {
+		return nil, err
+	}
+
+	doc.name = "ddl_" + name
+	doc.viewname = name
+	doc.mapfn = mapfn
+
+	inst := viewIndex{
+		name:     name,
+		using:    datastore.VIEW,
+		on:       on,
+		ddoc:     &doc,
+		view:     view,
+		keyspace: view.keyspace,
+	}
+
+	logging.Infof("Created index %s on %s with key %v", name, view.keyspace.Name(), on)
+
+	err = inst.putDesignDoc()
+	if err != nil {
+		return nil, err
+	}
+
+	err = inst.WaitForIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	return &inst, nil
+}
+
+// get the map function for an existing design document
+func getMapFunction(v *viewIndexer, ddName string) (string, error) {
+
+	b := v.keyspace
+	jdoc, err := getDesignDoc(b, "ddl_"+ddName)
+	if err != nil {
+		return "", err
+	}
+
+	jview, ok := jdoc.Views[ddName]
+	if !ok {
+		return "", fmt.Errorf("View not found %v", ddName)
+	}
+
+	return jview.Map, nil
+
+}
+
 func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 	b := v.keyspace
@@ -179,9 +234,10 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			mapfn:    jview.Map,
 			reducefn: jview.Reduce,
 		}
+
 		if ddoc.checksum() != jdoc.IndexChecksum {
 			nonUsableIndexes = append(nonUsableIndexes, iname)
-			logging.Errorf("Warning - checksum failed on index  %v", iname)
+			logging.Warnf("Warning - checksum failed on index  %v", iname)
 			continue
 		}
 
@@ -459,7 +515,7 @@ func (this *JsStatement) Visit(bucketName string, e expression.Expression) (expr
 	if stringer != "" {
 		re := regexp.MustCompile("\\(meta[.][\\S]*\\)")
 		if re.FindString(stringer) != "" {
-			// if the expression contains a meta.`something` do not add .doc and also
+			// if the expression contains a meta().`something` do not add .doc and also
 			// strip out the bucket name
 			stringer = strings.Replace(stringer, ".`"+bucketName+"`", "", -1)
 		} else {
@@ -487,7 +543,13 @@ func (this *JsStatement) VisitWhere(bucketName string, e expression.Expression) 
 	if stringer != "" {
 		stringer = strings.Replace(stringer, "`", "", -1)
 		// replace all instances of bucket-name with doc.bucket-name
-		stringer = strings.Replace(stringer, bucketName, "doc", -1)
+		if strings.Contains(stringer, "meta") {
+			// remove the bucket name from the string
+			stringer = strings.Replace(stringer, bucketName, "", -1)
+			stringer = strings.Replace(stringer, "meta", "doc.meta", -1)
+		} else {
+			stringer = strings.Replace(stringer, bucketName, "doc", -1)
+		}
 		this.js.WriteString(stringer)
 	} else {
 		return e, errors.New("This Expression is not supported by view indexes")

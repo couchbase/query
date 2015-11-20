@@ -537,7 +537,6 @@ func (this *JSConverter) VisitFunction(expr expression.Function) (interface{}, e
 		buf.WriteString("Date.now().toString()")
 	case "meta":
 		buf.WriteString("meta")
-		buf.WriteString(".")
 		nobracket = true
 	default:
 		nopush = true
