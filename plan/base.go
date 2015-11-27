@@ -9,10 +9,6 @@
 
 package plan
 
-import (
-	"encoding/json"
-)
-
 type readonly struct {
 }
 
@@ -20,27 +16,9 @@ func (this *readonly) Readonly() bool {
 	return true
 }
 
-func (this *readonly) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{"readonly": true})
-}
-
-func (this *readonly) UnmarshalJSON([]byte) error {
-	// NOP: readonly has no data structure
-	return nil
-}
-
 type readwrite struct {
 }
 
 func (this *readwrite) Readonly() bool {
 	return false
-}
-
-func (this *readwrite) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{"readonly": false})
-}
-
-func (this *readwrite) UnmarshalJSON([]byte) error {
-	// NOP: readonly has no data structure
-	return nil
 }

@@ -64,9 +64,9 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   "#operator"
-		Keys []string "group_keys"
-		Aggs []string "aggregates"
+		_    string   `json:"#operator"`
+		Keys []string `json:"group_keys"`
+		Aggs []string `json:"aggregates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -142,9 +142,9 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   "#operator"
-		Keys []string "group_keys"
-		Aggs []string "aggregates"
+		_    string   `json:"#operator"`
+		Keys []string `json:"group_keys"`
+		Aggs []string `json:"aggregates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -220,9 +220,9 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string   "#operator"
-		Keys []string "group_keys"
-		Aggs []string "aggregates"
+		_    string   `json:"#operator"`
+		Keys []string `json:"group_keys"`
+		Aggs []string `json:"aggregates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

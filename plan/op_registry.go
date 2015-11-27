@@ -62,6 +62,8 @@ var _OPERATORS = map[string]Operator{
 	"Join":               &Join{},
 	"Nest":               &Nest{},
 	"Unnest":             &Unnest{},
+	"IndexJoin":          &IndexJoin{},
+	"IndexNest":          &IndexNest{},
 	"Let":                &Let{},
 	"Merge":              &Merge{},
 	"Order":              &Order{},

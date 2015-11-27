@@ -76,9 +76,11 @@ func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 		} else {
 			this.second, err = MakeOperator(op_type.Operator, child)
 		}
-		return err
+
+		if err != nil {
+			return err
+		}
 	}
 
-	return nil
-
+	return err
 }
