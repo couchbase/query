@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 // Dummy operator that simply wraps an item channel.
 type Channel struct {
 	readonly
@@ -24,6 +28,11 @@ func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Channel) New() Operator {
 	return &Channel{}
+}
+
+func (this *Channel) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "Channel"}
+	return json.Marshal(r)
 }
 
 func (this *Channel) UnmarshalJSON([]byte) error {

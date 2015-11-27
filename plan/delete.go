@@ -36,6 +36,10 @@ func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSendDelete(this)
 }
 
+func (this *SendDelete) New() Operator {
+	return &SendDelete{}
+}
+
 func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
 }
@@ -55,10 +59,6 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r["alias"] = this.alias
 	r["limit"] = this.limit
 	return json.Marshal(r)
-}
-
-func (this *SendDelete) New() Operator {
-	return &SendDelete{}
 }
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {

@@ -57,6 +57,7 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 	if this.alias != "" {
 		r["as"] = this.alias
 	}
+
 	return json.Marshal(r)
 }
 

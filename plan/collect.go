@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Collect struct {
 	readonly
 }
@@ -23,6 +27,11 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Collect) New() Operator {
 	return &Collect{}
+}
+
+func (this *Collect) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "Collect"}
+	return json.Marshal(r)
 }
 
 func (this *Collect) UnmarshalJSON([]byte) error {

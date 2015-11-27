@@ -25,13 +25,13 @@ func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitDiscard(this)
 }
 
+func (this *Discard) New() Operator {
+	return &Discard{}
+}
+
 func (this *Discard) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Discard"}
 	return json.Marshal(r)
-}
-
-func (this *Discard) New() Operator {
-	return &Discard{}
 }
 
 func (this *Discard) UnmarshalJSON([]byte) error {

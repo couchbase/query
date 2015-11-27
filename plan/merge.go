@@ -40,12 +40,12 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
 	}
 }
 
-func (this *Merge) New() Operator {
-	return &Merge{}
-}
-
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMerge(this)
+}
+
+func (this *Merge) New() Operator {
+	return &Merge{}
 }
 
 func (this *Merge) Keyspace() datastore.Keyspace {
@@ -147,7 +147,10 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		case 2:
 			this.insert, err = MakeOperator(op_type.Operator, child)
 		}
-		return err
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return err

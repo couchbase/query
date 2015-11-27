@@ -98,6 +98,7 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 		t := make(map[string]interface{})
 		t["path"] = expression.NewStringer().Visit(term.Path())
 		t["expr"] = expression.NewStringer().Visit(term.Value())
+		// FIXME: SET FOR
 		s = append(s, t)
 	}
 	r["set_terms"] = s
@@ -137,6 +138,7 @@ func (this *Set) UnmarshalJSON(body []byte) error {
 
 		terms[i] = algebra.NewSetTerm(path, expr, nil)
 	}
+
 	this.node = algebra.NewSet(terms)
 	return nil
 }
@@ -165,9 +167,7 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	for _, term := range this.node.Terms() {
 		t := make(map[string]interface{})
 		t["path"] = expression.NewStringer().Visit(term.Path())
-		// FIXME
-		//t["expr"] = expression.NewStringer().Visit(term.UpdateFor().Bindings())
-		t["expr"] = "FIXME"
+		// FIXME: UNSET FOR
 		s = append(s, t)
 	}
 	r["unset_terms"] = s
@@ -180,7 +180,6 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 		_          string `json:"#operator"`
 		UnsetTerms []struct {
 			Path string `json:"path"`
-			Expr string `json:"expr"`
 		} `json:"unset_terms"`
 	}
 
@@ -201,14 +200,9 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 			return fmt.Errorf("Unset.UnmarshalJSON: cannot resolve path expression from %s", UnsetTerm.Path)
 		}
 
-		// is expr needed in Unset?
-		_, err = parser.Parse(UnsetTerm.Expr)
-		if err != nil {
-			return err
-		}
-
 		terms[i] = algebra.NewUnsetTerm(path, nil)
 	}
+
 	this.node = algebra.NewUnset(terms)
 	return nil
 }

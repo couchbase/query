@@ -50,12 +50,14 @@ func (this *Parallel) MaxParallelism() int {
 func (this *Parallel) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Parallel"}
 	r["~child"] = this.child
+
 	/*
-	           TODO / FIXME: Uncomment this
+	           FIXME: Uncomment this when QA is ready.
 	   	if this.maxParallelism > 0 {
 	   		r["maxParallelism"] = this.maxParallelism
 	   	}
 	*/
+
 	return json.Marshal(r)
 }
 

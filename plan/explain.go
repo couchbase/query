@@ -9,6 +9,10 @@
 
 package plan
 
+import (
+	"encoding/json"
+)
+
 type Explain struct {
 	readonly
 	op Operator
@@ -30,4 +34,34 @@ func (this *Explain) New() Operator {
 
 func (this *Explain) Operator() Operator {
 	return this.op
+}
+
+func (this *Explain) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "Explain"}
+	r["op"] = this.op
+	return json.Marshal(r)
+}
+
+func (this *Explain) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_  string          `json:"#operator"`
+		Op json.RawMessage `json:"op"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	var op_type struct {
+		Operator string `json:"#operator"`
+	}
+
+	err = json.Unmarshal(_unmarshalled.Op, &op_type)
+	if err != nil {
+		return err
+	}
+
+	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
+	return err
 }

@@ -37,7 +37,8 @@ func (this *Alias) Alias() string {
 }
 
 func (this *Alias) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"as": this.alias}
+	r := map[string]interface{}{"#operator": "Alias"}
+	r["as"] = this.alias
 	return json.Marshal(r)
 }
 

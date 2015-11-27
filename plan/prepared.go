@@ -38,7 +38,7 @@ func NewPrepared(operator Operator, signature value.Value) *Prepared {
 }
 
 func (this *Prepared) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]interface{}, 5)
 	r["operator"] = this.Operator
 	r["signature"] = this.signature
 	r["name"] = this.name

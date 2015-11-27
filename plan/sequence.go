@@ -57,34 +57,24 @@ func (this *Sequence) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.children = []Operator{}
+	this.children = make([]Operator, 0, len(_unmarshalled.Children))
 
 	for _, raw_child := range _unmarshalled.Children {
 		var child_type struct {
 			Op_name string `json:"#operator"`
 		}
-		var read_only struct {
-			Readonly bool `json:"readonly"`
-		}
+
 		err = json.Unmarshal(raw_child, &child_type)
 		if err != nil {
 			return err
 		}
 
-		if child_type.Op_name == "" {
-			err = json.Unmarshal(raw_child, &read_only)
-			if err != nil {
-				return err
-			} else {
-				// This should be a readonly object
-			}
-		} else {
-			child_op, err := MakeOperator(child_type.Op_name, raw_child)
-			if err != nil {
-				return err
-			}
-			this.children = append(this.children, child_op)
+		child_op, err := MakeOperator(child_type.Op_name, raw_child)
+		if err != nil {
+			return err
 		}
+
+		this.children = append(this.children, child_op)
 	}
 
 	return err
