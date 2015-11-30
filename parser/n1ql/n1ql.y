@@ -2375,7 +2375,7 @@ function_name LPAREN opt_exprs RPAREN
 {
     $$ = nil;
     f, ok := expression.GetFunction($1);
-    if !ok && yylex.(*lexer).parsingStatement() {
+    if !ok {
         f, ok = algebra.GetAggregate($1, false);
     }
 

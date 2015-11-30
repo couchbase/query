@@ -160,8 +160,6 @@ func AddPrepared(prepared *Prepared) errors.Error {
 	return nil
 }
 
-var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
-
 func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	switch prepared_stmt.Type() {
 	case value.STRING:
@@ -183,7 +181,7 @@ func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 		}
 		return unmarshalPrepared(prepared_bytes)
 	default:
-		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
+		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
 }
 
@@ -214,7 +212,7 @@ func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
 	prepared := &Prepared{}
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
-		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
+		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
 	}
 	if prepared.Name() != "" {
 		cache.add(prepared)
