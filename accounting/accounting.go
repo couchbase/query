@@ -274,7 +274,7 @@ func requestType(stmt string, prepared *plan.Prepared) string {
 	var tokens []string
 
 	if prepared != nil && prepared.Text() != "" {
-		// Second or fourth token determines type of statment
+		// Second or fourth token determines type of statement
 		tokens = strings.Split(strings.TrimSpace(prepared.Text()), " ")[1:]
 	} else {
 		if stmt != "" {

@@ -97,7 +97,7 @@ func TestRequestWithTimeout(t *testing.T) {
 	}
 }
 
-func TestPrepareStatments(t *testing.T) {
+func TestPrepareStatements(t *testing.T) {
 	preparedSequence(t, "doSelect", "SELECT b FROM p0:b0 LIMIT 5")
 	preparedSequence(t, "doInsert", "INSERT INTO p0:b0 VALUES ($1, $2)")
 }
@@ -108,7 +108,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 	// { "prepared": "name" }  fails with "no such name" error
 	doNoSuchPrepared(t, name)
 
-	// { "statement": "prepare name as <<N1QL statment>>" }  succeeds
+	// { "statement": "prepare name as <<N1QL statement>>" }  succeeds
 	doPrepare(t, name, stmt)
 
 	// { "prepared": "name" }  succeeds
