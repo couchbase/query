@@ -2392,34 +2392,24 @@ function_name LPAREN opt_exprs RPAREN
 |
 function_name LPAREN DISTINCT expr RPAREN
 {
-    $$ = nil;
-    if !yylex.(*lexer).parsingStatement() {
-        yylex.Error("Cannot use aggregate as an inline expression.");
+    agg, ok := algebra.GetAggregate($1, true);
+    if ok {
+        $$ = agg.Constructor()($4);
     } else {
-        agg, ok := algebra.GetAggregate($1, true);
-        if ok {
-            $$ = agg.Constructor()($4);
-        } else {
-            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
-        }
+        yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
     }
 }
 |
 function_name LPAREN STAR RPAREN
 {
-    $$ = nil;
-    if !yylex.(*lexer).parsingStatement() {
-        yylex.Error("Cannot use aggregate as an inline expression.");
+    if strings.ToLower($1) != "count" {
+        yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1));
     } else {
-        if strings.ToLower($1) != "count" {
-            yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*).", $1));
+        agg, ok := algebra.GetAggregate($1, false);
+        if ok {
+            $$ = agg.Constructor()(nil);
         } else {
-            agg, ok := algebra.GetAggregate($1, false);
-            if ok {
-                $$ = agg.Constructor()(nil);
-            } else {
-                yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
-            }
+            yylex.Error(fmt.Sprintf("Invalid aggregate function %s.", $1));
         }
     }
 }
@@ -2524,11 +2514,6 @@ subquery_expr
 subquery_expr:
 LPAREN fullselect RPAREN
 {
-    $$ = nil;
-    if yylex.(*lexer).parsingStatement() {
-        $$ = algebra.NewSubquery($2);
-    } else {
-        yylex.Error("Cannot use subquery as an inline expression.");
-    }
+    $$ = algebra.NewSubquery($2);
 }
 ;
