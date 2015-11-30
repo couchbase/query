@@ -25,9 +25,9 @@ Bindings is a helper class. Type Binding is a struct
 with three fields, variable, expression and descend.
 */
 type Binding struct {
-	variable string
-	expr     Expression
-	descend  bool
+	variable string     `json:"variable"`
+	expr     Expression `json:"expr"`
+	descend  bool       `json:"descend"`
 }
 
 /*
@@ -87,21 +87,14 @@ func (this *Binding) Descend() bool {
 	return this.descend
 }
 
-/*
-The receiver for this method is of type Binding. It returns a
-byte array and an error. Create a map from string to interface
-with a single field with name and value set as type and binding.
-For the name variable, set the receivers variable as the value.
-For expression call the Visit method over the expression and use
-its return value to set the value of the map. Set the field
-descend to the receivers descend value. Call Marshal over this
-map and return it.
-*/
-func (this Binding) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "binding"}
+func (this *Binding) MarshalJSON() ([]byte, error) {
+	r := make(map[string]interface{}, 3)
 	r["variable"] = this.variable
 	r["expr"] = NewStringer().Visit(this.expr)
-	r["descend"] = this.descend
+	if this.descend {
+		r["descend"] = this.descend
+	}
+
 	return json.Marshal(r)
 }
 

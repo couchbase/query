@@ -52,20 +52,6 @@ It returns a Boolean value.
 */
 func (this *Every) Type() value.Type { return value.BOOLEAN }
 
-/*
-This method evaluates the EVERY range predicate and returns a boolean
-value representing the result. The first step is to accumulate the
-elements or attributes of a collection/object. This is done by
-ranging over the bindings, evaluating the expressions and populating
-a slice of descendants if present. If any of these binding values are
-mising or null then, return a missing/null. The next step is to get
-the number of elements/attributes by ranging over the bindings slice.
-In order to evaluate the every clause, evaluate the satisfies
-condition with respect to the collection. If this returns false for
-any condition, then return false (as every condition needs to evaluate
-to true). If the condition over all elements/attributes have been
-satisfied, return true.
-*/
 func (this *Every) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
