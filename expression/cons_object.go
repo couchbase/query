@@ -81,16 +81,6 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 	return value.NewValue(m), nil
 }
 
-/*
-Check if the input expression other is equivalent to the receiver
-expressions. Cast the other expr to a pointer to ObjectConstruct.
-If the length of the receivers bindings and other's bindings are
-not equal return false. Range over the receivers bindings and
-compare the expression values for each objectconstructs bindings
-by calling equivalent to for those expressions. If not equal
-return false. If all child expressions in the bindings are
-equal, return true.
-*/
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true

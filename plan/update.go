@@ -11,9 +11,9 @@ package plan
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/algebra/unmarshal"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
@@ -23,26 +23,6 @@ import (
 type Clone struct {
 	readonly
 	alias string
-}
-
-// Write to copy
-type Set struct {
-	readonly
-	node *algebra.Set
-}
-
-// Write to copy
-type Unset struct {
-	readonly
-	node *algebra.Unset
-}
-
-// Send to keyspace
-type SendUpdate struct {
-	readwrite
-	keyspace datastore.Keyspace
-	alias    string
-	limit    expression.Expression
 }
 
 func NewClone(alias string) *Clone {
@@ -73,6 +53,12 @@ func (this *Clone) UnmarshalJSON([]byte) error {
 	return nil
 }
 
+// Write to copy
+type Set struct {
+	readonly
+	node *algebra.Set
+}
+
 func NewSet(node *algebra.Set) *Set {
 	return &Set{
 		node: node,
@@ -93,25 +79,14 @@ func (this *Set) Node() *algebra.Set {
 
 func (this *Set) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Set"}
-	s := make([]interface{}, 0, len(this.node.Terms()))
-	for _, term := range this.node.Terms() {
-		t := make(map[string]interface{})
-		t["path"] = expression.NewStringer().Visit(term.Path())
-		t["expr"] = expression.NewStringer().Visit(term.Value())
-		// FIXME: SET FOR
-		s = append(s, t)
-	}
-	r["set_terms"] = s
+	r["set_terms"] = this.node.Terms()
 	return json.Marshal(r)
 }
 
 func (this *Set) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string `json:"#operator"`
-		SetTerms []struct {
-			Path string `json:"path"`
-			Expr string `json:"expr"`
-		} `json:"set_terms"`
+		_        string          `json:"#operator"`
+		SetTerms json.RawMessage `json:"set_terms"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -119,28 +94,19 @@ func (this *Set) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	terms := make([]*algebra.SetTerm, len(_unmarshalled.SetTerms))
-	for i, SetTerm := range _unmarshalled.SetTerms {
-		path_expr, err := parser.Parse(SetTerm.Path)
-		if err != nil {
-			return err
-		}
-
-		path, is_path := path_expr.(expression.Path)
-		if !is_path {
-			return fmt.Errorf("Set.UnmarshalJSON: cannot resolve path expression from %s", SetTerm.Path)
-		}
-
-		expr, err := parser.Parse(SetTerm.Expr)
-		if err != nil {
-			return err
-		}
-
-		terms[i] = algebra.NewSetTerm(path, expr, nil)
+	terms, err := unmarshal.UnmarshalSetTerms(_unmarshalled.SetTerms)
+	if err != nil {
+		return err
 	}
 
 	this.node = algebra.NewSet(terms)
 	return nil
+}
+
+// Write to copy
+type Unset struct {
+	readonly
+	node *algebra.Unset
 }
 
 func NewUnset(node *algebra.Unset) *Unset {
@@ -163,24 +129,14 @@ func (this *Unset) Node() *algebra.Unset {
 
 func (this *Unset) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Unset"}
-	s := make([]interface{}, 0, len(this.node.Terms()))
-	for _, term := range this.node.Terms() {
-		t := make(map[string]interface{})
-		t["path"] = expression.NewStringer().Visit(term.Path())
-		// FIXME: UNSET FOR
-		s = append(s, t)
-	}
-	r["unset_terms"] = s
-
+	r["unset_terms"] = this.node.Terms()
 	return json.Marshal(r)
 }
 
 func (this *Unset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_          string `json:"#operator"`
-		UnsetTerms []struct {
-			Path string `json:"path"`
-		} `json:"unset_terms"`
+		_          string          `json:"#operator"`
+		UnsetTerms json.RawMessage `json:"unset_terms"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -188,23 +144,21 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	terms := make([]*algebra.UnsetTerm, len(_unmarshalled.UnsetTerms))
-	for i, UnsetTerm := range _unmarshalled.UnsetTerms {
-		path_expr, err := parser.Parse(UnsetTerm.Path)
-		if err != nil {
-			return err
-		}
-
-		path, is_path := path_expr.(expression.Path)
-		if !is_path {
-			return fmt.Errorf("Unset.UnmarshalJSON: cannot resolve path expression from %s", UnsetTerm.Path)
-		}
-
-		terms[i] = algebra.NewUnsetTerm(path, nil)
+	terms, err := unmarshal.UnmarshalUnsetTerms(_unmarshalled.UnsetTerms)
+	if err != nil {
+		return err
 	}
 
 	this.node = algebra.NewUnset(terms)
 	return nil
+}
+
+// Send to keyspace
+type SendUpdate struct {
+	readwrite
+	keyspace datastore.Keyspace
+	alias    string
+	limit    expression.Expression
 }
 
 func NewSendUpdate(keyspace datastore.Keyspace, alias string, limit expression.Expression) *SendUpdate {

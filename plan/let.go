@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/expression/unmarshal"
 )
 
 type Let struct {
@@ -47,13 +47,8 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 
 func (this *Let) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string `json:"#operator"`
-		Bindings []struct {
-			_    string `json:"type"`
-			Var  string `json:"variable"`
-			Expr string `json:"variable"`
-			Desc bool   `json:"descend"`
-		} `json:"bindings"`
+		_        string          `json:"#operator"`
+		Bindings json.RawMessage `json:"bindings"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -61,18 +56,6 @@ func (this *Let) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.bindings = make(expression.Bindings, len(_unmarshalled.Bindings))
-	for i, binding := range _unmarshalled.Bindings {
-		expr, err := parser.Parse(binding.Expr)
-		if err != nil {
-			return err
-		}
-		if binding.Desc {
-			this.bindings[i] = expression.NewDescendantBinding(binding.Var, expr)
-		} else {
-			this.bindings[i] = expression.NewBinding(binding.Var, expr)
-		}
-	}
-
-	return nil
+	this.bindings, err = unmarshal.UnmarshalBindings(_unmarshalled.Bindings)
+	return err
 }

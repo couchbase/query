@@ -56,20 +56,6 @@ expression.
 */
 func (this *First) Type() value.Type { return this.mapping.Type() }
 
-/*
-This method evaluates the First range transform and returns a single
-element based on the operand expression after mapping/filtering the
-elements/attributes of a collection or objects. The first step is to accumulate the
-elements or attributes of a collection/object. This is done by
-ranging over the bindings, evaluating the expressions and populating
-a slice of descendants if present. If any of these binding values are
-missing or null then, return a missing/null. The next step is to get
-the number of elements/attributes by ranging over the bindings slice.
-In order to evaluate the any clause, evaluate the when condition
-with respect to the collection until it is true and return that
-element (after evaluation.) If no such element is encountered, return a
-missing value.
-*/
 func (this *First) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
