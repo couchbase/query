@@ -96,6 +96,7 @@ type AnnotatedPair struct {
 
 // Globally accessible Datastore instance
 var _DATASTORE Datastore
+var _SYSTEMSTORE Datastore
 
 func SetDatastore(datastore Datastore) {
 	_DATASTORE = datastore
@@ -105,8 +106,23 @@ func GetDatastore() Datastore {
 	return _DATASTORE
 }
 
+func SetSystemstore(systemstore Datastore) {
+	_SYSTEMSTORE = systemstore
+}
+
+func GetSystemstore() Datastore {
+	return _SYSTEMSTORE
+}
+
 func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
-	datastore := GetDatastore()
+	var datastore Datastore
+
+	if namespace == "#system" {
+		datastore = GetSystemstore()
+	} else {
+		datastore = GetDatastore()
+	}
+
 	if datastore == nil {
 		return nil, errors.NewError(nil, "Datastore not set.")
 	}

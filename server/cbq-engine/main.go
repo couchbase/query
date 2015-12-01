@@ -136,6 +136,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	datastore_package.SetSystemstore(server.Systemstore())
+
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
 	server.SetMemProfile(*MEM_PROFILE)
