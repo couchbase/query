@@ -76,8 +76,11 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Merge"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
-	r["keyspaceRef"] = this.ref
 	r["key"] = expression.NewStringer().Visit(this.key)
+
+	if this.ref.As() != "" {
+		r["as"] = this.ref.As()
+	}
 
 	if this.update != nil {
 		r["update"] = this.update
@@ -96,14 +99,14 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string               `json:"#operator"`
-		Keys   string               `json:"keyspace"`
-		Names  string               `json:"namespace"`
-		KRef   *algebra.KeyspaceRef `json:"keyspaceRef"`
-		Key    string               `json:"key"`
-		Update json.RawMessage      `json:"update"`
-		Delete json.RawMessage      `json:"delete"`
-		Insert json.RawMessage      `json:"insert"`
+		_      string          `json:"#operator"`
+		Keys   string          `json:"keyspace"`
+		Names  string          `json:"namespace"`
+		As     string          `json:"as"`
+		Key    string          `json:"key"`
+		Update json.RawMessage `json:"update"`
+		Delete json.RawMessage `json:"delete"`
+		Insert json.RawMessage `json:"insert"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -115,6 +118,8 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
+
+	this.ref = algebra.NewKeyspaceRef(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As)
 
 	if _unmarshalled.Key != "" {
 		this.key, err = parser.Parse(_unmarshalled.Key)
@@ -130,6 +135,10 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	}
 
 	for i, child := range ops {
+		if len(child) == 0 {
+			continue
+		}
+
 		var op_type struct {
 			Operator string `json:"#operator"`
 		}
