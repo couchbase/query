@@ -106,6 +106,10 @@ func (this *Server) Datastore() datastore.Datastore {
 	return this.datastore
 }
 
+func (this *Server) Systemstore() datastore.Datastore {
+	return this.systemstore
+}
+
 func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
 	return this.configstore
 }
