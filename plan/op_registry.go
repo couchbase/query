@@ -39,57 +39,96 @@ func GetOperator(name string) (Operator, bool) {
 // correct implementation given the name of an implementation via
 // the "#operator" key in a marshalled object.
 var _OPERATORS = map[string]Operator{
-	"Alias":              &Alias{},
-	"Authorize":          &Authorize{},
-	"Channel":            &Channel{},
-	"Collect":            &Collect{},
-	"Delete":             &SendDelete{},
-	"Discard":            &Discard{},
-	"Distinct":           &Distinct{},
-	"ExceptAll":          &ExceptAll{},
-	"Explain":            &Explain{},
-	"Fetch":              &Fetch{},
-	"Filter":             &Filter{},
-	"InitialGroup":       &InitialGroup{},
-	"IntermediateGroup":  &IntermediateGroup{},
-	"FinalGroup":         &FinalGroup{},
+	// Scan
+	"PrimaryScan":   &PrimaryScan{},
+	"ParentScan":    &ParentScan{},
+	"IndexScan":     &IndexScan{},
+	"KeyScan":       &KeyScan{},
+	"ValueScan":     &ValueScan{},
+	"DummyScan":     &DummyScan{},
+	"CountScan":     &CountScan{},
+	"IntersectScan": &IntersectScan{},
+	"UnionScan":     &UnionScan{},
+
+	// Fetch
+	"Fetch":      &Fetch{},
+	"DummyFetch": &DummyFetch{},
+
+	// Join
+	"Join":      &Join{},
+	"IndexJoin": &IndexJoin{},
+	"Nest":      &Nest{},
+	"IndexNest": &IndexNest{},
+	"Unnest":    &Unnest{},
+
+	// Let + Letting
+	"Let": &Let{},
+
+	// Filter
+	"Filter": &Filter{},
+
+	// Group
+	"InitialGroup":      &InitialGroup{},
+	"IntermediateGroup": &IntermediateGroup{},
+	"FinalGroup":        &FinalGroup{},
+
+	// Project
+	"InitialProject": &InitialProject{},
+	"FinalProject":   &FinalProject{},
+
+	// Distinct
+	"Distinct": &Distinct{},
+
+	// Set operators
+	"UnionAll":     &UnionAll{},
+	"IntersectAll": &IntersectAll{},
+	"ExceptAll":    &ExceptAll{},
+
+	// Order
+	"Order": &Order{},
+
+	// Paging
+	"Offset": &Offset{},
+	"Limit":  &Limit{},
+
+	// Insert
+	"SendInsert": &SendInsert{},
+
+	// Upsert
+	"SendUpsert": &SendUpsert{},
+
+	// Delete
+	"SendDelete": &SendDelete{},
+
+	// Update
+	"Clone":      &Clone{},
+	"Set":        &Set{},
+	"Unset":      &Unset{},
+	"SendUpdate": &SendUpdate{},
+
+	// Merge
+	"Merge": &Merge{},
+
+	// Framework
+	"Alias":     &Alias{},
+	"Authorize": &Authorize{},
+	"Parallel":  &Parallel{},
+	"Sequence":  &Sequence{},
+	"Discard":   &Discard{},
+	"Stream":    &Stream{},
+	"Collect":   &Collect{},
+	"Channel":   &Channel{},
+
+	// Index DDL
 	"CreatePrimaryIndex": &CreatePrimaryIndex{},
 	"CreateIndex":        &CreateIndex{},
 	"DropIndex":          &DropIndex{},
 	"AlterIndex":         &AlterIndex{},
-	"Insert":             &SendInsert{},
-	"IntersectAll":       &IntersectAll{},
-	"Join":               &Join{},
-	"Nest":               &Nest{},
-	"Unnest":             &Unnest{},
-	"IndexJoin":          &IndexJoin{},
-	"IndexNest":          &IndexNest{},
-	"Let":                &Let{},
-	"Merge":              &Merge{},
-	"Order":              &Order{},
-	"Offset":             &Offset{},
-	"Limit":              &Limit{},
-	"Parallel":           &Parallel{},
-	"Prepare":            &Prepare{},
-	"InitialProject":     &InitialProject{},
-	"FinalProject":       &FinalProject{},
-	"PrimaryScan":        &PrimaryScan{},
-	"IndexScan":          &IndexScan{},
-	"KeyScan":            &KeyScan{},
-	"ParentScan":         &ParentScan{},
-	"ValueScan":          &ValueScan{},
-	"CountScan":          &CountScan{},
-	"DummyScan":          &DummyScan{},
-	"DummyFetch":         &DummyFetch{},
-	"IntersectScan":      &IntersectScan{},
-	"UnionScan":          &UnionScan{},
-	"Sequence":           &Sequence{},
-	"Stream":             &Stream{},
-	"UnionAll":           &UnionAll{},
-	"Clone":              &Clone{},
-	"Set":                &Set{},
-	"Unset":              &Unset{},
-	"SendInsert":         &SendInsert{},
-	"SendUpdate":         &SendUpdate{},
-	"SendUpsert":         &SendUpsert{},
+	"BuildIndexes":       &BuildIndexes{},
+
+	// Explain
+	"Explain": &Explain{},
+
+	// Prepare
+	"Prepare": &Prepare{},
 }
