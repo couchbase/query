@@ -58,7 +58,7 @@ type Visitor interface {
 	// Order
 	VisitOrder(op *Order) (interface{}, error)
 
-	// Offset
+	// Paging
 	VisitOffset(op *Offset) (interface{}, error)
 	VisitLimit(op *Limit) (interface{}, error)
 
