@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -118,98 +117,10 @@ func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
 	b.namespace = p
 	b.name = KEYSPACE_NAME_DATASTORES
 
-	b.si = newSystemIndexer(b)
-	b.si.CreatePrimaryIndex("", "#primary", nil)
+	primary := &storeIndex{name: "#primary", keyspace: b}
+	b.si = newSystemIndexer(b, primary)
 
 	return b, nil
-}
-
-type systemIndexer struct {
-	keyspace datastore.Keyspace
-	indexes  map[string]datastore.Index
-	primary  datastore.PrimaryIndex
-}
-
-func newSystemIndexer(keyspace datastore.Keyspace) datastore.Indexer {
-
-	return &systemIndexer{
-		keyspace: keyspace,
-		indexes:  make(map[string]datastore.Index),
-	}
-}
-
-func (si *systemIndexer) KeyspaceId() string {
-	return si.keyspace.Id()
-}
-
-func (si *systemIndexer) Name() datastore.IndexType {
-	return datastore.DEFAULT
-}
-
-func (si *systemIndexer) IndexIds() ([]string, errors.Error) {
-	rv := make([]string, 0, len(si.indexes))
-	for name, _ := range si.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
-}
-
-func (si *systemIndexer) IndexNames() ([]string, errors.Error) {
-	rv := make([]string, 0, len(si.indexes))
-	for name, _ := range si.indexes {
-		rv = append(rv, name)
-	}
-	return rv, nil
-}
-
-func (si *systemIndexer) IndexById(id string) (datastore.Index, errors.Error) {
-	return si.IndexByName(id)
-}
-
-func (si *systemIndexer) IndexByName(name string) (datastore.Index, errors.Error) {
-	index, ok := si.indexes[name]
-	if !ok {
-		return nil, errors.NewSystemIdxNotFoundError(nil, name)
-	}
-	return index, nil
-}
-
-func (si *systemIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, errors.Error) {
-	return []datastore.PrimaryIndex{si.primary}, nil
-}
-
-func (si *systemIndexer) Indexes() ([]datastore.Index, errors.Error) {
-	return []datastore.Index{si.primary}, nil
-}
-
-func (si *systemIndexer) CreatePrimaryIndex(requestId, name string, with value.Value) (
-	datastore.PrimaryIndex, errors.Error) {
-	if si.primary == nil {
-		pi := new(storeIndex)
-		si.primary = pi
-		pi.keyspace = si.keyspace.(*storeKeyspace)
-		pi.name = name
-		si.indexes[pi.name] = pi
-	}
-
-	return si.primary, nil
-}
-
-func (mi *systemIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
-	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "CREATE INDEX is not supported for system datastore.")
-}
-
-func (mi *systemIndexer) BuildIndexes(requestId string, names ...string) errors.Error {
-	return errors.NewSystemNotSupportedError(nil, "BUILD INDEXES is not supported for system datastore.")
-}
-
-func (mi *systemIndexer) Refresh() errors.Error {
-	return nil
-}
-
-func (mi *systemIndexer) SetLogLevel(level logging.Level) {
-	// No-op, uses query engine logger
 }
 
 type storeIndex struct {

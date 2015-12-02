@@ -148,7 +148,7 @@ func newKeyspacesKeyspace(p *namespace) (*keyspaceKeyspace, errors.Error) {
 	b.name = KEYSPACE_NAME_KEYSPACES
 
 	primary := &keyspaceIndex{name: "#primary", keyspace: b}
-	b.indexer = &systemIndexer{keyspace: b, indexes: make(map[string]datastore.Index), primary: primary}
+	b.indexer = newSystemIndexer(b, primary)
 
 	return b, nil
 }
