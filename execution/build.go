@@ -204,7 +204,11 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 
 // Order
 func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
-	return NewOrder(plan), nil
+	if plan.LimitPushed() {
+		return NewOrderLimit(plan), nil
+	} else {
+		return NewOrder(plan), nil
+	}
 }
 
 // Offset

@@ -19,12 +19,24 @@ import (
 
 type Order struct {
 	readonly
-	terms algebra.SortTerms
+	terms  algebra.SortTerms
+	offset *Offset
+	limit  *Limit
 }
 
 func NewOrder(order *algebra.Order) *Order {
 	return &Order{
-		terms: order.Terms(),
+		terms:  order.Terms(),
+		offset: nil,
+		limit:  nil,
+	}
+}
+
+func NewOrderWithLimit(order *algebra.Order, offset *Offset, limit *Limit) *Order {
+	return &Order{
+		terms:  order.Terms(),
+		offset: offset,
+		limit:  limit,
 	}
 }
 
@@ -56,6 +68,12 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 		s = append(s, q)
 	}
 	r["sort_terms"] = s
+	if this.offset != nil {
+		r["offset"] = expression.NewStringer().Visit(this.offset.Expression())
+	}
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit.Expression())
+	}
 	return json.Marshal(r)
 }
 
@@ -66,6 +84,8 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Expr string `json:"expr"`
 			Desc bool   `json:"desc"`
 		} `json:"sort_terms"`
+		offsetExpr string `json:"offset"`
+		limitExpr  string `json:"limit"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -81,5 +101,31 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		}
 		this.terms[i] = algebra.NewSortTerm(expr, term.Desc)
 	}
+	if offsetExprStr := _unmarshalled.offsetExpr; offsetExprStr != "" {
+		offsetExpr, err := parser.Parse(offsetExprStr)
+		if err != nil {
+			return err
+		}
+		this.offset = NewOffset(offsetExpr)
+	}
+	if limitExprStr := _unmarshalled.limitExpr; limitExprStr != "" {
+		limitExpr, err := parser.Parse(limitExprStr)
+		if err != nil {
+			return err
+		}
+		this.limit = NewLimit(limitExpr)
+	}
 	return nil
+}
+
+func (this *Order) LimitPushed() bool {
+	return this.limit != nil
+}
+
+func (this *Order) Offset() *Offset {
+	return this.offset
+}
+
+func (this *Order) Limit() *Limit {
+	return this.limit
 }

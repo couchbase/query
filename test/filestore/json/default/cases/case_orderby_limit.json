@@ -1,0 +1,164 @@
+[
+    {
+        "statements": "SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 0",
+        "results":[
+        ]
+    },
+    {
+        "statements": "SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT -1",
+        "results":[
+        ]
+    },
+    {
+        "statements": "SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 0 OFFSET 0",
+        "results":[
+        ]
+    },
+    {
+        "statements": "SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT -1 OFFSET 2",
+        "results":[
+        ]
+    },
+    {
+        "statements": "EXPLAIN SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 1 OFFSET 1",
+        "results": [
+        {
+            "#operator": "Sequence",
+            "~children": [
+                {
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
+                            "#operator": "PrimaryScan",
+                            "index": "#primary",
+                            "keyspace": "catalog",
+                            "namespace": "default",
+                            "using": "default"
+                        },
+                        {
+                            "#operator": "Parallel",
+                            "~child": {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "Fetch",
+                                        "keyspace": "catalog",
+                                        "namespace": "default"
+                                    },
+                                    {
+                                        "#operator": "InitialProject",
+                                        "result_terms": [
+                                            {
+                                                "expr": "(`catalog`.`dimensions`)"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "#operator": "Order",
+                    "limit": "1",
+                    "offset": "1",
+                    "sort_terms": [
+                        {
+                            "expr": "((`catalog`.`dimensions`).`length`)"
+                        },
+                        {
+                            "expr": "((`catalog`.`dimensions`).`width`)"
+                        }
+                    ]
+                },
+                {
+                    "#operator": "Offset",
+                    "expr": "1"
+                },
+                {
+                    "#operator": "Limit",
+                    "expr": "1"
+                },
+                {
+                    "#operator": "FinalProject"
+                }
+            ]
+        }
+      ]
+    },
+
+
+    {
+        "statements": "EXPLAIN SELECT first_name, state, age FROM default:user_profile.personal_details ORDER BY age, first_name DESC LIMIT 3",
+        "results": [
+        {
+            "#operator": "Sequence",
+            "~children": [
+                {
+                    "#operator": "Sequence",
+                    "~children": [
+                        {
+                            "#operator": "PrimaryScan",
+                            "index": "#primary",
+                            "keyspace": "user_profile",
+                            "namespace": "default",
+                            "using": "default"
+                        },
+                        {
+                            "#operator": "Parallel",
+                            "~child": {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "Fetch",
+                                        "keyspace": "user_profile",
+                                        "namespace": "default",
+                                        "projection": "`personal_details`"
+                                    },
+                                    {
+                                        "#operator": "InitialProject",
+                                        "result_terms": [
+                                            {
+                                                "expr": "(`personal_details`.`first_name`)"
+                                            },
+                                            {
+                                                "expr": "(`personal_details`.`state`)"
+                                            },
+                                            {
+                                                "expr": "(`personal_details`.`age`)"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "#operator": "Order",
+                    "limit": "3",
+                    "sort_terms": [
+                        {
+                            "expr": "(`personal_details`.`age`)"
+                        },
+                        {
+                            "desc": true,
+                            "expr": "(`personal_details`.`first_name`)"
+                        }
+                    ]
+                },
+                {
+                    "#operator": "Limit",
+                    "expr": "3"
+                },
+                {
+                    "#operator": "FinalProject"
+                }
+            ]
+          }
+        ]
+     }
+
+
+]
+

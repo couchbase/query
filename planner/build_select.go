@@ -61,8 +61,17 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	children := make([]plan.Operator, 0, 5)
 	children = append(children, sub.(plan.Operator))
 
+	pushLimit := (order != nil) && (limit != nil)
 	if order != nil {
-		children = append(children, plan.NewOrder(order))
+		if pushLimit {
+			if offset == nil {
+				children = append(children, plan.NewOrderWithLimit(order, nil, plan.NewLimit(limit)))
+			} else {
+				children = append(children, plan.NewOrderWithLimit(order, plan.NewOffset(offset), plan.NewLimit(limit)))
+			}
+		} else {
+			children = append(children, plan.NewOrder(order))
+		}
 	}
 
 	if offset != nil {

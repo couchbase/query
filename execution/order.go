@@ -70,6 +70,14 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 	return true
 }
 
+func (this *Order) setupTerms(context *Context) {
+	this.context = context
+	this.terms = make([]string, len(this.plan.Terms()))
+	for i, term := range this.plan.Terms() {
+		this.terms[i] = term.Expression().String()
+	}
+}
+
 func (this *Order) afterItems(context *Context) {
 	defer this.releaseValues()
 	defer func() {
@@ -77,12 +85,7 @@ func (this *Order) afterItems(context *Context) {
 		this.terms = nil
 	}()
 
-	this.context = context
-	this.terms = make([]string, len(this.plan.Terms()))
-	for i, term := range this.plan.Terms() {
-		this.terms[i] = term.Expression().String()
-	}
-
+	this.setupTerms(context)
 	timer := time.Now()
 	sort.Sort(this)
 	context.AddPhaseTime("sort", time.Since(timer))
@@ -106,9 +109,10 @@ func (this *Order) Len() int {
 }
 
 func (this *Order) Less(i, j int) bool {
-	v1 := this.values[i]
-	v2 := this.values[j]
+	return this.lessThan(this.values[i], this.values[j])
+}
 
+func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bool {
 	var ev1, ev2 value.Value
 	var c int
 	var e error
