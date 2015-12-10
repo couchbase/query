@@ -171,6 +171,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_count":    &ArrayCount{},
 	"array_distinct": &ArrayDistinct{},
 	"array_ifnull":   &ArrayIfNull{},
+	"array_insert":   &ArrayInsert{},
 	"array_length":   &ArrayLength{},
 	"array_max":      &ArrayMax{},
 	"array_min":      &ArrayMin{},

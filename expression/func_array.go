@@ -612,6 +612,108 @@ func (this *ArrayIfNull) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayInsert
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_INSERT(value, expr, expr).
+It returns a new array with value inserted. Type ArrayInsert
+is a struct that implements TernaryFunctionBase.
+*/
+type ArrayInsert struct {
+	TernaryFunctionBase
+}
+
+/*
+The function NewArrayInsert calls NewTernaryFunctionBase to
+create a function named ARRAY_INSERT with the three
+expressions as input.
+*/
+func NewArrayInsert(first, second, third Expression) Function {
+	rv := &ArrayInsert{
+		*NewTernaryFunctionBase("array_insert", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns an Array value.
+*/
+func (this *ArrayInsert) Type() value.Type { return value.ARRAY }
+
+/*
+Calls the Eval method for ternary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+/*
+This method inserts the third value to the first value at the second position.
+*/
+func (this *ArrayInsert) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	} else if third.Type() == value.MISSING {
+		return first, nil
+	}
+
+	/* the position needs to be an integer */
+	f := second.Actual().(float64)
+	if math.Trunc(f) != f {
+		return value.NULL_VALUE, nil
+	}
+
+	s := first.Actual().([]interface{})
+
+	n := int(f)
+
+	/* position goes from 0 to end of array */
+	if n < 0 || n > len(s) {
+		return value.NULL_VALUE, nil
+	}
+
+	ra := make([]interface{}, 0, len(s)+1)
+
+	/* corner case: append to the end */
+	if n == len(s) {
+		ra = append(ra, s...)
+		ra = append(ra, third)
+	} else {
+		ra = append(ra, s[:n]...)
+		ra = append(ra, third)
+		ra = append(ra, s[n:]...)
+	}
+
+	return value.NewValue(ra), nil
+}
+
+/*
+The constructor returns a NewArrayInsert with the two operands
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ArrayInsert) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayInsert(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ArrayLength
 //
 ///////////////////////////////////////////////////
