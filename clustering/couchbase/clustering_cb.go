@@ -295,6 +295,10 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 				}
 			}
 		}
+		// if no hostname is present it means this is the localhost
+		if hostname == "" {
+			hostname = "127.0.0.1"
+		}
 		queryNodeNames = append(queryNodeNames, hostname)
 		queryNodes[hostname] = queryServices
 	}
