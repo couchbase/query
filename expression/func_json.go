@@ -17,28 +17,28 @@ import (
 
 ///////////////////////////////////////////////////
 //
-// DecodeJSON
+// JSONDecode
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the  json function DECODE_JSON(expr). It
+This represents the  json function JSON_DECODE(expr). It
 unmarshals the JSON-encoded string into a N1QL value, and
-if empty string is MISSING. Type DecodeJSON is a struct
+if empty string is MISSING. Type JSONDecode is a struct
 that implements UnaryFunctionBase.
 */
-type DecodeJSON struct {
+type JSONDecode struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewDecodeJSON calls NewUnaryFunctionBase to
-create a function named DECODE_JSON with an expression as
+The function NewJSONDecode calls NewUnaryFunctionBase to
+create a function named JSON_DECODE with an expression as
 input.
 */
-func NewDecodeJSON(operand Expression) Function {
-	rv := &DecodeJSON{
-		*NewUnaryFunctionBase("decode_json", operand),
+func NewJSONDecode(operand Expression) Function {
+	rv := &JSONDecode{
+		*NewUnaryFunctionBase("json_decode", operand),
 	}
 
 	rv.expr = rv
@@ -49,20 +49,20 @@ func NewDecodeJSON(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *DecodeJSON) Accept(visitor Visitor) (interface{}, error) {
+func (this *JSONDecode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a value type JSON.
 */
-func (this *DecodeJSON) Type() value.Type { return value.JSON }
+func (this *JSONDecode) Type() value.Type { return value.JSON }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *DecodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
@@ -75,7 +75,7 @@ string return missing value. If not then call the Unmarshal
 method defined in the json package, by casting the strings
 to a bytes slice and return the json value.
 */
-func (this *DecodeJSON) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *JSONDecode) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
@@ -97,39 +97,39 @@ func (this *DecodeJSON) Apply(context Context, arg value.Value) (value.Value, er
 }
 
 /*
-The constructor returns a NewDecodeJSON with the an operand
+The constructor returns a NewJSONDecode with the an operand
 cast to a Function as the FunctionConstructor.
 */
-func (this *DecodeJSON) Constructor() FunctionConstructor {
+func (this *JSONDecode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewDecodeJSON(operands[0])
+		return NewJSONDecode(operands[0])
 	}
 }
 
 ///////////////////////////////////////////////////
 //
-// EncodeJSON
+// JSONEncode
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the  json function ENCODE_JSON(expr).
+This represents the  json function JSON_ENCODE(expr).
 It marshals the N1QL value into a JSON-encoded string.
-A MISSING becomes the empty string. Type EncodeJSON
+A MISSING becomes the empty string. Type JSONEncode
 is a struct that implements UnaryFunctionBase.
 */
-type EncodeJSON struct {
+type JSONEncode struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewEncodeJSON calls NewUnaryFunctionBase to
-create a function named ENCODE_JSON with an expression as
+The function NewJSONEncode calls NewUnaryFunctionBase to
+create a function named JSON_ENCODE with an expression as
 input.
 */
-func NewEncodeJSON(operand Expression) Function {
-	rv := &EncodeJSON{
-		*NewUnaryFunctionBase("encode_json", operand),
+func NewJSONEncode(operand Expression) Function {
+	rv := &JSONEncode{
+		*NewUnaryFunctionBase("json_encode", operand),
 	}
 
 	rv.expr = rv
@@ -140,20 +140,20 @@ func NewEncodeJSON(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *EncodeJSON) Accept(visitor Visitor) (interface{}, error) {
+func (this *JSONEncode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a value type STRING.
 */
-func (this *EncodeJSON) Type() value.Type { return value.STRING }
+func (this *JSONEncode) Type() value.Type { return value.STRING }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *EncodeJSON) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
@@ -161,18 +161,18 @@ func (this *EncodeJSON) Evaluate(item value.Value, context Context) (value.Value
 This method returns a Json encoded string by sing the MarshalJSON
 method. The return bytes value is cast to a string and returned.
 */
-func (this *EncodeJSON) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *JSONEncode) Apply(context Context, arg value.Value) (value.Value, error) {
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(string(bytes)), nil
 }
 
 /*
-The constructor returns a NewEncodeJSON with the an operand
+The constructor returns a NewJSONEncode with the an operand
 cast to a Function as the FunctionConstructor.
 */
-func (this *EncodeJSON) Constructor() FunctionConstructor {
+func (this *JSONEncode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewEncodeJSON(operands[0])
+		return NewJSONEncode(operands[0])
 	}
 }
 

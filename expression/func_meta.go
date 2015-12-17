@@ -18,39 +18,39 @@ import (
 
 ///////////////////////////////////////////////////
 //
-// Base64
+// Base64Encode
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the function BASE64(expr). It returns the
-base64-encoding of expr. Type Base64 is a struct that implements
+This represents the function BASE64_ENCODE(expr). It returns the
+base64-encoding of expr. Type Base64Encode is a struct that implements
 UnaryFunctionBase.
 */
-type Base64 struct {
+type Base64Encode struct {
 	UnaryFunctionBase
 }
 
-func NewBase64(operand Expression) Function {
-	rv := &Base64{
-		*NewUnaryFunctionBase("base64", operand),
+func NewBase64Encode(operand Expression) Function {
+	rv := &Base64Encode{
+		*NewUnaryFunctionBase("base64_encode", operand),
 	}
 
 	rv.expr = rv
 	return rv
 }
 
-func (this *Base64) Accept(visitor Visitor) (interface{}, error) {
+func (this *Base64Encode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *Base64) Type() value.Type { return value.STRING }
+func (this *Base64Encode) Type() value.Type { return value.STRING }
 
-func (this *Base64) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Base64Encode) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-func (this *Base64) Apply(context Context, operand value.Value) (value.Value, error) {
+func (this *Base64Encode) Apply(context Context, operand value.Value) (value.Value, error) {
 	if operand.Type() == value.MISSING {
 		return operand, nil
 	}
@@ -60,9 +60,64 @@ func (this *Base64) Apply(context Context, operand value.Value) (value.Value, er
 	return value.NewValue(str), nil
 }
 
-func (this *Base64) Constructor() FunctionConstructor {
+func (this *Base64Encode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewBase64(operands[0])
+		return NewBase64Encode(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// Base64Decode
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the function BASE64_DECODE(expr). It returns the
+base64-decoding of expr. Type Base64Decode is a struct that implements
+UnaryFunctionBase.
+*/
+type Base64Decode struct {
+	UnaryFunctionBase
+}
+
+func NewBase64Decode(operand Expression) Function {
+	rv := &Base64Decode{
+		*NewUnaryFunctionBase("base64_decode", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *Base64Decode) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Base64Decode) Type() value.Type { return value.STRING }
+
+func (this *Base64Decode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Base64Decode) Apply(context Context, operand value.Value) (value.Value, error) {
+	if operand.Type() == value.MISSING {
+		return operand, nil
+	} else if operand.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str, err := base64.StdEncoding.DecodeString(operand.Actual().(string))
+	if err != nil {
+		return value.NULL_VALUE, nil
+	} else {
+		return value.NewValue(str), nil
+	}
+}
+
+func (this *Base64Decode) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewBase64Decode(operands[0])
 	}
 }
 

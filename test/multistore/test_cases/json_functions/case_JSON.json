@@ -1,5 +1,14 @@
 [
 {
+	"statements":"SELECT JSON_DECODE(\"2\")",
+	"results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+
+{
 	"statements":"SELECT DECODE_JSON(\"2\")",
 	"results": [
         {
@@ -21,6 +30,21 @@
 	"statements":"select DECODE_JSON(\"\")",
 	"results": [
         {}
+    ]
+},
+
+{
+	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"results": [
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        },
+        {
+            "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
+        }
     ]
 },
 

@@ -74,5 +74,29 @@
             "b64": "eyJuYW1lIjoiaGFycnkiLCJ0eXBlIjoiY29udGFjdCJ9"
         }
   ]
+    },
+
+     {
+        "statements": "select BASE64_DECODE(BASE64_ENCODE({'a': 1, 'b': 2 }))",
+        "results": [
+        {
+            "$1": {
+                "a": 1,
+                "b": 2
+            }
+        }
+  ]
+    },
+
+     {
+        "statements": "select DECODE_BASE64(ENCODE_BASE64({'a': 1, 'b': 2 }))",
+        "results": [
+        {
+            "$1": {
+                "a": 1,
+                "b": 2
+            }
+        }
+  ]
     }
 ]

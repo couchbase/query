@@ -1,5 +1,13 @@
 [
 {
+  "statements":"select json_decode(\"2\")",
+  "results": [
+        {
+            "$1": 2
+        }
+    ]
+},
+{
   "statements":"select decode_json(\"2\")",
   "results": [
         {
@@ -19,6 +27,20 @@
   "statements":"select DECODE_JSON(\"\")",
   "results": [
         {}
+    ]
+},
+{
+  "statements":"select json_encode(details) as enc from default:catalog ORDER BY enc",
+  "results": [
+        {
+            "enc": "{\"actors\":[\"Benedict Cumberbatch\",\"Martin Freeman\"],\"director\":[\"Euros Lyn\",\"Paul Mcguigan\"],\"format\":\"Box Set\",\"genre\":[\"Crime\",\"Thriller\"],\"runtime\":\"266.0 mins\",\"title\":\"SHERLOCK: SERIES 1\"}"
+        },
+        {
+            "enc": "{\"actors\":[\"Jessica Chastain\",\"Mark Strong\"],\"director\":\"Kathryn Bigelow\",\"format\":\"DVD\",\"genre\":[\"Action\",\"Thriller\"],\"runtime\":\"157 mins\",\"title\":\"ZERO DARK THIRTY\"}"
+        },
+        {
+            "enc": "{\"author\":\"Dan Brown\",\"genre\":[\"Fiction\",\"Thriller\"],\"package\":\"Hardcover\",\"published\":\"05/14/2013\",\"title\":\"INFERNO\"}"
+        }
     ]
 },
 {

@@ -13,6 +13,20 @@ var parseUUIDRegex = regexp.MustCompile(hexPattern)
 
 const hexPattern = `^(urn\:uuid\:)?[\{(\[]?([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([1-5][A-Fa-f0-9]{3})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})[\]\})]?$`
 
+func TestNewBase64Decode(t *testing.T) {
+	inEx := NewConstant([]interface{}{1, 2, 3})
+	encEx := NewBase64Encode(inEx)
+	rv, err := encEx.Evaluate(nil, nil)
+	if err != nil {
+		t.Errorf("Error %v returned by Base64Encode", err)
+	}
+	decEx := NewBase64Decode(encEx)
+	rv, err = decEx.Evaluate(nil, nil)
+	if inEx.Value().Collate(rv) != 0 {
+		t.Errorf("Mismatch: received %v expected %v", rv, inEx.Value().Actual())
+	}
+}
+
 func TestNewV4(t *testing.T) {
 	u, err := util.UUID()
 	if err != nil {

@@ -195,8 +195,12 @@ var _FUNCTIONS = map[string]Function{
 	"object_values": &ObjectValues{},
 
 	// JSON
-	"decode_json":  &DecodeJSON{},
-	"encode_json":  &EncodeJSON{},
+	"json_encode": &JSONEncode{},
+	"json_decode": &JSONDecode{},
+
+	// ...backwards compatibility
+	"encode_json":  &JSONEncode{},
+	"decode_json":  &JSONDecode{},
 	"encoded_size": &EncodedSize{},
 	"poly_length":  &PolyLength{},
 
@@ -221,12 +225,18 @@ var _FUNCTIONS = map[string]Function{
 	"posinfif":   &PosInfIf{},
 
 	// Meta
-	"base64":      &Base64{},
-	"meta":        &Meta{},
-	"min_version": &MinVersion{},
-	"self":        &Self{},
-	"uuid":        &Uuid{},
-	"version":     &Version{},
+	"base64_encode": &Base64Encode{},
+	"base64_decode": &Base64Decode{},
+
+	// ...backwards compatibility
+	"base64":        &Base64Encode{},
+	"encode_base64": &Base64Encode{},
+	"decode_base64": &Base64Decode{},
+	"meta":          &Meta{},
+	"min_version":   &MinVersion{},
+	"self":          &Self{},
+	"uuid":          &Uuid{},
+	"version":       &Version{},
 
 	// Type checking
 	"is_array":   &IsArray{},

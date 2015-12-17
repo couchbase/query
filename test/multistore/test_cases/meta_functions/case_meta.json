@@ -33,5 +33,29 @@
             "b64": "eyJjY0luZm8iOnsiY2FyZEV4cGlyeSI6IjIwMTEtMTAtMTIiLCJjYXJkTnVtYmVyIjoiMTIxMS0xMjIxLTEyMzQtMjIwMSIsImNhcmRUeXBlIjoiYW1lcmljYW5leHByZXNzIn0sImN1c3RvbWVySWQiOiJjdXN0b21lcjI3NyIsImRhdGVBZGRlZCI6IjIwMTMtMDgtMDlUMTU6NTI6MTVaIiwiZGF0ZUxhc3RBY3RpdmUiOiIyMDE0LTAzLTA3VDE1OjUyOjE1WiIsImVtYWlsQWRkcmVzcyI6ImFtaWVAa29lbHBpbi5uYW1lIiwiZmlyc3ROYW1lIjoiRWQiLCJsYXN0TmFtZSI6IlJpdGNoaWUiLCJwaG9uZU51bWJlciI6Ijk0Ny0zMTEtMjI0OCB4ODQ1IiwicG9zdGFsQ29kZSI6IjI1Nzk1Iiwic3RhdGUiOiJXQSIsInRlc3RfaWQiOiJtZXRhX2Z1bmMiLCJ0eXBlIjoiY3VzdG9tZXIifQ=="
         }
     ]
+},
+
+{
+	"statements": "select BASE64_DECODE(BASE64_ENCODE({'a': 1, 'b': 2 }))",
+	"results": [
+        {
+            "$1": {
+                "a": 1,
+                "b": 2
+            }
+        }
+  ]
+},
+
+{
+	"statements": "select DECODE_BASE64(ENCODE_BASE64({'a': 1, 'b': 2 }))",
+	"results": [
+        {
+            "$1": {
+                "a": 1,
+                "b": 2
+            }
+        }
+  ]
 }
 ]
