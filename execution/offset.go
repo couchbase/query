@@ -21,7 +21,7 @@ import (
 type Offset struct {
 	base
 	plan   *plan.Offset
-	offset uint64
+	offset int64
 }
 
 func NewOffset(plan *plan.Offset) *Offset {
@@ -57,7 +57,7 @@ func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
 	switch actual := actual.(type) {
 	case float64:
 		if math.Trunc(actual) == actual {
-			this.offset = uint64(actual)
+			this.offset = int64(actual)
 			return true
 		}
 	}

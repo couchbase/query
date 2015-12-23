@@ -18,23 +18,36 @@ import (
 
 type OrderLimit struct {
 	Order
-	offset          Offset
-	limit           Limit
+	offset          *Offset // offset is optional
+	limit           *Limit  // limit must present
 	numReturnedRows int
+	fallbackNum     int
 	ignoreInput     bool
 	fallback        bool
 }
 
-const _FALLBACK_NUM = 8192
-
 func NewOrderLimit(plan *plan.Order) *OrderLimit {
-	rv := &OrderLimit{
-		Order:           *NewOrder(plan),
-		offset:          *NewOffset(plan.Offset()), // offset is optional
-		limit:           *NewLimit(plan.Limit()),   // limit must present
-		numReturnedRows: 0,
-		ignoreInput:     false,
-		fallback:        false,
+	var rv *OrderLimit
+	if plan.Offset() == nil {
+		rv = &OrderLimit{
+			Order:           *NewOrder(plan),
+			offset:          nil,
+			limit:           NewLimit(plan.Limit()),
+			numReturnedRows: 0,
+			fallbackNum:     plan.FallbackNum(),
+			ignoreInput:     false,
+			fallback:        false,
+		}
+	} else {
+		rv = &OrderLimit{
+			Order:           *NewOrder(plan),
+			offset:          NewOffset(plan.Offset()),
+			limit:           NewLimit(plan.Limit()),
+			numReturnedRows: 0,
+			fallbackNum:     plan.FallbackNum(),
+			ignoreInput:     false,
+			fallback:        false,
+		}
 	}
 
 	rv.output = rv
@@ -42,23 +55,41 @@ func NewOrderLimit(plan *plan.Order) *OrderLimit {
 }
 
 func (this *OrderLimit) Copy() Operator {
-	return &OrderLimit{
-		Order: Order{
-			base:   this.base.copy(),
-			plan:   this.plan,
-			values: _ORDER_POOL.Get(),
-		},
-		offset: Offset{
-			base: this.offset.base.copy(),
-			plan: this.offset.plan,
-		},
-		limit: Limit{
-			base: this.limit.base.copy(),
-			plan: this.limit.plan,
-		},
-		numReturnedRows: this.numReturnedRows,
-		ignoreInput:     this.ignoreInput,
-		fallback:        this.fallback,
+	if this.offset == nil {
+		return &OrderLimit{
+			Order: Order{
+				base:   this.base.copy(),
+				plan:   this.plan,
+				values: _ORDER_POOL.Get(),
+			},
+			offset: nil,
+			limit: &Limit{
+				base: this.limit.base.copy(),
+				plan: this.limit.plan,
+			},
+			numReturnedRows: this.numReturnedRows,
+			ignoreInput:     this.ignoreInput,
+			fallback:        this.fallback,
+		}
+	} else {
+		return &OrderLimit{
+			Order: Order{
+				base:   this.base.copy(),
+				plan:   this.plan,
+				values: _ORDER_POOL.Get(),
+			},
+			offset: &Offset{
+				base: this.offset.base.copy(),
+				plan: this.offset.plan,
+			},
+			limit: &Limit{
+				base: this.limit.base.copy(),
+				plan: this.limit.plan,
+			},
+			numReturnedRows: this.numReturnedRows,
+			ignoreInput:     this.ignoreInput,
+			fallback:        this.fallback,
+		}
 	}
 }
 
@@ -73,11 +104,14 @@ func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 	this.setupTerms(context)
 	res := true
 
-	if this.offset.plan != nil {
+	if this.offset != nil {
 		// There is an offset in the query.
 		res = this.offset.beforeItems(context, parent)
+		if !res {
+			return res
+		}
 		offset := this.offset.offset
-		if offset > _FALLBACK_NUM {
+		if offset > int64(this.fallbackNum) {
 			// Fall back to the standard sort.
 			this.fallback = true
 		} else {
@@ -86,9 +120,12 @@ func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	res = res && this.limit.beforeItems(context, parent)
+	if !res {
+		return res
+	}
 	limit := this.limit.limit
 	this.ignoreInput = limit <= 0
-	if !this.ignoreInput && !this.fallback && limit > int64(_FALLBACK_NUM-this.numReturnedRows) {
+	if !this.ignoreInput && !this.fallback && limit > int64(this.fallbackNum-this.numReturnedRows) {
 		// Fallback to the standard sort.
 		this.fallback = true
 	}
@@ -99,6 +136,14 @@ func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 
 	// Will ignore input rows if numReturnedRows is not positive.
 	this.ignoreInput = this.ignoreInput || this.numReturnedRows <= 0
+
+	// Allocate more space if necessary.
+	if this.numReturnedRows > cap(this.values) {
+		values := make(value.AnnotatedValues, len(this.values), this.numReturnedRows)
+		copy(values, this.values)
+		this.releaseValues()
+		this.values = values
+	}
 	return res
 }
 
@@ -108,12 +153,6 @@ func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context)
 	}
 	if this.ignoreInput {
 		return true
-	}
-	if len(this.values) == cap(this.values) {
-		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
-		copy(values, this.values)
-		this.releaseValues()
-		this.values = values
 	}
 
 	// Prune the item that does not need to enter the heap.
@@ -132,7 +171,7 @@ func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context)
 
 func (this *OrderLimit) afterItems(context *Context) {
 	defer func() {
-		if this.offset.plan != nil {
+		if this.offset != nil {
 			this.offset.afterItems(context)
 		}
 		this.limit.afterItems(context)
@@ -141,11 +180,11 @@ func (this *OrderLimit) afterItems(context *Context) {
 	// Deal with the case no data item is needed at all:
 	// when offset is too large.
 	len := len(this.values)
-	offset := uint64(0)
-	if this.offset.plan != nil {
+	offset := int64(0)
+	if this.offset != nil {
 		offset = this.offset.offset
 	}
-	if offset >= uint64(len) {
+	if offset >= int64(len) {
 		this.values = this.values[0:0]
 	}
 

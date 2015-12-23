@@ -24,6 +24,8 @@ type Order struct {
 	limit  *Limit
 }
 
+const _FALLBACK_NUM = 8192
+
 func NewOrder(order *algebra.Order) *Order {
 	return &Order{
 		terms:  order.Terms(),
@@ -128,4 +130,8 @@ func (this *Order) Offset() *Offset {
 
 func (this *Order) Limit() *Limit {
 	return this.limit
+}
+
+func (this *Order) FallbackNum() int {
+	return _FALLBACK_NUM
 }
