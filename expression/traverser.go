@@ -245,6 +245,11 @@ func (this *TraverserBase) VisitCover(expr *Cover) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
+// All
+func (this *TraverserBase) VisitAll(expr *All) (interface{}, error) {
+	return nil, this.TraverseList(expr.Children())
+}
+
 // Init
 func (this *TraverserBase) SetTraverser(traverser Traverser) {
 	if this.traverser == nil {

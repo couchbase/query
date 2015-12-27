@@ -158,7 +158,7 @@ func (view *viewIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 	return idx, nil
 }
 
-func (view *viewIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
+func (view *viewIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 
 	view.Refresh()
@@ -173,15 +173,15 @@ func (view *viewIndexer) CreateIndex(requestId, name string, equalKey, rangeKey 
 		}
 	}
 
-	logging.Debugf("Creating index %s with equal key %v range key %v", name, equalKey, rangeKey)
+	logging.Debugf("Creating index %s with equal key %v range key %v", name, seekKey, rangeKey)
 
 	var idx datastore.Index
 	var err error
 
 	if with != nil {
-		idx, err = newViewIndexFromExistingMap(name, with.Actual().(string), datastore.IndexKey(rangeKey), view)
+		idx, err = newViewIndexFromExistingMap(name, with.Actual().(string), rangeKey, view)
 	} else {
-		idx, err = newViewIndex(name, datastore.IndexKey(rangeKey), where, view)
+		idx, err = newViewIndex(name, rangeKey, where, view)
 	}
 
 	if err != nil {
@@ -293,7 +293,7 @@ func (view *viewIndexer) SetLogLevel(level logging.Level) {
 type viewIndex struct {
 	name      string
 	using     datastore.IndexType
-	on        datastore.IndexKey
+	on        expression.Expressions
 	where     expression.Expression
 	ddoc      *designdoc
 	keyspace  *keyspace
@@ -325,7 +325,7 @@ func (vi *viewIndex) Type() datastore.IndexType {
 	return vi.using
 }
 
-func (vi *viewIndex) Key() datastore.IndexKey {
+func (vi *viewIndex) Key() expression.Expressions {
 	return vi.on
 }
 
@@ -342,11 +342,11 @@ func (vi *viewIndex) SeekKey() expression.Expressions {
 }
 
 func (vi *viewIndex) RangeKey() expression.Expressions {
-	return expression.Expressions(vi.on)
+	return vi.on
 }
 
 func (vi *viewIndex) Condition() expression.Expression {
-	return expression.Expression(vi.where)
+	return vi.where
 }
 
 func (vi *viewIndex) IsPrimary() bool {

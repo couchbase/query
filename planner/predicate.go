@@ -223,3 +223,8 @@ func (this *predicate) VisitPositionalParameter(expr expression.PositionalParame
 func (this *predicate) VisitCover(expr *expression.Cover) (interface{}, error) {
 	return expr.Covered().Accept(this)
 }
+
+// All
+func (this *predicate) VisitAll(expr *expression.All) (interface{}, error) {
+	return expr.Array().Accept(this)
+}

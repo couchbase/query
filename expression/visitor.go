@@ -19,7 +19,7 @@ and an error.
 */
 type Visitor interface {
 	/*
-	   Arithmetic Expressions.
+	   Arithmetic expressions.
 	*/
 	VisitAdd(expr *Add) (interface{}, error)
 	VisitDiv(expr *Div) (interface{}, error)
@@ -130,7 +130,8 @@ type Visitor interface {
 	VisitPositionalParameter(expr PositionalParameter) (interface{}, error)
 
 	/*
-	   Cover
+	   Indexing support.
 	*/
 	VisitCover(expr *Cover) (interface{}, error)
+	VisitAll(expr *All) (interface{}, error)
 }

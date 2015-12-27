@@ -295,7 +295,7 @@ func (mi *mockIndexer) CreatePrimaryIndex(requestId, name string, with value.Val
 	return mi.primary, nil
 }
 
-func (mi *mockIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
+func (mi *mockIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewOtherNotSupportedError(nil, "CREATE INDEX is not supported for mock datastore.")
 }

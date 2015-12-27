@@ -604,6 +604,11 @@ func (this *JSConverter) VisitCover(expr *expression.Cover) (interface{}, error)
 	return expr.Covered().Accept(this)
 }
 
+// All
+func (this *JSConverter) VisitAll(expr *expression.All) (interface{}, error) {
+	return expr.Array().Accept(this)
+}
+
 // Bindings
 
 func (this *JSConverter) visitBindings(bindings expression.Bindings, w io.Writer, in, within string) {

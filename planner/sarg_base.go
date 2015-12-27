@@ -227,3 +227,8 @@ func (this *sargBase) VisitPositionalParameter(expr expression.PositionalParamet
 func (this *sargBase) VisitCover(expr *expression.Cover) (interface{}, error) {
 	return expr.Covered().Accept(this)
 }
+
+// All
+func (this *sargBase) VisitAll(expr *expression.All) (interface{}, error) {
+	return expr.Array().Accept(this)
+}

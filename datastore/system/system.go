@@ -162,7 +162,7 @@ func (si *systemIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 	return nil, errors.NewSystemNotSupportedError(nil, "CREATE PRIMARY INDEX is not supported for system datastore.")
 }
 
-func (mi *systemIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
+func (mi *systemIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewSystemNotSupportedError(nil, "CREATE INDEX is not supported for system datastore.")
 }

@@ -577,8 +577,21 @@ func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interf
 // Cover
 func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("cover(")
+	buf.WriteString("cover (")
 	buf.WriteString(expr.Text())
+	buf.WriteString(")")
+	return buf.String(), nil
+}
+
+// All
+func (this *Stringer) VisitAll(expr *All) (interface{}, error) {
+	var buf bytes.Buffer
+	if expr.Distinct() {
+		buf.WriteString("all distinct (")
+	} else {
+		buf.WriteString("all (")
+	}
+	buf.WriteString(this.Visit(expr.Array()))
 	buf.WriteString(")")
 	return buf.String(), nil
 }

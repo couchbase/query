@@ -505,7 +505,7 @@ func (fi *fileIndexer) CreatePrimaryIndex(requestId, name string, with value.Val
 	return fi.primary, nil
 }
 
-func (b *fileIndexer) CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,
+func (b *fileIndexer) CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewFileNotSupported(nil, "CREATE INDEX is not supported for file-based datastore.")
 }

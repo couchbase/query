@@ -66,6 +66,12 @@ type Expression interface {
 	EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error)
 
 	/*
+	   This method indicates if the expression is an array index
+	   key, and if so, whether it is distinct.
+	*/
+	IsArrayIndexKey() (bool, bool)
+
+	/*
 	   Value() returns the static / constant value of this
 	   Expression, or nil. Expressions that depend on data,
 	   clocks, or random numbers must return nil. Used in index

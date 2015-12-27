@@ -221,3 +221,8 @@ func (this *subsetFactory) VisitPositionalParameter(expr expression.PositionalPa
 func (this *subsetFactory) VisitCover(expr *expression.Cover) (interface{}, error) {
 	return expr.Covered().Accept(this)
 }
+
+// All
+func (this *subsetFactory) VisitAll(expr *expression.All) (interface{}, error) {
+	return expr.Array().Accept(this)
+}

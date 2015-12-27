@@ -27,7 +27,7 @@ type ddocJSON struct {
 	Options       map[string]interface{} `json:"options"`
 }
 
-func newViewIndex(name string, on datastore.IndexKey, where expression.Expression, view *viewIndexer) (*viewIndex, error) {
+func newViewIndex(name string, on expression.Expressions, where expression.Expression, view *viewIndexer) (*viewIndex, error) {
 
 	doc, err := newDesignDoc(name, view.keyspace.Name(), on, where)
 	if err != nil {
@@ -70,7 +70,7 @@ func (vi *viewIndex) String() string {
 	return buf.String()
 }
 
-func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, where expression.Expression) (*designdoc, error) {
+func newDesignDoc(idxname string, bucketName string, on expression.Expressions, where expression.Expression) (*designdoc, error) {
 	var doc designdoc
 
 	doc.name = "ddl_" + idxname
@@ -89,7 +89,7 @@ func newDesignDoc(idxname string, bucketName string, on datastore.IndexKey, wher
 	return &doc, nil
 }
 
-func newViewIndexFromExistingMap(name, ddName string, on datastore.IndexKey, view *viewIndexer) (*viewIndex, error) {
+func newViewIndexFromExistingMap(name, ddName string, on expression.Expressions, view *viewIndexer) (*viewIndex, error) {
 
 	var doc designdoc
 
@@ -292,7 +292,7 @@ func newViewPrimaryIndex(v *viewIndexer, name string) (*primaryIndex, error) {
 		viewIndex{
 			name:      name,
 			using:     datastore.VIEW,
-			on:        datastore.IndexKey{mdid},
+			on:        expression.Expressions{mdid},
 			ddoc:      ddoc,
 			keyspace:  v.keyspace,
 			view:      v,
@@ -324,7 +324,7 @@ func newPrimaryDDoc(name string) *designdoc {
 	return &doc
 }
 
-func generateMap(bucketName string, on datastore.IndexKey, where expression.Expression, doc *designdoc) error {
+func generateMap(bucketName string, on expression.Expressions, where expression.Expression, doc *designdoc) error {
 
 	buf := new(bytes.Buffer)
 
@@ -391,7 +391,7 @@ func generateMap(bucketName string, on datastore.IndexKey, where expression.Expr
 	return nil
 }
 
-func generateReduce(on datastore.IndexKey, doc *designdoc) error {
+func generateReduce(on expression.Expressions, doc *designdoc) error {
 	doc.reducefn = ""
 	return nil
 }

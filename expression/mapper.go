@@ -246,6 +246,11 @@ func (this *MapperBase) VisitCover(expr *Cover) (interface{}, error) {
 	return this.visit(expr)
 }
 
+// All
+func (this *MapperBase) VisitAll(expr *All) (interface{}, error) {
+	return this.visit(expr)
+}
+
 // Init
 func (this *MapperBase) SetMapper(mapper Mapper) {
 	if this.mapper == nil {

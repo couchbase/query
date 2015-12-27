@@ -36,7 +36,7 @@ type Indexer interface {
 	PrimaryIndexes() ([]PrimaryIndex, errors.Error)                                           // Returns the server-recommended primary index
 	Indexes() ([]Index, errors.Error)                                                         // Returns all the indexes defined on this keyspace
 	CreatePrimaryIndex(requestId, name string, with value.Value) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
-	CreateIndex(requestId, name string, equalKey, rangeKey expression.Expressions,            // Create a secondary index on this keyspace
+	CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,             // Create a secondary index on this keyspace
 		where expression.Expression, with value.Value) (Index, errors.Error)
 	BuildIndexes(requestId string, name ...string) errors.Error // Build indexes that were deferred at creation
 	Refresh() errors.Error                                      // Refresh list of indexes from metadata
@@ -64,8 +64,6 @@ const (
 	SCAN_PLUS ScanConsistency = "scan_plus"
 	AT_PLUS   ScanConsistency = "at_plus"
 )
-
-type IndexKey expression.Expressions
 
 type Indexes []Index
 

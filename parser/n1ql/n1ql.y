@@ -267,6 +267,7 @@ val              value.Value
 
 /* Unary operators */
 %right          COVER
+%left           ALL
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
 
@@ -369,8 +370,8 @@ val              value.Value
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
 %type <s>                rename
-%type <expr>             index_expr index_where
-%type <exprs>            index_exprs
+%type <expr>             index_term index_expr index_where
+%type <exprs>            index_terms
 
 %start input
 
@@ -1603,7 +1604,7 @@ CREATE PRIMARY INDEX opt_primary_name ON named_keyspace_ref opt_index_using opt_
     $$ = algebra.NewCreatePrimaryIndex($4, $6, $7, $8)
 }
 |
-CREATE INDEX index_name ON named_keyspace_ref LPAREN index_exprs RPAREN index_partition index_where opt_index_using opt_index_with
+CREATE INDEX index_name ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_index_with
 {
     $$ = algebra.NewCreateIndex($3, $5, $7, $9, $10, $11, $12)
 }
@@ -1686,15 +1687,34 @@ WITH expr
 }
 ;
 
-index_exprs:
-index_expr
+index_terms:
+index_term
 {
     $$ = expression.Expressions{$1}
 }
 |
-index_exprs COMMA index_expr
+index_terms COMMA index_term
 {
     $$ = append($1, $3)
+}
+;
+
+index_term:
+index_expr
+|
+all index_expr
+{
+    $$ = expression.NewAll($2, false)
+}
+|
+all DISTINCT index_expr
+{
+    $$ = expression.NewAll($3, true)
+}
+|
+DISTINCT index_expr
+{
+    $$ = expression.NewAll($2, true)
 }
 ;
 
@@ -1708,6 +1728,12 @@ expr
 
     $$ = exp
 }
+
+all:
+ALL
+|
+EACH
+;
 
 index_where:
 /* empty */
