@@ -18,7 +18,7 @@ import (
 )
 
 /*
-Represents the Keyspace (bucket) term in the from clause.  The
+Represents the Keyspace (bucket) term in the FROM clause.  The
 keyspace can be prefixed with an optional namespace (pool).
 
 Nested paths can be specified. For each document in the keyspace the
@@ -26,7 +26,7 @@ path is evaluated and its value becomes an input to the query. If any
 element of the path is NULL or missing, the document is skipped and
 does not contribute to the query.
 
-The Alias for the from clause is specified using the AS keyword.
+The alias for the FROM clause is specified using the AS keyword.
 
 Specific primary keys within a keyspace can be specified.  Only values
 having those primary keys will be included as inputs to the query.
@@ -51,7 +51,7 @@ func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
 
 /*
 This method maps all the constituent terms, namely projection and keys
-in the from clause.
+in the FROM clause.
 */
 func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.projection != nil {
@@ -168,14 +168,14 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 }
 
 /*
-Return the primary term in the from clause.
+Return the primary term in the FROM clause.
 */
 func (this *KeyspaceTerm) PrimaryTerm() FromTerm {
 	return this
 }
 
 /*
-Returns the Alias string.
+Returns the alias string.
 */
 func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
@@ -225,7 +225,7 @@ func (this *KeyspaceTerm) As() string {
 }
 
 /*
-Returns the keys expression defined by the use keys
+Returns the keys expression defined by the USE KEYS
 clause.
 */
 func (this *KeyspaceTerm) Keys() expression.Expression {
@@ -233,7 +233,7 @@ func (this *KeyspaceTerm) Keys() expression.Expression {
 }
 
 /*
-Returns the indexes defined by the use index clause.
+Returns the indexes defined by the USE INDEX clause.
 */
 func (this *KeyspaceTerm) Indexes() IndexRefs {
 	return this.indexes
