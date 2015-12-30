@@ -82,7 +82,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	return plan.NewAlterIndex(index, stmt), nil
+	return plan.NewAlterIndex(index, stmt, keyspace), nil
 }
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {

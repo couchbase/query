@@ -10,7 +10,6 @@
 package execution
 
 import (
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -50,19 +49,14 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 
 		// Actually create index
 		node := this.plan.Node()
-		var equalKey expression.Expressions
-		if node.Partition() != nil {
-			equalKey = expression.Expressions{node.Partition()}
-		}
-
 		indexer, err := this.plan.Keyspace().Indexer(node.Using())
 		if err != nil {
 			context.Error(err)
 			return
 		}
 
-		_, err = indexer.CreateIndex(context.RequestId(), node.Name(), equalKey,
-			node.Expressions(), node.Where(), node.With())
+		_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
+			node.RangeKeys(), node.Where(), node.With())
 		if err != nil {
 			context.Error(err)
 		}

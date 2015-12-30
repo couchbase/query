@@ -12,7 +12,7 @@ package plan
 import "encoding/json"
 
 type Sequence struct {
-	children []Operator `json:"children"`
+	children []Operator `json:"~children"`
 }
 
 func NewSequence(children ...Operator) *Sequence {

@@ -362,19 +362,8 @@ func NewValue(val interface{}) Value {
 }
 
 /*
-Create a new Value from a slice of bytes. (this need not be valid JSON)
-We first validate the input bytes to check if it is valid json encoded
-data using a function, defined in the public repository dustin/gojson.
-It returns a nil if the json is valid. Try to identify the type of json
-value it is by calling identifyType. If a Number, string, Boolean or
-null value we call Unmarshal to parse the json encoded data and store
-result.  If an error was returned by the Unmarshal function, the data
-was not valid json encoding. In the case it is of object or array,
-create and initialize a new variable as a pointer to the structure
-parsedValue, and assign raw to the bytes. In the event an err was
-returned by the validate function, we set the parsedType variable in
-the struct to BINARY. If there was no error we set it to the type we
-identified before and return the pointer to the struct as a Value.
+Create a new Value from a slice of bytes. The type is inferred from
+the first non-whitespace byte.
 */
 func newValueFromBytes(bytes []byte) Value {
 	parsedType := BINARY
@@ -388,7 +377,7 @@ func newValueFromBytes(bytes []byte) Value {
 			var p interface{}
 			err := json.Unmarshal(bytes, &p)
 			if err != nil {
-				panic(fmt.Sprintf("Parse error on JSON data: %v", err))
+				return binaryValue(bytes)
 			}
 
 			return NewValue(p)

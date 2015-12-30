@@ -64,8 +64,8 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 func (this *Parallel) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_              string          `json:"#operator"`
-		Child          json.RawMessage `json:"~child"`
 		MaxParallelism int             `json:"maxParallelism"`
+		Child          json.RawMessage `json:"~child"`
 	}
 	var child_type struct {
 		Operator string `json:"#operator"`

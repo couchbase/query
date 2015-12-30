@@ -212,10 +212,11 @@ func (this *parsedValue) unwrap() Value {
 			var p interface{}
 			err := json.Unmarshal(this.raw, &p)
 			if err != nil {
-				panic("Unexpected parse error on valid JSON.")
+				this.parsedType = BINARY
+				this.parsed = binaryValue(this.raw)
+			} else {
+				this.parsed = NewValue(p)
 			}
-
-			this.parsed = NewValue(p)
 		}
 	}
 

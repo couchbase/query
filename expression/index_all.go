@@ -20,11 +20,6 @@ type All struct {
 }
 
 func NewAll(array Expression, distinct bool) *All {
-	// Find first non-All expression
-	for all, ok := array.(*All); ok; {
-		array = all.Array()
-	}
-
 	rv := &All{
 		array:    array,
 		distinct: distinct,

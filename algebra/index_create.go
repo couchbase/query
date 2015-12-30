@@ -36,8 +36,8 @@ type CreateIndex struct {
 
 	name      string                 `json:"name"`
 	keyspace  *KeyspaceRef           `json:"keyspace"`
-	exprs     expression.Expressions `json:"expressions"`
-	partition expression.Expression  `json:"partition"`
+	keys      expression.Expressions `json:"keys"`
+	partition expression.Expressions `json:"partition"`
 	where     expression.Expression  `json:"where"`
 	using     datastore.IndexType    `json:"using"`
 	with      value.Value            `json:"with"`
@@ -47,12 +47,12 @@ type CreateIndex struct {
 The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
-func NewCreateIndex(name string, keyspace *KeyspaceRef, exprs expression.Expressions,
-	partition, where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
+func NewCreateIndex(name string, keyspace *KeyspaceRef, keys, partition expression.Expressions,
+	where expression.Expression, using datastore.IndexType, with value.Value) *CreateIndex {
 	rv := &CreateIndex{
 		name:      name,
 		keyspace:  keyspace,
-		exprs:     exprs,
+		keys:      keys,
 		partition: partition,
 		where:     where,
 		using:     using,
@@ -91,13 +91,13 @@ This method maps all the constituent clauses, namely the expression,
 partition and where clause within a create index statement.
 */
 func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.exprs.MapExpressions(mapper)
+	err = this.keys.MapExpressions(mapper)
 	if err != nil {
 		return
 	}
 
 	if this.partition != nil {
-		this.partition, err = mapper.Map(this.partition)
+		err = this.partition.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
@@ -117,7 +117,17 @@ func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 Return expr from the create index statement.
 */
 func (this *CreateIndex) Expressions() expression.Expressions {
-	return this.exprs
+	exprs := this.keys
+
+	if this.partition != nil {
+		exprs = append(exprs, this.partition...)
+	}
+
+	if this.where != nil {
+		exprs = append(exprs, this.where)
+	}
+
+	return exprs
 }
 
 /*
@@ -144,9 +154,16 @@ func (this *CreateIndex) Keyspace() *KeyspaceRef {
 }
 
 /*
+Return keys from the create index statement.
+*/
+func (this *CreateIndex) Keys() expression.Expressions {
+	return this.keys
+}
+
+/*
 Returns the Partition expression of the create index statement.
 */
-func (this *CreateIndex) Partition() expression.Expression {
+func (this *CreateIndex) Partition() expression.Expressions {
 	return this.partition
 }
 
@@ -171,6 +188,18 @@ func (this *CreateIndex) With() value.Value {
 	return this.with
 }
 
+func (this *CreateIndex) SeekKeys() expression.Expressions {
+	return this.partition
+}
+
+func (this *CreateIndex) RangeKeys() expression.Expressions {
+	if this.partition != nil {
+		return this.keys[len(this.partition):]
+	} else {
+		return this.keys
+	}
+}
+
 /*
 Marshals input receiver into byte array.
 */
@@ -178,11 +207,12 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createIndex"}
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
+	r["keys"] = this.keys
 	if this.partition != nil {
-		r["partition"] = expression.NewStringer().Visit(this.partition)
+		r["partition"] = this.partition
 	}
 	if this.where != nil {
-		r["where"] = expression.NewStringer().Visit(this.where)
+		r["where"] = this.where
 	}
 	r["using"] = this.using
 	if this.with != nil {

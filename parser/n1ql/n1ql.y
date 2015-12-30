@@ -366,7 +366,7 @@ val              value.Value
 %type <s>                index_name opt_primary_name
 %type <ss>               index_names
 %type <keyspaceRef>      named_keyspace_ref
-%type <expr>             index_partition
+%type <exprs>            index_partition
 %type <indexType>        index_using opt_index_using
 %type <val>              index_with opt_index_with
 %type <s>                rename
@@ -1642,7 +1642,7 @@ index_partition:
     $$ = nil
 }
 |
-PARTITION BY expr
+PARTITION BY exprs
 {
     $$ = $3
 }
