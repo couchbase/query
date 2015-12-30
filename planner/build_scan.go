@@ -80,7 +80,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		formalizer.Keyspace = node.Alias()
 		primaryKey := expression.Expressions{
 			expression.NewField(
-				expression.NewMeta(expression.NewConstant(node.Alias())),
+				expression.NewMeta(expression.NewIdentifier(node.Alias())),
 				expression.NewFieldName("id", false)),
 		}
 
@@ -403,21 +403,27 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
+	id := expression.NewField(
+		expression.NewMeta(expression.NewIdentifier(node.Alias())),
+		expression.NewFieldName("id", false))
 
 outer:
 	for index, entry := range secondaries {
+		keys := entry.keys
+		if !index.IsPrimary() {
+			// Matches execution.spanScan.RunOnce()
+			keys = append(keys, id)
+		}
+
+		// Use the first available covering index
 		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, entry.keys) {
+			if !expr.CoveredBy(alias, keys) {
 				continue outer
 			}
 		}
 
-		covers := make(expression.Covers, 0, len(entry.keys)+1)
-		covers = append(covers, expression.NewCover(expression.NewField(
-			expression.NewMeta(expression.NewIdentifier(node.Alias())),
-			expression.NewFieldName("id", false))))
-
-		for _, key := range entry.keys {
+		covers := make(expression.Covers, 0, len(keys))
+		for _, key := range keys {
 			covers = append(covers, expression.NewCover(key))
 		}
 

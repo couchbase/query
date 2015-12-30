@@ -151,13 +151,13 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 					covers := this.plan.Covers()
 					if len(covers) > 0 {
-						for i, c := range covers {
-							if i == 0 {
-								av.SetCover(c.Text(), value.NewValue(entry.PrimaryKey))
-							} else {
-								av.SetCover(c.Text(), entry.EntryKey[i-1])
-							}
+						// Matches planner.builder.buildCoveringScan()
+						for i, ek := range entry.EntryKey {
+							av.SetCover(covers[i].Text(), ek)
 						}
+
+						// Matches planner.builder.buildCoveringScan()
+						av.SetCover(covers[len(covers)-1].Text(), value.NewValue(entry.PrimaryKey))
 
 						av.SetField(this.plan.Term().Alias(), av)
 					}

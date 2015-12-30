@@ -10,10 +10,23 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "PrimaryScan",
+                            "#operator": "IndexScan",
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "High": [
+                                            "\"damien\""
+                                        ],
+                                        "Inclusion": 3,
+                                        "Low": [
+                                            "\"damien\""
+                                        ]
+                                    }
+                                }
+                            ],
                             "using": "default"
                         },
                         {
@@ -70,10 +83,23 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "PrimaryScan",
+                            "#operator": "IndexScan",
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "High": [
+                                            "\"damien\""
+                                        ],
+                                        "Inclusion": 3,
+                                        "Low": [
+                                            "\"damien\""
+                                        ]
+                                    }
+                                }
+                            ],
                             "using": "default"
                         },
                         {
@@ -136,11 +162,40 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "PrimaryScan",
-                            "index": "#primary",
-                            "keyspace": "game",
-                            "namespace": "default",
-                            "using": "default"
+                            "#operator": "UnionScan",
+                            "scans": [
+                                {
+                                    "#operator": "IndexScan",
+                                    "index": "#primary",
+                                    "keyspace": "game",
+                                    "namespace": "default",
+                                    "spans": [
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\"damien\""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\"damien\""
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\"dustin\""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\"dustin\""
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "using": "default"
+                                }
+                            ]
                         },
                         {
                             "#operator": "Parallel",
@@ -196,11 +251,51 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "PrimaryScan",
-                            "index": "#primary",
-                            "keyspace": "game",
-                            "namespace": "default",
-                            "using": "default"
+                            "#operator": "UnionScan",
+                            "scans": [
+                                {
+                                    "#operator": "IndexScan",
+                                    "index": "#primary",
+                                    "keyspace": "game",
+                                    "namespace": "default",
+                                    "spans": [
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\"damien\""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\"damien\""
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\"dustin\""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\"dustin\""
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "Range": {
+                                                "High": [
+                                                    "\"junyi\""
+                                                ],
+                                                "Inclusion": 3,
+                                                "Low": [
+                                                    "\"junyi\""
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "using": "default"
+                                }
+                            ]
                         },
                         {
                             "#operator": "Parallel",
