@@ -372,6 +372,7 @@ val              value.Value
 %type <s>                rename
 %type <expr>             index_term index_expr index_where
 %type <exprs>            index_terms
+%type <expr>             expr_input
 
 %start input
 
@@ -383,7 +384,7 @@ stmt opt_trailer
     yylex.(*lexer).setStatement($1)
 }
 |
-expr
+expr_input
 {
     yylex.(*lexer).setExpression($1)
 }
@@ -2541,5 +2542,31 @@ subquery_expr:
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2);
+}
+;
+
+
+/*************************************************
+ *
+ * Top-level expression input / parsing.
+ *
+ *************************************************/
+
+expr_input:
+expr
+|
+all expr
+{
+    $$ = expression.NewAll($2, false)
+}
+|
+all DISTINCT expr
+{
+    $$ = expression.NewAll($3, true)
+}
+|
+DISTINCT expr
+{
+    $$ = expression.NewAll($2, true)
 }
 ;
