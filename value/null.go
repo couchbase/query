@@ -27,14 +27,12 @@ func NewNullValue() Value {
 	return NULL_VALUE
 }
 
-/*
-It is a slice of bytes representing a null string.
-*/
 var _NULL_BYTES = []byte("null")
 
-/*
-For nulls return _NULL_BYTES
-*/
+func (this *nullValue) String() string {
+	return "null"
+}
+
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }

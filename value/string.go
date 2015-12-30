@@ -11,6 +11,7 @@ package value
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 /*
@@ -25,8 +26,21 @@ assign it to EMPTY_STRING_VALUE.
 var EMPTY_STRING_VALUE = NewValue("")
 
 /*
-Call the Marshal function in json on receiver after
-casting to string.
+Use built-in JSON string marshalling, which handles special
+characters.
+*/
+func (this stringValue) String() string {
+	bytes, err := json.Marshal(string(this))
+	if err != nil {
+		// We should not get here.
+		panic(fmt.Sprintf("Error marshaling Value %v: %v", this, err))
+	}
+	return string(bytes)
+}
+
+/*
+Use built-in JSON string marshalling, which handles special
+characters.
 */
 func (this stringValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(this))

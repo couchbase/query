@@ -31,8 +31,14 @@ func NewMissingValue() Value {
 }
 
 /*
-Ideally, we should never marshal a MISSING value. Hence
-_NULL_BYTES is returned.
+NOTE: This differs from the JSON marshalling of MISSING.
+*/
+func (this missingValue) String() string {
+	return "missing"
+}
+
+/*
+MISSING is marshalled as NULL in JSON arrays.
 */
 func (this missingValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil

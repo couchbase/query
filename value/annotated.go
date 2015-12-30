@@ -9,10 +9,6 @@
 
 package value
 
-import (
-	"encoding/json"
-)
-
 type AnnotatedChannel chan AnnotatedValue
 type AnnotatedValues []AnnotatedValue
 
@@ -64,8 +60,12 @@ type annotatedValue struct {
 	covers      map[string]Value
 }
 
+func (this *annotatedValue) String() string {
+	return this.Value.String()
+}
+
 func (this *annotatedValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.Value)
+	return this.Value.MarshalJSON()
 }
 
 func (this *annotatedValue) Copy() Value {

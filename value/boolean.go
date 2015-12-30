@@ -34,10 +34,14 @@ representing false and true.
 var _FALSE_BYTES = []byte("false")
 var _TRUE_BYTES = []byte("true")
 
-/*
-Returns the byte arrays _False/_TRUE _BYTES depending on
-whether the reciever true or false.
-*/
+func (this boolValue) String() string {
+	if this {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
 func (this boolValue) MarshalJSON() ([]byte, error) {
 	if this {
 		return _TRUE_BYTES, nil
@@ -47,7 +51,7 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 }
 
 /*
-Type Boolean
+Type BOOLEAN
 */
 func (this boolValue) Type() Type {
 	return BOOLEAN

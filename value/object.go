@@ -20,6 +20,10 @@ objectValue is a type of map from string to interface.
 */
 type objectValue map[string]interface{}
 
+func (this objectValue) String() string {
+	return marshalString(this)
+}
+
 func (this objectValue) MarshalJSON() ([]byte, error) {
 	if this == nil {
 		return _NULL_BYTES, nil
@@ -47,7 +51,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		buf.Write(b)
 		buf.WriteString(":")
 
-		b, err = json.Marshal(v)
+		b, err = v.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}

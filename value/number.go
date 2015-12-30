@@ -31,13 +31,11 @@ var _NAN_BYTES = []byte("\"NaN\"")
 var _POS_INF_BYTES = []byte("\"+Infinity\"")
 var _NEG_INF_BYTES = []byte("\"-Infinity\"")
 
-/*
-MarshalJSON casts the method receiver to float64, and uses
-the math package functions to check if its NaN, +infinity
-or –infinity, in which case it returns a slice of byte
-representing that value, else it calls jsons marshal
-function on the cast value.
-*/
+func (this floatValue) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
+}
+
 func (this floatValue) MarshalJSON() ([]byte, error) {
 	f := float64(this)
 

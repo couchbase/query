@@ -25,6 +25,10 @@ type parsedValue struct {
 	parsed     Value
 }
 
+func (this *parsedValue) String() string {
+	return this.unwrap().String()
+}
+
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
 }
@@ -62,19 +66,7 @@ func (this *parsedValue) CopyForUpdate() Value {
 }
 
 /*
-Use "github.com/dustin/go-jsonpointer".
-First check if the parsed Value is nil. If not then call the
-Field method for that value and return it. In the event that
-it is nil, check to see if the parsedType is an object. If not
-return missingField and false, since only objects have fields.
-Use the Find method in the jsonpointer package to find a section
-of raw JSON, with input arguments the slice of bytes and a path
-string. The package defines a string syntax for indentifying a
-specific value in a JSON document. It returns a slice of bytes.
-If the error it returns is not nil or if the result of the Find
-is nil and the error is nil, then return a missingField.
-If the result is not nil then call NewValue on the result to
-get a valid value and return true.
+Use "github.com/dustin/go-jsonpointer". Delayed parsing.
 */
 func (this *parsedValue) Field(field string) (Value, bool) {
 	if this.parsed != nil {
@@ -121,11 +113,7 @@ func (this *parsedValue) UnsetField(field string) error {
 }
 
 /*
-Call the index method for the type of value parsed, if it is
-not nil. If it isnt of type array then return missingIndex.
-Go through the raw bytes and find this index. If there is an
-error or the result is nil, return missingIndex. Otherwise
-call NewValue to get a value to return.
+Use "github.com/dustin/go-jsonpointer". Delayed parsing.
 */
 func (this *parsedValue) Index(index int) (Value, bool) {
 	if this.parsed != nil {

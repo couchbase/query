@@ -16,9 +16,12 @@ import (
 
 type binaryValue []byte
 
+func (this binaryValue) String() string {
+	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
+}
+
 func (this binaryValue) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("\"<binary (%d b)>\"", len(this))
-	return []byte(s), nil
+	return []byte(this.String()), nil
 }
 
 func (this binaryValue) Type() Type {

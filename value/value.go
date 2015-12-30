@@ -159,9 +159,12 @@ implements the methods that correspond to it.
 */
 type Value interface {
 	/*
-	   This method is used by the json package. It is used to
-	   convert to JSON byte encoding; and returns a byte array of
-	   valid JSON values. error is always nil.
+	   String marshaling.
+	*/
+	fmt.Stringer
+
+	/*
+	   JSON marshaling.
 	*/
 	json.Marshaler
 
@@ -452,4 +455,13 @@ func identifyType(bytes []byte) Type {
 	}
 
 	return BINARY
+}
+
+func marshalString(v Value) string {
+	bytes, err := v.MarshalJSON()
+	if err != nil {
+		// We should not get here.
+		panic(fmt.Sprintf("Error marshaling Value %v: %v", v, err))
+	}
+	return string(bytes)
 }

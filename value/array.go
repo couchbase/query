@@ -11,7 +11,6 @@ package value
 
 import (
 	"bytes"
-	"encoding/json"
 )
 
 /*
@@ -23,6 +22,10 @@ type sliceValue []interface{}
 EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 */
 var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
+
+func (this sliceValue) String() string {
+	return marshalString(this)
+}
 
 func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
@@ -271,16 +274,16 @@ func (this sliceValue) unwrap() Value {
 var _SMALL_ARRAY_VALUE = sliceValue([]interface{}{nil})
 
 /*
-It is a struct containing slice values. This enables us to call all
-the implemented methods for slicevalue without having to redefine them.
+Wrap a sliceValue that can be reallocated for resizing.
 */
 type listValue struct {
 	slice sliceValue
 }
 
-/*
-Call implemented MarshalJSON method for slice in *listValue.
-*/
+func (this *listValue) String() string {
+	return this.slice.String()
+}
+
 func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
 }
@@ -509,7 +512,7 @@ func marshalArray(slice []interface{}) (b []byte, err error) {
 		}
 
 		v := NewValue(e)
-		b, err = json.Marshal(v)
+		b, err = v.MarshalJSON()
 		if err != nil {
 			return
 		}
