@@ -33,15 +33,17 @@ const (
 
 	//Authentication Errors (121 - 135)
 	//Missing or invalid username/password.
-	INVALID_PASSWORD = 121
-	INVALID_USERNAME = 122
+	INVALID_PASSWORD   = 121
+	INVALID_USERNAME   = 122
+	MISSING_CREDENTIAL = 123
 
 	//Command Errors (136 - 169)
-	NO_SUCH_COMMAND   = 136
-	NO_SUCH_VALUE     = 137
-	TOO_MANY_ARGS     = 138
-	TOO_FEW_ARGS      = 139
-	PARAM_STACK_EMPTY = 140
+	NO_SUCH_COMMAND = 136
+	NO_SUCH_PARAM   = 137
+	TOO_MANY_ARGS   = 138
+	TOO_FEW_ARGS    = 139
+	STACK_EMPTY     = 140
+	NO_SUCH_ALIAS   = 141
 
 	//Generic Errors (170 - 199)
 	OPERATION_TIMEOUT = 170
@@ -51,6 +53,10 @@ const (
 	GON1QL_QUERY      = 174
 	WRITER_OUTPUT     = 175
 	UNBALANCED_PAREN  = 176
+	ROWS_CLOSE        = 177
+
+	//Untracked error
+	UNKNOWN_ERROR = 199
 )
 
 //Connection errors
@@ -116,14 +122,20 @@ func NewShellErrorInvalidUsername(msg string) Error {
 	return &err{level: EXCEPTION, ICode: INVALID_USERNAME, IKey: "shell.invalid.username", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewShellErrorMissingCredential(msg string) Error {
+	return &err{level: EXCEPTION, ICode: MISSING_CREDENTIAL, IKey: "shell.missing.credentials", InternalMsg: msg, InternalCaller: CallerN(1)}
+
+}
+
 //Command Errors
 func NewShellErrorNoSuchCommand(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_SUCH_COMMAND, IKey: "shell.no.such.command", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewShellErrorNoSuchValue(msg string) Error {
-	return &err{level: EXCEPTION, ICode: NO_SUCH_VALUE, IKey: "shell.no.such.value", InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewShellErrorNoSuchParam(msg string) Error {
+	return &err{level: EXCEPTION, ICode: NO_SUCH_PARAM, IKey: "shell.no.such.param", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
 func NewShellErrorTooManyArgs(msg string) Error {
 	return &err{level: EXCEPTION, ICode: TOO_MANY_ARGS, IKey: "shell.too.many.args", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
@@ -132,8 +144,14 @@ func NewShellErrorTooFewArgs(msg string) Error {
 	return &err{level: EXCEPTION, ICode: TOO_FEW_ARGS, IKey: "shell.too.few.args", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewShellErrorParamStackEmpty(msg string) Error {
-	return &err{level: EXCEPTION, ICode: PARAM_STACK_EMPTY, IKey: "shell.parameter.stack.empty", InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewShellErrorStackEmpty(msg string) Error {
+	return &err{level: EXCEPTION, ICode: STACK_EMPTY, IKey: "shell.parameter.stack.empty", InternalMsg: msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorNoSuchAlias(msg string) Error {
+	return &err{level: EXCEPTION, ICode: NO_SUCH_ALIAS, IKey: "shell.alias.does.not.exist", InternalMsg: msg, InternalCaller: CallerN(1)}
+
 }
 
 //Generic Errors
@@ -163,4 +181,13 @@ func NewShellErrorWriterOutput(msg string) Error {
 
 func NewShellErrorUnbalancedParen(msg string) Error {
 	return &err{level: EXCEPTION, ICode: UNBALANCED_PAREN, IKey: "shell.unbalanced.parenthesis", InternalMsg: msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorRowsClose(msg string) Error {
+	return &err{level: EXCEPTION, ICode: ROWS_CLOSE, IKey: "shell.rows.close.error", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorUnkownError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
