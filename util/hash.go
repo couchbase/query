@@ -9,27 +9,13 @@
 
 package util
 
-import (
-	"math"
-)
-
-// Comparisons
-
-func MinInt(x, y int) int {
-	return int(math.Min(float64(x), float64(y)))
-}
-
-func MaxInt(x, y int) int {
-	return int(math.Max(float64(x), float64(y)))
-}
-
-// Rounding
-
-func Round(f float64) float64 {
-	return math.Floor(f + .5)
-}
-
-func RoundPlaces(f float64, places int) float64 {
-	shift := math.Pow(10, float64(places))
-	return Round(f*shift) / shift
+// Quick FNV1a hash to distribute strings across required cache buckets
+// Using it instead of hash/fnv to avoid poinless memory allocation
+func HashString(id string, hashes int) int {
+	var h uint = 2166136261
+	for _, c := range []byte(id) {
+		h ^= uint(c)
+		h *= 16777619
+	}
+	return int(h) % hashes
 }

@@ -27,6 +27,7 @@ import (
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
@@ -128,7 +129,14 @@ func main() {
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	plusChannel := make(server.RequestChannel, *REQUEST_CAP)
-	server, err := server.NewServer(datastore, configstore, acctstore, *NAMESPACE,
+
+	sys, err := system.NewDatastore(datastore)
+	if err != nil {
+		logging.Errorp(err.Error())
+		os.Exit(1)
+	}
+
+	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE)
 	if err != nil {

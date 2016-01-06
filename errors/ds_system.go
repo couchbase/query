@@ -52,5 +52,9 @@ func NewSystemIdxNotFoundError(e error, msg string) Error {
 func NewSystemIdxNoDropError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 11006, IKey: "datastore.system.idx_no_drop", ICause: e,
 		InternalMsg: "System datastore : This  index cannot be dropped " + msg, InternalCaller: CallerN(1)}
+}
 
+func NewSystemStmtNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 11007, IKey: "datastore.system.stmt_not_found", ICause: e,
+		InternalMsg: "System datastore : Statement not found " + msg, InternalCaller: CallerN(1)}
 }

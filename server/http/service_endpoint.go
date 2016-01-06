@@ -13,10 +13,12 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
@@ -33,23 +35,27 @@ type HttpEndpoint struct {
 	listener    net.Listener
 	listenerTLS net.Listener
 	mux         *mux.Router
+	actives     server.ActiveRequests
 }
 
 const (
 	servicePrefix = "/query/service"
 )
 
-func NewServiceEndpoint(server *server.Server, staticPath string, metrics bool,
+func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
-		server:    server,
+		server:    srv,
 		metrics:   metrics,
 		httpAddr:  httpAddr,
 		httpsAddr: httpsAddr,
 		certFile:  certFile,
 		keyFile:   keyFile,
-		bufpool:   NewSyncPool(server.KeepAlive()),
+		bufpool:   NewSyncPool(srv.KeepAlive()),
+		actives:   NewActiveRequests(),
 	}
+
+	server.SetActives(rv.actives)
 
 	rv.registerHandlers(staticPath)
 	return rv
@@ -101,6 +107,9 @@ func (this *HttpEndpoint) ListenTLS() error {
 // we respond with a timeout status.
 func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	request := newHttpRequest(resp, req, this.bufpool, this.server.RequestSizeCap())
+
+	this.actives.Put(request)
+	defer this.actives.Delete(request.Id().String(), false)
 
 	defer this.doStats(request)
 
@@ -179,8 +188,70 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
 		request.Prepared())
+	accounting.LogRequest(acctstore, request_time, service_time, request.resultCount,
+		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
+		request.SortCount(), request.Prepared(), request.Id().String())
 }
 
 func ServicePrefix() string {
 	return servicePrefix
+}
+
+// activeHttpRequests implements server.ActiveRequests for http requests
+type activeHttpRequests struct {
+	sync.RWMutex
+	requests map[string]*httpRequest
+}
+
+func NewActiveRequests() server.ActiveRequests {
+	return &activeHttpRequests{
+		requests: map[string]*httpRequest{},
+	}
+}
+
+func (this *activeHttpRequests) Put(req server.Request) errors.Error {
+	this.Lock()
+	defer this.Unlock()
+	http_req, is_http := req.(*httpRequest)
+	if !is_http {
+		return errors.NewServiceErrorHttpReq(req.Id().String())
+	}
+	this.requests[http_req.Id().String()] = http_req
+	return nil
+}
+
+func (this *activeHttpRequests) Get(id string) (server.Request, errors.Error) {
+	this.RLock()
+	defer this.RUnlock()
+	return this.requests[id], nil
+}
+
+func (this *activeHttpRequests) Delete(id string, stop bool) bool {
+	this.Lock()
+	defer this.Unlock()
+	if stop {
+
+		// Stop the request
+		req := this.requests[id]
+		if req == nil {
+			return true
+		}
+		req.Stop(server.STOPPED)
+	}
+	delete(this.requests, id)
+	return false
+}
+
+func (this *activeHttpRequests) Count() (int, errors.Error) {
+	this.RLock()
+	defer this.RUnlock()
+	return len(this.requests), nil
+}
+
+func (this *activeHttpRequests) ForEach(f func(string, server.Request)) {
+	this.RLock()
+	defer this.RUnlock()
+	for requestId, request := range this.requests {
+		f(requestId, request)
+	}
 }

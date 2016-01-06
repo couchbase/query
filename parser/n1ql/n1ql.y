@@ -1220,6 +1220,11 @@ INSERT INTO keyspace_ref LPAREN key_expr opt_value_expr RPAREN fullselect opt_re
 ;
 
 keyspace_ref:
+SYSTEM COLON keyspace_name opt_as_alias
+{
+    $$ = algebra.NewKeyspaceRef("#system", $3, $4)
+}
+|
 namespace_name COLON keyspace_name opt_as_alias
 {
     $$ = algebra.NewKeyspaceRef($1, $3, $4)

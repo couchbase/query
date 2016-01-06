@@ -73,3 +73,8 @@ func NewServiceErrorMediaType(mediaType string) Error {
 	return &err{level: EXCEPTION, ICode: 1120, IKey: "service.io.request.media_type",
 		InternalMsg: fmt.Sprintf("Unsupported media type: %s", mediaType), InternalCaller: CallerN(1)}
 }
+
+func NewServiceErrorHttpReq(id string) Error {
+	return &err{level: EXCEPTION, ICode: 1130, IKey: "service.io.request.type",
+		InternalMsg: fmt.Sprintf("Request %s is not a http request", id), InternalCaller: CallerN(1)}
+}

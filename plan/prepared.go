@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sync"
+	"time"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -110,7 +112,16 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 
 type preparedCache struct {
 	sync.RWMutex
-	prepareds map[string]*Prepared
+	prepareds map[string]*cacheEntry
+}
+
+type cacheEntry struct {
+	prepared *Prepared
+	lastUse  time.Time
+	uses     int32
+	// FIXME add moving averages, latency
+	// This requires an update method to be called from
+	// server/http/service_endpoint.go:doStats()
 }
 
 const (
@@ -119,7 +130,7 @@ const (
 )
 
 var cache = &preparedCache{
-	prepareds: make(map[string]*Prepared, _CACHE_SIZE),
+	prepareds: make(map[string]*cacheEntry, _CACHE_SIZE),
 }
 
 func (this *preparedCache) get(name value.Value) *Prepared {
@@ -127,17 +138,24 @@ func (this *preparedCache) get(name value.Value) *Prepared {
 		return nil
 	}
 	this.RLock()
+	defer this.RUnlock()
 	rv := this.prepareds[name.Actual().(string)]
-	this.RUnlock()
-	return rv
+	if rv != nil {
+		atomic.AddInt32(&rv.uses, 1)
+		rv.lastUse = time.Now()
+		return rv.prepared
+	}
+	return nil
 }
 
 func (this *preparedCache) add(prepared *Prepared) {
 	this.Lock()
 	if len(this.prepareds) > _MAX_SIZE {
-		this.prepareds = make(map[string]*Prepared, _CACHE_SIZE)
+		this.prepareds = make(map[string]*cacheEntry, _CACHE_SIZE)
 	}
-	this.prepareds[prepared.Name()] = prepared
+	this.prepareds[prepared.Name()] = &cacheEntry{
+		prepared: prepared,
+	}
 	this.Unlock()
 }
 
@@ -145,10 +163,93 @@ func (this *preparedCache) peek(prepared *Prepared) bool {
 	this.RLock()
 	cached := this.prepareds[prepared.Name()]
 	this.RUnlock()
-	if cached != nil && cached.Text() != prepared.Text() {
+	if cached != nil && cached.prepared.Text() != prepared.Text() {
 		return true
 	}
 	return false
+}
+
+func (this *preparedCache) peekName(name string) bool {
+	this.RLock()
+	cached := this.prepareds[name]
+	this.RUnlock()
+	return cached != nil
+}
+
+func (this *preparedCache) snapshot() []map[string]interface{} {
+	this.RLock()
+	defer this.RUnlock()
+	data := make([]map[string]interface{}, len(this.prepareds))
+	i := 0
+	for _, d := range this.prepareds {
+		data[i] = map[string]interface{}{}
+		data[i]["name"] = d.prepared.Name()
+		data[i]["statement"] = d.prepared.Text()
+		data[i]["uses"] = d.uses
+		data[i]["lastUse"] = d.lastUse.String()
+		data[i]["plan"] = "{ TODO }"
+		i++
+	}
+	return data
+}
+
+func (this *preparedCache) size() int {
+	this.RLock()
+	defer this.RUnlock()
+	return len(this.prepareds)
+}
+
+func (this *preparedCache) entry(name string) *cacheEntry {
+	this.RLock()
+	defer this.RUnlock()
+	return this.prepareds[name]
+}
+
+func (this *preparedCache) remove(name string) {
+	this.Lock()
+	defer this.Unlock()
+	delete(this.prepareds, name)
+}
+
+func (this *preparedCache) names() []string {
+	i := 0
+	this.RLock()
+	defer this.RUnlock()
+	n := make([]string, len(this.prepareds))
+	for k := range this.prepareds {
+		n[i] = k
+		i++
+	}
+	return n
+}
+
+func SnapshotPrepared() []map[string]interface{} {
+	return cache.snapshot()
+}
+
+func CountPrepareds() int {
+	return cache.size()
+}
+
+func NamePrepareds() []string {
+	return cache.names()
+}
+
+func PreparedEntry(name string) struct {
+	Uses    int
+	LastUse string
+	Text    string
+} {
+	ce := cache.entry(name)
+	return struct {
+		Uses    int
+		LastUse string
+		Text    string
+	}{
+		Uses:    int(ce.uses),
+		LastUse: ce.lastUse.String(),
+		Text:    ce.prepared.Text(),
+	}
 }
 
 func AddPrepared(prepared *Prepared) errors.Error {
@@ -159,6 +260,16 @@ func AddPrepared(prepared *Prepared) errors.Error {
 	cache.add(prepared)
 	return nil
 }
+
+func DeletePrepared(name string) errors.Error {
+	if !cache.peekName(name) {
+		return errors.NewNoSuchPreparedError(name)
+	}
+	cache.remove(name)
+	return nil
+}
+
+var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
 
 func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	switch prepared_stmt.Type() {

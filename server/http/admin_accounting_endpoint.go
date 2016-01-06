@@ -12,15 +12,22 @@ package http
 import (
 	"bytes"
 	"net/http"
+	"time"
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
 )
 
 const (
 	accountingPrefix = adminPrefix + "/stats"
+	vitalsPrefix     = adminPrefix + "/vitals"
+	preparedsPrefix  = adminPrefix + "/prepareds"
+	requestsPrefix   = adminPrefix + "/requests"
 	expvarsRoute     = "/debug/vars"
 )
 
@@ -38,13 +45,32 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	notFoundHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doNotFound)
 	}
-
+	vitalsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doVitals)
+	}
+	preparedHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPrepared)
+	}
+	preparedsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPrepareds)
+	}
+	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doActiveRequests)
+	}
+	requestHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doActiveRequest)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:             {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}": {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		accountingPrefix:              {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":  {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                  {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:               {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix + "/{name}":   {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
+		requestsPrefix:                {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix + "/{request}": {handler: requestHandler, methods: []string{"GET", "DELETE"}},
 	}
 
 	for route, h := range routeMap {
@@ -124,6 +150,100 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		reg.Counter(accounting.INVALID_REQUESTS).Inc(1)
 	}
 	return nil, nil
+}
+
+func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	switch req.Method {
+	case "GET":
+		acctStore := endpoint.server.AccountingStore()
+		return acctStore.Vitals()
+	default:
+		return nil, nil
+	}
+}
+
+func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	name := vars["name"]
+
+	switch req.Method {
+	case "DELETE":
+		err := plan.DeletePrepared(name)
+		if err != nil {
+			return nil, err
+		}
+		return true, nil
+	case "GET":
+		return plan.GetPrepared(value.NewValue(name))
+	default:
+		return nil, nil
+	}
+}
+
+func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	switch req.Method {
+	case "GET":
+		return plan.SnapshotPrepared(), nil
+	default:
+		return nil, nil
+	}
+}
+
+func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	request := vars["request"]
+
+	switch req.Method {
+	case "GET":
+		// TODO: implement
+		return nil, nil
+	case "DELETE":
+		if endpoint.actives.Delete(request, true) {
+			return nil, errors.NewServiceErrorHttpReq(request)
+		}
+
+		return true, nil
+	default:
+		return nil, nil
+	}
+}
+
+func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numRequests, err := endpoint.actives.Count()
+	if err != nil {
+		return nil, err
+	}
+
+	requests := make([]map[string]interface{}, numRequests)
+	i := 0
+	snapshot := func(requestId string, request server.Request) {
+		requests[i] = map[string]interface{}{}
+		requests[i]["requestId"] = request.Id().String()
+		if request.Statement() != "" {
+			requests[i]["request.statement"] = request.Statement()
+		}
+		if request.Prepared() != nil {
+			p := request.Prepared()
+			requests[i]["prepared.name"] = p.Name()
+			requests[i]["prepared.statement"] = p.Text()
+		}
+		requests[i]["requestTime"] = request.RequestTime()
+		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
+		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
+		requests[i]["state"] = request.State()
+		requests[i]["fetches"] = "TODO"
+		requests[i]["scans"] = "TODO"
+		// PhaseTimes() is not in server.Request API
+		httpRequest, isHttp := request.(*httpRequest)
+		if isHttp {
+			for phase, phaseTime := range httpRequest.PhaseTimes() {
+				requests[i][phase] = phaseTime.String()
+			}
+		}
+		i++
+	}
+	endpoint.actives.ForEach(snapshot)
+	return requests, nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {

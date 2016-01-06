@@ -10,6 +10,7 @@
 package logging
 
 import (
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -156,155 +157,248 @@ type Logger interface {
 	Level() Level // Get the current logging level
 }
 
-var logger Logger
+var logger Logger = nil
+var curLevel Level = DEBUG // initially set to never skip
 
-var loggerMutex sync.Mutex
+var loggerMutex sync.RWMutex
+
+// All the methods below first acquire the mutex (mostly in exclusive mode)
+// and only then check if logging at the current level is enabled.
+// This introduces a fair bottleneck for those log entries that should be
+// skipped (the majority, at INFO or below levels)
+// We try to predict here if we should lock the mutex at all by caching
+// the current log level: while dynamically changing logger, there might
+// be the odd entry skipped as the new level is cached.
+// Since we seem to never change the logger, this is not an issue.
+func skipLogging(level Level) bool {
+	if logger == nil {
+		return false
+	}
+	return curLevel > level
+}
 
 func SetLogger(newLogger Logger) {
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger = newLogger
+	if logger == nil {
+		curLevel = NONE
+	} else {
+		curLevel = newLogger.Level()
+	}
 }
 
 func Logp(level Level, msg string, kv ...Pair) {
+	if skipLogging(level) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Logp(level, msg, kv...)
 }
 
 func Debugp(msg string, kv ...Pair) {
+	if skipLogging(DEBUG) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Debugp(msg, kv...)
 }
 
 func Tracep(msg string, kv ...Pair) {
+	if skipLogging(TRACE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Tracep(msg, kv...)
 }
 
 func Requestp(rlevel Level, msg string, kv ...Pair) {
+	if skipLogging(REQUEST) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Requestp(rlevel, msg, kv...)
 }
 
 func Infop(msg string, kv ...Pair) {
+	if skipLogging(INFO) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Infop(msg, kv...)
 }
 
 func Warnp(msg string, kv ...Pair) {
+	if skipLogging(WARN) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Warnp(msg, kv...)
 }
 
 func Errorp(msg string, kv ...Pair) {
+	if skipLogging(ERROR) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Errorp(msg, kv...)
 }
 
 func Severep(msg string, kv ...Pair) {
+	if skipLogging(SEVERE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Severep(msg, kv...)
 }
 
 func Logm(level Level, msg string, kv Map) {
+	if skipLogging(level) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Logm(level, msg, kv)
 }
 
 func Debugm(msg string, kv Map) {
+	if skipLogging(DEBUG) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Debugm(msg, kv)
 }
 
 func Tracem(msg string, kv Map) {
+	if skipLogging(TRACE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Tracem(msg, kv)
 }
 
 func Requestm(rlevel Level, msg string, kv Map) {
+	if skipLogging(REQUEST) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Requestm(rlevel, msg, kv)
 }
 
 func Infom(msg string, kv Map) {
+	if skipLogging(INFO) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Infom(msg, kv)
 }
 
 func Warnm(msg string, kv Map) {
+	if skipLogging(WARN) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Warnm(msg, kv)
 }
 
 func Errorm(msg string, kv Map) {
+	if skipLogging(ERROR) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Errorm(msg, kv)
 }
 
 func Severem(msg string, kv Map) {
+	if skipLogging(SEVERE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Severem(msg, kv)
 }
 
 func Logf(level Level, fmt string, args ...interface{}) {
+	if skipLogging(level) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Logf(level, fmt, args...)
 }
 
 func Debugf(fmt string, args ...interface{}) {
+	if skipLogging(DEBUG) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Debugf(fmt, args...)
 }
 
 func Tracef(fmt string, args ...interface{}) {
+	if skipLogging(TRACE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Tracef(fmt, args...)
 }
 
 func Requestf(rlevel Level, fmt string, args ...interface{}) {
+	if skipLogging(REQUEST) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Requestf(rlevel, fmt, args...)
 }
 
 func Infof(fmt string, args ...interface{}) {
+	if skipLogging(INFO) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Infof(fmt, args...)
 }
 
 func Warnf(fmt string, args ...interface{}) {
+	if skipLogging(WARN) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Warnf(fmt, args...)
 }
 
 func Errorf(fmt string, args ...interface{}) {
+	if skipLogging(ERROR) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Errorf(fmt, args...)
 }
 
 func Severef(fmt string, args ...interface{}) {
+	if skipLogging(SEVERE) {
+		return
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Severef(fmt, args...)
@@ -314,10 +408,24 @@ func SetLevel(level Level) {
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.SetLevel(level)
+	curLevel = level
 }
 
 func LogLevel() Level {
+	loggerMutex.RLock()
+	defer loggerMutex.RUnlock()
+	return logger.Level()
+}
+
+func Stackf(level Level, fmt string, args ...interface{}) {
+	if skipLogging(level) {
+		return
+	}
+	buf := make([]byte, 1<<16)
+	n := runtime.Stack(buf, false)
+	s := string(buf[0:n])
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	return logger.Level()
+	logger.Logf(level, fmt, args...)
+	logger.Logf(level, s)
 }

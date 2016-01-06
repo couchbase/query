@@ -28,6 +28,7 @@ type AccountingStore interface {
 	MetricRegistry() MetricRegistry           // The MetricRegistry that this AccountingStore is managing
 	MetricReporter() MetricReporter           // The MetricReporter that this AccountingStore is using
 	HealthCheckRegistry() HealthCheckRegistry // The HealthCheckRegistry that this AccountingStore is managing
+	Vitals() (interface{}, errors.Error)      // The Vital Signs of the entity that this AccountingStore
 }
 
 // Metric types
@@ -206,6 +207,9 @@ const (
 	DURATION_500MS  = 500 * time.Millisecond
 	DURATION_1000MS = 1000 * time.Millisecond
 	DURATION_5000MS = 5000 * time.Millisecond
+
+	REQUEST_RATE  = "request_rate"
+	REQUEST_TIMER = "request_timer"
 )
 
 var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
@@ -214,6 +218,8 @@ var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_
 
 // Map each duration to its metrics
 var slowMetricsMap = map[time.Duration][]string{
+
+	// FIXME MB-15575 would like to use durations as duration windows, not overall
 	DURATION_5000MS: {REQUESTS_5000MS, REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
 	DURATION_1000MS: {REQUESTS_1000MS, REQUESTS_500MS, REQUESTS_250MS},
 	DURATION_500MS:  {REQUESTS_500MS, REQUESTS_250MS},
@@ -227,6 +233,9 @@ func RegisterMetrics(acctstore AccountingStore) {
 	for _, name := range metricNames {
 		ms.Counter(name)
 	}
+
+	ms.Meter(REQUEST_RATE)
+	ms.Timer(REQUEST_TIMER)
 }
 
 func RecordMetrics(acctstore AccountingStore,
@@ -242,6 +251,9 @@ func RecordMetrics(acctstore AccountingStore,
 	ms.Counter(RESULT_SIZE).Inc(int64(result_size))
 	ms.Counter(ERRORS).Inc(int64(error_count))
 	ms.Counter(WARNINGS).Inc(int64(warn_count))
+
+	ms.Meter(REQUEST_RATE).Mark(1)
+	ms.Timer(REQUEST_TIMER).Update(request_time)
 
 	// Determine slow metrics based on request duration
 	slowMetrics := slowMetricsMap[DURATION_0MS]

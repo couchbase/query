@@ -16,24 +16,44 @@ package accounting_gm
 import (
 	"expvar"
 	"fmt"
+	"runtime"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
 type gometricsAccountingStore struct {
+	sync.Mutex
 	registry accounting.MetricRegistry
 	reporter accounting.MetricReporter
+	vitals   map[string]interface{}
 }
 
 func NewAccountingStore() accounting.AccountingStore {
-	return &gometricsAccountingStore{
+	rv := &gometricsAccountingStore{
 		registry: &goMetricRegistry{},
 		reporter: &goMetricReporter{},
+		vitals:   map[string]interface{}{},
 	}
+
+	var lastUtime, lastStime int64
+	var lastPauseTime uint64
+	var lastNow time.Time
+	startTime := time.Now()
+
+	rv.vitals["lastUtime"] = lastUtime
+	rv.vitals["lastStime"] = lastStime
+	rv.vitals["lastNow"] = lastNow
+	rv.vitals["lastPauseTime"] = lastPauseTime
+	rv.vitals["startTime"] = startTime
+
+	return rv
 }
 
 func (g *gometricsAccountingStore) Id() string {
@@ -54,6 +74,84 @@ func (g *gometricsAccountingStore) MetricReporter() accounting.MetricReporter {
 
 func (g *gometricsAccountingStore) HealthCheckRegistry() accounting.HealthCheckRegistry {
 	return accounting_stub.HealthCheckRegistryStub{}
+}
+
+func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
+	var mem runtime.MemStats
+
+	runtime.ReadMemStats(&mem)
+	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
+	request_rate := g.registry.Meter(accounting.REQUEST_RATE)
+
+	ru := syscall.Rusage{}
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+		// TODO: log error
+	}
+
+	now := time.Now()
+	newUtime := ru.Utime.Nano()
+	newStime := ru.Stime.Nano()
+	g.Lock()
+	uptime := now.Sub(g.vitals["startTime"].(time.Time))
+	dur := float64(now.Sub(g.vitals["lastNow"].(time.Time)))
+	uPerc := float64(newUtime-g.vitals["lastUtime"].(int64)) / dur
+	sPerc := float64(newStime-g.vitals["lastStime"].(int64)) / dur
+	pausePerc := float64(mem.PauseTotalNs-g.vitals["lastPauseTime"].(uint64)) / dur
+
+	g.vitals["lastNow"] = now
+	g.vitals["lastUtime"] = newUtime
+	g.vitals["lastStime"] = newStime
+	g.vitals["lastPauseTime"] = mem.PauseTotalNs
+	g.Unlock()
+
+	return VitalsRecord{
+		Uptime:         uptime.String(),
+		Threads:        runtime.NumGoroutine(),
+		Cores:          runtime.GOMAXPROCS(0),
+		GCNum:          mem.NextGC,
+		GCPauseTime:    time.Duration(mem.PauseTotalNs).String(),
+		GCPausePercent: util.RoundPlaces(pausePerc, 4),
+		MemoryUsage:    mem.Alloc,
+		MemoryTotal:    mem.TotalAlloc,
+		MemorySys:      mem.Sys,
+		CPUUser:        util.RoundPlaces(uPerc, 4),
+		CPUSys:         util.RoundPlaces(sPerc, 4),
+		ReqCount:       request_rate.Count(),
+		Req1min:        util.RoundPlaces(request_rate.Rate1(), 4),
+		Req5min:        util.RoundPlaces(request_rate.Rate5(), 4),
+		Req15min:       util.RoundPlaces(request_rate.Rate15(), 4),
+		ReqMean:        time.Duration(request_timer.Mean()).String(),
+		ReqMedian:      time.Duration(request_timer.Percentile(.5)).String(),
+		Req80:          time.Duration(request_timer.Percentile(.8)).String(),
+		Req95:          time.Duration(request_timer.Percentile(.95)).String(),
+		Req99:          time.Duration(request_timer.Percentile(.99)).String(),
+	}, nil
+
+}
+
+type VitalsRecord struct {
+	Uptime         string  `json:"uptime"`
+	Threads        int     `json:"threads"`
+	Cores          int     `json:"cores"`
+	GCNum          uint64  `json:"gc.num"`
+	GCPauseTime    string  `json:"gc.pause.time"`
+	GCPausePercent float64 `json:"gc.pause.percent"`
+	MemoryUsage    uint64  `json:"memory.usage"`
+	MemoryTotal    uint64  `json:"memory.total"`
+	MemorySys      uint64  `json:"memory.system"`
+	CPUUser        float64 `json:"cpu.user.percent"`
+	CPUSys         float64 `json:"cpu.sys.percent"`
+	ReqCount       int64   `json:"request.count"`
+	Req1min        float64 `json:"request.per.sec.1min"`
+	Req5min        float64 `json:"request.per.sec.5min"`
+	Req15min       float64 `json:"request.per.sec.15min"`
+	ReqMean        string  `json:"request_time.mean"`
+	ReqMedian      string  `json:"request_time.median"`
+	Req80          string  `json:"request_time.80percentile"`
+	Req95          string  `json:"request_time.95percentile"`
+	Req99          string  `json:"request_time.99percentile"`
+
+	// FIXME Active vs Queued threads, local time, version, direct vs prepared, network
 }
 
 type goMetricRegistry struct {

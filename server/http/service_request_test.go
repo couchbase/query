@@ -220,7 +220,7 @@ func makeMockServer() *server.Server {
 	datastore.SetDatastore(store)
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
-	server, err := server.NewServer(store, nil, nil, "default",
+	server, err := server.NewServer(store, nil, nil, nil, "default",
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
 		logging.Errorp(err.Error())

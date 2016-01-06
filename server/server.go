@@ -22,7 +22,6 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
@@ -66,12 +65,13 @@ type Server struct {
 
 const KEEP_ALIVE_DEFAULT = 1024 * 16
 
-func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
+func NewServer(store datastore.Datastore, sys datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	channel, plusChannel RequestChannel, servicers, plusServicers, maxParallelism int,
 	timeout time.Duration, signature, metrics bool, enterprise bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
+		systemstore: sys,
 		configstore: config,
 		acctstore:   acctng,
 		namespace:   namespace,
@@ -93,12 +93,12 @@ func NewServer(store datastore.Datastore, config clustering.ConfigurationStore,
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 
-	sys, err := system.NewDatastore(store)
-	if err != nil {
-		return nil, err
-	}
-
-	rv.systemstore = sys
+	//	sys, err := system.NewDatastore(store)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	rv.systemstore = sys
 	return rv, nil
 }
 

@@ -54,6 +54,10 @@ func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
 	return MetricReporterStub{}
 }
 
+func (AccountingStoreStub) Vitals() (interface{}, errors.Error) {
+	return nil, nil
+}
+
 // CounterStub is a stub implementation of Counter
 type CounterStub struct{}
 

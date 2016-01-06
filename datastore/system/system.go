@@ -24,6 +24,9 @@ const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_KEYSPACES = "keyspaces"
 const KEYSPACE_NAME_INDEXES = "indexes"
 const KEYSPACE_NAME_DUAL = "dual"
+const KEYSPACE_NAME_PREPAREDS = "prepareds"
+const KEYSPACE_NAME_REQUESTS = "completed_requests"
+const KEYSPACE_NAME_ACTIVE = "active_requests"
 
 type store struct {
 	actualStore              datastore.Datastore
@@ -71,6 +74,7 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 }
 
 func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+	logging.Logf(logging.INFO, "System authorize")
 	return nil
 }
 

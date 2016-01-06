@@ -17,6 +17,7 @@ import (
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
+	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
@@ -212,6 +213,12 @@ func Start(site, pool, namespace string) *server.Server {
 		os.Exit(1)
 	}
 
+	sys, err := system.NewDatastore(datastore)
+	if err != nil {
+		logging.Errorp(err.Error())
+		os.Exit(1)
+	}
+
 	configstore, err := config_resolver.NewConfigstore("stub:")
 	if err != nil {
 		logging.Errorp("Could not connect to configstore",
@@ -228,7 +235,7 @@ func Start(site, pool, namespace string) *server.Server {
 
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
-	server, err := server.NewServer(datastore, configstore, acctstore, namespace,
+	server, err := server.NewServer(datastore, sys, configstore, acctstore, namespace,
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
 		logging.Errorp(err.Error())

@@ -52,6 +52,7 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 }
 
 func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
+
 	b, ok := p.keyspaces[name]
 	if !ok {
 		return nil, errors.NewSystemKeyspaceNotFoundError(nil, name)
@@ -106,6 +107,24 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 		return e
 	}
 	p.keyspaces[ib.Name()] = ib
+
+	preps, e := newPreparedsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[preps.Name()] = preps
+
+	reqs, e := newRequestsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[reqs.Name()] = reqs
+
+	actives, e := newActiveRequestsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[actives.Name()] = actives
 
 	return nil
 }
