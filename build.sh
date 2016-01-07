@@ -18,6 +18,11 @@ cd shell/cbq
 ./build.sh $1
 cd ../..
 
+echo cd shell/go_cbq
+cd shell/go_cbq
+./build.sh $1
+cd ../..
+
 echo cd tutorial
 cd tutorial
 ./build.sh $1
