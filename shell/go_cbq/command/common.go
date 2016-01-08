@@ -17,7 +17,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
-	go_n1ql "github.com/couchbaselabs/go_n1ql"
+	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/sbinet/liner"
 )
 

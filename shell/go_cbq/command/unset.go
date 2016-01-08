@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/errors"
-	go_n1ql "github.com/couchbaselabs/go_n1ql"
+	go_n1ql "github.com/couchbase/go_n1ql"
 )
 
 /* Unset Command */

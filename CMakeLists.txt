@@ -25,3 +25,7 @@ GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engin
 GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin OUTPUT cbq)
+  
+GoInstall (TARGET go_cbq PACKAGE github.com/couchbase/query/shell/go_cbq
+  GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
+  INSTALL_PATH bin OUTPUT go_cbq)
