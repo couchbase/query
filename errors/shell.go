@@ -24,6 +24,7 @@ const (
 	UNREACHABLE_NETWORK  = 106
 	NO_CONNECTION        = 107
 	GO_N1QL_OPEN         = 108
+	INVALID_URL          = 109
 
 	//Read/Write/Update file errors (116 - 120)
 	READ_FILE  = 116
@@ -54,6 +55,7 @@ const (
 	WRITER_OUTPUT     = 175
 	UNBALANCED_PAREN  = 176
 	ROWS_CLOSE        = 177
+	CMD_LINE_ARG      = 178
 
 	//Untracked error
 	UNKNOWN_ERROR = 199
@@ -94,6 +96,10 @@ func NewShellErrorNoConnection(msg string) Error {
 
 func NewShellErrorGon1qlOpen(msg string) Error {
 	return &err{level: EXCEPTION, ICode: GO_N1QL_OPEN, IKey: "shell.gon1ql.Open.method.error", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorInvalidURL(msg string) Error {
+	return &err{level: EXCEPTION, ICode: INVALID_URL, IKey: "shell.Invalid.URL", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 //Read/Write/Update file errors
@@ -181,11 +187,14 @@ func NewShellErrorWriterOutput(msg string) Error {
 
 func NewShellErrorUnbalancedParen(msg string) Error {
 	return &err{level: EXCEPTION, ICode: UNBALANCED_PAREN, IKey: "shell.unbalanced.parenthesis", InternalMsg: msg, InternalCaller: CallerN(1)}
-
 }
 
 func NewShellErrorRowsClose(msg string) Error {
 	return &err{level: EXCEPTION, ICode: ROWS_CLOSE, IKey: "shell.rows.close.error", InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorCmdLineArgs(msg string) Error {
+	return &err{level: EXCEPTION, ICode: CMD_LINE_ARG, IKey: "shell.command.line.args", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnkownError(msg string) Error {

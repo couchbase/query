@@ -17,10 +17,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 
+	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	go_n1ql "github.com/couchbase/go_n1ql"
 )
 
 /*
@@ -273,6 +274,27 @@ func main() {
 		}
 	*/
 
+	/* Check for input url argument
+	 */
+
+	args := flag.Args()
+	if len(args) > 1 {
+		s_err := command.HandleError(errors.CMD_LINE_ARG, "")
+		command.PrintError(s_err)
+		os.Exit(1)
+	} else {
+		if len(args) == 1 {
+			urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
+			match, _ := regexp.MatchString(urlRegex, args[0])
+			if match == false {
+				s_err := command.HandleError(errors.INVALID_URL, args[0])
+				command.PrintError(s_err)
+			} else {
+				ServerFlag = args[0]
+			}
+		}
+	}
+
 	/* -quiet : Display Message only if flag not specified
 	 */
 	if !quietFlag && NoQueryService == false {
@@ -396,6 +418,5 @@ func main() {
 	}
 
 	go_n1ql.SetPassthroughMode(true)
-	//fmt.Println("Input arguments, ", os.Args)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }

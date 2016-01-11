@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
-	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/sbinet/liner"
 )
 
@@ -28,12 +28,10 @@ var (
 	NamedParam map[string]*Stack = map[string]*Stack{}
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
-		"querycreds": Stack_Helper(),
 		"limit":      Stack_Helper(),
 		"histfile":   Stack_Helper(),
 		"histsize":   Stack_Helper(),
 		"autoconfig": Stack_Helper(),
-		"state":      Stack_Helper(),
 	}
 )
 

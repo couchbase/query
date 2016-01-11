@@ -51,6 +51,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorNoConnection("Not Connected to any instance. Use \\CONNECT command. ")
 	case errors.GO_N1QL_OPEN:
 		return errors.NewShellErrorGon1qlOpen(msg)
+	case errors.INVALID_URL:
+		return errors.NewShellErrorInvalidURL("Invalid input url : " + msg)
 
 	//Read/Write/Update file errors
 	case errors.READ_FILE:
@@ -101,6 +103,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorUnbalancedParen("Unbalanced Parenthesis in the input.")
 	case errors.ROWS_CLOSE:
 		return errors.NewShellErrorRowsClose(msg)
+	case errors.CMD_LINE_ARG:
+		return errors.NewShellErrorCmdLineArgs("Place input argument url at the end, after input flags. ")
 
 	default:
 		return errors.NewShellErrorUnkownError(msg)
