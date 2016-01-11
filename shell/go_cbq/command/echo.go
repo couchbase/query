@@ -11,6 +11,7 @@ package command
 
 import (
 	"io"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
@@ -60,18 +61,33 @@ func (this *Echo) ExecCommand(args []string) (int, string) {
 				continue
 			}
 
-			// If the value type is string then output it directly.
-			if v.Type() == value.STRING {
+			//Do not print the password when printing the credentials
+			if val == "-creds" {
+
+				tmpstr := ValToStr(v)
+				tmp := usernames(tmpstr)
+				tmpstr = strings.Replace(tmp[0], "\"", "", -1)
+
 				//Use the string value directly as output.
-				_, werr = io.WriteString(W, v.Actual().(string))
+				_, werr = io.WriteString(W, tmpstr)
 				_, werr = io.WriteString(W, " ")
 
 			} else {
-				// Convert non string values to string and then output.
-				_, werr = io.WriteString(W, ValToStr(v))
-				_, werr = io.WriteString(W, " ")
+				// If the value type is string then output it directly.
+				if v.Type() == value.STRING {
+					//Use the string value directly as output.
+					_, werr = io.WriteString(W, v.Actual().(string))
+					_, werr = io.WriteString(W, " ")
+
+				} else {
+					// Convert non string values to string and then output.
+					_, werr = io.WriteString(W, ValToStr(v))
+					_, werr = io.WriteString(W, " ")
+
+				}
 
 			}
+
 		}
 	}
 

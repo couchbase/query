@@ -12,6 +12,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 )
@@ -62,8 +63,16 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 			var werr error
 			io.WriteString(W, "Query Parameters :: \n")
 			for name, value := range QueryParam {
-				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
-				_, werr = io.WriteString(W, valuestr)
+				//Do not print the password when printing the credentials
+				if name == "creds" {
+
+					valuestr = fmt.Sprintln("Parameter name :", name, "Usernames", usernames(fmt.Sprintf("%s", *value)))
+					_, werr = io.WriteString(W, valuestr)
+
+				} else {
+					valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
+					_, werr = io.WriteString(W, valuestr)
+				}
 			}
 			_, werr = io.WriteString(W, "\n")
 
@@ -125,4 +134,18 @@ func (this *Set) PrintHelp(desc bool) (int, string) {
 		return errors.WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
+}
+
+func usernames(arrcreds string) []string {
+	arrcreds = strings.Replace(arrcreds, "[", "", -1)
+	arrcreds = strings.Replace(arrcreds, "]", "", -1)
+	arrcreds = strings.Replace(arrcreds, "\"", "", -1)
+	tmpval := strings.Split(arrcreds, " ")
+
+	var unames []string
+	for i := 0; i < len(tmpval); i++ {
+		tmp := strings.Split(tmpval[i], ":")
+		unames = append(unames, "\""+tmp[0]+"\"")
+	}
+	return unames
 }
