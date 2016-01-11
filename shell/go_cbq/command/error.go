@@ -66,9 +66,9 @@ func HandleError(err int, msg string) errors.Error {
 
 	//Authentication Errors.
 	case errors.INVALID_PASSWORD:
-		return errors.NewShellErrorInvalidPassword(msg)
+		return errors.NewShellErrorInvalidPassword("Invalid Password. " + msg)
 	case errors.INVALID_USERNAME:
-		return errors.NewShellErrorInvalidUsername(msg)
+		return errors.NewShellErrorInvalidUsername("Invalid Username.")
 	case errors.MISSING_CREDENTIAL:
 		return errors.NewShellErrorMissingCredential("Username or Password missing in -credentials/-c option.")
 

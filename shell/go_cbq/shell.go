@@ -114,6 +114,25 @@ func init() {
 }
 
 /*
+   Option        : -password or -p
+   Args          : password
+   Password for user given by -u. If -u is present and we provide -p, then
+   do not prompt for the password. Error out if username is not provided.
+*/
+
+var pwdFlag string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = "Password \n\t For Example : -p=password"
+	)
+	flag.StringVar(&pwdFlag, "password", defaultval, usage)
+	flag.StringVar(&pwdFlag, "p", defaultval, " Shorthand for -password")
+
+}
+
+/*
    Option        : -credentials or -c
    Args          : A list of credentials, in the form of user/password objects.
    Login credentials for users as well as SASL Buckets.
@@ -320,15 +339,25 @@ func main() {
 	   bucket credentials using -credentials if they need to.
 	*/
 	var creds command.Credentials
+	var err error
+	var password []byte
 
 	if userFlag != "" {
-		s := fmt.Sprintln("Enter Password: ")
-		_, werr := io.WriteString(command.W, s)
-		if werr != nil {
-			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-			command.PrintError(s_err)
+		//Check if there is a -password option.
+		if pwdFlag != "" {
+			password = []byte(pwdFlag)
+			err = nil
+		} else {
+			// If no -p option then prompt for the password
+			s := fmt.Sprintln("Enter Password: ")
+			_, werr := io.WriteString(command.W, s)
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
+			password, err = terminal.ReadPassword(0)
 		}
-		password, err := terminal.ReadPassword(0)
+
 		if err == nil {
 			if string(password) == "" {
 				s_err := command.HandleError(errors.INVALID_PASSWORD, "")
@@ -339,6 +368,14 @@ func main() {
 			}
 		} else {
 			s_err := command.HandleError(errors.INVALID_PASSWORD, err.Error())
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+	} else {
+		// If the -u option isnt specified and the -p option is specified
+		// then Invalid Username error.
+		if pwdFlag != "" {
+			s_err := command.HandleError(errors.INVALID_USERNAME, "")
 			command.PrintError(s_err)
 			os.Exit(1)
 		}
