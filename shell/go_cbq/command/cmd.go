@@ -51,7 +51,8 @@ var (
 	FILE_INPUT = false
 	//Total no. of commands
 	MAX_COMMANDS = len(COMMAND_LIST)
-	//Total number of
+	//File to store History in
+	HISTFILE = ".cbq_history"
 )
 
 /*

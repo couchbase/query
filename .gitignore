@@ -2,6 +2,7 @@
 *~
 y.output
 shell/cbq/cbq
+shell/go_cbq/go_cbq
 server/cbq-engine/cbq-engine
 tutorial/tutorial
 *.swp

@@ -421,6 +421,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		args_str := strings.Join(args[1:], " ")
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
+
+		if vble == "histfile" {
+			HISTFILE = args[1]
+		}
+
 		if err_code != 0 {
 			return err_code, err_str
 		}

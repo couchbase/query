@@ -14,12 +14,13 @@ import (
 	"os"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/shell/go_cbq/command"
 	"github.com/sbinet/liner"
 )
 
 func LoadHistory(liner *liner.State, dir string) (int, string) {
 	if dir != "" {
-		err_code, err_str := ReadHistoryFromFile(liner, dir+"/.cbq_history")
+		err_code, err_str := ReadHistoryFromFile(liner, dir+"/"+command.HISTFILE)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -30,7 +31,7 @@ func LoadHistory(liner *liner.State, dir string) (int, string) {
 func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
-		err_code, err_str := WriteHistoryToFile(liner, dir+"/.cbq_history")
+		err_code, err_str := WriteHistoryToFile(liner, dir+"/"+command.HISTFILE)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -67,7 +68,15 @@ func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 	var err error
 	f, err := os.Open(path)
 	if err != nil {
-		return errors.FILE_OPEN, err.Error()
+		if os.IsNotExist(err) {
+			f, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			if err != nil {
+				return errors.FILE_OPEN, err.Error()
+			}
+
+		} else {
+			return errors.FILE_OPEN, err.Error()
+		}
 	}
 
 	defer f.Close()
