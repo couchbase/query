@@ -14,9 +14,9 @@ import (
 	"io"
 	"strings"
 
+	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
-	go_n1ql "github.com/couchbase/go_n1ql"
 )
 
 /* Pop Command */

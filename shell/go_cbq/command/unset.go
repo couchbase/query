@@ -13,8 +13,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/couchbase/query/errors"
 	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/query/errors"
 )
 
 /* Unset Command */
