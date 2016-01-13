@@ -89,23 +89,57 @@ func (this floatValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
 	case floatValue:
-		if math.IsNaN(float64(other)) {
-			if math.IsNaN(float64(this)) {
+		t := float64(this)
+		o := float64(other)
+
+		// NaN sorts first
+		if math.IsNaN(t) {
+			if math.IsNaN(o) {
+				return 0
+			} else {
+				return -1
+			}
+		}
+
+		if math.IsNaN(o) {
+			return 1
+		}
+
+		// NegInfinity sorts next
+		if math.IsInf(t, -1) {
+			if math.IsInf(o, -1) {
+				return 0
+			} else {
+				return -1
+			}
+		}
+
+		if math.IsInf(o, -1) {
+			return 1
+		}
+
+		// PosInfinity sorts last
+		if math.IsInf(t, 1) {
+			if math.IsInf(o, 1) {
 				return 0
 			} else {
 				return 1
 			}
 		}
 
-		result := float64(this - other)
+		if math.IsInf(o, 1) {
+			return -1
+		}
+
+		result := t - o
 		switch {
 		case result < 0.0:
 			return -1
 		case result > 0.0:
 			return 1
+		default:
+			return 0
 		}
-
-		return 0
 	default:
 		return int(NUMBER - other.Type())
 	}
