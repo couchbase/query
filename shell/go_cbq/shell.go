@@ -293,6 +293,15 @@ func main() {
 		}
 	*/
 
+	/* -version : Display the version of the shell and then exit.
+	 */
+	if versionFlag == true {
+		dummy := []string{}
+		cmd := command.Version{}
+		cmd.ExecCommand(dummy)
+		os.Exit(0)
+	}
+
 	/* Check for input url argument
 	 */
 
@@ -323,15 +332,6 @@ func main() {
 			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
 			command.PrintError(s_err)
 		}
-	}
-
-	/* -version : Display the version of the shell and then exit.
-	 */
-	if versionFlag == true {
-		dummy := []string{}
-		cmd := command.Version{}
-		cmd.ExecCommand(dummy)
-		os.Exit(0)
 	}
 
 	/* -user : Accept Admin credentials. Prompt for password and set
