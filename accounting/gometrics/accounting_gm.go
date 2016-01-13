@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"syscall"
+	//	"syscall"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -83,14 +83,16 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
 	request_rate := g.registry.Meter(accounting.REQUEST_RATE)
 
-	ru := syscall.Rusage{}
-	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
-		// TODO: log error
-	}
+	// FIXME
+	//	ru := syscall.Rusage{}
+	//	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+	// TODO: log error
+	//	}
 
 	now := time.Now()
-	newUtime := ru.Utime.Nano()
-	newStime := ru.Stime.Nano()
+	newUtime := int64(0) //ru.Utime.Nano()
+	newStime := int64(0) //ru.Stime.Nano()
+	// end FIXME
 	g.Lock()
 	uptime := now.Sub(g.vitals["startTime"].(time.Time))
 	dur := float64(now.Sub(g.vitals["lastNow"].(time.Time)))
