@@ -20,6 +20,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -107,7 +108,12 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 		var parsed *json.RawMessage
 
 		val := values[i]
+
 		b, _ := val.([]byte)
+
+		if string(b) == "null" {
+			return b, 0, ""
+		}
 
 		if string(b) != "" {
 			//Parse the sub values of the main map first.
@@ -124,7 +130,7 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 		}
 
 		//Remove one level of nesting for the results when we have only 1 column to project.
-		if len(columns) == 1 {
+		if len(columns) == 1 && dat[col] != nil {
 			c, err = dat[col].MarshalJSON()
 			if err != nil {
 				return nil, errors.JSON_MARSHAL, err.Error()
@@ -156,6 +162,8 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 		}
 
 	} else {
+		// If there is more than 1 column being projected, then
+		// marshal and appropriately handle result.
 		if len(columns) != 1 {
 			b, err = json.Marshal(dat)
 			if err != nil {
@@ -167,15 +175,27 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 
 	}
 
+	var obj bool = true
 	if *prettyFlag == true {
-		var data map[string]interface{}
-		if err := json.Unmarshal(b, &data); err != nil {
-			return nil, errors.JSON_UNMARSHAL, err.Error()
+
+		tmpval := value.NewValue(b)
+		if tmpval.Type() == value.OBJECT {
+			obj = true
+		} else {
+			obj = false
 		}
 
-		b, err = json.MarshalIndent(data, "        ", "    ")
-		if err != nil {
-			return nil, errors.JSON_MARSHAL, err.Error()
+		var data map[string]interface{}
+		if obj == true {
+
+			if err := json.Unmarshal(b, &data); err != nil {
+				return nil, errors.JSON_UNMARSHAL, err.Error()
+			}
+
+			b, err = json.MarshalIndent(data, "        ", "    ")
+			if err != nil {
+				return nil, errors.JSON_MARSHAL, err.Error()
+			}
 		}
 	}
 
@@ -214,6 +234,9 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 				valuePtrs[i] = &values[i]
 			}
 
+			// The first 2 rows represent the metadata. Hence they need
+			// to be explicitely handled.
+
 			if rownum == 0 {
 
 				// Get the first row to post process.
@@ -244,6 +267,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 				continue
 			}
 
+			// Get the second row
 			if rownum == 1 {
 
 				// Get the second row to post process as the metrics
@@ -274,7 +298,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 
 			_, werr = io.WriteString(w, string(result))
 
-		}
+		} //rows.Next ends here
 
 		err = rows.Close()
 		if err != nil {
