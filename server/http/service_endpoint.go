@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/server"
 	"github.com/gorilla/mux"
 )
@@ -185,6 +186,9 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	service_time := time.Since(request.ServiceTime())
 	request_time := time.Since(request.RequestTime())
 	acctstore := this.server.AccountingStore()
+
+	// TODO
+	plan.RecordPreparedMetrics(request.Prepared())
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
 		request.Prepared())

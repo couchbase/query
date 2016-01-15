@@ -133,14 +133,14 @@ var cache = &preparedCache{
 	prepareds: make(map[string]*cacheEntry, _CACHE_SIZE),
 }
 
-func (this *preparedCache) get(name value.Value) *Prepared {
+func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 	if name.Type() != value.STRING || !name.Truth() {
 		return nil
 	}
 	this.RLock()
 	defer this.RUnlock()
 	rv := this.prepareds[name.Actual().(string)]
-	if rv != nil {
+	if rv != nil && track {
 		atomic.AddInt32(&rv.uses, 1)
 		rv.lastUse = time.Now()
 		return rv.prepared
@@ -271,10 +271,10 @@ func DeletePrepared(name string) errors.Error {
 
 var errBadFormat = fmt.Errorf("unable to convert to prepared statment.")
 
-func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
+func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Error) {
 	switch prepared_stmt.Type() {
 	case value.STRING:
-		prepared := cache.get(prepared_stmt)
+		prepared := cache.get(prepared_stmt, track)
 		if prepared == nil {
 			return nil, errors.NewNoSuchPreparedError(prepared_stmt.Actual().(string))
 		}
@@ -282,7 +282,7 @@ func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	case value.OBJECT:
 		name_value, has_name := prepared_stmt.Field("name")
 		if has_name {
-			if prepared := cache.get(name_value); prepared != nil {
+			if prepared := cache.get(name_value, track); prepared != nil {
 				return prepared, nil
 			}
 		}
@@ -294,6 +294,18 @@ func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
+}
+
+func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
+	return doGetPrepared(prepared_stmt, false)
+}
+
+func TrackPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
+	return doGetPrepared(prepared_stmt, true)
+}
+
+func RecordPreparedMetrics(prepared *Prepared) {
+	// TODO
 }
 
 func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {

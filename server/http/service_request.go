@@ -292,7 +292,9 @@ func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
 	if err != nil || prepared_field == nil {
 		return nil, err
 	}
-	return plan.GetPrepared(prepared_field)
+
+	// Monitoring API: track prepared statement access
+	return plan.TrackPrepared(prepared_field)
 }
 
 func getEncodedPlan(a httpRequestArgs) (*plan.Prepared, errors.Error) {

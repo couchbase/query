@@ -28,6 +28,7 @@ const (
 	vitalsPrefix     = adminPrefix + "/vitals"
 	preparedsPrefix  = adminPrefix + "/prepareds"
 	requestsPrefix   = adminPrefix + "/requests"
+	completedPrefix  = adminPrefix + "/completed_requests"
 	expvarsRoute     = "/debug/vars"
 )
 
@@ -57,6 +58,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequests)
 	}
+	completedHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequests)
+	}
 	requestHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequest)
 	}
@@ -71,6 +75,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		preparedsPrefix + "/{name}":   {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
 		requestsPrefix:                {handler: requestsHandler, methods: []string{"GET"}},
 		requestsPrefix + "/{request}": {handler: requestHandler, methods: []string{"GET", "DELETE"}},
+		completedPrefix:               {handler: completedHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -191,15 +196,38 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 
 func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
-	request := vars["request"]
+	requestId := vars["request"]
 
 	switch req.Method {
 	case "GET":
-		// TODO: implement
-		return nil, nil
+		request, _ := endpoint.actives.Get(requestId)
+		reqMap := map[string]interface{}{}
+		reqMap["requestId"] = request.Id().String()
+		if request.Statement() != "" {
+			reqMap["request.statement"] = request.Statement()
+		}
+		if request.Prepared() != nil {
+			p := request.Prepared()
+			reqMap["prepared.name"] = p.Name()
+			reqMap["prepared.statement"] = p.Text()
+		}
+		reqMap["requestTime"] = request.RequestTime()
+		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
+		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+		reqMap["state"] = request.State()
+
+		// FIXME more stats
+		// PhaseTimes() is not in server.Request API
+		httpRequest, isHttp := request.(*httpRequest)
+		if isHttp {
+			for phase, phaseTime := range httpRequest.PhaseTimes() {
+				reqMap[phase] = phaseTime.String()
+			}
+		}
+		return reqMap, nil
 	case "DELETE":
-		if endpoint.actives.Delete(request, true) {
-			return nil, errors.NewServiceErrorHttpReq(request)
+		if endpoint.actives.Delete(requestId, true) {
+			return nil, errors.NewServiceErrorHttpReq(requestId)
 		}
 
 		return true, nil
@@ -216,7 +244,13 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0
+
 	snapshot := func(requestId string, request server.Request) {
+
+		// FIXME quick hack to avoid overruns
+		if i >= numRequests {
+			return
+		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.Id().String()
 		if request.Statement() != "" {
@@ -231,8 +265,8 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
-		requests[i]["fetches"] = "TODO"
-		requests[i]["scans"] = "TODO"
+
+		// FIXME more stats
 		// PhaseTimes() is not in server.Request API
 		httpRequest, isHttp := request.(*httpRequest)
 		if isHttp {
@@ -243,6 +277,42 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		i++
 	}
 	endpoint.actives.ForEach(snapshot)
+	return requests, nil
+}
+
+func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numRequests := accounting.RequestsCount()
+
+	requests := make([]map[string]interface{}, numRequests)
+	i := 0
+
+	snapshot := func(requestId string, request *accounting.RequestLogEntry) {
+
+		// FIXME quick hack to avoid overruns
+		if i >= numRequests {
+			return
+		}
+		requests[i] = map[string]interface{}{}
+		requests[i]["requestId"] = request.RequestId
+		if request.Statement != "" {
+			requests[i]["statement"] = request.Statement
+		}
+		if request.PreparedName != "" {
+			requests[i]["preparedName"] = request.PreparedName
+			requests[i]["preparedText"] = request.PreparedText
+		}
+		requests[i]["requestTime"] = request.Time
+		requests[i]["elapsedTime"] = request.ElapsedTime
+		requests[i]["serviceTime"] = request.ServiceTime
+		requests[i]["resultCount"] = request.ResultCount
+		requests[i]["resultSize"] = request.ResultSize
+		requests[i]["errorCount"] = request.ErrorCount
+		requests[i]["sortCount"] = request.SortCount
+
+		// FIXME more stats
+		i++
+	}
+	accounting.RequestsForeach(snapshot)
 	return requests, nil
 }
 
