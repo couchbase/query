@@ -33,11 +33,11 @@ func (this *Pop) CommandCompletion() bool {
 }
 
 func (this *Pop) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Pop) MaxArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Pop) ExecCommand(args []string) (int, string) {

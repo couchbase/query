@@ -29,11 +29,11 @@ func (this *Connect) CommandCompletion() bool {
 }
 
 func (this *Connect) MinArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Connect) MaxArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Connect) ExecCommand(args []string) (int, string) {

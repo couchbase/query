@@ -29,7 +29,7 @@ func (this *Unalias) CommandCompletion() bool {
 }
 
 func (this *Unalias) MinArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Unalias) MaxArgs() int {

@@ -13,7 +13,6 @@ import (
 	"io"
 
 	"github.com/couchbase/query/errors"
-	//"github.com/sbinet/liner"
 )
 
 /* Source Command */
@@ -30,11 +29,11 @@ func (this *Source) CommandCompletion() bool {
 }
 
 func (this *Source) MinArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Source) MaxArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Source) ExecCommand(args []string) (int, string) {
@@ -52,7 +51,8 @@ func (this *Source) ExecCommand(args []string) (int, string) {
 		   into a buffer, we restrict the number of queries that
 		   can be loaded from the file.
 		*/
-		FILE_INPUT = true
+		FILE_IP_MODE = true
+		FILE_INPUT = args[0]
 	}
 	return 0, ""
 }

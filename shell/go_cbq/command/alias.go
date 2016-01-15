@@ -31,11 +31,11 @@ func (this *Alias) CommandCompletion() bool {
 }
 
 func (this *Alias) MinArgs() int {
-	return 2
+	return TWO_ARGS
 }
 
 func (this *Alias) MaxArgs() int {
-	return MAX_ALIASES
+	return MAX_ARGS
 }
 
 func (this *Alias) ExecCommand(args []string) (int, string) {

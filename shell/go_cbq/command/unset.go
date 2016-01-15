@@ -31,11 +31,11 @@ func (this *Unset) CommandCompletion() bool {
 }
 
 func (this *Unset) MinArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Unset) MaxArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Unset) ExecCommand(args []string) (int, string) {

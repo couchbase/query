@@ -35,9 +35,10 @@ const (
 const (
 	SHELL_VERSION = "1.0"
 
-	MAX_ARGS    = math.MaxInt16
-	MAX_ALIASES = math.MaxInt16
-	MAX_VARS    = math.MaxInt16
+	MAX_ARGS  = math.MaxInt16
+	ZERO_ARGS = 0
+	ONE_ARG   = 1
+	TWO_ARGS  = 2
 )
 
 var (
@@ -48,7 +49,9 @@ var (
 	//Used to quit shell
 	EXIT = false
 	//Used to check for files
-	FILE_INPUT = false
+	FILE_INPUT = ""
+	//True if reading commands from file
+	FILE_IP_MODE = false
 	//Total no. of commands
 	MAX_COMMANDS = len(COMMAND_LIST)
 	//File to store History in
@@ -91,6 +94,9 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\echo":    &Echo{},
 	"\\alias":   &Alias{},
 	"\\unalias": &Unalias{},
+
+	/* Scripting Management */
+	"\\source": &Source{},
 }
 
 /*

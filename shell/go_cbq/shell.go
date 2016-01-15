@@ -317,6 +317,7 @@ func main() {
 			if match == false {
 				s_err := command.HandleError(errors.INVALID_URL, args[0])
 				command.PrintError(s_err)
+				os.Exit(1)
 			} else {
 				ServerFlag = args[0]
 			}
@@ -451,7 +452,15 @@ func main() {
 
 	if inputFlag != "" {
 		//Read each line from the file and call execute query
-
+		go_n1ql.SetPassthroughMode(true)
+		input_command := "\\source " + inputFlag
+		errCode, errStr := execute_input(input_command, os.Stdout)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	go_n1ql.SetPassthroughMode(true)

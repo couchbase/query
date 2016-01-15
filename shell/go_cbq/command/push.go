@@ -32,7 +32,7 @@ func (this *Push) CommandCompletion() bool {
 }
 
 func (this *Push) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Push) MaxArgs() int {

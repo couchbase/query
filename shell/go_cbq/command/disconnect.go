@@ -29,11 +29,11 @@ func (this *Disconnect) CommandCompletion() bool {
 }
 
 func (this *Disconnect) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Disconnect) MaxArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Disconnect) ExecCommand(args []string) (int, string) {

@@ -31,7 +31,7 @@ func (this *Set) CommandCompletion() bool {
 }
 
 func (this *Set) MinArgs() int {
-	return 2
+	return TWO_ARGS
 }
 
 func (this *Set) MaxArgs() int {

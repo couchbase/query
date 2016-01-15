@@ -29,11 +29,11 @@ func (this *Version) CommandCompletion() bool {
 }
 
 func (this *Version) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Version) MaxArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Version) ExecCommand(args []string) (int, string) {

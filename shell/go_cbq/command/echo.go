@@ -31,7 +31,7 @@ func (this *Echo) CommandCompletion() bool {
 }
 
 func (this *Echo) MinArgs() int {
-	return 1
+	return ONE_ARG
 }
 
 func (this *Echo) MaxArgs() int {

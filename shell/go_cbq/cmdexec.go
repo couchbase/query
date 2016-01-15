@@ -10,10 +10,11 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"unicode"
@@ -28,7 +29,7 @@ This method executes the input command or statement. It
 returns an error code and optionally a non empty error message.
 */
 func execute_input(line string, w io.Writer) (int, string) {
-
+	line = strings.TrimSpace(line)
 	command.W = w
 
 	if DISCONNECT == true || NoQueryService == true {
@@ -37,6 +38,12 @@ func execute_input(line string, w io.Writer) (int, string) {
 			command.DISCONNECT = false
 			DISCONNECT = false
 		}
+	}
+
+	// Handle comments here as well. This is useful for the \source
+	// command and the --file and --script options.
+	if strings.HasPrefix(line, "--") || strings.HasPrefix(line, "#") {
+		return 0, ""
 	}
 
 	if strings.HasPrefix(line, "\\\\") {
@@ -111,6 +118,8 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 
 		b, _ := val.([]byte)
 
+		// Return input from go_n1ql as is (null). This case is seen when
+		// the query tries to output RAW values and one of them is missing.
 		if string(b) == "null" {
 			return b, 0, ""
 		}
@@ -226,7 +235,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 		valuePtrs := make([]interface{}, count)
 
 		//Check if spacing is enough
-		_, werr = io.WriteString(w, "\n{\n")
+		_, werr = io.WriteString(w, "{\n")
 
 		for rows.Next() {
 
@@ -328,34 +337,32 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 	return 0, ""
 }
 
-/* From
-http://intogooglego.blogspot.com/2015/05/day-6-string-minifier-remove-whitespaces.html
-*/
-func stringMinifier(in string) (out string) {
-	white := false
-	for _, c := range in {
-		if unicode.IsSpace(c) {
-			if !white {
-				out = out + " "
+//Function to remove extra space in between words in a string.
+func trimSpaceInStr(inputStr string) (outputStr string) {
+	whiteSpace := false
+	for _, character := range inputStr {
+		if unicode.IsSpace(character) {
+			if !whiteSpace {
+				outputStr = outputStr + " "
 			}
-			white = true
+			whiteSpace = true
 		} else {
-			out = out + string(c)
-			white = false
+			outputStr = outputStr + string(character)
+			whiteSpace = false
 		}
 	}
 	return
 }
 
 func ExecShellCmd(line string) (int, string) {
-
+	line = strings.TrimSpace(line)
 	arg1 := strings.Split(line, " ")
 	arg1str := strings.ToLower(arg1[0])
 
 	line = arg1str + " " + strings.Join(arg1[1:], " ")
 	line = strings.TrimSpace(line)
 
-	line = stringMinifier(line)
+	line = trimSpaceInStr(line)
 
 	// Handle input strings to \echo command.
 	if strings.HasPrefix(line, "\\echo") {
@@ -387,12 +394,6 @@ func ExecShellCmd(line string) (int, string) {
 		return errors.NO_SUCH_COMMAND, ""
 	}
 
-	if (strings.HasPrefix(line, "\\source") || strings.HasPrefix(line, "\\load")) &&
-		command.FILE_INPUT == true {
-
-		fmt.Println("ISHA DEBUG : FILENAME ", command.FILE_INPUT)
-	}
-
 	SERVICE_URL = command.SERVICE_URL
 
 	if SERVICE_URL != "" {
@@ -408,5 +409,79 @@ func ExecShellCmd(line string) (int, string) {
 	}
 
 	EXIT = command.EXIT
+
+	// File based input. Run all the commands as seen in the file
+	// given by FILE_INPUT and then return the prompt.
+	if strings.HasPrefix(line, "\\source") && command.FILE_IP_MODE == true {
+		errCode, errStr := readFile()
+		if errCode != 0 {
+			return errCode, errStr
+		}
+
+	} // ends main if loop for
+
+	return 0, ""
+}
+
+// Helper function to read file based input. Run all the commands as
+// seen in the file given by FILE_INPUT and then return the prompt.
+func readFile() (int, string) {
+	// Read input file
+	inputFile, err := os.Open(command.FILE_INPUT)
+	if err != nil {
+		return errors.FILE_OPEN, err.Error()
+	}
+
+	// Defer file close
+	defer inputFile.Close()
+
+	// Create a new reader for the file
+	newFileReader := bufio.NewReader(inputFile)
+
+	// Final input command string to be executed
+	final_input := " "
+
+	// Loop through th file for every line.
+	for {
+
+		// Read the line until a new line character. If it contains a ;
+		// at the end of the read then that is the query to run. If not
+		// keep appending to the string until you reach the ;\n.
+		path, err := newFileReader.ReadString('\n')
+		if err == io.EOF {
+			// Reached end of file. We are done. So break out of the loop.
+			break
+		} else if err != nil {
+			return errors.READ_FILE, err.Error()
+		}
+		// Remove leading and trailing spaces from the input
+		path = strings.TrimSpace(path)
+		if strings.HasSuffix(path, ";") {
+			// The full input command has been read.
+			final_input = final_input + " " + path
+		} else {
+			// Only part of the command has been read. Hence continue
+			// reading until ; is reached.
+			final_input = final_input + " " + path
+			continue
+		}
+
+		// Populate the final string to execute
+		final_input = strings.TrimSpace(final_input)
+
+		// Print the query along with printing the
+		io.WriteString(command.W, final_input+"\n")
+
+		//Remove the ; before sending the query to execute
+		final_input = strings.TrimSuffix(final_input, ";")
+
+		errCode, errStr := execute_input(final_input, command.W)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+		}
+		io.WriteString(command.W, "\n\n")
+		final_input = " "
+	}
 	return 0, ""
 }

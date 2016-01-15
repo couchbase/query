@@ -30,7 +30,7 @@ func (this *Help) CommandCompletion() bool {
 }
 
 func (this *Help) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Help) MaxArgs() int {

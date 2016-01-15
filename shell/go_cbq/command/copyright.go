@@ -29,11 +29,11 @@ func (this *Copyright) CommandCompletion() bool {
 }
 
 func (this *Copyright) MinArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Copyright) MaxArgs() int {
-	return 0
+	return ZERO_ARGS
 }
 
 func (this *Copyright) ExecCommand(args []string) (int, string) {
