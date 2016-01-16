@@ -22,15 +22,31 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
 	"github.com/couchbase/query/value"
+	"github.com/sbinet/liner"
 )
 
 /*
 This method executes the input command or statement. It
 returns an error code and optionally a non empty error message.
 */
-func execute_input(line string, w io.Writer) (int, string) {
+func execute_input(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
 	line = strings.TrimSpace(line)
 	command.W = w
+
+	if interactive == false {
+		// Check if the line ends with a ;
+		line = strings.TrimSpace(line)
+		semiC := ""
+		if !strings.HasSuffix(line, ";") {
+			semiC = ";"
+		}
+		errCode, errStr := UpdateHistory(liner, homeDir, line+semiC)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+		}
+
+	}
 
 	if DISCONNECT == true || NoQueryService == true {
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
@@ -57,7 +73,7 @@ func execute_input(line string, w io.Writer) (int, string) {
 			return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
 		}
 
-		err_code, err_str := execute_input(val, w)
+		err_code, err_str := execute_input(val, w, interactive, liner)
 		/* Error handling for Shell errors and errors recieved from
 		   go_n1ql.
 		*/
@@ -67,7 +83,7 @@ func execute_input(line string, w io.Writer) (int, string) {
 
 	} else if strings.HasPrefix(line, "\\") {
 		//This block handles the shell commands
-		err_code, err_str := ExecShellCmd(line)
+		err_code, err_str := ExecShellCmd(line, liner)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -354,7 +370,7 @@ func trimSpaceInStr(inputStr string) (outputStr string) {
 	return
 }
 
-func ExecShellCmd(line string) (int, string) {
+func ExecShellCmd(line string, liner *liner.State) (int, string) {
 	line = strings.TrimSpace(line)
 	arg1 := strings.Split(line, " ")
 	arg1str := strings.ToLower(arg1[0])
@@ -413,7 +429,7 @@ func ExecShellCmd(line string) (int, string) {
 	// File based input. Run all the commands as seen in the file
 	// given by FILE_INPUT and then return the prompt.
 	if strings.HasPrefix(line, "\\source") && command.FILE_IP_MODE == true {
-		errCode, errStr := readFile()
+		errCode, errStr := readAndExec(liner)
 		if errCode != 0 {
 			return errCode, errStr
 		}
@@ -425,7 +441,7 @@ func ExecShellCmd(line string) (int, string) {
 
 // Helper function to read file based input. Run all the commands as
 // seen in the file given by FILE_INPUT and then return the prompt.
-func readFile() (int, string) {
+func readAndExec(liner *liner.State) (int, string) {
 	// Read input file
 	inputFile, err := os.Open(command.FILE_INPUT)
 	if err != nil {
@@ -475,7 +491,7 @@ func readFile() (int, string) {
 		//Remove the ; before sending the query to execute
 		final_input = strings.TrimSuffix(final_input, ";")
 
-		errCode, errStr := execute_input(final_input, command.W)
+		errCode, errStr := execute_input(final_input, command.W, false, liner)
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
 			command.PrintError(s_err)

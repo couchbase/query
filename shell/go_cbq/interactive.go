@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
 	"github.com/sbinet/liner"
@@ -34,6 +35,8 @@ var fgRed = "\x1b[31m"
 
 var first = false
 
+var homeDir string
+
 /* This method is used to handle user interaction with the
    cli. After combining the multi line input, it is sent to
    the execute_inpu method which parses and executes the
@@ -47,7 +50,7 @@ func HandleInteractiveMode(prompt string) {
 	   try USERPROFILE for windows. If neither is found then
 	   the cli cant find the history file to read from.
 	*/
-	homeDir := os.Getenv("HOME")
+	homeDir = os.Getenv("HOME")
 	if homeDir == "" {
 		homeDir = os.Getenv("USERPROFILE")
 		if homeDir == "" {
@@ -77,6 +80,43 @@ func HandleInteractiveMode(prompt string) {
 	// state for reading a multi-line query
 	inputLine := []string{}
 	fullPrompt := prompt + QRY_PROMPT1
+
+	// Handle the file input and script options here so as to add
+	// the commands to the history.
+	if scriptFlag != "" {
+		//Execute the input command
+		go_n1ql.SetPassthroughMode(true)
+		err_code, err_str := execute_input(scriptFlag, command.W, false, liner)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
+			liner.Close()
+			os.Clearenv()
+			os.Exit(1)
+		}
+		liner.Close()
+		os.Clearenv()
+		os.Exit(0)
+	}
+
+	if inputFlag != "" {
+		//Read each line from the file and call execute query
+		go_n1ql.SetPassthroughMode(true)
+		input_command := "\\source " + inputFlag
+		errCode, errStr := execute_input(input_command, command.W, false, liner)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+			liner.Close()
+			os.Clearenv()
+			os.Exit(1)
+		}
+		liner.Close()
+		os.Clearenv()
+		os.Exit(0)
+	}
+	// End handling the options
+
 	for {
 		line, err := liner.Prompt(fullPrompt)
 		if err != nil {
@@ -119,7 +159,7 @@ func HandleInteractiveMode(prompt string) {
 					s_err := command.HandleError(err_code, err_string)
 					command.PrintError(s_err)
 				}
-				err_code, err_string = execute_input(inputString, os.Stdout)
+				err_code, err_string = execute_input(inputString, os.Stdout, true, liner)
 				/* Error handling for Shell errors and errors recieved from
 				   go_n1ql.
 				*/

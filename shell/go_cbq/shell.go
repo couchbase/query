@@ -267,7 +267,13 @@ var (
 func main() {
 
 	flag.Parse()
-	command.W = os.Stdout
+
+	if outputFlag == "" {
+		// Set command.W = os.Stdout
+		SetWriter(os.Stdout)
+	} else {
+		// Redirect all output to the given file.
+	}
 
 	/* Handle options and what they should do */
 
@@ -435,34 +441,17 @@ func main() {
 		go_n1ql.SetQueryParams("creds", string(ac))
 	}
 
-	if scriptFlag != "" {
-		go_n1ql.SetPassthroughMode(true)
-		err_code, err_str := execute_input(scriptFlag, os.Stdout)
-		if err_code != 0 {
-			s_err := command.HandleError(err_code, err_str)
-			command.PrintError(s_err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
-
 	if timeoutFlag != "0ms" {
 		go_n1ql.SetQueryParams("timeout", timeoutFlag)
 	}
 
-	if inputFlag != "" {
-		//Read each line from the file and call execute query
-		go_n1ql.SetPassthroughMode(true)
-		input_command := "\\source " + inputFlag
-		errCode, errStr := execute_input(input_command, os.Stdout)
-		if errCode != 0 {
-			s_err := command.HandleError(errCode, errStr)
-			command.PrintError(s_err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
+	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.
+	// This is so as to add these to the history.
 
 	go_n1ql.SetPassthroughMode(true)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
+}
+
+func SetWriter(Wt io.Writer) {
+	command.W = Wt
 }
