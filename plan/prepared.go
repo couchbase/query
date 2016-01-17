@@ -140,9 +140,11 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 	this.RLock()
 	defer this.RUnlock()
 	rv := this.prepareds[name.Actual().(string)]
-	if rv != nil && track {
-		atomic.AddInt32(&rv.uses, 1)
-		rv.lastUse = time.Now()
+	if rv != nil {
+		if track {
+			atomic.AddInt32(&rv.uses, 1)
+			rv.lastUse = time.Now()
+		}
 		return rv.prepared
 	}
 	return nil

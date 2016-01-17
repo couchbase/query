@@ -17,5 +17,5 @@ func HashString(id string, hashes int) int {
 		h ^= uint(c)
 		h *= 16777619
 	}
-	return int(h) % hashes
+	return int(h % uint(hashes))
 }
