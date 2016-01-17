@@ -253,6 +253,8 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 		//Check if spacing is enough
 		_, werr = io.WriteString(w, "{\n")
 
+		var prevRowResult []byte
+
 		for rows.Next() {
 
 			for i, _ := range columns {
@@ -310,28 +312,56 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 				continue
 			}
 
-			if iter == 0 {
-				iter++
-			} else {
-				_, werr = io.WriteString(w, ", \n\t")
+			//if rownum >=3 then print the rows
+			if rownum > 2 {
+				if iter == 0 {
+					iter++
+				} else {
+					_, werr = io.WriteString(w, ", \n\t")
+				}
+				_, werr = io.WriteString(w, string(prevRowResult))
 			}
 
-			result, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum)
-			if result == nil && err_code != 0 {
+			var err_code int
+			var err_string string
+
+			prevRowResult, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum)
+			if prevRowResult == nil && err_code != 0 {
 				return err_code, err_string
 			}
-
-			_, werr = io.WriteString(w, string(result))
+			rownum++
 
 		} //rows.Next ends here
+
+		//Suffix to result array
+		_, werr = io.WriteString(w, "\n\t],")
+
+		// The prevRowResult contains the output of the last row.
+		// This is the errors row. Process this.
+		var errorRow map[string]interface{}
+
+		// Unmarshal the results of the errors object into errorRow
+		// and then output that.
+		if err := json.Unmarshal(prevRowResult, &errorRow); err != nil {
+			return errors.JSON_UNMARSHAL, err.Error()
+		}
+
+		if errorRow["errors"] != nil {
+			//When there are errors in this row. Print them.
+			c, err := json.MarshalIndent(errorRow["errors"], "        ", "    ")
+			if err != nil {
+				return errors.JSON_MARSHAL, err.Error()
+			}
+			_, werr = io.WriteString(w, "\n")
+			_, werr = io.WriteString(w, "    \"errors\" : ")
+			_, werr = io.WriteString(w, string(c))
+			_, werr = io.WriteString(w, ",")
+		}
 
 		err = rows.Close()
 		if err != nil {
 			return errors.ROWS_CLOSE, err.Error()
 		}
-
-		//Suffix to result array
-		_, werr = io.WriteString(w, "\n    ],")
 
 		//Write the status and the metrics
 		if status != "" {
