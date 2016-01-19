@@ -77,6 +77,10 @@ func init() {
 	}
 }
 
+func SetWriter(Wt io.Writer) {
+	W = Wt
+}
+
 /* The Resolve method is used to evaluate the input parameter
    to the \SET / \PUSH / \POP / \UNSET and \ECHO commands. It
    takes in a string, and resolves it to the appropriate value.
@@ -304,7 +308,7 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 		//when processing the username and password.
 		up[0] = strings.TrimSpace(up[0])
 		up[1] = strings.TrimSpace(up[1])
-		if len(up) < 2 {
+		if len(up) < 2 || (up[0] == "" && up[1] != "") {
 			// One of the input credentials is incorrect
 			return nil, errors.MISSING_CREDENTIAL, ""
 		} else {

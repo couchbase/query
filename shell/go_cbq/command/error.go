@@ -70,7 +70,7 @@ func HandleError(err int, msg string) errors.Error {
 	case errors.INVALID_USERNAME:
 		return errors.NewShellErrorInvalidUsername("Invalid Username.")
 	case errors.MISSING_CREDENTIAL:
-		return errors.NewShellErrorMissingCredential("Username or Password missing in -credentials/-c option.")
+		return errors.NewShellErrorMissingCredential("Username missing in -credentials/-c option.")
 
 	//Command Errors
 	case errors.NO_SUCH_COMMAND:

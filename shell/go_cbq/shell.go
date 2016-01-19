@@ -270,7 +270,7 @@ func main() {
 
 	if outputFlag == "" {
 		// Set command.W = os.Stdout
-		SetWriter(os.Stdout)
+		command.SetWriter(os.Stdout)
 	} else {
 		// Redirect all output to the given file.
 	}
@@ -450,8 +450,4 @@ func main() {
 
 	go_n1ql.SetPassthroughMode(true)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
-}
-
-func SetWriter(Wt io.Writer) {
-	command.W = Wt
 }
