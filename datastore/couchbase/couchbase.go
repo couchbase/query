@@ -9,7 +9,7 @@
 
 /*
 
-Package file provides a couchbase-server implementation of the datasite
+Package couchbase provides a couchbase-server implementation of the datastore
 package.
 
 */
@@ -40,34 +40,34 @@ const (
 	PRIMARY_INDEX = "#primary"
 )
 
-// datasite is the root for the couchbase datasite
-type site struct {
+// store is the root for the couchbase datastore
+type store struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
 }
 
-func (s *site) Id() string {
+func (s *store) Id() string {
 	return s.URL()
 }
 
-func (s *site) URL() string {
+func (s *store) URL() string {
 	return s.client.BaseURL.String()
 }
 
-func (s *site) NamespaceIds() ([]string, errors.Error) {
+func (s *store) NamespaceIds() ([]string, errors.Error) {
 	return s.NamespaceNames()
 }
 
-func (s *site) NamespaceNames() ([]string, errors.Error) {
+func (s *store) NamespaceNames() ([]string, errors.Error) {
 	return []string{"default"}, nil
 }
 
-func (s *site) NamespaceById(id string) (p datastore.Namespace, e errors.Error) {
+func (s *store) NamespaceById(id string) (p datastore.Namespace, e errors.Error) {
 	return s.NamespaceByName(id)
 }
 
-func (s *site) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
+func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Error) {
 	p, ok := s.namespaceCache[name]
 	if !ok {
 		var err errors.Error
@@ -114,7 +114,7 @@ func doAuth(username, password, bucket string, requested datastore.Privilege) (b
 
 }
 
-func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.Credentials) errors.Error {
+func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials) errors.Error {
 
 	var authResult bool
 	var err error
@@ -192,7 +192,7 @@ func (s *site) Authorize(privileges datastore.Privileges, credentials datastore.
 	return nil
 }
 
-func (s *site) SetLogLevel(level logging.Level) {
+func (s *store) SetLogLevel(level logging.Level) {
 	for _, n := range s.namespaceCache {
 		defer n.lock.Unlock()
 		n.lock.Lock()
@@ -207,6 +207,17 @@ func (s *site) SetLogLevel(level logging.Level) {
 			}
 		}
 	}
+}
+
+// Eben TODO: Implement this method by hooking up schema inferencer
+// Ignore the name parameter for now
+func (s *store) Inferencer(name string) (datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
+// Sitaram TODO: Implement this method by hooking up schema inferencer
+func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
 func initCbAuth(url string) (*cb.Client, error) {
@@ -224,7 +235,7 @@ func initCbAuth(url string) (*cb.Client, error) {
 	return &client, nil
 }
 
-// NewSite creates a new Couchbase site for the given url.
+// NewStore creates a new Couchbase store for the given url.
 func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 
 	var client cb.Client
@@ -276,7 +287,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		}
 	}
 
-	site := &site{
+	store := &store{
 		client:         client,
 		namespaceCache: make(map[string]*namespace),
 		CbAuthInit:     cbAuthInit,
@@ -285,19 +296,19 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	// initialize the default pool.
 	// TODO can couchbase server contain more than one pool ?
 
-	defaultPool, Err := loadNamespace(site, "default")
+	defaultPool, Err := loadNamespace(store, "default")
 	if Err != nil {
 		logging.Errorf("Cannot connect to default pool")
 		return nil, Err
 	}
 
-	site.namespaceCache["default"] = defaultPool
-	logging.Infof("New site created with url %s", u)
+	store.namespaceCache["default"] = defaultPool
+	logging.Infof("New store created with url %s", u)
 
-	return site, nil
+	return store, nil
 }
 
-func loadNamespace(s *site, name string) (*namespace, errors.Error) {
+func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 
 	cbpool, err := s.client.GetPool(name)
 	if err != nil {
@@ -325,7 +336,7 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 	}
 
 	rv := namespace{
-		site:          s,
+		store:         s,
 		name:          name,
 		cbNamespace:   cbpool,
 		keyspaceCache: make(map[string]datastore.Keyspace),
@@ -336,7 +347,7 @@ func loadNamespace(s *site, name string) (*namespace, errors.Error) {
 
 // a namespace represents a couchbase pool
 type namespace struct {
-	site          *site
+	store         *store
 	name          string
 	cbNamespace   cb.Pool
 	keyspaceCache map[string]datastore.Keyspace
@@ -345,7 +356,7 @@ type namespace struct {
 }
 
 func (p *namespace) DatastoreId() string {
-	return p.site.Id()
+	return p.store.Id()
 }
 
 func (p *namespace) Id() string {
@@ -421,20 +432,20 @@ func (p *namespace) refresh(changed bool) {
 	// trigger refresh of this pool
 	logging.Debugf("Refreshing pool %s", p.name)
 
-	newpool, err := p.site.client.GetPool(p.name)
+	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
 
 		var client cb.Client
 
 		logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
-		url := p.site.URL()
+		url := p.store.URL()
 
 		/*
 			transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
 			cb.HTTPClient.Transport = transport
 		*/
 
-		if p.site.CbAuthInit == true {
+		if p.store.CbAuthInit == true {
 			client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
 		} else {
 			client, err = cb.Connect(url)
@@ -449,7 +460,7 @@ func (p *namespace) refresh(changed bool) {
 			logging.Errorf("Retry Failed Error updating pool name %s: Error %v", p.name, err)
 			return
 		}
-		p.site.client = client
+		p.store.client = client
 
 	}
 
@@ -472,7 +483,7 @@ func (p *namespace) refresh(changed bool) {
 		}
 		// Not deleted. Check if GSI indexer is available
 		if ks.(*keyspace).gsiIndexer == nil {
-			ks.(*keyspace).refreshIndexer(p.site.URL(), p.Name())
+			ks.(*keyspace).refreshIndexer(p.store.URL(), p.Name())
 		}
 	}
 
@@ -533,7 +544,7 @@ func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 	}
 
 	var qerr errors.Error
-	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.site.URL(), p.Name(), name)
+	rv.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), name)
 	if qerr != nil {
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", name, qerr)
 	}

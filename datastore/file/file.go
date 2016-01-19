@@ -76,6 +76,14 @@ func (s *store) SetLogLevel(level logging.Level) {
 	// No-op. Uses query engine logger.
 }
 
+func (s *store) Inferencer(name string) (datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
+func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

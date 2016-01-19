@@ -384,3 +384,8 @@ func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
 	return NewExplain(plan.Operator()), nil
 }
+
+// Infer
+func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, error) {
+	return NewInferKeyspace(plan), nil
+}

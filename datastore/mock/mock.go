@@ -81,6 +81,14 @@ func (s *store) SetLogLevel(level logging.Level) {
 	// No-op. Uses query engine logger.
 }
 
+func (s *store) Inferencer(name string) (datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
+func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

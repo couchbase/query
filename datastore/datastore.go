@@ -41,6 +41,8 @@ type Datastore interface {
 	NamespaceByName(name string) (Namespace, errors.Error) // Find a namespace in this datastore using the namespace's name
 	Authorize(Privileges, Credentials) errors.Error        // Perform authorization and return nil if successful
 	SetLogLevel(level logging.Level)                       // Set log level of in-process indexers
+	Inferencer(name string) (Inferencer, errors.Error)     // Schema inference provider by name, e.g. INF_DEFAULT
+	Inferencers() ([]Inferencer, errors.Error)             // List of schema inference providers
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

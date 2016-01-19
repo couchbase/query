@@ -150,6 +150,7 @@
 /[iI][nN][cC][lL][uU][dD][eE]/			 { logToken("INCLUDE"); return INCLUDE }
 /[iI][nN][cC][rR][eE][mM][eE][nN][tT]/		 { logToken("INCREMENT"); return INCREMENT }
 /[iI][nN][dD][eE][xX]/				 { logToken("INDEX"); return INDEX }
+/[iI][nN][fF][eE][rR]/				 { logToken("INFER"); return INFER }
 /[iI][nN][lL][iI][nN][eE]/			 { logToken("INLINE"); return INLINE }
 /[iI][nN][nN][eE][rR]/				 { logToken("INNER"); return INNER }
 /[iI][nN][sS][eE][rR][tT]/			 { logToken("INSERT"); return INSERT }

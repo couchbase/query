@@ -17,8 +17,8 @@ type Visitor interface {
 
 	/*
 	   Visitor for DML statements. N1QL provides several data
-	   modification statements such as Insert, Upsert, Delete,
-	   Update and Merge.
+	   modification statements such as INSERT, UPSERT, DELETE,
+	   UPDATE and MERGE.
 	*/
 	VisitInsert(stmt *Insert) (interface{}, error)
 	VisitUpsert(stmt *Upsert) (interface{}, error)
@@ -28,8 +28,8 @@ type Visitor interface {
 
 	/*
 	   Visitor for DDL statements. N1QL provides index
-	   statements Create primary index, Create index, Drop
-	   index and Alter index as Data definition statements.
+	   statements CREATE PRIMARY INDEX, CREATE INDEX, DROP
+	   INDEX and ALTER INDEX as Data definition statements.
 	*/
 	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (interface{}, error)
 	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
@@ -43,14 +43,19 @@ type Visitor interface {
 	VisitExplain(stmt *Explain) (interface{}, error)
 
 	/*
-	   Visitor for PREPAREd statements.
+	   Visitor for PREPARED statements.
 	*/
 	VisitPrepare(stmt *Prepare) (interface{}, error)
 
 	/*
-	   Visitor for EXECUTE.
+	   Visitor for EXECUTE statements.
 	*/
 	VisitExecute(stmt *Execute) (interface{}, error)
+
+	/*
+	   Visitor for INFER statements.
+	*/
+	VisitInferKeyspace(stmt *InferKeyspace) (interface{}, error)
 }
 
 type NodeVisitor interface {

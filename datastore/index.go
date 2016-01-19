@@ -131,7 +131,6 @@ type IndexEntry struct {
 }
 
 type EntryChannel chan *IndexEntry
-type StopChannel chan bool
 
 // Statistics captures statistics for a range.
 // - it may return heuristics and/or outdated values.
@@ -143,12 +142,6 @@ type Statistics interface {
 	Max() (value.Values, errors.Error)
 	DistinctCount() (int64, errors.Error)
 	Bins() ([]Statistics, errors.Error)
-}
-
-type Context interface {
-	Fatal(errors.Error)
-	Error(errors.Error)
-	Warning(errors.Error)
 }
 
 type IndexConnection struct {

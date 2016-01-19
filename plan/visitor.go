@@ -102,4 +102,7 @@ type Visitor interface {
 
 	// Prepare
 	VisitPrepare(op *Prepare) (interface{}, error)
+
+	// Infer
+	VisitInferKeyspace(op *InferKeyspace) (interface{}, error)
 }

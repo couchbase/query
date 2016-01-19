@@ -66,10 +66,8 @@ mergeUpdate      *algebra.MergeUpdate
 mergeDelete      *algebra.MergeDelete
 mergeInsert      *algebra.MergeInsert
 
-createIndex      *algebra.CreateIndex
-dropIndex        *algebra.DropIndex
-alterIndex       *algebra.AlterIndex
 indexType        datastore.IndexType
+inferenceType    datastore.InferenceType
 val              value.Value
 }
 
@@ -142,6 +140,7 @@ val              value.Value
 %token INCLUDE
 %token INCREMENT
 %token INDEX
+%token INFER
 %token INLINE
 %token INNER
 %token INSERT
@@ -339,6 +338,7 @@ val              value.Value
 %type <b>                dir opt_dir
 
 %type <statement>        stmt explain prepare execute select_stmt dml_stmt ddl_stmt
+%type <statement>        infer infer_keyspace
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
 
@@ -374,6 +374,9 @@ val              value.Value
 %type <exprs>            index_terms
 %type <expr>             expr_input
 
+%type <inferenceType>    opt_infer_using
+%type <val>              infer_with opt_infer_with
+
 %start input
 
 %%
@@ -399,17 +402,19 @@ opt_trailer SEMI
 ;
 
 stmt:
+select_stmt
+|
+dml_stmt
+|
+ddl_stmt
+|
 explain
 |
 prepare
 |
 execute
 |
-select_stmt
-|
-dml_stmt
-|
-ddl_stmt
+infer
 ;
 
 explain:
@@ -453,6 +458,51 @@ execute:
 EXECUTE expr
 {
     $$ = algebra.NewExecute($2)
+}
+;
+
+infer:
+infer_keyspace
+;
+
+infer_keyspace:
+INFER opt_keyspace keyspace_ref opt_infer_using opt_infer_with
+{
+    $$ = algebra.NewInferKeyspace($3, $4, $5)
+}
+;
+
+opt_keyspace:
+/* empty */
+{
+}
+|
+KEYSPACE
+;
+
+opt_infer_using:
+/* empty */
+{
+    $$ = datastore.INF_DEFAULT
+}
+;
+
+opt_infer_with:
+/* empty */
+{
+    $$ = nil
+}
+|
+infer_with
+;
+
+infer_with:
+WITH expr
+{
+    $$ = $2.Value()
+    if $$ == nil {
+	yylex.Error("WITH value must be static.")
+    }
 }
 ;
 
