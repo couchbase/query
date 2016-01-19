@@ -1,0 +1,127 @@
+//  Copyright (c) 2015-2016 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package command
+
+import (
+	"bufio"
+	"bytes"
+	"testing"
+
+	"github.com/couchbase/query/errors"
+)
+
+/*
+   Test the \ALIAS and \UNALIAS commands.
+*/
+
+func TestAlias(t *testing.T) {
+	//Create Alias
+	alias := COMMAND_LIST["\\alias"]
+	s := make([]string, 2)
+
+	s[0] = "command1"
+	s[1] = "\\ECHO This \"Is A\" histfile"
+	errCode, errStr := alias.ExecCommand(s)
+
+	if AliasCommand[s[0]] != s[1] {
+		t.Errorf("Alias %s not created properly.\n", s[0])
+		t.Errorf("Error : %s", HandleError(errCode, errStr))
+	} else {
+		t.Logf(" The value of Alias %s is :: %s ", s[0], AliasCommand[s[0]])
+	}
+
+	//Unset Alias
+	unalias := COMMAND_LIST["\\unalias"]
+	tmp := []string{s[0]}
+	errCode, errStr = unalias.ExecCommand(tmp)
+	if errCode == errors.NO_SUCH_ALIAS {
+		t.Errorf("Error using \\UNALIAS %s", HandleError(errCode, errStr))
+	} else {
+		t.Logf("%s deleted using \\UNALIAS", s[0])
+	}
+}
+
+func TestListAlias(t *testing.T) {
+	//Without Args, to list all aliases.
+	alias := COMMAND_LIST["\\alias"]
+	tmp := make([]string, 0)
+
+	var b bytes.Buffer
+	writetmp := bufio.NewWriter(&b)
+	SetWriter(writetmp)
+
+	errCode, errStr := alias.ExecCommand(tmp)
+	writetmp.Flush()
+
+	if errCode == 0 {
+		t.Logf("\n%s", b.String())
+	} else {
+		t.Error("Error with displaying ALIAS")
+		t.Errorf("Error : %s ", HandleError(errCode, errStr))
+	}
+}
+
+func TestAliasErrors(t *testing.T) {
+	//Error Case 1 : Too few args
+	alias := COMMAND_LIST["\\alias"]
+	tmp := make([]string, 1)
+
+	errCode, errStr := alias.ExecCommand(tmp)
+
+	if errCode == errors.TOO_FEW_ARGS {
+		t.Log("Too Few arguments to \\ALIAS command.")
+	} else {
+		t.Error("Minimum number of args for \\ALIAS has changed.")
+	}
+
+	//Error Case 2 : Alias does not exist
+	_, ok := AliasCommand["newcommand"]
+	if !ok {
+		t.Logf("ALIAS newcommand doesn't exist.")
+	}
+
+	//Error Case 3 : There are no aliases
+	unalias := COMMAND_LIST["\\unalias"]
+
+	//Delete the existing aliases.
+	for key, _ := range AliasCommand {
+		tmp[0] = key
+		errCode, errStr := unalias.ExecCommand(tmp)
+		if errCode == errors.NO_SUCH_ALIAS {
+			t.Errorf("Error using \\UNALIAS %s", HandleError(errCode, errStr))
+		} else {
+			t.Log("All ALIAS deleted using \\UNALIAS")
+		}
+	}
+
+	tmp = make([]string, 0)
+
+	//test case where too few args for \unalias
+	errCode, errStr = unalias.ExecCommand(tmp)
+	if errCode == errors.TOO_FEW_ARGS {
+		t.Logf("%s", HandleError(errCode, errStr))
+	} else {
+		t.Errorf("Minimum number of args for \\UNALIAS has changed.")
+	}
+
+	var b bytes.Buffer
+	writetmp := bufio.NewWriter(&b)
+	SetWriter(writetmp)
+
+	errCode, errStr = alias.ExecCommand(tmp)
+	writetmp.Flush()
+
+	if errCode == errors.NO_SUCH_ALIAS {
+		t.Logf("%s", HandleError(errCode, errStr))
+	} else {
+		t.Errorf("Unknown Error %s", HandleError(errCode, errStr))
+	}
+
+}
