@@ -373,3 +373,287 @@ func (this *ObjectValues) Constructor() FunctionConstructor {
 		return NewObjectValues(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectAdd
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_ADD(expr, expr, expr).
+It returns an object containing the source object augmented
+with the new name, attribute pair.
+It does not do key substitution.
+Type ObjectAdd is a struct that implements TernaryFunctionBase.
+*/
+type ObjectAdd struct {
+	TernaryFunctionBase
+}
+
+/*
+The function NewObjectAdd calls NewTernaryFunctionBase to
+create a function named OBJECT_PUT with three expression as
+input.
+*/
+func NewObjectAdd(first, second, third Expression) Function {
+	rv := &ObjectAdd{
+		*NewTernaryFunctionBase("object_add", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type OBJECT.
+*/
+func (this *ObjectAdd) Type() value.Type { return value.OBJECT }
+
+/*
+Calls the Eval method for ternary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+/*
+This method takes in an object, a name and a value
+and returns a new object that contains the name /
+attribute pair. If the type of input is missing
+then return a missing value, and if not an object
+return a null value.
+If the key is found, an error is thrown
+*/
+func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+
+	// First must be an object, or we're out
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	// second must be a non empty string
+	if second.Type() != value.STRING || second.Actual().(string) == "" {
+		return first, nil
+	}
+
+	field := second.Actual().(string)
+
+	// we don't overwrite
+	_, exists := first.Field(field)
+	if exists {
+		return value.NULL_VALUE, nil
+	}
+
+	// SetField will remove if the attribute is missing, but we don't
+	// overwrite anyway, so we might just skip now
+	if third.Type() != value.MISSING {
+		rv := first.CopyForUpdate()
+		rv.SetField(field, third)
+		return rv, nil
+	}
+	return first, nil
+}
+
+/*
+The constructor returns a NewObjectAdd with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectAdd) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectAdd(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectPut
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_PUT(expr, expr, expr).
+It returns an object containing the source object augmented
+with the new name, attribute pair.
+If the key is found in the object, the corresponding attribute
+is replaced by the third argument.
+If the third argument is MISSING, the existing key is deleted.
+Type ObjectPut is a struct that implements UnaryFunctionBase.
+*/
+type ObjectPut struct {
+	TernaryFunctionBase
+}
+
+/*
+The function NewObjectPut calls NewTernaryFunctionBase to
+create a function named OBJECT_PUT with three expression as
+input.
+*/
+func NewObjectPut(first, second, third Expression) Function {
+	rv := &ObjectPut{
+		*NewTernaryFunctionBase("object_put", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectPut) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type OBJECT.
+*/
+func (this *ObjectPut) Type() value.Type { return value.OBJECT }
+
+/*
+Calls the Eval method for ternary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectPut) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+/*
+This method takes in an object, a name and a value
+and returns a new object that contains the name /
+attribute pair. If the type of input is missing
+then return a missing value, and if not an object
+return a null value.
+If the key passed already exists, then the attribute
+replaces the old attribute. If the attribute is missing
+this function behaves like OBJECT_REMOVE
+*/
+func (this *ObjectPut) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+
+	// First must be an object, or we're out
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	// second must be a non empty string
+	if second.Type() != value.STRING || second.Actual().(string) == "" {
+		return first, nil
+	}
+
+	field := second.Actual().(string)
+
+	rv := first.CopyForUpdate()
+	rv.SetField(field, third)
+	return rv, nil
+}
+
+/*
+The constructor returns a NewObjectPut with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectPut) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectPut(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectRemove
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_REMOVE(expr, expr).
+It returns an object with the name / attribute pair for
+the name passed as second parameter removed.
+Type ObjectRemove is a struct that implements BinaryFunctionBase.
+*/
+type ObjectRemove struct {
+	BinaryFunctionBase
+}
+
+/*
+The function NewObjectRemove calls NewBinaryFunctionBase to
+create a function named OBJECT_REMOVE with two expressions as
+input.
+*/
+func NewObjectRemove(first, second Expression) Function {
+	rv := &ObjectRemove{
+		*NewBinaryFunctionBase("object_remove", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectRemove) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type OBJECT.
+*/
+func (this *ObjectRemove) Type() value.Type { return value.OBJECT }
+
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+/*
+This method takes in an object and a name and returns
+an object with the name / attribute pair removed.
+If the type of input is missing then return a missing value, and
+if not an object return a null value.
+*/
+func (this *ObjectRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
+	// First must be an object, or we're out
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	// second must be a non empty string
+	if second.Type() != value.STRING || second.Actual().(string) == "" {
+		return first, nil
+	}
+
+	field := second.Actual().(string)
+
+	rv := first.CopyForUpdate()
+	rv.UnsetField(field)
+	return rv, nil
+}
+
+/*
+The constructor returns a NewObjectRemove with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectRemove) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectRemove(operands[0], operands[1])
+	}
+}

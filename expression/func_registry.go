@@ -189,9 +189,12 @@ var _FUNCTIONS = map[string]Function{
 	"array_sum":      &ArraySum{},
 
 	// Object
+	"object_add":    &ObjectAdd{},
 	"object_length": &ObjectLength{},
 	"object_names":  &ObjectNames{},
 	"object_pairs":  &ObjectPairs{},
+	"object_put":    &ObjectPut{},
+	"object_remove": &ObjectRemove{},
 	"object_values": &ObjectValues{},
 
 	// JSON

@@ -1,4 +1,59 @@
 [
+  {
+     "statements":"SELECT OBJECT_ADD({'f1': 1}, 'f2', 2) ",
+     "results": [
+	{
+            "$1": {
+                "f1": 1,
+                "f2": 2
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_ADD(NULL, 'f2', 2) ",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_ADD(MISSING, 'f2', 2) ",
+     "results": [
+        {}
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_ADD({'f1': 1}, MISSING, 2) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_ADD({'f1': 1}, 'f2', MISSING) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_ADD({'f1': 1}, 2, 2) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
     {
         "statements": "SELECT OBJECT_LENGTH(details) as objlen FROM default:catalog ORDER BY objlen",
         "results": [
@@ -148,6 +203,117 @@
                 }
             ]
         }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1}, 'f2', 2) ",
+     "results": [
+	{
+            "$1": {
+                "f1": 1,
+                "f2": 2
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT(NULL, 'f2', 2) ",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT(MISSING, 'f2', 2) ",
+     "results": [
+        {}
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1}, MISSING, 2) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1}, 'f2', MISSING) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1}, 2, 2) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', 3) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1,
+                "f2": 3
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', MISSING) ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f2') ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f3') ",
+     "results": [
+        {
+            "$1": {
+                "f1": 1,
+                "f2": 2
+            }
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_REMOVE(NULL, 'f2') ",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
+  {
+     "statements":"SELECT OBJECT_REMOVE(MISSING, 'f2') ",
+     "results": [
+        {}
     ]
   },
   {
