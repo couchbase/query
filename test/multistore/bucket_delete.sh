@@ -4,7 +4,7 @@ echo Delete Buckets
 
 Site=http://127.0.0.1:8091/pools/default/buckets/
 Auth=Administrator:password
-bucket=(customer orders product purchase review)
+bucket=(customer orders product purchase review shellTest)
 
 
 echo POST /pools/default/buckets

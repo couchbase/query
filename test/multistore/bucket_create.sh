@@ -4,13 +4,14 @@ echo Creating Buckets
 
 Site=http://127.0.0.1:8091/pools/default/buckets
 Auth=Administrator:password
-bucket=(customer orders product purchase review)
+bucket=(customer orders product purchase review shellTest)
+q=${1:-250}
 port=11224
 
 for i in "${bucket[@]}"
 do
-echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=250 -d authType=none -d proxyPort=$port $Site
-curl -X POST -u $Auth -d name=$i -d ramQuotaMB=250 -d authType=none -d proxyPort=$port $Site
+echo curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port $Site
+curl -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d authType=none -d proxyPort=$port $Site
 let port\+=1
 done
 

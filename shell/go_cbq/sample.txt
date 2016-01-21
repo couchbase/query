@@ -1,0 +1,4 @@
+\SET $rate 9.5;
+\ECHO select * from `beer-sample` \\serverversion $rate;
+select version();
+#this is a comment;
