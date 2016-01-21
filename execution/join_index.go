@@ -69,7 +69,7 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 
 		id := idv.Actual().(string)
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn) // Notify index that I have stopped
+		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
 		wg.Add(1)
 		go this.scan(id, context, conn, &wg)

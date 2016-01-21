@@ -35,9 +35,9 @@ func eval(cx expression.Expressions, context *Context, parent value.Value) (valu
 	return cv, true
 }
 
-func notifyConn(conn *datastore.IndexConnection) {
+func notifyConn(stopchannel datastore.StopChannel) {
 	select {
-	case conn.StopChannel() <- false:
+	case stopchannel <- false:
 	default:
 	}
 }

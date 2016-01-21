@@ -10,6 +10,10 @@
 package execution
 
 import (
+	"time"
+
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -43,10 +47,40 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		// TODO: Sitaram to implement INFER execution
-		// Use Datastore.Inferencer()
-		// Use go Inferencer().InferKeyspace()
-		// Use this.sendItem()
-		// See scan_index.go for example
+		conn := datastore.NewValueConnection(context)
+		defer notifyConn(conn.StopChannel())
+
+		var duration time.Duration
+		timer := time.Now()
+		defer context.AddPhaseTime("InferKeySpace", time.Since(timer)-duration)
+
+		infer, err := context.Datastore().Inferencer(this.plan.Node().Using())
+		if err != nil {
+			context.Error(errors.NewError(err, "Failed to get Inferencer"))
+			return
+		}
+		go infer.InferKeyspace(this.plan.Keyspace(), this.plan.Node().With(), conn)
+
+		var val value.Value
+
+		ok := true
+		for ok {
+			select {
+			case <-this.stopChannel:
+				return
+			default:
+			}
+
+			select {
+			case val, ok = <-conn.ValueChannel():
+				if ok {
+					t := time.Now()
+					ok = this.sendItem(value.NewAnnotatedValue(val))
+					duration += time.Since(t)
+				}
+			case <-this.stopChannel:
+				return
+			}
+		}
 	})
 }

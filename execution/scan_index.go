@@ -122,7 +122,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		conn := datastore.NewIndexConnection(context)
-		defer notifyConn(conn) // Notify index that I have stopped
+		defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
 		var duration time.Duration
 		timer := time.Now()

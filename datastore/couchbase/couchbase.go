@@ -211,7 +211,7 @@ func (s *store) SetLogLevel(level logging.Level) {
 
 // Eben TODO: Implement this method by hooking up schema inferencer
 // Ignore the name parameter for now
-func (s *store) Inferencer(name string) (datastore.Inferencer, errors.Error) {
+func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 

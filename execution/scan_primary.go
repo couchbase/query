@@ -55,7 +55,7 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	conn := this.newIndexConnection(context)
-	defer notifyConn(conn) // Notify index that I have stopped
+	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
 	var duration time.Duration
 	timer := time.Now()
@@ -113,7 +113,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, chunkSize int, indexEntry *datastore.IndexEntry) *datastore.IndexEntry {
 	conn, _ := datastore.NewSizedIndexConnection(int64(chunkSize), context)
 	conn.SetPrimary()
-	defer notifyConn(conn) // Notify index that I have stopped
+	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
 	var duration time.Duration
 	timer := time.Now()

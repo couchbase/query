@@ -82,7 +82,7 @@ func (s *store) SetLogLevel(level logging.Level) {
 	// No-op. Uses query engine logger.
 }
 
-func (s *store) Inferencer(name string) (datastore.Inferencer, errors.Error) {
+func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
