@@ -119,30 +119,6 @@
     ]
     },
     {
-       "statements":"select MILLIS_TO_UTC(DATE_TRUNC_MILLIS(1.4213055469157766e+12,\"year\"))",
-       "results": [
-        {
-            "$1": "2015-01-02T00:00:00Z"
-        }
-    ]    
-    },
-    {
-       "statements":"select DATE_TRUNC_STR(\"2006-01-01\",\"year\")",
-       "results": [
-        {
-            "$1": "2005-01-01"
-        }
-    ]
-    },
-    {
-       "statements":"select MILLIS_TO_STR(1.4201568e+12,\"2006-01-02\")",
-     "results": [
-        {
-            "$1": "2015-01-01"
-        }
-    ]    
-    },
-    {
        "statements":"select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\")",
        "results": [
         {
@@ -179,14 +155,6 @@
       "results": [
         {
             "$1": 201
-        }
-    ]
-    },
-    {
-      "statements":"select STR_TO_UTC(\"2006-01-02 15:04:05\")",
-      "results": [
-        {
-            "$1": "2006-01-02 23:04:05"
         }
     ]
     },
