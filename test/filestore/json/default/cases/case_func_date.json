@@ -119,6 +119,30 @@
     ]
     },
     {
+       "statements":"select MILLIS_TO_UTC(DATE_TRUNC_MILLIS(1.453505233e+12,\"day\"))",
+       "results": [
+        {
+            "$1": "2016-01-22T00:00:00Z"
+        }
+    ]    
+    },
+    {
+       "statements":"select DATE_TRUNC_STR(\"2006-03-01\",\"year\")",
+       "results": [
+        {
+            "$1": "2006-01-01"
+        }
+    ]
+    },
+    {
+       "statements":"select MILLIS_TO_STR(1.453485008e+12,\"2006-01-02\")",
+     "results": [
+        {
+            "$1": "2016-01-22"
+        }
+    ]    
+    },
+    {
        "statements":"select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\")",
        "results": [
         {
@@ -155,6 +179,14 @@
       "results": [
         {
             "$1": 201
+        }
+    ]
+    },
+    {
+      "statements":"select STR_TO_UTC(\"2006-01-02T15:04:05Z\")",
+      "results": [
+        {
+            "$1": "2006-01-02T15:04:05Z"
         }
     ]
     },
