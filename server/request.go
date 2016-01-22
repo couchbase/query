@@ -301,6 +301,12 @@ func (this *BaseRequest) ServiceTime() time.Time {
 }
 
 func (this *BaseRequest) SetState(state State) {
+
+	// we don't transition from TIMEOUT to STOPPED
+	// to allow the request to close gracefully on timeout
+	if this.state == TIMEOUT && state == STOPPED {
+		return
+	}
 	this.Lock()
 	defer this.Unlock()
 	this.state = state

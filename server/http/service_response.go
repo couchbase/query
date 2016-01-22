@@ -86,26 +86,24 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
-	defer this.stopAndClose(server.COMPLETED)
-
 	this.NotifyStop(stopNotify)
 
 	this.setHttpCode(http.StatusOK)
 	_ = this.writePrefix(srvr, signature) &&
 		this.writeResults()
-	this.writeSuffix(srvr.Metrics(), "")
+
+	state := this.State()
+	this.writeSuffix(srvr.Metrics(), state)
 	this.writer.noMoreData()
+	if (state != server.TIMEOUT) {
+		this.stopAndClose(server.COMPLETED)
+	} else {
+		this.Close()
+	}
 }
 
 func (this *httpRequest) Expire() {
-	defer this.stopAndClose(server.TIMEOUT)
-
-	if this.httpCode() == 0 {
-		this.setHttpCode(http.StatusOK)
-		this.writePrefix(&server.Server{}, nil)
-	}
-	this.writeSuffix(true, server.TIMEOUT)
-	this.writer.noMoreData()
+	this.Stop(server.TIMEOUT)
 }
 
 func (this *httpRequest) stopAndClose(state server.State) {
@@ -182,16 +180,17 @@ func (this *httpRequest) writeResults() bool {
 
 func (this *httpRequest) writeResult(item value.Value) bool {
 	var rv bool
-	if this.resultCount == 0 {
-		rv = this.writeString("\n")
-	} else {
-		rv = this.writeString(",\n")
-	}
 
 	bytes, err := json.MarshalIndent(item, "        ", "    ")
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
 		return false
+	}
+
+	if this.resultCount == 0 {
+		rv = this.writeString("\n")
+	} else {
+		rv = this.writeString(",\n")
 	}
 
 	this.resultSize += len(bytes)
