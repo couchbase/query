@@ -1,2 +1,2 @@
-echo go build
-go build
+echo go build -tags "enterprise" 
+go build -tags "enterprise" 

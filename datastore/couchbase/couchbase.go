@@ -45,6 +45,7 @@ type store struct {
 	client         cb.Client             // instance of go-couchbase client
 	namespaceCache map[string]*namespace // map of pool-names and IDs
 	CbAuthInit     bool                  // whether cbAuth is initialized
+	inferencer     datastore.Inferencer  // what we use to infer schemas
 }
 
 func (s *store) Id() string {
@@ -212,7 +213,7 @@ func (s *store) SetLogLevel(level logging.Level) {
 // Eben TODO: Implement this method by hooking up schema inferencer
 // Ignore the name parameter for now
 func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+	return s.inferencer, nil
 }
 
 // Sitaram TODO: Implement this method by hooking up schema inferencer
@@ -293,13 +294,20 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		CbAuthInit:     cbAuthInit,
 	}
 
+	// get the schema inferencer
+	var er errors.Error
+	store.inferencer, er = GetDefaultInferencer(store)
+	if er != nil {
+		return nil, er
+	}
+
 	// initialize the default pool.
 	// TODO can couchbase server contain more than one pool ?
 
-	defaultPool, Err := loadNamespace(store, "default")
-	if Err != nil {
+	defaultPool, er := loadNamespace(store, "default")
+	if er != nil {
 		logging.Errorf("Cannot connect to default pool")
-		return nil, Err
+		return nil, er
 	}
 
 	store.namespaceCache["default"] = defaultPool
