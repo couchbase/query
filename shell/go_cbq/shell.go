@@ -39,7 +39,7 @@ var ServerFlag string
 func init() {
 	const (
 		defaultserver = "http://localhost:8091/"
-		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\n Usage: cbq \n\t\t Connects to local couchbase instance. Same as: cbq -engine=http://localhost:8091\n\t cbq -engine=http://172.23.107.18:8093 \n\t\t Connects to query node at 172.23.107.18 Port 8093 \n\t cbq -engine=https://my.secure.node.com:8093 \n\t\t Connects to query node at my.secure.node.com:8093 using secure https protocol."
+		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\tFor Example : ./go_cbq -e=http://172.23.107.18:8093\n"
 	)
 	flag.StringVar(&ServerFlag, "engine", defaultserver, usage)
 	flag.StringVar(&ServerFlag, "e", defaultserver, "Shorthand for -engine")
@@ -89,7 +89,7 @@ var timeoutFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Query timeout parameter. Units are mandatory. For Example : \"10ms\". \n\t\t Valid Units : ns (nanoseconds), us (microseconds), ms (milliseconds), s (seconds), m (minutes), h (hours) "
+		usage      = "Query timeout parameter. Units are mandatory. For Example : \"10ms\". \n\t\tValid Units : ns, us, ms, s, m, h"
 	)
 	flag.StringVar(&timeoutFlag, "timeout", defaultval, usage)
 	flag.StringVar(&timeoutFlag, "t", defaultval, " Shorthand for -timeout")
@@ -333,7 +333,7 @@ func main() {
 	/* -quiet : Display Message only if flag not specified
 	 */
 	if !quietFlag && NoQueryService == false {
-		s := fmt.Sprintln("Connect to " + ServerFlag + ". Type Ctrl-D to exit.\n")
+		s := fmt.Sprintln("Input connection parameter is " + ServerFlag + ". Type Ctrl-D to exit.\n")
 		_, werr := io.WriteString(command.W, s)
 		if werr != nil {
 			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
