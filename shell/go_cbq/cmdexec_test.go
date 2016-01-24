@@ -60,7 +60,7 @@ func TestExecuteInput(t *testing.T) {
 
 // This function tests both the n1ql execution function
 // and the write helper method to write the output of the
-// query. For this test, we will use the dummy bucket default.
+// query. For this test, we will use the dummy bucket shellTest.
 
 func execn1ql(line string, t *testing.T) bool {
 	go_n1ql.SetPassthroughMode(true)
@@ -117,6 +117,18 @@ func TestExecN1QLStmt(t *testing.T) {
 	testconn := execn1ql(line, t)
 	if testconn == true {
 		t.Log("Testing N1QL statements")
+
+		//test to check output where all values are missing.
+		//test for MB-17509
+		line = "SELECT feature_name, IFNAN(story_point[2],story_point[1]) as point FROM shellTest ORDER BY feature_name"
+		execn1ql(line, t)
+
+		line = "SELECT RAW (feature_name) as point FROM shellTest ORDER BY feature_name"
+		execn1ql(line, t)
+
+		line = "SELECT element (feature_name) as point FROM shellTest ORDER BY feature_name"
+		execn1ql(line, t)
+
 		//Insert data into shellTest
 		line = "insert into shellTest values (\"1\", {\"name\" : \"Mission Peak\" , \"distance\" : 6}), (\"2\", {\"name\" : \"Black Mountain\", \"Location\" : \"Santa Clara County\", \"distance\" : 17})"
 		execn1ql(line, t)

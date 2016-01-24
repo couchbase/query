@@ -116,7 +116,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 	return 0, ""
 }
 
-func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int) ([]byte, int, string) {
+func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int, isRawOrElement bool) ([]byte, int, string) {
 	//Scan the values into the respective columns
 	if err := rows.Scan(valuePtrs...); err != nil {
 		return nil, errors.ROWS_SCAN, err.Error()
@@ -136,7 +136,7 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 
 		// Return input from go_n1ql as is (null). This case is seen when
 		// the query tries to output RAW values and one of them is missing.
-		if string(b) == "null" {
+		if string(b) == "null" && isRawOrElement == true {
 			return b, 0, ""
 		}
 
@@ -230,6 +230,10 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 	//if strings.HasPrefix(strings.ToLower(line), "prepare") {
 
+	//track if we need to return raw elements from anywhere in the query.
+	isRaw := strings.Contains(strings.ToLower(line), "raw")
+	isElement := strings.Contains(strings.ToLower(line), "element")
+
 	rows, err := n1ql.Query(line)
 
 	if err != nil {
@@ -268,7 +272,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 
 				// Get the first row to post process.
 
-				extras, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum)
+				extras, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum, false)
 
 				if extras == nil && err_code != 0 {
 					return err_code, err_string
@@ -301,7 +305,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 
 				var err_code int
 				var err_string string
-				metrics, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum)
+				metrics, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum, false)
 
 				if metrics == nil && err_code != 0 {
 					return err_code, err_string
@@ -325,7 +329,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 			var err_code int
 			var err_string string
 
-			prevRowResult, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum)
+			prevRowResult, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum, (isRaw || isElement))
 			if prevRowResult == nil && err_code != 0 {
 				return err_code, err_string
 			}
