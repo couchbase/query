@@ -56,11 +56,11 @@ func HandleError(err int, msg string) errors.Error {
 
 	//Read/Write/Update file errors
 	case errors.READ_FILE:
-		return errors.NewShellErrorReadFile("Error during file read. ")
+		return errors.NewShellErrorReadFile("Error during file read. " + msg)
 	case errors.WRITE_FILE:
-		return errors.NewShellErrorWriteFile("Error during file write. ")
+		return errors.NewShellErrorWriteFile("Error during file write. " + msg)
 	case errors.FILE_OPEN:
-		return errors.NewShellErrorOpenFile("Unable to open file. ")
+		return errors.NewShellErrorOpenFile("Unable to open file. " + msg)
 	case errors.FILE_CLOSE:
 		return errors.NewShellErrorCloseFile("Unable to close file. ")
 
@@ -68,7 +68,7 @@ func HandleError(err int, msg string) errors.Error {
 	case errors.INVALID_PASSWORD:
 		return errors.NewShellErrorInvalidPassword("Invalid Password. " + msg)
 	case errors.INVALID_USERNAME:
-		return errors.NewShellErrorInvalidUsername("Invalid Username.")
+		return errors.NewShellErrorInvalidUsername("Invalid Username. ")
 	case errors.MISSING_CREDENTIAL:
 		return errors.NewShellErrorMissingCredential("Username missing in -credentials/-c option.")
 
@@ -84,7 +84,7 @@ func HandleError(err int, msg string) errors.Error {
 	case errors.STACK_EMPTY:
 		return errors.NewShellErrorStackEmpty("Stack Empty.")
 	case errors.NO_SUCH_ALIAS:
-		return errors.NewShellErrorNoSuchAlias("Alias does not exist")
+		return errors.NewShellErrorNoSuchAlias("Alias does not exist : " + msg)
 
 	//Generic Errors
 	case errors.OPERATION_TIMEOUT:
@@ -98,7 +98,7 @@ func HandleError(err int, msg string) errors.Error {
 	case errors.GON1QL_QUERY:
 		return errors.NewShellErrorGon1qlQueryMethod(msg)
 	case errors.WRITER_OUTPUT:
-		return errors.NewShellErrorWriterOutput("Error with io Writer. ")
+		return errors.NewShellErrorWriterOutput("Error with io Writer. " + msg)
 	case errors.UNBALANCED_PAREN:
 		return errors.NewShellErrorUnbalancedParen("Unbalanced Parenthesis in the input.")
 	case errors.ROWS_CLOSE:
