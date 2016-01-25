@@ -134,6 +134,9 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 		*/
 
 		key := param[1:]
+
+		key = strings.ToLower(key)
+
 		v, ok := QueryParam[key]
 
 		if !ok {
@@ -352,6 +355,8 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 		vble = vble[1:]
+
+		vble = strings.ToLower(vble)
 
 		args_str := strings.Join(args[1:], " ")
 
