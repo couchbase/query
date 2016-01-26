@@ -111,7 +111,6 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
-
 	defer this.doStats(request)
 
 	if request.State() == server.FATAL {
@@ -182,6 +181,7 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 }
 
 func (this *HttpEndpoint) doStats(request *httpRequest) {
+
 	// Update metrics:
 	service_time := time.Since(request.ServiceTime())
 	request_time := time.Since(request.RequestTime())
@@ -238,12 +238,12 @@ func (this *activeHttpRequests) Delete(id string, stop bool) bool {
 		// Stop the request
 		req := this.requests[id]
 		if req == nil {
-			return true
+			return false
 		}
 		req.Stop(server.STOPPED)
 	}
 	delete(this.requests, id)
-	return false
+	return true
 }
 
 func (this *activeHttpRequests) Count() (int, errors.Error) {

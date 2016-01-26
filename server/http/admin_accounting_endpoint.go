@@ -27,7 +27,7 @@ const (
 	accountingPrefix = adminPrefix + "/stats"
 	vitalsPrefix     = adminPrefix + "/vitals"
 	preparedsPrefix  = adminPrefix + "/prepareds"
-	requestsPrefix   = adminPrefix + "/requests"
+	requestsPrefix   = adminPrefix + "/active_requests"
 	completedPrefix  = adminPrefix + "/completed_requests"
 	expvarsRoute     = "/debug/vars"
 )

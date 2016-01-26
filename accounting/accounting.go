@@ -210,6 +210,7 @@ const (
 
 	REQUEST_RATE  = "request_rate"
 	REQUEST_TIMER = "request_timer"
+	PREPARED      = "prepared"
 )
 
 var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
@@ -236,6 +237,9 @@ func RegisterMetrics(acctstore AccountingStore) {
 
 	ms.Meter(REQUEST_RATE)
 	ms.Timer(REQUEST_TIMER)
+
+	// We have to use a meter due to the way it's used in accounting_gm.go
+	ms.Meter(PREPARED)
 }
 
 func RecordMetrics(acctstore AccountingStore,
@@ -254,6 +258,10 @@ func RecordMetrics(acctstore AccountingStore,
 
 	ms.Meter(REQUEST_RATE).Mark(1)
 	ms.Timer(REQUEST_TIMER).Update(request_time)
+
+	if prepared != nil {
+		ms.Meter(PREPARED).Mark(1)
+	}
 
 	// Determine slow metrics based on request duration
 	slowMetrics := slowMetricsMap[DURATION_0MS]
@@ -285,6 +293,8 @@ func RecordMetrics(acctstore AccountingStore,
 func requestType(stmt string, prepared *plan.Prepared) string {
 	var tokens []string
 
+	// FIXME - this is a proper hack! should be using algebra.Statement
+	// or something similar to determine the statement type!
 	if prepared != nil && prepared.Text() != "" {
 		// Second or fourth token determines type of statement
 		tokens = strings.Split(strings.TrimSpace(prepared.Text()), " ")[1:]

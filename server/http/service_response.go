@@ -95,7 +95,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	state := this.State()
 	this.writeSuffix(srvr.Metrics(), state)
 	this.writer.noMoreData()
-	if (state != server.TIMEOUT) {
+	if state != server.TIMEOUT {
 		this.stopAndClose(server.COMPLETED)
 	} else {
 		this.Close()

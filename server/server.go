@@ -20,6 +20,7 @@ import (
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -448,6 +449,20 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, namespace, false)
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
+		}
+
+		// In order to allow monitoring to track prepared statement executed through
+		// N1QL "EXECUTE", set request.prepared - because, as of yet, it isn't!
+		//
+		// HACK ALERT - request does not currently track the request type
+		// and even if it did, and prepared.(*plan.Prepared) is set, it
+		// does not carry a name or text.
+		// This should probably done in build.go and / or build_execute.go,
+		// but for now this will do.
+		exec, ok := stmt.(*algebra.Execute)
+		if ok && exec.Prepared() != nil {
+			prep, _ := plan.TrackPrepared(exec.Prepared())
+			request.SetPrepared(prep)
 		}
 
 		if logging.LogLevel() >= logging.TRACE {

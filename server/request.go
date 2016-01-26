@@ -46,6 +46,7 @@ type Request interface {
 	ClientID() ClientContextID
 	Statement() string
 	Prepared() *plan.Prepared
+	SetPrepared(prepared *plan.Prepared)
 	NamedArgs() map[string]value.Value
 	PositionalArgs() value.Values
 	Namespace() string
@@ -298,6 +299,12 @@ func (this *BaseRequest) RequestTime() time.Time {
 
 func (this *BaseRequest) ServiceTime() time.Time {
 	return this.serviceTime
+}
+
+func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
+	this.Lock()
+	defer this.Unlock()
+	this.prepared = prepared
 }
 
 func (this *BaseRequest) SetState(state State) {

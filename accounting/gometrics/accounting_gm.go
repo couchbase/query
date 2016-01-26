@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	//	"syscall"
 	"time"
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
@@ -82,17 +82,11 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	runtime.ReadMemStats(&mem)
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
 	request_rate := g.registry.Meter(accounting.REQUEST_RATE)
-
-	// FIXME
-	//	ru := syscall.Rusage{}
-	//	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
-	// TODO: log error
-	//	}
+	prepared := g.registry.Meter(accounting.PREPARED)
 
 	now := time.Now()
-	newUtime := int64(0) //ru.Utime.Nano()
-	newStime := int64(0) //ru.Stime.Nano()
-	// end FIXME
+	newUtime, newStime := util.CpuTimes()
+
 	g.Lock()
 	uptime := now.Sub(g.vitals["startTime"].(time.Time))
 	dur := float64(now.Sub(g.vitals["lastNow"].(time.Time)))
@@ -106,9 +100,20 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	g.vitals["lastPauseTime"] = mem.PauseTotalNs
 	g.Unlock()
 
+	actCount, _ := server.ActiveRequestsCount()
+	totCount := request_rate.Count()
+	var prepPercent float64
+	if totCount > 0 {
+		prepPercent = float64(prepared.Count()) / float64(totCount)
+	} else {
+		prepPercent = 0.0
+	}
+
 	return VitalsRecord{
 		Uptime:         uptime.String(),
-		Threads:        runtime.NumGoroutine(),
+		LocalTime:      now.String(),
+		Version:        util.VERSION,
+		TotThreads:     runtime.NumGoroutine(),
 		Cores:          runtime.GOMAXPROCS(0),
 		GCNum:          mem.NextGC,
 		GCPauseTime:    time.Duration(mem.PauseTotalNs).String(),
@@ -118,7 +123,8 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 		MemorySys:      mem.Sys,
 		CPUUser:        util.RoundPlaces(uPerc, 4),
 		CPUSys:         util.RoundPlaces(sPerc, 4),
-		ReqCount:       request_rate.Count(),
+		ReqCount:       totCount,
+		ActCount:       int64(actCount),
 		Req1min:        util.RoundPlaces(request_rate.Rate1(), 4),
 		Req5min:        util.RoundPlaces(request_rate.Rate5(), 4),
 		Req15min:       util.RoundPlaces(request_rate.Rate15(), 4),
@@ -127,13 +133,16 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 		Req80:          time.Duration(request_timer.Percentile(.8)).String(),
 		Req95:          time.Duration(request_timer.Percentile(.95)).String(),
 		Req99:          time.Duration(request_timer.Percentile(.99)).String(),
+		Prepared:       prepPercent,
 	}, nil
 
 }
 
 type VitalsRecord struct {
 	Uptime         string  `json:"uptime"`
-	Threads        int     `json:"threads"`
+	LocalTime      string  `json:"local.time"`
+	Version        string  `json:"version"`
+	TotThreads     int     `json:"total.threads"`
 	Cores          int     `json:"cores"`
 	GCNum          uint64  `json:"gc.num"`
 	GCPauseTime    string  `json:"gc.pause.time"`
@@ -143,7 +152,8 @@ type VitalsRecord struct {
 	MemorySys      uint64  `json:"memory.system"`
 	CPUUser        float64 `json:"cpu.user.percent"`
 	CPUSys         float64 `json:"cpu.sys.percent"`
-	ReqCount       int64   `json:"request.count"`
+	ReqCount       int64   `json:"request.completed.count"`
+	ActCount       int64   `json:"request.active.count"`
 	Req1min        float64 `json:"request.per.sec.1min"`
 	Req5min        float64 `json:"request.per.sec.5min"`
 	Req15min       float64 `json:"request.per.sec.15min"`
@@ -152,6 +162,7 @@ type VitalsRecord struct {
 	Req80          string  `json:"request_time.80percentile"`
 	Req95          string  `json:"request_time.95percentile"`
 	Req99          string  `json:"request_time.99percentile"`
+	Prepared       float64 `json:"request.prepared.percent"`
 
 	// FIXME Active vs Queued threads, local time, version, direct vs prepared, network
 }
