@@ -18,35 +18,38 @@ import (
 
 type OrderLimit struct {
 	Order
-	offset          *Offset // offset is optional
-	limit           *Limit  // limit must present
-	numReturnedRows int
-	fallbackNum     int
-	ignoreInput     bool
-	fallback        bool
+	offset           *Offset // offset is optional
+	limit            *Limit  // limit must present
+	numReturnedRows  int
+	fallbackNum      int
+	ignoreInput      bool
+	fallback         bool
+	numProcessedRows uint64
 }
 
 func NewOrderLimit(plan *plan.Order) *OrderLimit {
 	var rv *OrderLimit
 	if plan.Offset() == nil {
 		rv = &OrderLimit{
-			Order:           *NewOrder(plan),
-			offset:          nil,
-			limit:           NewLimit(plan.Limit()),
-			numReturnedRows: 0,
-			fallbackNum:     plan.FallbackNum(),
-			ignoreInput:     false,
-			fallback:        false,
+			Order:            *NewOrder(plan),
+			offset:           nil,
+			limit:            NewLimit(plan.Limit()),
+			numReturnedRows:  0,
+			fallbackNum:      plan.FallbackNum(),
+			ignoreInput:      false,
+			fallback:         false,
+			numProcessedRows: 0,
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:           *NewOrder(plan),
-			offset:          NewOffset(plan.Offset()),
-			limit:           NewLimit(plan.Limit()),
-			numReturnedRows: 0,
-			fallbackNum:     plan.FallbackNum(),
-			ignoreInput:     false,
-			fallback:        false,
+			Order:            *NewOrder(plan),
+			offset:           NewOffset(plan.Offset()),
+			limit:            NewLimit(plan.Limit()),
+			numReturnedRows:  0,
+			fallbackNum:      plan.FallbackNum(),
+			ignoreInput:      false,
+			fallback:         false,
+			numProcessedRows: 0,
 		}
 	}
 
@@ -67,9 +70,10 @@ func (this *OrderLimit) Copy() Operator {
 				base: this.limit.base.copy(),
 				plan: this.limit.plan,
 			},
-			numReturnedRows: this.numReturnedRows,
-			ignoreInput:     this.ignoreInput,
-			fallback:        this.fallback,
+			numReturnedRows:  this.numReturnedRows,
+			ignoreInput:      this.ignoreInput,
+			fallback:         this.fallback,
+			numProcessedRows: this.numProcessedRows,
 		}
 	} else {
 		return &OrderLimit{
@@ -86,9 +90,10 @@ func (this *OrderLimit) Copy() Operator {
 				base: this.limit.base.copy(),
 				plan: this.limit.plan,
 			},
-			numReturnedRows: this.numReturnedRows,
-			ignoreInput:     this.ignoreInput,
-			fallback:        this.fallback,
+			numReturnedRows:  this.numReturnedRows,
+			ignoreInput:      this.ignoreInput,
+			fallback:         this.fallback,
+			numProcessedRows: this.numProcessedRows,
 		}
 	}
 }
@@ -101,6 +106,7 @@ func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 	this.numReturnedRows = 0
 	this.fallback = false
+	this.numProcessedRows = 0
 	this.setupTerms(context)
 	res := true
 
@@ -148,6 +154,7 @@ func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context) bool {
+	this.numProcessedRows++
 	if this.fallback {
 		return this.Order.processItem(item, context)
 	}
@@ -189,6 +196,9 @@ func (this *OrderLimit) afterItems(context *Context) {
 	}
 
 	this.Order.afterItems(context)
+
+	// Set the sort count to the number of processed rows.
+	context.SetSortCount(this.numProcessedRows)
 }
 
 func (this *OrderLimit) Less(i, j int) bool {
