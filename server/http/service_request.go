@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -642,7 +643,7 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	}
 	// Check that the rest data has the expected names
 	for _, arg := range sparse_vector_data {
-		if arg.Value == 0 || arg.Guard == "" {
+		if (*arg)[0] == 0 || (*arg)[1] == "" {
 			return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
 		}
 	}
@@ -1086,9 +1087,27 @@ func (this *scanVectorEntries) Entries() []timestamp.Entry {
 }
 
 // restArg captures how vector data is passed via REST
-type restArg struct {
-	Value uint64 `json:"value"`
-	Guard string `json:"guard"`
+// A proper entry has two entries.
+// [0] is the sequence number (a float64 that can be converted into a uint64 cleanly).
+// [1] is the UUID (a string).
+type restArg []interface{}
+
+func (this restArg) extractValues() (uint64, string, errors.Error) {
+	if len(this) != 2 {
+		return 0, "", errors.NewServiceErrorScanVectorBadLength(this)
+	}
+	sequenceNum, found := this[0].(float64)
+	if !found {
+		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(this[0])
+	}
+	if sequenceNum < 0.0 || sequenceNum > math.MaxUint64 || math.Floor(sequenceNum) != sequenceNum {
+		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(this[0])
+	}
+	uuid, found := this[1].(string)
+	if !found {
+		return 0, "", errors.NewServiceErrorScanVectorBadUUID(this[1])
+	}
+	return uint64(sequenceNum), uuid, nil
 }
 
 // makeFullVector is used when the request includes all entries
@@ -1099,10 +1118,14 @@ func makeFullVector(args []*restArg) (*scanVectorEntries, errors.Error) {
 	}
 	entries := make([]timestamp.Entry, len(args))
 	for i, arg := range args {
+		sequenceNum, uuid, err := arg.extractValues()
+		if err != nil {
+			return nil, err
+		}
 		entries[i] = &scanVectorEntry{
 			position: uint32(i),
-			value:    arg.Value,
-			guard:    arg.Guard,
+			value:    sequenceNum,
+			guard:    uuid,
 		}
 	}
 	return &scanVectorEntries{
@@ -1119,10 +1142,14 @@ func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, errors.Erro
 		if err != nil {
 			return nil, errors.NewServiceErrorBadValue(err, SCAN_VECTOR)
 		}
+		sequenceNum, uuid, error := arg.extractValues()
+		if err != nil {
+			return nil, error
+		}
 		entries[i] = &scanVectorEntry{
 			position: uint32(index),
-			value:    arg.Value,
-			guard:    arg.Guard,
+			value:    sequenceNum,
+			guard:    uuid,
 		}
 		i = i + 1
 	}

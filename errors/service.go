@@ -78,3 +78,18 @@ func NewServiceErrorHttpReq(id string) Error {
 	return &err{level: EXCEPTION, ICode: 1130, IKey: "service.io.request.type",
 		InternalMsg: fmt.Sprintf("Request %s is not a http request", id), InternalCaller: CallerN(1)}
 }
+
+func NewServiceErrorScanVectorBadLength(vec []interface{}) Error {
+	return &err{level: EXCEPTION, ICode: 1140, IKey: "service.io.request.type",
+		InternalMsg: fmt.Sprintf("Array %v should be of length 2", vec), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorScanVectorBadSequenceNumber(seq interface{}) Error {
+	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.type",
+		InternalMsg: fmt.Sprintf("Bad sequence number %v. Expected an unsigned 64-bit integer.", seq), InternalCaller: CallerN(1)}
+}
+
+func NewServiceErrorScanVectorBadUUID(uuid interface{}) Error {
+	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.type",
+		InternalMsg: fmt.Sprintf("Bad UUID %v. Expected a string.", uuid), InternalCaller: CallerN(1)}
+}

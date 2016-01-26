@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 
 	log_resolver "github.com/couchbase/query/logging/resolver"
@@ -62,6 +63,57 @@ func init() {
 	}
 	logging.SetLogger(logger)
 	test_server = newTestServer()
+}
+
+func TestMakeSparseVector(t *testing.T) {
+	d1 := restArg{ float64(345), "AAUID" }
+	d2 := restArg{ float64(100001), "BAUID" }
+	d3 := restArg{ float64(999999), "CAUID" }
+
+	vdata := map[string]*restArg{
+		"3": &d1,
+		"5": &d2,
+		"7": &d3,
+	}
+
+	var actual timestamp.Vector  // Verify expected return type.
+	actual, err := makeSparseVector(vdata)
+
+	if err != nil {
+		t.Errorf("expected %v, actual %v", nil, err);
+	}
+
+	// Results may appear in any order in entry array.
+	if len(actual.Entries()) != 3 {
+		t.Errorf("expected length 3, actual %d", len(actual.Entries()));
+	}
+	for _, entry := range actual.Entries() {
+		switch entry.Position() {
+		case 3:
+			if entry.Value() != 345 {
+				t.Errorf("expected %d, actual %d", 345, entry.Value());
+			}
+			if entry.Guard() != "AAUID" {
+				t.Errorf("expected %s, actual %s", "AAUID", entry.Guard());
+			}
+		case 5:
+			if entry.Value() != 100001 {
+				t.Errorf("expected %d, actual %d", 100001, entry.Value());
+			}
+			if entry.Guard() != "BAUID" {
+				t.Errorf("expected %s, actual %s", "BAUID", entry.Guard());
+			}
+		case 7:
+			if entry.Value() != 999999 {
+				t.Errorf("expected %d, actual %d", 999999, entry.Value());
+			}
+			if entry.Guard() != "CAUID" {
+				t.Errorf("expected %s, actual %s", "CAUID", entry.Guard());
+			}
+		default:
+			t.Errorf("Unexpected position %d", entry.Position());
+		}
+	}
 }
 
 func TestRequestDefaults(t *testing.T) {
