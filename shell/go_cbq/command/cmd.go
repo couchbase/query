@@ -30,6 +30,7 @@ const (
 	ECHO_CMD       = "ECHO"
 	UNALIAS_CMD    = "UNALIAS"
 	SOURCE_CMD     = "SOURCE"
+	REDIRECT_CMD   = "REDIRECT"
 )
 
 const (
@@ -51,7 +52,11 @@ var (
 	//Used to check for files
 	FILE_INPUT = ""
 	//True if reading commands from file
-	FILE_IP_MODE = false
+	FILE_RD_MODE = false
+	//True if writing commands to file
+	FILE_WR_MODE = false
+	//File to redirect output to
+	FILE_OUTPUT = ""
 	//Total no. of commands
 	MAX_COMMANDS = len(COMMAND_LIST)
 	//File to store History in
@@ -96,7 +101,8 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\unalias": &Unalias{},
 
 	/* Scripting Management */
-	"\\source": &Source{},
+	"\\source":   &Source{},
+	"\\redirect": &Redirect{},
 }
 
 /*

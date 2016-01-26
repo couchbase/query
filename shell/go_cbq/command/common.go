@@ -489,7 +489,7 @@ func printDesc(cmdname string) (int, string) {
 
 	case SOURCE_CMD:
 		_, werr = io.WriteString(W, "Load input file into shell\n")
-		_, werr = io.WriteString(W, " For Example : \n\t \\SOURCE temp1.txt ;\n")
+		_, werr = io.WriteString(W, "\tExample : \n\t \\SOURCE temp1.txt ;\n")
 
 	case UNALIAS_CMD:
 		_, werr = io.WriteString(W, "Delete the alias given by <alias name>.\n")
@@ -503,8 +503,12 @@ func printDesc(cmdname string) (int, string) {
 		_, werr = io.WriteString(W, "Print the Shell Version\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\VERSION;\n")
 
+	case REDIRECT_CMD:
+		_, werr = io.WriteString(W, "Write output of commands to file. To return to Stdout, execute \\REDIRECT OFF\n")
+		_, werr = io.WriteString(W, "\tExample : \n\t \\REDIRECT temp1.txt ;\n select * from `beer-sample`;\n\\REDIRECT OFF;")
+
 	default:
-		_, werr = io.WriteString(W, "IshaFix : Does not exist\n")
+		_, werr = io.WriteString(W, "Fix : Does not exist\n")
 
 	}
 	if werr != nil {

@@ -35,7 +35,7 @@ s.day=6 ORDER BY a.name;
 \SET;
 
 \REDIRECT output_file.txt;
-\SOURCE examples/file1.txt
+\SOURCE examples/file1.txt;
 \REDIRECT off;
 
 \QUIT;

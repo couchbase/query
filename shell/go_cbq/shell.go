@@ -268,12 +268,16 @@ func main() {
 
 	flag.Parse()
 
-	if outputFlag == "" {
-		// Set command.W = os.Stdout
-		command.SetWriter(os.Stdout)
-	} else {
+	if outputFlag != "" {
 		// Redirect all output to the given file.
+		// This is handled in the HandleInteractiveMode() method
+		// in interactive.go.
+		command.FILE_WR_MODE = true
+		command.FILE_OUTPUT = outputFlag
 	}
+
+	// Set command.W = os.Stdout
+	command.SetWriter(os.Stdout)
 
 	/* Handle options and what they should do */
 

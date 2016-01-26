@@ -30,9 +30,6 @@ const (
 	QRY_PROMPT2 = "   > "
 )
 
-var reset = "\x1b[0m"
-var fgRed = "\x1b[31m"
-
 var first = false
 
 var homeDir string
@@ -45,6 +42,27 @@ var homeDir string
    the name of the executable.
 */
 func HandleInteractiveMode(prompt string) {
+
+	// Variables used for output to file
+	var err error
+	outputFile := os.Stdout
+	prevFile := ""
+	prevreset := command.Getreset()
+	prevfgRed := command.GetfgRed()
+
+	// If an output flag is defined
+	if outputFlag != "" {
+		prevFile = command.FILE_OUTPUT
+		outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+		command.SetDispVal("", "")
+		if err != nil {
+			s_err := command.HandleError(errors.FILE_OPEN, err.Error())
+			command.PrintError(s_err)
+		}
+
+		defer outputFile.Close()
+		command.SetWriter(io.Writer(outputFile))
+	}
 
 	/* Find the HOME environment variable. If it isnt set then
 	   try USERPROFILE for windows. If neither is found then
@@ -67,8 +85,7 @@ func HandleInteractiveMode(prompt string) {
 	defer liner.Close()
 
 	/* Load history from Home directory
-	   TODO : Once Histfile and Histsize are introduced then change this code
-	*/
+	 */
 	err_code, err_string := LoadHistory(liner, homeDir)
 	if err_code != 0 {
 		s_err := command.HandleError(err_code, err_string)
@@ -86,6 +103,16 @@ func HandleInteractiveMode(prompt string) {
 	if scriptFlag != "" {
 		//Execute the input command
 		go_n1ql.SetPassthroughMode(true)
+
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_WR_MODE == true {
+			_, werr := io.WriteString(command.W, scriptFlag+"\n")
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
+		}
+
 		err_code, err_str := execute_input(scriptFlag, command.W, false, liner)
 		if err_code != 0 {
 			s_err := command.HandleError(err_code, err_str)
@@ -103,6 +130,16 @@ func HandleInteractiveMode(prompt string) {
 		//Read each line from the file and call execute query
 		go_n1ql.SetPassthroughMode(true)
 		input_command := "\\source " + inputFlag
+
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_WR_MODE == true {
+			_, werr := io.WriteString(command.W, input_command+"\n")
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
+		}
+
 		errCode, errStr := execute_input(input_command, command.W, false, liner)
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
@@ -128,6 +165,18 @@ func HandleInteractiveMode(prompt string) {
 			continue
 		}
 
+		// Redirect command
+		prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
+
+		if outputFile == os.Stdout {
+			command.SetDispVal(prevreset, prevfgRed)
+			command.SetWriter(os.Stdout)
+		} else {
+			if outputFile != nil {
+				defer outputFile.Close()
+				command.SetWriter(io.Writer(outputFile))
+			}
+		}
 		/* Check for shell comments : -- and #. Add them to the history
 		   but do not send them to be parsed.
 		*/
@@ -159,7 +208,15 @@ func HandleInteractiveMode(prompt string) {
 					s_err := command.HandleError(err_code, err_string)
 					command.PrintError(s_err)
 				}
-				err_code, err_string = execute_input(inputString, os.Stdout, true, liner)
+				// If outputting to a file, then add the statement to the file as well.
+				if command.FILE_WR_MODE == true {
+					_, werr := io.WriteString(command.W, "\n"+inputString+"\n")
+					if werr != nil {
+						s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+						command.PrintError(s_err)
+					}
+				}
+				err_code, err_string = execute_input(inputString, command.W, true, liner)
 				/* Error handling for Shell errors and errors recieved from
 				   go_n1ql.
 				*/
@@ -167,7 +224,7 @@ func HandleInteractiveMode(prompt string) {
 					s_err := command.HandleError(err_code, err_string)
 					if err_code == errors.GON1QL_QUERY {
 						//Dont print the error code for query errors.
-						tmpstr := fmt.Sprintln(fgRed, s_err, reset)
+						tmpstr := fmt.Sprintln(command.GetfgRed(), s_err, command.Getreset())
 						io.WriteString(command.W, tmpstr+"\n")
 
 					} else {
@@ -222,4 +279,28 @@ func HandleInteractiveMode(prompt string) {
 func signalCatcher(liner *liner.State) {
 	liner.SetCtrlCAborts(false)
 
+}
+
+func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
+	var err error
+	var outputFile *os.File
+
+	if command.FILE_WR_MODE == true {
+		if prevFile != command.FILE_OUTPUT {
+			prevFile = command.FILE_OUTPUT
+			outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			command.SetDispVal("", "")
+			if err != nil {
+				s_err := command.HandleError(errors.FILE_OPEN, err.Error())
+				command.PrintError(s_err)
+				return prevFile, nil
+			}
+
+		}
+	} else {
+		command.SetDispVal(prevreset, prevfgRed)
+		prevFile = ""
+		outputFile = os.Stdout
+	}
+	return prevFile, outputFile
 }

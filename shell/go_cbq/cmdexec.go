@@ -73,6 +73,14 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 			return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
 		}
 
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_WR_MODE == true {
+			_, werr := io.WriteString(command.W, val+"\n")
+			if werr != nil {
+				return errors.WRITER_OUTPUT, werr.Error()
+			}
+		}
+
 		err_code, err_str := execute_input(val, w, interactive, liner)
 		/* Error handling for Shell errors and errors recieved from
 		   go_n1ql.
@@ -462,7 +470,7 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 
 	// File based input. Run all the commands as seen in the file
 	// given by FILE_INPUT and then return the prompt.
-	if strings.HasPrefix(line, "\\source") && command.FILE_IP_MODE == true {
+	if strings.HasPrefix(line, "\\source") && command.FILE_RD_MODE == true {
 		errCode, errStr := readAndExec(liner)
 		if errCode != 0 {
 			return errCode, errStr
@@ -490,6 +498,12 @@ func readAndExec(liner *liner.State) (int, string) {
 
 	// Final input command string to be executed
 	final_input := " "
+
+	// For redirect command
+	outputFile := os.Stdout
+	prevFile := ""
+	prevreset := command.Getreset()
+	prevfgRed := command.GetfgRed()
 
 	// Loop through th file for every line.
 	for {
@@ -524,6 +538,23 @@ func readAndExec(liner *liner.State) (int, string) {
 
 		//Remove the ; before sending the query to execute
 		final_input = strings.TrimSuffix(final_input, ";")
+
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_WR_MODE == true {
+			prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
+
+			if outputFile == os.Stdout {
+				command.SetDispVal(prevreset, prevfgRed)
+				command.SetWriter(os.Stdout)
+			} else {
+				if outputFile != nil {
+					defer outputFile.Close()
+					command.SetWriter(io.Writer(outputFile))
+				}
+			}
+			io.WriteString(command.W, final_input+"\n")
+
+		}
 
 		errCode, errStr := execute_input(final_input, command.W, false, liner)
 		if errCode != 0 {

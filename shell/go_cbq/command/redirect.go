@@ -11,32 +11,33 @@ package command
 
 import (
 	"io"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 )
 
-/* Source Command */
-type Source struct {
+/* Redirect Command */
+type Redirect struct {
 	ShellCommand
 }
 
-func (this *Source) Name() string {
-	return "SOURCE"
+func (this *Redirect) Name() string {
+	return "REDIRECT"
 }
 
-func (this *Source) CommandCompletion() bool {
+func (this *Redirect) CommandCompletion() bool {
 	return false
 }
 
-func (this *Source) MinArgs() int {
+func (this *Redirect) MinArgs() int {
 	return ONE_ARG
 }
 
-func (this *Source) MaxArgs() int {
+func (this *Redirect) MaxArgs() int {
 	return ONE_ARG
 }
 
-func (this *Source) ExecCommand(args []string) (int, string) {
+func (this *Redirect) ExecCommand(args []string) (int, string) {
 	/* Command to load a file into the shell.
 	 */
 	if len(args) > this.MaxArgs() {
@@ -45,20 +46,18 @@ func (this *Source) ExecCommand(args []string) (int, string) {
 	} else if len(args) < this.MinArgs() {
 		return errors.TOO_FEW_ARGS, ""
 	} else {
-		/* This case needs to be handled in the ShellCommand
-		   in the main package, since we need to run each
-		   query as it is being read. Otherwise, if we load it
-		   into a buffer, we restrict the number of queries that
-		   can be loaded from the file.
-		*/
-		FILE_RD_MODE = true
-		FILE_INPUT = args[0]
+		if strings.ToLower(args[0]) == "off" {
+			FILE_WR_MODE = false
+		} else {
+			FILE_WR_MODE = true
+			FILE_OUTPUT = args[0]
+		}
 	}
 	return 0, ""
 }
 
-func (this *Source) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\SOURCE <filename>\n")
+func (this *Redirect) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\REDIRECT <filename>\n\\REDIRECT OFF;")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

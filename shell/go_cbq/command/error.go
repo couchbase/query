@@ -23,6 +23,21 @@ import (
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
 
+// Methods that get and set display variables
+
+func SetDispVal(newreset, newfgRed string) {
+	reset = newreset
+	fgRed = newfgRed
+}
+
+func Getreset() string {
+	return reset
+}
+
+func GetfgRed() string {
+	return fgRed
+}
+
 /* The handleError method creates the error using the methods
    defined in the n1ql errors package. This is where all the
    shell errors are handled.
