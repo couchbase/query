@@ -309,9 +309,10 @@ func (this *BaseRequest) SetPrepared(prepared *plan.Prepared) {
 
 func (this *BaseRequest) SetState(state State) {
 
-	// we don't transition from TIMEOUT to STOPPED
-	// to allow the request to close gracefully on timeout
-	if this.state == TIMEOUT && state == STOPPED {
+	// Once we transition to TIMEOUT, we don't transition to
+	// STOPPED or COMPLETED to allow the request to close
+	// gracefully on timeout and report the right state
+	if this.state == TIMEOUT && (state == STOPPED || state == COMPLETED) {
 		return
 	}
 	this.Lock()

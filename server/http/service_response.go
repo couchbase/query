@@ -104,6 +104,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 func (this *httpRequest) Expire() {
 	this.Stop(server.TIMEOUT)
+	this.stopCloseNotifier()
 }
 
 func (this *httpRequest) stopAndClose(state server.State) {
