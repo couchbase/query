@@ -17,6 +17,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,19 +66,139 @@ func init() {
 	test_server = newTestServer()
 }
 
-func TestMakeSparseVector(t *testing.T) {
-	d1 := restArg{float64(345), "AAUID"}
-	d2 := restArg{float64(100001), "BAUID"}
-	d3 := restArg{float64(999999), "CAUID"}
+func verifyEntry(t *testing.T, e timestamp.Entry, position uint32, guard string, value uint64) {
+	if e.Position() != position {
+		t.Errorf("Bad position, expected %d actual %d", position, e.Position())
+	}
+	if e.Guard() != guard {
+		t.Errorf("Bad guard, expected %s actual %s", guard, e.Guard())
+	}
+	if e.Value() != value {
+		t.Errorf("Bad value, expecte %d actual %d", value, e.Value())
+	}
+}
 
-	vdata := map[string]*restArg{
-		"3": &d1,
-		"5": &d2,
-		"7": &d3,
+func TestGetScanVectors(t *testing.T) {
+	jsonText := ` { 
+		"bucketb": [FULL_SCAN_VECTOR],
+		"default": {
+			"23": [9012344, "AUUID"],
+			"45": [7455623, "BUUID"]
+		},
+		"bucketa": {
+			"1000": [1234567, "CUUID"]
+		}
+	}`
+	fullScanElement := "[90909, \"DUUID\"],"
+	replacement := strings.TrimRight(strings.Repeat(fullScanElement, 1024), ",")
+	jsonText = strings.Replace(jsonText, "FULL_SCAN_VECTOR", replacement, 1)
+
+	decoder := json.NewDecoder(strings.NewReader(jsonText))
+	var target interface{}
+	e := decoder.Decode(&target)
+	if e != nil {
+		t.Errorf("Unexpected JSON parsing error %v", e)
+	}
+	var bucketVectorMap map[string]timestamp.Vector
+	bucketVectorMap, err := getScanVectorsFromJSON(target)
+	if err != nil {
+		t.Errorf("Unexpected error %v", err)
+	}
+	if len(bucketVectorMap) != 3 {
+		t.Errorf("Expected map size 3, actual %d", len(bucketVectorMap))
+	}
+
+	// Verify bucket "bucketb".
+	vector, ok := bucketVectorMap["bucketb"]
+	if !ok {
+		t.Errorf("Could not find element bucketb")
+	}
+	entries := vector.Entries()
+	if len(entries) != 1024 {
+		t.Errorf("Expected bucketb entries lenth 1024, actual %d", len(entries))
+	}
+	for i, entry := range entries {
+		verifyEntry(t, entry, uint32(i), "DUUID", 90909)
+	}
+
+	// Verify bucket "default".
+	vector, ok = bucketVectorMap["default"]
+	if !ok {
+		t.Errorf("Could not find element default.")
+	}
+	entries = vector.Entries()
+	if len(entries) != 2 {
+		t.Errorf("Expected default entries length 2, actual %d", len(entries))
+	}
+	var entry23 timestamp.Entry
+	var entry45 timestamp.Entry
+
+	if entries[0].Position() == 23 {
+		entry23 = entries[0]
+		entry45 = entries[1]
+	} else {
+		entry23 = entries[1]
+		entry45 = entries[0]
+	}
+
+	verifyEntry(t, entry23, 23, "AUUID", 9012344)
+	verifyEntry(t, entry45, 45, "BUUID", 7455623)
+
+	// Verify bucket "bucketa".
+	vector, ok = bucketVectorMap["bucketa"]
+	if !ok {
+		t.Errorf("Could not find element bucketa.")
+	}
+	entries = vector.Entries()
+	if len(entries) != 1 {
+		t.Errorf("Expected bucketa entries length 1, actual %d", len(entries))
+	}
+	entry := entries[0]
+	verifyEntry(t, entry, 1000, "CUUID", 1234567)
+}
+
+func TestFullScanVector(t *testing.T) {
+	jsonText := "[FULL_SCAN_VECTOR]"
+	fullScanElement := "[777777, \"VUUID\"],"
+	replacement := strings.TrimRight(strings.Repeat(fullScanElement, 1024), ",")
+	jsonText = strings.Replace(jsonText, "FULL_SCAN_VECTOR", replacement, 1)
+
+	decoder := json.NewDecoder(strings.NewReader(jsonText))
+	var target interface{}
+	e := decoder.Decode(&target)
+	if e != nil {
+		t.Errorf("Unexpected JSON parsing error %v", e)
+	}
+	var vector timestamp.Vector
+	vector, err := getScanVectorFromJSON(target)
+	if err != nil {
+		t.Errorf("Unexpected error %v", err)
+	}
+
+	entries := vector.Entries()
+	if len(entries) != 1024 {
+		t.Errorf("Expected entries lenth 1024, actual %d", len(entries))
+	}
+	for i, entry := range entries {
+		verifyEntry(t, entry, uint32(i), "VUUID", 777777)
+	}
+}
+
+func TestSparseScanVector(t *testing.T) {
+	jsonText := `{ 
+		"3": [ 345, "AAUID" ],
+		"5": [ 100001, "BAUID" ],
+		"7": [ 999999, "CAUID" ]
+	}`
+	var target interface{}
+	decoder := json.NewDecoder(strings.NewReader(jsonText))
+	e := decoder.Decode(&target)
+	if e != nil {
+		t.Errorf("Unexpected error %v", e)
 	}
 
 	var actual timestamp.Vector // Verify expected return type.
-	actual, err := makeSparseVector(vdata)
+	actual, err := getScanVectorFromJSON(target)
 
 	if err != nil {
 		t.Errorf("expected %v, actual %v", nil, err)
@@ -90,26 +211,11 @@ func TestMakeSparseVector(t *testing.T) {
 	for _, entry := range actual.Entries() {
 		switch entry.Position() {
 		case 3:
-			if entry.Value() != 345 {
-				t.Errorf("expected %d, actual %d", 345, entry.Value())
-			}
-			if entry.Guard() != "AAUID" {
-				t.Errorf("expected %s, actual %s", "AAUID", entry.Guard())
-			}
+			verifyEntry(t, entry, 3, "AAUID", 345)
 		case 5:
-			if entry.Value() != 100001 {
-				t.Errorf("expected %d, actual %d", 100001, entry.Value())
-			}
-			if entry.Guard() != "BAUID" {
-				t.Errorf("expected %s, actual %s", "BAUID", entry.Guard())
-			}
+			verifyEntry(t, entry, 5, "BAUID", 100001)
 		case 7:
-			if entry.Value() != 999999 {
-				t.Errorf("expected %d, actual %d", 999999, entry.Value())
-			}
-			if entry.Guard() != "CAUID" {
-				t.Errorf("expected %s, actual %s", "CAUID", entry.Guard())
-			}
+			verifyEntry(t, entry, 7, "CAUID", 999999)
 		default:
 			t.Errorf("Unexpected position %d", entry.Position())
 		}

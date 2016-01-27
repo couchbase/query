@@ -247,6 +247,7 @@ const ( // Request argument names
 	SCAN_CONSISTENCY  = "scan_consistency"
 	SCAN_WAIT         = "scan_wait"
 	SCAN_VECTOR       = "scan_vector"
+	SCAN_VECTORS      = "scan_vectors"
 	CREDS             = "creds"
 	CLIENT_CONTEXT_ID = "client_context_id"
 )
@@ -261,6 +262,7 @@ var _PARAMETERS = []string{
 	SCAN_CONSISTENCY,
 	SCAN_WAIT,
 	SCAN_VECTOR,
+	SCAN_VECTORS,
 	MAX_PARALLELISM,
 	READONLY,
 	METRICS,
@@ -341,14 +343,25 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
 		return nil, err
 	}
 
-	if scan_level == server.AT_PLUS && scan_vector == nil {
+	scan_vectors, err := a.getScanVectors()
+	if err != nil {
+		return nil, err
+	}
+
+	// Not both scan_vector and scan_vectors.
+	if scan_vector != nil && scan_vectors != nil {
+		return nil, errors.NewServiceErrorMultipleValues("scan_vector and scan_vectors")
+	}
+
+	if scan_level == server.AT_PLUS && scan_vector == nil && scan_vectors == nil {
 		return nil, errors.NewServiceErrorMissingValue(SCAN_VECTOR)
 	}
 
 	return &scanConfigImpl{
-		scan_level:  scan_level,
-		scan_wait:   scan_wait,
-		scan_vector: scan_vector,
+		scan_level:   scan_level,
+		scan_wait:    scan_wait,
+		scan_vector:  scan_vector,
+		scan_vectors: scan_vectors,
 	}, nil
 }
 
@@ -514,6 +527,7 @@ type httpRequestArgs interface {
 	getStatement() (string, errors.Error)
 	getCredentials() ([]map[string]string, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
+	getScanVectors() (map[string]timestamp.Vector, errors.Error)
 }
 
 // getRequestParams creates a httpRequestArgs implementation,
@@ -622,33 +636,92 @@ func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
 	return positionalArgs, nil
 }
 
-func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
-	var full_vector_data []*restArg
-	var sparse_vector_data map[string]*restArg
+// Note: This function has no receiver, which makes it easier to test.
+// The "json" input parameter should be a parsed JSON object structure, the output of a decoder.
+func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, errors.Error) {
+	bucketMap, ok := json.(map[string]interface{})
+	if !ok {
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTORS, "map of strings to vectors")
+	}
 
+	out := make(map[string]timestamp.Vector)
+	for k, v := range bucketMap {
+		// Is it a sparse vector?
+		mapVector, ok := v.(map[string]interface{})
+		if ok {
+			entries, err := makeSparseVector(mapVector)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = entries
+			continue
+		}
+		// Is it a full vector?
+		arrayVector, ok := v.([]interface{})
+		if ok {
+			entries, err := makeFullVector(arrayVector)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = entries
+			continue
+		}
+		return nil, errors.NewServiceErrorTypeMismatch(k, "full or sparse vector")
+	}
+
+	return out, nil
+}
+
+// Note: This function has no receiver, which makes it easier to test.
+// The "json" input parameter should be a parsed JSON object structure, the output of a decoder.
+func getScanVectorFromJSON(json interface{}) (timestamp.Vector, errors.Error) {
+	// Is it a sparse vector?
+	mapVector, ok := json.(map[string]interface{})
+	if ok {
+		return makeSparseVector(mapVector)
+	}
+
+	// Is it a full vector?
+	arrayVector, ok := json.([]interface{})
+	if ok {
+		return makeFullVector(arrayVector)
+	}
+
+	return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "full or sparse vector")
+}
+
+func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	scan_vector_data_field, err := this.formValue(SCAN_VECTOR)
 
 	if err != nil || scan_vector_data_field == "" {
 		return nil, err
 	}
+
+	var target interface{}
 	decoder := json.NewDecoder(strings.NewReader(scan_vector_data_field))
-	e := decoder.Decode(&full_vector_data)
-	if e == nil {
-		return makeFullVector(full_vector_data)
-	}
-	decoder = json.NewDecoder(strings.NewReader(scan_vector_data_field))
-	e = decoder.Decode(&sparse_vector_data)
+	e := decoder.Decode(&target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
 	}
-	// Check that the rest data has the expected names
-	for _, arg := range sparse_vector_data {
-		if (*arg)[0] == 0 || (*arg)[1] == "" {
-			return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
-		}
+
+	return getScanVectorFromJSON(target)
+}
+
+func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {
+	scan_vectors_data_field, err := this.formValue(SCAN_VECTORS)
+
+	if err != nil || scan_vectors_data_field == "" {
+		return nil, err
 	}
 
-	return makeSparseVector(sparse_vector_data)
+	var target interface{}
+	decoder := json.NewDecoder(strings.NewReader(scan_vectors_data_field))
+	e := decoder.Decode(&target)
+	if e != nil {
+		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTORS)
+	}
+
+	return getScanVectorsFromJSON(target)
 }
 
 func (this *urlArgs) getDuration(f string) (time.Duration, errors.Error) {
@@ -819,49 +892,20 @@ func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
 	return creds_data, nil
 }
 
-func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
-	var type_ok bool
-
-	scan_vector_data_field, in_request := this.getField(SCAN_VECTOR)
+func (this *jsonArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {
+	scan_vectors_data, in_request := this.getField(SCAN_VECTORS)
 	if !in_request {
 		return nil, nil
 	}
-	full_vector_data, type_ok := scan_vector_data_field.([]interface{})
-	if type_ok {
-		if len(full_vector_data) != SCAN_VECTOR_SIZE {
-			return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR,
-				fmt.Sprintf("array of %d entries", SCAN_VECTOR_SIZE))
-		}
-		entries := make([]timestamp.Entry, len(full_vector_data))
-		for index, arg := range full_vector_data {
-			nextEntry, err := makeVectorEntry(index, arg)
-			if err != nil {
-				return nil, err
-			}
-			entries[index] = nextEntry
-		}
+	return getScanVectorsFromJSON(scan_vectors_data)
+}
+
+func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
+	scan_vector_data, in_request := this.getField(SCAN_VECTOR)
+	if !in_request {
+		return nil, nil
 	}
-	sparse_vector_data, type_ok := scan_vector_data_field.(map[string]interface{})
-	if !type_ok {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
-	}
-	entries := make([]timestamp.Entry, len(sparse_vector_data))
-	i := 0
-	for key, arg := range sparse_vector_data {
-		index, e := strconv.Atoi(key)
-		if e != nil {
-			return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
-		}
-		nextEntry, err := makeVectorEntry(index, arg)
-		if err != nil {
-			return nil, err
-		}
-		entries[i] = nextEntry
-		i = i + 1
-	}
-	return &scanVectorEntries{
-		entries: entries,
-	}, nil
+	return getScanVectorFromJSON(scan_vector_data)
 }
 
 func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Error) {
@@ -1086,55 +1130,26 @@ func (this *scanVectorEntries) Entries() []timestamp.Entry {
 	return this.entries
 }
 
-// restArg captures how vector data is passed via REST
-// A proper entry has two entries.
-// [0] is the sequence number (a float64 that can be converted into a uint64 cleanly).
-// [1] is the UUID (a string).
-type restArg []interface{}
-
-func (this restArg) extractValues() (uint64, string, errors.Error) {
-	if len(this) != 2 {
-		return 0, "", errors.NewServiceErrorScanVectorBadLength(this)
+// A scan vector entry is an array of length two: [number, string] holding a sequence number and a guard string.
+func extractValues(arr []interface{}) (uint64, string, errors.Error) {
+	if len(arr) != 2 {
+		return 0, "", errors.NewServiceErrorScanVectorBadLength(arr)
 	}
-	sequenceNum, found := this[0].(float64)
+	sequenceNum, found := arr[0].(float64)
 	if !found {
-		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(this[0])
+		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(arr[0])
 	}
 	if sequenceNum < 0.0 || sequenceNum > math.MaxUint64 || math.Floor(sequenceNum) != sequenceNum {
-		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(this[0])
+		return 0, "", errors.NewServiceErrorScanVectorBadSequenceNumber(arr[0])
 	}
-	uuid, found := this[1].(string)
+	uuid, found := arr[1].(string)
 	if !found {
-		return 0, "", errors.NewServiceErrorScanVectorBadUUID(this[1])
+		return 0, "", errors.NewServiceErrorScanVectorBadUUID(arr[1])
 	}
 	return uint64(sequenceNum), uuid, nil
 }
 
-// makeFullVector is used when the request includes all entries
-func makeFullVector(args []*restArg) (*scanVectorEntries, errors.Error) {
-	if len(args) != SCAN_VECTOR_SIZE {
-		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR,
-			fmt.Sprintf("array of %d entries", SCAN_VECTOR_SIZE))
-	}
-	entries := make([]timestamp.Entry, len(args))
-	for i, arg := range args {
-		sequenceNum, uuid, err := arg.extractValues()
-		if err != nil {
-			return nil, err
-		}
-		entries[i] = &scanVectorEntry{
-			position: uint32(i),
-			value:    sequenceNum,
-			guard:    uuid,
-		}
-	}
-	return &scanVectorEntries{
-		entries: entries,
-	}, nil
-}
-
-// makeSparseVector is used when the request contains a sparse entry arg
-func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, errors.Error) {
+func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.Error) {
 	entries := make([]timestamp.Entry, len(args))
 	i := 0
 	for key, arg := range args {
@@ -1142,7 +1157,11 @@ func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, errors.Erro
 		if err != nil {
 			return nil, errors.NewServiceErrorBadValue(err, SCAN_VECTOR)
 		}
-		sequenceNum, uuid, error := arg.extractValues()
+		array, ok := arg.([]interface{})
+		if !ok {
+			return nil, errors.NewServiceErrorTypeMismatch("scan vector entry", "two-element array")
+		}
+		sequenceNum, uuid, error := extractValues(array)
 		if err != nil {
 			return nil, error
 		}
@@ -1158,12 +1177,40 @@ func makeSparseVector(args map[string]*restArg) (*scanVectorEntries, errors.Erro
 	}, nil
 }
 
+func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
+	if len(args) != SCAN_VECTOR_SIZE {
+		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR,
+			fmt.Sprintf("array of %d entries", SCAN_VECTOR_SIZE))
+	}
+	entries := make([]timestamp.Entry, len(args))
+	for i, arg := range args {
+		array, ok := arg.([]interface{})
+		if !ok {
+			return nil, errors.NewServiceErrorTypeMismatch("entry of a full scan vector",
+				"array of length 2")
+		}
+		sequenceNum, uuid, err := extractValues(array)
+		if err != nil {
+			return nil, err
+		}
+		entries[i] = &scanVectorEntry{
+			position: uint32(i),
+			value:    sequenceNum,
+			guard:    uuid,
+		}
+	}
+	return &scanVectorEntries{
+		entries: entries,
+	}, nil
+}
+
 const SCAN_VECTOR_SIZE = 1024
 
 type scanConfigImpl struct {
-	scan_level  server.ScanConsistency
-	scan_wait   time.Duration
-	scan_vector timestamp.Vector
+	scan_level   server.ScanConsistency
+	scan_wait    time.Duration
+	scan_vector  timestamp.Vector
+	scan_vectors map[string]timestamp.Vector
 }
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
