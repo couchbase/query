@@ -57,7 +57,7 @@ func (this *subsetFactory) VisitSimpleCase(expr *expression.SimpleCase) (interfa
 // Collection
 
 func (this *subsetFactory) VisitAny(expr *expression.Any) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetAny(expr), nil
 }
 
 func (this *subsetFactory) VisitArray(expr *expression.Array) (interface{}, error) {

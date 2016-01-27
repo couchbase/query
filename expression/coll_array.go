@@ -20,7 +20,7 @@ ARRAY evaluates to an array of the operand expression. Type
 Array is a struct that implements collMap.
 */
 type Array struct {
-	collMap
+	collMapBase
 }
 
 /*
@@ -30,7 +30,7 @@ bindings and expression when/mapping.
 */
 func NewArray(mapping Expression, bindings Bindings, when Expression) Expression {
 	rv := &Array{
-		collMap: collMap{
+		collMapBase: collMapBase{
 			mapping:  mapping,
 			bindings: bindings,
 			when:     when,

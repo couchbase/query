@@ -11,36 +11,36 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
-func SargableFor(pred expression.Expression, exprs expression.Expressions) int {
-	s := newSargable(pred)
-	n := len(exprs)
-
-	if n > 1 {
-		// Only AND predicates can sarg more than one index key
-		if _, ok := pred.(*expression.And); !ok {
-			n = 1
-		}
-	}
-
-	i := 0
-	for ; i < n; i++ {
-		// Terminate on statically-valued expression
-		if exprs[i].Value() != nil {
-			return i
-		}
-
-		r, err := exprs[i].Accept(s)
-		if err != nil || !r.(bool) {
-			return i
-		}
-	}
-
-	return i
+type sargAny struct {
+	sargDefault
 }
 
-func newSargable(pred expression.Expression) expression.Visitor {
-	s, _ := pred.Accept(_SARGABLE_FACTORY)
-	return s.(expression.Visitor)
+func newSargAny(pred *expression.Any) *sargAny {
+	rv := &sargAny{}
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
+		if SubsetOf(pred, expr2) {
+			return _SELF_SPANS, nil
+		}
+
+		all, ok := expr2.(*expression.All)
+		if !ok {
+			return nil, nil
+		}
+
+		array, ok := all.Array().(*expression.Array)
+		if !ok {
+			return nil, nil
+		}
+
+		if !pred.Bindings().EquivalentTo(array.Bindings()) {
+			return nil, nil
+		}
+
+		return sargFor(pred.Satisfies(), array.Mapping(), false)
+	}
+
+	return rv
 }

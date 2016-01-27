@@ -306,6 +306,14 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		if len(entry.spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
 			op = plan.NewUnionScan(op)
+		} else {
+			// Use UnionScan to de-dup array index scans
+			for _, sk := range entry.sargKeys {
+				if isArray, _ := sk.IsArrayIndexKey(); isArray {
+					op = plan.NewUnionScan(op)
+					break
+				}
+			}
 		}
 
 		scans = append(scans, op)

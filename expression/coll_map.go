@@ -9,17 +9,43 @@
 
 package expression
 
+import (
+	"reflect"
+)
+
 /*
 Type collMap represents a struct that implements ExpressionBase.
 It refers to the fields or attributes of a collection or map
 used for Range transforms. Contains fields mapping and
 bindings, and a when expression.
 */
-type collMap struct {
+type collMap interface {
+	Expression
+	Mapping() Expression
+	Bindings() Bindings
+	When() Expression
+}
+
+type collMapBase struct {
 	ExpressionBase
 	mapping  Expression
 	bindings Bindings
 	when     Expression
+}
+
+func (this *collMapBase) EquivalentTo(other Expression) bool {
+	if this.ValueEquals(other) {
+		return true
+	}
+
+	if reflect.TypeOf(this.expr) != reflect.TypeOf(other) {
+		return false
+	}
+
+	o := other.(collMap)
+	return this.mapping.EquivalentTo(o.Mapping()) &&
+		this.bindings.EquivalentTo(o.Bindings()) &&
+		Equivalent(this.when, o.When())
 }
 
 /*
@@ -27,7 +53,7 @@ Returns the children as expressions of the collMap.
 Append the mapping, binding expressions and the
 when condition if present.
 */
-func (this *collMap) Children() Expressions {
+func (this *collMapBase) Children() Expressions {
 	d := make(Expressions, 0, 2+len(this.bindings))
 	d = append(d, this.mapping)
 
@@ -47,7 +73,7 @@ Map one set of expressions to another expression.
 (Map Expresions associated with bindings and
 the when expression if it exists. ).
 */
-func (this *collMap) MapChildren(mapper Mapper) (err error) {
+func (this *collMapBase) MapChildren(mapper Mapper) (err error) {
 	this.mapping, err = mapper.Map(this.mapping)
 	if err != nil {
 		return
@@ -68,58 +94,14 @@ func (this *collMap) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
-/*
-Return receiver bindings.
-*/
-func (this *collMap) Bindings() Bindings {
+func (this *collMapBase) Mapping() Expression {
+	return this.mapping
+}
+
+func (this *collMapBase) Bindings() Bindings {
 	return this.bindings
 }
 
-/*
-Type collPred represents a struct that implements ExpressionBase.
-It refers to the fields or attributes of a collection or map
-used for Range predicates. Contains fields bindings, and satisfies
-of type expression.
-*/
-type collPred struct {
-	ExpressionBase
-	bindings  Bindings
-	satisfies Expression
-}
-
-func (this *collPred) Children() Expressions {
-	d := make(Expressions, 0, 1+len(this.bindings))
-
-	for _, b := range this.bindings {
-		d = append(d, b.Expression())
-	}
-
-	d = append(d, this.satisfies)
-	return d
-}
-
-/*
-Map one set of expressions to another expression.
-(Map Expresions associated with bindings and
-the satisfies expression if it exists ).
-*/
-func (this *collPred) MapChildren(mapper Mapper) (err error) {
-	err = this.bindings.MapExpressions(mapper)
-	if err != nil {
-		return
-	}
-
-	this.satisfies, err = mapper.Map(this.satisfies)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-/*
-Return receiver bindings.
-*/
-func (this *collPred) Bindings() Bindings {
-	return this.bindings
+func (this *collMapBase) When() Expression {
+	return this.when
 }

@@ -98,9 +98,35 @@ func (this *Binding) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this Bindings) EquivalentTo(other Bindings) bool {
+	if len(this) != len(other) {
+		return false
+	}
+
+	for i, b := range this {
+		o := other[i]
+		if b.variable != o.variable ||
+			b.descend != o.descend ||
+			!b.expr.EquivalentTo(o.expr) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this Bindings) DependsOn(expr Expression) bool {
+	for _, b := range this {
+		if b.expr.DependsOn(expr) {
+			return true
+		}
+	}
+
+	return false
+}
+
 /*
-This method ranges over the bindings (receiver) and maps
-each expression to another.
+Range over the bindings and map each expression to another.
 */
 func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	for _, b := range this {

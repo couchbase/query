@@ -19,7 +19,7 @@ condition over the elements or attributes of a collection or
 object. Type Every is a struct that implements collPred.
 */
 type Every struct {
-	collPred
+	collPredBase
 }
 
 /*
@@ -29,7 +29,7 @@ bindings and expression satisfies.
 */
 func NewEvery(bindings Bindings, satisfies Expression) Expression {
 	rv := &Every{
-		collPred: collPred{
+		collPredBase: collPredBase{
 			bindings:  bindings,
 			satisfies: satisfies,
 		},

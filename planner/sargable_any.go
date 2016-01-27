@@ -13,34 +13,31 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(pred expression.Expression, exprs expression.Expressions) int {
-	s := newSargable(pred)
-	n := len(exprs)
-
-	if n > 1 {
-		// Only AND predicates can sarg more than one index key
-		if _, ok := pred.(*expression.And); !ok {
-			n = 1
-		}
-	}
-
-	i := 0
-	for ; i < n; i++ {
-		// Terminate on statically-valued expression
-		if exprs[i].Value() != nil {
-			return i
-		}
-
-		r, err := exprs[i].Accept(s)
-		if err != nil || !r.(bool) {
-			return i
-		}
-	}
-
-	return i
+type sargableAny struct {
+	predicate
 }
 
-func newSargable(pred expression.Expression) expression.Visitor {
-	s, _ := pred.Accept(_SARGABLE_FACTORY)
-	return s.(expression.Visitor)
+func newSargableAny(pred *expression.Any) *sargableAny {
+	rv := &sargableAny{}
+	rv.test = func(expr2 expression.Expression) (bool, error) {
+		if SubsetOf(pred, expr2) {
+			return true, nil
+		}
+
+		all, ok := expr2.(*expression.All)
+		if !ok {
+			return false, nil
+		}
+
+		array, ok := all.Array().(*expression.Array)
+		if !ok {
+			return false, nil
+		}
+
+		mappings := expression.Expressions{array.Mapping()}
+		return pred.Bindings().EquivalentTo(array.Bindings()) &&
+			SargableFor(pred.Satisfies(), mappings) > 0, nil
+	}
+
+	return rv
 }

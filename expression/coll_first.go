@@ -20,7 +20,7 @@ FIRST evaluates to a single element based on the operand expression.
 Type First is a struct that implements collMap.
 */
 type First struct {
-	collMap
+	collMapBase
 }
 
 /*
@@ -30,7 +30,7 @@ bindings and expression when/mapping.
 */
 func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression {
 	rv := &First{
-		collMap: collMap{
+		collMapBase: collMapBase{
 			mapping:  mapping,
 			bindings: bindings,
 			when:     when,

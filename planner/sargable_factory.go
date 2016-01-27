@@ -57,7 +57,7 @@ func (this *sargableFactory) VisitSimpleCase(expr *expression.SimpleCase) (inter
 // Collection
 
 func (this *sargableFactory) VisitAny(expr *expression.Any) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableAny(expr), nil
 }
 
 func (this *sargableFactory) VisitArray(expr *expression.Array) (interface{}, error) {

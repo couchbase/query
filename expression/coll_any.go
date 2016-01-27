@@ -19,7 +19,7 @@ condition over the elements or attributes of a collection or
 object. Type Any is a struct that implements collPred.
 */
 type Any struct {
-	collPred
+	collPredBase
 }
 
 /*
@@ -29,7 +29,7 @@ bindings and expression satisfies.
 */
 func NewAny(bindings Bindings, satisfies Expression) Expression {
 	rv := &Any{
-		collPred: collPred{
+		collPredBase: collPredBase{
 			bindings:  bindings,
 			satisfies: satisfies,
 		},
