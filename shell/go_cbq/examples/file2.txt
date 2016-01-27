@@ -1,0 +1,15 @@
+\PUSH;
+\SET -$airport "SJC";
+\SET -args ["LAX", 6 ];
+execute airinfo;
+
+\SET;
+\POP;
+
+\REDIRECT OFF;
+\SOURCE examples/file3.txt;
+
+# Back to file 2;
+\SET;
+
+# FIle2 ends here 

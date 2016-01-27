@@ -1,0 +1,15 @@
+\PUSH;
+\SET -$airport "LAX";
+\SET -args ["JFK", 8 ];
+
+\SET;
+
+execute airinfo;
+
+\POP;
+
+\redirect examples/output.txt;
+
+\SET;
+
+# File3 ends here; 

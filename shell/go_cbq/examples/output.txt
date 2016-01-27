@@ -1,0 +1,23 @@
+\SET
+Query Parameters :: 
+Parameter name : creds Usernames ["Administrator"]
+Parameter name : args Value  [["SEA",6]]
+
+Named Parameters :: 
+Parameter name : airport Value  ["SFO"]
+
+User Defined Session Parameters :: 
+
+Predefined Session Parameters :: 
+Parameter name : limit Value  [0]
+Parameter name : histfile Value  [".cbq_history"]
+Parameter name : histsize Value  [1000]
+Parameter name : autoconfig Value  [false]
+
+
+
+\REDIRECT output_file.txt;
+\REDIRECT output_file.txt
+
+
+\SOURCE examples/file1.txt \REDIRECT off;

@@ -1,0 +1,21 @@
+\ECHO \\airinfo;
+\ALIAS;
+#Create Prepared statement to retrieve information from `travel-sample`;
+prepare airinfo 
+from SELECT a.name, s.flight, 
+            s.utc, r.sourceairport, 
+            r.destinationairport, r.equipment 
+     FROM `travel-sample` r 
+     UNNEST r.schedule s 
+     JOIN `travel-sample` a ON KEYS r.airlineid 
+     WHERE r.sourceairport=$airport AND 
+           r.destinationairport=$1 AND 
+           s.day=$2 
+     ORDER BY a.name;
+
+\SET;
+
+\SOURCE examples/file2.txt;
+
+--Back to file 1;
+\SET;

@@ -1,0 +1,41 @@
+\SET -creds Administrator:password;
+\ECHO -creds;
+create primary index on `travel-sample`;
+
+
+#Find flight information, from source to destination on a leave date; 
+
+#Find schedule information for an airline that services the requested flight path;
+
+
+SELECT a.name, s.flight, s.utc, r.sourceairport, r.destinationairport, r.equipment 
+FROM `travel-sample` r 
+UNNEST r.schedule s 
+JOIN `travel-sample` a 
+ON KEYS r.airlineid 
+WHERE r.sourceairport='SFO' AND 
+r.destinationairport='SEA' AND 
+s.day=6 ORDER BY a.name;
+
+\ALIAS airinfo SELECT a.name, s.flight, s.utc, r.sourceairport, r.destinationairport, r.equipment FROM `travel-sample` r UNNEST r.schedule s JOIN `travel-sample` a ON KEYS r.airlineid WHERE r.sourceairport=$airport AND r.destinationairport=$1 AND s.day=$2 ORDER BY a.name;
+
+\ALIAS;
+
+\SET -args ["SEA", 6];
+\SET -$airport "SFO";
+\\airinfo;
+
+\SET;
+
+\ECHO -args -$airport -creds;
+
+
+\SOURCE examples/file1.txt;
+
+\SET;
+
+\REDIRECT output_file.txt;
+\SOURCE examples/file1.txt
+\REDIRECT off;
+
+\QUIT;
