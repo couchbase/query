@@ -1,32 +1,35 @@
 #!/bin/bash
+#
+# to build the enterprise version, with schema inferencing, launch this 
+# as './build.sh -tags "enterprise"
 
-echo go get -d -v ./...
-go get -d -v ./...
+echo go get $* -d -v ./...
+go get $* -d -v ./...
 
 echo cd parser/n1ql
 cd parser/n1ql
-./build.sh $1
+./build.sh $*
 cd ../..
 
 echo cd server/cbq-engine
 cd server/cbq-engine
-./build.sh $1
+./build.sh $*
 cd ../..
 
 echo cd shell/cbq
 cd shell/cbq
-./build.sh $1
+./build.sh $*
 cd ../..
 
 echo cd shell/go_cbq
 cd shell/go_cbq
-./build.sh $1
+./build.sh $*
 cd ../..
 
 echo cd tutorial
 cd tutorial
-./build.sh $1
+./build.sh $*
 cd ..
 
-echo go install  -tags "enterprise" ./...
-go install  -tags "enterprise" ./...
+echo go install  $* ./...
+go install $* ./...

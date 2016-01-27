@@ -452,6 +452,11 @@ source, so as to be able to make a build. This clones it into query:
      $ cd query 
      $ ./build.sh
 
+By default, this builds the community edition of query. If you want
+the enterprise version (which includes schema inferencing), use:
+
+     $ ./build.sh -tags "enterprise"
+
 All the builds exist in their respective directories. You can find the
 cbq and cbq-engine binaries in the shell and server directories.
 
