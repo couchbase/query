@@ -98,7 +98,7 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return
 	}
 
-	f.Keyspace = ""
+	f.SetKeyspace("")
 	this.right.keys, err = f.Map(this.right.keys)
 	if err != nil {
 		return
@@ -110,13 +110,13 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return nil, err
 	}
 
-	_, ok := f.Allowed.Field(alias)
+	_, ok := f.Allowed().Field(alias)
 	if ok {
 		err = errors.NewDuplicateAliasError("JOIN", alias, "plan.join.duplicate_alias")
 		return nil, err
 	}
 
-	f.Allowed.SetField(alias, alias)
+	f.Allowed().SetField(alias, alias)
 	return
 }
 

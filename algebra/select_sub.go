@@ -69,7 +69,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 			return nil, err
 		}
 	} else {
-		f = expression.NewFormalizer(parent)
+		f = expression.NewFormalizer("", parent)
 	}
 
 	if this.let != nil {
@@ -100,9 +100,9 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	// Determine if this is a correlated subquery
 	this.correlated = false
-	immediate := f.Allowed.GetValue().Fields()
+	immediate := f.Allowed().GetValue().Fields()
 
-	for ident, _ := range f.Identifiers {
+	for ident, _ := range f.Identifiers() {
 		if _, ok := immediate[ident]; !ok {
 			this.correlated = true
 			break

@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/value"
 )
 
 /*
@@ -48,12 +47,7 @@ func (this *KeyspaceRef) Formalize() (f *expression.Formalizer, err error) {
 		return
 	}
 
-	allowed := value.NewScopeValue(make(map[string]interface{}), nil)
-	allowed.SetField(keyspace, keyspace)
-
-	f = expression.NewFormalizer(nil)
-	f.Keyspace = keyspace
-	f.Allowed = allowed
+	f = expression.NewFormalizer(keyspace, nil)
 	return
 }
 

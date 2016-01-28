@@ -107,14 +107,14 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 		return nil, err
 	}
 
-	_, ok := f.Allowed.Field(alias)
+	_, ok := f.Allowed().Field(alias)
 	if ok {
 		err = errors.NewDuplicateAliasError("UNNEST", alias, "plan.unnest.duplicate_alias")
 		return nil, err
 	}
 
-	f.Keyspace = ""
-	f.Allowed.SetField(alias, alias)
+	f.SetKeyspace("")
+	f.Allowed().SetField(alias, alias)
 	return
 }
 

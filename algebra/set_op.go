@@ -100,9 +100,9 @@ func (this *setOp) Formalize(parent *expression.Formalizer) (*expression.Formali
 	}
 
 	terms := this.ResultTerms()
-	f := expression.NewFormalizer(parent)
+	f := expression.NewFormalizer("", parent)
 	for _, term := range terms {
-		f.Allowed.SetField(term.Alias(), term.Alias())
+		f.Allowed().SetField(term.Alias(), term.Alias())
 	}
 
 	return f, nil

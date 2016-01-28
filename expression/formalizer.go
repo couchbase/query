@@ -23,24 +23,29 @@ Allowed and keyspace of type value and string.
 type Formalizer struct {
 	MapperBase
 
-	Allowed     *value.ScopeValue
-	Keyspace    string
-	Identifiers map[string]bool
+	keyspace    string
+	allowed     *value.ScopeValue
+	identifiers map[string]bool
 }
 
 /*
 This method returns a pointer to a Formalizer struct
-with Allowed set to a new map of type string to interface.
+with allowed set to a new map of type string to interface.
 */
-func NewFormalizer(parent *Formalizer) *Formalizer {
+func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	var pv value.Value
 	if parent != nil {
-		pv = parent.Allowed
+		pv = parent.allowed
 	}
 
 	rv := &Formalizer{
-		Allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
-		Identifiers: make(map[string]bool),
+		keyspace:    keyspace,
+		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
+		identifiers: make(map[string]bool),
+	}
+
+	if keyspace != "" {
+		rv.allowed.SetField(keyspace, keyspace)
 	}
 
 	rv.mapper = rv
@@ -131,21 +136,21 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 Formalize Identifier.
 */
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	_, ok := this.Allowed.Field(expr.Identifier())
+	_, ok := this.allowed.Field(expr.Identifier())
 	if ok {
-		if this.Identifiers != nil {
-			this.Identifiers[expr.Identifier()] = true
+		if this.identifiers != nil {
+			this.identifiers[expr.Identifier()] = true
 		}
 
 		return expr, nil
 	}
 
-	if this.Keyspace == "" {
+	if this.keyspace == "" {
 		return nil, fmt.Errorf("Ambiguous reference to field %v.", expr.Identifier())
 	}
 
 	return NewField(
-			NewIdentifier(this.Keyspace),
+			NewIdentifier(this.keyspace),
 			NewFieldName(expr.Identifier(), expr.CaseInsensitive())),
 		nil
 }
@@ -155,8 +160,8 @@ Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	meta, ok := expr.(*Meta)
-	if ok && len(meta.Operands()) == 0 && this.Keyspace != "" {
-		return NewMeta(NewIdentifier(this.Keyspace)), nil
+	if ok && len(meta.Operands()) == 0 && this.keyspace != "" {
+		return NewMeta(NewIdentifier(this.keyspace)), nil
 	}
 
 	return expr, expr.MapChildren(this.mapper)
@@ -177,15 +182,15 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 /*
 Visitor method for Bindings. Value is a new map from string
 to interface which is populated using the bindings in the
-scope of the parent which is listed by the value Allowed.
-Bring the bindings that have parrent Allowed into scope.
+scope of the parent which is listed by the value allowed.
+Bring the bindings that have parrent allowed into scope.
 */
 func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, err error) {
-	sv = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.Allowed)
+	sv = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
 
 	var expr Expression
 	for _, b := range bindings {
-		_, ok := this.Allowed.Field(b.Variable())
+		_, ok := this.allowed.Field(b.Variable())
 		if ok {
 			return nil, fmt.Errorf("Bind alias %s already in scope.", b.Variable())
 		}
@@ -199,7 +204,7 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 		sv.SetField(b.Variable(), b.Variable())
 	}
 
-	this.Allowed = sv
+	this.allowed = sv
 	return sv, nil
 }
 
@@ -209,24 +214,43 @@ Set scope to parent's scope.
 func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
 	parent := sv.Parent()
 	if parent == nil {
-		this.Allowed = nil
+		this.allowed = nil
 	}
 
-	this.Allowed = sv.Parent().(*value.ScopeValue)
-}
-
-func (this *Formalizer) SetIdentifiers(identifiers map[string]bool) {
-	this.Identifiers = identifiers
+	this.allowed = sv.Parent().(*value.ScopeValue)
 }
 
 func (this *Formalizer) Copy() *Formalizer {
-	f := NewFormalizer(nil)
-	f.Allowed = this.Allowed.Copy().(*value.ScopeValue)
-	f.Keyspace = this.Keyspace
+	f := NewFormalizer(this.keyspace, nil)
+	f.allowed = this.allowed.Copy().(*value.ScopeValue)
 
-	for ident, val := range this.Identifiers {
-		f.Identifiers[ident] = val
+	for ident, val := range this.identifiers {
+		f.identifiers[ident] = val
 	}
 
 	return f
+}
+
+func (this *Formalizer) SetKeyspace(keyspace string) {
+	this.keyspace = keyspace
+
+	if keyspace != "" {
+		this.allowed.SetField(keyspace, keyspace)
+	}
+}
+
+func (this *Formalizer) Keyspace() string {
+	return this.keyspace
+}
+
+func (this *Formalizer) Allowed() *value.ScopeValue {
+	return this.allowed
+}
+
+func (this *Formalizer) SetIdentifiers(identifiers map[string]bool) {
+	this.identifiers = identifiers
+}
+
+func (this *Formalizer) Identifiers() map[string]bool {
+	return this.identifiers
 }

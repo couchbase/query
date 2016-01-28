@@ -198,7 +198,7 @@ in the insert statement.
 */
 func (this *Insert) Formalize() (err error) {
 	if this.values != nil {
-		f := expression.NewFormalizer(nil)
+		f := expression.NewFormalizer("", nil)
 		err = this.values.MapExpressions(f)
 		if err != nil {
 			return

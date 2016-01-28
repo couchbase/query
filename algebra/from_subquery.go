@@ -78,15 +78,13 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return
 	}
 
-	_, ok := parent.Allowed.Field(alias)
+	_, ok := parent.Allowed().Field(alias)
 	if ok {
 		err = errors.NewDuplicateAliasError("subquery", alias, "plan.subquery.duplicate_alias")
 		return nil, err
 	}
 
-	f = expression.NewFormalizer(parent)
-	f.Keyspace = alias
-	f.Allowed.SetField(alias, alias)
+	f = expression.NewFormalizer(alias, parent)
 	return
 }
 

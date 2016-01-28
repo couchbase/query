@@ -76,8 +76,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return
 		}
 
-		formalizer := expression.NewFormalizer(nil)
-		formalizer.Keyspace = node.Alias()
+		formalizer := expression.NewFormalizer(node.Alias(), nil)
 		primaryKey := expression.Expressions{
 			expression.NewField(
 				expression.NewMeta(expression.NewIdentifier(node.Alias())),

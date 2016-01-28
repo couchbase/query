@@ -198,7 +198,7 @@ in the upsert statement.
 */
 func (this *Upsert) Formalize() (err error) {
 	if this.values != nil {
-		f := expression.NewFormalizer(nil)
+		f := expression.NewFormalizer("", nil)
 		err = this.values.MapExpressions(f)
 		if err != nil {
 			return

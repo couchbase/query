@@ -99,7 +99,7 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 		return
 	}
 
-	_, ok := f.Allowed.Field(this.keyFor)
+	_, ok := f.Allowed().Field(this.keyFor)
 	if !ok {
 		err = errors.NewUnknownForError("JOIN", this.keyFor, "plan.join.unknown_for")
 		return nil, err
@@ -111,21 +111,21 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 		return nil, err
 	}
 
-	_, ok = f.Allowed.Field(alias)
+	_, ok = f.Allowed().Field(alias)
 	if ok {
 		err = errors.NewDuplicateAliasError("JOIN", alias, "plan.join.duplicate_alias")
 		return nil, err
 	}
 
-	f.Allowed.SetField(alias, alias)
-	f.Keyspace = ""
+	f.Allowed().SetField(alias, alias)
+	f.SetKeyspace("")
 
-	p := expression.NewFormalizer(parent)
-	p.Allowed.SetField(alias, alias)
+	p := expression.NewFormalizer("", parent)
+	p.Allowed().SetField(alias, alias)
 	this.right.keys, err = p.Map(this.right.keys)
 
-	for ident, val := range p.Identifiers {
-		f.Identifiers[ident] = val
+	for ident, val := range p.Identifiers() {
+		f.Identifiers()[ident] = val
 	}
 
 	return

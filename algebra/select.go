@@ -71,7 +71,7 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Select) Formalize() (err error) {
-	return this.FormalizeSubquery(expression.NewFormalizer(nil))
+	return this.FormalizeSubquery(expression.NewFormalizer("", nil))
 }
 
 /*
@@ -198,8 +198,8 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 
 		if !this.correlated {
 			// Determine if this is a correlated subquery
-			immediate := f.Allowed.GetValue().Fields()
-			for ident, _ := range f.Identifiers {
+			immediate := f.Allowed().GetValue().Fields()
+			for ident, _ := range f.Identifiers() {
 				if _, ok := immediate[ident]; !ok {
 					this.correlated = true
 					break
@@ -213,7 +213,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 	}
 
 	if !this.correlated {
-		prevIdentifiers := parent.Identifiers
+		prevIdentifiers := parent.Identifiers()
 		defer parent.SetIdentifiers(prevIdentifiers)
 		parent.SetIdentifiers(make(map[string]bool))
 	}
@@ -233,7 +233,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 	}
 
 	if !this.correlated {
-		this.correlated = len(parent.Identifiers) > 0
+		this.correlated = len(parent.Identifiers()) > 0
 	}
 
 	return err

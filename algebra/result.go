@@ -179,7 +179,7 @@ func (this *Projection) Formalize(in *expression.Formalizer) (f *expression.Form
 	// Exempt explicit aliases from being formalized
 	for _, term := range this.terms {
 		if term.as != "" {
-			f.Allowed.SetField(term.as, term.as)
+			f.Allowed().SetField(term.as, term.as)
 		}
 	}
 

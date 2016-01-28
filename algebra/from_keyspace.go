@@ -148,7 +148,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return
 	}
 
-	f = expression.NewFormalizer(parent)
+	f = expression.NewFormalizer("", parent)
 	if this.keys != nil {
 		_, err = this.keys.Accept(f)
 		if err != nil {
@@ -156,14 +156,13 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		}
 	}
 
-	_, ok := parent.Allowed.Field(keyspace)
+	_, ok := parent.Allowed().Field(keyspace)
 	if ok {
 		err = errors.NewDuplicateAliasError("subquery", keyspace, "plan.keyspace.duplicate_alias")
 		return nil, err
 	}
 
-	f.Allowed.SetField(keyspace, keyspace)
-	f.Keyspace = keyspace
+	f.SetKeyspace(keyspace)
 	return
 }
 

@@ -54,7 +54,7 @@ func (this *SelectTerm) Formalize(parent *expression.Formalizer) (f *expression.
 		return nil, err
 	}
 
-	return expression.NewFormalizer(nil), nil
+	return expression.NewFormalizer("", nil), nil
 }
 
 /*

@@ -158,7 +158,7 @@ func (this *Delete) Formalize() (err error) {
 		return err
 	}
 
-	empty := expression.NewFormalizer(nil)
+	empty := expression.NewFormalizer("", nil)
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
 		if err != nil {

@@ -226,5 +226,5 @@ func (this *predicate) VisitCover(expr *expression.Cover) (interface{}, error) {
 
 // All
 func (this *predicate) VisitAll(expr *expression.All) (interface{}, error) {
-	return expr.Array().Accept(this)
+	return this.test(expr)
 }
