@@ -35,8 +35,16 @@ func newSargableAny(pred *expression.Any) *sargableAny {
 		}
 
 		mappings := expression.Expressions{array.Mapping()}
-		return pred.Bindings().EquivalentTo(array.Bindings()) &&
-			SargableFor(pred.Satisfies(), mappings) > 0, nil
+		if !pred.Bindings().EquivalentTo(array.Bindings()) {
+			return false, nil
+		}
+
+		if array.When() != nil &&
+			!SubsetOf(pred.Satisfies(), array.When()) {
+			return false, nil
+		}
+
+		return SargableFor(pred.Satisfies(), mappings) > 0, nil
 	}
 
 	return rv

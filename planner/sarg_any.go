@@ -39,6 +39,11 @@ func newSargAny(pred *expression.Any) *sargAny {
 			return nil, nil
 		}
 
+		if array.When() != nil &&
+			!SubsetOf(pred.Satisfies(), array.When()) {
+			return nil, nil
+		}
+
 		return sargFor(pred.Satisfies(), array.Mapping(), false)
 	}
 
