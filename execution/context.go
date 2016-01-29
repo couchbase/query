@@ -41,44 +41,44 @@ type Output interface {
 }
 
 type Context struct {
-	requestId      string
-	datastore      datastore.Datastore
-	systemstore    datastore.Datastore
-	namespace      string
-	readonly       bool
-	maxParallelism int
-	now            time.Time
-	namedArgs      map[string]value.Value
-	positionalArgs value.Values
-	credentials    datastore.Credentials
-	consistency    datastore.ScanConsistency
-	vector         timestamp.Vector
-	output         Output
-	subplans       *subqueryMap
-	subresults     *subqueryMap
-	mutex          sync.RWMutex
+	requestId        string
+	datastore        datastore.Datastore
+	systemstore      datastore.Datastore
+	namespace        string
+	readonly         bool
+	maxParallelism   int
+	now              time.Time
+	namedArgs        map[string]value.Value
+	positionalArgs   value.Values
+	credentials      datastore.Credentials
+	consistency      datastore.ScanConsistency
+	scanVectorSource timestamp.ScanVectorSource
+	output           Output
+	subplans         *subqueryMap
+	subresults       *subqueryMap
+	mutex            sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	namespace string, readonly bool, maxParallelism int, namedArgs map[string]value.Value,
 	positionalArgs value.Values, credentials datastore.Credentials,
-	consistency datastore.ScanConsistency, vector timestamp.Vector, output Output) *Context {
+	consistency datastore.ScanConsistency, scanVectorSource timestamp.ScanVectorSource, output Output) *Context {
 	rv := &Context{
-		requestId:      requestId,
-		datastore:      datastore,
-		systemstore:    systemstore,
-		namespace:      namespace,
-		readonly:       readonly,
-		maxParallelism: maxParallelism,
-		now:            time.Now(),
-		namedArgs:      namedArgs,
-		positionalArgs: positionalArgs,
-		credentials:    credentials,
-		consistency:    consistency,
-		vector:         vector,
-		output:         output,
-		subplans:       nil,
-		subresults:     nil,
+		requestId:        requestId,
+		datastore:        datastore,
+		systemstore:      systemstore,
+		namespace:        namespace,
+		readonly:         readonly,
+		maxParallelism:   maxParallelism,
+		now:              time.Now(),
+		namedArgs:        namedArgs,
+		positionalArgs:   positionalArgs,
+		credentials:      credentials,
+		consistency:      consistency,
+		scanVectorSource: scanVectorSource,
+		output:           output,
+		subplans:         nil,
+		subresults:       nil,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -140,8 +140,8 @@ func (this *Context) ScanConsistency() datastore.ScanConsistency {
 	return this.consistency
 }
 
-func (this *Context) ScanVector() timestamp.Vector {
-	return this.vector
+func (this *Context) ScanVectorSource() timestamp.ScanVectorSource {
+	return this.scanVectorSource
 }
 
 func (this *Context) AddMutationCount(i uint64) {

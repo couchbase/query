@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 	"io/ioutil"
@@ -163,8 +164,8 @@ func (this *scanConfigImpl) ScanWait() time.Duration {
 	return 0
 }
 
-func (this *scanConfigImpl) ScanVector() timestamp.Vector {
-	return nil
+func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
+	return &http.ZeroScanVectorSource{}
 }
 
 /*

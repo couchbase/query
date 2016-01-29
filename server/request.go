@@ -56,7 +56,7 @@ type Request interface {
 	Metrics() value.Tristate
 	Signature() value.Tristate
 	ScanConsistency() datastore.ScanConsistency
-	ScanVector() timestamp.Vector
+	ScanVectorSource() timestamp.ScanVectorSource
 	RequestTime() time.Time
 	ServiceTime() time.Time
 	Output() execution.Output
@@ -92,7 +92,7 @@ const (
 type ScanConfiguration interface {
 	ScanConsistency() datastore.ScanConsistency
 	ScanWait() time.Duration
-	ScanVector() timestamp.Vector
+	ScanVectorSource() timestamp.ScanVectorSource
 }
 
 // API for tracking active requests
@@ -286,11 +286,11 @@ func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {
 	return this.consistency.ScanConsistency()
 }
 
-func (this *BaseRequest) ScanVector() timestamp.Vector {
+func (this *BaseRequest) ScanVectorSource() timestamp.ScanVectorSource {
 	if this.consistency == nil {
 		return nil
 	}
-	return this.consistency.ScanVector()
+	return this.consistency.ScanVectorSource()
 }
 
 func (this *BaseRequest) RequestTime() time.Time {

@@ -167,8 +167,10 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 		}
 	}
 
+	keyspace := this.plan.Keyspace()
+	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 	this.plan.Index().ScanEntries(context.RequestId(), limit,
-		context.ScanConsistency(), context.ScanVector(), conn)
+		context.ScanConsistency(), scanVector, conn)
 }
 
 func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {
@@ -179,8 +181,10 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 		Inclusion: datastore.NEITHER,
 		Low:       []value.Value{value.NewValue(indexEntry.PrimaryKey)},
 	}
+	keyspace := this.plan.Keyspace()
+	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
 	this.plan.Index().Scan(context.RequestId(), ds, true, int64(chunkSize),
-		context.ScanConsistency(), context.ScanVector(), conn)
+		context.ScanConsistency(), scanVector, conn)
 }
 
 func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexConnection {

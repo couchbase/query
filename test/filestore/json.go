@@ -13,9 +13,11 @@ import (
 	"encoding/json"
 	"os"
 	"runtime"
+	"time"
 
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
@@ -23,6 +25,8 @@ import (
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
 
@@ -128,9 +132,26 @@ func (this *MockResponse) NoMoreResults() {
 	close(this.done)
 }
 
+type scanConfigImpl struct {
+}
+
+func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
+	return datastore.SCAN_PLUS
+}
+
+func (this *scanConfigImpl) ScanWait() time.Duration {
+	return 0
+}
+
+func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
+	return &http.ZeroScanVectorSource{}
+}
+
 func Run(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, nil, "", nil)
+	scanConfiguration := &scanConfigImpl{}
+
+	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, scanConfiguration, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

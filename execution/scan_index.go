@@ -191,8 +191,10 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		}
 	}
 
+	keyspaceTerm := this.plan.Term()
+	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
 	this.plan.Index().Scan(context.RequestId(), dspan, this.plan.Distinct(), limit,
-		context.ScanConsistency(), context.ScanVector(), conn)
+		context.ScanConsistency(), scanVector, conn)
 }
 
 func evalSpan(ps *plan.Span, context *Context) (*datastore.Span, error) {

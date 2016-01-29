@@ -348,20 +348,33 @@ func getScanConfiguration(a httpRequestArgs) (*scanConfigImpl, errors.Error) {
 		return nil, err
 	}
 
-	// Not both scan_vector and scan_vectors.
-	if scan_vector != nil && scan_vectors != nil {
-		return nil, errors.NewServiceErrorMultipleValues("scan_vector and scan_vectors")
-	}
-
-	if scan_level == server.AT_PLUS && scan_vector == nil && scan_vectors == nil {
-		return nil, errors.NewServiceErrorMissingValue(SCAN_VECTOR)
+	var scan_vector_source timestamp.ScanVectorSource
+	if scan_vector == nil {
+		if scan_vectors == nil {
+			if scan_level == server.AT_PLUS && scan_vector == nil && scan_vectors == nil {
+				return nil, errors.NewServiceErrorMissingValue(SCAN_VECTOR)
+			}
+			scan_vector_source = &ZeroScanVectorSource{}
+		} else {
+			defaultNamespace, err := a.getString(NAMESPACE, "default")
+			if err != nil {
+				return nil, err
+			}
+			scan_vector_source = newMultipleScanVectorSource(defaultNamespace, scan_vectors)
+		}
+	} else {
+		if scan_vectors == nil {
+			scan_vector_source = &singleScanVectorSource{scan_vector: scan_vector}
+		} else {
+			// Not both scan_vector and scan_vectors.
+			return nil, errors.NewServiceErrorMultipleValues("scan_vector and scan_vectors")
+		}
 	}
 
 	return &scanConfigImpl{
-		scan_level:   scan_level,
-		scan_wait:    scan_wait,
-		scan_vector:  scan_vector,
-		scan_vectors: scan_vectors,
+		scan_level:         scan_level,
+		scan_wait:          scan_wait,
+		scan_vector_source: scan_vector_source,
 	}, nil
 }
 
@@ -1207,10 +1220,9 @@ func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
 const SCAN_VECTOR_SIZE = 1024
 
 type scanConfigImpl struct {
-	scan_level   server.ScanConsistency
-	scan_wait    time.Duration
-	scan_vector  timestamp.Vector
-	scan_vectors map[string]timestamp.Vector
+	scan_level         server.ScanConsistency
+	scan_wait          time.Duration
+	scan_vector_source timestamp.ScanVectorSource
 }
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
@@ -1230,8 +1242,8 @@ func (this *scanConfigImpl) ScanWait() time.Duration {
 	return this.scan_wait
 }
 
-func (this *scanConfigImpl) ScanVector() timestamp.Vector {
-	return this.scan_vector
+func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
+	return this.scan_vector_source
 }
 
 func newScanConsistency(s string) server.ScanConsistency {

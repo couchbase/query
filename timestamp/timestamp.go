@@ -21,3 +21,7 @@ type Entry interface {
 	Guard() string    // vbucket/partition validation UUID
 	Value() uint64    // Logical sequence number
 }
+
+type ScanVectorSource interface {
+	ScanVector(namespace_id string, keyspace_name string) Vector
+}
