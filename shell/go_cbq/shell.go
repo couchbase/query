@@ -272,7 +272,7 @@ func main() {
 		// Redirect all output to the given file.
 		// This is handled in the HandleInteractiveMode() method
 		// in interactive.go.
-		command.FILE_WR_MODE = true
+		command.FILE_RW_MODE = true
 		command.FILE_OUTPUT = outputFlag
 	}
 

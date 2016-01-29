@@ -54,7 +54,7 @@ var (
 	//True if reading commands from file
 	FILE_RD_MODE = false
 	//True if writing commands to file
-	FILE_WR_MODE = false
+	FILE_RW_MODE = false
 	//File to redirect output to
 	FILE_OUTPUT = ""
 	//Total no. of commands

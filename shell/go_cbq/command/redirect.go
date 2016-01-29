@@ -47,9 +47,9 @@ func (this *Redirect) ExecCommand(args []string) (int, string) {
 		return errors.TOO_FEW_ARGS, ""
 	} else {
 		if strings.ToLower(args[0]) == "off" {
-			FILE_WR_MODE = false
+			FILE_RW_MODE = false
 		} else {
-			FILE_WR_MODE = true
+			FILE_RW_MODE = true
 			FILE_OUTPUT = args[0]
 		}
 	}

@@ -105,7 +105,7 @@ func HandleInteractiveMode(prompt string) {
 		go_n1ql.SetPassthroughMode(true)
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_WR_MODE == true {
+		if command.FILE_RW_MODE == true {
 			_, werr := io.WriteString(command.W, scriptFlag+"\n")
 			if werr != nil {
 				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
@@ -132,7 +132,7 @@ func HandleInteractiveMode(prompt string) {
 		input_command := "\\source " + inputFlag
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_WR_MODE == true {
+		if command.FILE_RW_MODE == true {
 			_, werr := io.WriteString(command.W, input_command+"\n")
 			if werr != nil {
 				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
@@ -209,7 +209,7 @@ func HandleInteractiveMode(prompt string) {
 					command.PrintError(s_err)
 				}
 				// If outputting to a file, then add the statement to the file as well.
-				if command.FILE_WR_MODE == true {
+				if command.FILE_RW_MODE == true {
 					_, werr := io.WriteString(command.W, "\n"+inputString+"\n")
 					if werr != nil {
 						s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
@@ -285,7 +285,7 @@ func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
 	var err error
 	var outputFile *os.File
 
-	if command.FILE_WR_MODE == true {
+	if command.FILE_RW_MODE == true {
 		if prevFile != command.FILE_OUTPUT {
 			prevFile = command.FILE_OUTPUT
 			outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)

@@ -74,7 +74,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 		}
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_WR_MODE == true {
+		if command.FILE_RW_MODE == true {
 			_, werr := io.WriteString(command.W, val+"\n")
 			if werr != nil {
 				return errors.WRITER_OUTPUT, werr.Error()
@@ -540,7 +540,7 @@ func readAndExec(liner *liner.State) (int, string) {
 		final_input = strings.TrimSuffix(final_input, ";")
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_WR_MODE == true {
+		if command.FILE_RW_MODE == true {
 			prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
 
 			if outputFile == os.Stdout {
