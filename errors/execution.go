@@ -102,3 +102,9 @@ func NewUnnestInvalidPosition(pos interface{}) Error {
 	return &err{level: EXCEPTION, ICode: 5180, IKey: "execution.unnest_invalid_position",
 		InternalMsg: fmt.Sprintf("Invalid UNNEST position of type %T.", pos), InternalCaller: CallerN(1)}
 }
+
+func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
+	return &err{level: EXCEPTION, ICode: 5190, IKey: "execution.scan_vector_too_many_scanned_vectors",
+		InternalMsg: fmt.Sprintf("The scan_vector parameter should not be used for queries accessing more than one keyspace. "+
+			"Use scan_vectors instead. Keyspaces: %v", buckets), InternalCaller: CallerN(1)}
+}

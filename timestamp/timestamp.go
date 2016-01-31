@@ -12,6 +12,15 @@ Package timestmap provides logical vector timestamps.
 */
 package timestamp
 
+const (
+	// Scan vectors not specified at all.
+	NO_VECTORS = 1
+	// Client gave us one vector, without saying what scan vector it is for. (scan_vector)
+	ONE_VECTOR = 2
+	// Client gave us a map of from keyspaces to scan vectors.
+	VECTOR_MAP = 3
+)
+
 type Vector interface {
 	Entries() []Entry // Non-zero entries; all missing entries are zero
 }
@@ -23,5 +32,6 @@ type Entry interface {
 }
 
 type ScanVectorSource interface {
+	Type() int32
 	ScanVector(namespace_id string, keyspace_name string) Vector
 }

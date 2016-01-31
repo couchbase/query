@@ -407,7 +407,12 @@ func (this *Server) serviceRequest(request Request) {
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
 	if er != nil {
-		request.Fail(errors.NewError(err, ""))
+		error, ok := er.(errors.Error)
+		if ok {
+			request.Fail(error)
+		} else {
+			request.Fail(errors.NewError(er, ""))
+		}
 	}
 
 	if logging.LogLevel() >= logging.TRACE {

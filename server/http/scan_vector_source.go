@@ -24,6 +24,10 @@ func (this *singleScanVectorSource) ScanVector(namespace_id string, keyspace_nam
 	return this.scan_vector
 }
 
+func (this *singleScanVectorSource) Type() int32 {
+	return timestamp.ONE_VECTOR
+}
+
 // Implements timestamp.ScanVectorSource.
 // Visible because it is used in a test.
 type ZeroScanVectorSource struct {
@@ -33,6 +37,10 @@ type ZeroScanVectorSource struct {
 func (this *ZeroScanVectorSource) ScanVector(namespace_id string, keyspace_name string) timestamp.Vector {
 	// Always return a vector of 0 entries.
 	return &this.empty
+}
+
+func (this *ZeroScanVectorSource) Type() int32 {
+	return timestamp.NO_VECTORS
 }
 
 type fullyQualifiedKeyspace struct {
@@ -53,6 +61,10 @@ func (this *multipleScanVectorSource) ScanVector(namespace_id string, keyspace_n
 	} else {
 		return &scanVectorEntries{}
 	}
+}
+
+func (this *multipleScanVectorSource) Type() int32 {
+	return timestamp.VECTOR_MAP
 }
 
 func newMultipleScanVectorSource(default_namespace string, vector_map map[string]timestamp.Vector) *multipleScanVectorSource {

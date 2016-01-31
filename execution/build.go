@@ -10,29 +10,59 @@
 package execution
 
 import (
+	"fmt"
+
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 )
 
 // Build a query execution pipeline from a query plan.
 func Build(plan plan.Operator, context *Context) (Operator, error) {
-	builder := &builder{context}
+	var m map[scannedIndex]bool
+	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
+		// Collect scanned indexes.
+		m = make(map[scannedIndex]bool)
+	}
+	builder := &builder{context, m}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
 		return nil, err
 	}
 
+	if builder.scannedIndexes != nil && len(builder.scannedIndexes) > 1 {
+		scannedIndexArr := make([]string, len(builder.scannedIndexes))
+		for si := range builder.scannedIndexes {
+			scannedIndexArr = append(scannedIndexArr, fmt.Sprintf("%s:%s", si.namespace, si.keyspace))
+		}
+		return nil, errors.NewScanVectorTooManyScannedBuckets(scannedIndexArr)
+	}
+
 	ex := x.(Operator)
 	return ex, nil
 }
 
+type scannedIndex struct {
+	namespace string
+	keyspace  string
+}
+
 type builder struct {
-	context *Context
+	context        *Context
+	scannedIndexes map[scannedIndex]bool  // Nil if scanned indexes should not be collected.
 }
 
 // Scan
 func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspace := plan.Keyspace()
+		scannedIndex := scannedIndex{keyspace.NamespaceId(), keyspace.Name()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
 	return NewPrimaryScan(plan), nil
 }
 
@@ -41,6 +71,13 @@ func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error)
 }
 
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+	 	scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
 	return NewIndexScan(plan), nil
 }
 
