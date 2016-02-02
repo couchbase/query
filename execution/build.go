@@ -51,7 +51,7 @@ type scannedIndex struct {
 
 type builder struct {
 	context        *Context
-	scannedIndexes map[scannedIndex]bool  // Nil if scanned indexes should not be collected.
+	scannedIndexes map[scannedIndex]bool // Nil if scanned indexes should not be collected.
 }
 
 // Scan
@@ -74,7 +74,7 @@ func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
 	// Remember the bucket of the scanned index.
 	if this.scannedIndexes != nil {
 		keyspaceTerm := plan.Term()
-	 	scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
 		this.scannedIndexes[scannedIndex] = true
 	}
 
