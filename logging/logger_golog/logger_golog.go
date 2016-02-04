@@ -208,7 +208,7 @@ type logEntry struct {
 
 func newLogEntry(msg string, level logging.Level) *logEntry {
 	return &logEntry{
-		Time:    time.Now().Format(time.RFC3339),
+		Time:    time.Now().Format("2006-01-02T15:04:05.000-07:00"), // time.RFC3339 with milliseconds
 		Level:   level,
 		Rlevel:  logging.NONE,
 		Message: msg,
