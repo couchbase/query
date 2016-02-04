@@ -42,9 +42,13 @@ func (this *All) Evaluate(item value.Value, context Context) (value.Value, error
 }
 
 func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
-	val, err := this.array.Evaluate(item, context)
+	val, vals, err := this.array.EvaluateForIndex(item, context)
 	if err != nil {
-		return val, nil, err
+		return val, vals, err
+	}
+
+	if vals != nil {
+		return nil, vals, nil
 	}
 
 	var rv value.Values

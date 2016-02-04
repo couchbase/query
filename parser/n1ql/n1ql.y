@@ -372,7 +372,7 @@ val              value.Value
 %type <s>                rename
 %type <expr>             index_term index_expr index_where
 %type <exprs>            index_terms
-%type <expr>             expr_input
+%type <expr>             expr_input all_expr
 
 %type <inferenceType>    opt_infer_using
 %type <val>              infer_with opt_infer_with
@@ -2587,6 +2587,11 @@ LPAREN expr RPAREN
     $$ = $2
 }
 |
+LPAREN all_expr RPAREN
+{
+    $$ = $2
+}
+|
 subquery_expr
 {
     $$ = $1
@@ -2610,6 +2615,10 @@ LPAREN fullselect RPAREN
 expr_input:
 expr
 |
+all_expr
+;
+
+all_expr:
 all expr
 {
     $$ = expression.NewAll($2, false)

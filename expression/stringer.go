@@ -587,12 +587,12 @@ func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 func (this *Stringer) VisitAll(expr *All) (interface{}, error) {
 	var buf bytes.Buffer
 	if expr.Distinct() {
-		buf.WriteString("all distinct (")
+		buf.WriteString("(distinct (")
 	} else {
-		buf.WriteString("all (")
+		buf.WriteString("(all (")
 	}
 	buf.WriteString(this.Visit(expr.Array()))
-	buf.WriteString(")")
+	buf.WriteString("))")
 	return buf.String(), nil
 }
 

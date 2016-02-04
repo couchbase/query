@@ -126,6 +126,92 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
+func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
+	missing := false
+	null := false
+
+	barr := make([][]interface{}, len(this.bindings))
+	for i, b := range this.bindings {
+		bv, err := b.Expression().Evaluate(item, context)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if b.Descend() {
+			buffer := make([]interface{}, 0, 256)
+			bv = value.NewValue(bv.Descendants(buffer))
+		}
+
+		switch bv.Type() {
+		case value.ARRAY:
+			barr[i] = bv.Actual().([]interface{})
+		case value.MISSING:
+			missing = true
+		default:
+			null = true
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil, nil
+	}
+
+	if null {
+		return value.NULL_VALUE, nil, nil
+	}
+
+	n := -1
+	for _, b := range barr {
+		if n < 0 || len(b) < n {
+			n = len(b)
+		}
+	}
+
+	var rv []interface{}
+	var rvs value.Values
+	for i := 0; i < n; i++ {
+		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		for j, b := range this.bindings {
+			cv.SetField(b.Variable(), barr[j][i])
+		}
+
+		if this.when != nil {
+			wv, e := this.when.Evaluate(cv, context)
+			if e != nil {
+				return nil, nil, e
+			}
+
+			if !wv.Truth() {
+				continue
+			}
+		}
+
+		mv, mvs, e := this.mapping.EvaluateForIndex(cv, context)
+		if e != nil {
+			return nil, nil, e
+		} else if mvs != nil {
+			if rvs == nil {
+				rvs = make(value.Values, 0, n*8)
+			}
+			rvs = append(rvs, mvs...)
+		} else if mv != nil && mv.Type() != value.MISSING {
+			if rv == nil {
+				rv = make([]interface{}, 0, n)
+			}
+			rv = append(rv, mv)
+		}
+	}
+
+	if rvs != nil {
+		return nil, rvs, nil
+	} else {
+		if rv == nil {
+			rv = make([]interface{}, 0)
+		}
+		return value.NewValue(rv), nil, nil
+	}
+}
+
 func (this *Array) Copy() Expression {
 	return NewArray(this.mapping.Copy(), this.bindings.Copy(), Copy(this.when))
 }
