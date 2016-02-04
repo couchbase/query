@@ -210,15 +210,13 @@ func (s *store) SetLogLevel(level logging.Level) {
 	}
 }
 
-// Eben TODO: Implement this method by hooking up schema inferencer
 // Ignore the name parameter for now
 func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, errors.Error) {
 	return s.inferencer, nil
 }
 
-// Sitaram TODO: Implement this method by hooking up schema inferencer
 func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+	return []datastore.Inferencer{s.inferencer}, nil
 }
 
 func initCbAuth(url string) (*cb.Client, error) {
