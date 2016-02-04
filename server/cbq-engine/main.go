@@ -68,6 +68,10 @@ var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
+// Monitoring API
+var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
+var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
+
 func main() {
 	HideConsole(true)
 	defer HideConsole(false)
@@ -126,6 +130,9 @@ func main() {
 		// Make metrics available
 		acctstore.MetricReporter().Start(1, 1)
 	}
+
+	// Start the completed requests log
+	accounting.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
 	channel := make(server.RequestChannel, *REQUEST_CAP)
 	plusChannel := make(server.RequestChannel, *REQUEST_CAP)

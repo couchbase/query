@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -297,6 +298,8 @@ const (
 	_SCANCAP         = "scan-cap"
 	_SERVICERS       = "servicers"
 	_TIMEOUT         = "timeout"
+	_CMPTHRESHOLD    = "completed-threshold"
+	_CMPLIMIT        = "completed-limit"
 )
 
 type checker func(interface{}) bool
@@ -338,6 +341,8 @@ var _CHECKERS = map[string]checker{
 	_SCANCAP:         checkNumber,
 	_SERVICERS:       checkNumber,
 	_TIMEOUT:         checkNumber,
+	_CMPTHRESHOLD:    checkNumber,
+	_CMPLIMIT:        checkNumber,
 }
 
 type setter func(*server.Server, interface{})
@@ -391,6 +396,14 @@ var _SETTERS = map[string]setter{
 		value, _ := o.(float64)
 		s.SetTimeout(time.Duration(value))
 	},
+	_CMPTHRESHOLD: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		accounting.RequestsSetThreshold(int(value))
+	},
+	_CMPLIMIT: func(s *server.Server, o interface{}) {
+		value, _ := o.(float64)
+		accounting.RequestsSetLimit(int(value))
+	},
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -443,6 +456,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_TIMEOUT] = srvr.Timeout()
 	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
 	settings[_LOGLEVEL] = srvr.LogLevel()
+	settings[_CMPTHRESHOLD] = accounting.RequestsThreshold()
+	settings[_CMPLIMIT] = accounting.RequestsLimit()
 	return settings
 }
 
