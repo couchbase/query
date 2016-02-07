@@ -172,9 +172,9 @@ var loggerMutex sync.RWMutex
 // Since we seem to never change the logger, this is not an issue.
 func skipLogging(level Level) bool {
 	if logger == nil {
-		return false
+		return true
 	}
-	return curLevel > level
+	return level > curLevel
 }
 
 func SetLogger(newLogger Logger) {
