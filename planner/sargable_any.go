@@ -35,7 +35,7 @@ func newSargableAny(pred *expression.Any) *sargableAny {
 		}
 
 		mappings := expression.Expressions{array.Mapping()}
-		if !pred.Bindings().EquivalentTo(array.Bindings()) {
+		if !pred.Bindings().SubsetOf(array.Bindings()) {
 			return false, nil
 		}
 

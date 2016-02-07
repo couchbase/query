@@ -28,6 +28,6 @@ func newSubsetAny(any *expression.Any) *subsetAny {
 }
 
 func (this *subsetAny) VisitAny(expr *expression.Any) (interface{}, error) {
-	return this.any.Bindings().EquivalentTo(expr.Bindings()) &&
+	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
 		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
 }

@@ -35,7 +35,7 @@ func newSargAny(pred *expression.Any) *sargAny {
 			return nil, nil
 		}
 
-		if !pred.Bindings().EquivalentTo(array.Bindings()) {
+		if !pred.Bindings().SubsetOf(array.Bindings()) {
 			return nil, nil
 		}
 

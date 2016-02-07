@@ -115,6 +115,23 @@ func (this Bindings) EquivalentTo(other Bindings) bool {
 	return true
 }
 
+func (this Bindings) SubsetOf(other Bindings) bool {
+	if len(this) != len(other) {
+		return false
+	}
+
+	for i, b := range this {
+		o := other[i]
+		if b.variable != o.variable ||
+			(b.descend && !o.descend) ||
+			!b.expr.EquivalentTo(o.expr) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (this Bindings) DependsOn(expr Expression) bool {
 	for _, b := range this {
 		if b.expr.DependsOn(expr) {
