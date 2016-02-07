@@ -366,24 +366,24 @@ Create a new Value from a slice of bytes. The type is inferred from
 the first non-whitespace byte.
 */
 func newValueFromBytes(bytes []byte) Value {
-	parsedType := BINARY
-	err := json.Validate(bytes)
+	parsedType := identifyType(bytes)
 
-	if err == nil {
-		parsedType = identifyType(bytes)
-
-		switch parsedType {
-		case NUMBER, STRING, BOOLEAN, NULL:
-			var p interface{}
-			err := json.Unmarshal(bytes, &p)
-			if err != nil {
-				return binaryValue(bytes)
-			}
-
-			return NewValue(p)
-		case BINARY:
+	switch parsedType {
+	case NUMBER, STRING, BOOLEAN, NULL:
+		var p interface{}
+		err := json.Unmarshal(bytes, &p)
+		if err != nil {
 			return binaryValue(bytes)
 		}
+
+		return NewValue(p)
+	case BINARY:
+		return binaryValue(bytes)
+	}
+
+	err := json.Validate(bytes)
+	if err != nil {
+		return binaryValue(bytes)
 	}
 
 	return &parsedValue{
