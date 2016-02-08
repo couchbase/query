@@ -376,6 +376,9 @@ func main() {
 				os.Exit(1)
 			} else {
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
+				// The go_n1ql driver needs the username/password to query the cluster endpoint,
+				// which may require authorization.
+				go_n1ql.SetUsernamePassword(userFlag, string(password))
 			}
 		} else {
 			s_err := command.HandleError(errors.INVALID_PASSWORD, err.Error())
