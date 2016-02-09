@@ -25,6 +25,7 @@ func ParseStatement(input string) (algebra.Statement, error) {
 	lex := newLexer(NewLexer(reader))
 	lex.parsingStmt = true
 	lex.text = input
+	lex.nex.ResetOffset()
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
@@ -45,6 +46,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
+	lex.nex.ResetOffset()
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
@@ -91,6 +93,10 @@ func newLexer(nex *Lexer) *lexer {
 
 func (this *lexer) Lex(lval *yySymType) int {
 	return this.nex.Lex(lval)
+}
+
+func (this *lexer) Remainder(offset int) string {
+	return strings.TrimLeft(this.text[offset:], " \t")
 }
 
 func (this *lexer) Error(s string) {

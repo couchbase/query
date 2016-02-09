@@ -4,6 +4,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" ORDER BY id",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -69,6 +70,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	    },
+	"text": "SELECT * FROM default:game WHERE META(game).id = \"damien\" ORDER BY id"
         }
     ]
     },
@@ -77,6 +80,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE \"damien\" = META(game).id ORDER BY id",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -142,6 +146,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT * FROM default:game WHERE \"damien\" = META(game).id ORDER BY id"
         }
     ]
     },
@@ -156,6 +162,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" OR META(game).id = \"dustin\" ORDER BY id",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -237,6 +244,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT * FROM default:game WHERE META(game).id = \"damien\" OR META(game).id = \"dustin\" ORDER BY id"
         }
     ]
     },
@@ -245,6 +254,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" OR META(game).id = \"dustin\" OR META(game).id = \"junyi\" ORDER BY id",
           "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -337,6 +347,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT * FROM default:game WHERE META(game).id = \"damien\" OR META(game).id = \"dustin\" OR META(game).id = \"junyi\" ORDER BY id"
         }
     ]
     },
@@ -357,6 +369,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" OR name = \"foo\" ORDER BY id",
          "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -409,6 +422,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	    },
+	"text": "SELECT * FROM default:game WHERE META(game).id = \"damien\" OR name = \"foo\" ORDER BY id"
         }
     ]
     },
@@ -417,6 +432,7 @@
         "statements": "EXPLAIN SELECT * FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"junyi\"]  satisfies META(game).id = id END ORDER BY id",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -469,6 +485,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT * FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"junyi\"]  satisfies META(game).id = id END ORDER BY id"
         }
     ]
     },
@@ -489,6 +507,7 @@
         "statements": "explain SELECT META(game).id FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"does_not_exist\"] satisfies META(game).id = id or id IS NOT NULL END ORDER BY id",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -540,6 +559,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+            },
+            "text": "SELECT META(game).id FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"does_not_exist\"] satisfies META(game).id = id or id IS NOT NULL END ORDER BY id"
         }
     ]
    },
@@ -548,6 +569,7 @@
         "statements": "EXPLAIN SELECT COUNT(*) as c FROM default:game ORDER BY c",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -618,6 +640,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT COUNT(*) as c FROM default:game ORDER BY c"
         }
     ]   
    },
@@ -626,6 +650,7 @@
         "statements": "EXPLAIN SELECT COUNT(*), MIN(score) as sc FROM default:game ORDER BY sc ",
         "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -709,6 +734,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	    },
+	"text": "SELECT COUNT(*), MIN(score) as sc FROM default:game ORDER BY sc"
         }
     ]
    },
@@ -717,6 +744,7 @@
         "statements": "EXPLAIN SELECT COUNT(*) as c FROM default:game WHERE score > 5 ORDER BY c ",
          "results": [
         {
+	"plan": {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -798,6 +826,8 @@
                     "#operator": "FinalProject"
                 }
             ]
+	},
+	"text": "SELECT COUNT(*) as c FROM default:game WHERE score \u003e 5 ORDER BY c"
         }
     ]
    }

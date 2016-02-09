@@ -419,7 +419,7 @@ func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
 
 // Explain
 func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
-	return NewExplain(plan.Operator()), nil
+	return NewExplain(plan), nil
 }
 
 // Infer
