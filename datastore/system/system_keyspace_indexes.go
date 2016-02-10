@@ -148,13 +148,12 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 		if err != nil {
 			return nil, err
 		}
-
 		doc := value.NewAnnotatedValue(map[string]interface{}{
 			"id":           index.Id(),
 			"name":         index.Name(),
 			"keyspace_id":  keyspace.Id(),
 			"namespace_id": namespace.Id(),
-			"datastore_id": actualStore.Id(),
+			"datastore_id": actualStore.URL(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index.RangeKey())),
 			"using":        datastoreObjectToJSONSafe(index.Type()),
 			"state":        string(state),
