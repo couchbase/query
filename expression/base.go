@@ -266,3 +266,19 @@ func (this *ExpressionBase) SetExpr(expr Expression) {
 		this.expr = expr
 	}
 }
+
+/*
+Range over the children of the expression, and check if each
+child is limit pushable to index. If not then return false as
+the limit is not pushable to index. If all children are limit
+pushable, then return true.
+*/
+func (this *ExpressionBase) IsLimitPushable() bool {
+	for _, child := range this.expr.Children() {
+		if !child.IsLimitPushable() {
+			return false
+		}
+	}
+
+	return true
+}

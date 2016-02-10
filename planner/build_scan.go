@@ -93,8 +93,19 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return nil, nil, er
 		}
 
+		if limit != nil {
+			if len(minimals) == 0 || !pred.IsLimitPushable() {
+				// PrimaryScan with predicates disable limit pushdown
+				// Predicate conatins expression that disallows limit pushdown
+				prevLimit := this.limit
+				defer func() { this.limit = prevLimit }()
+				this.limit = nil
+				limit = nil
+			}
+		}
+
 		if len(minimals) > 0 {
-			secondary, err = this.buildSecondaryScan(minimals, node, limit)
+			secondary, err = this.buildSecondaryScan(minimals, node, pred, limit)
 			return secondary, nil, err
 		}
 	}
@@ -290,17 +301,30 @@ outer:
 }
 
 func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover != nil {
-		scan, err := this.buildCoveringScan(secondaries, node, limit)
+		scan, err := this.buildCoveringScan(secondaries, node, pred, limit)
 		if scan != nil || err != nil {
 			return scan, err
 		}
 	}
 
+	if limit != nil && len(secondaries) > 1 {
+		// This makes InterSectionscan disable limit pushdown
+		this.limit = nil
+		limit = nil
+	}
+
 	scans := make([]plan.Operator, 0, len(secondaries))
 	var op plan.Operator
 	for index, entry := range secondaries {
+		if limit != nil {
+			if !pred.CoveredBy(node.Alias(), entry.keys) {
+				// Predicate is not covered by index keys disable limit pushdown
+				this.limit = nil
+				limit = nil
+			}
+		}
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil)
 		if len(entry.spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
@@ -403,7 +427,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []
 }
 
 func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover == nil {
 		return nil, nil
 	}
@@ -432,6 +456,10 @@ outer:
 		covers := make(expression.Covers, 0, len(keys))
 		for _, key := range keys {
 			covers = append(covers, expression.NewCover(key))
+		}
+		if !pred.CoveredBy(alias, keys) {
+			this.limit = nil
+			limit = nil
 		}
 
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)

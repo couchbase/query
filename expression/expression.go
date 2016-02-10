@@ -158,6 +158,12 @@ type Expression interface {
 	   This function returns an expression that is a deep copy.
 	*/
 	Copy() Expression
+
+	/*
+	   This method indicates if the expression allows pushing the
+	   limit to indexscan
+	*/
+	IsLimitPushable() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

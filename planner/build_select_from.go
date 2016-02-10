@@ -24,7 +24,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 	if count {
 		this.maxParallelism = 1
 	} else if node.From() != nil {
-		if this.where != nil || group != nil {
+		if group != nil {
 			this.limit = nil
 		}
 
