@@ -507,6 +507,24 @@ type keyspace struct {
 	gsiIndexer  datastore.Indexer // GSI index provider
 }
 
+//
+// Inferring schemas sometimes requires getting a sample of random documents
+// from a keyspace. Ideally this should come through a random traversal of the
+// primary index, but until that is available, we need to use the Bucket's
+// connection pool of memcached.Clients to request random documents from
+// the KV store.
+//
+
+func (k *keyspace) GetRandomDoc() (string, value.Value, errors.Error) {
+	resp, err := k.cbbucket.GetRandomDoc()
+
+	if err != nil {
+		return "", nil, errors.NewError(err, "Error getting random doc")
+	}
+
+	return fmt.Sprintf("%s", resp.Key), value.NewValue(resp.Body), nil
+}
+
 func newKeyspace(p *namespace, name string) (datastore.Keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()

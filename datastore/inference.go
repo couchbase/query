@@ -10,6 +10,7 @@
 package datastore
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -18,6 +19,10 @@ type InferenceType string
 const (
 	INF_DEFAULT InferenceType = "default"
 )
+
+type RandomDocumentProvider interface {
+	GetRandomDoc() (string, value.Value, errors.Error)
+}
 
 type Inferencer interface {
 	Name() InferenceType
