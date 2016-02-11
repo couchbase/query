@@ -24,17 +24,15 @@ type Explain struct {
 	statementBase
 
 	stmt Statement `json:"stmt"`
-	text string    `json:"text"`
 }
 
 /*
 The function NewExplain returns a pointer to the Explain
 struct that has its field stmt set to the input Statement.
 */
-func NewExplain(stmt Statement, text string) *Explain {
+func NewExplain(stmt Statement) *Explain {
 	rv := &Explain{
 		stmt: stmt,
-		text: text,
 	}
 
 	rv.statementBase.stmt = rv
@@ -90,11 +88,4 @@ Return the explain statement.
 */
 func (this *Explain) Statement() Statement {
 	return this.stmt
-}
-
-/*
-Return the text of the statement being explained
-*/
-func (this *Explain) Text() string {
-	return this.text
 }

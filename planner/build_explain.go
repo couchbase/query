@@ -20,5 +20,5 @@ func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
 		return nil, err
 	}
 
-	return plan.NewExplain(op.(plan.Operator), stmt.Text()), nil
+	return plan.NewExplain(op.(plan.Operator)), nil
 }

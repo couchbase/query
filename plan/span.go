@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
-	"github.com/couchbase/query/value"
 )
 
 type Ranges []*Range
@@ -24,15 +23,6 @@ type Range struct {
 	Low       expression.Expressions
 	High      expression.Expressions
 	Inclusion datastore.Inclusion
-}
-
-func isNotNull(e expression.Expressions) bool {
-	for _, elem := range e {
-		if elem.Value() != value.NULL_VALUE {
-			return true
-		}
-	}
-	return false
 }
 
 func (this *Range) Copy() *Range {
@@ -48,11 +38,11 @@ func (this *Range) MarshalJSON() ([]byte, error) {
 		"Inclusion": this.Inclusion,
 	}
 
-	if this.Low != nil && isNotNull(this.Low) {
+	if this.Low != nil {
 		r["Low"] = this.Low
 	}
 
-	if this.High != nil && isNotNull(this.High) {
+	if this.High != nil {
 		r["High"] = this.High
 	}
 
@@ -114,7 +104,7 @@ func (this *Span) MarshalJSON() ([]byte, error) {
 		"Range": &this.Range,
 	}
 
-	if this.Seek != nil && isNotNull(this.Seek) {
+	if this.Seek != nil {
 		r["Seek"] = this.Seek
 	}
 

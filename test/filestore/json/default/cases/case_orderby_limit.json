@@ -23,8 +23,6 @@
         "statements": "EXPLAIN SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 1 OFFSET 1",
         "results": [
         {
-	"plan":
-	    {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -85,8 +83,6 @@
                     "#operator": "FinalProject"
                 }
             ]
-	},
-	"text": "SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 1 OFFSET 1"
         }
       ]
     },
@@ -96,8 +92,6 @@
         "statements": "EXPLAIN SELECT first_name, state, age FROM default:user_profile.personal_details ORDER BY age, first_name DESC LIMIT 3",
         "results": [
         {
-	"plan":
-	    {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -161,8 +155,6 @@
                     "#operator": "FinalProject"
                 }
             ]
-	    },
-	    "text": "SELECT first_name, state, age FROM default:user_profile.personal_details ORDER BY age, first_name DESC LIMIT 3"
           }
         ]
      }

@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -44,7 +46,7 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		bytes, err := this.plan.MarshalJSON()
+		bytes, err := json.Marshal(this.plan)
 		if err != nil {
 			context.Fatal(errors.NewError(err, "Failed to marshal JSON."))
 			return

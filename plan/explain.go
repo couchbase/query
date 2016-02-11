@@ -15,14 +15,12 @@ import (
 
 type Explain struct {
 	readonly
-	op   Operator
-	text string
+	op Operator
 }
 
-func NewExplain(op Operator, text string) *Explain {
+func NewExplain(op Operator) *Explain {
 	return &Explain{
-		op:   op,
-		text: text,
+		op: op,
 	}
 }
 
@@ -38,25 +36,16 @@ func (this *Explain) Operator() Operator {
 	return this.op
 }
 
-func (this *Explain) Text() string {
-	return this.text
-}
-
 func (this *Explain) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
-	r["plan"] = this.op
-	r["text"] = this.text
+	r := map[string]interface{}{"#operator": "Explain"}
+	r["op"] = this.op
 	return json.Marshal(r)
 }
 
 func (this *Explain) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Op   json.RawMessage `json:"plan"`
-		Text string          `json:"text"`
-	}
-
-	var op_type struct {
-		Operator string `json:"#operator"`
+		_  string          `json:"#operator"`
+		Op json.RawMessage `json:"op"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -64,12 +53,15 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	var op_type struct {
+		Operator string `json:"#operator"`
+	}
+
 	err = json.Unmarshal(_unmarshalled.Op, &op_type)
 	if err != nil {
 		return err
 	}
 
-	this.text = _unmarshalled.Text
 	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
 	return err
 }
