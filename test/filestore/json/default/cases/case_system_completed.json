@@ -1,0 +1,38 @@
+[
+	{
+	"statements": "delete from system:completed_requests",
+	"results": [
+	]
+	},
+	{
+	"statements": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests",
+	"results": [
+        {
+            "ErrorCount": 0,
+            "ResultCount": 0,
+            "ResultSize": 0,
+            "SortCount": 0,
+            "Statement": "delete from system:completed_requests"
+        }
+	]
+	},
+	{
+	"statements": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests",
+	"results": [
+        {
+            "ErrorCount": 0,
+            "ResultCount": 0,
+            "ResultSize": 0,
+            "SortCount": 0,
+            "Statement": "delete from system:completed_requests"
+        },
+        {
+            "ErrorCount": 0,
+            "ResultCount": 1,
+            "ResultSize": 0,
+            "SortCount": 0,
+            "Statement": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests"
+        }
+	]
+	}
+]

@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
@@ -40,6 +41,11 @@ type MockQuery struct {
 	server.BaseRequest
 	response    *MockResponse
 	resultCount int
+}
+
+type MockServer struct {
+	server    *server.Server
+	acctstore accounting.AccountingStore
 }
 
 func (this *MockQuery) Output() execution.Output {
@@ -147,7 +153,13 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 	return &http.ZeroScanVectorSource{}
 }
 
-func Run(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
+func (this *MockServer) doStats(request *MockQuery) {
+	accounting.LogRequest(this.acctstore, 0, 0, request.resultCount,
+		0, 0, 0, request.Statement(),
+		request.SortCount(), request.Prepared(), request.Id().String())
+}
+
+func Run(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 
@@ -161,9 +173,10 @@ func Run(mockServer *server.Server, q string) ([]interface{}, []errors.Error, er
 		BaseRequest: *base,
 		response:    mr,
 	}
+	defer mockServer.doStats(query)
 
 	select {
-	case mockServer.Channel() <- query:
+	case mockServer.server.Channel() <- query:
 		// Wait until the request exits.
 		<-query.CloseNotify()
 	default:
@@ -176,8 +189,9 @@ func Run(mockServer *server.Server, q string) ([]interface{}, []errors.Error, er
 	return mr.results, mr.warnings, mr.err
 }
 
-func Start(site, pool string) *server.Server {
+func Start(site, pool string) *MockServer {
 
+	mockServer := &MockServer{}
 	datastore, err := resolver.NewDatastore("dir:./json")
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -204,8 +218,15 @@ func Start(site, pool string) *server.Server {
 		)
 	}
 
+	// Start the completed requests log - keep it small and busy
+	accounting.RequestsInit(0, 4)
+
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
+
+	// need to do it before NewServer() or server scope's changes to
+	// the variable and not the package...
+	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, "json",
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
@@ -216,5 +237,7 @@ func Start(site, pool string) *server.Server {
 	server.SetKeepAlive(1 << 10)
 
 	go server.Serve()
-	return server
+	mockServer.server = server
+	mockServer.acctstore = acctstore
+	return mockServer
 }

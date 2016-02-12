@@ -17,11 +17,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/couchbase/query/server"
 	"github.com/dustin/go-jsonpointer"
 )
 
-func start() *server.Server {
+func start() *MockServer {
 	return Start("dir:.", "json")
 }
 
@@ -74,7 +73,7 @@ func TestAllCaseFiles(t *testing.T) {
 	}
 }
 
-func testCaseFile(t *testing.T, fname string, qc *server.Server) {
+func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 	t.Logf("testCaseFile: %v\n", fname)
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
