@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2015-04-04
+* Modified: 2016-02-13
 
 ## Introduction
 
@@ -2570,6 +2570,9 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2015-04-04 - Set operators
     * Allow parentheses for setting precedence of set operators
     * Allow full select as term of set operators
+* 2016-02-13 - Index joins and index nests
+    * Add syntax for index joins and index nests
+    * Rename original N1QL joins as lookup joins
 
 ### Open issues
 
