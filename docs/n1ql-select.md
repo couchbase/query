@@ -117,9 +117,17 @@ _join-type:_
 
 ![](diagram/join-type.png)
 
-_on-keys-clause:_
+_join-predicate:_
 
-![](diagram/on-keys-clause.png)
+![](diagram/join-predicate.png)
+
+_lookup-join-predicate:_
+
+![](diagram/lookup-join-predicate.png)
+
+_index-join-predicate:_
+
+![](diagram/index-join-predicate.png)
 
 _nest-clause:_
 
@@ -348,10 +356,17 @@ subscripts.
             { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
         ]
 
-### Joins
+### Lookup joins
 
 Joins allow you to create new input objects by combining two or more
-source objects. For example, if our _customer_ objects were:
+source objects.
+
+N1QL provides two types of joins: lookup joins and index joins. Index
+joins are discussed later in this document.
+
+Let us start with lookup joins.
+
+For example, if our _customer_ objects were:
 
         {
             "name": ...,
@@ -436,8 +451,26 @@ Then our joined objects would be:
         },
         ...
 
-ON KEYS is required after each JOIN. It specifies the primary keys for
-the second keyspace (bucket) in the join.
+
+_join-clause:_
+
+![](diagram/join-clause.png)
+
+_join-type:_
+
+![](diagram/join-type.png)
+
+_join-predicate:_
+
+![](diagram/join-predicate.png)
+
+_lookup-join-predicate:_
+
+![](diagram/lookup-join-predicate.png)
+
+
+For lookup joins, ON KEYS is required after each JOIN. It specifies
+the primary keys for the second keyspace (bucket) in the join.
 
 Joins can be chained.
 
@@ -472,6 +505,12 @@ along with the parent customer's name.
             { "name" : "Roadster Corp.", "street" : "4120 Alamo Dr.", "zip" : "75019" }
         ]
 
+
+_unnest-clause:_
+
+![](diagram/unnest-clause.png)
+
+
 The first path element after each UNNEST must reference some preceding
 path.
 
@@ -487,7 +526,7 @@ source object. If the right hand source object is NULL, MISSING,
 empty, or a non-array value, then the result object's right-hand side
 value is MISSING (omitted).
 
-### Nests
+### Lookup nests
 
 Nesting is conceptually the inverse of unnesting. Nesting performs a
 join across two keyspaces (or a keyspace with itself). But instead of
@@ -495,6 +534,10 @@ producing a cross-product of the left and right hand inputs, a single
 result is produced for each left hand input, while the corresponding
 right hand inputs are collected into an array and nested as a single
 array-valued field in the result object.
+
+As with joins, N1QL provides two types of nests: lookup nests and
+index nests. We start here with lookup nests, followed by a later
+section on index nests.
 
 Recall our _invoice_ objects:
 
@@ -505,7 +548,7 @@ Recall our _invoice_ objects:
             "total": ...
         }
 
-And our _invoice_item_ objects:
+And our _invoice\_item_ objects:
 
         {
             "invoice_key": ...,
@@ -571,6 +614,24 @@ The results would be:
         },
         ...
 
+
+_nest-clause:_
+
+![](diagram/nest-clause.png)
+
+_join-type:_
+
+![](diagram/join-type.png)
+
+_join-predicate:_
+
+![](diagram/join-predicate.png)
+
+_lookup-join-predicate:_
+
+![](diagram/lookup-join-predicate.png)
+
+
 Nests can be chained with other nests, joins, and unnests.
 
 By default, an INNER nest is performed. This means that for each
@@ -594,6 +655,42 @@ performed. One result object is produced for each left hand source
 object.
 
 The right hand result of NEST is always an array or MISSING.
+
+### Index joins
+
+_join-clause:_
+
+![](diagram/join-clause.png)
+
+_join-type:_
+
+![](diagram/join-type.png)
+
+_join-predicate:_
+
+![](diagram/join-predicate.png)
+
+_index-join-predicate:_
+
+![](diagram/index-join-predicate.png)
+
+### Index nests
+
+_nest-clause:_
+
+![](diagram/nest-clause.png)
+
+_join-type:_
+
+![](diagram/join-type.png)
+
+_join-predicate:_
+
+![](diagram/join-predicate.png)
+
+_index-join-predicate:_
+
+![](diagram/index-join-predicate.png)
 
 ### Arrays
 
