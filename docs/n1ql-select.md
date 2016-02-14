@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-02-13
+* Modified: 2016-02-14
 
 ## Introduction
 
@@ -658,6 +658,62 @@ The right hand result of NEST is always an array or MISSING.
 
 ### Index joins
 
+Beginning with Couchbase 4.5 ("Watson" release), N1QL provides a new
+type of JOIN called index join. The original N1QL joins are now called
+lookup joins.
+
+In order to understand the behavior and benefit of index joins, it is
+useful to review lookup joins and their limitations. With lookup
+joins, the left terms must be able to produce the primary key of the
+next right term. We call this a left-to-right join.
+
+Left-to-right joins are most efficient when it is possible to filter
+on the left terms before applying the join. In our invoice and
+customer example, we could filter on invoices before applying the
+join. For example, to find all invoices and customers where the
+invoice total exceeds $10,000, we could write:
+
+        FROM invoice inv JOIN customer cust ON KEYS inv.customer_key
+        WHERE inv.total > 10000
+
+In this case, there is a many-to-one relationship from invoice to
+customer. There is also an implicit child-to-parent relationship.
+
+Suppose instead that we wanted to perform the same join, but filter on
+customer name. _invoice_ does not contain customer name, so we cannot
+filter on invoice. And _customer_ does not contain invoice keys, so we
+cannot reverse the join order as N1QL joins are left-to-right only. In
+order to maintain the left-to-right nature of N1QL joins, we would
+need to scan all the invoices, join the corresponding customers, and
+then apply the filter on customer name. This is highly inefficient.
+
+Enter index joins. Index joins address the problem of performing
+left-to-right joins where the most selective filter condition is on
+the parent, not the child. In other words, we want the parent to be in
+the left term(s), and the child to be the right term.
+
+Index joins introduce a slight syntax variation which allows you to
+specify both the child and the parent.
+
+In our example, that would be:
+
+        FROM customer cust JOIN invoice inv ON KEY inv.customer_key FOR cust
+        WHERE cust.name = "Acme Inc."
+
+The term immediately after JOIN is the child; in this case _inv_. The
+term immediately after FOR is the parent, in this case _cust_. The
+parent must be specified because JOINs can be chained, producing
+several terms to the left of the current JOIN. One of these left terms
+must be identified as the parent.
+
+Note that for index joins, the syntax uses ON KEY (singular) instead
+of ON KEYS (plural). This is because for index joins, the ON KEY
+expression must produce a scalar value (for lookup joins, the ON KEYS
+expression can produce either a scalar or an array value).
+
+Finally, index joins require an index on the ON KEY expression. That
+is why they are called "index joins".
+
 _join-clause:_
 
 ![](diagram/join-clause.png)
@@ -674,7 +730,36 @@ _index-join-predicate:_
 
 ![](diagram/index-join-predicate.png)
 
+In other respects, the semantics of index joins are the same as lookup
+joins: INNER, LEFT OUTER, chaining, handling of NULL and MISSING, etc.
+
 ### Index nests
+
+Index nests are like index joins, except that they perform a nest
+rather than a join.
+
+Recall our example from lookup nests:
+
+        FROM invoice inv NEST invoice_item items ON KEYS inv.invoice_item_keys
+
+The example required that each invoice object contain an array of
+invoice\_item\_keys. In other words, the parent object (_invoice_)
+contained an array of keys to child objects (_invoice\_item_).
+
+But suppose the data was not modeled this way. For example, if some
+parents could have many children (thousands or more), then modeling
+the data this way could be problematic, because those parent objects
+would become very large, and maintaining the parent-child
+relationships within the parent objects would lead to contention.
+
+Instead, the child object (_invoice\_item_) would contain a key to the
+parent object (_invoice_). To write the same nesting query, using
+N1QL's left-to-right semantics, you would use an index nest:
+
+        FROM invoice inv NEST invoice_item items ON KEY items.invoice_key FOR inv
+
+Like index joins, index nests allow you to efficiently filter on the
+parent objects before performing the nest.
 
 _nest-clause:_
 
@@ -691,6 +776,9 @@ _join-predicate:_
 _index-join-predicate:_
 
 ![](diagram/index-join-predicate.png)
+
+In other respects, the semantics of index nests are the same as lookup
+nests: INNER, LEFT OUTER, chaining, handling of NULL and MISSING, etc.
 
 ### Arrays
 
@@ -2564,7 +2652,7 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2015-01-19 - FROM subquery
     * Allow subquery in FROM clause
 * 2015-02-26 - FROM subquery
-    * Update syntax diagram to show subquery in FROM clause 
+    * Update syntax diagram to show subquery in FROM clause
 * 2015-04-03 - Hints
     * Add syntax for index hints
 * 2015-04-04 - Set operators
@@ -2573,6 +2661,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
 * 2016-02-13 - Index joins and index nests
     * Add syntax for index joins and index nests
     * Rename original N1QL joins as lookup joins
+* 2016-02-14 - Index joins and index nests
+    * Add content for index joins and index nests
 
 ### Open issues
 
