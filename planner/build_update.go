@@ -29,27 +29,32 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	subChildren := this.subChildren
-	subChildren = append(subChildren, plan.NewClone(ksref.Alias()))
+	updateSubChildren := make([]plan.Operator, 0, 8)
+	updateSubChildren = append(updateSubChildren, plan.NewClone(ksref.Alias()))
 
 	if stmt.Set() != nil {
-		subChildren = append(subChildren, plan.NewSet(stmt.Set()))
+		updateSubChildren = append(updateSubChildren, plan.NewSet(stmt.Set()))
 	}
 
 	if stmt.Unset() != nil {
-		subChildren = append(subChildren, plan.NewUnset(stmt.Unset()))
+		updateSubChildren = append(updateSubChildren, plan.NewUnset(stmt.Unset()))
 	}
 
-	subChildren = append(subChildren, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
+	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref.Alias(), stmt.Limit()))
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+		updateSubChildren = append(updateSubChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
 	}
 
-	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
-	this.children = append(this.children, parallel)
-
 	if stmt.Limit() != nil {
-		this.children = append(this.children, plan.NewLimit(stmt.Limit()))
+		seqChildren := make([]plan.Operator, 0, 3)
+		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
+		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(updateSubChildren...), this.maxParallelism))
+		this.children = append(this.children, plan.NewSequence(seqChildren...))
+	} else {
+		subChildren = append(subChildren, updateSubChildren...)
+		this.children = append(this.children, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
 	}
 
 	if stmt.Returning() == nil {

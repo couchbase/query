@@ -30,17 +30,23 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	}
 
 	subChildren := this.subChildren
-	subChildren = append(subChildren, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
+	deleteSubChildren := make([]plan.Operator, 0, 4)
+
+	deleteSubChildren = append(deleteSubChildren, plan.NewSendDelete(keyspace, ksref.Alias(), stmt.Limit()))
 
 	if stmt.Returning() != nil {
-		subChildren = append(subChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
+		deleteSubChildren = append(deleteSubChildren, plan.NewInitialProject(stmt.Returning()), plan.NewFinalProject())
 	}
 
-	parallel := plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism)
-	this.children = append(this.children, parallel)
-
 	if stmt.Limit() != nil {
-		this.children = append(this.children, plan.NewLimit(stmt.Limit()))
+		seqChildren := make([]plan.Operator, 0, 3)
+		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
+		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit()))
+		seqChildren = append(seqChildren, plan.NewParallel(plan.NewSequence(deleteSubChildren...), this.maxParallelism))
+		this.children = append(this.children, plan.NewSequence(seqChildren...))
+	} else {
+		subChildren = append(subChildren, deleteSubChildren...)
+		this.children = append(this.children, plan.NewParallel(plan.NewSequence(subChildren...), this.maxParallelism))
 	}
 
 	if stmt.Returning() == nil {
