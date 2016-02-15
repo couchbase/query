@@ -655,7 +655,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 		return nil, nil
 	}
 
-	bulkResponse, err := b.cbbucket.GetBulk(keys)
+	bulkResponse, err := b.cbbucket.GetBulkAll(keys)
 	if err != nil {
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
@@ -664,32 +664,33 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 	}
 
 	i := 0
-	rv := make([]datastore.AnnotatedPair, len(bulkResponse))
-	for k, v := range bulkResponse {
+	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	for k, av := range bulkResponse {
+		for _, v := range av {
+			var doc datastore.AnnotatedPair
+			doc.Key = k
 
-		var doc datastore.AnnotatedPair
-		doc.Key = k
+			Value := value.NewAnnotatedValue(value.NewValue(v.Body))
 
-		Value := value.NewAnnotatedValue(value.NewValue(v.Body))
+			meta_flags := binary.BigEndian.Uint32(v.Extras[0:4])
+			meta_type := "json"
+			if Value.Type() == value.BINARY {
+				meta_type = "base64"
+			}
+			Value.SetAttachment("meta", map[string]interface{}{
+				"id":    k,
+				"cas":   v.Cas,
+				"type":  meta_type,
+				"flags": uint32(meta_flags),
+			})
 
-		meta_flags := binary.BigEndian.Uint32(v.Extras[0:4])
-		meta_type := "json"
-		if Value.Type() == value.BINARY {
-			meta_type = "base64"
+			// Uncomment when needed
+			//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
+
+			doc.Value = Value
+			rv = append(rv, doc)
+			i++
 		}
-		Value.SetAttachment("meta", map[string]interface{}{
-			"id":    k,
-			"cas":   v.Cas,
-			"type":  meta_type,
-			"flags": uint32(meta_flags),
-		})
-
-		// Uncomment when needed
-		//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
-
-		doc.Value = Value
-		rv[i] = doc
-		i++
 
 	}
 
