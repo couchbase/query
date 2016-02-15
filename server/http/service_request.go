@@ -276,8 +276,10 @@ var _PARAMETERS = []string{
 }
 
 func isValidParameter(a string) bool {
+	a = strings.TrimSpace(a)
+	// Ignore empty (whitespace) parameters. They are harmless.
 	if a == "" {
-		return false
+		return true
 	}
 	if strings.IndexRune(a, '$') == 0 {
 		return true
