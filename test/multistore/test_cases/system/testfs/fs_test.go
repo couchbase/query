@@ -6,22 +6,31 @@
 //  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
-package testcs_joins
+
+package testfs
 
 import (
-	"github.com/couchbase/query/errors"
-	js "github.com/couchbase/query/test/multistore"
+	"fmt"
+	"path/filepath"
+	"testing"
 )
 
-func Start_test() *js.MockServer {
-	return js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
-}
-
-func testCaseFile(fname string, qc *js.MockServer) (fin_stmt string, errstring error) {
-	fin_stmt, errstring = js.FtestCaseFile(fname, qc, js.Namespace_CBS)
-	return
-}
-
-func Run_test(mockServer *js.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
-	return js.Run(mockServer, q, js.Namespace_CBS)
+func TestAllCaseFiles(t *testing.T) {
+	qc := start()
+	matches, err := filepath.Glob("../case_*.json")
+	if err != nil {
+		t.Errorf("glob failed: %v", err)
+	}
+	for _, m := range matches {
+		t.Logf("TestCaseFile: %v\n", m)
+		stmt, err := testCaseFile(m, qc)
+		if err != nil {
+			t.Errorf("Error received : %s \n", err)
+			return
+		}
+		if stmt != "" {
+			t.Logf(" %v\n", stmt)
+		}
+		fmt.Println("\nQuery matched: ", m, "\n\n")
+	}
 }

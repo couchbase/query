@@ -219,7 +219,7 @@ func Start(site, pool string) *MockServer {
 	}
 
 	// Start the completed requests log - keep it small and busy
-	accounting.RequestsInit(0, 4)
+	accounting.RequestsInit(0, 8)
 
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)

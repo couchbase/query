@@ -10,19 +10,18 @@ package testcs_unnest
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 	js "github.com/couchbase/query/test/multistore"
 )
 
-func Start_test() *server.Server {
+func Start_test() *js.MockServer {
 	return js.Start(js.Site_CBS, js.Auth_param+"@"+js.Pool_CBS, js.Namespace_CBS)
 }
 
-func testCaseFile(fname string, qc *server.Server) (fin_stmt string, errstring error) {
+func testCaseFile(fname string, qc *js.MockServer) (fin_stmt string, errstring error) {
 	fin_stmt, errstring = js.FtestCaseFile(fname, qc, js.Namespace_CBS)
 	return
 }
 
-func Run_test(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
+func Run_test(mockServer *js.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
 	return js.Run(mockServer, q, js.Namespace_CBS)
 }

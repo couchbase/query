@@ -11,7 +11,6 @@ package multistore
 
 import (
 	"fmt"
-	"github.com/couchbase/query/server"
 	"io/ioutil"
 	"testing"
 )
@@ -20,7 +19,7 @@ import (
 Method to pass in parameters for site, pool and
 namespace to Start method for Datastore.
 */
-func start_ds() *server.Server {
+func start_ds() *MockServer {
 	return Start("dir:", "../../data/sampledb/", Namespace_FS)
 }
 
@@ -28,7 +27,7 @@ func start_ds() *server.Server {
 Method to pass in parameters for site, pool and
 namespace to Start method for Couchbase Server.
 */
-func start_cs() *server.Server {
+func start_cs() *MockServer {
 	return Start(Site_CBS, Auth_param+"@"+Pool_CBS, Namespace_CBS)
 }
 

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	go_er "errors"
 	"fmt"
+	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
@@ -56,6 +57,11 @@ type MockQuery struct {
 	server.BaseRequest
 	response    *MockResponse
 	resultCount int
+}
+
+type MockServer struct {
+	server    *server.Server
+	acctstore accounting.AccountingStore
 }
 
 func (this *MockQuery) Output() execution.Output {
@@ -168,12 +174,18 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 	return &http.ZeroScanVectorSource{}
 }
 
+func (this *MockServer) doStats(request *MockQuery) {
+	accounting.LogRequest(this.acctstore, 0, 0, request.resultCount,
+		0, 0, 0, request.Statement(),
+		request.SortCount(), request.Prepared(), request.Id().String())
+}
+
 /*
 This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
-func Run(mockServer *server.Server, q, namespace string) ([]interface{}, []errors.Error, errors.Error) {
+func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
@@ -187,9 +199,10 @@ func Run(mockServer *server.Server, q, namespace string) ([]interface{}, []error
 		BaseRequest: *base,
 		response:    mr,
 	}
+	defer mockServer.doStats(query)
 
 	select {
-	case mockServer.Channel() <- query:
+	case mockServer.server.Channel() <- query:
 		// Wait until the request exits.
 		<-query.CloseNotify()
 	default:
@@ -206,8 +219,9 @@ func Run(mockServer *server.Server, q, namespace string) ([]interface{}, []error
 Used to specify the N1QL nodes options using the method NewServer
 as defined in server/server.go.
 */
-func Start(site, pool, namespace string) *server.Server {
+func Start(site, pool, namespace string) *MockServer {
 
+	mockServer := &MockServer{}
 	datastore, err := resolver.NewDatastore(site + pool)
 	if err != nil {
 		logging.Errorp(err.Error())
@@ -234,8 +248,15 @@ func Start(site, pool, namespace string) *server.Server {
 		)
 	}
 
+	// Start the completed requests log - keep it small and busy
+	accounting.RequestsInit(0, 8)
+
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
+
+	// need to do it before NewServer() or server scope's changes to
+	// the variable and not the package...
+	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, namespace,
 		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
 	if err != nil {
@@ -245,10 +266,12 @@ func Start(site, pool, namespace string) *server.Server {
 	server.SetKeepAlive(1 << 10)
 
 	go server.Serve()
-	return server
+	mockServer.server = server
+	mockServer.acctstore = acctstore
+	return mockServer
 }
 
-func FtestCaseFile(fname string, qc *server.Server, namespace string) (fin_stmt string, errstring error) {
+func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt string, errstring error) {
 	fin_stmt = ""
 
 	/* Reads the input file and returns its contents in the form

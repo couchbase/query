@@ -97,7 +97,6 @@ func (this *GenCache) Add(entry interface{}, id string) {
 		}
 		this.insert(elem, cacheNum)
 		this.maps[cacheNum][id] = elem
-		atomic.AddInt32(&this.curSize, 1)
 	}
 }
 

@@ -10,19 +10,18 @@ package testfs
 
 import (
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/server"
 	js "github.com/couchbase/query/test/multistore"
 )
 
-func start() *server.Server {
+func start() *js.MockServer {
 	return js.Start("dir:", "../../../data/", js.Namespace_FS)
 }
 
-func testCaseFile(fname string, qc *server.Server) (fin_stmt string, errstring error) {
+func testCaseFile(fname string, qc *js.MockServer) (fin_stmt string, errstring error) {
 	fin_stmt, errstring = js.FtestCaseFile(fname, qc, js.Namespace_FS)
 	return
 }
 
-func Run_test(mockServer *server.Server, q string) ([]interface{}, []errors.Error, errors.Error) {
+func Run_test(mockServer *js.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
 	return js.Run(mockServer, q, js.Namespace_FS)
 }

@@ -1,0 +1,103 @@
+[
+	{
+	"statements": "prepare test from select name, statement, uses from system:prepareds",
+	"results": [
+        {
+            "encoded_plan": "H4sIAAAJbogA/5ySQUvDQBCF/0rYXhSC4DU3LwVvhR5FmiV5bbduNuvMRFpL/e3Opm2CQQR7y7558+ab7B4NQtXWqFfR22AKY3ITbAP9ErDoqY0gKy2Z4mhm48Es8d5pL9TyVW2drwna//LT9NTJtiX3mVy96aaUBbnG0mFZKWFuXKixV3UWz7JKbzhwtFWijoRoCTVfFrnqMz6woFG1Yxc2qtRY286LOeWTaZas9/AD0k3Mc0i1/R/aFOQ5OHHWL6jdoUpXQWAFXgmo4X4g9jEZ78ohunwoU3R536f9WmexOg1B/jJ1DE711ynU3IURScvJoZu5D+exAff/6rxPMe5bPJ6mOUsh2KYfYNhtgpWOkLovr2/HbbrsAXaUEtr1pM2CvYw/N0uvNltT22QMr4xZysuzISfPUv/FMeU8fQcAAP//nEAlaA8DAAA=",
+            "name": "test",
+            "operator": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "Authorize",
+                        "child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "PrimaryScan",
+                                    "index": "#primary",
+                                    "keyspace": "prepareds",
+                                    "namespace": "#system",
+                                    "using": "default"
+                                },
+                                {
+                                    "#operator": "Parallel",
+                                    "~child": {
+                                        "#operator": "Sequence",
+                                        "~children": [
+                                            {
+                                                "#operator": "Fetch",
+                                                "keyspace": "prepareds",
+                                                "namespace": "#system"
+                                            },
+                                            {
+                                                "#operator": "InitialProject",
+                                                "result_terms": [
+                                                    {
+                                                        "expr": "(`prepareds`.`name`)"
+                                                    },
+                                                    {
+                                                        "expr": "(`prepareds`.`statement`)"
+                                                    },
+                                                    {
+                                                        "expr": "(`prepareds`.`uses`)"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "#operator": "FinalProject"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        },
+                        "privileges": {
+                            "#system:prepareds": 1
+                        }
+                    },
+                    {
+                        "#operator": "Stream"
+                    }
+                ]
+            },
+	    "signature": {
+                "name": "json",
+                "statement": "json",
+                "uses": "json"
+            },
+            "text": "prepare test from select name, statement, uses from system:prepareds"
+	}
+	]
+	},
+	{
+	"statements": "select name, statement, uses from system:prepareds",
+	"results": [
+       	 {
+            "name": "test",
+            "statement": "prepare test from select name, statement, uses from system:prepareds",
+            "uses": 0
+       	 }
+	]
+	},
+	{
+	"statements": "execute test",
+	"results": [
+       	 {
+            "name": "test",
+            "statement": "prepare test from select name, statement, uses from system:prepareds",
+            "uses": 1
+	 }
+	]
+	},
+	{
+	"statements": "delete from system:prepareds",
+	"results": [
+	]
+	},
+	{
+	"statements": "select name, statement, uses from system:prepareds",
+	"results": [
+	]
+	}
+]
