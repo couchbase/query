@@ -527,6 +527,115 @@ func (this *ArrayDistinct) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayFlatten
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_FLATTEN(expr, value).
+It returns a new array with value appended. Type ArrayFlatten
+is a struct that implements BinaryFunctionBase.
+*/
+type ArrayFlatten struct {
+	BinaryFunctionBase
+}
+
+/*
+The function NewArrayFlatten calls NewBinaryFunctionBase to
+create a function named ARRAY_FLATTEN with the two
+expressions as input.
+*/
+func NewArrayFlatten(first, second Expression) Function {
+	rv := &ArrayFlatten{
+		*NewBinaryFunctionBase("array_flatten", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ArrayFlatten) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns an Array value.
+*/
+func (this *ArrayFlatten) Type() value.Type { return value.ARRAY }
+
+/*
+Calls the Eval method for binary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ArrayFlatten) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+/*
+This method evaluates the array flatten function. If either
+of the input argument types are missing, or not an array return
+a missing and null value respectively. Use the append method
+to append the second expression to the first expression. Return
+the new array.
+*/
+func (this *ArrayFlatten) Apply(context Context, first, second value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	arr := first.Actual().([]interface{})
+	fdepth := second.Actual().(float64)
+
+	// Second parameter must be an integer.
+	if math.Trunc(fdepth) != fdepth {
+		return value.NULL_VALUE, nil
+	}
+	depth := int(fdepth)
+
+	destArr := make([]interface{}, 0)
+	destArr = arrayFlattenInto(arr, destArr, depth)
+	return value.NewValue(destArr), nil
+}
+
+func arrayFlattenInto(sourceArr, destArr []interface{}, depth int) []interface{} {
+	// Just copy the contents of the source array into the destination array.
+	if depth == 0 {
+		return append(destArr, sourceArr...)
+	}
+
+	// Copy the elements into the destination array.
+	// Recurse as necessary.
+	for _, elem := range sourceArr {
+		el := elem.(value.Value)
+		if el.Type() == value.ARRAY {
+			subArr := el.Actual().([]interface{})
+			destArr = arrayFlattenInto(subArr, destArr, depth-1)
+		} else {
+			destArr = append(destArr, elem)
+		}
+	}
+
+	return destArr
+}
+
+/*
+The constructor returns a NewArrayFlatten with the two operands
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ArrayFlatten) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewArrayFlatten(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ArrayIfNull
 //
 ///////////////////////////////////////////////////

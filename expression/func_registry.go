@@ -170,6 +170,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_contains": &ArrayContains{},
 	"array_count":    &ArrayCount{},
 	"array_distinct": &ArrayDistinct{},
+	"array_flatten":  &ArrayFlatten{},
 	"array_ifnull":   &ArrayIfNull{},
 	"array_insert":   &ArrayInsert{},
 	"array_length":   &ArrayLength{},

@@ -410,6 +410,54 @@
         }
     ]
   },
+ {
+     "statements":"select ARRAY_FLATTEN([ 0, [\"one\"], [[2]], [[[3]]] ], 0)",
+     "results": [
+        {
+            "$1": [ 0, ["one"], [[2]], [[[3]]] ]
+        }
+    ]
+  },
+ {
+     "statements":"select ARRAY_FLATTEN([ 0, [\"one\"], [[2]], [[[3]]] ], 1)",
+     "results": [
+        {
+            "$1": [ 0, "one", [2], [[3]] ]
+        }
+    ]
+  },
+ {
+     "statements":"select ARRAY_FLATTEN([ 0, [\"one\"], [[2]], [[[3]]] ], 2)",
+     "results": [
+        {
+            "$1": [ 0, "one", 2, [3] ]
+        }
+    ]
+  },
+ {
+     "statements":"select ARRAY_FLATTEN([ 0, [\"one\"], [[2]], [[[3]]] ], 3)",
+     "results": [
+        {
+            "$1": [ 0, "one", 2, 3 ]
+        }
+    ]
+  },
+ {
+     "statements":"select ARRAY_FLATTEN([ 0, [\"one\", \"a\"], [\"b\", [2], \"c\"], [[[3, null]]] ], -1)",
+     "results": [
+        {
+            "$1": [ 0, "one", "a", "b", 2, "c", 3, null ]
+        }
+    ]
+  },
+ {
+     "statements":"select ARRAY_FLATTEN(\"something\", -1)",
+     "results": [
+        {
+            "$1": null
+        }
+    ]
+  },
   {
      "statements":"select ARRAY_LENGTH([null, null, null, \"append\", \"avg\", null, \"max\"])",
      "results": [
