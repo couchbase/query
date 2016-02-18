@@ -292,7 +292,7 @@ func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Err
 		if err != nil {
 			return nil, errors.NewUnrecognizedPreparedError(err)
 		}
-		return unmarshalPrepared(prepared_bytes)
+		return unmarshalPrepared(prepared_bytes, "")
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
@@ -325,19 +325,21 @@ func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	prepared, err := unmarshalPrepared(prepared_bytes)
+	prepared, err := unmarshalPrepared(prepared_bytes, prepared_stmt)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	prepared.SetEncodedPlan(prepared_stmt)
 	return prepared, nil
 }
 
-func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
+func unmarshalPrepared(bytes []byte, prepared_stmt string) (*Prepared, errors.Error) {
 	prepared := &Prepared{}
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
+	}
+	if prepared_stmt != "" {
+		prepared.SetEncodedPlan(prepared_stmt)
 	}
 	if prepared.Name() != "" {
 		cache.add(prepared)
