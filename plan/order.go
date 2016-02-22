@@ -26,15 +26,7 @@ type Order struct {
 
 const _FALLBACK_NUM = 8192
 
-func NewOrder(order *algebra.Order) *Order {
-	return &Order{
-		terms:  order.Terms(),
-		offset: nil,
-		limit:  nil,
-	}
-}
-
-func NewOrderWithLimit(order *algebra.Order, offset *Offset, limit *Limit) *Order {
+func NewOrder(order *algebra.Order, offset *Offset, limit *Limit) *Order {
 	return &Order{
 		terms:  order.Terms(),
 		offset: offset,

@@ -50,7 +50,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
 	if this.limit != nil && node.Projection().Distinct() {
-		this.limit = nil
+		this.resetOrderLimit()
 	}
 
 	err = this.visitFrom(node, group)

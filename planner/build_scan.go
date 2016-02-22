@@ -25,6 +25,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	limit expression.Expression) (op plan.Operator, err error) {
 	keys := node.Keys()
 	if keys != nil {
+		this.resetOrderLimit()
 		switch keys := keys.(type) {
 		case *expression.ArrayConstruct:
 			this.maxParallelism = util.MaxInt(1, len(keys.Operands()))
@@ -108,6 +109,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			secondary, err = this.buildSecondaryScan(minimals, node, pred, limit)
 			return secondary, nil, err
 		}
+	}
+
+	if this.order != nil {
+		this.resetOrderLimit()
+		limit = nil
 	}
 
 	primary, err = this.buildPrimaryScan(keyspace, node, limit, hintIndexes, otherIndexes)
@@ -309,22 +315,34 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		}
 	}
 
-	if limit != nil && len(secondaries) > 1 {
-		// This makes InterSectionscan disable limit pushdown
-		this.limit = nil
+	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
+		// This makes InterSectionscan disable limit pushdown, don't use index order
+		this.resetOrderLimit()
+		limit = nil
+	}
+	if this.order != nil && this.maxParallelism > 1 {
+		this.resetOrderLimit()
 		limit = nil
 	}
 
 	scans := make([]plan.Operator, 0, len(secondaries))
 	var op plan.Operator
 	for index, entry := range secondaries {
-		if limit != nil {
-			if !pred.CoveredBy(node.Alias(), entry.keys) {
-				// Predicate is not covered by index keys disable limit pushdown
-				this.limit = nil
-				limit = nil
-			}
+		if this.order != nil && !this.useIndexOrder(entry, entry.keys) {
+			this.resetOrderLimit()
+			limit = nil
 		}
+
+		if limit != nil && !pred.CoveredBy(node.Alias(), entry.keys) {
+			// Predicate is not covered by index keys disable limit pushdown
+			this.limit = nil
+			limit = nil
+		}
+
+		if this.order != nil {
+			this.maxParallelism = 1
+		}
+
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil)
 		if len(entry.spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
@@ -457,9 +475,18 @@ outer:
 		for _, key := range keys {
 			covers = append(covers, expression.NewCover(key))
 		}
-		if !pred.CoveredBy(alias, keys) {
+		if this.order != nil && !this.useIndexOrder(entry, keys) {
+			this.resetOrderLimit()
+			limit = nil
+		}
+
+		if limit != nil && !pred.CoveredBy(alias, keys) {
 			this.limit = nil
 			limit = nil
+		}
+
+		if this.order != nil {
+			this.maxParallelism = 1
 		}
 
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)
@@ -467,6 +494,7 @@ outer:
 
 		if len(entry.spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
+
 			return plan.NewUnionScan(scan), nil
 		}
 
@@ -474,4 +502,31 @@ outer:
 	}
 
 	return nil, nil
+}
+
+func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
+
+	// If it makes UnionScan don't use index order
+	if len(entry.spans) > 1 {
+		return false
+	} else {
+		for _, sk := range entry.sargKeys {
+			if isArray, _ := sk.IsArrayIndexKey(); isArray {
+				return false
+			}
+		}
+	}
+
+	if len(keys) < len(this.order.Terms()) {
+		return false
+	}
+	for i, orderterm := range this.order.Terms() {
+		if orderterm.Descending() {
+			return false
+		}
+		if !orderterm.Expression().EquivalentTo(keys[i]) {
+			return false
+		}
+	}
+	return true
 }

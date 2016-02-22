@@ -23,9 +23,10 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 
 	if count {
 		this.maxParallelism = 1
+		this.resetOrderLimit()
 	} else if node.From() != nil {
 		if group != nil {
-			this.limit = nil
+			this.resetOrderLimit()
 		}
 
 		_, err := node.From().Accept(this)
@@ -34,6 +35,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 		}
 	} else {
 		// No FROM clause
+		this.resetOrderLimit()
 		scan := plan.NewDummyScan()
 		this.children = append(this.children, scan)
 		this.maxParallelism = 1
@@ -81,7 +83,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	this.limit = nil
+	this.resetOrderLimit()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -106,7 +108,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
-	this.limit = nil
+	this.resetOrderLimit()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -185,7 +187,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	this.limit = nil
+	this.resetOrderLimit()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -227,4 +229,9 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	scan := plan.NewCountScan(keyspace, from)
 	this.children = append(this.children, scan)
 	return true, nil
+}
+
+func (this *builder) resetOrderLimit() {
+	this.order = nil
+	this.limit = nil
 }

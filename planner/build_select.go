@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
 
@@ -43,10 +44,12 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.cover = nil
 	}
 
-	if order != nil || offset != nil {
-		this.limit = nil
-	} else if limit != nil {
-		this.limit = limit
+	if limit != nil {
+		if offset != nil {
+			this.limit = expression.NewAdd(offset, limit)
+		} else {
+			this.limit = limit
+		}
 	}
 
 	sub, err := stmt.Subresult().Accept(this)
@@ -61,16 +64,15 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	children := make([]plan.Operator, 0, 5)
 	children = append(children, sub.(plan.Operator))
 
-	pushLimit := (order != nil) && (limit != nil)
-	if order != nil {
-		if pushLimit {
-			if offset == nil {
-				children = append(children, plan.NewOrderWithLimit(order, nil, plan.NewLimit(limit)))
+	if order != nil && this.order == nil {
+		if limit != nil {
+			if offset != nil {
+				children = append(children, plan.NewOrder(order, plan.NewOffset(offset), plan.NewLimit(limit)))
 			} else {
-				children = append(children, plan.NewOrderWithLimit(order, plan.NewOffset(offset), plan.NewLimit(limit)))
+				children = append(children, plan.NewOrder(order, nil, plan.NewLimit(limit)))
 			}
 		} else {
-			children = append(children, plan.NewOrder(order))
+			children = append(children, plan.NewOrder(order, nil, nil))
 		}
 	}
 
