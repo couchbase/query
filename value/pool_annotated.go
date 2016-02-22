@@ -36,7 +36,7 @@ func (this *AnnotatedPool) Get() AnnotatedValues {
 }
 
 func (this *AnnotatedPool) Put(s AnnotatedValues) {
-	if cap(s) != this.size {
+	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}
 

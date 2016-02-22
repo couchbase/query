@@ -227,6 +227,7 @@ func (this *base) notifyStop() {
 type batcher interface {
 	allocateBatch()
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
+	enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool
 	flushBatch(context *Context) bool
 	releaseBatch()
 }
@@ -261,21 +262,24 @@ func (this *base) releaseBatch() {
 	this.batch = nil
 }
 
-func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
+func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool {
 	if this.batch == nil {
 		this.allocateBatch()
-	} else if len(this.batch) == cap(this.batch) {
+	} else if len(this.batch) == batchSize {
 		if !b.flushBatch(context) {
 			return false
 		}
 
-		if len(this.batch) == cap(this.batch) {
+		if len(this.batch) == batchSize {
 			this.allocateBatch()
 		}
 	}
 
 	this.batch = append(this.batch, item)
 	return true
+}
+func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
+	return this.enbatchSize(item, b, cap(this.batch), context)
 }
 
 func (this *base) requireKey(item value.AnnotatedValue, context *Context) (string, bool) {
