@@ -196,6 +196,7 @@ var _FUNCTIONS = map[string]Function{
 	"object_pairs":  &ObjectPairs{},
 	"object_put":    &ObjectPut{},
 	"object_remove": &ObjectRemove{},
+	"object_unwrap": &ObjectUnwrap{},
 	"object_values": &ObjectValues{},
 
 	// JSON

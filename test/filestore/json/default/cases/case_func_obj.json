@@ -367,5 +367,36 @@
             ]
         }
     ]
+  },
+  {
+     "statements":"select OBJECT_UNWRAP(TOARRAY(orders.id)) AS a from default:orders ORDER BY a",
+     "results": [
+        {
+            "a": null
+        },
+        {
+            "a": null
+        },
+        {
+            "a": null
+        },
+        {
+            "a": null
+        }
+    ]
+  },
+  {
+     "statements":"select OBJECT_UNWRAP({'id': 1})",
+     "results": [
+        {
+            "$1": 1
+        }
+     ]
+  },
+  {
+     "statements":"select OBJECT_UNWRAP(missing)",
+     "results": [
+               {}
+     ]
   }
 ]

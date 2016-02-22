@@ -657,3 +657,97 @@ func (this *ObjectRemove) Constructor() FunctionConstructor {
 		return NewObjectRemove(operands[0], operands[1])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectUnwrap
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_UNWRAP(expr).
+Given an object with precisely one name / value pair, it
+returns the value.
+Type ObjectUnwrap is a struct that implements
+UnaryFunctionBase.
+*/
+type ObjectUnwrap struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewObjectUnwrap calls NewUnaryFunctionBase to
+create a function named OBJECT_UNWRAP with an expression as
+input.
+*/
+func NewObjectUnwrap(operand Expression) Function {
+	rv := &ObjectUnwrap{
+		*NewUnaryFunctionBase("object_unwrap", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectUnwrap) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+For anything other than json's - it returns the operand
+type.
+For jsons - it should return the type of the value
+in the name value pair, which we haven't evaluated yet.
+So it returns a json.
+*/
+func (this *ObjectUnwrap) Type() value.Type {
+
+	// this is the succinct version of the above...
+	return this.Operand().Type()
+}
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectUnwrap) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+This method takes in an object and returns the
+attribute value. If the type of input is missing
+then return a missing value, and if not an object
+return a null value. Convert it to a valid Go type.
+Return the value
+*/
+func (this *ObjectUnwrap) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := arg.Actual().(map[string]interface{})
+	if len(oa) == 1 {
+		for _, v := range oa {
+			return value.NewValue(v), nil
+		}
+	}
+
+	return value.NULL_VALUE, nil
+}
+
+/*
+The constructor returns a NewObjectUnwrap with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectUnwrap) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectUnwrap(operands[0])
+	}
+}
