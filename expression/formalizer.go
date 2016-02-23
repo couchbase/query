@@ -33,18 +33,6 @@ This method returns a pointer to a Formalizer struct
 with allowed set to a new map of type string to interface.
 */
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
-	rv := NewAnonFormalizer(keyspace, parent)
-
-	if keyspace != "" {
-		rv.allowed.SetField(keyspace, keyspace)
-	}
-	return rv
-}
-
-/*
-Returns a formalizer structure that does not have the keyspace in scope
-*/
-func NewAnonFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	var pv value.Value
 	if parent != nil {
 		pv = parent.allowed
@@ -54,6 +42,10 @@ func NewAnonFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 		keyspace:    keyspace,
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
 		identifiers: make(map[string]bool),
+	}
+
+	if keyspace != "" {
+		rv.allowed.SetField(keyspace, keyspace)
 	}
 
 	rv.mapper = rv
