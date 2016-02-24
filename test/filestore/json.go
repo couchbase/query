@@ -70,8 +70,8 @@ func (this *MockQuery) Failed(srvr *server.Server) {
 	this.stopAndClose(server.FATAL)
 }
 
-func (this *MockQuery) Expire() {
-	defer this.stopAndClose(server.TIMEOUT)
+func (this *MockQuery) Expire(state server.State) {
+	defer this.stopAndClose(state)
 
 	this.response.err = errors.NewError(nil, "Query timed out")
 	close(this.response.done)
@@ -156,7 +156,8 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 func (this *MockServer) doStats(request *MockQuery) {
 	accounting.LogRequest(this.acctstore, 0, 0, request.resultCount,
 		0, 0, 0, request.Statement(),
-		request.SortCount(), request.Prepared(), request.Id().String())
+		request.SortCount(), request.Prepared(),
+		string(request.State()), request.Id().String())
 }
 
 func Run(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {

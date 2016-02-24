@@ -58,6 +58,7 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 	accounting.RequestsForeach(func(id string, entry *accounting.RequestLogEntry) {
 		item := value.NewAnnotatedValue(map[string]interface{}{
 			"RequestId":   id,
+			"State":       entry.State,
 			"ElapsedTime": entry.ElapsedTime,
 			"ServiceTime": entry.ServiceTime,
 			"ResultCount": entry.ResultCount,

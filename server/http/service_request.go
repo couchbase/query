@@ -214,7 +214,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	closeNotifier := func() {
 		select {
 		case <-closeNotify:
-			rv.Expire()
+			rv.Expire(server.CLOSED)
 			return
 		case <-rv.requestNotify:
 			return

@@ -35,6 +35,7 @@ type RequestLogEntry struct {
 	ServiceTime  time.Duration
 	Statement    string
 	Plan         *plan.Prepared
+	State        string
 	ResultCount  int
 	ResultSize   int
 	ErrorCount   int
@@ -111,7 +112,7 @@ func LogRequest(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string,
-	sort_count uint64, plan *plan.Prepared, id string) {
+	sort_count uint64, plan *plan.Prepared, state string, id string) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
@@ -119,6 +120,7 @@ func LogRequest(acctstore AccountingStore,
 
 	re := &RequestLogEntry{
 		RequestId:   id,
+		State:       state,
 		ElapsedTime: request_time,
 		ServiceTime: service_time,
 		ResultCount: result_count,

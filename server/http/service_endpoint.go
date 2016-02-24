@@ -194,7 +194,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 		request.Prepared())
 	accounting.LogRequest(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
-		request.SortCount(), request.Prepared(), request.Id().String())
+		request.SortCount(), request.Prepared(),
+		string(request.State()), request.Id().String())
 }
 
 func ServicePrefix() string {

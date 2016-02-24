@@ -294,6 +294,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.RequestId
+		requests[i]["state"] = request.State
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement
 		}

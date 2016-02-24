@@ -95,15 +95,15 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	state := this.State()
 	this.writeSuffix(srvr.Metrics(), state)
 	this.writer.noMoreData()
-	if state != server.TIMEOUT {
+	if state != server.TIMEOUT && state != server.CLOSED {
 		this.stopAndClose(server.COMPLETED)
 	} else {
 		this.Close()
 	}
 }
 
-func (this *httpRequest) Expire() {
-	this.Stop(server.TIMEOUT)
+func (this *httpRequest) Expire(state server.State) {
+	this.Stop(state)
 	this.stopCloseNotifier()
 }
 
