@@ -69,6 +69,9 @@ mergeInsert      *algebra.MergeInsert
 indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
+
+// token offset into the statement
+tokOffset	 int
 }
 
 %token ALL
@@ -420,7 +423,7 @@ infer
 explain:
 EXPLAIN stmt
 {
-    $$ = algebra.NewExplain($2)
+    $$ = algebra.NewExplain($2, yylex.(*lexer).Remainder($<tokOffset>1))
 }
 ;
 

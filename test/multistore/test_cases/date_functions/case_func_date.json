@@ -66,6 +66,8 @@
       "statements":"EXPLAIN select CLOCK_STR(\"2006-01-02\")",
       "results": [
         {
+	"plan":
+            {
             "#operator": "Sequence",
             "~children": [
                 {
@@ -91,6 +93,8 @@
                     }
                 }
             ]
+            },
+        "text": "select CLOCK_STR(\"2006-01-02\")"
         }
     ]
     },

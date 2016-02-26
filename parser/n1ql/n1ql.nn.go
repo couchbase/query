@@ -376,7 +376,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
 
 		// (0|[1-9][0-9]*)\.[0-9]+([eE][+\-]?[0-9]+)?
-		{[]bool{false, false, false, false, false, true, false, false, true}, []func(rune) int{ // Transitions
+		{[]bool{false, false, false, false, false, true, false, true, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
 				case 43:
@@ -407,7 +407,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 45:
 					return -1
 				case 46:
-					return 4
+					return 3
 				case 48:
 					return -1
 				case 69:
@@ -430,42 +430,19 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 45:
 					return -1
 				case 46:
-					return 4
-				case 48:
 					return 3
+				case 48:
+					return 4
 				case 69:
 					return -1
 				case 101:
 					return -1
 				}
 				switch {
-				case 48 <= r && r <= 48:
-					return 3
 				case 49 <= r && r <= 57:
-					return 3
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 43:
-					return -1
-				case 45:
-					return -1
-				case 46:
 					return 4
-				case 48:
-					return 3
-				case 69:
-					return -1
-				case 101:
-					return -1
-				}
-				switch {
 				case 48 <= r && r <= 48:
-					return 3
-				case 49 <= r && r <= 57:
-					return 3
+					return 4
 				}
 				return -1
 			},
@@ -485,10 +462,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				}
 				switch {
-				case 48 <= r && r <= 48:
-					return 5
 				case 49 <= r && r <= 57:
 					return 5
+				case 48 <= r && r <= 48:
+					return 5
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 43:
+					return -1
+				case 45:
+					return -1
+				case 46:
+					return 3
+				case 48:
+					return 4
+				case 69:
+					return -1
+				case 101:
+					return -1
+				}
+				switch {
+				case 49 <= r && r <= 57:
+					return 4
+				case 48 <= r && r <= 48:
+					return 4
 				}
 				return -1
 			},
@@ -508,33 +508,33 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				}
 				switch {
-				case 48 <= r && r <= 48:
-					return 5
 				case 49 <= r && r <= 57:
 					return 5
+				case 48 <= r && r <= 48:
+					return 5
 				}
 				return -1
 			},
 			func(r rune) int {
 				switch r {
 				case 43:
+					return 8
+				case 45:
+					return 8
+				case 46:
+					return -1
+				case 48:
 					return 7
-				case 45:
+				case 69:
+					return -1
+				case 101:
+					return -1
+				}
+				switch {
+				case 48 <= r && r <= 48:
 					return 7
-				case 46:
-					return -1
-				case 48:
-					return 8
-				case 69:
-					return -1
-				case 101:
-					return -1
-				}
-				switch {
-				case 48 <= r && r <= 48:
-					return 8
 				case 49 <= r && r <= 57:
-					return 8
+					return 7
 				}
 				return -1
 			},
@@ -547,17 +547,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 46:
 					return -1
 				case 48:
-					return 8
+					return 7
 				case 69:
 					return -1
 				case 101:
 					return -1
 				}
 				switch {
-				case 49 <= r && r <= 57:
-					return 8
 				case 48 <= r && r <= 48:
-					return 8
+					return 7
+				case 49 <= r && r <= 57:
+					return 7
 				}
 				return -1
 			},
@@ -570,17 +570,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 46:
 					return -1
 				case 48:
-					return 8
+					return 7
 				case 69:
 					return -1
 				case 101:
 					return -1
 				}
 				switch {
-				case 49 <= r && r <= 57:
-					return 8
 				case 48 <= r && r <= 48:
-					return 8
+					return 7
+				case 49 <= r && r <= 57:
+					return 7
 				}
 				return -1
 			},
@@ -618,9 +618,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 48:
 					return -1
 				case 69:
-					return 3
+					return 4
 				case 101:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 48:
@@ -637,17 +637,38 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				case 45:
 					return -1
 				case 48:
-					return 4
+					return 3
 				case 69:
-					return 3
+					return 4
 				case 101:
-					return 3
+					return 4
 				}
 				switch {
 				case 48 <= r && r <= 48:
-					return 4
+					return 3
 				case 49 <= r && r <= 57:
+					return 3
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 43:
+					return -1
+				case 45:
+					return -1
+				case 48:
+					return 3
+				case 69:
 					return 4
+				case 101:
+					return 4
+				}
+				switch {
+				case 48 <= r && r <= 48:
+					return 3
+				case 49 <= r && r <= 57:
+					return 3
 				}
 				return -1
 			},
@@ -669,27 +690,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return 6
 				case 49 <= r && r <= 57:
 					return 6
-				}
-				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 43:
-					return -1
-				case 45:
-					return -1
-				case 48:
-					return 4
-				case 69:
-					return 3
-				case 101:
-					return 3
-				}
-				switch {
-				case 48 <= r && r <= 48:
-					return 4
-				case 49 <= r && r <= 57:
-					return 4
 				}
 				return -1
 			},
@@ -794,7 +794,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 		}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1}, nil},
 
 		// (\/\*)([^\*]|(\*)+[^\/])*((\*)+\/)
-		{[]bool{false, false, false, false, false, true, false, false, true, false}, []func(rune) int{ // Transitions
+		{[]bool{false, false, false, false, false, false, true, false, true, false}, []func(rune) int{ // Transitions
 			func(r rune) int {
 				switch r {
 				case 42:
@@ -834,11 +834,20 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			func(r rune) int {
 				switch r {
 				case 42:
-					return 6
-				case 47:
 					return 5
+				case 47:
+					return 6
 				}
 				return 7
+			},
+			func(r rune) int {
+				switch r {
+				case 42:
+					return 5
+				case 47:
+					return 8
+				}
+				return 9
 			},
 			func(r rune) int {
 				switch r {
@@ -848,15 +857,6 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					return -1
 				}
 				return -1
-			},
-			func(r rune) int {
-				switch r {
-				case 42:
-					return 6
-				case 47:
-					return 8
-				}
-				return 9
 			},
 			func(r rune) int {
 				switch r {
@@ -30651,6 +30651,34 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 				return -1
 			},
 		}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
+
+		// .
+		{[]bool{false, true}, []func(rune) int{ // Transitions
+			func(r rune) int {
+				return 1
+			},
+			func(r rune) int {
+				return -1
+			},
+		}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
+
+		// \n
+		{[]bool{false, true}, []func(rune) int{ // Transitions
+			func(r rune) int {
+				switch r {
+				case 10:
+					return 1
+				}
+				return -1
+			},
+			func(r rune) int {
+				switch r {
+				case 10:
+					return -1
+				}
+				return -1
+			},
+		}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
 	}, 0, 0)
 	return yylex
 }
@@ -30716,13 +30744,13 @@ OUTER0:
 		case 0:
 			{
 				lval.s, _ = UnmarshalDoubleQuoted(yylex.Text())
-				logToken("STR - %s", lval.s)
+				logToken(yylex.Text(), "STR - %s", lval.s)
 				return STR
 			}
 		case 1:
 			{
 				lval.s, _ = UnmarshalSingleQuoted(yylex.Text())
-				logToken("STR - %s", lval.s)
+				logToken(yylex.Text(), "STR - %s", lval.s)
 				return STR
 			}
 		case 2:
@@ -30731,1037 +30759,1049 @@ OUTER0:
 				text := yylex.Text()
 				text = text[0 : len(text)-1]
 				lval.s, _ = UnmarshalBackQuoted(text)
-				logToken("IDENT_ICASE - %s", lval.s)
+				logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 				return IDENT_ICASE
 			}
 		case 3:
 			{
 				// Escaped identifier
 				lval.s, _ = UnmarshalBackQuoted(yylex.Text())
-				logToken("IDENT - %s", lval.s)
+				logToken(yylex.Text(), "IDENT - %s", lval.s)
 				return IDENT
 			}
 		case 4:
 			{
 				// We differentiate NUM from INT
 				lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-				logToken("NUM - %f", lval.f)
+				logToken(yylex.Text(), "NUM - %f", lval.f)
 				return NUM
 			}
 		case 5:
 			{
 				// We differentiate NUM from INT
 				lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-				logToken("NUM - %f", lval.f)
+				logToken(yylex.Text(), "NUM - %f", lval.f)
 				return NUM
 			}
 		case 6:
 			{
 				// We differentiate NUM from INT
 				lval.n, _ = strconv.Atoi(yylex.Text())
-				logToken("INT - %d", lval.n)
+				logToken(yylex.Text(), "INT - %d", lval.n)
 				return INT
 			}
 		case 7:
 			{
-				logToken("BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
+				logToken(yylex.Text(), "BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
 			}
 		case 8:
 			{
-				logToken("LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */
+				logToken(yylex.Text(), "LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */
 			}
 		case 9:
 			{
-				logToken("WHITESPACE (count=%d)", len(yylex.Text())) /* eat up whitespace */
+				logToken(yylex.Text(), "WHITESPACE (count=%d)", len(yylex.Text())) /* eat up whitespace */
 			}
 		case 10:
 			{
-				logToken("DOT")
+				logToken(yylex.Text(), "DOT")
 				return DOT
 			}
 		case 11:
 			{
-				logToken("PLUS")
+				logToken(yylex.Text(), "PLUS")
 				return PLUS
 			}
 		case 12:
 			{
-				logToken("MINUS")
+				logToken(yylex.Text(), "MINUS")
 				return MINUS
 			}
 		case 13:
 			{
-				logToken("MULT")
+				logToken(yylex.Text(), "MULT")
 				return STAR
 			}
 		case 14:
 			{
-				logToken("DIV")
+				logToken(yylex.Text(), "DIV")
 				return DIV
 			}
 		case 15:
 			{
-				logToken("MOD")
+				logToken(yylex.Text(), "MOD")
 				return MOD
 			}
 		case 16:
 			{
-				logToken("DEQ")
+				logToken(yylex.Text(), "DEQ")
 				return DEQ
 			}
 		case 17:
 			{
-				logToken("EQ")
+				logToken(yylex.Text(), "EQ")
 				return EQ
 			}
 		case 18:
 			{
-				logToken("NE")
+				logToken(yylex.Text(), "NE")
 				return NE
 			}
 		case 19:
 			{
-				logToken("NE")
+				logToken(yylex.Text(), "NE")
 				return NE
 			}
 		case 20:
 			{
-				logToken("LT")
+				logToken(yylex.Text(), "LT")
 				return LT
 			}
 		case 21:
 			{
-				logToken("LTE")
+				logToken(yylex.Text(), "LTE")
 				return LE
 			}
 		case 22:
 			{
-				logToken("GT")
+				logToken(yylex.Text(), "GT")
 				return GT
 			}
 		case 23:
 			{
-				logToken("GTE")
+				logToken(yylex.Text(), "GTE")
 				return GE
 			}
 		case 24:
 			{
-				logToken("CONCAT")
+				logToken(yylex.Text(), "CONCAT")
 				return CONCAT
 			}
 		case 25:
 			{
-				logToken("LPAREN")
+				logToken(yylex.Text(), "LPAREN")
 				return LPAREN
 			}
 		case 26:
 			{
-				logToken("RPAREN")
+				logToken(yylex.Text(), "RPAREN")
 				return RPAREN
 			}
 		case 27:
 			{
-				logToken("LBRACE")
+				logToken(yylex.Text(), "LBRACE")
 				return LBRACE
 			}
 		case 28:
 			{
-				logToken("RBRACE")
+				logToken(yylex.Text(), "RBRACE")
 				return RBRACE
 			}
 		case 29:
 			{
-				logToken("COMMA")
+				logToken(yylex.Text(), "COMMA")
 				return COMMA
 			}
 		case 30:
 			{
-				logToken("COLON")
+				logToken(yylex.Text(), "COLON")
 				return COLON
 			}
 		case 31:
 			{
-				logToken("LBRACKET")
+				logToken(yylex.Text(), "LBRACKET")
 				return LBRACKET
 			}
 		case 32:
 			{
-				logToken("RBRACKET")
+				logToken(yylex.Text(), "RBRACKET")
 				return RBRACKET
 			}
 		case 33:
 			{
-				logToken("RBRACKET_ICASE")
+				logToken(yylex.Text(), "RBRACKET_ICASE")
 				return RBRACKET_ICASE
 			}
 		case 34:
 			{
-				logToken("SEMI")
+				logToken(yylex.Text(), "SEMI")
 				return SEMI
 			}
 		case 35:
 			{
-				logToken("ALL")
+				logToken(yylex.Text(), "ALL")
 				return ALL
 			}
 		case 36:
 			{
-				logToken("ALTER")
+				logToken(yylex.Text(), "ALTER")
 				return ALTER
 			}
 		case 37:
 			{
-				logToken("ANALYZE")
+				logToken(yylex.Text(), "ANALYZE")
 				return ANALYZE
 			}
 		case 38:
 			{
-				logToken("AND")
+				logToken(yylex.Text(), "AND")
 				return AND
 			}
 		case 39:
 			{
-				logToken("ANY")
+				logToken(yylex.Text(), "ANY")
 				return ANY
 			}
 		case 40:
 			{
-				logToken("ARRAY")
+				logToken(yylex.Text(), "ARRAY")
 				return ARRAY
 			}
 		case 41:
 			{
-				logToken("AS")
+				logToken(yylex.Text(), "AS")
+				lval.tokOffset = curOffset
 				return AS
 			}
 		case 42:
 			{
-				logToken("ASC")
+				logToken(yylex.Text(), "ASC")
 				return ASC
 			}
 		case 43:
 			{
-				logToken("BEGIN")
+				logToken(yylex.Text(), "BEGIN")
 				return BEGIN
 			}
 		case 44:
 			{
-				logToken("BETWEEN")
+				logToken(yylex.Text(), "BETWEEN")
 				return BETWEEN
 			}
 		case 45:
 			{
-				logToken("BINARY")
+				logToken(yylex.Text(), "BINARY")
 				return BINARY
 			}
 		case 46:
 			{
-				logToken("BOOLEAN")
+				logToken(yylex.Text(), "BOOLEAN")
 				return BOOLEAN
 			}
 		case 47:
 			{
-				logToken("BREAK")
+				logToken(yylex.Text(), "BREAK")
 				return BREAK
 			}
 		case 48:
 			{
-				logToken("BUCKET")
+				logToken(yylex.Text(), "BUCKET")
 				return BUCKET
 			}
 		case 49:
 			{
-				logToken("BUILD")
+				logToken(yylex.Text(), "BUILD")
 				return BUILD
 			}
 		case 50:
 			{
-				logToken("BY")
+				logToken(yylex.Text(), "BY")
 				return BY
 			}
 		case 51:
 			{
-				logToken("CALL")
+				logToken(yylex.Text(), "CALL")
 				return CALL
 			}
 		case 52:
 			{
-				logToken("CASE")
+				logToken(yylex.Text(), "CASE")
 				return CASE
 			}
 		case 53:
 			{
-				logToken("CAST")
+				logToken(yylex.Text(), "CAST")
 				return CAST
 			}
 		case 54:
 			{
-				logToken("CLUSTER")
+				logToken(yylex.Text(), "CLUSTER")
 				return CLUSTER
 			}
 		case 55:
 			{
-				logToken("COLLATE")
+				logToken(yylex.Text(), "COLLATE")
 				return COLLATE
 			}
 		case 56:
 			{
-				logToken("COLLECTION")
+				logToken(yylex.Text(), "COLLECTION")
 				return COLLECTION
 			}
 		case 57:
 			{
-				logToken("COMMIT")
+				logToken(yylex.Text(), "COMMIT")
 				return COMMIT
 			}
 		case 58:
 			{
-				logToken("CONNECT")
+				logToken(yylex.Text(), "CONNECT")
 				return CONNECT
 			}
 		case 59:
 			{
-				logToken("CONTINUE")
+				logToken(yylex.Text(), "CONTINUE")
 				return CONTINUE
 			}
 		case 60:
 			{
-				logToken("CORRELATE")
+				logToken(yylex.Text(), "CORRELATE")
 				return CORRELATE
 			}
 		case 61:
 			{
-				logToken("COVER")
+				logToken(yylex.Text(), "COVER")
 				return COVER
 			}
 		case 62:
 			{
-				logToken("CREATE")
+				logToken(yylex.Text(), "CREATE")
 				return CREATE
 			}
 		case 63:
 			{
-				logToken("DATABASE")
+				logToken(yylex.Text(), "DATABASE")
 				return DATABASE
 			}
 		case 64:
 			{
-				logToken("DATASET")
+				logToken(yylex.Text(), "DATASET")
 				return DATASET
 			}
 		case 65:
 			{
-				logToken("DATASTORE")
+				logToken(yylex.Text(), "DATASTORE")
 				return DATASTORE
 			}
 		case 66:
 			{
-				logToken("DECLARE")
+				logToken(yylex.Text(), "DECLARE")
 				return DECLARE
 			}
 		case 67:
 			{
-				logToken("DECREMENT")
+				logToken(yylex.Text(), "DECREMENT")
 				return DECREMENT
 			}
 		case 68:
 			{
-				logToken("DELETE")
+				logToken(yylex.Text(), "DELETE")
 				return DELETE
 			}
 		case 69:
 			{
-				logToken("DERIVED")
+				logToken(yylex.Text(), "DERIVED")
 				return DERIVED
 			}
 		case 70:
 			{
-				logToken("DESC")
+				logToken(yylex.Text(), "DESC")
 				return DESC
 			}
 		case 71:
 			{
-				logToken("DESCRIBE")
+				logToken(yylex.Text(), "DESCRIBE")
 				return DESCRIBE
 			}
 		case 72:
 			{
-				logToken("DISTINCT")
+				logToken(yylex.Text(), "DISTINCT")
 				return DISTINCT
 			}
 		case 73:
 			{
-				logToken("DO")
+				logToken(yylex.Text(), "DO")
 				return DO
 			}
 		case 74:
 			{
-				logToken("DROP")
+				logToken(yylex.Text(), "DROP")
 				return DROP
 			}
 		case 75:
 			{
-				logToken("EACH")
+				logToken(yylex.Text(), "EACH")
 				return EACH
 			}
 		case 76:
 			{
-				logToken("ELEMENT")
+				logToken(yylex.Text(), "ELEMENT")
 				return ELEMENT
 			}
 		case 77:
 			{
-				logToken("ELSE")
+				logToken(yylex.Text(), "ELSE")
 				return ELSE
 			}
 		case 78:
 			{
-				logToken("END")
+				logToken(yylex.Text(), "END")
 				return END
 			}
 		case 79:
 			{
-				logToken("EVERY")
+				logToken(yylex.Text(), "EVERY")
 				return EVERY
 			}
 		case 80:
 			{
-				logToken("EXCEPT")
+				logToken(yylex.Text(), "EXCEPT")
 				return EXCEPT
 			}
 		case 81:
 			{
-				logToken("EXCLUDE")
+				logToken(yylex.Text(), "EXCLUDE")
 				return EXCLUDE
 			}
 		case 82:
 			{
-				logToken("EXECUTE")
+				logToken(yylex.Text(), "EXECUTE")
 				return EXECUTE
 			}
 		case 83:
 			{
-				logToken("EXISTS")
+				logToken(yylex.Text(), "EXISTS")
 				return EXISTS
 			}
 		case 84:
 			{
-				logToken("EXPLAIN")
+				logToken(yylex.Text(), "EXPLAIN")
+				lval.tokOffset = curOffset
 				return EXPLAIN
 			}
 		case 85:
 			{
-				logToken("FALSE")
+				logToken(yylex.Text(), "FALSE")
 				return FALSE
 			}
 		case 86:
 			{
-				logToken("FETCH")
+				logToken(yylex.Text(), "FETCH")
 				return FETCH
 			}
 		case 87:
 			{
-				logToken("FIRST")
+				logToken(yylex.Text(), "FIRST")
 				return FIRST
 			}
 		case 88:
 			{
-				logToken("FLATTEN")
+				logToken(yylex.Text(), "FLATTEN")
 				return FLATTEN
 			}
 		case 89:
 			{
-				logToken("FOR")
+				logToken(yylex.Text(), "FOR")
 				return FOR
 			}
 		case 90:
 			{
-				logToken("FORCE")
+				logToken(yylex.Text(), "FORCE")
 				return FORCE
 			}
 		case 91:
 			{
-				logToken("FROM")
+				logToken(yylex.Text(), "FROM")
+				lval.tokOffset = curOffset
 				return FROM
 			}
 		case 92:
 			{
-				logToken("FUNCTION")
+				logToken(yylex.Text(), "FUNCTION")
 				return FUNCTION
 			}
 		case 93:
 			{
-				logToken("GRANT")
+				logToken(yylex.Text(), "GRANT")
 				return GRANT
 			}
 		case 94:
 			{
-				logToken("GROUP")
+				logToken(yylex.Text(), "GROUP")
 				return GROUP
 			}
 		case 95:
 			{
-				logToken("GSI")
+				logToken(yylex.Text(), "GSI")
 				return GSI
 			}
 		case 96:
 			{
-				logToken("HAVING")
+				logToken(yylex.Text(), "HAVING")
 				return HAVING
 			}
 		case 97:
 			{
-				logToken("IF")
+				logToken(yylex.Text(), "IF")
 				return IF
 			}
 		case 98:
 			{
-				logToken("IGNORE")
+				logToken(yylex.Text(), "IGNORE")
 				return IGNORE
 			}
 		case 99:
 			{
-				logToken("ILIKE")
+				logToken(yylex.Text(), "ILIKE")
 				return ILIKE
 			}
 		case 100:
 			{
-				logToken("IN")
+				logToken(yylex.Text(), "IN")
 				return IN
 			}
 		case 101:
 			{
-				logToken("INCLUDE")
+				logToken(yylex.Text(), "INCLUDE")
 				return INCLUDE
 			}
 		case 102:
 			{
-				logToken("INCREMENT")
+				logToken(yylex.Text(), "INCREMENT")
 				return INCREMENT
 			}
 		case 103:
 			{
-				logToken("INDEX")
+				logToken(yylex.Text(), "INDEX")
 				return INDEX
 			}
 		case 104:
 			{
-				logToken("INFER")
+				logToken(yylex.Text(), "INFER")
 				return INFER
 			}
 		case 105:
 			{
-				logToken("INLINE")
+				logToken(yylex.Text(), "INLINE")
 				return INLINE
 			}
 		case 106:
 			{
-				logToken("INNER")
+				logToken(yylex.Text(), "INNER")
 				return INNER
 			}
 		case 107:
 			{
-				logToken("INSERT")
+				logToken(yylex.Text(), "INSERT")
 				return INSERT
 			}
 		case 108:
 			{
-				logToken("INTERSECT")
+				logToken(yylex.Text(), "INTERSECT")
 				return INTERSECT
 			}
 		case 109:
 			{
-				logToken("INTO")
+				logToken(yylex.Text(), "INTO")
 				return INTO
 			}
 		case 110:
 			{
-				logToken("IS")
+				logToken(yylex.Text(), "IS")
 				return IS
 			}
 		case 111:
 			{
-				logToken("JOIN")
+				logToken(yylex.Text(), "JOIN")
 				return JOIN
 			}
 		case 112:
 			{
-				logToken("KEY")
+				logToken(yylex.Text(), "KEY")
 				return KEY
 			}
 		case 113:
 			{
-				logToken("KEYS")
+				logToken(yylex.Text(), "KEYS")
 				return KEYS
 			}
 		case 114:
 			{
-				logToken("KEYSPACE")
+				logToken(yylex.Text(), "KEYSPACE")
 				return KEYSPACE
 			}
 		case 115:
 			{
-				logToken("LAST")
+				logToken(yylex.Text(), "LAST")
 				return LAST
 			}
 		case 116:
 			{
-				logToken("LEFT")
+				logToken(yylex.Text(), "LEFT")
 				return LEFT
 			}
 		case 117:
 			{
-				logToken("LET")
+				logToken(yylex.Text(), "LET")
 				return LET
 			}
 		case 118:
 			{
-				logToken("LETTING")
+				logToken(yylex.Text(), "LETTING")
 				return LETTING
 			}
 		case 119:
 			{
-				logToken("LIKE")
+				logToken(yylex.Text(), "LIKE")
 				return LIKE
 			}
 		case 120:
 			{
-				logToken("LIMIT")
+				logToken(yylex.Text(), "LIMIT")
 				return LIMIT
 			}
 		case 121:
 			{
-				logToken("LSM")
+				logToken(yylex.Text(), "LSM")
 				return LSM
 			}
 		case 122:
 			{
-				logToken("MAP")
+				logToken(yylex.Text(), "MAP")
 				return MAP
 			}
 		case 123:
 			{
-				logToken("MAPPING")
+				logToken(yylex.Text(), "MAPPING")
 				return MAPPING
 			}
 		case 124:
 			{
-				logToken("MATCHED")
+				logToken(yylex.Text(), "MATCHED")
 				return MATCHED
 			}
 		case 125:
 			{
-				logToken("MATERIALIZED")
+				logToken(yylex.Text(), "MATERIALIZED")
 				return MATERIALIZED
 			}
 		case 126:
 			{
-				logToken("MERGE")
+				logToken(yylex.Text(), "MERGE")
 				return MERGE
 			}
 		case 127:
 			{
-				logToken("MINUS")
+				logToken(yylex.Text(), "MINUS")
 				return MINUS
 			}
 		case 128:
 			{
-				logToken("MISSING")
+				logToken(yylex.Text(), "MISSING")
 				return MISSING
 			}
 		case 129:
 			{
-				logToken("NAMESPACE")
+				logToken(yylex.Text(), "NAMESPACE")
 				return NAMESPACE
 			}
 		case 130:
 			{
-				logToken("NEST")
+				logToken(yylex.Text(), "NEST")
 				return NEST
 			}
 		case 131:
 			{
-				logToken("NOT")
+				logToken(yylex.Text(), "NOT")
 				return NOT
 			}
 		case 132:
 			{
-				logToken("NULL")
+				logToken(yylex.Text(), "NULL")
 				return NULL
 			}
 		case 133:
 			{
-				logToken("NUMBER")
+				logToken(yylex.Text(), "NUMBER")
 				return NUMBER
 			}
 		case 134:
 			{
-				logToken("OBJECT")
+				logToken(yylex.Text(), "OBJECT")
 				return OBJECT
 			}
 		case 135:
 			{
-				logToken("OFFSET")
+				logToken(yylex.Text(), "OFFSET")
 				return OFFSET
 			}
 		case 136:
 			{
-				logToken("ON")
+				logToken(yylex.Text(), "ON")
 				return ON
 			}
 		case 137:
 			{
-				logToken("OPTION")
+				logToken(yylex.Text(), "OPTION")
 				return OPTION
 			}
 		case 138:
 			{
-				logToken("OR")
+				logToken(yylex.Text(), "OR")
 				return OR
 			}
 		case 139:
 			{
-				logToken("ORDER")
+				logToken(yylex.Text(), "ORDER")
 				return ORDER
 			}
 		case 140:
 			{
-				logToken("OUTER")
+				logToken(yylex.Text(), "OUTER")
 				return OUTER
 			}
 		case 141:
 			{
-				logToken("OVER")
+				logToken(yylex.Text(), "OVER")
 				return OVER
 			}
 		case 142:
 			{
-				logToken("PARSE")
+				logToken(yylex.Text(), "PARSE")
 				return PARSE
 			}
 		case 143:
 			{
-				logToken("PARTITION")
+				logToken(yylex.Text(), "PARTITION")
 				return PARTITION
 			}
 		case 144:
 			{
-				logToken("PASSWORD")
+				logToken(yylex.Text(), "PASSWORD")
 				return PASSWORD
 			}
 		case 145:
 			{
-				logToken("PATH")
+				logToken(yylex.Text(), "PATH")
 				return PATH
 			}
 		case 146:
 			{
-				logToken("POOL")
+				logToken(yylex.Text(), "POOL")
 				return POOL
 			}
 		case 147:
 			{
-				logToken("PREPARE")
+				logToken(yylex.Text(), "PREPARE")
+				lval.tokOffset = curOffset
 				return PREPARE
 			}
 		case 148:
 			{
-				logToken("PRIMARY")
+				logToken(yylex.Text(), "PRIMARY")
 				return PRIMARY
 			}
 		case 149:
 			{
-				logToken("PRIVATE")
+				logToken(yylex.Text(), "PRIVATE")
 				return PRIVATE
 			}
 		case 150:
 			{
-				logToken("PRIVILEGE")
+				logToken(yylex.Text(), "PRIVILEGE")
 				return PRIVILEGE
 			}
 		case 151:
 			{
-				logToken("PROCEDURE")
+				logToken(yylex.Text(), "PROCEDURE")
 				return PROCEDURE
 			}
 		case 152:
 			{
-				logToken("PUBLIC")
+				logToken(yylex.Text(), "PUBLIC")
 				return PUBLIC
 			}
 		case 153:
 			{
-				logToken("RAW")
+				logToken(yylex.Text(), "RAW")
 				return RAW
 			}
 		case 154:
 			{
-				logToken("REALM")
+				logToken(yylex.Text(), "REALM")
 				return REALM
 			}
 		case 155:
 			{
-				logToken("REDUCE")
+				logToken(yylex.Text(), "REDUCE")
 				return REDUCE
 			}
 		case 156:
 			{
-				logToken("RENAME")
+				logToken(yylex.Text(), "RENAME")
 				return RENAME
 			}
 		case 157:
 			{
-				logToken("RETURN")
+				logToken(yylex.Text(), "RETURN")
 				return RETURN
 			}
 		case 158:
 			{
-				logToken("RETURNING")
+				logToken(yylex.Text(), "RETURNING")
 				return RETURNING
 			}
 		case 159:
 			{
-				logToken("REVOKE")
+				logToken(yylex.Text(), "REVOKE")
 				return REVOKE
 			}
 		case 160:
 			{
-				logToken("RIGHT")
+				logToken(yylex.Text(), "RIGHT")
 				return RIGHT
 			}
 		case 161:
 			{
-				logToken("ROLE")
+				logToken(yylex.Text(), "ROLE")
 				return ROLE
 			}
 		case 162:
 			{
-				logToken("ROLLBACK")
+				logToken(yylex.Text(), "ROLLBACK")
 				return ROLLBACK
 			}
 		case 163:
 			{
-				logToken("SATISFIES")
+				logToken(yylex.Text(), "SATISFIES")
 				return SATISFIES
 			}
 		case 164:
 			{
-				logToken("SCHEMA")
+				logToken(yylex.Text(), "SCHEMA")
 				return SCHEMA
 			}
 		case 165:
 			{
-				logToken("SELECT")
+				logToken(yylex.Text(), "SELECT")
 				return SELECT
 			}
 		case 166:
 			{
-				logToken("SELF")
+				logToken(yylex.Text(), "SELF")
 				return SELF
 			}
 		case 167:
 			{
-				logToken("SET")
+				logToken(yylex.Text(), "SET")
 				return SET
 			}
 		case 168:
 			{
-				logToken("SHOW")
+				logToken(yylex.Text(), "SHOW")
 				return SHOW
 			}
 		case 169:
 			{
-				logToken("SOME")
+				logToken(yylex.Text(), "SOME")
 				return SOME
 			}
 		case 170:
 			{
-				logToken("START")
+				logToken(yylex.Text(), "START")
 				return START
 			}
 		case 171:
 			{
-				logToken("STATISTICS")
+				logToken(yylex.Text(), "STATISTICS")
 				return STATISTICS
 			}
 		case 172:
 			{
-				logToken("STRING")
+				logToken(yylex.Text(), "STRING")
 				return STRING
 			}
 		case 173:
 			{
-				logToken("SYSTEM")
+				logToken(yylex.Text(), "SYSTEM")
 				return SYSTEM
 			}
 		case 174:
 			{
-				logToken("THEN")
+				logToken(yylex.Text(), "THEN")
 				return THEN
 			}
 		case 175:
 			{
-				logToken("TO")
+				logToken(yylex.Text(), "TO")
 				return TO
 			}
 		case 176:
 			{
-				logToken("TRANSACTION")
+				logToken(yylex.Text(), "TRANSACTION")
 				return TRANSACTION
 			}
 		case 177:
 			{
-				logToken("TRIGGER")
+				logToken(yylex.Text(), "TRIGGER")
 				return TRIGGER
 			}
 		case 178:
 			{
-				logToken("TRUE")
+				logToken(yylex.Text(), "TRUE")
 				return TRUE
 			}
 		case 179:
 			{
-				logToken("TRUNCATE")
+				logToken(yylex.Text(), "TRUNCATE")
 				return TRUNCATE
 			}
 		case 180:
 			{
-				logToken("UNDER")
+				logToken(yylex.Text(), "UNDER")
 				return UNDER
 			}
 		case 181:
 			{
-				logToken("UNION")
+				logToken(yylex.Text(), "UNION")
 				return UNION
 			}
 		case 182:
 			{
-				logToken("UNIQUE")
+				logToken(yylex.Text(), "UNIQUE")
 				return UNIQUE
 			}
 		case 183:
 			{
-				logToken("UNNEST")
+				logToken(yylex.Text(), "UNNEST")
 				return UNNEST
 			}
 		case 184:
 			{
-				logToken("UNSET")
+				logToken(yylex.Text(), "UNSET")
 				return UNSET
 			}
 		case 185:
 			{
-				logToken("UPDATE")
+				logToken(yylex.Text(), "UPDATE")
 				return UPDATE
 			}
 		case 186:
 			{
-				logToken("UPSERT")
+				logToken(yylex.Text(), "UPSERT")
 				return UPSERT
 			}
 		case 187:
 			{
-				logToken("USE")
+				logToken(yylex.Text(), "USE")
 				return USE
 			}
 		case 188:
 			{
-				logToken("USER")
+				logToken(yylex.Text(), "USER")
 				return USER
 			}
 		case 189:
 			{
-				logToken("USING")
+				logToken(yylex.Text(), "USING")
 				return USING
 			}
 		case 190:
 			{
-				logToken("VALIDATE")
+				logToken(yylex.Text(), "VALIDATE")
 				return VALIDATE
 			}
 		case 191:
 			{
-				logToken("VALUE")
+				logToken(yylex.Text(), "VALUE")
 				return VALUE
 			}
 		case 192:
 			{
-				logToken("VALUED")
+				logToken(yylex.Text(), "VALUED")
 				return VALUED
 			}
 		case 193:
 			{
-				logToken("VALUES")
+				logToken(yylex.Text(), "VALUES")
 				return VALUES
 			}
 		case 194:
 			{
-				logToken("VIA")
+				logToken(yylex.Text(), "VIA")
 				return VIA
 			}
 		case 195:
 			{
-				logToken("VIEW")
+				logToken(yylex.Text(), "VIEW")
 				return VIEW
 			}
 		case 196:
 			{
-				logToken("WHEN")
+				logToken(yylex.Text(), "WHEN")
 				return WHEN
 			}
 		case 197:
 			{
-				logToken("WHERE")
+				logToken(yylex.Text(), "WHERE")
 				return WHERE
 			}
 		case 198:
 			{
-				logToken("WHILE")
+				logToken(yylex.Text(), "WHILE")
 				return WHILE
 			}
 		case 199:
 			{
-				logToken("WITH")
+				logToken(yylex.Text(), "WITH")
 				return WITH
 			}
 		case 200:
 			{
-				logToken("WITHIN")
+				logToken(yylex.Text(), "WITHIN")
 				return WITHIN
 			}
 		case 201:
 			{
-				logToken("WORK")
+				logToken(yylex.Text(), "WORK")
 				return WORK
 			}
 		case 202:
 			{
-				logToken("XOR")
+				logToken(yylex.Text(), "XOR")
 				return XOR
 			}
 		case 203:
 			{
 				lval.s = yylex.Text()
-				logToken("IDENT - %s", lval.s)
+				logToken(yylex.Text(), "IDENT - %s", lval.s)
 				return IDENT
 			}
 		case 204:
 			{
 				lval.s = yylex.Text()[1:]
-				logToken("NAMED_PARAM - %s", lval.s)
+				logToken(yylex.Text(), "NAMED_PARAM - %s", lval.s)
 				return NAMED_PARAM
 			}
 		case 205:
 			{
 				lval.n, _ = strconv.Atoi(yylex.Text()[1:])
-				logToken("POSITIONAL_PARAM - %d", lval.n)
+				logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
 				return POSITIONAL_PARAM
 			}
 		case 206:
 			{
 				lval.n = 0 // Handled by parser
-				logToken("NEXT_PARAM - ?")
+				logToken(yylex.Text(), "NEXT_PARAM - ?")
 				return NEXT_PARAM
+			}
+		case 207:
+			{
+				curOffset++
+			}
+		case 208:
+			{
+				curOffset++
 			}
 		default:
 			break OUTER0
@@ -31772,6 +31812,14 @@ OUTER0:
 
 	return 0
 }
-func logToken(format string, v ...interface{}) {
+
+var curOffset int
+
+func logToken(text string, format string, v ...interface{}) {
+	curOffset += len(text)
 	clog.To("LEXER", format, v...)
+}
+
+func (this *Lexer) ResetOffset() {
+	curOffset = 0
 }
