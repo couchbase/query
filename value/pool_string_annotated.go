@@ -36,7 +36,7 @@ func (this *StringAnnotatedPool) Get() map[string]AnnotatedValue {
 }
 
 func (this *StringAnnotatedPool) Put(s map[string]AnnotatedValue) {
-	if s == nil || len(s) > this.size {
+	if s == nil {
 		return
 	}
 

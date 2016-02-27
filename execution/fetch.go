@@ -15,18 +15,21 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type Fetch struct {
 	base
-	plan *plan.Fetch
+	plan      *plan.Fetch
+	batchsize int
 }
 
 func NewFetch(plan *plan.Fetch) *Fetch {
 	rv := &Fetch{
-		base: newBase(),
-		plan: plan,
+		base:      newBase(),
+		plan:      plan,
+		batchsize: PipelineBatchSize(),
 	}
 
 	rv.output = rv
@@ -38,7 +41,7 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	return &Fetch{this.base.copy(), this.plan}
+	return &Fetch{this.base.copy(), this.plan, this.batchsize}
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
@@ -46,7 +49,7 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	return this.enbatch_size(item, this, this.batchsize, context)
 }
 
 func (this *Fetch) afterItems(context *Context) {
@@ -91,12 +94,24 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
+	var bclen int
+	if len(this.batch) == this.batchsize {
+		bclen = len(this.output.ItemChannel())
+	}
+
 	timer := time.Now()
 
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
 
 	context.AddPhaseTime("fetch", time.Since(timer))
+
+	if len(this.batch) == this.batchsize {
+		aclen := len(this.output.ItemChannel())
+		if ((bclen - aclen) > this.batchsize) || (aclen+this.batchsize) < cap(this.output.ItemChannel()) {
+			this.batchsize = util.MinInt(2*this.batchsize, cap(this.output.ItemChannel()))
+		}
+	}
 
 	fetchOk := true
 	for _, err := range errs {
