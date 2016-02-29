@@ -190,14 +190,18 @@ var _FUNCTIONS = map[string]Function{
 	"array_sum":      &ArraySum{},
 
 	// Object
-	"object_add":    &ObjectAdd{},
-	"object_length": &ObjectLength{},
-	"object_names":  &ObjectNames{},
-	"object_pairs":  &ObjectPairs{},
-	"object_put":    &ObjectPut{},
-	"object_remove": &ObjectRemove{},
-	"object_unwrap": &ObjectUnwrap{},
-	"object_values": &ObjectValues{},
+	"object_add":         &ObjectAdd{},
+	"object_innerpairs":  &ObjectInnerPairs{},
+	"object_innervalues": &ObjectInnerValues{},
+	"object_length":      &ObjectLength{},
+	"object_names":       &ObjectNames{},
+	"object_outerpairs":  &ObjectPairs{},
+	"object_outervalues": &ObjectValues{},
+	"object_pairs":       &ObjectPairs{},
+	"object_put":         &ObjectPut{},
+	"object_remove":      &ObjectRemove{},
+	"object_unwrap":      &ObjectUnwrap{},
+	"object_values":      &ObjectValues{},
 
 	// JSON
 	"json_encode": &JSONEncode{},
