@@ -57,12 +57,16 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []e
 
 	for _, key := range keys {
 		p := plan.PreparedEntry(key)
-		item := value.NewAnnotatedValue(map[string]interface{}{
+
+		itemMap := map[string]interface{}{
 			"name":      key,
 			"uses":      p.Uses,
-			"lastUse":   p.LastUse,
 			"statement": p.Text,
-		})
+		}
+		if p.Uses > 0 {
+			itemMap["lastUse"] = p.LastUse
+		}
+		item := value.NewAnnotatedValue(itemMap)
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": key,
 		})

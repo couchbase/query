@@ -188,7 +188,9 @@ func (this *preparedCache) snapshot() []map[string]interface{} {
 		data[i]["name"] = d.prepared.Name()
 		data[i]["statement"] = d.prepared.Text()
 		data[i]["uses"] = d.uses
-		data[i]["lastUse"] = d.lastUse.String()
+		if d.uses > 0 {
+			data[i]["lastUse"] = d.lastUse.String()
+		}
 		data[i]["plan"] = "{ TODO }"
 		i++
 	}
