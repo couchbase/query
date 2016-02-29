@@ -761,7 +761,7 @@ func (this *ObjectUnwrap) Constructor() FunctionConstructor {
 /*
 This represents the object function OBJECT_INNERVALUES(expr).
 It returns an array containing the attribute values of
-the object, in N1QL collation order. Type ObjectSetValue
+the object, in N1QL collation order. Type ObjectInnerValue
 is a struct that implements UnaryFunctionBase.
 */
 type ObjectInnerValues struct {
