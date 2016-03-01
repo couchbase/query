@@ -57,11 +57,13 @@ type builder struct {
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY
 	limit           expression.Expression // Used for LIMIT pushdown
+	countOperand    expression.Expression // Used for IndexCountScan
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
 	coveringScan    *plan.IndexScan
+	countScan       *plan.IndexCountScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {

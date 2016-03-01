@@ -159,6 +159,111 @@ func (this *FinalProject) UnmarshalJSON([]byte) error {
 	return nil
 }
 
+type IndexCountProject struct {
+	readonly
+	projection *algebra.Projection
+	terms      ProjectTerms
+}
+
+func NewIndexCountProject(projection *algebra.Projection) *IndexCountProject {
+	results := projection.Terms()
+	terms := make(ProjectTerms, len(results))
+
+	for i, res := range results {
+		terms[i] = &ProjectTerm{
+			result: res,
+		}
+	}
+
+	return &IndexCountProject{
+		projection: projection,
+		terms:      terms,
+	}
+}
+
+func (this *IndexCountProject) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitIndexCountProject(this)
+}
+
+func (this *IndexCountProject) New() Operator {
+	return &IndexCountProject{}
+}
+
+func (this *IndexCountProject) Projection() *algebra.Projection {
+	return this.projection
+}
+
+func (this *IndexCountProject) Terms() ProjectTerms {
+	return this.terms
+}
+
+func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
+	r := map[string]interface{}{"#operator": "IndexCountProject"}
+
+	if this.projection.Raw() {
+		r["raw"] = this.projection.Raw()
+	}
+
+	s := make([]interface{}, 0, len(this.terms))
+	for _, term := range this.terms {
+		t := make(map[string]interface{})
+
+		if term.Result().As() != "" {
+			t["as"] = term.Result().As()
+		}
+
+		expr := term.Result().Expression()
+		if expr != nil {
+			t["expr"] = expression.NewStringer().Visit(expr)
+		}
+
+		s = append(s, t)
+	}
+	r["result_terms"] = s
+	return json.Marshal(r)
+}
+
+func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
+	var _unmarshalled struct {
+		_     string `json:"#operator"`
+		Terms []*struct {
+			Expr string `json:"expr"`
+			As   string `json:"as"`
+		} `json:"result_terms"`
+		Raw bool `json:"raw"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	terms := make(algebra.ResultTerms, len(_unmarshalled.Terms))
+	for i, term_data := range _unmarshalled.Terms {
+		var expr expression.Expression
+		if term_data.Expr != "" {
+			expr, err = parser.Parse(term_data.Expr)
+			if err != nil {
+				return err
+			}
+		}
+		terms[i] = algebra.NewResultTerm(expr, false, term_data.As)
+	}
+	projection := algebra.NewProjection(false, terms)
+	results := projection.Terms()
+	project_terms := make(ProjectTerms, len(results))
+
+	for i, res := range results {
+		project_terms[i] = &ProjectTerm{
+			result: res,
+		}
+	}
+
+	this.projection = projection
+	this.terms = project_terms
+	return nil
+}
+
 type ProjectTerms []*ProjectTerm
 
 type ProjectTerm struct {

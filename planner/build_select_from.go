@@ -62,7 +62,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	this.children = append(this.children, scan)
 
-	if this.coveringScan == nil {
+	if this.coveringScan == nil && this.countScan == nil {
 		fetch := plan.NewFetch(keyspace, node)
 		this.subChildren = append(this.subChildren, fetch)
 	}
@@ -84,6 +84,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	this.resetOrderLimit()
+	this.countOperand = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -109,6 +110,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.resetOrderLimit()
+	this.countOperand = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -137,6 +139,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
+	this.countOperand = nil
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -160,6 +163,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+	this.countOperand = nil
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -188,6 +192,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	this.resetOrderLimit()
+	this.countOperand = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {

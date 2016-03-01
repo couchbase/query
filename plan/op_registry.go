@@ -40,15 +40,16 @@ func GetOperator(name string) (Operator, bool) {
 // the "#operator" key in a marshalled object.
 var _OPERATORS = map[string]Operator{
 	// Scan
-	"PrimaryScan":   &PrimaryScan{},
-	"ParentScan":    &ParentScan{},
-	"IndexScan":     &IndexScan{},
-	"KeyScan":       &KeyScan{},
-	"ValueScan":     &ValueScan{},
-	"DummyScan":     &DummyScan{},
-	"CountScan":     &CountScan{},
-	"IntersectScan": &IntersectScan{},
-	"UnionScan":     &UnionScan{},
+	"PrimaryScan":    &PrimaryScan{},
+	"ParentScan":     &ParentScan{},
+	"IndexScan":      &IndexScan{},
+	"KeyScan":        &KeyScan{},
+	"ValueScan":      &ValueScan{},
+	"DummyScan":      &DummyScan{},
+	"CountScan":      &CountScan{},
+	"IndexCountScan": &IndexCountScan{},
+	"IntersectScan":  &IntersectScan{},
+	"UnionScan":      &UnionScan{},
 
 	// Fetch
 	"Fetch":      &Fetch{},
@@ -73,8 +74,9 @@ var _OPERATORS = map[string]Operator{
 	"FinalGroup":        &FinalGroup{},
 
 	// Project
-	"InitialProject": &InitialProject{},
-	"FinalProject":   &FinalProject{},
+	"InitialProject":    &InitialProject{},
+	"FinalProject":      &FinalProject{},
+	"IndexCountProject": &IndexCountProject{},
 
 	// Distinct
 	"Distinct": &Distinct{},

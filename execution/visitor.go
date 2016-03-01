@@ -18,6 +18,7 @@ type Visitor interface {
 	VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)
 	VisitCountScan(op *CountScan) (interface{}, error)
+	VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
 	VisitIntersectScan(op *IntersectScan) (interface{}, error)
 	VisitUnionScan(op *UnionScan) (interface{}, error)
 
@@ -46,6 +47,7 @@ type Visitor interface {
 	// Project
 	VisitInitialProject(op *InitialProject) (interface{}, error)
 	VisitFinalProject(op *FinalProject) (interface{}, error)
+	VisitIndexCountProject(op *IndexCountProject) (interface{}, error)
 
 	// Distinct
 	VisitDistinct(op *Distinct) (interface{}, error)

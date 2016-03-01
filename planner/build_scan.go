@@ -315,6 +315,10 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		}
 	}
 
+	if this.countOperand != nil {
+		this.countOperand = nil
+	}
+
 	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
 		// This makes InterSectionscan disable limit pushdown, don't use index order
 		this.resetOrderLimit()
@@ -487,6 +491,16 @@ outer:
 
 		if this.order != nil {
 			this.maxParallelism = 1
+		}
+
+		if this.countOperand != nil && pred.IsLimitPushable() && len(entry.spans) == 1 {
+			countIndex, ok := index.(datastore.CountIndex)
+			if ok {
+				if this.countOperand.EquivalentTo(keys[0]) || this.countOperand.Value() != nil {
+					this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
+					return this.countScan, nil
+				}
+			}
 		}
 
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)

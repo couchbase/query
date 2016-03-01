@@ -86,6 +86,11 @@ type Index interface {
 		vector timestamp.Vector, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
 }
 
+type CountIndex interface {
+	Index
+	Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) // Perform a count on index.
+}
+
 /*
 PrimaryIndex represents primary key indexes.
 */

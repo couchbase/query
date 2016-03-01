@@ -21,9 +21,11 @@ import (
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
 	prevCorrelated := this.correlated
+	prevCountOperand := this.countOperand
 	defer func() {
 		this.cover = prevCover
 		this.correlated = prevCorrelated
+		this.countOperand = prevCountOperand
 	}()
 
 	this.correlated = node.IsCorrelated()
@@ -44,6 +46,19 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		group = algebra.NewGroup(nil, nil, nil)
 		this.where = constrainAggregate(this.where, aggs)
 	}
+	if !node.Projection().Distinct() && this.order == nil {
+		if group == nil || len(aggs) == 1 {
+			for i, term := range node.Projection().Terms() {
+				count, ok := term.Expression().(*algebra.Count)
+				if i == 0 && ok {
+					this.countOperand = count.Operand()
+				} else {
+					this.countOperand = nil
+					break
+				}
+			}
+		}
+	}
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
@@ -58,8 +73,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		return nil, err
 	}
 
-	if this.coveringScan != nil {
-		coverer := expression.NewCoverer(this.coveringScan.Covers())
+	if this.coveringScan != nil || this.countScan != nil {
+		var covers expression.Covers
+		if this.countScan != nil {
+			covers = this.countScan.Covers()
+		} else {
+			covers = this.coveringScan.Covers()
+
+		}
+		coverer := expression.NewCoverer(covers)
 		err = this.cover.MapExpressions(coverer)
 		if err != nil {
 			return nil, err
@@ -73,37 +95,41 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
-	if node.Let() != nil {
-		this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
-	}
+	if this.countScan == nil {
+		if node.Let() != nil {
+			this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
+		}
 
-	if node.Where() != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(node.Where()))
-	}
+		if node.Where() != nil {
+			this.subChildren = append(this.subChildren, plan.NewFilter(node.Where()))
+		}
 
-	if group != nil {
-		this.visitGroup(group, aggs)
-	}
+		if group != nil {
+			this.visitGroup(group, aggs)
+		}
 
-	projection := node.Projection()
-	this.subChildren = append(this.subChildren, plan.NewInitialProject(projection))
+		projection := node.Projection()
+		this.subChildren = append(this.subChildren, plan.NewInitialProject(projection))
 
-	// Initial DISTINCT (parallel)
-	if projection.Distinct() || this.distinct {
-		this.subChildren = append(this.subChildren, plan.NewDistinct())
-	}
+		// Initial DISTINCT (parallel)
+		if projection.Distinct() || this.distinct {
+			this.subChildren = append(this.subChildren, plan.NewDistinct())
+		}
 
-	if !this.delayProjection {
-		// Perform the final projection if there is no subsequent ORDER BY
-		this.subChildren = append(this.subChildren, plan.NewFinalProject())
-	}
+		if !this.delayProjection {
+			// Perform the final projection if there is no subsequent ORDER BY
+			this.subChildren = append(this.subChildren, plan.NewFinalProject())
+		}
 
-	// Parallelize the subChildren
-	this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
+		// Parallelize the subChildren
+		this.children = append(this.children, plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism))
 
-	// Final DISTINCT (serial)
-	if projection.Distinct() || this.distinct {
-		this.children = append(this.children, plan.NewDistinct())
+		// Final DISTINCT (serial)
+		if projection.Distinct() || this.distinct {
+			this.children = append(this.children, plan.NewDistinct())
+		}
+	} else {
+		this.children = append(this.children, plan.NewIndexCountProject(node.Projection()))
 	}
 
 	// Serialize the top-level children

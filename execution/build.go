@@ -81,6 +81,17 @@ func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
 	return NewIndexScan(plan), nil
 }
 
+func (this *builder) VisitIndexCountScan(plan *plan.IndexCountScan) (interface{}, error) {
+	// Remember the bucket of the scanned index.
+	if this.scannedIndexes != nil {
+		keyspaceTerm := plan.Term()
+		scannedIndex := scannedIndex{keyspaceTerm.Namespace(), keyspaceTerm.Keyspace()}
+		this.scannedIndexes[scannedIndex] = true
+	}
+
+	return NewIndexCountScan(plan), nil
+}
+
 func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
 	return NewKeyScan(plan), nil
 }
@@ -188,6 +199,10 @@ func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}
 
 func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
 	return NewFinalProject(), nil
+}
+
+func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
+	return NewIndexCountProject(plan), nil
 }
 
 // Distinct
