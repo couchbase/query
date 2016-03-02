@@ -43,6 +43,7 @@ type RequestLogEntry struct {
 	PreparedName string
 	PreparedText string
 	Time         time.Time
+	PhaseTimes   map[string]interface{}
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -112,7 +113,8 @@ func LogRequest(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
 	error_count int, warn_count int, stmt string,
-	sort_count uint64, plan *plan.Prepared, state string, id string) {
+	sort_count uint64, plan *plan.Prepared,
+	phaseTimes map[string]interface{}, state string, id string) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
@@ -135,6 +137,9 @@ func LogRequest(acctstore AccountingStore,
 	if plan != nil {
 		re.PreparedName = plan.Name()
 		re.PreparedText = plan.Text()
+	}
+	if phaseTimes != nil {
+		re.PhaseTimes = phaseTimes
 	}
 	requestLog.cache.Add(re, id)
 }

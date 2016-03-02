@@ -186,12 +186,12 @@ func (this *preparedCache) snapshot() []map[string]interface{} {
 	for _, d := range this.prepareds {
 		data[i] = map[string]interface{}{}
 		data[i]["name"] = d.prepared.Name()
+		data[i]["encoded_plan"] = d.prepared.EncodedPlan()
 		data[i]["statement"] = d.prepared.Text()
 		data[i]["uses"] = d.uses
 		if d.uses > 0 {
 			data[i]["lastUse"] = d.lastUse.String()
 		}
-		data[i]["plan"] = "{ TODO }"
 		i++
 	}
 	return data
@@ -243,16 +243,19 @@ func PreparedEntry(name string) struct {
 	Uses    int
 	LastUse string
 	Text    string
+	Plan    string
 } {
 	ce := cache.entry(name)
 	return struct {
 		Uses    int
 		LastUse string
 		Text    string
+		Plan    string
 	}{
 		Uses:    int(ce.uses),
 		LastUse: ce.lastUse.String(),
 		Text:    ce.prepared.Text(),
+		Plan:    ce.prepared.EncodedPlan(),
 	}
 }
 

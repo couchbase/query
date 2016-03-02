@@ -59,9 +59,10 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []e
 		p := plan.PreparedEntry(key)
 
 		itemMap := map[string]interface{}{
-			"name":      key,
-			"uses":      p.Uses,
-			"statement": p.Text,
+			"name":         key,
+			"uses":         p.Uses,
+			"statement":    p.Text,
+			"encoded_plan": p.Plan,
 		}
 		if p.Uses > 0 {
 			itemMap["lastUse"] = p.LastUse

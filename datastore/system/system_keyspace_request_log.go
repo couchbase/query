@@ -59,8 +59,8 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 		item := value.NewAnnotatedValue(map[string]interface{}{
 			"RequestId":   id,
 			"State":       entry.State,
-			"ElapsedTime": entry.ElapsedTime,
-			"ServiceTime": entry.ServiceTime,
+			"ElapsedTime": entry.ElapsedTime.String(),
+			"ServiceTime": entry.ServiceTime.String(),
 			"ResultCount": entry.ResultCount,
 			"ResultSize":  entry.ResultSize,
 			"ErrorCount":  entry.ErrorCount,
@@ -73,6 +73,9 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 		if entry.PreparedName != "" {
 			item.SetField("PreparedName", entry.PreparedName)
 			item.SetField("PreparedText", entry.PreparedText)
+		}
+		if entry.PhaseTimes != nil {
+			item.SetField("PhaseTimes", entry.PhaseTimes)
 		}
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": id,

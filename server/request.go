@@ -411,6 +411,20 @@ func (this *BaseRequest) PhaseTimes() map[string]time.Duration {
 	return this.phaseTimes
 }
 
+func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
+	if this.phaseTimes == nil {
+		return nil
+	}
+
+	this.Lock()
+	defer this.Unlock()
+	pT := make(map[string]interface{}, len(this.phaseTimes))
+	for k, d := range this.phaseTimes {
+		pT[k] = d.String()
+	}
+	return pT
+}
+
 func (this *BaseRequest) Results() value.ValueChannel {
 	return this.results
 }

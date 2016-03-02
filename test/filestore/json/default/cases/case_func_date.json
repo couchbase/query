@@ -286,5 +286,21 @@
             "$1": -1
         }
     ]
+   },
+   {
+     "statements":"select duration_to_str(993)",
+     "results": [
+        {
+            "$1": "993ns"
+        }
+    ]
+   },
+   {
+     "statements":"select str_to_duration('993ns')",
+     "results": [
+        {
+            "$1": 993
+        }
+    ]
    }
 ]

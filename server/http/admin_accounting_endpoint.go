@@ -216,14 +216,12 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
 
-		// FIXME more stats
-		// PhaseTimes() is not in server.Request API
-		httpRequest, isHttp := request.(*httpRequest)
-		if isHttp {
-			for phase, phaseTime := range httpRequest.PhaseTimes() {
-				reqMap[phase] = phaseTime.String()
-			}
+		t := request.Output().FmtPhaseTimes
+		if t != nil {
+			reqMap["phaseTimes"] = t
 		}
+
+		// FIXME more stats
 		return reqMap, nil
 	case "DELETE":
 		if endpoint.actives.Delete(requestId, true) {
@@ -266,13 +264,11 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
 
-		// FIXME more stats
-		// PhaseTimes() is not in server.Request API
-		httpRequest, isHttp := request.(*httpRequest)
-		if isHttp {
-			for phase, phaseTime := range httpRequest.PhaseTimes() {
-				requests[i][phase] = phaseTime.String()
-			}
+		t := request.Output().FmtPhaseTimes()
+		if t != nil {
+			requests[i]["phaseTimes"] = t
+
+			// FIXME more stats
 		}
 		i++
 	}
@@ -303,12 +299,15 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["preparedText"] = request.PreparedText
 		}
 		requests[i]["requestTime"] = request.Time
-		requests[i]["elapsedTime"] = request.ElapsedTime
-		requests[i]["serviceTime"] = request.ServiceTime
+		requests[i]["elapsedTime"] = request.ElapsedTime.String()
+		requests[i]["serviceTime"] = request.ServiceTime.String()
 		requests[i]["resultCount"] = request.ResultCount
 		requests[i]["resultSize"] = request.ResultSize
 		requests[i]["errorCount"] = request.ErrorCount
 		requests[i]["sortCount"] = request.SortCount
+		if request.PhaseTimes != nil {
+			requests[i]["phaseTimes"] = request.PhaseTimes
+		}
 
 		// FIXME more stats
 		i++

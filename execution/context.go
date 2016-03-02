@@ -38,6 +38,7 @@ type Output interface {
 	SortCount() uint64
 	AddPhaseTime(phase string, duration time.Duration)
 	PhaseTimes() map[string]time.Duration
+	FmtPhaseTimes() map[string]interface{}
 }
 
 type Context struct {

@@ -178,7 +178,7 @@ func (this *MockServer) doStats(request *MockQuery) {
 	accounting.LogRequest(this.acctstore, 0, 0, request.resultCount,
 		0, 0, 0, request.Statement(),
 		request.SortCount(), request.Prepared(),
-		string(request.State()), request.Id().String())
+		nil, string(request.State()), request.Id().String())
 }
 
 /*

@@ -1650,6 +1650,167 @@ func (this *StrToZoneName) Constructor() FunctionConstructor {
 	}
 }
 
+///////////////////////////////////////////////////
+//
+// DurationToStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DURATION_TO_STR(duration)
+It converts a duration in nanoseconds to a string
+DurationToStr is a struct that implements UnaryFunctionBase.
+*/
+type DurationToStr struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewDurationToStr calls NewUnaryFunctionBase to
+create a function named DURATION_TO_STR with the expression
+as input.
+*/
+func NewDurationToStr(first Expression) Function {
+	rv := &DurationToStr{
+		*NewUnaryFunctionBase("duration_to_str", first),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *DurationToStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type STRING.
+*/
+func (this *DurationToStr) Type() value.Type { return value.STRING }
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+This method takes a duration and converts it to its string
+representation.
+If the argument is missing, it returns missing.
+If it's not an integer or the conversion fails, it returns null.
+*/
+func (this *DurationToStr) Apply(context Context, first value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.NUMBER {
+		return value.NULL_VALUE, nil
+	}
+
+	d := first.Actual().(float64)
+	str := time.Duration(d).String()
+
+	return value.NewValue(str), nil
+}
+
+/*
+The constructor returns a NewDurationToStr with the operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *DurationToStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDurationToStr(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// StrToDuration
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function STR_TO_DURATION(string)
+It converts a string to a duration in nanoseconds.
+StrToDuration is a struct that implements UnaryFunctionBase.
+*/
+type StrToDuration struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewStrToDuration calls NewUnaryFunctionBase to
+create a function named STR_TO_DURATION with the expression
+as input.
+*/
+func NewStrToDuration(first Expression) Function {
+	rv := &StrToDuration{
+		*NewUnaryFunctionBase("str_to_duration", first),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *StrToDuration) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type NUMBER.
+*/
+func (this *StrToDuration) Type() value.Type { return value.NUMBER }
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+This method takes a string representation of a duration and converts it to a
+duration.
+If the argument is missing, it returns missing.
+If it's not a string or the conversion fails, it returns null.
+*/
+func (this *StrToDuration) Apply(context Context, first value.Value) (value.Value, error) {
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	d, err := time.ParseDuration(str)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(d), nil
+}
+
+/*
+The constructor returns a NewStrToDuration with the operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *StrToDuration) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewStrToDuration(operands[0])
+	}
+}
+
 /*
 Parse the input string using the defined formats for Date
 and return the time value it represents, and error. The
