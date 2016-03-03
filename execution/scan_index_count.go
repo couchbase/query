@@ -48,9 +48,13 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 
 		keyspaceTerm := this.plan.Term()
 		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
-		var duration time.Duration
 		timer := time.Now()
-		defer context.AddPhaseTime("IndexCountScan", time.Since(timer)-duration)
+		addTime := func() {
+			t := time.Since(timer) - this.chanTime
+			context.AddPhaseTime("IndexCountScan", t)
+			this.plan.AddTime(t)
+		}
+		defer addTime()
 		var count int64
 		for _, span := range this.plan.Spans() {
 			dspan, err := evalSpan(span, context)

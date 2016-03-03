@@ -19,8 +19,7 @@ import (
 
 type Nest struct {
 	base
-	plan     *plan.Nest
-	duration time.Duration
+	plan *plan.Nest
 }
 
 func NewNest(plan *plan.Nest) *Nest {
@@ -45,8 +44,10 @@ func (this *Nest) Copy() Operator {
 }
 
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
-	defer context.AddPhaseTime("nest", this.duration)
 	this.runConsumer(this, context, parent)
+	t := this.duration - this.chanTime
+	context.AddPhaseTime("nest", t)
+	this.plan.AddTime(t)
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {

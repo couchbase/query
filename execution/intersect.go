@@ -53,7 +53,7 @@ func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
-	distinct := NewDistinct(true)
+	distinct := NewDistinct(nil, true)
 	sequence := NewSequence(this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)

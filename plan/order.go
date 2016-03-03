@@ -68,6 +68,9 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit.Expression())
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

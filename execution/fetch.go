@@ -104,7 +104,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	// Fetch
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
 
-	context.AddPhaseTime("fetch", time.Since(timer))
+	t := time.Since(timer)
+	context.AddPhaseTime("fetch", t)
+	this.plan.AddTime(t)
 
 	if len(this.batch) == this.batchSize {
 		aclen := len(this.output.ItemChannel())

@@ -138,7 +138,9 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	pairs, e := this.plan.Keyspace().Update(pairs)
 
-	context.AddPhaseTime("update", time.Since(timer))
+	t := time.Since(timer)
+	context.AddPhaseTime("update", t)
+	this.plan.AddTime(t)
 
 	// Update mutation count with number of updated docs
 	context.AddMutationCount(uint64(len(pairs)))

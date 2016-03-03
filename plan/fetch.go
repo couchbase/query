@@ -58,6 +58,9 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

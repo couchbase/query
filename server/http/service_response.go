@@ -21,6 +21,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 )
@@ -336,6 +337,19 @@ func (this *httpRequest) writeMetrics(metrics bool) bool {
 
 	if this.warningCount > 0 {
 		rv = rv && this.writeString(fmt.Sprintf(",\n        \"warningCount\": %d", this.warningCount))
+	}
+
+	if logging.LogLevel() == logging.DEBUG {
+		timings := this.GetTimings()
+		if timings != nil {
+			e, err := json.MarshalIndent(timings, "\t", "    ")
+			if err == nil {
+				rv = rv && this.writeString(fmt.Sprintf(",\n        \"executionTimings\": %s", e))
+			} else {
+				logging.Infop("Error writing timings",
+					logging.Pair{"error", err})
+			}
+		}
 	}
 
 	return rv && this.writeString("\n    }")

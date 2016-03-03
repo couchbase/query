@@ -58,6 +58,9 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["alias"] = this.alias
 	r["limit"] = this.limit
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

@@ -25,7 +25,6 @@ type Merge struct {
 	delete       Operator
 	insert       Operator
 	childChannel StopChannel
-	duration     time.Duration
 }
 
 func NewMerge(plan *plan.Merge, update, delete, insert Operator) *Merge {
@@ -63,7 +62,11 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		defer context.AddPhaseTime("merge", this.duration)
+		addTime := func() {
+			context.AddPhaseTime("merge", this.duration)
+			this.plan.AddTime(this.duration)
+		}
+		defer addTime()
 
 		if context.Readonly() {
 			return
@@ -105,12 +108,15 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			default:
 			}
 
+			t := time.Now()
 			select {
 			case item, ok = <-this.input.ItemChannel():
+				this.chanTime += time.Since(t)
 				if ok {
 					ok = this.processMatch(item, context, update, delete, insert)
 				}
 			case <-this.stopChannel: // Never closed
+				this.chanTime += time.Since(t)
 				this.notifyStop()
 				notifyChildren(children...)
 				break loop

@@ -476,6 +476,7 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		}
 	}
 
+	request.SetTimings(prepared.Operator)
 	if logging.LogLevel() >= logging.DEBUG {
 		// log EXPLAIN for the request
 		logExplain(prepared)

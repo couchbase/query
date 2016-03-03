@@ -66,7 +66,9 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		context.AddPhaseTime("authorize", time.Since(timer))
+		t := time.Since(timer)
+		context.AddPhaseTime("authorize", t)
+		this.plan.AddTime(t)
 
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)

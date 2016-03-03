@@ -31,6 +31,9 @@ func (this *Distinct) New() Operator {
 
 func (this *Distinct) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Distinct"}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

@@ -19,8 +19,7 @@ import (
 
 type Join struct {
 	base
-	plan     *plan.Join
-	duration time.Duration
+	plan *plan.Join
 }
 
 func NewJoin(plan *plan.Join) *Join {
@@ -45,8 +44,10 @@ func (this *Join) Copy() Operator {
 }
 
 func (this *Join) RunOnce(context *Context, parent value.Value) {
-	defer context.AddPhaseTime("join", this.duration)
 	this.runConsumer(this, context, parent)
+	t := this.duration - this.chanTime
+	context.AddPhaseTime("join", t)
+	this.plan.AddTime(t)
 }
 
 func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool {

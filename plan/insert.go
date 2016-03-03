@@ -79,6 +79,9 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	if this.value != nil {
 		r["value"] = this.value.String()
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 
 	return json.Marshal(r)
 }

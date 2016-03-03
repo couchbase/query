@@ -156,7 +156,9 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	// Perform the actual INSERT
 	keys, e := this.plan.Keyspace().Insert(dpairs)
 
-	context.AddPhaseTime("insert", time.Since(timer))
+	t := time.Since(timer)
+	context.AddPhaseTime("insert", t)
+	this.plan.AddTime(t)
 
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(keys)))

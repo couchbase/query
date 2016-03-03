@@ -56,6 +56,9 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 
 	return json.Marshal(r)
 }

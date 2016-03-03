@@ -24,8 +24,7 @@ import (
 
 type IndexNest struct {
 	base
-	plan     *plan.IndexNest
-	duration time.Duration
+	plan *plan.IndexNest
 }
 
 func NewIndexNest(plan *plan.IndexNest) *IndexNest {
@@ -51,8 +50,10 @@ func (this *IndexNest) Copy() Operator {
 
 func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 	start := time.Now()
-	defer context.AddPhaseTime("index_nest", time.Since(start)-this.duration)
 	this.runConsumer(this, context, parent)
+	t := time.Since(start) - this.chanTime
+	context.AddPhaseTime("index_nest", t)
+	this.plan.AddTime(t)
 }
 
 func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) bool {

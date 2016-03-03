@@ -9,16 +9,30 @@
 
 package plan
 
+import (
+	"time"
+)
+
 type readonly struct {
+	duration time.Duration
 }
 
 func (this *readonly) Readonly() bool {
 	return true
 }
 
+func (this *readonly) AddTime(t time.Duration) {
+	this.duration += t
+}
+
 type readwrite struct {
+	duration time.Duration
 }
 
 func (this *readwrite) Readonly() bool {
 	return false
+}
+
+func (this *readwrite) AddTime(t time.Duration) {
+	this.duration += t
 }

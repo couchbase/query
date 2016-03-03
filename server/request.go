@@ -69,6 +69,8 @@ type Request interface {
 	Expire(state State)
 	State() State
 	Credentials() datastore.Credentials
+	SetTimings(p plan.Operator)
+	GetTimings() plan.Operator
 }
 
 type RequestID interface {
@@ -155,6 +157,7 @@ type BaseRequest struct {
 	stopNotify     chan bool // notified when request execution stops
 	stopResult     chan bool // stop consuming results
 	stopExecute    chan bool // stop executing request
+	timings        plan.Operator
 }
 
 type requestIDImpl struct {
@@ -423,6 +426,14 @@ func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 		pT[k] = d.String()
 	}
 	return pT
+}
+
+func (this *BaseRequest) SetTimings(p plan.Operator) {
+	this.timings = p
+}
+
+func (this *BaseRequest) GetTimings() plan.Operator {
+	return this.timings
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {

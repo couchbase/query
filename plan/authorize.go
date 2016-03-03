@@ -52,6 +52,9 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Authorize"}
 	r["privileges"] = this.privs
 	r["child"] = this.child
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

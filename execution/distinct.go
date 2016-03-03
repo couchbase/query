@@ -12,6 +12,7 @@ package execution
 import (
 	"time"
 
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
@@ -19,15 +20,17 @@ import (
 type Distinct struct {
 	base
 	set     *value.Set
+	plan    *plan.Distinct
 	collect bool
 }
 
 const _DISTINCT_CAP = 1024
 
-func NewDistinct(collect bool) *Distinct {
+func NewDistinct(plan *plan.Distinct, collect bool) *Distinct {
 	rv := &Distinct{
 		base:    newBase(),
 		set:     value.NewSet(_DISTINCT_CAP),
+		plan:    plan,
 		collect: collect,
 	}
 
@@ -69,7 +72,11 @@ func (this *Distinct) afterItems(context *Context) {
 
 	values := this.set.Values()
 
-	context.AddPhaseTime("distinct", time.Since(timer))
+	t := time.Since(timer)
+	context.AddPhaseTime("distinct", t)
+	if this.plan != nil {
+		this.plan.AddTime(t)
+	}
 
 	for _, av := range values {
 		if !this.sendItem(value.NewAnnotatedValue(av)) {

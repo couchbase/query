@@ -45,6 +45,9 @@ func (this *Clone) Alias() string {
 
 func (this *Clone) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Clone"}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

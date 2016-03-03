@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"sync"
 	go_atomic "sync/atomic"
+	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
@@ -28,6 +29,8 @@ type base struct {
 	parent      Parent
 	once        sync.Once
 	batch       []value.AnnotatedValue
+	duration    time.Duration
+	chanTime    time.Duration
 }
 
 const _ITEM_CAP = 512
@@ -118,6 +121,12 @@ func (this *base) copy() base {
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
+	t := time.Now()
+	addTime := func() {
+		this.chanTime += time.Since(t)
+	}
+	defer addTime()
+
 	select {
 	case <-this.stopChannel: // Never closed
 		return false
@@ -159,8 +168,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 		var item value.AnnotatedValue
 	loop:
 		for ok {
+			t := time.Now()
 			select {
 			case <-this.stopChannel: // Never closed
+				this.chanTime += time.Since(t)
 				break loop
 			default:
 			}
@@ -171,8 +182,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 					ok = cons.processItem(item, context)
 				}
 			case <-this.stopChannel: // Never closed
+				this.chanTime += time.Since(t)
 				break loop
 			}
+			this.chanTime += time.Since(t)
 		}
 
 		this.notifyStop()

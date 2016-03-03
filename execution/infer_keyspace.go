@@ -50,10 +50,13 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 		conn := datastore.NewValueConnection(context)
 		defer notifyConn(conn.StopChannel())
 
-		var duration time.Duration
 		timer := time.Now()
-		defer context.AddPhaseTime("InferKeySpace", time.Since(timer)-duration)
-
+		addTime := func() {
+			t := time.Since(timer) - this.chanTime
+			context.AddPhaseTime("InferKeySpace", t)
+			this.plan.AddTime(t)
+		}
+		defer addTime()
 		infer, err := context.Datastore().Inferencer(this.plan.Node().Using())
 		if err != nil {
 			context.Error(errors.NewError(err, "Failed to get Inferencer"))
@@ -74,9 +77,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 			select {
 			case val, ok = <-conn.ValueChannel():
 				if ok {
-					t := time.Now()
 					ok = this.sendItem(value.NewAnnotatedValue(val))
-					duration += time.Since(t)
 				}
 			case <-this.stopChannel:
 				return

@@ -111,6 +111,9 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	}
 
 	r["scan"] = scan
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

@@ -71,6 +71,9 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 
 	return json.Marshal(r)
 }

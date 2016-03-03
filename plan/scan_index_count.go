@@ -74,6 +74,9 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 	if this.covers != nil {
 		r["covers"] = this.covers
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 
 	return json.Marshal(r)
 }

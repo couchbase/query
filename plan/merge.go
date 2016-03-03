@@ -93,6 +93,9 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	if this.insert != nil {
 		r["insert"] = this.insert
 	}
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 
 	return json.Marshal(r)
 }

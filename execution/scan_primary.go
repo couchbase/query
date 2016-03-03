@@ -57,9 +57,14 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	conn := this.newIndexConnection(context)
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
-	var duration time.Duration
 	timer := time.Now()
-	defer context.AddPhaseTime("scan", time.Since(timer)-duration)
+	addTime := func() {
+
+		t := time.Since(timer) - this.chanTime
+		context.AddPhaseTime("scan", t)
+		this.plan.AddTime(t)
+	}
+	defer addTime()
 
 	go this.scanEntries(context, conn)
 
@@ -77,8 +82,6 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 		select {
 		case entry, ok = <-conn.EntryChannel():
-			t := time.Now()
-
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
@@ -88,7 +91,6 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 				nitems++
 			}
 
-			duration += time.Since(t)
 		case <-this.stopChannel:
 			return
 		}
@@ -115,9 +117,14 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 	conn.SetPrimary()
 	defer notifyConn(conn.StopChannel()) // Notify index that I have stopped
 
-	var duration time.Duration
 	timer := time.Now()
-	defer context.AddPhaseTime("scan", time.Since(timer)-duration)
+	addTime := func() {
+
+		t := time.Since(timer) - this.chanTime
+		context.AddPhaseTime("scan", t)
+		this.plan.AddTime(t)
+	}
+	defer addTime()
 
 	go this.scanChunk(context, conn, chunkSize, indexEntry)
 
@@ -135,8 +142,6 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 		select {
 		case entry, ok = <-conn.EntryChannel():
-			t := time.Now()
-
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
@@ -146,7 +151,6 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 				nitems++
 			}
 
-			duration += time.Since(t)
 		case <-this.stopChannel:
 			return nil
 		}

@@ -50,6 +50,9 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "CountScan"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
+	if this.duration != 0 {
+		r["#time"] = this.duration.String()
+	}
 	return json.Marshal(r)
 }
 

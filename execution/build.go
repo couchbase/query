@@ -207,7 +207,7 @@ func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (inter
 
 // Distinct
 func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
-	return NewDistinct(false), nil
+	return NewDistinct(plan, false), nil
 }
 
 // Set operators

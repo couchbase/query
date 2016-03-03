@@ -49,7 +49,9 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		count, e := this.plan.Keyspace().Count()
 
-		context.AddPhaseTime("count", time.Since(timer))
+		t := time.Since(timer)
+		context.AddPhaseTime("count", t)
+		this.plan.AddTime(t)
 
 		if e != nil {
 			context.Error(e)

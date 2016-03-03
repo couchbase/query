@@ -24,7 +24,7 @@ import (
 type IndexJoin struct {
 	base
 	plan     *plan.IndexJoin
-	duration time.Duration
+	joinTime time.Duration
 }
 
 func NewIndexJoin(plan *plan.IndexJoin) *IndexJoin {
@@ -50,8 +50,10 @@ func (this *IndexJoin) Copy() Operator {
 
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
 	start := time.Now()
-	defer context.AddPhaseTime("index_join", time.Since(start)-this.duration)
 	this.runConsumer(this, context, parent)
+	t := time.Since(start) - this.joinTime - this.chanTime
+	context.AddPhaseTime("index_join", t)
+	this.plan.AddTime(t)
 }
 
 func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -92,7 +94,7 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 					found = found || foundOne
 				}
 
-				this.duration += time.Since(t)
+				this.joinTime += time.Since(t)
 			case <-this.stopChannel:
 				return false
 			}
