@@ -12,12 +12,10 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"database/sql"
-	//"os"
 	"strings"
 	"testing"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/shell/go_cbq/command"
 	"github.com/sbinet/liner"
 )
@@ -25,7 +23,6 @@ import (
 var Server = "http://127.0.0.1:8091"
 
 func execline(line string, t *testing.T) {
-	go_n1ql.SetPassthroughMode(true)
 	var liner = liner.NewLiner()
 	defer liner.Close()
 
@@ -63,7 +60,7 @@ func TestExecuteInput(t *testing.T) {
 // query. For this test, we will use the dummy bucket shellTest.
 
 func execn1ql(line string, t *testing.T) bool {
-	go_n1ql.SetPassthroughMode(true)
+
 	var liner = liner.NewLiner()
 	defer liner.Close()
 
@@ -71,7 +68,7 @@ func execn1ql(line string, t *testing.T) bool {
 	w := bufio.NewWriter(&b)
 	command.SetWriter(w)
 
-	n1ql, err := sql.Open("n1ql", Server)
+	dBn1ql, err := n1ql.OpenExtended(Server)
 	if err != nil {
 		// If the test cannot connect to a server
 		// don't execute the TestExecN1QLStmt method.
@@ -84,7 +81,7 @@ func execn1ql(line string, t *testing.T) bool {
 		//sql.Open will not throw an error. Hence ping
 		//the server and see if it returns an error.
 
-		err = n1ql.Ping()
+		err = dBn1ql.Ping()
 
 		if err != nil {
 			testconn := false
@@ -92,7 +89,7 @@ func execn1ql(line string, t *testing.T) bool {
 			return testconn
 		}
 
-		errC, errS := ExecN1QLStmt(line, n1ql, w)
+		errC, errS := ExecN1QLStmt(line, dBn1ql, w)
 		w.Flush()
 		if errC != 0 {
 			t.Errorf("Error executing statement : %v", line)
@@ -201,7 +198,7 @@ func testFileCmd(t *testing.T) {
 }
 
 func execshell(line string, t *testing.T) {
-	go_n1ql.SetPassthroughMode(true)
+
 	var liner = liner.NewLiner()
 	defer liner.Close()
 

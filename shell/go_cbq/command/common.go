@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 	"github.com/sbinet/liner"
@@ -296,13 +296,13 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 func ToCreds(credsFlag string) (Credentials, int, string) {
 
 	//Handle the input string of credentials.
-	//The string needs to be parsed into a byte array so as to pass to go_n1ql.
+	//The string needs to be parsed into a byte array so as to pass to godbc/n1ql.
 	cred := strings.Split(credsFlag, ",")
 	var creds Credentials
 	creds = append(creds, Credential{"user": "", "pass": ""})
 
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
-	format as expected by go_n1ql creds.
+	format as expected by godbc/n1ql creds.
 	*/
 	for _, i := range cred {
 		up := strings.Split(i, ":")
@@ -348,7 +348,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		val := ValToStr(v)
 
 		vble = "$" + vble
-		go_n1ql.SetQueryParams(vble, val)
+		n1ql.SetQueryParams(vble, val)
 
 	} else if strings.HasPrefix(args[0], "-") {
 		// For query parameters
@@ -386,7 +386,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			if err != nil {
 				return errors.JSON_MARSHAL, ""
 			}
-			go_n1ql.SetQueryParams("creds", string(ac))
+			n1ql.SetQueryParams("creds", string(ac))
 
 		} else {
 
@@ -395,7 +395,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return err_code, err_str
 			}
 
-			// When passing the query rest api parameter to go_n1ql
+			// When passing the query rest api parameter to godbc/n1ql
 			// we need to convert to string only if the value isnt
 			// already a string
 			var val string = ""
@@ -405,7 +405,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				val = ValToStr(v)
 			}
 
-			go_n1ql.SetQueryParams(vble, val)
+			n1ql.SetQueryParams(vble, val)
 
 		}
 
@@ -516,4 +516,14 @@ func printDesc(cmdname string) (int, string) {
 	}
 	return 0, ""
 
+}
+
+func Ping(server string) error {
+	db, err := n1ql.OpenExtended(server)
+	if err != nil {
+		return err
+	}
+
+	err = db.Ping()
+	return err
 }

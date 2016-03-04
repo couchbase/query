@@ -23,7 +23,7 @@ const (
 	NO_ROUTE_TO_HOST     = 105
 	UNREACHABLE_NETWORK  = 106
 	NO_CONNECTION        = 107
-	GO_N1QL_OPEN         = 108
+	DRIVER_OPEN          = 108
 	INVALID_URL          = 109
 
 	//Read/Write/Update file errors (116 - 120)
@@ -51,7 +51,7 @@ const (
 	ROWS_SCAN         = 171
 	JSON_MARSHAL      = 172
 	JSON_UNMARSHAL    = 173
-	GON1QL_QUERY      = 174
+	DRIVER_QUERY      = 174
 	WRITER_OUTPUT     = 175
 	UNBALANCED_PAREN  = 176
 	ROWS_CLOSE        = 177
@@ -94,8 +94,8 @@ func NewShellErrorNoConnection(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_CONNECTION, IKey: "shell.not.connected.to.any.instance", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewShellErrorGon1qlOpen(msg string) Error {
-	return &err{level: EXCEPTION, ICode: GO_N1QL_OPEN, IKey: "shell.gon1ql.Open.method.error", InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewShellErrorDriverOpen(msg string) Error {
+	return &err{level: EXCEPTION, ICode: DRIVER_OPEN, IKey: "shell.driver.Open.method.error", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidURL(msg string) Error {
@@ -177,8 +177,8 @@ func NewShellErrorJsonMarshal(msg string) Error {
 func NewShellErrorJsonUnmarshal(msg string) Error {
 	return &err{level: EXCEPTION, ICode: JSON_UNMARSHAL, IKey: "shell.json.unmarshal.error", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
-func NewShellErrorGon1qlQueryMethod(msg string) Error {
-	return &err{level: EXCEPTION, ICode: GON1QL_QUERY, IKey: "shell.gon1ql.query.method.error", InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewShellErrorDriverQueryMethod(msg string) Error {
+	return &err{level: EXCEPTION, ICode: DRIVER_QUERY, IKey: "shell.driver.query.method.error", InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorWriterOutput(msg string) Error {

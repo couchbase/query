@@ -11,6 +11,7 @@ package command
 
 import (
 	"io"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 )
@@ -49,7 +50,16 @@ func (this *Connect) ExecCommand(args []string) (int, string) {
 		return errors.TOO_FEW_ARGS, ""
 	} else {
 		SERVICE_URL = args[0]
-		io.WriteString(W, "\nEndpoint to Connect to : "+SERVICE_URL+" . Type Ctrl-D / \\exit / \\quit to exit.\n")
+
+		if strings.HasPrefix(SERVICE_URL, "http://") == false && strings.HasPrefix(SERVICE_URL, "https://") == false {
+			SERVICE_URL = "http://" + SERVICE_URL
+		}
+
+		err := Ping(SERVICE_URL)
+		if err != nil {
+			return errors.CONNECTION_REFUSED, ""
+		}
+		io.WriteString(W, "\nConnected to : "+SERVICE_URL+" . Type Ctrl-D / \\exit / \\quit to exit.\n")
 	}
 	return 0, ""
 }

@@ -49,7 +49,7 @@ func HandleError(err int, msg string) errors.Error {
 
 	//Connection errors
 	case errors.CONNECTION_REFUSED:
-		return errors.NewShellErrorCannotConnect("Unable to connect to query service " + SERVICE_URL)
+		return errors.NewShellErrorCannotConnect("Unable to connect to " + SERVICE_URL + ". " + msg)
 	case errors.UNSUPPORTED_PROTOCOL:
 		return errors.NewShellErrorUnsupportedProtocol("Unsupported Protocol Scheme " + SERVICE_URL)
 	case errors.NO_SUCH_HOST:
@@ -64,8 +64,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorUnreachableNetwork("Network is unreachable ")
 	case errors.NO_CONNECTION:
 		return errors.NewShellErrorNoConnection("Not Connected to any instance. Use \\CONNECT command. ")
-	case errors.GO_N1QL_OPEN:
-		return errors.NewShellErrorGon1qlOpen(msg)
+	case errors.DRIVER_OPEN:
+		return errors.NewShellErrorDriverOpen(msg)
 	case errors.INVALID_URL:
 		return errors.NewShellErrorInvalidURL("Invalid input url : " + msg)
 
@@ -110,8 +110,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorJsonMarshal(msg)
 	case errors.JSON_UNMARSHAL:
 		return errors.NewShellErrorJsonUnmarshal(msg)
-	case errors.GON1QL_QUERY:
-		return errors.NewShellErrorGon1qlQueryMethod(msg)
+	case errors.DRIVER_QUERY:
+		return errors.NewShellErrorDriverQueryMethod(msg)
 	case errors.WRITER_OUTPUT:
 		return errors.NewShellErrorWriterOutput("Error with io Writer. " + msg)
 	case errors.UNBALANCED_PAREN:

@@ -14,7 +14,7 @@ import (
 	"io"
 	"strings"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -84,7 +84,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 
 			if ok {
 				if NamedParam[vble].Len() == 0 {
-					go_n1ql.UnsetQueryParams(vble)
+					n1ql.UnsetQueryParams(vble)
 				} else {
 					name := "$" + vble
 					err_code, err_str := setNewParamPop(name, st_val)
@@ -94,7 +94,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 				}
 
 			} else {
-				go_n1ql.UnsetQueryParams(vble)
+				n1ql.UnsetQueryParams(vble)
 			}
 
 		} else if strings.HasPrefix(args[0], "-") {
@@ -111,7 +111,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 
 			if ok {
 				if QueryParam[vble].Len() == 0 {
-					go_n1ql.UnsetQueryParams(vble)
+					n1ql.UnsetQueryParams(vble)
 				} else {
 					err_code, err_str := setNewParamPop(vble, st_val)
 					if err_code != 0 {
@@ -120,7 +120,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 				}
 
 			} else {
-				go_n1ql.UnsetQueryParams(vble)
+				n1ql.UnsetQueryParams(vble)
 			}
 
 		} else if strings.HasPrefix(args[0], "$") {
@@ -170,7 +170,7 @@ func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, 
 
 		if isrestp == true && val.Len() == 0 {
 			delete(param, name)
-			go_n1ql.UnsetQueryParams(name)
+			n1ql.UnsetQueryParams(name)
 		}
 
 		if err_code != 0 {
@@ -222,6 +222,6 @@ func setNewParamPop(name string, paramst *Stack) (int, string) {
 		}
 		nval = string(ac)
 	}
-	go_n1ql.SetQueryParams(name, nval)
+	n1ql.SetQueryParams(name, nval)
 	return 0, ""
 }

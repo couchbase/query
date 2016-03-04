@@ -15,7 +15,6 @@ import (
 	"os"
 	"strings"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
 	"github.com/sbinet/liner"
@@ -102,7 +101,6 @@ func HandleInteractiveMode(prompt string) {
 	// the commands to the history.
 	if scriptFlag != "" {
 		//Execute the input command
-		go_n1ql.SetPassthroughMode(true)
 
 		// If outputting to a file, then add the statement to the file as well.
 		if command.FILE_RW_MODE == true {
@@ -128,7 +126,6 @@ func HandleInteractiveMode(prompt string) {
 
 	if inputFlag != "" {
 		//Read each line from the file and call execute query
-		go_n1ql.SetPassthroughMode(true)
 		input_command := "\\source " + inputFlag
 
 		// If outputting to a file, then add the statement to the file as well.
@@ -218,11 +215,11 @@ func HandleInteractiveMode(prompt string) {
 				}
 				err_code, err_string = execute_input(inputString, command.W, true, liner)
 				/* Error handling for Shell errors and errors recieved from
-				   go_n1ql.
+				   godbc/n1ql.
 				*/
 				if err_code != 0 {
 					s_err := command.HandleError(err_code, err_string)
-					if err_code == errors.GON1QL_QUERY {
+					if err_code == errors.DRIVER_QUERY {
 						//Dont print the error code for query errors.
 						tmpstr := fmt.Sprintln(command.GetfgRed(), s_err, command.Getreset())
 						io.WriteString(command.W, tmpstr+"\n")

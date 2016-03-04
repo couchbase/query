@@ -13,7 +13,7 @@ import (
 	"io"
 	"strings"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 )
 
@@ -60,7 +60,7 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
-			go_n1ql.UnsetQueryParams(vble)
+			n1ql.UnsetQueryParams(vble)
 
 		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
@@ -71,7 +71,7 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
-			go_n1ql.UnsetQueryParams(vble)
+			n1ql.UnsetQueryParams(vble)
 
 		} else if strings.HasPrefix(args[0], "$") {
 			// For User defined session variables

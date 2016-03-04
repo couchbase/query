@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"io"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -107,7 +107,7 @@ func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int,
 		}
 		v.Push(t)
 
-		// When passing the query rest api parameter to go_n1ql
+		// When passing the query rest api parameter to godbc/n1ql
 		// we need to convert to string only if the value isnt
 		// already a string
 
@@ -144,7 +144,7 @@ func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int,
 					val = string(ac)
 				}
 			}
-			go_n1ql.SetQueryParams(name, val)
+			n1ql.SetQueryParams(name, val)
 		}
 	}
 	return 0, ""

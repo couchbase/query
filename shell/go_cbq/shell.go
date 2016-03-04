@@ -17,9 +17,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
+	"strings"
 
-	go_n1ql "github.com/couchbase/go_n1ql"
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
 )
@@ -281,28 +281,6 @@ func main() {
 
 	/* Handle options and what they should do */
 
-	// TODO : Readd ...
-	//Taken out so as to connect to both cluster and query service
-	//using go_n1ql.
-	/*
-		if strings.HasPrefix(ServerFlag, "http://") == false {
-			ServerFlag = "http://" + ServerFlag
-		}
-
-		urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
-		match, _ := regexp.MatchString(urlRegex, ServerFlag)
-		if match == false {
-			//TODO Isha : Add error code. Throw invalid url error
-			fmt.Println("Invalid url please check" + ServerFlag)
-		}
-
-
-		//-engine
-		if strings.HasSuffix(ServerFlag, "/") == false {
-			ServerFlag = ServerFlag + "/"
-		}
-	*/
-
 	/* -version : Display the version of the shell and then exit.
 	 */
 	if versionFlag == true {
@@ -322,22 +300,38 @@ func main() {
 		os.Exit(1)
 	} else {
 		if len(args) == 1 {
-			urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
-			match, _ := regexp.MatchString(urlRegex, args[0])
-			if match == false {
-				s_err := command.HandleError(errors.INVALID_URL, args[0])
-				command.PrintError(s_err)
-				os.Exit(1)
-			} else {
-				ServerFlag = args[0]
-			}
+			ServerFlag = args[0]
 		}
+	}
+
+	// If no protocol exists, then append http:// as default protocol.
+	if strings.HasPrefix(ServerFlag, "http://") == false && strings.HasPrefix(ServerFlag, "https://") == false {
+		ServerFlag = "http://" + ServerFlag
+	}
+
+	//-engine
+	if strings.HasSuffix(ServerFlag, "/") == false {
+		ServerFlag = ServerFlag + "/"
+	}
+
+	// Check if connection is possible to the input ServerFlag
+	// else failed to connect to.
+
+	pingerr := command.Ping(ServerFlag)
+	SERVICE_URL = ServerFlag
+	command.SERVICE_URL = ServerFlag
+	if pingerr != nil {
+		s_err := command.HandleError(errors.CONNECTION_REFUSED, "")
+		command.PrintError(s_err)
+		ServerFlag = ""
+		command.SERVICE_URL = ""
+		SERVICE_URL = ""
 	}
 
 	/* -quiet : Display Message only if flag not specified
 	 */
-	if !quietFlag && NoQueryService == false {
-		s := fmt.Sprintln("Input connection parameter is " + ServerFlag + ". Type Ctrl-D to exit.\n")
+	if !quietFlag && NoQueryService == false && pingerr == nil {
+		s := fmt.Sprintln("Connected to : " + ServerFlag + ". Type Ctrl-D to exit.\n")
 		_, werr := io.WriteString(command.W, s)
 		if werr != nil {
 			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
@@ -376,9 +370,9 @@ func main() {
 				os.Exit(1)
 			} else {
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
-				// The go_n1ql driver needs the username/password to query the cluster endpoint,
+				// The driver needs the username/password to query the cluster endpoint,
 				// which may require authorization.
-				go_n1ql.SetUsernamePassword(userFlag, string(password))
+				n1ql.SetUsernamePassword(userFlag, string(password))
 			}
 		} else {
 			s_err := command.HandleError(errors.INVALID_PASSWORD, err.Error())
@@ -430,12 +424,10 @@ func main() {
 	//is a SASL bucket, and we need to access the other unprotected buckets.
 	//CBauth works this way.
 
-	//if credsFlag == "" && userFlag != "" {
 	creds = append(creds, command.Credential{"user": "", "pass": ""})
-	//}
 
 	/* Add the credentials set by -user and -credentials to the
-	   go_n1ql creds parameter.
+	   n1ql creds parameter.
 	*/
 	if creds != nil {
 		ac, err := json.Marshal(creds)
@@ -445,16 +437,15 @@ func main() {
 			command.PrintError(s_err)
 			os.Exit(1)
 		}
-		go_n1ql.SetQueryParams("creds", string(ac))
+		n1ql.SetQueryParams("creds", string(ac))
 	}
 
 	if timeoutFlag != "0ms" {
-		go_n1ql.SetQueryParams("timeout", timeoutFlag)
+		n1ql.SetQueryParams("timeout", timeoutFlag)
 	}
 
 	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.
 	// This is so as to add these to the history.
 
-	go_n1ql.SetPassthroughMode(true)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }

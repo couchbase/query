@@ -71,7 +71,7 @@ TODO :: Autoconfig, limit and Histsize will be implemented post DP.
 	NO_ROUTE_TO_HOST     |  105
 	UNREACHABLE_NETWORK  |  106
 	NO_CONNECTION        |  107
-	GO_N1QL_OPEN         |  108
+	DRIVER_OPEN         |  108
 	INVALID_URL          |  109
 
 #### Read/Write/Update file errors (116 - 120)
@@ -99,7 +99,7 @@ Missing or invalid username/password.
 	ROWS_SCAN         | 171
 	JSON_MARSHAL      | 172
 	JSON_UNMARSHAL    | 173
-	GON1QL_QUERY      | 174
+	DRIVER_QUERY      | 174
 	WRITER_OUTPUT     | 175
 	UNBALANCED_PAREN  | 176
 	ROWS_CLOSE        | 177

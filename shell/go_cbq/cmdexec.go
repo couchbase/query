@@ -11,17 +11,14 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
-	"encoding/json"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"unicode"
 
+	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	"github.com/couchbase/query/value"
 	"github.com/sbinet/liner"
 )
 
@@ -53,6 +50,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 			NoQueryService = false
 			command.DISCONNECT = false
 			DISCONNECT = false
+			SERVICE_URL = ""
 		}
 	}
 
@@ -83,7 +81,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 		err_code, err_str := execute_input(val, w, interactive, liner)
 		/* Error handling for Shell errors and errors recieved from
-		   go_n1ql.
+		   godbc/n1ql.
 		*/
 		if err_code != 0 {
 			return err_code, err_str
@@ -107,12 +105,12 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 			   If successful execute the n1ql command. Else try to connect
 			   again.
 			*/
-			n1ql, err := sql.Open("n1ql", ServerFlag)
+			dBn1ql, err := n1ql.OpenExtended(ServerFlag)
 			if err != nil {
-				return errors.GO_N1QL_OPEN, ""
+				return errors.DRIVER_OPEN, ""
 			} else {
 				//Successfully logged into the server
-				err_code, err_str := ExecN1QLStmt(line, n1ql, w)
+				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
 				if err_code != 0 {
 					return err_code, err_str
 				}
@@ -124,267 +122,16 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 	return 0, ""
 }
 
-func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int, isRawOrElement bool) ([]byte, int, string) {
-	//Scan the values into the respective columns
-	if err := rows.Scan(valuePtrs...); err != nil {
-		return nil, errors.ROWS_SCAN, err.Error()
-	}
+func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 
-	dat := map[string]*json.RawMessage{}
-	var c []byte = nil
-	var b []byte = nil
-	var err error = nil
-
-	for i, col := range columns {
-		var parsed *json.RawMessage
-
-		val := values[i]
-
-		b, _ := val.([]byte)
-
-		// Return input from go_n1ql as is (null). This case is seen when
-		// the query tries to output RAW values and one of them is missing.
-		if string(b) == "null" && isRawOrElement == true {
-			return b, 0, ""
-		}
-
-		if string(b) != "" {
-			//Parse the sub values of the main map first.
-			err = json.Unmarshal(b, &parsed)
-			if err != nil {
-				return nil, errors.JSON_UNMARSHAL, err.Error()
-			}
-
-			//Fill up final result object
-			dat[col] = parsed
-
-		} else {
-			continue
-		}
-
-		//Remove one level of nesting for the results when we have only 1 column to project.
-		if len(columns) == 1 && dat[col] != nil {
-			c, err = dat[col].MarshalJSON()
-			if err != nil {
-				return nil, errors.JSON_MARSHAL, err.Error()
-			}
-		}
-
-	}
-
-	b = nil
-	err = nil
-
-	// The first and second row represent the metadata. Because of the
-	// way the rows are returned we need to create a map with the
-	// correct data.
-	if rownum == 0 || rownum == 1 {
-		keys := make([]string, 0, len(dat))
-		for key, _ := range dat {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		if keys != nil {
-			map_value := dat[keys[0]]
-			b, err = map_value.MarshalJSON()
-			if err != nil {
-				return nil, errors.JSON_MARSHAL, err.Error()
-			}
-
-		}
-
-	} else {
-		// If there is more than 1 column being projected, then
-		// marshal and appropriately handle result.
-		if len(columns) != 1 {
-			b, err = json.Marshal(dat)
-			if err != nil {
-				return nil, errors.JSON_MARSHAL, err.Error()
-			}
-		} else {
-			b = c
-		}
-
-	}
-
-	var obj bool = true
-	if *prettyFlag == true {
-
-		tmpval := value.NewValue(b)
-		if tmpval.Type() == value.OBJECT {
-			obj = true
-		} else {
-			obj = false
-		}
-
-		var data map[string]interface{}
-		if obj == true {
-
-			if err := json.Unmarshal(b, &data); err != nil {
-				return nil, errors.JSON_UNMARSHAL, err.Error()
-			}
-
-			b, err = json.MarshalIndent(data, "        ", "    ")
-			if err != nil {
-				return nil, errors.JSON_MARSHAL, err.Error()
-			}
-		}
-	}
-
-	return b, 0, ""
-}
-
-func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
-	//if strings.HasPrefix(strings.ToLower(line), "prepare") {
-
-	//track if we need to return raw elements from anywhere in the query.
-	isRaw := strings.Contains(strings.ToLower(line), "raw")
-	isElement := strings.Contains(strings.ToLower(line), "element")
-
-	rows, err := n1ql.Query(line)
+	rows, err := dBn1ql.QueryRaw(line)
 
 	if err != nil {
-		return errors.GON1QL_QUERY, err.Error()
+		return errors.DRIVER_QUERY, err.Error()
 
 	} else {
-		iter := 0
-		rownum := 0
 
-		var werr error
-		status := ""
-		var metrics []byte
-		metrics = nil
-
-		// Multi column projection
-		columns, _ := rows.Columns()
-		count := len(columns)
-		values := make([]interface{}, count)
-		valuePtrs := make([]interface{}, count)
-
-		//Check if spacing is enough
-		_, werr = io.WriteString(w, "{\n")
-
-		var prevRowResult []byte
-
-		for rows.Next() {
-
-			for i, _ := range columns {
-				valuePtrs[i] = &values[i]
-			}
-
-			// The first 2 rows represent the metadata. Hence they need
-			// to be explicitely handled.
-
-			if rownum == 0 {
-
-				// Get the first row to post process.
-
-				extras, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum, false)
-
-				if extras == nil && err_code != 0 {
-					return err_code, err_string
-				}
-
-				var dat map[string]interface{}
-
-				if err := json.Unmarshal(extras, &dat); err != nil {
-					return errors.JSON_UNMARSHAL, err.Error()
-				}
-
-				_, werr = io.WriteString(w, "    \"requestID\": \""+dat["requestID"].(string)+"\",\n")
-
-				jsonString, err := json.MarshalIndent(dat["signature"], "        ", "    ")
-
-				if err != nil {
-					return errors.JSON_MARSHAL, err.Error()
-				}
-				_, werr = io.WriteString(w, "    \"signature\": "+string(jsonString)+",\n")
-				_, werr = io.WriteString(w, "    \"results\" : [\n\t")
-				status = dat["status"].(string)
-				rownum++
-				continue
-			}
-
-			// Get the second row
-			if rownum == 1 {
-
-				// Get the second row to post process as the metrics
-
-				var err_code int
-				var err_string string
-				metrics, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum, false)
-
-				if metrics == nil && err_code != 0 {
-					return err_code, err_string
-				}
-
-				//Wait until all the rows have been written to write the metrics.
-				rownum++
-				continue
-			}
-
-			//if rownum >=3 then print the rows
-			if rownum > 2 {
-				if iter == 0 {
-					iter++
-				} else {
-					_, werr = io.WriteString(w, ", \n\t")
-				}
-				_, werr = io.WriteString(w, string(prevRowResult))
-			}
-
-			var err_code int
-			var err_string string
-
-			prevRowResult, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum, (isRaw || isElement))
-			if prevRowResult == nil && err_code != 0 {
-				return err_code, err_string
-			}
-			rownum++
-
-		} //rows.Next ends here
-
-		//Suffix to result array
-		_, werr = io.WriteString(w, "\n\t],")
-
-		// The prevRowResult contains the output of the last row.
-		// This is the errors row. Process this.
-		var errorRow map[string]interface{}
-
-		// Unmarshal the results of the errors object into errorRow
-		// and then output that.
-		if err := json.Unmarshal(prevRowResult, &errorRow); err != nil {
-			return errors.JSON_UNMARSHAL, err.Error()
-		}
-
-		if errorRow["errors"] != nil {
-			//When there are errors in this row. Print them.
-			c, err := json.MarshalIndent(errorRow["errors"], "        ", "    ")
-			if err != nil {
-				return errors.JSON_MARSHAL, err.Error()
-			}
-			_, werr = io.WriteString(w, "\n")
-			_, werr = io.WriteString(w, "    \"errors\" : ")
-			_, werr = io.WriteString(w, string(c))
-			_, werr = io.WriteString(w, ",")
-		}
-
-		err = rows.Close()
-		if err != nil {
-			return errors.ROWS_CLOSE, err.Error()
-		}
-
-		//Write the status and the metrics
-		if status != "" {
-			_, werr = io.WriteString(w, "\n    \"status\": \""+status+"\"")
-		}
-		if metrics != nil {
-			_, werr = io.WriteString(w, ",\n    \"metrics\": ")
-			_, werr = io.WriteString(w, string(metrics))
-		}
-
-		_, werr = io.WriteString(w, "\n}\n")
+		_, werr := io.Copy(w, rows)
 
 		// For any captured write error
 		if werr != nil {
@@ -445,6 +192,13 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
 	if ok == true {
 		err_code, err_str := Cmd.ExecCommand(cmd_args[1:])
+		if err_code == errors.CONNECTION_REFUSED {
+			if strings.TrimSpace(SERVICE_URL) == "" {
+				io.WriteString(command.W, "\n No connected to any instance. \n")
+			} else {
+				err_str = err_str + "\n Still Connected to : " + SERVICE_URL + ".\n"
+			}
+		}
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -454,10 +208,10 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 
 	SERVICE_URL = command.SERVICE_URL
 
+	// Reset the Server flag and Service_url to the current connection string.
 	if SERVICE_URL != "" {
 		ServerFlag = SERVICE_URL
 		command.SERVICE_URL = ""
-		SERVICE_URL = ""
 	}
 
 	DISCONNECT = command.DISCONNECT
