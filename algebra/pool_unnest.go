@@ -7,22 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package datastore
+package algebra
 
 import (
 	"sync"
 )
 
-type IndexEntryPool struct {
+type UnnestPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewIndexEntryPool(size int) *IndexEntryPool {
-	rv := &IndexEntryPool{
+func NewUnnestPool(size int) *UnnestPool {
+	rv := &UnnestPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]*IndexEntry, 0, size)
+				return make([]*Unnest, 0, size)
 			},
 		},
 		size: size,
@@ -31,14 +31,14 @@ func NewIndexEntryPool(size int) *IndexEntryPool {
 	return rv
 }
 
-func (this *IndexEntryPool) Get() []*IndexEntry {
-	return this.pool.Get().([]*IndexEntry)
+func (this *UnnestPool) Get() []*Unnest {
+	return this.pool.Get().([]*Unnest)
 }
 
-func (this *IndexEntryPool) Put(s []*IndexEntry) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+func (this *UnnestPool) Put(buf []*Unnest) {
+	if cap(buf) < this.size || cap(buf) > 2*this.size {
 		return
 	}
 
-	this.pool.Put(s[0:0])
+	this.pool.Put(buf[0:0])
 }

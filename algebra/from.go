@@ -50,7 +50,7 @@ type FromTerm interface {
 	Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error)
 
 	/*
-	   Represents the primary from term.
+	   Represents the primary (first) term of this FROM term.
 	*/
 	PrimaryTerm() FromTerm
 
@@ -58,4 +58,11 @@ type FromTerm interface {
 	   Represents alias string.
 	*/
 	Alias() string
+}
+
+type JoinTerm interface {
+	FromTerm
+	Left() FromTerm
+	Right() *KeyspaceTerm
+	Outer() bool
 }

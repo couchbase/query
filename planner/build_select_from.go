@@ -29,6 +29,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) er
 			this.resetOrderLimit()
 		}
 
+		// Use FROM clause in index selection
+		prevFrom := this.from
+		this.from = node.From()
+		defer func() { this.from = prevFrom }()
+
 		_, err := node.From().Accept(this)
 		if err != nil {
 			return err

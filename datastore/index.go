@@ -75,7 +75,7 @@ type Index interface {
 	Id() string                                                         // Id of this index
 	Name() string                                                       // Name of this index
 	Type() IndexType                                                    // Type of this index
-	SeekKey() expression.Expressions                                    // Equality keys
+	SeekKey() expression.Expressions                                    // Seek keys
 	RangeKey() expression.Expressions                                   // Range keys
 	Condition() expression.Expression                                   // Condition, if any
 	IsPrimary() bool                                                    // Is this a primary index

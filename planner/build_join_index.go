@@ -39,7 +39,9 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
 	datastore.Index, expression.Covers, error) {
-	indexes, err := allIndexes(keyspace)
+	indexes := _ALL_INDEX_POOL.Get()
+	defer _ALL_INDEX_POOL.Put(indexes)
+	indexes, err := allIndexes(keyspace, indexes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -68,7 +70,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	sargables, err := sargableIndexes(indexes, pred, subset, primaryKey, dnf, formalizer)
+	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, dnf, formalizer)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -18,7 +18,7 @@ import (
 )
 
 /*
-Represents the join clause. Joins create new input objects by
+Represents the JOIN clause. Joins create new input objects by
 combining two or more source objects.  They can be chained.
 */
 type Join struct {
@@ -36,7 +36,7 @@ func (this *Join) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-Maps left and right source objects of the join.
+Maps left and right source objects of the JOIN.
 */
 func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.left.MapExpressions(mapper)
@@ -89,8 +89,8 @@ func (this *Join) String() string {
 }
 
 /*
-Qualify all identifiers for the parent expression. Checks is
-a join alias exists and if it is a duplicate alias.
+Qualify all identifiers for the parent expression. Checks if
+a JOIN alias exists and if it is a duplicate alias.
 */
 func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
@@ -122,7 +122,7 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 /*
 Returns the primary term in the left source of
-the join.
+the JOIN.
 */
 func (this *Join) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
@@ -136,14 +136,14 @@ func (this *Join) Alias() string {
 }
 
 /*
-Returns the left source object of the join.
+Returns the left source object of the JOIN.
 */
 func (this *Join) Left() FromTerm {
 	return this.left
 }
 
 /*
-Returns the right source object of the join.
+Returns the right source object of the JOIN.
 */
 func (this *Join) Right() *KeyspaceTerm {
 	return this.right
@@ -151,14 +151,14 @@ func (this *Join) Right() *KeyspaceTerm {
 
 /*
 Returns boolean value based on if it is
-an outer or inner join.
+an outer or inner JOIN.
 */
 func (this *Join) Outer() bool {
 	return this.outer
 }
 
 /*
-Marshals input join terms.
+Marshals input JOIN terms.
 */
 func (this *Join) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "join"}

@@ -40,7 +40,7 @@ func (this *Nest) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-Maps the right input of the nest if the left is mapped
+Maps the right input of the NEST if the left is mapped
 successfully.
 */
 func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
@@ -94,8 +94,8 @@ func (this *Nest) String() string {
 }
 
 /*
-Qualify all identifiers for the parent expression. Checks is
-a nest alias exists and if it is a duplicate alias.
+Qualify all identifiers for the parent expression. Checks if
+a NEST alias exists and if it is a duplicate alias.
 */
 func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
@@ -126,28 +126,28 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 }
 
 /*
-Return the primary term in the left term of the nest clause.
+Return the primary term in the left term of the NEST clause.
 */
 func (this *Nest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
 
 /*
-Returns the nest alias of the right source.
+Returns the NEST alias of the right source.
 */
 func (this *Nest) Alias() string {
 	return this.right.Alias()
 }
 
 /*
-Returns the left term in the nest clause.
+Returns the left term in the NEST clause.
 */
 func (this *Nest) Left() FromTerm {
 	return this.left
 }
 
 /*
-Returns the right term in the nest clause.
+Returns the right term in the NEST clause.
 */
 func (this *Nest) Right() *KeyspaceTerm {
 	return this.right
@@ -155,14 +155,14 @@ func (this *Nest) Right() *KeyspaceTerm {
 
 /*
 Returns a boolean value depending on if it is
-an outer or inner nest.
+an outer or inner NEST.
 */
 func (this *Nest) Outer() bool {
 	return this.outer
 }
 
 /*
-Marshals input nest terms into byte array.
+Marshals input NEST terms into byte array.
 */
 func (this *Nest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "nest"}

@@ -24,13 +24,13 @@ resulting joined object becomes an input to the query.
 */
 type Unnest struct {
 	left  FromTerm
-	outer bool
 	expr  expression.Expression
 	as    string
+	outer bool
 }
 
 func NewUnnest(left FromTerm, outer bool, expr expression.Expression, as string) *Unnest {
-	return &Unnest{left, outer, expr, as}
+	return &Unnest{left, expr, as, outer}
 }
 
 func (this *Unnest) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -87,8 +87,8 @@ func (this *Unnest) String() string {
 }
 
 /*
-Qualify all identifiers for the parent expression. Checks is
-a unnest alias exists and if it is a duplicate alias.
+Qualify all identifiers for the parent expression. Checks if
+a UNNEST alias exists and if it is a duplicate alias.
 */
 func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
@@ -120,14 +120,14 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 
 /*
 Return the primary term in the parent object
-(left term) of the unnest clause.
+(left term) of the UNNEST clause.
 */
 func (this *Unnest) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
 }
 
 /*
-Returns the unnest alias if set. Else returns the alias of
+Returns the UNNEST alias if set. Else returns the alias of
 the input nested array.
 */
 func (this *Unnest) Alias() string {
@@ -139,7 +139,7 @@ func (this *Unnest) Alias() string {
 }
 
 /*
-Returns the left term (parent object) in the unnest
+Returns the left term (parent object) in the UNNEST
 clause.
 */
 func (this *Unnest) Left() FromTerm {
@@ -147,26 +147,33 @@ func (this *Unnest) Left() FromTerm {
 }
 
 /*
-Returns a boolean value depending on if it is
-an outer or inner unnest.
+Implements JoinTerm interface. Returns nil for UNNEST.
 */
-func (this *Unnest) Outer() bool {
-	return this.outer
+func (this *Unnest) Right() *KeyspaceTerm {
+	return nil
 }
 
 /*
 Returns the source array object path expression for
-the unnest clause.
+the UNNEST clause.
 */
 func (this *Unnest) Expression() expression.Expression {
 	return this.expr
 }
 
 /*
-Returns the alias string in an unnest clause.
+Returns the alias string in an UNNEST clause.
 */
 func (this *Unnest) As() string {
 	return this.as
+}
+
+/*
+Returns a boolean value depending on if it is
+an outer or inner UNNEST.
+*/
+func (this *Unnest) Outer() bool {
+	return this.outer
 }
 
 /*
@@ -175,10 +182,8 @@ Marshals input unnest terms into byte array.
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "unnest"}
 	r["left"] = this.left
+	r["expr"] = expression.NewStringer().Visit(this.expr)
 	r["as"] = this.as
 	r["outer"] = this.outer
-	if this.expr != nil {
-		r["expr"] = expression.NewStringer().Visit(this.expr)
-	}
 	return json.Marshal(r)
 }

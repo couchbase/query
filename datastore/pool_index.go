@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-type IndexEntryPool struct {
+type IndexPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewIndexEntryPool(size int) *IndexEntryPool {
-	rv := &IndexEntryPool{
+func NewIndexPool(size int) *IndexPool {
+	rv := &IndexPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]*IndexEntry, 0, size)
+				return make([]Index, 0, size)
 			},
 		},
 		size: size,
@@ -31,11 +31,11 @@ func NewIndexEntryPool(size int) *IndexEntryPool {
 	return rv
 }
 
-func (this *IndexEntryPool) Get() []*IndexEntry {
-	return this.pool.Get().([]*IndexEntry)
+func (this IndexPool) Get() []Index {
+	return this.pool.Get().([]Index)
 }
 
-func (this *IndexEntryPool) Put(s []*IndexEntry) {
+func (this IndexPool) Put(s []Index) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}

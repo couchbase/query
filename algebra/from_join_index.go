@@ -18,7 +18,7 @@ import (
 )
 
 /*
-Represents the join clause. IndexJoins create new input objects by
+Represents the JOIN clause. IndexJoins create new input objects by
 combining two or more source objects.  They can be chained.
 */
 type IndexJoin struct {
@@ -37,7 +37,7 @@ func (this *IndexJoin) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-Maps left and right source objects of the join.
+Maps left and right source objects of the JOIN.
 */
 func (this *IndexJoin) MapExpressions(mapper expression.Mapper) (err error) {
 	err = this.left.MapExpressions(mapper)
@@ -90,8 +90,8 @@ func (this *IndexJoin) String() string {
 }
 
 /*
-Qualify all identifiers for the parent expression. Checks is
-a join alias exists and if it is a duplicate alias.
+Qualify all identifiers for the parent expression. Checks if
+a JOIN alias exists and if it is a duplicate alias.
 */
 func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	f, err = this.left.Formalize(parent)
@@ -133,7 +133,7 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 
 /*
 Returns the primary term in the left source of
-the join.
+the JOIN.
 */
 func (this *IndexJoin) PrimaryTerm() FromTerm {
 	return this.left.PrimaryTerm()
@@ -147,14 +147,14 @@ func (this *IndexJoin) Alias() string {
 }
 
 /*
-Returns the left source object of the join.
+Returns the left source object of the JOIN.
 */
 func (this *IndexJoin) Left() FromTerm {
 	return this.left
 }
 
 /*
-Returns the right source object of the join.
+Returns the right source object of the JOIN.
 */
 func (this *IndexJoin) Right() *KeyspaceTerm {
 	return this.right
@@ -169,7 +169,7 @@ func (this *IndexJoin) For() string {
 }
 
 /*
-Marshals input join terms.
+Marshals input JOIN terms.
 */
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "indexJoin"}
