@@ -28,3 +28,13 @@ This document provides links to external design documents; links are provided un
 * [Command Line Shell Survey](http://goo.gl/ZStXN7) - a survey of open source command line shells; identifies features and functionality
 * [Command Line Shell Architecture Summary](http://goo.gl/SFwRWq) - describes workings of open source command line shells; identifies best practices in design and functionality
 * [Command Line Shell Design](http://goo.gl/zvlTKY) - design guide for N1QL command line shell
+
+## N1QL Design Documents
+
+* [Push Query Offset, Limit to the Indexer](https://docs.google.com/a/couchbase.com/document/d/1pCvrLGPJwfczYX_yPxV6aVp0QL1RnBW7VW3jOsgnJxM/edit?usp=sharing) - describes when to push the query offset, limit to indexer
+* [Optimize the query with order, offdset, limit to exploit index ordering](https://docs.google.com/a/couchbase.com/document/d/1wfRY7bVshnZ1woexoaLUnDU9y2aSitHPgdYJXesAgUg/edit?usp=sharing) - describes when query uses index order
+* [Optimize the query with count(expr) to exploit index scan count](https://docs.google.com/a/couchbase.com/document/d/1FXPRr-lCshSpo97kIMShVRi5IAaO7fnd1BihVm5aO24/edit?usp=sharing) - describes when query uses index scan count
+
+## N1QL Presentations
+
+* [Performance Improvements](https://docs.google.com/a/couchbase.com/presentation/d/14K74FEJlD3gY_0ViKDuMBLYEYwQa5GMg9Sb7ABZ_eO4/edit?usp=sharing) - describes order, limit, count performance improvements
