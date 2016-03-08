@@ -189,12 +189,12 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		}
 
 		if limit != nil && !pred.CoveredBy(node.Alias(), entry.keys) {
-			var condpred expression.Expression
+			var condPred expression.Expression
 			if entry.cond != nil {
-				condpred = nonKeysPredExpression(node.Alias(), entry.keys, pred, condpred)
+				condPred = nonKeysPredExpression(node.Alias(), entry.keys, pred, condPred)
 			}
 
-			if entry.cond == nil || condpred == nil || !condpred.EquivalentTo(entry.cond) {
+			if entry.cond == nil || condPred == nil || !condPred.EquivalentTo(entry.cond) {
 				// Predicate is not covered by index keys disable limit pushdown
 				this.limit = nil
 				limit = nil
@@ -254,20 +254,20 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 
 // Separate AND operands of predicate that are not matched with keys
 
-func nonKeysPredExpression(alias string, keys expression.Expressions, pred, condpred expression.Expression) expression.Expression {
+func nonKeysPredExpression(alias string, keys expression.Expressions, pred, condPred expression.Expression) expression.Expression {
 	switch expr2 := pred.(type) {
 	case *expression.And:
 		for _, op := range expr2.Operands() {
-			condpred = nonKeysPredExpression(alias, keys, op, condpred)
+			condPred = nonKeysPredExpression(alias, keys, op, condPred)
 		}
 	default:
 		if !pred.CoveredBy(alias, keys) {
-			if condpred == nil {
-				condpred = pred
+			if condPred == nil {
+				condPred = pred
 			} else {
-				condpred = expression.NewAnd(condpred, pred)
+				condPred = expression.NewAnd(condPred, pred)
 			}
 		}
 	}
-	return condpred
+	return condPred
 }
