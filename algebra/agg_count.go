@@ -75,11 +75,6 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 }
 
 /*
-Minimum number of arguments to the count function is 0.
-*/
-func (this *Count) MinArgs() int { return 0 }
-
-/*
 The constructor returns a NewCount with either nil or one
 input operand cast to a Function as the FunctionConstructor.
 */
