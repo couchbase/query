@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group) error {
@@ -231,8 +232,16 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 
 	for _, term := range node.Projection().Terms() {
 		count, ok := term.Expression().(*algebra.Count)
-		if !ok || count.Operand() != nil {
+		if !ok {
 			return false, nil
+		}
+
+		operand := count.Operand()
+		if operand != nil {
+			val := operand.Value()
+			if val == nil || val.Type() <= value.NULL {
+				return false, nil
+			}
 		}
 	}
 

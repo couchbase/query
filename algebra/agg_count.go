@@ -56,16 +56,12 @@ func (this *Count) Type() value.Type { return value.NUMBER }
 
 /*
 Directly call the evaluate method for aggregate functions and
-passe in the receiver, current item and current context, for
+pass in the receiver, current item and current context, for
 count with an input expression operand. For a count with no
 operands (count (*)), get the count from the attachment and
 then evaluate.
 */
 func (this *Count) Evaluate(item value.Value, context expression.Context) (result value.Value, e error) {
-	if this.Operand() != nil {
-		return this.evaluate(this, item, context)
-	}
-
 	// Full keyspace count is short-circuited
 	switch item := item.(type) {
 	case value.AnnotatedValue:
