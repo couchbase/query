@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
@@ -61,10 +62,16 @@ outer:
 			this.maxParallelism = 1
 		}
 
-		if this.countOperand != nil && pred.IsLimitPushable() && len(entry.spans) == 1 {
+		if pred.IsLimitPushable() && len(entry.spans) == 1 {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
-				if this.countOperand.EquivalentTo(keys[0]) || this.countOperand.Value() != nil {
+				op := this.countOperand
+				var val value.Value
+				if op != nil {
+					val = op.Value()
+				}
+
+				if op == nil || (val != nil && val.Type() > value.NULL) {
 					this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
 					return this.countScan, nil
 				}
