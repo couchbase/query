@@ -26,17 +26,18 @@ import (
 )
 
 type HttpEndpoint struct {
-	server      *server.Server
-	metrics     bool
-	httpAddr    string
-	httpsAddr   string
-	certFile    string
-	keyFile     string
-	bufpool     BufferPool
-	listener    net.Listener
-	listenerTLS net.Listener
-	mux         *mux.Router
-	actives     server.ActiveRequests
+	server        *server.Server
+	metrics       bool
+	httpAddr      string
+	httpsAddr     string
+	certFile      string
+	keyFile       string
+	minTlsVersion string
+	bufpool       BufferPool
+	listener      net.Listener
+	listenerTLS   net.Listener
+	mux           *mux.Router
+	actives       server.ActiveRequests
 }
 
 const (
@@ -44,16 +45,17 @@ const (
 )
 
 func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
-	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
+	httpAddr, httpsAddr, certFile, keyFile, minTlsVersion string) *HttpEndpoint {
 	rv := &HttpEndpoint{
-		server:    srv,
-		metrics:   metrics,
-		httpAddr:  httpAddr,
-		httpsAddr: httpsAddr,
-		certFile:  certFile,
-		keyFile:   keyFile,
-		bufpool:   NewSyncPool(srv.KeepAlive()),
-		actives:   NewActiveRequests(),
+		server:        srv,
+		metrics:       metrics,
+		httpAddr:      httpAddr,
+		httpsAddr:     httpsAddr,
+		certFile:      certFile,
+		keyFile:       keyFile,
+		minTlsVersion: minTlsVersion,
+		bufpool:       NewSyncPool(srv.KeepAlive()),
+		actives:       NewActiveRequests(),
 	}
 
 	server.SetActives(rv.actives)
@@ -79,12 +81,25 @@ func (this *HttpEndpoint) ListenTLS() error {
 		return err
 	}
 
+	var minTlsVersion uint16
+	switch this.minTlsVersion {
+	case "tlsv1":
+		minTlsVersion = tls.VersionTLS10
+	case "tlsv1.1":
+		minTlsVersion = tls.VersionTLS11
+	case "tlsv1.2":
+		minTlsVersion = tls.VersionTLS12
+	default:
+		logging.Warnf("Unrecognized --ssl_minimum_protocol %s. Acceptable values are tlsv1/tlsv1.1/tlsv1.2. Using minimum protocol tlsv1.0.", this.minTlsVersion)
+		minTlsVersion = tls.VersionTLS10
+	}
+
 	ln, err := net.Listen("tcp", this.httpsAddr)
 	if err == nil {
 		cfg := &tls.Config{
 			Certificates: []tls.Certificate{tlsCert},
 			ClientAuth:   tls.NoClientCert,
-			MinVersion:   tls.VersionTLS10,
+			MinVersion:   minTlsVersion,
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 				tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
