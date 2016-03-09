@@ -162,8 +162,8 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		}
 	}
 
-	if this.countOperand != nil {
-		this.countOperand = nil
+	if this.countAgg != nil {
+		this.countAgg = nil
 	}
 
 	if (this.order != nil || limit != nil) && len(secondaries) > 1 {

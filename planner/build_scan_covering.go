@@ -62,10 +62,10 @@ outer:
 			this.maxParallelism = 1
 		}
 
-		if pred.IsLimitPushable() && len(entry.spans) == 1 {
+		if this.countAgg != nil && pred.IsLimitPushable() && len(entry.spans) == 1 {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
-				op := this.countOperand
+				op := this.countAgg.Operand()
 				var val value.Value
 				if op != nil {
 					val = op.Value()

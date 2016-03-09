@@ -90,7 +90,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countOperand = nil
+	this.countAgg = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -116,7 +116,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countOperand = nil
+	this.countAgg = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -145,7 +145,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	this.countOperand = nil
+	this.countAgg = nil
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
-	this.countOperand = nil
+	this.countAgg = nil
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countOperand = nil
+	this.countAgg = nil
 
 	_, err := node.Left().Accept(this)
 	if err != nil {

@@ -21,11 +21,11 @@ import (
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
 	prevCorrelated := this.correlated
-	prevCountOperand := this.countOperand
+	prevCountAgg := this.countAgg
 	defer func() {
 		this.cover = prevCover
 		this.correlated = prevCorrelated
-		this.countOperand = prevCountOperand
+		this.countAgg = prevCountAgg
 	}()
 
 	this.correlated = node.IsCorrelated()
@@ -51,9 +51,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			for i, term := range node.Projection().Terms() {
 				count, ok := term.Expression().(*algebra.Count)
 				if i == 0 && ok {
-					this.countOperand = count.Operand()
+					this.countAgg = count
 				} else {
-					this.countOperand = nil
+					this.countAgg = nil
 					break
 				}
 			}
