@@ -44,7 +44,7 @@
     ]
     },
     {
-        "statements": "SELECT details.director FROM default:catalog  GROUP BY details.director HAVING ANY director IN details.director satisfies director END ORDER BY details.director",
+        "statements": "SELECT details.director FROM default:catalog GROUP BY details.director HAVING ANY director IN details.director satisfies director END ORDER BY details.director",
         "results": [
         {
             "director": [

@@ -65,7 +65,11 @@ func (this *subsetFactory) VisitArray(expr *expression.Array) (interface{}, erro
 }
 
 func (this *subsetFactory) VisitEvery(expr *expression.Every) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetEvery(expr), nil
+}
+
+func (this *subsetFactory) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return newSubsetAnyEvery(expr), nil
 }
 
 func (this *subsetFactory) VisitExists(expr *expression.Exists) (interface{}, error) {

@@ -1,0 +1,86 @@
+[
+
+{
+	"statements": "SELECT customerId from purchase WHERE EVERY buy IN purchase.lineItems SATISFIES buy.product=\"product85\" END AND test_id=\"any_func\" ORDER BY customerId, lineItems.count LIMIT 2",
+	"results": [
+        {
+            "customerId": "customer867"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT customerId from purchase WHERE EVERY buy IN purchase.lineItems SATISFIES buy.product=\"product85\" AND buy.count =2 END AND test_id=\"any_func\" ORDER BY customerId, lineItems.count LIMIT 2",
+	"results": [
+    ]
+},
+
+{
+	"statements": "SELECT customerId from purchase WHERE EVERY buy IN purchase.lineItems SATISFIES buy.product=\"product85\" AND buy.count =2 AND customerId= \"customer187\" END AND test_id=\"any_func\" ORDER BY customerId, lineItems.count LIMIT 2",
+	"results": [
+    ]
+},
+
+{
+	"statements": "SELECT purchaseId FROM purchase WHERE EVERY buy IN purchase.lineItems SATISFIES buy.count>4 END AND test_id=\"any_func\" ORDER BY purchaseId limit 3",
+	"results": [
+        {
+            "purchaseId": "purchase1013"
+        },
+        {
+            "purchaseId": "purchase1025"
+        },
+        {
+            "purchaseId": "purchase1035"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT purchaseId from purchase WHERE lineItems[0].product = \"product32\" AND EVERY sale IN purchase.lineItems SATISFIES sale.count > 4 END AND test_id=\"any_func\" ORDER BY purchaseId",
+	"results": [
+        {
+            "purchaseId": "purchase1035"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT purchaseId FROM purchase WHERE EVERY sale in purchase.lineItems satisfies sale.count > 4 END AND test_id=\"any_func\" ORDER BY purchaseId LIMIT 5",
+	"results": [
+        {
+            "purchaseId": "purchase1013"
+        },
+        {
+            "purchaseId": "purchase1025"
+        },
+        {
+            "purchaseId": "purchase1035"
+        },
+        {
+            "purchaseId": "purchase1040"
+        },
+        {
+            "purchaseId": "purchase1072"
+        }
+    ]
+},
+
+{
+	"statements": "SELECT purchaseId, customerId FROM purchase WHERE EVERY sale IN purchase.lineItems SATISFIES sale.product < purchase.purchaseId END AND test_id=\"any_func\" ORDER BY purchaseId LIMIT 3",
+	"results": [
+        {
+            "customerId": "customer515",
+            "purchaseId": "purchase0"
+        },
+        {
+            "customerId": "customer182",
+            "purchaseId": "purchase1"
+        },
+        {
+            "customerId": "customer776",
+            "purchaseId": "purchase10"
+        }
+    ]
+}
+]

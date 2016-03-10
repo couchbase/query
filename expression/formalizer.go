@@ -93,6 +93,26 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 }
 
 /*
+Visitor method for an Any and Every Range Predicate that maps the
+children of the input ANY AND EVERY expression.
+*/
+func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+	sv, err := this.PushBindings(expr.Bindings())
+	if err != nil {
+		return nil, err
+	}
+
+	defer this.PopBindings(sv)
+
+	err = expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return expr, nil
+}
+
+/*
 Visitor method for an Array Range Transform that maps the
 children of the input ARRAY expression.
 */

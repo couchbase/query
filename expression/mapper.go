@@ -100,6 +100,10 @@ func (this *MapperBase) VisitEvery(expr *Every) (interface{}, error) {
 	return this.visit(expr)
 }
 
+func (this *MapperBase) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+	return this.visit(expr)
+}
+
 func (this *MapperBase) VisitArray(expr *Array) (interface{}, error) {
 	return this.visit(expr)
 }

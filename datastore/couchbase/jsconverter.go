@@ -184,6 +184,10 @@ func (this *JSConverter) VisitEvery(expr *expression.Every) (interface{}, error)
 	return nil, fmt.Errorf("Expression not implemented")
 }
 
+func (this *JSConverter) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
+}
+
 func (this *JSConverter) VisitExists(expr *expression.Exists) (interface{}, error) {
 	return nil, fmt.Errorf("Expression not implemented")
 }

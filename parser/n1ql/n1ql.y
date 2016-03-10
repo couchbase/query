@@ -2532,6 +2532,16 @@ EVERY coll_bindings satisfies END
 {
     $$ = expression.NewEvery($2, $3)
 }
+|
+ANY AND EVERY coll_bindings satisfies END
+{
+    $$ = expression.NewAnyEvery($4, $5)
+}
+|
+SOME AND EVERY coll_bindings satisfies END
+{
+    $$ = expression.NewAnyEvery($4, $5)
+}
 ;
 
 coll_bindings:

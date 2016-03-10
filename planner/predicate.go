@@ -75,6 +75,10 @@ func (this *predicate) VisitEvery(expr *expression.Every) (interface{}, error) {
 	return this.test(expr)
 }
 
+func (this *predicate) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return this.test(expr)
+}
+
 func (this *predicate) VisitExists(expr *expression.Exists) (interface{}, error) {
 	return this.test(expr)
 }

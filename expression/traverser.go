@@ -99,6 +99,10 @@ func (this *TraverserBase) VisitEvery(expr *Every) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
+func (this *TraverserBase) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+	return nil, this.TraverseList(expr.Children())
+}
+
 func (this *TraverserBase) VisitArray(expr *Array) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }

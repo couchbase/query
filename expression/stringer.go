@@ -190,6 +190,16 @@ func (this *Stringer) VisitEvery(expr *Every) (interface{}, error) {
 	return buf.String(), nil
 }
 
+func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("any and every ")
+	this.visitBindings(expr.bindings, &buf, " in ", " within ")
+	buf.WriteString(" satisfies ")
+	buf.WriteString(this.Visit(expr.satisfies))
+	buf.WriteString(" end")
+	return buf.String(), nil
+}
+
 func (this *Stringer) VisitExists(expr *Exists) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(exists ")

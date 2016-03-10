@@ -1,0 +1,76 @@
+[
+    {
+        "statements": "SELECT name FROM default:contacts WHERE EVERY child IN children SATISFIES child.age > 14 AND child.gender = \"m\" END order by name",
+        "results": [
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT name FROM default:contacts WHERE EVERY child in children satisfies child.age > 14 END order by name",
+        "results": [
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "statements": "SELECT name FROM default:contacts WHERE EVERY child IN children SATISFIES child.age > 14 END AND EVERY hobby in hobbies SATISFIES hobby = \"golf\" END ORDER BY name",
+        "results": [
+        ]
+    },
+    {
+        "statements": "SELECT title FROM default:catalog WHERE EVERY director IN details.director satisfies director END ORDER BY title",
+        "results": [
+        {
+            "title": "Sherlock: Series 1"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT details.director FROM default:catalog GROUP BY details.director HAVING EVERY director IN details.director satisfies director END ORDER BY details.director",
+        "results": [
+        {
+            "director": [
+                "Euros Lyn",
+                "Paul Mcguigan"
+            ]
+        }
+    ]
+    },
+    {
+        "statements": "SELECT asin FROM default:catalog WHERE dimensions.height > 1 and EVERY gen IN details.genre satisfies gen = \"Thriller\" END",
+        "results": [
+    ]
+    },
+    {
+        "statements": "SELECT name FROM default:contacts WHERE EVERY child in children satisfies child.age > 14 END",
+        "results": [
+          {
+            "name": "ian"
+          }
+        ]
+    },
+    {
+        "description": "ANY expression referring to outer context",
+        "statements" : "SELECT name, children FROM default:contacts WHERE EVERY child in children satisfies child.name > name END",
+        "results" : [
+        {
+            "children": [
+                {
+                    "age": 17,
+                    "gender": "f",
+                    "name": "xena"
+                },
+                {
+                    "age": 2,
+                    "gender": "m",
+                    "name": "yuri"
+                }
+            ],
+            "name": "earl"
+        }
+    ]
+    }
+]

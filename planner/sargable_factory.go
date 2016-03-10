@@ -68,6 +68,10 @@ func (this *sargableFactory) VisitEvery(expr *expression.Every) (interface{}, er
 	return newSargableDefault(expr), nil
 }
 
+func (this *sargableFactory) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return newSargableAnyEvery(expr), nil
+}
+
 func (this *sargableFactory) VisitExists(expr *expression.Exists) (interface{}, error) {
 	return newSargableDefault(expr), nil
 }

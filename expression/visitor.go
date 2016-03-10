@@ -43,6 +43,7 @@ type Visitor interface {
 	VisitAny(expr *Any) (interface{}, error)
 	VisitArray(expr *Array) (interface{}, error)
 	VisitEvery(expr *Every) (interface{}, error)
+	VisitAnyEvery(expr *AnyEvery) (interface{}, error)
 	VisitExists(expr *Exists) (interface{}, error)
 	VisitFirst(expr *First) (interface{}, error)
 	VisitIn(expr *In) (interface{}, error)

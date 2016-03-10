@@ -79,6 +79,10 @@ func (this *sargBase) VisitEvery(expr *expression.Every) (interface{}, error) {
 	return this.sarger(expr)
 }
 
+func (this *sargBase) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return this.sarger(expr)
+}
+
 func (this *sargBase) VisitExists(expr *expression.Exists) (interface{}, error) {
 	return this.sarger(expr)
 }

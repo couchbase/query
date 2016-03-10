@@ -31,3 +31,8 @@ func (this *subsetAny) VisitAny(expr *expression.Any) (interface{}, error) {
 	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
 		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
 }
+
+func (this *subsetAny) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
+		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
+}
