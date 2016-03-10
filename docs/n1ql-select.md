@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-02-14
+* Modified: 2016-03-10
 
 ## Introduction
 
@@ -1211,11 +1211,21 @@ If _name-expr_ is given, it must evaluate to a string. Otherwise, the
 result is MISSING if _name-expr_ or _expr_ evaluates to MISSING, and
 NULL if _name-expr_ evaluates to another non-string value.
 
-#### ANY, SOME, and EVERY
+#### ANY or SOME, EVERY, and ANY AND EVERY or SOME AND EVERY
 
-Range predicates (ANY, SOME, EVERY) allow you to test a boolean
-condition over the elements or attributes of a collection or
-object(s). ANY, SOME, and EVERY evaluate to a boolean value.
+Range predicates (ANY or SOME, EVERY, and ANY AND EVERY or SOME AND
+EVERY) allow you to test a boolean condition over the elements or
+attributes of a collection or object(s). They each evaluate to a
+boolean value.
+
+ANY or SOME is TRUE if the collection is non-empty and at least one
+element matches.
+
+EVERY is TRUE if the collection is empty, or if the collection is
+non-empty and every element matches.
+
+ANY AND EVERY or SOME AND EVERY is TRUE if the collection is non-empty
+and every element matches.
 
 _range-cond:_
 
@@ -2663,6 +2673,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Rename original N1QL joins as lookup joins
 * 2016-02-14 - Index joins and index nests
     * Add content for index joins and index nests
+* 2016-03-10 - ANY / SOME AND EVERY
+    * Add new expression ANY / SOME AND EVERY
 
 ### Open issues
 
