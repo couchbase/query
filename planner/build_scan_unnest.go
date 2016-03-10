@@ -57,7 +57,7 @@ dimension.
 
 */
 func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (plan.Operator, error) {
+	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (op plan.Operator, err error) {
 
 	// Enumerate INNER UNNESTs
 	unnests := _UNNEST_POOL.Get()
@@ -83,12 +83,24 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, nil
 	}
 
+	var un *algebra.Unnest
 	for _, unnest := range primaryUnnests {
 		for _, index := range unnestIndexes {
 			mapping := allMap[index]
-			op, err := matchUnnest(node, pred, unnest, index, mapping, unnests)
-			if op != nil || err != nil {
-				return op, err
+			op, un, err = matchUnnest(node, pred, unnest, index, indexes[index], mapping, unnests)
+			if err != nil {
+				return nil, err
+			}
+
+			if op == nil {
+				continue
+			}
+
+			cop, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], un)
+			if cop != nil || err != nil {
+				return cop, err
+			} else {
+				return op, nil
 			}
 		}
 	}
@@ -138,7 +150,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 	unnestIndexes []datastore.Index) ([]datastore.Index, map[datastore.Index]*expression.All) {
 	allMap := make(map[datastore.Index]*expression.All, len(indexes))
 
-	for idx, entry := range indexes {
+	for index, entry := range indexes {
 		if len(entry.keys) == 0 {
 			continue
 		}
@@ -154,29 +166,30 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 			continue
 		}
 
-		unnestIndexes = append(unnestIndexes, idx)
-		allMap[idx] = all
+		unnestIndexes = append(unnestIndexes, index)
+		allMap[index] = all
 	}
 
 	return unnestIndexes, allMap
 }
 
 func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest *algebra.Unnest,
-	index datastore.Index, mapping *expression.All, unnests []*algebra.Unnest) (plan.Operator, error) {
+	index datastore.Index, entry *indexEntry, mapping *expression.All, unnests []*algebra.Unnest) (
+	plan.Operator, *algebra.Unnest, error) {
 
 	array, ok := mapping.Array().(*expression.Array)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if len(array.Bindings()) != 1 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	binding := array.Bindings()[0]
 	if unnest.As() != binding.Variable() ||
 		!unnest.Expression().EquivalentTo(binding.Expression()) {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	arrayMapping := array.Mapping()
@@ -189,27 +202,60 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 				continue
 			}
 
-			op, err := matchUnnest(node, pred, u, index, nestedMapping, unnests)
+			op, un, err := matchUnnest(node, pred, u, index, entry, nestedMapping, unnests)
 			if op != nil || err != nil {
-				return op, err
+				return op, un, err
 			}
 		}
 
-		return nil, nil
+		return nil, nil, nil
 	} else {
 		mappings := expression.Expressions{array.Mapping()}
 		if SargableFor(pred, mappings) == 0 {
-			return nil, nil
+			return nil, nil, nil
 		}
 
 		spans, err := SargFor(pred, mappings, len(mappings))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
+		entry.spans = spans
 		scan := plan.NewIndexScan(index, node, spans, false, nil, nil)
-		return plan.NewUnionScan(scan), nil
+		return plan.NewUnionScan(scan), unnest, nil
 	}
+}
+
+func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred expression.Expression,
+	index datastore.Index, entry *indexEntry, unnest *algebra.Unnest) (plan.Operator, error) {
+	if this.cover == nil {
+		return nil, nil
+	}
+
+	alias := node.Alias()
+	id := expression.NewField(
+		expression.NewMeta(expression.NewIdentifier(alias)),
+		expression.NewFieldName("id", false))
+
+	keys := append(entry.keys, id)
+
+	exprs := this.cover.Expressions()
+	for _, expr := range exprs {
+		if !expr.CoveredBy(alias, keys) {
+			return nil, nil
+		}
+	}
+
+	this.resetOrderLimit()
+
+	covers := make(expression.Covers, 0, len(keys))
+	for _, key := range keys {
+		covers = append(covers, expression.NewCover(key))
+	}
+
+	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers)
+	this.coveringScan = scan
+	return plan.NewUnionScan(scan), nil
 }
 
 var _UNNEST_POOL = algebra.NewUnnestPool(8)

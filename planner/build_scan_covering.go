@@ -24,10 +24,10 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 	}
 
 	alias := node.Alias()
-	exprs := this.cover.Expressions()
 	id := expression.NewField(
-		expression.NewMeta(expression.NewIdentifier(node.Alias())),
+		expression.NewMeta(expression.NewIdentifier(alias)),
 		expression.NewFieldName("id", false))
+	exprs := this.cover.Expressions()
 
 outer:
 	for index, entry := range secondaries {
@@ -48,6 +48,7 @@ outer:
 		for _, key := range keys {
 			covers = append(covers, expression.NewCover(key))
 		}
+
 		if this.order != nil && !this.useIndexOrder(entry, keys) {
 			this.resetOrderLimit()
 			limit = nil
@@ -83,8 +84,14 @@ outer:
 
 		if len(entry.spans) > 1 {
 			// Use UnionScan to de-dup multiple spans
-
 			return plan.NewUnionScan(scan), nil
+		} else {
+			// Use UnionScan to de-dup array index scans
+			for _, sk := range entry.sargKeys {
+				if isArray, _ := sk.IsArrayIndexKey(); isArray {
+					return plan.NewUnionScan(scan), nil
+				}
+			}
 		}
 
 		return scan, nil
