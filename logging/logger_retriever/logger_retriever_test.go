@@ -14,7 +14,6 @@ import (
 
 	/*
 		"github.com/couchbase/query/logging"
-		"github.com/couchbase/query/querylog"
 	*/)
 
 func TestRetrieverLogger(t *testing.T) {

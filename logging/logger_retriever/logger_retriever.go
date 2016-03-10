@@ -12,8 +12,8 @@ package logger_retriever
 import (
 	"reflect"
 
+	"fmt"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/querylog"
 	"github.com/couchbase/retriever/logger"
 )
 
@@ -23,7 +23,7 @@ type RetrieverLogger struct {
 
 func NewRetrieverLogger(keylist []string) *RetrieverLogger {
 	return &RetrieverLogger{
-		logWriter: querylog.Init(keylist),
+		logWriter: initLogger(keylist),
 	}
 }
 
@@ -131,4 +131,50 @@ func getStringAt(i int, a []interface{}) string {
 		return arg.(string)
 	}
 	return ""
+}
+
+var QueryLogger *logger.LogWriter
+
+const (
+	HTTP      = "HTTP"
+	SCAN      = "SCAN"
+	OPTIMIZER = "OPTIMIZER"
+	PLANNER   = "PLANNER"
+	PARSER    = "PARSER"
+	COMPILER  = "COMPILER"
+	PIPELINE  = "PIPELINE"
+	ALGEBRA   = "ALGEBRA"
+	DATASTORE = "DATASTORE"
+)
+
+var loggerInitialized bool
+
+// initialize the logger
+func initLogger(keylist []string) *logger.LogWriter {
+
+	if loggerInitialized == true {
+		if keylist != nil {
+			QueryLogger.EnableKeys(keylist)
+		}
+
+		return QueryLogger
+	}
+
+	var err error
+	QueryLogger, err = logger.NewLogger("cbq-server", logger.LevelInfo)
+	if err != nil {
+		fmt.Printf("Cannot create logger instance")
+		return nil
+	}
+
+	// set logging to file
+	QueryLogger.SetFile()
+	if keylist != nil {
+		QueryLogger.EnableKeys(keylist)
+	} else {
+		QueryLogger.EnableKeys([]string{PARSER, COMPILER, PIPELINE, ALGEBRA, DATASTORE})
+	}
+
+	loggerInitialized = true
+	return QueryLogger
 }
