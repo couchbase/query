@@ -126,10 +126,8 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 
 	rows, err := dBn1ql.QueryRaw(line)
 
-	if err != nil {
-		return errors.DRIVER_QUERY, err.Error()
-
-	} else {
+	if rows != nil {
+		// We have output. That is what we want. We can ignore the error, even if there is one.
 
 		_, werr := io.Copy(w, rows)
 
@@ -137,8 +135,15 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 		if werr != nil {
 			return errors.WRITER_OUTPUT, werr.Error()
 		}
+
+		return 0, ""
 	}
 
+	if err != nil {
+		return errors.DRIVER_QUERY, err.Error()
+	}
+
+	// No output, and no error. Strange, but keep going.
 	return 0, ""
 }
 
