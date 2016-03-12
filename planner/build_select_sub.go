@@ -29,6 +29,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}()
 
 	this.correlated = node.IsCorrelated()
+	this.countAgg = nil
 
 	if this.cover == nil {
 		this.cover = node
