@@ -146,6 +146,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	this.countAgg = nil
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -170,6 +171,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
 	this.countAgg = nil
+
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
