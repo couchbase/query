@@ -267,7 +267,7 @@
 
 
     {
-        "statements": "SELECT search.category AS most_searched_category, count(*) AS count FROM default:user_profile AS search_hist UNNEST search_hist.search_history AS search GROUP BY search.category ORDER BY count DESC",
+        "statements": "SELECT search.category AS most_searched_category, count(*) AS count FROM default:user_profile AS search_hist UNNEST search_hist.search_history AS search GROUP BY search.category ORDER BY count(*) DESC",
         "results": [
         {
             "count": 11,

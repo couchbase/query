@@ -44,7 +44,7 @@
     ]
   },
   {
-     "statements": "SELECT array_avg(array_agg(LENGTH(title))) FROM default:catalog ORDER BY title",
+     "statements": "SELECT array_avg(array_agg(LENGTH(title))) FROM default:catalog",
      "results": [
         {
             "$1": 13.666666666666666
@@ -125,7 +125,7 @@
      "error":"Wrong number of arguments to function ARRAY_CONCAT."
   },
   {
-     "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(title)), 7) FROM default:catalog ORDER BY title",
+     "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(title)), 7) FROM default:catalog",
      "results": [
         {
             "$1": true
@@ -133,7 +133,7 @@
     ]
   },
   {
-     "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(title))) FROM default:catalog ORDER BY title",
+     "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(title))) FROM default:catalog",
      "results": [
         {
             "$1": 3
@@ -142,7 +142,7 @@
   },
   {
     "description":"Output before Distinct",
-    "statements":"SELECT array_concat(array_agg(LENGTH(title)),[16,18,54]) FROM default:catalog ORDER BY title",
+    "statements":"SELECT array_concat(array_agg(LENGTH(title)),[16,18,54]) FROM default:catalog",
      "results": [
         {
             "$1": [
@@ -158,7 +158,7 @@
   },
  {
    "description":"Distinct gives inconsistent results, hence sort",
-   "statements":"SELECT array_sort(array_distinct(array_concat(array_agg(LENGTH(title)),[16,18,54]))) FROM default:catalog ORDER BY title",
+   "statements":"SELECT array_sort(array_distinct(array_concat(array_agg(LENGTH(title)),[16,18,54]))) FROM default:catalog",
    "results": [
         {
             "$1": [
@@ -237,7 +237,7 @@
  },
  {
    "description":"If prev example is an array of slices then the result is as follows.",
-   "statements":"select array_sort(ARRAY_DISTINCT(array_agg(ARRAY ol.productId FOR ol IN orderlines END) ) ) AS A FROM default:orders ORDER BY A",
+   "statements":"select array_sort(ARRAY_DISTINCT(array_agg(ARRAY ol.productId FOR ol IN orderlines END) ) ) AS A FROM default:orders",
    "results": [
         {
             "A": [
@@ -442,7 +442,7 @@
     ]
  },
  {
-    "statements":"select array_position(array_agg(array_min(ARRAY ol.productId FOR ol IN orderlines END) ) , \"sugar22\" ) AS A FROM default:orders ORDER BY A ",
+    "statements":"select array_position(array_agg(array_min(ARRAY ol.productId FOR ol IN orderlines END) ) , \"sugar22\" ) AS A FROM default:orders",
     "results": [
         {
             "A": 3
@@ -532,7 +532,7 @@
     ]
  },
  {
-    "statements":"select ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"])  AS A FROM default:orders ORDER BY A",
+    "statements":"select ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"])  AS A FROM default:orders",
     "results": [
         {
             "A": [
@@ -549,7 +549,7 @@
     ]
  },
  {
-    "statements":"select ARRAY_REVERSE( ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"]))  AS A FROM default:orders ORDER BY A ",
+    "statements":"select ARRAY_REVERSE( ARRAY_REMOVE( array_agg(ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\", \"sugar22\"]))  AS A FROM default:orders",
     "results": [
         {
             "A": [

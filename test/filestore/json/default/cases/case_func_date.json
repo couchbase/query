@@ -47,7 +47,7 @@
 
    {
         "description": "test now_str",
-        "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR() ORDER BY millennium",
+        "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR()",
         "results": [
         {
             "millennium": 3

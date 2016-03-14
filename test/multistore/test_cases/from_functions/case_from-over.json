@@ -220,7 +220,7 @@
     },
 
     {
-        "statements": "SELECT count(*) AS C FROM orders AS ord UNNEST ord.orderlines[0].qty AS quant UNNEST ord.orderlines[1].qty AS quant1 WHERE ord.test_id=\"from_func\" GROUP BY ord.orderlines[0:1].productId ORDER BY quant1",
+        "statements": "SELECT count(*) AS C FROM orders AS ord UNNEST ord.orderlines[0].qty AS quant UNNEST ord.orderlines[1].qty AS quant1 WHERE ord.test_id=\"from_func\" GROUP BY ord.orderlines[0:1].productId",
         "results": [
         {
             "C": 4

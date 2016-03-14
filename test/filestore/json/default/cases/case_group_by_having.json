@@ -1,7 +1,7 @@
 [
     {
         "description": "simple group by usage",
-        "statements": "SELECT type, COUNT(*) AS count FROM default:catalog GROUP BY type ORDER BY count",
+        "statements": "SELECT type, COUNT(*) AS count FROM default:catalog GROUP BY type ORDER BY type",
         "results": [
         {
             "count": 1,
@@ -16,7 +16,7 @@
 
     {
         "description": "use all aggregate functions, no group by",
-        "statements": "SELECT MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog ORDER BY min",
+        "statements": "SELECT MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog",
         "results": [
         {
             "avg": 566,
@@ -30,7 +30,7 @@
 
     {
         "description": "use all aggregate functions, this type with group by",
-        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type ORDER BY min",
+        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type ORDER BY type",
         "results": [
         {
             "avg": 300,
@@ -53,7 +53,7 @@
 
     {
         "description": "use all aggregate functions, with group by and having",
-        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type HAVING count(pricing.list) > 1 ORDER BY min ",
+        "statements": "SELECT type, MIN(pricing.list) AS min, MAX(pricing.list) AS max, AVG(pricing.list) AS avg, SUM(pricing.list) AS sum, COUNT(pricing.list) AS count FROM default:catalog GROUP BY type HAVING count(pricing.list) > 1 ORDER BY type",
         "results": [
         {
             "avg": 699,
@@ -68,7 +68,7 @@
 
     {
         "description": "use array aggregate function",
-        "statements": "SELECT ARRAY_AGG(asin) AS agg FROM default:catalog ORDER BY agg",
+        "statements": "SELECT ARRAY_AGG(asin) AS agg FROM default:catalog",
         "results": [
          {
             "agg": [
@@ -146,7 +146,7 @@
     },
 
     {
-        "statements": "SELECT details.director AS D, count(*) AS count FROM default:catalog WHERE ANY director IN details.director SATISFIES director END GROUP BY details.director HAVING ARRAY_LENGTH(details.director) > 1 ORDER BY D",
+        "statements": "SELECT details.director AS D, count(*) AS count FROM default:catalog WHERE ANY director IN details.director SATISFIES director END GROUP BY details.director HAVING ARRAY_LENGTH(details.director) > 1 ORDER BY details.director",
         "results": [
         {
             "D": [
@@ -238,7 +238,7 @@
 
 {
         "description": "test that distinct count works with group by",
-        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_title_count, join_yr",
+        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY join_yr",
         "results": [
         {
             "distinct_title_count": 3,
@@ -253,7 +253,7 @@
 
     {
         "description": "test that distinct array agg works with group by",
-        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_titles, join_yr",
+        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY join_yr",
         "results": [
        {
             "distinct_titles": [
@@ -276,7 +276,7 @@
 
    {
         "description": "test that distinct count and count work at the same time",
-        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, COUNT(job_title) AS title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_title_count, join_yr",
+        "statements": "SELECT COUNT(DISTINCT job_title) AS distinct_title_count, COUNT(job_title) AS title_count, join_yr FROM default:jobs GROUP BY join_yr ORDER BY join_yr",
         "results": [
         {
             "distinct_title_count": 3,
@@ -293,7 +293,7 @@
 
     {
         "description": "test that distinct array agg and array agg work at the same time",
-        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, ARRAY_AGG(job_title) AS titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY distinct_titles, join_yr ",
+        "statements": "SELECT ARRAY_AGG(DISTINCT job_title) AS distinct_titles, ARRAY_AGG(job_title) AS titles, join_yr FROM default:jobs GROUP BY join_yr ORDER BY join_yr ",
         "results": [
        {
             "distinct_titles": [
@@ -326,7 +326,7 @@
     },
 
    {
-       "statements": "SELECT profile_details.prefs.ui_theme, count(*) AS theme_usage FROM default:user_profile GROUP BY profile_details.prefs.ui_theme ORDER BY count(*), profile_details.prefs.ui_theme", 
+       "statements": "SELECT profile_details.prefs.ui_theme, count(*) AS theme_usage FROM default:user_profile GROUP BY profile_details.prefs.ui_theme ORDER BY theme_usage, profile_details.prefs.ui_theme", 
            "results": [
     {
             "theme_usage": 1,

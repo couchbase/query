@@ -50,7 +50,7 @@
     ]
   },
   {
-     "statements": "SELECT array_avg(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\" ORDER BY 1",
+     "statements": "SELECT array_avg(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\"",
      "results": [
         {
             "$1": 10.25
@@ -135,7 +135,7 @@
     ]
   },
   {
-     "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(custId)), 10) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(custId)), 10) FROM orders WHERE test_id=\"array_func\"",
      "results": [
         {
             "$1": true
@@ -143,7 +143,7 @@
     ]
   },
   {
-     "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+     "statements":"SELECT ARRAY_COUNT(array_agg(LENGTH(custId))) FROM orders WHERE test_id=\"array_func\"",
      "results": [
         {
             "$1": 4
@@ -151,7 +151,7 @@
     ]
   },
   {
-    "statements":"SELECT array_concat(array_agg(LENGTH(custId)),[16,18,54]) FROM orders WHERE test_id=\"array_func\" ORDER BY custId",
+    "statements":"SELECT array_concat(array_agg(LENGTH(custId)),[16,18,54]) FROM orders WHERE test_id=\"array_func\"",
      "results": [
         {
             "$1": [
@@ -168,7 +168,7 @@
   },
  {
    "description":"Distinct gives inconsistent results, hence sort",
-   "statements":"SELECT array_sort(array_distinct(array_concat(array_agg(LENGTH(custId)),[16,18,54]))) FROM orders WHERE test_id=\"array_func\" ORDER BY id",
+   "statements":"SELECT array_sort(array_distinct(array_concat(array_agg(LENGTH(custId)),[16,18,54]))) FROM orders WHERE test_id=\"array_func\"",
    "results": [
         {
             "$1": [
@@ -183,7 +183,7 @@
  },
  {
    "description":"Output before Distinct",
-   "statements":"select array_sort(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"])) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+   "statements":"select array_sort(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"])) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
    "results": [
         {
             "A": [
@@ -217,7 +217,7 @@
  },
  { 
    "description":"Distinct gives inconsistent results, hence sort",
-   "statements":" select array_sort(ARRAY_DISTINCT(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"]))) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A ",
+   "statements":" select array_sort(ARRAY_DISTINCT(ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [\"coffee01\"]))) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
    "results": [
         {
             "A": [

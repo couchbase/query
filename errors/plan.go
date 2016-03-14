@@ -85,3 +85,10 @@ func NewNoIndexJoinError(alias, op string) Error {
 	return &err{level: EXCEPTION, ICode: NO_INDEX_JOIN, IKey: fmt.Sprintf("plan.index_%s.no_index", op),
 		InternalMsg: fmt.Sprintf("No index available for join term %s", alias), InternalCaller: CallerN(1)}
 }
+
+const NOT_GROUP_KEY_OR_AGG = 4210
+
+func NewNotGroupKeyOrAggError(expr string) Error {
+	return &err{level: EXCEPTION, ICode: NOT_GROUP_KEY_OR_AGG, IKey: "plan.not_group_key_or_agg",
+		InternalMsg: fmt.Sprintf("Expression must be a group key or aggregate: %s", expr), InternalCaller: CallerN(1)}
+}
