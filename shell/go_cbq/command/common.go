@@ -26,7 +26,6 @@ var (
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"histfile": Stack_Helper(),
-		"wordwrap": Stack_Helper(),
 		//"limit":    Stack_Helper(),
 		//"autoconfig": Stack_Helper(),
 	}
@@ -48,13 +47,6 @@ func init() {
 	//var werr error
 
 	err_code, err_str = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
-	if err_code != 0 {
-		s_err := HandleError(err_code, err_str)
-		PrintError(s_err)
-
-	}
-
-	err_code, err_str = PushValue_Helper(false, PreDefSV, "wordwrap", "true")
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
@@ -449,12 +441,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			} else {
 				HISTFILE = args[1]
 			}
-		}
-
-		if vble == "wordwrap" {
-			//Valid values are true and false.
-			//If these are not boolean values, wordwrap will retain its original value.
-			//TODO
 		}
 
 		if err_code != 0 {
