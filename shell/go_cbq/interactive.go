@@ -17,7 +17,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	"github.com/sbinet/liner"
+	"github.com/peterh/liner"
 )
 
 /* The following values define the query prompt for cbq.
@@ -63,24 +63,18 @@ func HandleInteractiveMode(prompt string) {
 		command.SetWriter(io.Writer(outputFile))
 	}
 
-	/* Find the HOME environment variable. If it isnt set then
-	   try USERPROFILE for windows. If neither is found then
-	   the cli cant find the history file to read from.
-	*/
-	homeDir = os.Getenv("HOME")
-	if homeDir == "" {
-		homeDir = os.Getenv("USERPROFILE")
-		if homeDir == "" {
-			_, werr := io.WriteString(command.W, "Unable to determine home directory, history file disabled\n")
-			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-				command.PrintError(s_err)
-			}
-		}
+	// Find the HOME environment variable using GetHome
+	var err_code = 0
+	var err_str = ""
+	homeDir, err_code, err_str = command.GetHome()
+	if err_code != 0 {
+		s_err := command.HandleError(err_code, err_str)
+		command.PrintError(s_err)
 	}
 
 	/* Create a new liner */
 	var liner = liner.NewLiner()
+	liner.SetMultiLineMode(true)
 	defer liner.Close()
 
 	/* Load history from Home directory

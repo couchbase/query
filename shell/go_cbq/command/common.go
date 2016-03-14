@@ -12,26 +12,23 @@ package command
 import (
 	"encoding/json"
 	"io"
-	"strconv"
+	"os"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
-	"github.com/sbinet/liner"
 )
-
-//type PtrStrings *[]string
 
 var (
 	QueryParam map[string]*Stack = map[string]*Stack{}
 	NamedParam map[string]*Stack = map[string]*Stack{}
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
-		"limit":      Stack_Helper(),
-		"histfile":   Stack_Helper(),
-		"histsize":   Stack_Helper(),
-		"autoconfig": Stack_Helper(),
+		"histfile": Stack_Helper(),
+		"wordwrap": Stack_Helper(),
+		//"limit":    Stack_Helper(),
+		//"autoconfig": Stack_Helper(),
 	}
 )
 
@@ -57,24 +54,24 @@ func init() {
 
 	}
 
-	err_code, err_str = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "wordwrap", "true")
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
+
 	}
 
-	histlim := int(liner.HistoryLimit)
-	err_code, err_str = PushValue_Helper(false, PreDefSV, "histsize", strconv.Itoa(histlim))
+	/*err_code, err_str = PushValue_Helper(false, PreDefSV, "limit", "0")
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
-	}
+	}*/
 
-	err_code, err_str = PushValue_Helper(false, PreDefSV, "limit", "0")
+	/*err_code, err_str = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
-	}
+	}*/
 }
 
 func SetWriter(Wt io.Writer) {
@@ -386,6 +383,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			if err != nil {
 				return errors.JSON_MARSHAL, ""
 			}
+
 			n1ql.SetQueryParams("creds", string(ac))
 
 		} else {
@@ -427,12 +425,36 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 
+		vble = strings.ToLower(vble)
+
 		args_str := strings.Join(args[1:], " ")
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
 
 		if vble == "histfile" {
-			HISTFILE = args[1]
+			//Verify if the value for histfile is valid.
+			//the path is given is relative to the HOME dir.
+			//dir+"/"+HISTFILE ==>
+
+			homeDir, err_code, err_str := GetHome()
+			if err_code != 0 {
+				return err_code, err_str
+			}
+
+			_, err := os.OpenFile(homeDir+"/"+args[1], os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			//If err then the value for histfile is invalid. Hence return an error.
+			//For this case, the HISTFILE will retain its original value.
+			if err != nil {
+				return errors.FILE_OPEN, err.Error()
+			} else {
+				HISTFILE = args[1]
+			}
+		}
+
+		if vble == "wordwrap" {
+			//Valid values are true and false.
+			//If these are not boolean values, wordwrap will retain its original value.
+			//TODO
 		}
 
 		if err_code != 0 {
@@ -526,4 +548,22 @@ func Ping(server string) error {
 
 	err = db.Ping()
 	return err
+}
+
+/* Find the HOME environment variable. If it isnt set then
+   try USERPROFILE for windows. If neither is found then
+   the cli cant find the history file to read from.
+*/
+func GetHome() (homeDir string, err_code int, err_Str string) {
+	homeDir = os.Getenv("HOME")
+	if homeDir == "" {
+		homeDir = os.Getenv("USERPROFILE")
+		if homeDir == "" {
+			_, werr := io.WriteString(W, "Unable to determine home directory, history file disabled\n")
+			if werr != nil {
+				return "", errors.WRITER_OUTPUT, werr.Error()
+			}
+		}
+	}
+	return homeDir, 0, ""
 }

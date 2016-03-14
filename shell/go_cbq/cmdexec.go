@@ -19,7 +19,7 @@ import (
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	"github.com/sbinet/liner"
+	"github.com/peterh/liner"
 )
 
 /*

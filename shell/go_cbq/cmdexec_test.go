@@ -17,7 +17,7 @@ import (
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	"github.com/sbinet/liner"
+	"github.com/peterh/liner"
 )
 
 var Server = "http://127.0.0.1:8091"

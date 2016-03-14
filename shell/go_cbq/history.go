@@ -12,15 +12,18 @@ package main
 import (
 	"bufio"
 	"os"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/go_cbq/command"
-	"github.com/sbinet/liner"
+	"github.com/peterh/liner"
 )
 
 func LoadHistory(liner *liner.State, dir string) (int, string) {
 	if dir != "" {
+
 		err_code, err_str := ReadHistoryFromFile(liner, dir+"/"+command.HISTFILE)
+
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -32,6 +35,7 @@ func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
 		err_code, err_str := WriteHistoryToFile(liner, dir+"/"+command.HISTFILE)
+
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -83,8 +87,16 @@ func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 
 	reader := bufio.NewReader(f)
 	_, err = liner.ReadHistory(reader)
+
+	//Check for line too long errors. If the line didnt fit into the buffer
+	//then dont report the error
+	if err != nil && strings.Contains(err.Error(), "too long") {
+		err = nil
+	}
+
 	if err != nil {
 		return errors.READ_FILE, err.Error()
 	}
+
 	return 0, ""
 }
