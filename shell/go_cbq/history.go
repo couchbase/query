@@ -22,7 +22,8 @@ import (
 func LoadHistory(liner *liner.State, dir string) (int, string) {
 	if dir != "" {
 
-		err_code, err_str := ReadHistoryFromFile(liner, dir+"/"+command.HISTFILE)
+		path := command.GetPath(dir, command.HISTFILE)
+		err_code, err_str := ReadHistoryFromFile(liner, path)
 
 		if err_code != 0 {
 			return err_code, err_str
@@ -34,7 +35,8 @@ func LoadHistory(liner *liner.State, dir string) (int, string) {
 func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
-		err_code, err_str := WriteHistoryToFile(liner, dir+"/"+command.HISTFILE)
+		path := command.GetPath(dir, command.HISTFILE)
+		err_code, err_str := WriteHistoryToFile(liner, path)
 
 		if err_code != 0 {
 			return err_code, err_str

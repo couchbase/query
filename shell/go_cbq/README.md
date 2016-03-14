@@ -58,8 +58,8 @@ no prefix | Predefined (Built-in) Session Variable
 $ | User Defined Session Variable
 -$ | Named Parameters
 
-#### List of Predefined Parameters : limit, histfile, histsize and auto config.
-TODO :: Autoconfig, limit and Histsize will be implemented post DP.
+#### List of Predefined Parameters : histfile and auto config.
+TODO :: Autoconfig will be implemented post DP.
 
 ### Error Handling
 #### Connection errors (100 - 115)

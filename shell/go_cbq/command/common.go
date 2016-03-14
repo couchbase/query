@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
@@ -26,7 +27,6 @@ var (
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"histfile": Stack_Helper(),
-		//"limit":    Stack_Helper(),
 		//"autoconfig": Stack_Helper(),
 	}
 )
@@ -52,12 +52,6 @@ func init() {
 		PrintError(s_err)
 
 	}
-
-	/*err_code, err_str = PushValue_Helper(false, PreDefSV, "limit", "0")
-	if err_code != 0 {
-		s_err := HandleError(err_code, err_str)
-		PrintError(s_err)
-	}*/
 
 	/*err_code, err_str = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
 	if err_code != 0 {
@@ -433,13 +427,15 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return err_code, err_str
 			}
 
-			_, err := os.OpenFile(homeDir+"/"+args[1], os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			path := GetPath(homeDir, args_str)
+
+			_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			//If err then the value for histfile is invalid. Hence return an error.
 			//For this case, the HISTFILE will retain its original value.
 			if err != nil {
 				return errors.FILE_OPEN, err.Error()
 			} else {
-				HISTFILE = args[1]
+				HISTFILE = path
 			}
 		}
 
@@ -541,15 +537,51 @@ func Ping(server string) error {
    the cli cant find the history file to read from.
 */
 func GetHome() (homeDir string, err_code int, err_Str string) {
-	homeDir = os.Getenv("HOME")
-	if homeDir == "" {
+	//Detect OS using the runtime.GOOS
+	if runtime.GOOS == "windows" {
 		homeDir = os.Getenv("USERPROFILE")
-		if homeDir == "" {
-			_, werr := io.WriteString(W, "Unable to determine home directory, history file disabled\n")
-			if werr != nil {
-				return "", errors.WRITER_OUTPUT, werr.Error()
-			}
+		WINDOWS = true
+	} else {
+		homeDir = os.Getenv("HOME")
+	}
+
+	if homeDir == "" {
+		_, werr := io.WriteString(W, "Unable to determine home directory, history file disabled\n")
+		if werr != nil {
+			return "", errors.WRITER_OUTPUT, werr.Error()
 		}
 	}
 	return homeDir, 0, ""
+}
+
+func GetPath(homeDir, inputPath string) (path string) {
+	//When verifying the path, check to see if input is an absolute path
+	//or not.
+
+	if WINDOWS {
+		//On windows, since there is no way to know if we are providing
+		//the absolute path, try and open the file with and without the
+		//userprofile prefixed to it.
+
+		_, err := os.OpenFile(inputPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			//Prefix the input path with the USERPROFILE. This is a relative path.
+			path = homeDir + "\\" + inputPath
+		} else {
+			path = inputPath
+		}
+
+	} else {
+		if strings.HasPrefix(inputPath, "/") {
+			//This is an absolute path. Hence we need not prefix it with
+			//$HOME
+			path = inputPath
+		} else {
+			//Prefix this with $HOME
+			path = homeDir + "/" + inputPath
+		}
+
+	}
+	return
+
 }

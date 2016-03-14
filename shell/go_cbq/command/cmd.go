@@ -61,6 +61,8 @@ var (
 	MAX_COMMANDS = len(COMMAND_LIST)
 	//File to store History in
 	HISTFILE = ".cbq_history"
+	//Is this running on windows
+	WINDOWS = false
 )
 
 /*
