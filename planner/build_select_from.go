@@ -82,6 +82,9 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		return nil, err
 	}
 
+	this.resetOrderLimit()
+	this.countAgg = nil
+
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 	this.children = append(this.children, sel.(plan.Operator), plan.NewAlias(node.Alias()))
