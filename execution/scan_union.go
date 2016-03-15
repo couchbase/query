@@ -104,8 +104,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		this.notifyScans()
 		this.values = nil
+		this.notifyScans()
 
 		// Await children
 		for ; n > 0; n-- {

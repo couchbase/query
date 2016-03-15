@@ -177,7 +177,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 					ok = this.sendItem(av)
 					docs++
-					if docs > PhaseUpdateCount {
+					if docs > _PHASE_UPDATE_COUNT {
 						context.AddPhaseCount(INDEX_SCAN, docs)
 						docs = 0
 					}

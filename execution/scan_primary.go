@@ -98,7 +98,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 				lastEntry = entry
 				nitems++
 				docs++
-				if docs > PhaseUpdateCount {
+				if docs > _PHASE_UPDATE_COUNT {
 					context.AddPhaseCount(PRIMARY_SCAN, docs)
 					docs = 0
 				}

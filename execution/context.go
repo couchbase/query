@@ -43,11 +43,11 @@ func (phase Phases) String() string {
 var _PHASE_NAMES = []string{
 	FETCH:        "Fetch",
 	INDEX_SCAN:   "IndexScan",
-	PRIMARY_SCAN: "IndexScan",
+	PRIMARY_SCAN: "PrimaryScan",
 	SORT:         "Sort",
 }
 
-const PhaseUpdateCount uint64 = 100
+const _PHASE_UPDATE_COUNT uint64 = 100
 
 type Output interface {
 	Result(item value.Value) bool
