@@ -30,20 +30,21 @@ import (
 )
 
 type RequestLogEntry struct {
-	RequestId    string
-	ElapsedTime  time.Duration
-	ServiceTime  time.Duration
-	Statement    string
-	Plan         *plan.Prepared
-	State        string
-	ResultCount  int
-	ResultSize   int
-	ErrorCount   int
-	SortCount    uint64
-	PreparedName string
-	PreparedText string
-	Time         time.Time
-	PhaseTimes   map[string]interface{}
+	RequestId      string
+	ElapsedTime    time.Duration
+	ServiceTime    time.Duration
+	Statement      string
+	Plan           *plan.Prepared
+	State          string
+	ResultCount    int
+	ResultSize     int
+	ErrorCount     int
+	PreparedName   string
+	PreparedText   string
+	Time           time.Time
+	PhaseTimes     map[string]interface{}
+	PhaseCounts    map[string]interface{}
+	PhaseOperators map[string]interface{}
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -109,12 +110,14 @@ func RequestsForeach(f func(string, *RequestLogEntry)) {
 	requestLog.cache.ForEach(dummyF)
 }
 
-func LogRequest(acctstore AccountingStore,
-	request_time time.Duration, service_time time.Duration,
+func LogRequest(request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
-	error_count int, warn_count int, stmt string,
-	sort_count uint64, plan *plan.Prepared,
-	phaseTimes map[string]interface{}, state string, id string) {
+	error_count int, stmt string,
+	plan *plan.Prepared,
+	phaseTimes map[string]interface{},
+	phaseCounts map[string]interface{},
+	phaseOperators map[string]interface{},
+	state string, id string) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
@@ -128,7 +131,6 @@ func LogRequest(acctstore AccountingStore,
 		ResultCount: result_count,
 		ResultSize:  result_size,
 		ErrorCount:  error_count,
-		SortCount:   sort_count,
 		Time:        time.Now(),
 	}
 	if stmt != "" {
@@ -138,8 +140,9 @@ func LogRequest(acctstore AccountingStore,
 		re.PreparedName = plan.Name()
 		re.PreparedText = plan.Text()
 	}
-	if phaseTimes != nil {
-		re.PhaseTimes = phaseTimes
-	}
+	re.PhaseTimes = phaseTimes
+	re.PhaseCounts = phaseCounts
+	re.PhaseOperators = phaseOperators
+
 	requestLog.cache.Add(re, id)
 }

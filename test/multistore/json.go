@@ -175,10 +175,7 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	accounting.LogRequest(this.acctstore, 0, 0, request.resultCount,
-		0, 0, 0, request.Statement(),
-		request.SortCount(), request.Prepared(),
-		nil, string(request.State()), request.Id().String())
+	request.LogRequest(0, 0, request.resultCount, 0, 0)
 }
 
 /*

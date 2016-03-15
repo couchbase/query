@@ -26,6 +26,29 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type Phases int
+
+const (
+	FETCH = Phases(iota)
+	INDEX_SCAN
+	PRIMARY_SCAN
+	SORT
+	PHASES // Sizer
+)
+
+func (phase Phases) String() string {
+	return _PHASE_NAMES[phase]
+}
+
+var _PHASE_NAMES = []string{
+	FETCH:        "Fetch",
+	INDEX_SCAN:   "IndexScan",
+	PRIMARY_SCAN: "IndexScan",
+	SORT:         "Sort",
+}
+
+const PhaseUpdateCount uint64 = 100
+
 type Output interface {
 	Result(item value.Value) bool
 	CloseResults()
@@ -34,8 +57,12 @@ type Output interface {
 	Warning(wrn errors.Error)
 	AddMutationCount(uint64)
 	MutationCount() uint64
-	SetSortCount(uint64)
 	SortCount() uint64
+	SetSortCount(i uint64)
+	AddPhaseOperator(p Phases)
+	AddPhaseCount(p Phases, c uint64)
+	FmtPhaseCounts() map[string]interface{}
+	FmtPhaseOperators() map[string]interface{}
 	AddPhaseTime(phase string, duration time.Duration)
 	PhaseTimes() map[string]time.Duration
 	FmtPhaseTimes() map[string]interface{}
@@ -159,6 +186,14 @@ func (this *Context) SetSortCount(i uint64) {
 
 func (this *Context) SortCount() uint64 {
 	return this.output.SortCount()
+}
+
+func (this *Context) AddPhaseOperator(p Phases) {
+	this.output.AddPhaseOperator(p)
+}
+
+func (this *Context) AddPhaseCount(p Phases, c uint64) {
+	this.output.AddPhaseCount(p, c)
 }
 
 func (this *Context) AddPhaseTime(phase string, duration time.Duration) {

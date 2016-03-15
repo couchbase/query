@@ -5,33 +5,30 @@
 	]
 	},
 	{
-	"statements": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests",
+	"statements": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests",
 	"results": [
         {
             "ErrorCount": 0,
             "ResultCount": 0,
             "ResultSize": 0,
-            "SortCount": 0,
             "Statement": "delete from system:completed_requests"
         }
 	]
 	},
 	{
-	"statements": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests order by Statement",
+	"statements": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests order by Statement",
 	"results": [
         {
             "ErrorCount": 0,
             "ResultCount": 0,
             "ResultSize": 0,
-            "SortCount": 0,
             "Statement": "delete from system:completed_requests"
         },
         {
             "ErrorCount": 0,
             "ResultCount": 1,
             "ResultSize": 0,
-            "SortCount": 0,
-            "Statement": "select ErrorCount, ResultCount, ResultSize, SortCount, Statement from system:completed_requests"
+            "Statement": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests"
         }
 	]
 	}

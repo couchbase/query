@@ -100,6 +100,7 @@ func (this *OrderLimit) Copy() Operator {
 
 func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
+	context.AddPhaseOperator(SORT)
 	this.runConsumer(this, context, parent)
 }
 
@@ -198,6 +199,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 	this.Order.afterItems(context)
 
 	// Set the sort count to the number of processed rows.
+	context.AddPhaseCount(SORT, this.numProcessedRows)
 	context.SetSortCount(this.numProcessedRows)
 }
 

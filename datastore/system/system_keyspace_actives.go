@@ -69,9 +69,17 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair
 		if request.Statement() != "" {
 			item.SetField("Statement", request.Statement())
 		}
-		t := request.Output().FmtPhaseTimes()
-		if t != nil {
-			item.SetField("PhaseTimes", t)
+		p := request.Output().FmtPhaseTimes()
+		if p != nil {
+			item.SetField("PhaseTimes", p)
+		}
+		p = request.Output().FmtPhaseCounts()
+		if p != nil {
+			item.SetField("PhaseCounts", p)
+		}
+		p = request.Output().FmtPhaseOperators()
+		if p != nil {
+			item.SetField("PhaseOperators", p)
 		}
 		if request.Prepared() != nil {
 			p := request.Prepared()

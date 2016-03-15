@@ -50,6 +50,7 @@ func (this *IndexScan) Copy() Operator {
 
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		context.AddPhaseOperator(INDEX_SCAN)
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
@@ -137,6 +138,15 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 		var entry *datastore.IndexEntry
 		ok := true
+		var docs uint64 = 0
+
+		var countDocs = func() {
+			if docs > 0 {
+				context.AddPhaseCount(INDEX_SCAN, docs)
+			}
+		}
+		defer countDocs()
+
 		for ok {
 			select {
 			case <-this.stopChannel:
@@ -166,6 +176,11 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 					}
 
 					ok = this.sendItem(av)
+					docs++
+					if docs > PhaseUpdateCount {
+						context.AddPhaseCount(INDEX_SCAN, docs)
+						docs = 0
+					}
 				}
 
 			case <-this.stopChannel:

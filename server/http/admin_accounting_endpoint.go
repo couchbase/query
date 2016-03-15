@@ -216,9 +216,17 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
 
-		t := request.Output().FmtPhaseTimes
-		if t != nil {
-			reqMap["phaseTimes"] = t
+		p := request.Output().FmtPhaseTimes()
+		if p != nil {
+			reqMap["phaseTimes"] = p
+		}
+		p = request.Output().FmtPhaseCounts()
+		if p != nil {
+			reqMap["phaseCounts"] = p
+		}
+		p = request.Output().FmtPhaseOperators()
+		if p != nil {
+			reqMap["phaseOperators"] = p
 		}
 
 		// FIXME more stats
@@ -304,7 +312,6 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["resultCount"] = request.ResultCount
 		requests[i]["resultSize"] = request.ResultSize
 		requests[i]["errorCount"] = request.ErrorCount
-		requests[i]["sortCount"] = request.SortCount
 		if request.PhaseTimes != nil {
 			requests[i]["phaseTimes"] = request.PhaseTimes
 		}

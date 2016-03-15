@@ -45,6 +45,7 @@ func (this *PrimaryScan) Copy() Operator {
 
 func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
+		context.AddPhaseOperator(PRIMARY_SCAN)
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
@@ -73,6 +74,13 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	ok := true
 	nitems := 0
 
+	var docs uint64 = 0
+	defer func() {
+		if docs > 0 {
+			context.AddPhaseCount(PRIMARY_SCAN, docs)
+		}
+	}()
+
 	for ok {
 		select {
 		case <-this.stopChannel:
@@ -89,6 +97,11 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 				ok = this.sendItem(av)
 				lastEntry = entry
 				nitems++
+				docs++
+				if docs > PhaseUpdateCount {
+					context.AddPhaseCount(PRIMARY_SCAN, docs)
+					docs = 0
+				}
 			}
 
 		case <-this.stopChannel:

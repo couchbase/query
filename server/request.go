@@ -15,6 +15,7 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -67,6 +68,7 @@ type Request interface {
 	Execute(server *Server, signature value.Value, notifyStop chan bool)
 	Failed(server *Server)
 	Expire(state State)
+	SortCount() uint64
 	State() State
 	Credentials() datastore.Credentials
 	SetTimings(p plan.Operator)
@@ -147,6 +149,7 @@ type BaseRequest struct {
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
 	phaseTimes     map[string]time.Duration
+	phaseStats     []phaseStat
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -162,6 +165,11 @@ type BaseRequest struct {
 
 type requestIDImpl struct {
 	id string
+}
+
+type phaseStat struct {
+	count     atomic.AlignedUint64
+	operators atomic.AlignedUint64
 }
 
 // requestIDImpl implements the RequestID interface
@@ -219,6 +227,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	if logging.LogLevel() >= logging.TRACE {
 		rv.phaseTimes = make(map[string]time.Duration, 8)
 	}
+	rv.phaseStats = make([]phaseStat, execution.PHASES)
 
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
@@ -400,6 +409,44 @@ func (this *BaseRequest) SortCount() uint64 {
 	return atomic.LoadUint64(&this.sortCount)
 }
 
+func (this *BaseRequest) AddPhaseCount(p execution.Phases, c uint64) {
+	atomic.AddUint64(&this.phaseStats[p].count, c)
+}
+
+func (this *BaseRequest) AddPhaseOperator(p execution.Phases) {
+	atomic.AddUint64(&this.phaseStats[p].operators, 1)
+}
+
+func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
+	var p map[string]interface{} = nil
+
+	for k, d := range this.phaseStats {
+		if d.count > 0 {
+			if p == nil {
+				p = make(map[string]interface{},
+					execution.PHASES)
+			}
+			p[execution.Phases(k).String()] = d.count
+		}
+	}
+	return p
+}
+
+func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
+	var p map[string]interface{} = nil
+
+	for k, d := range this.phaseStats {
+		if d.operators > 0 {
+			if p == nil {
+				p = make(map[string]interface{},
+					execution.PHASES)
+			}
+			p[execution.Phases(k).String()] = d.operators
+		}
+	}
+	return p
+}
+
 func (this *BaseRequest) AddPhaseTime(phase string, duration time.Duration) {
 	if this.phaseTimes == nil {
 		return
@@ -474,6 +521,15 @@ func (this *BaseRequest) Stop(state State) {
 
 func (this *BaseRequest) Close() {
 	sendStop(this.closeNotify)
+}
+
+func (this *BaseRequest) LogRequest(requestTime time.Duration, serviceTime time.Duration,
+	resultCount int, resultSize int, errorCount int) {
+	accounting.LogRequest(requestTime, serviceTime, resultCount,
+		resultSize, errorCount, this.Statement(),
+		this.Prepared(), this.FmtPhaseTimes(),
+		this.FmtPhaseCounts(), this.FmtPhaseOperators(),
+		string(this.State()), this.Id().String())
 }
 
 func sendStop(ch chan bool) {

@@ -64,7 +64,6 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 			"ResultCount": entry.ResultCount,
 			"ResultSize":  entry.ResultSize,
 			"ErrorCount":  entry.ErrorCount,
-			"SortCount":   entry.SortCount,
 			"Time":        entry.Time.String(),
 		})
 		if entry.Statement != "" {
@@ -76,6 +75,12 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 		}
 		if entry.PhaseTimes != nil {
 			item.SetField("PhaseTimes", entry.PhaseTimes)
+		}
+		if entry.PhaseCounts != nil {
+			item.SetField("PhaseCounts", entry.PhaseCounts)
+		}
+		if entry.PhaseOperators != nil {
+			item.SetField("PhaseOperators", entry.PhaseOperators)
 		}
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": id,

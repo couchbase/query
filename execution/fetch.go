@@ -21,8 +21,9 @@ import (
 
 type Fetch struct {
 	base
-	plan      *plan.Fetch
-	batchSize int
+	plan       *plan.Fetch
+	batchSize  int
+	fetchCount uint64
 }
 
 func NewFetch(plan *plan.Fetch) *Fetch {
@@ -41,20 +42,30 @@ func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Fetch) Copy() Operator {
-	return &Fetch{this.base.copy(), this.plan, this.batchSize}
+	return &Fetch{this.base.copy(), this.plan, this.batchSize, 0}
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
+	context.AddPhaseOperator(FETCH)
 	this.runConsumer(this, context, parent)
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatchSize(item, this, this.batchSize, context)
+	ok := this.enbatchSize(item, this, this.batchSize, context)
+	if ok {
+		this.fetchCount++
+		if this.fetchCount >= uint64(this.batchSize) {
+			context.AddPhaseCount(FETCH, this.fetchCount)
+			this.fetchCount = 0
+		}
+	}
+	return ok
 }
 
 func (this *Fetch) afterItems(context *Context) {
 	this.flushBatch(context)
 	context.SetSortCount(0)
+	context.AddPhaseCount(FETCH, this.fetchCount)
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {

@@ -55,6 +55,7 @@ func (this *Order) Copy() Operator {
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
 	defer this.releaseValues()
+	context.AddPhaseOperator(SORT)
 	this.runConsumer(this, context, parent)
 }
 
@@ -93,6 +94,7 @@ func (this *Order) afterItems(context *Context) {
 	this.plan.AddTime(t)
 
 	context.SetSortCount(uint64(this.Len()))
+	context.AddPhaseCount(SORT, uint64(this.Len()))
 
 	for _, av := range this.values {
 		if !this.sendItem(av) {

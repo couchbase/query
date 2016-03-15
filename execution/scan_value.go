@@ -48,6 +48,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		pairs := this.plan.Values()
+
 		for _, pair := range pairs {
 			key, err := pair.Key.Evaluate(parent, context)
 			if err != nil {

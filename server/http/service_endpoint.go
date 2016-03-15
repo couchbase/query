@@ -207,11 +207,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
 		request.Prepared())
-	accounting.LogRequest(acctstore, request_time, service_time, request.resultCount,
-		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
-		request.SortCount(), request.Prepared(),
-		request.Output().FmtPhaseTimes(),
-		string(request.State()), request.Id().String())
+	request.LogRequest(request_time, service_time, request.resultCount,
+		request.resultSize, request.errorCount)
 }
 
 func ServicePrefix() string {

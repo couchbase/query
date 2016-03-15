@@ -67,7 +67,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 			av := value.NewAnnotatedValue(cv)
 			av.SetAttachment("meta", map[string]interface{}{"id": key})
 			if !this.sendItem(av) {
-				return
+				break
 			}
 		}
 	})

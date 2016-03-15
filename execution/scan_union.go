@@ -79,6 +79,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		var item value.AnnotatedValue
 		n := len(this.scans)
 		ok := true
+
 	loop:
 		for ok {
 			select {
@@ -103,8 +104,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		this.values = nil
 		this.notifyScans()
+		this.values = nil
 
 		// Await children
 		for ; n > 0; n-- {

@@ -82,6 +82,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		n := len(this.scans)
 		stopped := false
 		ok := true
+
 	loop:
 		for ok {
 			select {
