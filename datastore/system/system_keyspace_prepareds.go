@@ -10,6 +10,8 @@
 package system
 
 import (
+	"time"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -56,24 +58,29 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []e
 	rv := make([]datastore.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		p := plan.PreparedEntry(key)
+		plan.PreparedDo(key, func(entry *plan.CacheEntry) {
 
-		itemMap := map[string]interface{}{
-			"name":         key,
-			"uses":         p.Uses,
-			"statement":    p.Text,
-			"encoded_plan": p.Plan,
-		}
-		if p.Uses > 0 {
-			itemMap["lastUse"] = p.LastUse
-		}
-		item := value.NewAnnotatedValue(itemMap)
-		item.SetAttachment("meta", map[string]interface{}{
-			"id": key,
-		})
-		rv = append(rv, datastore.AnnotatedPair{
-			Key:   key,
-			Value: item,
+			itemMap := map[string]interface{}{
+				"name":         key,
+				"uses":         entry.Uses,
+				"statement":    entry.Prepared.Text(),
+				"encoded_plan": entry.Prepared.EncodedPlan(),
+			}
+			if entry.Uses > 0 {
+				itemMap["lastUse"] = entry.LastUse.String()
+				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
+					time.Duration(entry.Uses)).String()
+				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
+					time.Duration(entry.Uses)).String()
+			}
+			item := value.NewAnnotatedValue(itemMap)
+			item.SetAttachment("meta", map[string]interface{}{
+				"id": key,
+			})
+			rv = append(rv, datastore.AnnotatedPair{
+				Key:   key,
+				Value: item,
+			})
 		})
 	}
 	return rv, errs

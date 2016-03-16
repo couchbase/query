@@ -55,41 +55,43 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 	var errs []errors.Error
 	rv := make([]datastore.AnnotatedPair, 0, len(keys))
 
-	accounting.RequestsForeach(func(id string, entry *accounting.RequestLogEntry) {
-		item := value.NewAnnotatedValue(map[string]interface{}{
-			"RequestId":   id,
-			"State":       entry.State,
-			"ElapsedTime": entry.ElapsedTime.String(),
-			"ServiceTime": entry.ServiceTime.String(),
-			"ResultCount": entry.ResultCount,
-			"ResultSize":  entry.ResultSize,
-			"ErrorCount":  entry.ErrorCount,
-			"Time":        entry.Time.String(),
+	for _, key := range keys {
+		accounting.RequestDo(key, func(entry *accounting.RequestLogEntry) {
+			item := value.NewAnnotatedValue(map[string]interface{}{
+				"RequestId":   key,
+				"State":       entry.State,
+				"ElapsedTime": entry.ElapsedTime.String(),
+				"ServiceTime": entry.ServiceTime.String(),
+				"ResultCount": entry.ResultCount,
+				"ResultSize":  entry.ResultSize,
+				"ErrorCount":  entry.ErrorCount,
+				"Time":        entry.Time.String(),
+			})
+			if entry.Statement != "" {
+				item.SetField("Statement", entry.Statement)
+			}
+			if entry.PreparedName != "" {
+				item.SetField("PreparedName", entry.PreparedName)
+				item.SetField("PreparedText", entry.PreparedText)
+			}
+			if entry.PhaseTimes != nil {
+				item.SetField("PhaseTimes", entry.PhaseTimes)
+			}
+			if entry.PhaseCounts != nil {
+				item.SetField("PhaseCounts", entry.PhaseCounts)
+			}
+			if entry.PhaseOperators != nil {
+				item.SetField("PhaseOperators", entry.PhaseOperators)
+			}
+			item.SetAttachment("meta", map[string]interface{}{
+				"id": key,
+			})
+			rv = append(rv, datastore.AnnotatedPair{
+				Key:   key,
+				Value: item,
+			})
 		})
-		if entry.Statement != "" {
-			item.SetField("Statement", entry.Statement)
-		}
-		if entry.PreparedName != "" {
-			item.SetField("PreparedName", entry.PreparedName)
-			item.SetField("PreparedText", entry.PreparedText)
-		}
-		if entry.PhaseTimes != nil {
-			item.SetField("PhaseTimes", entry.PhaseTimes)
-		}
-		if entry.PhaseCounts != nil {
-			item.SetField("PhaseCounts", entry.PhaseCounts)
-		}
-		if entry.PhaseOperators != nil {
-			item.SetField("PhaseOperators", entry.PhaseOperators)
-		}
-		item.SetAttachment("meta", map[string]interface{}{
-			"id": id,
-		})
-		rv = append(rv, datastore.AnnotatedPair{
-			Key:   id,
-			Value: item,
-		})
-	})
+	}
 	return rv, errs
 }
 

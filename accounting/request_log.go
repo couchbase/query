@@ -83,8 +83,14 @@ func RequestsSetThreshold(threshold int) {
 	requestLog.threshold = time.Duration(threshold)
 }
 
-func RequestsEntry(id string) *RequestLogEntry {
+func RequestEntry(id string) *RequestLogEntry {
 	return requestLog.cache.Get(id, nil).(*RequestLogEntry)
+}
+
+func RequestDo(id string, f func(*RequestLogEntry)) {
+	_ = requestLog.cache.Get(id, func(r interface{}) {
+		f(r.(*RequestLogEntry))
+	})
 }
 
 func RequestDelete(id string) errors.Error {
@@ -95,7 +101,7 @@ func RequestDelete(id string) errors.Error {
 	}
 }
 
-func RequestIds() []string {
+func RequestsIds() []string {
 	return requestLog.cache.Names()
 }
 

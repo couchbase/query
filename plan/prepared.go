@@ -112,16 +112,17 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 
 type preparedCache struct {
 	sync.RWMutex
-	prepareds map[string]*cacheEntry
+	prepareds map[string]*CacheEntry
 }
 
-type cacheEntry struct {
-	prepared *Prepared
-	lastUse  time.Time
-	uses     int32
+type CacheEntry struct {
+	Prepared    *Prepared
+	LastUse     time.Time
+	Uses        int32
+	ServiceTime atomic.AlignedUint64
+	RequestTime atomic.AlignedUint64
 	// FIXME add moving averages, latency
-	// This requires an update method to be called from
-	// server/http/service_endpoint.go:doStats()
+	// This requires the use of metrics
 }
 
 const (
@@ -130,7 +131,7 @@ const (
 )
 
 var cache = &preparedCache{
-	prepareds: make(map[string]*cacheEntry, _CACHE_SIZE),
+	prepareds: make(map[string]*CacheEntry, _CACHE_SIZE),
 }
 
 func (this *preparedCache) get(name value.Value, track bool) *Prepared {
@@ -142,10 +143,10 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 	rv := this.prepareds[name.Actual().(string)]
 	if rv != nil {
 		if track {
-			atomic.AddInt32(&rv.uses, 1)
-			rv.lastUse = time.Now()
+			atomic.AddInt32(&rv.Uses, 1)
+			rv.LastUse = time.Now()
 		}
-		return rv.prepared
+		return rv.Prepared
 	}
 	return nil
 }
@@ -153,10 +154,10 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 func (this *preparedCache) add(prepared *Prepared) {
 	this.Lock()
 	if len(this.prepareds) > _MAX_SIZE {
-		this.prepareds = make(map[string]*cacheEntry, _CACHE_SIZE)
+		this.prepareds = make(map[string]*CacheEntry, _CACHE_SIZE)
 	}
-	this.prepareds[prepared.Name()] = &cacheEntry{
-		prepared: prepared,
+	this.prepareds[prepared.Name()] = &CacheEntry{
+		Prepared: prepared,
 	}
 	this.Unlock()
 }
@@ -165,7 +166,7 @@ func (this *preparedCache) peek(prepared *Prepared) bool {
 	this.RLock()
 	cached := this.prepareds[prepared.Name()]
 	this.RUnlock()
-	if cached != nil && cached.prepared.Text() != prepared.Text() {
+	if cached != nil && cached.Prepared.Text() != prepared.Text() {
 		return true
 	}
 	return false
@@ -185,12 +186,12 @@ func (this *preparedCache) snapshot() []map[string]interface{} {
 	i := 0
 	for _, d := range this.prepareds {
 		data[i] = map[string]interface{}{}
-		data[i]["name"] = d.prepared.Name()
-		data[i]["encoded_plan"] = d.prepared.EncodedPlan()
-		data[i]["statement"] = d.prepared.Text()
-		data[i]["uses"] = d.uses
-		if d.uses > 0 {
-			data[i]["lastUse"] = d.lastUse.String()
+		data[i]["name"] = d.Prepared.Name()
+		data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
+		data[i]["statement"] = d.Prepared.Text()
+		data[i]["uses"] = d.Uses
+		if d.Uses > 0 {
+			data[i]["lastUse"] = d.LastUse.String()
 		}
 		i++
 	}
@@ -203,7 +204,7 @@ func (this *preparedCache) size() int {
 	return len(this.prepareds)
 }
 
-func (this *preparedCache) entry(name string) *cacheEntry {
+func (this *preparedCache) entry(name string) *CacheEntry {
 	this.RLock()
 	defer this.RUnlock()
 	return this.prepareds[name]
@@ -252,10 +253,19 @@ func PreparedEntry(name string) struct {
 		Text    string
 		Plan    string
 	}{
-		Uses:    int(ce.uses),
-		LastUse: ce.lastUse.String(),
-		Text:    ce.prepared.Text(),
-		Plan:    ce.prepared.EncodedPlan(),
+		Uses:    int(ce.Uses),
+		LastUse: ce.LastUse.String(),
+		Text:    ce.Prepared.Text(),
+		Plan:    ce.Prepared.EncodedPlan(),
+	}
+}
+
+func PreparedDo(name string, f func(*CacheEntry)) {
+	cache.RLock()
+	defer cache.RUnlock()
+	ce := cache.prepareds[name]
+	if ce != nil {
+		f(ce)
 	}
 }
 
@@ -311,8 +321,21 @@ func TrackPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	return doGetPrepared(prepared_stmt, true)
 }
 
-func RecordPreparedMetrics(prepared *Prepared) {
-	// TODO
+func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Duration) {
+	if prepared == nil {
+		return
+	}
+	name := prepared.Name()
+	if name == "" {
+		return
+	}
+	cache.RLock()
+	defer cache.RUnlock()
+	ce := cache.prepareds[name]
+	if ce != nil {
+		atomic.AddUint64(&ce.ServiceTime, uint64(serviceTime))
+		atomic.AddUint64(&ce.RequestTime, uint64(requestTime))
+	}
 }
 
 func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
