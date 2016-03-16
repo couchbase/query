@@ -314,31 +314,6 @@ func main() {
 		ServerFlag = ServerFlag + "/"
 	}
 
-	// Check if connection is possible to the input ServerFlag
-	// else failed to connect to.
-
-	pingerr := command.Ping(ServerFlag)
-	SERVICE_URL = ServerFlag
-	command.SERVICE_URL = ServerFlag
-	if pingerr != nil {
-		s_err := command.HandleError(errors.CONNECTION_REFUSED, "")
-		command.PrintError(s_err)
-		ServerFlag = ""
-		command.SERVICE_URL = ""
-		SERVICE_URL = ""
-	}
-
-	/* -quiet : Display Message only if flag not specified
-	 */
-	if !quietFlag && NoQueryService == false && pingerr == nil {
-		s := fmt.Sprintln("Connected to : " + ServerFlag + ". Type Ctrl-D to exit.\n")
-		_, werr := io.WriteString(command.W, s)
-		if werr != nil {
-			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-			command.PrintError(s_err)
-		}
-	}
-
 	/* -user : Accept Admin credentials. Prompt for password and set
 	   the n1ql_creds. Append to creds so that user can also define
 	   bucket credentials using -credentials if they need to.
@@ -438,6 +413,31 @@ func main() {
 			os.Exit(1)
 		}
 		n1ql.SetQueryParams("creds", string(ac))
+	}
+
+	// Check if connection is possible to the input ServerFlag
+	// else failed to connect to.
+
+	pingerr := command.Ping(ServerFlag)
+	SERVICE_URL = ServerFlag
+	command.SERVICE_URL = ServerFlag
+	if pingerr != nil {
+		s_err := command.HandleError(errors.CONNECTION_REFUSED, "")
+		command.PrintError(s_err)
+		ServerFlag = ""
+		command.SERVICE_URL = ""
+		SERVICE_URL = ""
+	}
+
+	/* -quiet : Display Message only if flag not specified
+	 */
+	if !quietFlag && NoQueryService == false && pingerr == nil {
+		s := fmt.Sprintln("Connected to : " + ServerFlag + ". Type Ctrl-D to exit.\n")
+		_, werr := io.WriteString(command.W, s)
+		if werr != nil {
+			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+			command.PrintError(s_err)
+		}
 	}
 
 	if timeoutFlag != "0ms" {
