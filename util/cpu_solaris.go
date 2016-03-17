@@ -7,24 +7,29 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-// +build !windows,!solaris
-
 package util
 
-import (
-	"syscall"
+/*
+#include <string.h>
+#include <errno.h>
+#include <sys/resource.h>
 
+const char *get_error() { return strerror(errno); }
+*/
+import "C"
+
+import (
 	"github.com/couchbase/query/logging"
 )
 
 func CpuTimes() (int64, int64) {
-	ru := syscall.Rusage{}
-	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
-		logging.Errorf(err.Error())
+	ru := C.struct_rusage{}
+	if ret := C.getrusage(C.RUSAGE_SELF, &ru); ret != 0 {
+		logging.Errorf(C.GoString(C.get_error()))
 		return int64(0), int64(0)
 	}
 
-	newUtime := int64(ru.Utime.Nano())
-	newStime := int64(ru.Stime.Nano())
+	newUtime := int64(ru.ru_utime.tv_usec) * 1000
+	newStime := int64(ru.ru_stime.tv_usec) * 1000
 	return newUtime, newStime
 }
