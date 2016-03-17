@@ -81,7 +81,6 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 				}
 			case <-this.childChannel:
 				n--
-				break loop
 			case <-this.stopChannel:
 				break loop
 			}
