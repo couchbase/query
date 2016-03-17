@@ -210,11 +210,6 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 
 	var expr Expression
 	for _, b := range bindings {
-		_, ok := this.allowed.Field(b.Variable())
-		if ok {
-			return nil, fmt.Errorf("Bind alias %s already in scope.", b.Variable())
-		}
-
 		expr, err = this.Map(b.Expression())
 		if err != nil {
 			return nil, err
@@ -232,11 +227,6 @@ func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, e
 Set scope to parent's scope.
 */
 func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
-	parent := sv.Parent()
-	if parent == nil {
-		this.allowed = nil
-	}
-
 	this.allowed = sv.Parent().(*value.ScopeValue)
 }
 
