@@ -171,6 +171,16 @@ func (this Bindings) Expressions() Expressions {
 	return exprs
 }
 
+func (this Bindings) Identifiers() Expressions {
+	exprs := make(Expressions, len(this))
+
+	for i, b := range this {
+		exprs[i] = NewIdentifier(b.variable)
+	}
+
+	return exprs
+}
+
 func (this Bindings) Copy() Bindings {
 	copies := make(Bindings, len(this))
 	for i, b := range this {

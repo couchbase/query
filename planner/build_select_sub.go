@@ -51,10 +51,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// Constrain projection to GROUP keys and aggregates
 	if group != nil {
-		keys := group.By()
+		groupExprs := group.By()
+		letting := group.Letting()
+		if letting != nil {
+			groupExprs = append(groupExprs, letting.Identifiers()...)
+		}
+
 		proj := node.Projection().Expressions()
 		for _, p := range proj {
-			err = constrainGroupProjection(p, p, keys)
+			err = constrainGroupProjection(p, p, groupExprs)
 			if err != nil {
 				return nil, err
 			}
@@ -70,7 +75,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 			ord := this.order.Expressions()
 			for _, o := range ord {
-				err = constrainGroupSort(o, o, keys, aliases)
+				err = constrainGroupSort(o, o, groupExprs, aliases)
 				if err != nil {
 					return nil, err
 				}
@@ -319,13 +324,13 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 	return constraint
 }
 
-func constrainGroupProjection(term, expr expression.Expression, groupKeys expression.Expressions) errors.Error {
+func constrainGroupProjection(term, expr expression.Expression, groupExprs expression.Expressions) errors.Error {
 	if _, ok := expr.(algebra.Aggregate); ok {
 		return nil
 	}
 
-	for _, groupKey := range groupKeys {
-		if expr.EquivalentTo(groupKey) {
+	for _, groupExpr := range groupExprs {
+		if expr.EquivalentTo(groupExpr) {
 			return nil
 		}
 	}
@@ -336,7 +341,7 @@ func constrainGroupProjection(term, expr expression.Expression, groupKeys expres
 	}
 
 	for _, child := range expr.Children() {
-		err := constrainGroupProjection(term, child, groupKeys)
+		err := constrainGroupProjection(term, child, groupExprs)
 		if err != nil {
 			return err
 		}
@@ -345,13 +350,13 @@ func constrainGroupProjection(term, expr expression.Expression, groupKeys expres
 	return nil
 }
 
-func constrainGroupSort(term, expr expression.Expression, groupKeys expression.Expressions, aliases map[string]bool) errors.Error {
+func constrainGroupSort(term, expr expression.Expression, groupExprs expression.Expressions, aliases map[string]bool) errors.Error {
 	if _, ok := expr.(algebra.Aggregate); ok {
 		return nil
 	}
 
-	for _, groupKey := range groupKeys {
-		if expr.EquivalentTo(groupKey) {
+	for _, groupExpr := range groupExprs {
+		if expr.EquivalentTo(groupExpr) {
 			return nil
 		}
 	}
@@ -362,7 +367,7 @@ func constrainGroupSort(term, expr expression.Expression, groupKeys expression.E
 	}
 
 	for _, child := range expr.Children() {
-		err := constrainGroupSort(term, child, groupKeys, aliases)
+		err := constrainGroupSort(term, child, groupExprs, aliases)
 		if err != nil {
 			return err
 		}
