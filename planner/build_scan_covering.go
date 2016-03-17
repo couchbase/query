@@ -87,7 +87,7 @@ outer:
 			return plan.NewDistinctScan(scan), nil
 		} else {
 			// Use DistinctScan to de-dup array index scans
-			for _, sk := range entry.sargKeys {
+			for _, sk := range index.RangeKey() {
 				if isArray, _ := sk.IsArrayIndexKey(); isArray {
 					return plan.NewDistinctScan(scan), nil
 				}

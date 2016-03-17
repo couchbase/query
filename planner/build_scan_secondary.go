@@ -207,7 +207,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 			op = plan.NewDistinctScan(op)
 		} else {
 			// Use DistinctScan to de-dup array index scans
-			for _, sk := range entry.sargKeys {
+			for _, sk := range index.RangeKey() {
 				if isArray, _ := sk.IsArrayIndexKey(); isArray {
 					op = plan.NewDistinctScan(op)
 					break
