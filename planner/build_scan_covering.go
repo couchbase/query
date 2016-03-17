@@ -83,13 +83,13 @@ outer:
 		this.coveringScan = scan
 
 		if len(entry.spans) > 1 {
-			// Use UnionScan to de-dup multiple spans
-			return plan.NewUnionScan(scan), nil
+			// Use DistinctScan to de-dup multiple spans
+			return plan.NewDistinctScan(scan), nil
 		} else {
-			// Use UnionScan to de-dup array index scans
+			// Use DistinctScan to de-dup array index scans
 			for _, sk := range entry.sargKeys {
 				if isArray, _ := sk.IsArrayIndexKey(); isArray {
-					return plan.NewUnionScan(scan), nil
+					return plan.NewDistinctScan(scan), nil
 				}
 			}
 		}

@@ -36,7 +36,7 @@ func (this *StringInterfacePool) Get() map[string]interface{} {
 }
 
 func (this *StringInterfacePool) Put(s map[string]interface{}) {
-	if s == nil || len(s) > this.size {
+	if s == nil || len(s) > 2*this.size {
 		return
 	}
 

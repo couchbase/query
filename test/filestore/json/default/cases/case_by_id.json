@@ -169,40 +169,38 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "UnionScan",
-                            "scans": [
-                                {
-                                    "#operator": "IndexScan",
-                                    "index": "#primary",
-                                    "keyspace": "game",
-                                    "namespace": "default",
-                                    "spans": [
-                                        {
-                                            "Range": {
-                                                "High": [
-                                                    "\"damien\""
-                                                ],
-                                                "Inclusion": 3,
-                                                "Low": [
-                                                    "\"damien\""
-                                                ]
-                                            }
-                                        },
-                                        {
-                                            "Range": {
-                                                "High": [
-                                                    "\"dustin\""
-                                                ],
-                                                "Inclusion": 3,
-                                                "Low": [
-                                                    "\"dustin\""
-                                                ]
-                                            }
+                            "#operator": "DistinctScan",
+                            "scan": {
+                                "#operator": "IndexScan",
+                                "index": "#primary",
+                                "keyspace": "game",
+                                "namespace": "default",
+                                "spans": [
+                                    {
+                                        "Range": {
+                                            "High": [
+                                                "\"damien\""
+                                            ],
+                                            "Inclusion": 3,
+                                            "Low": [
+                                                "\"damien\""
+                                            ]
                                         }
-                                    ],
-                                    "using": "default"
-                                }
-                            ]
+                                    },
+                                    {
+                                        "Range": {
+                                            "High": [
+                                                "\"dustin\""
+                                            ],
+                                            "Inclusion": 3,
+                                            "Low": [
+                                                "\"dustin\""
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "using": "default"
+                            }
                         },
                         {
                             "#operator": "Parallel",
@@ -261,51 +259,49 @@
                     "#operator": "Sequence",
                     "~children": [
                         {
-                            "#operator": "UnionScan",
-                            "scans": [
-                                {
-                                    "#operator": "IndexScan",
-                                    "index": "#primary",
-                                    "keyspace": "game",
-                                    "namespace": "default",
-                                    "spans": [
-                                        {
-                                            "Range": {
-                                                "High": [
-                                                    "\"damien\""
-                                                ],
-                                                "Inclusion": 3,
-                                                "Low": [
-                                                    "\"damien\""
-                                                ]
-                                            }
-                                        },
-                                        {
-                                            "Range": {
-                                                "High": [
-                                                    "\"dustin\""
-                                                ],
-                                                "Inclusion": 3,
-                                                "Low": [
-                                                    "\"dustin\""
-                                                ]
-                                            }
-                                        },
-                                        {
-                                            "Range": {
-                                                "High": [
-                                                    "\"junyi\""
-                                                ],
-                                                "Inclusion": 3,
-                                                "Low": [
-                                                    "\"junyi\""
-                                                ]
-                                            }
+                            "#operator": "DistinctScan",
+                            "scan": {
+                                "#operator": "IndexScan",
+                                "index": "#primary",
+                                "keyspace": "game",
+                                "namespace": "default",
+                                "spans": [
+                                    {
+                                        "Range": {
+                                            "High": [
+                                                "\"damien\""
+                                            ],
+                                            "Inclusion": 3,
+                                            "Low": [
+                                                "\"damien\""
+                                            ]
                                         }
-                                    ],
-                                    "using": "default"
-                                }
-                            ]
+                                    },
+                                    {
+                                        "Range": {
+                                            "High": [
+                                                "\"dustin\""
+                                            ],
+                                            "Inclusion": 3,
+                                            "Low": [
+                                                "\"dustin\""
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "Range": {
+                                            "High": [
+                                                "\"junyi\""
+                                            ],
+                                            "Inclusion": 3,
+                                            "Low": [
+                                                "\"junyi\""
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "using": "default"
+                            }
                         },
                         {
                             "#operator": "Parallel",

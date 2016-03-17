@@ -138,6 +138,15 @@ func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
 	return NewUnionScan(scans), nil
 }
 
+func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
+	scan, err := plan.Scan().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewDistinctScan(scan.(Operator)), nil
+}
+
 // Fetch
 func (this *builder) VisitFetch(plan *plan.Fetch) (interface{}, error) {
 	return NewFetch(plan), nil

@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-type StringIntPool struct {
+type StringBoolPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewStringIntPool(size int) *StringIntPool {
-	rv := &StringIntPool{
+func NewStringBoolPool(size int) *StringBoolPool {
+	rv := &StringBoolPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make(map[string]int, size)
+				return make(map[string]bool, size)
 			},
 		},
 		size: size,
@@ -31,11 +31,11 @@ func NewStringIntPool(size int) *StringIntPool {
 	return rv
 }
 
-func (this *StringIntPool) Get() map[string]int {
-	return this.pool.Get().(map[string]int)
+func (this *StringBoolPool) Get() map[string]bool {
+	return this.pool.Get().(map[string]bool)
 }
 
-func (this *StringIntPool) Put(s map[string]int) {
+func (this *StringBoolPool) Put(s map[string]bool) {
 	if s == nil || len(s) > 2*this.size {
 		return
 	}

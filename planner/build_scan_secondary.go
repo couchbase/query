@@ -203,13 +203,13 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil)
 		if len(entry.spans) > 1 {
-			// Use UnionScan to de-dup multiple spans
-			op = plan.NewUnionScan(op)
+			// Use DistinctScan to de-dup multiple spans
+			op = plan.NewDistinctScan(op)
 		} else {
-			// Use UnionScan to de-dup array index scans
+			// Use DistinctScan to de-dup array index scans
 			for _, sk := range entry.sargKeys {
 				if isArray, _ := sk.IsArrayIndexKey(); isArray {
-					op = plan.NewUnionScan(op)
+					op = plan.NewDistinctScan(op)
 					break
 				}
 			}
@@ -227,7 +227,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
 
-	// If it makes UnionScan don't use index order
+	// If it makes DistinctScan don't use index order
 	if len(entry.spans) > 1 {
 		return false
 	} else {

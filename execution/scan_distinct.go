@@ -13,54 +13,45 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-type UnionScan struct {
+type DistinctScan struct {
 	base
-	scans        []Operator
+	scan         Operator
 	keys         map[string]bool
 	childChannel StopChannel
 }
 
-func NewUnionScan(scans []Operator) *UnionScan {
-	rv := &UnionScan{
+func NewDistinctScan(scan Operator) *DistinctScan {
+	rv := &DistinctScan{
 		base:         newBase(),
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		scan:         scan,
+		childChannel: make(StopChannel, 1),
 	}
 
 	rv.output = rv
 	return rv
 }
 
-func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitUnionScan(this)
+func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitDistinctScan(this)
 }
 
-func (this *UnionScan) Copy() Operator {
-	scans := _SCAN_POOL.Get()
-
-	for i, s := range this.scans {
-		scans[i] = s.Copy()
-	}
-
-	return &UnionScan{
+func (this *DistinctScan) Copy() Operator {
+	return &DistinctScan{
 		base:         this.base.copy(),
-		scans:        scans,
-		childChannel: make(StopChannel, len(scans)),
+		scan:         this.scan.Copy(),
+		childChannel: make(StopChannel, 1),
 	}
 }
 
-func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
+func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() {
-			_SCAN_POOL.Put(this.scans)
-			this.scans = nil
-		}()
 
 		this.keys = _STRING_BOOL_POOL.Get()
 		defer func() {
@@ -68,16 +59,11 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.keys = nil
 		}()
 
-		channel := NewChannel()
-
-		for _, scan := range this.scans {
-			scan.SetParent(this)
-			scan.SetOutput(channel)
-			go scan.RunOnce(context, parent)
-		}
+		this.scan.SetParent(this)
+		go this.scan.RunOnce(context, parent)
 
 		var item value.AnnotatedValue
-		n := len(this.scans)
+		n := 1
 		ok := true
 
 	loop:
@@ -89,40 +75,31 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			select {
-			case item, ok = <-channel.ItemChannel():
+			case item, ok = <-this.scan.ItemChannel():
 				if ok {
 					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
 				n--
+				break loop
 			case <-this.stopChannel:
 				break loop
-			default:
-				if n == 0 {
-					break loop
-				}
 			}
 		}
 
-		notifyChildren(this.scans...)
-
-		// Await children
-		for ; n > 0; n-- {
+		// Await child scan
+		if n > 0 {
+			notifyChildren(this.scan)
 			<-this.childChannel
-		}
-
-		select {
-		case channel.StopChannel() <- false:
-		default:
 		}
 	})
 }
 
-func (this *UnionScan) ChildChannel() StopChannel {
+func (this *DistinctScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *UnionScan) processKey(item value.AnnotatedValue, context *Context) bool {
+func (this *DistinctScan) processKey(item value.AnnotatedValue, context *Context) bool {
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -146,3 +123,5 @@ func (this *UnionScan) processKey(item value.AnnotatedValue, context *Context) b
 	this.keys[key] = true
 	return this.sendItem(item)
 }
+
+var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

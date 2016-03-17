@@ -222,7 +222,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 
 		entry.spans = spans
 		scan := plan.NewIndexScan(index, node, spans, false, nil, nil)
-		return plan.NewUnionScan(scan), unnest, nil
+		return plan.NewDistinctScan(scan), unnest, nil
 	}
 }
 
@@ -255,7 +255,7 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 
 	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers)
 	this.coveringScan = scan
-	return plan.NewUnionScan(scan), nil
+	return plan.NewDistinctScan(scan), nil
 }
 
 var _UNNEST_POOL = algebra.NewUnnestPool(8)
