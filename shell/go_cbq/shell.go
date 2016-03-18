@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"path/filepath"
@@ -329,13 +328,7 @@ func main() {
 			err = nil
 		} else {
 			// If no -p option then prompt for the password
-			s := fmt.Sprintln("Enter Password: ")
-			_, werr := io.WriteString(command.W, s)
-			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-				command.PrintError(s_err)
-			}
-			password, err = terminal.ReadPassword(0)
+			password, err = promptPassword("Enter Password: ")
 		}
 
 		if err == nil {
