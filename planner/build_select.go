@@ -41,6 +41,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.delayProjection = true
 		this.cover = stmt
 	} else {
+		this.delayProjection = false
 		this.cover = nil
 	}
 
