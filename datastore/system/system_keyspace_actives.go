@@ -66,6 +66,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair
 			"ExecutionTime": time.Since(request.ServiceTime()).String(),
 			"State":         request.State(),
 		})
+		cId := request.ClientID().String()
+		if cId != "" {
+			item.SetField("ClientContextID", cId)
+		}
 		if request.Statement() != "" {
 			item.SetField("Statement", request.Statement())
 		}

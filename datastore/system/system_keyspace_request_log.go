@@ -67,6 +67,9 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 				"ErrorCount":  entry.ErrorCount,
 				"Time":        entry.Time.String(),
 			})
+			if entry.ClientId != "" {
+				item.SetField("ClientContextID", entry.ClientId)
+			}
 			if entry.Statement != "" {
 				item.SetField("Statement", entry.Statement)
 			}

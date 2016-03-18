@@ -203,6 +203,10 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		request, _ := endpoint.actives.Get(requestId)
 		reqMap := map[string]interface{}{}
 		reqMap["requestId"] = request.Id().String()
+		cId := request.ClientID().String()
+		if cId != "" {
+			reqMap["request.clientContextID"] = cId
+		}
 		if request.Statement() != "" {
 			reqMap["request.statement"] = request.Statement()
 		}
@@ -229,7 +233,6 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			reqMap["phaseOperators"] = p
 		}
 
-		// FIXME more stats
 		return reqMap, nil
 	case "DELETE":
 		if endpoint.actives.Delete(requestId, true) {
@@ -259,6 +262,10 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.Id().String()
+		cId := request.ClientID().String()
+		if cId != "" {
+			requests[i]["request.clientContextID"] = cId
+		}
 		if request.Statement() != "" {
 			requests[i]["request.statement"] = request.Statement()
 		}
@@ -272,11 +279,17 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
 
-		t := request.Output().FmtPhaseTimes()
-		if t != nil {
-			requests[i]["phaseTimes"] = t
-
-			// FIXME more stats
+		p := request.Output().FmtPhaseTimes()
+		if p != nil {
+			requests[i]["phaseTimes"] = p
+		}
+		p = request.Output().FmtPhaseCounts()
+		if p != nil {
+			requests[i]["phaseCounts"] = p
+		}
+		p = request.Output().FmtPhaseOperators()
+		if p != nil {
+			requests[i]["phaseOperators"] = p
 		}
 		i++
 	}
@@ -298,6 +311,9 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		}
 		requests[i] = map[string]interface{}{}
 		requests[i]["requestId"] = request.RequestId
+		if request.ClientId != "" {
+			requests[i]["clientContextID"] = request.ClientId
+		}
 		requests[i]["state"] = request.State
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement

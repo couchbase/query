@@ -31,6 +31,7 @@ import (
 
 type RequestLogEntry struct {
 	RequestId      string
+	ClientId       string
 	ElapsedTime    time.Duration
 	ServiceTime    time.Duration
 	Statement      string
@@ -123,7 +124,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	phaseTimes map[string]interface{},
 	phaseCounts map[string]interface{},
 	phaseOperators map[string]interface{},
-	state string, id string) {
+	state string, id string, clientId string) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
@@ -131,6 +132,7 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 
 	re := &RequestLogEntry{
 		RequestId:   id,
+		ClientId:    clientId,
 		State:       state,
 		ElapsedTime: request_time,
 		ServiceTime: service_time,
