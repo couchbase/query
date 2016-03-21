@@ -90,35 +90,26 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	this.NotifyStop(stopNotify)
 
 	this.setHttpCode(http.StatusOK)
-	_ = this.writePrefix(srvr, signature) &&
-		this.writeResults()
+	this.writePrefix(srvr, signature)
+	stopped := this.writeResults()
 
 	state := this.State()
 	this.writeSuffix(srvr.Metrics(), state)
 	this.writer.noMoreData()
-	if state != server.TIMEOUT && state != server.CLOSED {
-		this.stopAndClose(server.COMPLETED)
-	} else {
+	if stopped {
 		this.Close()
+	} else {
+		this.stopAndClose(server.COMPLETED)
 	}
 }
 
 func (this *httpRequest) Expire(state server.State) {
 	this.Stop(state)
-	this.stopCloseNotifier()
 }
 
 func (this *httpRequest) stopAndClose(state server.State) {
 	this.Stop(state)
-	this.stopCloseNotifier()
 	this.Close()
-}
-
-func (this *httpRequest) stopCloseNotifier() {
-	select {
-	case this.requestNotify <- false:
-	default:
-	}
 }
 
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
@@ -150,6 +141,8 @@ func (this *httpRequest) writeSignature(server_flag bool, signature value.Value)
 		this.writeValue(signature)
 }
 
+// returns true if the request has already been stopped
+// (eg through timeout or delete)
 func (this *httpRequest) writeResults() bool {
 	var item value.Value
 
@@ -159,48 +152,60 @@ func (this *httpRequest) writeResults() bool {
 		case <-this.StopExecute():
 			this.SetState(server.STOPPED)
 			return true
+		case <-this.httpCloseNotify:
+			this.SetState(server.CLOSED)
+			return false
 		default:
 		}
 
 		select {
 		case item, ok = <-this.Results():
-			if ok {
-				if !this.writeResult(item) {
-					this.SetState(server.FATAL)
-					return false
-				}
+			if this.Halted() {
+				return true
+			}
+			if ok && !this.writeResult(item) {
+				return false
 			}
 		case <-this.StopExecute():
 			this.SetState(server.STOPPED)
 			return true
+		case <-this.httpCloseNotify:
+			this.SetState(server.CLOSED)
+			return false
 		}
 	}
 
 	this.SetState(server.COMPLETED)
-	return true
+	return false
 }
 
 func (this *httpRequest) writeResult(item value.Value) bool {
-	var rv bool
+	var success bool
 
 	bytes, err := json.MarshalIndent(item, "        ", "    ")
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
+		this.SetState(server.FATAL)
 		return false
 	}
 
 	if this.resultCount == 0 {
-		rv = this.writeString("\n")
+		success = this.writeString("\n")
 	} else {
-		rv = this.writeString(",\n")
+		success = this.writeString(",\n")
 	}
 
 	this.resultSize += len(bytes)
 	this.resultCount++
 
-	return rv &&
-		this.writeString("        ") &&
-		this.writeString(string(bytes))
+	if success {
+		success = this.writeString("        ") &&
+			this.writeString(string(bytes))
+	}
+	if !success {
+		this.SetState(server.CLOSED)
+	}
+	return success
 }
 
 func (this *httpRequest) writeValue(item value.Value) bool {

@@ -70,6 +70,7 @@ type Request interface {
 	Expire(state State)
 	SortCount() uint64
 	State() State
+	Halted() bool
 	Credentials() datastore.Credentials
 	SetTimings(p plan.Operator)
 	GetTimings() plan.Operator
@@ -340,6 +341,15 @@ func (this *BaseRequest) State() State {
 	this.RLock()
 	defer this.RUnlock()
 	return this.state
+}
+
+func (this *BaseRequest) Halted() bool {
+
+	// we purposly do not take the lock
+	// as this is used repeatedly in Execution()
+	// if we mistakenly report the State as RUNNING,
+	// we'll catch the right state in other places...
+	return this.state != RUNNING
 }
 
 func (this *BaseRequest) Credentials() datastore.Credentials {

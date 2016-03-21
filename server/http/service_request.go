@@ -31,15 +31,15 @@ import (
 
 type httpRequest struct {
 	server.BaseRequest
-	resp          http.ResponseWriter
-	req           *http.Request
-	requestNotify chan bool
-	writer        responseDataManager
-	httpRespCode  int
-	resultCount   int
-	resultSize    int
-	errorCount    int
-	warningCount  int
+	resp            http.ResponseWriter
+	req             *http.Request
+	httpCloseNotify <-chan bool
+	writer          responseDataManager
+	httpRespCode    int
+	resultCount     int
+	resultSize      int
+	errorCount      int
+	warningCount    int
 }
 
 func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
@@ -199,10 +199,9 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		max_parallelism, readonly, metrics, signature, consistency, client_id, creds)
 
 	rv := &httpRequest{
-		BaseRequest:   *base,
-		resp:          resp,
-		req:           req,
-		requestNotify: make(chan bool, 1),
+		BaseRequest: *base,
+		resp:        resp,
+		req:         req,
 	}
 
 	rv.SetTimeout(rv, timeout)
@@ -210,17 +209,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	rv.writer = NewBufferedWriter(rv, bp)
 
 	// Abort if client closes connection; alternatively, return when request completes.
-	closeNotify := resp.(http.CloseNotifier).CloseNotify()
-	closeNotifier := func() {
-		select {
-		case <-closeNotify:
-			rv.Expire(server.CLOSED)
-			return
-		case <-rv.requestNotify:
-			return
-		}
-	}
-	go closeNotifier()
+	rv.httpCloseNotify = resp.(http.CloseNotifier).CloseNotify()
 
 	if err != nil {
 		rv.Fail(err)

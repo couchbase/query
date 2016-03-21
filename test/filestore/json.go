@@ -82,6 +82,8 @@ func (this *MockQuery) stopAndClose(state server.State) {
 	this.Close()
 }
 
+// returns true if the request has already been stopped
+// (eg through timeout or delete)
 func (this *MockQuery) writeResults() bool {
 	var item value.Value
 
@@ -93,14 +95,13 @@ func (this *MockQuery) writeResults() bool {
 			return true
 		default:
 		}
-
 		select {
 		case item, ok = <-this.Results():
-			if ok {
-				if !this.writeResult(item) {
-					this.SetState(server.FATAL)
-					return false
-				}
+			if this.Halted() {
+				return false
+			}
+			if ok && !this.writeResult(item) {
+				return false
 			}
 		case <-this.StopExecute():
 			this.SetState(server.STOPPED)
@@ -109,12 +110,13 @@ func (this *MockQuery) writeResults() bool {
 	}
 
 	this.SetState(server.COMPLETED)
-	return true
+	return false
 }
 
 func (this *MockQuery) writeResult(item value.Value) bool {
 	bytes, err := json.Marshal(item)
 	if err != nil {
+		this.SetState(server.FATAL)
 		panic(err.Error())
 	}
 
