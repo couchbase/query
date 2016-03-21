@@ -149,6 +149,27 @@ func (this *Merge) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
+func (this *Merge) mergeSendItem(op Operator, item value.AnnotatedValue) bool {
+	t := time.Now()
+	addTime := func() {
+		this.chanTime += time.Since(t)
+	}
+	defer addTime()
+
+	select {
+	case <-this.stopChannel: // Never closed
+		return false
+	default:
+	}
+
+	select {
+	case op.Input().ItemChannel() <- item:
+		return true
+	case <-this.stopChannel: // Never closed
+		return false
+	}
+}
+
 func (this *Merge) processMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
 	kv, e := this.plan.Key().Evaluate(item, context)
@@ -185,16 +206,16 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
-			update.Input().ItemChannel() <- item
+			fetchOk = this.mergeSendItem(update, item) && fetchOk
 		}
 
 		if delete != nil {
-			delete.Input().ItemChannel() <- item
+			fetchOk = this.mergeSendItem(delete, item) && fetchOk
 		}
 	} else {
 		// Not matched; INSERT
 		if insert != nil {
-			insert.Input().ItemChannel() <- item
+			fetchOk = this.mergeSendItem(insert, item) && fetchOk
 		}
 	}
 
