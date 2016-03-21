@@ -108,6 +108,9 @@ func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
 
 	// Attempt authorization with the cluster
 	configstore := this.server.ConfigurationStore()
+	if configstore == nil {
+		return errors.NewAdminAuthError(nil, "Failed to connect to Configuration Store")
+	}
 	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
 	authErr := configstore.Authorize(creds, sslPrivs)
 	if authErr != nil {
