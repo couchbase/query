@@ -1,0 +1,209 @@
+[
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (ivw) WHERE ANY v IN b SATISFIES ( ANY w IN v SATISFIES w > 3 END ) END and type=\"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "ivw",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "3"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(any `v` in (`product`.`b`) satisfies any `w` in `v` satisfies (3 \u003c `w`) end end and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (ivw) WHERE ANY v IN b SATISFIES ( ANY w IN v SATISFIES w \u003e 3 END ) END and type=\"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT * FROM product use index (ivw) UNNEST b AS v UNNEST v AS w WHERE w > 3 and product.type=\"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "index": "ivw",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "3"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Fetch",
+                                    "keyspace": "product",
+                                    "namespace": "default"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "v",
+                                    "expr": "(`product`.`b`)"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "w",
+                                    "expr": "`v`"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((3 \u003c `w`) and ((`product`.`type`) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "self",
+                                            "star": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT * FROM product use index (ivw) UNNEST b AS v UNNEST v AS w WHERE w \u003e 3 and product.type=\"coveredIndex\""
+        }
+    ]
+    },
+    {
+        "statements":"EXPLAIN SELECT product.b FROM product use index (cover_ivw) UNNEST b AS v UNNEST v AS w WHERE w > 3 and product.type=\"coveredIndex\"",
+        "results": [
+        {
+            "plan": {
+                "#operator": "Sequence",
+                "~children": [
+                    {
+                        "#operator": "DistinctScan",
+                        "scan": {
+                            "#operator": "IndexScan",
+                            "covers": [
+                                "cover ((distinct (array (distinct (array `w` for `w` in `v` end)) for `v` in (`product`.`b`) end)))",
+                                "cover ((`product`.`b`))",
+                                "cover ((`product`.`type`))",
+                                "cover ((meta(`product`).`id`))"
+                            ],
+                            "index": "cover_ivw",
+                            "keyspace": "product",
+                            "namespace": "default",
+                            "spans": [
+                                {
+                                    "Range": {
+                                        "Inclusion": 0,
+                                        "Low": [
+                                            "3"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "using": "gsi"
+                        }
+                    },
+                    {
+                        "#operator": "Parallel",
+                        "~child": {
+                            "#operator": "Sequence",
+                            "~children": [
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "v",
+                                    "expr": "cover ((`product`.`b`))"
+                                },
+                                {
+                                    "#operator": "Unnest",
+                                    "as": "w",
+                                    "expr": "`v`"
+                                },
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "((3 \u003c `w`) and (cover ((`product`.`type`)) = \"coveredIndex\"))"
+                                },
+                                {
+                                    "#operator": "InitialProject",
+                                    "result_terms": [
+                                        {
+                                            "expr": "cover ((`product`.`b`))"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "#operator": "FinalProject"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "text": "SELECT product.b FROM product use index (cover_ivw) UNNEST b AS v UNNEST v AS w WHERE w \u003e 3 and product.type=\"coveredIndex\""
+        }
+    ]
+    }
+]
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export NS_SERVER_CBAUTH_URL=
+export NS_SERVER_CBAUTH_USER=
+export NS_SERVER_CBAUTH_PWD=
+export NS_SERVER_CBAUTH_RPC_URL=
+export CBAUTH_REVRPC_URL=
+export GSI_TEST=
