@@ -71,6 +71,17 @@ func (this *Like) Evaluate(item value.Value, context Context) (value.Value, erro
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For LIKE, simply list this expression.
+*/
+func (this *Like) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 This method evaluates the between comparison operation and returns a
 value representing if first value is LIKE the second. If either of
 the input operands is MISSING or NULL, return MISSING or NULL.

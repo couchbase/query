@@ -10,13 +10,7 @@
 package expression
 
 /*
-This function returns a Function that represents the
-greater comparison expression. It is implemented using
-the NewLT function with its input operand expressions
-switched. (The first greater than the second operand is
-the same as the second less than the first operand.)
-NewLT implements a function thatn represents the less
-than comparison expression.
+Function implementing greater than.
 */
 func NewGT(first, second Expression) Function {
 	return NewLT(second, first)

@@ -57,6 +57,20 @@ func (this *And) Evaluate(item value.Value, context Context) (value.Value, error
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For AND, simply cumulate the implicit covers of each child operand.
+*/
+func (this *And) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	for _, op := range this.operands {
+		covers = op.FilterCovers(covers)
+	}
+
+	return covers
+}
+
+/*
 Range over input arguments, for all types other than missing and null,
 if the truth value of the argument is false, then return false. If
 the type is missing, return missing, and if null return null. If all

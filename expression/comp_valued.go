@@ -65,6 +65,17 @@ func (this *IsValued) PropagatesNull() bool {
 	return false
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsValued, simply list this expression.
+*/
+func (this *IsValued) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.NULL, value.MISSING:
@@ -113,6 +124,17 @@ func (this *IsNotValued) PropagatesMissing() bool {
 
 func (this *IsNotValued) PropagatesNull() bool {
 	return false
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsNotValued, simply list this expression.
+*/
+func (this *IsNotValued) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, error) {

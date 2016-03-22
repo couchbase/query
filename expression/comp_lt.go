@@ -59,6 +59,17 @@ func (this *LT) Evaluate(item value.Value, context Context) (value.Value, error)
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For LT, simply list this expression.
+*/
+func (this *LT) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *LT) Apply(context Context, first, second value.Value) (value.Value, error) {
 	cmp := first.Compare(second)
 	switch actual := cmp.Actual().(type) {

@@ -57,6 +57,17 @@ func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For EXISTS, simply list this expression.
+*/
+func (this *Exists) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 This method returns true if he value is an array and contains at least one element.
 This is done by checking the length of the array. If the type of input value
 is missing then return a missing value, and for all other types return null.

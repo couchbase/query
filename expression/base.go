@@ -186,6 +186,10 @@ func (this *ExpressionBase) PropagatesNull() bool {
 	return true
 }
 
+/*
+Indicates if this expression is equivalent to the other expression.
+False negatives are allowed. Used in index selection.
+*/
 func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true
@@ -211,6 +215,10 @@ func (this *ExpressionBase) EquivalentTo(other Expression) bool {
 	return true
 }
 
+/*
+Indicates if this expression depends on the other expression.  False
+negatives are allowed. Used in index selection.
+*/
 func (this *ExpressionBase) DependsOn(other Expression) bool {
 	if this.conditional || other.Value() != nil {
 		return false
@@ -229,6 +237,11 @@ func (this *ExpressionBase) DependsOn(other Expression) bool {
 	return false
 }
 
+/*
+Indicates if this expression is based on the keyspace and is covered
+by the list of expressions; that is, this expression does not depend
+on any stored data beyond the expressions.
+*/
 func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions) bool {
 	for _, expr := range exprs {
 		if this.expr.EquivalentTo(expr) {
@@ -247,8 +260,16 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions) bool {
 }
 
 /*
-Return true if the receiver Expression value and the input
-expression value are equal and not nil; else false.
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+*/
+func (this *ExpressionBase) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	return covers
+}
+
+/*
+Return true if the receiver Expression value and the input expression
+value are equal and not nil; else false.
 */
 func (this *ExpressionBase) ValueEquals(other Expression) bool {
 	thisValue := this.expr.Value()
@@ -268,10 +289,10 @@ func (this *ExpressionBase) SetExpr(expr Expression) {
 }
 
 /*
-Range over the children of the expression, and check if each
-child is limit pushable to index. If not then return false as
-the limit is not pushable to index. If all children are limit
-pushable, then return true.
+Range over the children of the expression, and check if each child is
+limit pushable to index. If not then return false as the limit is not
+pushable to index. If all children are limit pushable, then return
+true.
 */
 func (this *ExpressionBase) IsLimitPushable() bool {
 	for _, child := range this.expr.Children() {

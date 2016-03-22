@@ -57,6 +57,47 @@ func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error)
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For OR, intersect the implicit covers of each child operand.
+*/
+func (this *Or) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	c := _COVERS_POOL.Get()
+	defer _COVERS_POOL.Put(c)
+
+	c = this.operands[0].FilterCovers(c)
+	if len(c) == 0 {
+		return covers
+	}
+
+	for i := 1; i < len(this.operands); i++ {
+		ci := _COVERS_POOL.Get()
+		defer _COVERS_POOL.Put(ci)
+
+		ci = this.operands[i].FilterCovers(ci)
+		if len(ci) == 0 {
+			return covers
+		}
+
+		for s, v := range c {
+			vi, ok := ci[s]
+			if !ok || !v.Equals(vi).Truth() {
+				delete(c, s)
+			}
+		}
+	}
+
+	for s, v := range c {
+		covers[s] = v
+	}
+
+	return covers
+}
+
+var _COVERS_POOL = value.NewStringValuePool(16)
+
+/*
 Range over input arguments, for all types other than missing and null,
 if the truth value of the argument is true, then return true. If
 the type is missing, return missing, and if null return null. If all

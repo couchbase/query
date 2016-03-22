@@ -58,6 +58,17 @@ func (this *Between) Evaluate(item value.Value, context Context) (value.Value, e
 	return this.TernaryEval(this, item, context)
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For Between, simply list this expression.
+*/
+func (this *Between) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *Between) Apply(context Context, item, low, high value.Value) (value.Value, error) {
 	lowCmp := item.Compare(low)
 	if lowCmp.Type() == value.MISSING {

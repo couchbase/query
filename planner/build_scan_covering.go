@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -32,14 +33,32 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 outer:
 	for index, entry := range secondaries {
 		keys := entry.keys
+
+		// Matches execution.spanScan.RunOnce()
 		if !index.IsPrimary() {
-			// Matches execution.spanScan.RunOnce()
 			keys = append(keys, id)
+		}
+
+		// Include covering expression from index WHERE clause
+		coveringExprs := keys
+		var filterCovers map[string]value.Value
+		if entry.cond != nil {
+			filterCovers = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+			coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
+			copy(coveringExprs, keys)
+			for s, _ := range filterCovers {
+				expr, err := parser.Parse(s)
+				if err != nil {
+					return nil, err
+				}
+
+				coveringExprs = append(coveringExprs, expr)
+			}
 		}
 
 		// Use the first available covering index
 		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, keys) {
+			if !expr.CoveredBy(alias, coveringExprs) {
 				continue outer
 			}
 		}
@@ -47,20 +66,6 @@ outer:
 		covers := make(expression.Covers, 0, len(keys))
 		for _, key := range keys {
 			covers = append(covers, expression.NewCover(key))
-		}
-
-		if this.order != nil && !this.useIndexOrder(entry, keys) {
-			this.resetOrderLimit()
-			limit = nil
-		}
-
-		if limit != nil && !pred.CoveredBy(alias, keys) {
-			this.limit = nil
-			limit = nil
-		}
-
-		if this.order != nil {
-			this.maxParallelism = 1
 		}
 
 		if this.countAgg != nil && pred.IsLimitPushable() && len(entry.spans) == 1 {
@@ -73,13 +78,23 @@ outer:
 				}
 
 				if op == nil || (val != nil && val.Type() > value.NULL) {
+					this.maxParallelism = 1
 					this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
 					return this.countScan, nil
 				}
 			}
 		}
 
-		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers)
+		if this.order != nil && !this.useIndexOrder(entry, keys) {
+			this.resetOrderLimit()
+			limit = nil
+		}
+
+		if this.order != nil {
+			this.maxParallelism = 1
+		}
+
+		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
 		this.coveringScan = scan
 
 		if len(entry.spans) > 1 {

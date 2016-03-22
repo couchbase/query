@@ -57,6 +57,17 @@ func (this *Within) Evaluate(item value.Value, context Context) (value.Value, er
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For WITHIN, simply list this expression.
+*/
+func (this *Within) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 WITHIN evaluates to TRUE if the right-hand-side first value contains
 the left-hand-side second value (or name and value) as a child or
 descendant (i.e. directly or indirectly). If either

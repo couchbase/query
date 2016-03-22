@@ -56,6 +56,17 @@ func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error
 	return this.UnaryEval(this, item, context)
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For NOT, simply list this expression.
+*/
+func (this *Not) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL:

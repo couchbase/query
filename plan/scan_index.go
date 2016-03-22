@@ -16,27 +16,31 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 type IndexScan struct {
 	readonly
-	index    datastore.Index
-	term     *algebra.KeyspaceTerm
-	spans    Spans
-	distinct bool
-	limit    expression.Expression
-	covers   expression.Covers
+	index        datastore.Index
+	term         *algebra.KeyspaceTerm
+	spans        Spans
+	distinct     bool
+	limit        expression.Expression
+	covers       expression.Covers
+	filterCovers map[string]value.Value
 }
 
 func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans,
-	distinct bool, limit expression.Expression, covers expression.Covers) *IndexScan {
+	distinct bool, limit expression.Expression, covers expression.Covers,
+	filterCovers map[string]value.Value) *IndexScan {
 	return &IndexScan{
-		index:    index,
-		term:     term,
-		spans:    spans,
-		distinct: distinct,
-		limit:    limit,
-		covers:   covers,
+		index:        index,
+		term:         term,
+		spans:        spans,
+		distinct:     distinct,
+		limit:        limit,
+		covers:       covers,
+		filterCovers: filterCovers,
 	}
 }
 
@@ -72,6 +76,10 @@ func (this *IndexScan) Covers() expression.Covers {
 	return this.covers
 }
 
+func (this *IndexScan) FilterCovers() map[string]value.Value {
+	return this.filterCovers
+}
+
 func (this *IndexScan) Covering() bool {
 	return len(this.covers) > 0
 }
@@ -92,9 +100,14 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
-	if this.covers != nil {
+	if len(this.covers) > 0 {
 		r["covers"] = this.covers
 	}
+
+	if len(this.filterCovers) > 0 {
+		r["filterCovers"] = this.filterCovers
+	}
+
 	if this.duration != 0 {
 		r["#time"] = this.duration.String()
 	}
@@ -104,15 +117,16 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string              `json:"#operator"`
-		Index     string              `json:"index"`
-		Namespace string              `json:"namespace"`
-		Keyspace  string              `json:"keyspace"`
-		Using     datastore.IndexType `json:"using"`
-		Spans     Spans               `json:"spans"`
-		Distinct  bool                `json:"distinct"`
-		Limit     string              `json:"limit"`
-		Covers    []string            `json:"covers"`
+		_            string                 `json:"#operator"`
+		Index        string                 `json:"index"`
+		Namespace    string                 `json:"namespace"`
+		Keyspace     string                 `json:"keyspace"`
+		Using        datastore.IndexType    `json:"using"`
+		Spans        Spans                  `json:"spans"`
+		Distinct     bool                   `json:"distinct"`
+		Limit        string                 `json:"limit"`
+		Covers       []string               `json:"covers"`
+		FilterCovers map[string]value.Value `json:"filterCovers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -150,6 +164,8 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 			this.covers[i] = expression.NewCover(expr)
 		}
 	}
+
+	this.filterCovers = _unmarshalled.FilterCovers
 
 	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {

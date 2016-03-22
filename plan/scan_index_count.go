@@ -27,7 +27,8 @@ type IndexCountScan struct {
 	covers expression.Covers
 }
 
-func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm, spans Spans, covers expression.Covers) *IndexCountScan {
+func NewIndexCountScan(index datastore.CountIndex, term *algebra.KeyspaceTerm,
+	spans Spans, covers expression.Covers) *IndexCountScan {
 	return &IndexCountScan{
 		index:  index,
 		term:   term,
@@ -71,9 +72,11 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
 	r["spans"] = this.spans
-	if this.covers != nil {
+
+	if len(this.covers) > 0 {
 		r["covers"] = this.covers
 	}
+
 	if this.duration != 0 {
 		r["#time"] = this.duration.String()
 	}

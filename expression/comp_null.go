@@ -62,6 +62,17 @@ func (this *IsNull) PropagatesNull() bool {
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsNull, simply list this expression.
+*/
+func (this *IsNull) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 Evaluates the Is Null comparison operation for expressions.
 If the type of input argument is a null value, return true,
 if missing return a missing value and by for all other types
@@ -113,6 +124,17 @@ func (this *IsNotNull) Evaluate(item value.Value, context Context) (value.Value,
 
 func (this *IsNotNull) PropagatesNull() bool {
 	return false
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsNotNull, simply list this expression.
+*/
+func (this *IsNotNull) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *IsNotNull) Apply(context Context, arg value.Value) (value.Value, error) {

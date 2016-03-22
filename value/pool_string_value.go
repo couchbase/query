@@ -7,31 +7,42 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package value
 
 import (
-	"github.com/couchbase/query/expression"
+	"sync"
 )
 
-type subsetOr struct {
-	predicate
+type StringValuePool struct {
+	pool *sync.Pool
+	size int
 }
 
-func newSubsetOr(expr *expression.Or) *subsetOr {
-	rv := &subsetOr{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if expr.EquivalentTo(expr2) {
-			return true, nil
-		}
-
-		for _, child := range expr.Operands() {
-			if !SubsetOf(child, expr2) {
-				return false, nil
-			}
-		}
-
-		return true, nil
+func NewStringValuePool(size int) *StringValuePool {
+	rv := &StringValuePool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make(map[string]Value, size)
+			},
+		},
+		size: size,
 	}
 
 	return rv
+}
+
+func (this *StringValuePool) Get() map[string]Value {
+	return this.pool.Get().(map[string]Value)
+}
+
+func (this *StringValuePool) Put(s map[string]Value) {
+	if s == nil || len(s) > 2*this.size {
+		return
+	}
+
+	for k, _ := range s {
+		delete(s, k)
+	}
+
+	this.pool.Put(s)
 }

@@ -65,6 +65,17 @@ func (this *IsArray) Evaluate(item value.Value, context Context) (value.Value, e
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsArray) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 It returns true if type of the input value is an array value, else false.
 */
 func (this *IsArray) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -135,6 +146,17 @@ receiver, current item and current context.
 */
 func (this *IsAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsAtom) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
@@ -216,6 +238,17 @@ func (this *IsBinary) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsBinary) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 It returns true if type of the input value is a boolean value, else false.
 */
 func (this *IsBinary) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -285,6 +318,17 @@ receiver, current item and current context.
 */
 func (this *IsBoolean) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsBoolean) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*
@@ -360,6 +404,17 @@ func (this *IsNumber) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsNumber) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 It returns true if type of the input value is an number value, else false.
 */
 func (this *IsNumber) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -432,6 +487,17 @@ func (this *IsObject) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsObject) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 It returns true if type of the input value is an object value, else false.
 */
 func (this *IsObject) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -501,6 +567,17 @@ receiver, current item and current context.
 */
 func (this *IsString) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *IsString) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*

@@ -59,6 +59,31 @@ func (this *Eq) Evaluate(item value.Value, context Context) (value.Value, error)
 	return this.BinaryEval(this, item, context)
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For Eq, list either a static value, or this expression.
+*/
+func (this *Eq) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	var static, other Expression
+	if this.Second().Value() != nil {
+		static = this.Second()
+		other = this.First()
+	} else if this.First().Value() != nil {
+		static = this.First()
+		other = this.Second()
+	}
+
+	if static != nil {
+		covers[other.String()] = static.Value()
+		return covers
+	}
+
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *Eq) Apply(context Context, first, second value.Value) (value.Value, error) {
 	return first.Equals(second), nil
 }

@@ -20,6 +20,10 @@ type subsetAnd struct {
 func newSubsetAnd(expr *expression.And) *subsetAnd {
 	rv := &subsetAnd{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
+		if expr.EquivalentTo(expr2) {
+			return true, nil
+		}
+
 		for _, child := range expr.Operands() {
 			if SubsetOf(child, expr2) {
 				return true, nil
@@ -35,6 +39,12 @@ func newSubsetAnd(expr *expression.And) *subsetAnd {
 			}
 
 			return true, nil
+		case *expression.Or:
+			for _, child2 := range expr2.Operands() {
+				if SubsetOf(expr, child2) {
+					return true, nil
+				}
+			}
 		}
 
 		return false, nil

@@ -320,6 +320,17 @@ func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Va
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *ArrayContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 This method checks if the first array value contains the second
 value and returns true; else false. If either of the input
 argument types are missing, then return a missing value. If the

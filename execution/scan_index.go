@@ -159,18 +159,27 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 				if ok {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
+
+					// For downstream Fetch
 					meta := map[string]interface{}{"id": entry.PrimaryKey}
 					av.SetAttachment("meta", meta)
 
 					covers := this.plan.Covers()
 					if len(covers) > 0 {
+						for s, v := range this.plan.FilterCovers() {
+							av.SetCover(s, v)
+						}
+
 						// Matches planner.builder.buildCoveringScan()
 						for i, ek := range entry.EntryKey {
 							av.SetCover(covers[i].Text(), ek)
 						}
 
 						// Matches planner.builder.buildCoveringScan()
-						av.SetCover(covers[len(covers)-1].Text(), value.NewValue(entry.PrimaryKey))
+						if !this.plan.Index().IsPrimary() {
+							av.SetCover(covers[len(entry.EntryKey)].Text(),
+								value.NewValue(entry.PrimaryKey))
+						}
 
 						av.SetField(this.plan.Term().Alias(), av)
 					}

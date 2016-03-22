@@ -74,6 +74,17 @@ func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.V
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *RegexpContains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 This method takes in two values and returns a value that
 corresponds to whether the regular expression (already set
 or populated using the second value) contains the first
@@ -174,6 +185,17 @@ receiver, current item and current context.
 */
 func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *RegexpLike) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 /*

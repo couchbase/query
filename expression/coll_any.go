@@ -112,6 +112,17 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 	return value.NewValue(false), nil
 }
 
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For ANY, simply list this expression.
+*/
+func (this *Any) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
 func (this *Any) Copy() Expression {
 	return NewAny(this.bindings.Copy(), Copy(this.satisfies))
 }

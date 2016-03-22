@@ -67,6 +67,17 @@ func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For boolean functions, simply list this expression.
+*/
+func (this *Contains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 This method takes in two values and returns new value that returns a boolean
 value that depicts if the second value is contained within the first. If
 either of the input values are missing, return a missing value, and if they

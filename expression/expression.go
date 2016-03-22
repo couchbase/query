@@ -140,6 +140,12 @@ type Expression interface {
 	CoveredBy(keyspace string, exprs Expressions) bool
 
 	/*
+	   If this expression is in the WHERE clause of a partial
+	   index, lists the Expressions that are implicitly covered.
+	*/
+	FilterCovers(covers map[string]value.Value) map[string]value.Value
+
+	/*
 	   It is a utility function that returns the children of the
 	   expression. For expression a+b, a and b are the children
 	   of +.

@@ -13,7 +13,9 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -221,7 +223,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 		}
 
 		entry.spans = spans
-		scan := plan.NewIndexScan(index, node, spans, false, nil, nil)
+		scan := plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
 		return plan.NewDistinctScan(scan), unnest, nil
 	}
 }
@@ -239,21 +241,38 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 
 	keys := append(entry.keys, id)
 
-	exprs := this.cover.Expressions()
-	for _, expr := range exprs {
-		if !expr.CoveredBy(alias, keys) {
-			return nil, nil
+	// Include covering expression from index WHERE clause
+	coveringExprs := keys
+	var filterCovers map[string]value.Value
+	if entry.cond != nil {
+		filterCovers = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
+		copy(coveringExprs, keys)
+		for s, _ := range filterCovers {
+			expr, err := parser.Parse(s)
+			if err != nil {
+				return nil, err
+			}
+
+			coveringExprs = append(coveringExprs, expr)
 		}
 	}
 
-	this.resetOrderLimit()
+	exprs := this.cover.Expressions()
+	for _, expr := range exprs {
+		if !expr.CoveredBy(alias, coveringExprs) {
+			return nil, nil
+		}
+	}
 
 	covers := make(expression.Covers, 0, len(keys))
 	for _, key := range keys {
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers)
+	this.resetOrderLimit()
+
+	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers, filterCovers)
 	this.coveringScan = scan
 	return plan.NewDistinctScan(scan), nil
 }

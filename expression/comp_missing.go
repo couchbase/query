@@ -66,6 +66,17 @@ func (this *IsMissing) PropagatesNull() bool {
 }
 
 /*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsMissing, simply list this expression.
+*/
+func (this *IsMissing) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
+}
+
+/*
 Evaluates the Is Missing comparison operation for expressions.
 Return true if the input argument value is a missing value,
 else return false.
@@ -118,6 +129,17 @@ func (this *IsNotMissing) PropagatesMissing() bool {
 
 func (this *IsNotMissing) PropagatesNull() bool {
 	return false
+}
+
+/*
+If this expression is in the WHERE clause of a partial index, lists
+the Expressions that are implicitly covered.
+
+For IsNotMissing, simply list this expression.
+*/
+func (this *IsNotMissing) FilterCovers(covers map[string]value.Value) map[string]value.Value {
+	covers[this.String()] = value.TRUE_VALUE
+	return covers
 }
 
 func (this *IsNotMissing) Apply(context Context, arg value.Value) (value.Value, error) {
