@@ -142,6 +142,9 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 
 		if group != nil {
+			if group.By() == nil && this.where == nil {
+				this.maxParallelism = 1
+			}
 			this.visitGroup(group, aggs)
 		}
 
