@@ -77,6 +77,14 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 
 }
 
+func (this *HttpEndpoint) doConfigStore() (clustering.ConfigurationStore, errors.Error) {
+	configStore := this.server.ConfigurationStore()
+	if configStore == nil {
+		return nil, errors.NewAdminAuthError(nil, "Failed to connect to Configuration Store")
+	}
+	return configStore, nil
+}
+
 func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
 	// retrieve the credentials from the request; the credentials must be specified
 	// using basic authorization format. An error is returned if there is a step that
@@ -107,9 +115,9 @@ func (this *HttpEndpoint) hasAdminAuth(req *http.Request) errors.Error {
 	creds := map[string]string{user: password}
 
 	// Attempt authorization with the cluster
-	configstore := this.server.ConfigurationStore()
-	if configstore == nil {
-		return errors.NewAdminAuthError(nil, "Failed to connect to Configuration Store")
+	configstore, configErr := this.doConfigStore()
+	if configErr != nil {
+		return configErr
 	}
 	sslPrivs := []clustering.Privilege{clustering.PRIV_SYS_ADMIN}
 	authErr := configstore.Authorize(creds, sslPrivs)
@@ -139,7 +147,10 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 	if localConfig.myConfig != nil {
 		return localConfig.myConfig, nil
 	}
-	cfgStore := endpoint.server.ConfigurationStore()
+	cfgStore, cfgErr := endpoint.doConfigStore()
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
 	var self clustering.QueryNode
 	ip, err := util.ExternalIP()
 	if err != nil {
@@ -178,7 +189,10 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 }
 
 func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	cfgStore := endpoint.server.ConfigurationStore()
+	cfgStore, cfgErr := endpoint.doConfigStore()
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
 	cm := cfgStore.ConfigurationManager()
 	switch req.Method {
 	case "GET":
@@ -197,7 +211,10 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
-	cfgStore := endpoint.server.ConfigurationStore()
+	cfgStore, cfgErr := endpoint.doConfigStore()
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil {
 		return nil, err
@@ -216,7 +233,10 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	name := vars["cluster"]
-	cfgStore := endpoint.server.ConfigurationStore()
+	cfgStore, cfgErr := endpoint.doConfigStore()
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil || cluster == nil {
 		return cluster, err
@@ -239,7 +259,10 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	vars := mux.Vars(req)
 	node := vars["node"]
 	name := vars["cluster"]
-	cfgStore := endpoint.server.ConfigurationStore()
+	cfgStore, cfgErr := endpoint.doConfigStore()
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
 	cluster, err := cfgStore.ClusterByName(name)
 	if err != nil || cluster == nil {
 		return cluster, err
