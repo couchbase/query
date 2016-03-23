@@ -201,18 +201,18 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 			}
 		}
 
+		arrayIndex := indexHasArrayIndexKey(index)
+
+		if limit != nil && (arrayIndex || !allowedPushDown(index, entry)) {
+			limit = nil
+			this.limit = nil
+		}
+
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
-		if len(entry.spans) > 1 {
-			// Use DistinctScan to de-dup multiple spans
+
+		if len(entry.spans) > 1 || arrayIndex {
+			// Use DistinctScan to de-dup array index scans, multiple spans
 			op = plan.NewDistinctScan(op)
-		} else {
-			// Use DistinctScan to de-dup array index scans
-			for _, sk := range index.RangeKey() {
-				if isArray, _ := sk.IsArrayIndexKey(); isArray {
-					op = plan.NewDistinctScan(op)
-					break
-				}
-			}
 		}
 
 		scans = append(scans, op)
@@ -270,4 +270,27 @@ func nonKeysPredExpression(alias string, keys expression.Expressions, pred, cond
 		}
 	}
 	return condPred
+}
+
+func allowedPushDown(index datastore.Index, entry *indexEntry) bool {
+	if len(entry.keys) > 1 {
+		return false
+	} else {
+		for _, span := range entry.spans {
+			if span.Range.Low == nil && span.Range.High != nil {
+				// nulls are included disallow pushdown
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func indexHasArrayIndexKey(index datastore.Index) bool {
+	for _, sk := range index.RangeKey() {
+		if isArray, _ := sk.IsArrayIndexKey(); isArray {
+			return true
+		}
+	}
+	return false
 }

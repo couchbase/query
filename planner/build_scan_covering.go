@@ -68,7 +68,10 @@ outer:
 			covers = append(covers, expression.NewCover(key))
 		}
 
-		if this.countAgg != nil && pred.IsLimitPushable() && len(entry.spans) == 1 {
+		arrayIndex := indexHasArrayIndexKey(index)
+
+		if this.countAgg != nil && pred.IsLimitPushable() && !arrayIndex && (len(entry.spans) == 1) &&
+			(len(entry.keys) == 1) && allowedPushDown(index, entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
 				op := this.countAgg.Operand()
@@ -85,6 +88,11 @@ outer:
 			}
 		}
 
+		if limit != nil && (arrayIndex || !allowedPushDown(index, entry)) {
+			limit = nil
+			this.limit = nil
+		}
+
 		if this.order != nil && !this.useIndexOrder(entry, keys) {
 			this.resetOrderLimit()
 			limit = nil
@@ -97,16 +105,9 @@ outer:
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
 		this.coveringScan = scan
 
-		if len(entry.spans) > 1 {
-			// Use DistinctScan to de-dup multiple spans
+		if len(entry.spans) > 1 || arrayIndex {
+			// Use DistinctScan to de-dup array index scans, multiple spans
 			return plan.NewDistinctScan(scan), nil
-		} else {
-			// Use DistinctScan to de-dup array index scans
-			for _, sk := range index.RangeKey() {
-				if isArray, _ := sk.IsArrayIndexKey(); isArray {
-					return plan.NewDistinctScan(scan), nil
-				}
-			}
 		}
 
 		return scan, nil
