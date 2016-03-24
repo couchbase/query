@@ -102,8 +102,9 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	}
 
 	scan := map[string]interface{}{
-		"index": this.index.Name(),
-		"using": this.index.Type(),
+		"index":    this.index.Name(),
+		"index_id": this.index.Id(),
+		"using":    this.index.Type(),
 	}
 
 	if this.covers != nil {
@@ -127,9 +128,10 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		As    string `json:"as"`
 		For   string `json:"for"`
 		Scan  struct {
-			Index  string              `json:"index"`
-			Using  datastore.IndexType `json:"using"`
-			Covers []string            `json:"covers"`
+			Index   string              `json:"index"`
+			IndexId string              `json:"index_id"`
+			Using   datastore.IndexType `json:"using"`
+			Covers  []string            `json:"covers"`
 		} `json:"scan"`
 	}
 
@@ -163,7 +165,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.index, err = indexer.IndexByName(_unmarshalled.Scan.Index)
+	this.index, err = indexer.IndexById(_unmarshalled.Scan.IndexId)
 	if err != nil {
 		return err
 	}

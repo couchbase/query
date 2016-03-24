@@ -56,6 +56,7 @@ func (this *AlterIndex) Keyspace() datastore.Keyspace {
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "AlterIndex"}
 	r["index"] = this.index.Name()
+	r["index_id"] = this.index.Id()
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["rename"] = this.node.Rename()
@@ -65,12 +66,13 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 
 func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_      string              `json:"#operator"`
-		Index  string              `json:"index"`
-		Keys   string              `json:"keyspace"`
-		Names  string              `json:"namespace"`
-		Rename string              `json:"rename"`
-		Using  datastore.IndexType `json:"using"`
+		_       string              `json:"#operator"`
+		Index   string              `json:"index"`
+		IndexId string              `json:"index_id"`
+		Keys    string              `json:"keyspace"`
+		Names   string              `json:"namespace"`
+		Rename  string              `json:"rename"`
+		Using   datastore.IndexType `json:"using"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -91,6 +93,6 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.index, err = indexer.IndexByName(_unmarshalled.Index)
+	this.index, err = indexer.IndexById(_unmarshalled.IndexId)
 	return err
 }

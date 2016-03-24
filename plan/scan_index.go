@@ -87,6 +87,7 @@ func (this *IndexScan) Covering() bool {
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IndexScan"}
 	r["index"] = this.index.Name()
+	r["index_id"] = this.index.Id()
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	r["using"] = this.index.Type()
@@ -119,6 +120,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_            string                 `json:"#operator"`
 		Index        string                 `json:"index"`
+		IndexId      string                 `json:"index_id"`
 		Namespace    string                 `json:"namespace"`
 		Keyspace     string                 `json:"keyspace"`
 		Using        datastore.IndexType    `json:"using"`
@@ -172,6 +174,6 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.index, err = indexer.IndexByName(_unmarshalled.Index)
+	this.index, err = indexer.IndexById(_unmarshalled.IndexId)
 	return err
 }
