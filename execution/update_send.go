@@ -125,8 +125,10 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 				return false
 			}
 
-			pairs[i].Value = cv
-			item.SetField(this.plan.Alias(), cv)
+			cav := value.NewAnnotatedValue(cv)
+			cav.SetAnnotations(av)
+			pairs[i].Value = cav
+			item.SetField(this.plan.Alias(), cav)
 		default:
 			context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
