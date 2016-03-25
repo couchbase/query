@@ -95,15 +95,17 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return nil, nil, er
 		}
 
-		if limit != nil {
-			if len(minimals) == 0 || !pred.IsLimitPushable() {
-				// PrimaryScan with predicates disable limit pushdown
-				// Predicate conatins expression that disallows limit pushdown
-				prevLimit := this.limit
-				defer func() { this.limit = prevLimit }()
-				this.limit = nil
-				limit = nil
-			}
+		if limit != nil && (len(minimals) == 0 || !pred.IndexPushDownAllowed()) {
+			// PrimaryScan with predicates disable pushdown
+			// Predicate conatins expression that disallows pushdown
+			prevLimit := this.limit
+			defer func() { this.limit = prevLimit }()
+			this.limit = nil
+			limit = nil
+		}
+
+		if this.countAgg != nil && (len(minimals) == 0 || !pred.IndexPushDownAllowed()) {
+			this.countAgg = nil
 		}
 
 		if len(minimals) > 0 {

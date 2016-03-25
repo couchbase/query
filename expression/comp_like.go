@@ -119,10 +119,10 @@ func (this *Like) Constructor() FunctionConstructor {
 }
 
 /*
-Disallow pushing limit to index scan
+Disallow pushing operation to index scan
 */
 
-func (this *Like) IsLimitPushable() bool {
+func (this *Like) IndexPushDownAllowed() bool {
 	return false
 }
 

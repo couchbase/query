@@ -166,10 +166,10 @@ type Expression interface {
 	Copy() Expression
 
 	/*
-	   This method indicates if the expression allows pushing the
-	   limit to indexscan
+	   This method indicates if the expression allows pushing certain operation
+	   to indexscan
 	*/
-	IsLimitPushable() bool
+	IndexPushDownAllowed() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

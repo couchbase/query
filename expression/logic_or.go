@@ -36,6 +36,13 @@ func NewOr(operands ...Expression) *Or {
 }
 
 /*
+Disallow pushing operation to index scan
+*/
+func (this *Or) IndexPushDownAllowed() bool {
+	return false
+}
+
+/*
 It calls the VisitOr method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */

@@ -70,7 +70,7 @@ outer:
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if this.countAgg != nil && pred.IsLimitPushable() && !arrayIndex && (len(entry.spans) == 1) &&
+		if this.countAgg != nil && !arrayIndex && (len(entry.spans) == 1) &&
 			(len(entry.keys) == 1) && allowedPushDown(index, entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {

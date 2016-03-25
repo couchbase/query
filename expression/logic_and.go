@@ -36,6 +36,13 @@ func NewAnd(operands ...Expression) *And {
 }
 
 /*
+Disallow pushing operation to index scan
+*/
+func (this *And) IndexPushDownAllowed() bool {
+	return false
+}
+
+/*
 It calls the VisitAnd method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */

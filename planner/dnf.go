@@ -131,6 +131,10 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 		return expression.TRUE_EXPR, nil
 	}
 
+	if len(terms) == 1 {
+		return terms[0], nil
+	}
+
 	if len(terms) < len(expr.Operands()) {
 		expr = expression.NewAnd(terms...)
 	}
@@ -244,6 +248,10 @@ func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 
 	if len(terms) == 0 {
 		return expression.FALSE_EXPR, nil
+	}
+
+	if len(terms) == 1 {
+		return terms[0], nil
 	}
 
 	if len(terms) < len(expr.Operands()) {
