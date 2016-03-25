@@ -155,7 +155,7 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 				un = userCreds[1]
 			}
 
-			logging.Debugf(" Credentials for user %v"  un)
+			logging.Debugf(" Credentials for user %v", un)
 
 			authResult, err := doAuth(un, password, keyspace, privilege)
 
