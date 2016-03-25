@@ -15,7 +15,7 @@ set-op ::= 'UNION' | 'INTERSECT' | 'EXCEPT'
 /*
  *  select clause
  */
-select-clause ::= 'SELECT' ('ALL' | 'DISTINCT')? (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr ('AS'? alias)?)
+select-clause ::= 'SELECT' ('ALL' | 'DISTINCT')? (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT' | 'VALUE') expr ('AS'? alias)?)
 result-expr ::= (path '.')? '*' | expr ('AS'? alias)?
 path ::= identifier ('[' expr ']')* ('.' path)?
 alias ::= identifier

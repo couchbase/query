@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-03-10
+* Modified: 2016-03-24
 
 ## Introduction
 
@@ -2675,6 +2675,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add content for index joins and index nests
 * 2016-03-10 - ANY / SOME AND EVERY
     * Add new expression ANY / SOME AND EVERY
+* 2016-03-24 - SELECT VALUE
+    * Add SELECT VALUE as synonym for SELECT RAW
 
 ### Open issues
 
