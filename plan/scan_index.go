@@ -106,7 +106,7 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	}
 
 	if len(this.filterCovers) > 0 {
-		r["filterCovers"] = this.filterCovers
+		r["filter_covers"] = this.filterCovers
 	}
 
 	if this.duration != 0 {
@@ -128,7 +128,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		Distinct     bool                   `json:"distinct"`
 		Limit        string                 `json:"limit"`
 		Covers       []string               `json:"covers"`
-		FilterCovers map[string]value.Value `json:"filterCovers"`
+		FilterCovers map[string]value.Value `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
