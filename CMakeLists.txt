@@ -30,12 +30,12 @@ GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engin
   GOVERSION 1.4.x
   GOTAGS ${_gotags})
 
-GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
+GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
   GOVERSION 1.4.x)
 
-GoInstall (TARGET go_cbq PACKAGE github.com/couchbase/query/shell/go_cbq
+GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   INSTALL_PATH bin
   GOVERSION 1.4.x)

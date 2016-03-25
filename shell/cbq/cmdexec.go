@@ -18,7 +18,7 @@ import (
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/shell/go_cbq/command"
+	"github.com/couchbase/query/shell/cbq/command"
 	"github.com/peterh/liner"
 )
 
@@ -107,7 +107,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 			*/
 			dBn1ql, err := n1ql.OpenExtended(ServerFlag)
 			if err != nil {
-				return errors.DRIVER_OPEN, ""
+				return errors.DRIVER_OPEN, err.Error()
 			} else {
 				//Successfully logged into the server
 				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)

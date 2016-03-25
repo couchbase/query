@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/couchbase/query/shell/go_cbq/command"
+	"github.com/couchbase/query/shell/cbq/command"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

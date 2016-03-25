@@ -1,4 +1,4 @@
-//  Copyright (c) 2013 Couchbase, Inc.
+//  Copyright (c) 2015-2016 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -11,30 +11,46 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
+	"strings"
 
-	"github.com/sbinet/liner"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/shell/cbq/command"
+	"github.com/peterh/liner"
 )
 
-func LoadHistory(liner *liner.State, dir string) {
+func LoadHistory(liner *liner.State, dir string) (int, string) {
 	if dir != "" {
-		ReadHistoryFromFile(liner, dir+"/.cbq_history")
+
+		path := command.GetPath(dir, command.HISTFILE)
+		err_code, err_str := ReadHistoryFromFile(liner, path)
+
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
+	return 0, ""
 }
 
-func UpdateHistory(liner *liner.State, dir, line string) {
+func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
-		WriteHistoryToFile(liner, dir+"/.cbq_history")
+		path := command.GetPath(dir, command.HISTFILE)
+		err_code, err_str := WriteHistoryToFile(liner, path)
+
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
+	return 0, ""
 }
 
-func WriteHistoryToFile(liner *liner.State, path string) {
+func WriteHistoryToFile(liner *liner.State, path string) (int, string) {
 
+	var err error
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return
+		return errors.FILE_OPEN, err.Error()
 	}
 
 	defer f.Close()
@@ -42,22 +58,47 @@ func WriteHistoryToFile(liner *liner.State, path string) {
 	writer := bufio.NewWriter(f)
 	_, err = liner.WriteHistory(writer)
 	if err != nil {
-		fmt.Printf("Error updating .cbq_history file: %v\n", err)
+		return errors.WRITE_FILE, err.Error()
 	} else {
-		writer.Flush()
+		err = writer.Flush()
+		if err != nil {
+			return errors.WRITER_OUTPUT, err.Error()
+		}
 	}
+	return 0, ""
 
 }
 
-func ReadHistoryFromFile(liner *liner.State, path string) {
+func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 
+	var err error
 	f, err := os.Open(path)
 	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			f, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			if err != nil {
+				return errors.FILE_OPEN, err.Error()
+			}
+
+		} else {
+			return errors.FILE_OPEN, err.Error()
+		}
 	}
 
 	defer f.Close()
 
 	reader := bufio.NewReader(f)
-	liner.ReadHistory(reader)
+	_, err = liner.ReadHistory(reader)
+
+	//Check for line too long errors. If the line didnt fit into the buffer
+	//then dont report the error
+	if err != nil && strings.Contains(err.Error(), "too long") {
+		err = nil
+	}
+
+	if err != nil {
+		return errors.READ_FILE, err.Error()
+	}
+
+	return 0, ""
 }

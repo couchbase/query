@@ -16,13 +16,13 @@ cd server/cbq-engine
 ./build.sh $*
 cd ../..
 
-echo cd shell/cbq
-cd shell/cbq
+echo cd shell/cbq.old
+cd shell/cbq.old
 ./build.sh $*
 cd ../..
 
-echo cd shell/go_cbq
-cd shell/go_cbq
+echo cd shell/cbq
+cd shell/cbq
 ./build.sh $*
 cd ../..
 

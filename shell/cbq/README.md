@@ -1,4 +1,4 @@
-# go_cbq
+# cbq
 
 ## Advanced Command Line Shell for Couchbase query.
 
@@ -116,7 +116,7 @@ To run examples :
 1. Start couchbase server on machine. Add travel-sample and beer-sample.
 2. Make beer-sample a sasl bucket with password b1.
 3. ./build.sh to build the shell
-4. ./go_cbq
+4. ./cbq
 5. Either run the file demo.txt (\SOURCE examples/demo.txt) or manually run each command in it.
 
 

@@ -352,7 +352,7 @@ This package provides a parallel sort. It was copied from the Golang
 source and basic parallelism was added, but it has not been
 fine-tuned.
 
-### Client/go_cbq
+### cbq
 
 This package provides a client library that will be used by the
 command-line shell to encapsulate cluster-awareness and other

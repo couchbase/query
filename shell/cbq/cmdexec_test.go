@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	"github.com/couchbase/godbc/n1ql"
-	"github.com/couchbase/query/shell/go_cbq/command"
+	"github.com/couchbase/query/shell/cbq/command"
 	"github.com/peterh/liner"
 )
 
