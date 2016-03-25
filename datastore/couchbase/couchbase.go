@@ -90,19 +90,19 @@ func doAuth(username, password, bucket string, requested datastore.Privilege) (b
 	}
 
 	if requested == datastore.PRIV_DDL {
-		authResult, err := creds.CanDDLBucket(bucket)
+		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].views!write", bucket))
 		if err != nil || authResult == false {
 			return false, err
 		}
 
 	} else if requested == datastore.PRIV_WRITE {
-		authResult, err := creds.CanAccessBucket(bucket)
+		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].data!write", bucket))
 		if err != nil || authResult == false {
 			return false, err
 		}
 
 	} else if requested == datastore.PRIV_READ {
-		authResult, err := creds.CanReadBucket(bucket)
+		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].data!read", bucket))
 		if err != nil || authResult == false {
 			return false, err
 		}
@@ -116,10 +116,6 @@ func doAuth(username, password, bucket string, requested datastore.Privilege) (b
 }
 
 func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials) errors.Error {
-
-	var authResult bool
-	var err error
-
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
@@ -127,9 +123,14 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 		return nil
 	}
 
+	// Add default authorization -- the privileges every user has.
+	if credentials == nil {
+		credentials = make(datastore.Credentials)
+	}
+	credentials[""] = ""
+
 	// if the authentication fails for any of the requested privileges return an error
 	for keyspace, privilege := range privileges {
-
 		if strings.Contains(keyspace, ":") {
 			q := strings.Split(keyspace, ":")
 			pool := q[0]
@@ -143,53 +144,36 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 
 		logging.Debugf("Authenticating for keyspace %s", keyspace)
 
-		if len(credentials) == 0 {
-			authResult, err = doAuth(keyspace, "", keyspace, privilege)
-			if authResult == false || err != nil {
-				logging.Infof("Auth failed for keyspace %s", keyspace)
-				return errors.NewDatastoreAuthorizationError(err, "Keyspace "+keyspace)
+		thisBucketAuthorized := false
+		var rememberedError error
+		for username, password := range credentials {
+			var un string
+			userCreds := strings.Split(username, ":")
+			if len(userCreds) == 1 {
+				un = userCreds[0]
+			} else {
+				un = userCreds[1]
 			}
-		} else {
-			//look for either the bucket name or the admin credentials
-			for username, password := range credentials {
 
-				var un string
-				userCreds := strings.Split(username, ":")
-				if len(userCreds) == 1 {
-					un = userCreds[0]
-				} else {
-					un = userCreds[1]
-				}
+			logging.Debugf(" Credentials for user %v"  un)
 
-				logging.Debugf(" Credentials %v %v", un, userCreds)
+			authResult, err := doAuth(un, password, keyspace, privilege)
 
-				if strings.EqualFold(un, "Administrator") || strings.EqualFold(userCreds[0], "admin") {
-					authResult, err = doAuth(un, password, keyspace, privilege)
-				} else if un != "" && password != "" {
-					authResult, err = doAuth(un, password, keyspace, privilege)
-				} else {
-					//try with empty password
-					authResult, err = doAuth(keyspace, "", keyspace, privilege)
-				}
-
-				if err != nil {
-					return errors.NewDatastoreAuthorizationError(err, "Keyspace "+keyspace)
-
-				}
-
-				// Auth succeeded
-				if authResult == true {
-					break
-				}
-				continue
+			// Auth succeeded
+			if authResult == true {
+				thisBucketAuthorized = true
+				break
+			} else if err != nil {
+				rememberedError = err
 			}
 		}
 
+		if !thisBucketAuthorized {
+			return errors.NewDatastoreAuthorizationError(rememberedError, "Keyspace "+keyspace)
+		}
 	}
 
-	if authResult == false {
-		return errors.NewDatastoreAuthorizationError(err, "")
-	}
+	// If we got this far, every bucket is authorized. Success!
 	return nil
 }
 
