@@ -3,6 +3,7 @@
 y.output
 shell/cbq/cbq
 shell/go_cbq/go_cbq
+shell/cbq.old/cbq.old
 server/cbq-engine/cbq-engine
 tutorial/tutorial
 *.swp

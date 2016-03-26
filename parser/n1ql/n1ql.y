@@ -154,6 +154,7 @@ tokOffset	 int
 %token KEY
 %token KEYS
 %token KEYSPACE
+%token KNOWN
 %token LAST
 %token LEFT
 %token LET
@@ -223,6 +224,7 @@ tokOffset	 int
 %token UNDER
 %token UNION
 %token UNIQUE
+%token UNKNOWN
 %token UNNEST
 %token UNSET
 %token UPDATE
@@ -2104,12 +2106,12 @@ expr IS NOT MISSING
     $$ = expression.NewIsNotMissing($1)
 }
 |
-expr IS VALUED
+expr IS valued
 {
     $$ = expression.NewIsValued($1)
 }
 |
-expr IS NOT VALUED
+expr IS NOT valued
 {
     $$ = expression.NewIsNotValued($1)
 }
@@ -2118,6 +2120,12 @@ EXISTS expr
 {
     $$ = expression.NewExists($2)
 }
+;
+
+valued:
+VALUED
+|
+KNOWN
 ;
 
 c_expr:

@@ -173,6 +173,7 @@
 /[kK][eE][yY]/					 { logToken(yylex.Text(), "KEY"); return KEY }
 /[kK][eE][yY][sS]/				 { logToken(yylex.Text(), "KEYS"); return KEYS }
 /[kK][eE][yY][sS][pP][aA][cC][eE]/		 { logToken(yylex.Text(), "KEYSPACE"); return KEYSPACE }
+/[kK][nN][oO][wW][nN]/				 { logToken(yylex.Text(), "KNOWN"); return KNOWN }
 /[lL][aA][sS][tT]/				 { logToken(yylex.Text(), "LAST"); return LAST }
 /[lL][eE][fF][tT]/				 { logToken(yylex.Text(), "LEFT"); return LEFT }
 /[lL][eE][tT]/					 { logToken(yylex.Text(), "LET"); return LET }
@@ -245,6 +246,7 @@
 /[uU][nN][dD][eE][rR]/				 { logToken(yylex.Text(), "UNDER"); return UNDER }
 /[uU][nN][iI][oO][nN]/				 { logToken(yylex.Text(), "UNION"); return UNION }
 /[uU][nN][iI][qQ][uU][eE]/			 { logToken(yylex.Text(), "UNIQUE"); return UNIQUE }
+/[uU][nN][kK][nN][oO][wW][nN]/			 { logToken(yylex.Text(), "UNKNOWN"); return UNKNOWN }
 /[uU][nN][nN][eE][sS][tT]/			 { logToken(yylex.Text(), "UNNEST"); return UNNEST }
 /[uU][nN][sS][eE][tT]/				 { logToken(yylex.Text(), "UNSET"); return UNSET }
 /[uU][pP][dD][aA][tT][eE]/			 { logToken(yylex.Text(), "UPDATE"); return UPDATE }

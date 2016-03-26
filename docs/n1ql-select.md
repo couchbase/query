@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-03-24
+* Modified: 2016-03-26
 
 ## Introduction
 
@@ -2677,6 +2677,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add new expression ANY / SOME AND EVERY
 * 2016-03-24 - SELECT VALUE
     * Add SELECT VALUE as synonym for SELECT RAW
+* 2016-03-26 - IS [ NOT ] KNOWN
+    * Add IS [ NOT ] KNOWN as a synonym for IS [ NOT ] VALUED
 
 ### Open issues
 

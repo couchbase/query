@@ -81,7 +81,7 @@ logical-term ::= cond 'AND' cond | cond 'OR' cond | 'NOT' cond
 case-expr ::= simple-case-expr | searched-case-expr
 simple-case-expr ::= 'CASE' expr ('WHEN' expr 'THEN' expr)+ ('ELSE' expr)? 'END'
 searched-case-expr ::= 'CASE' ('WHEN' cond 'THEN' expr)+ ('ELSE' expr)? 'END'
-comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'NOT'? 'BETWEEN' expr 'AND' expr | expr 'NOT'? 'LIKE' expr | expr 'IS' 'NOT'? 'VALUED' | expr 'IS' 'NOT'? 'NULL' | expr 'IS' 'NOT'? 'MISSING'
+comparison-term ::= expr '=' expr | expr '==' expr | expr '!=' expr | expr '<>' expr | expr '>' expr | expr '>=' expr | expr '<' expr | expr '<=' expr | expr 'NOT'? 'BETWEEN' expr 'AND' expr | expr 'NOT'? 'LIKE' expr | expr 'IS' 'NOT'? 'NULL' | expr 'IS' 'NOT'? 'MISSING' | expr 'IS' 'NOT'? ( 'KNOWN' | 'VALUED' )
 arithmetic-term ::= expr '+' expr | expr '-' expr | expr '*' expr | expr '/' expr | expr '%' expr | '-' expr
 concatenation-term ::= expr '||' expr
 nested-expr ::= field-expr | element-expr | slice-expr
