@@ -1199,10 +1199,6 @@ _within-expr:_
 
 ![](diagram/within-expr.png)
 
-_name-expr:_
-
-![](diagram/name-expr.png)
-
 WITHIN evaluates to TRUE if the right-hand-side value contains the
 left-hand-side value (or name and value) as a child or descendant
 (i.e. directly or indirectly).
