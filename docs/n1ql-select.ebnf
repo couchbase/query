@@ -93,7 +93,7 @@ subquery-expr ::= '(' select ')'
 /*
  *  function calls
  */
-function-call ::= function-name '(' ('*' | ('DISTINCT'? expr (',' expr)*))? ')'
+function-call ::= function-name '(' ( expr ( ',' expr )* | 'DISTINCT' expr | '*' )? ')'
 function-name ::= identifier
 
 /*
