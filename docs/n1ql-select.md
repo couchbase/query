@@ -1207,10 +1207,6 @@ WITHIN evaluates to TRUE if the right-hand-side value contains the
 left-hand-side value (or name and value) as a child or descendant
 (i.e. directly or indirectly).
 
-If _name-expr_ is given, it must evaluate to a string. Otherwise, the
-result is MISSING if _name-expr_ or _expr_ evaluates to MISSING, and
-NULL if _name-expr_ evaluates to another non-string value.
-
 #### ANY or SOME, EVERY, and ANY AND EVERY or SOME AND EVERY
 
 Range predicates (ANY or SOME, EVERY, and ANY AND EVERY or SOME AND
@@ -2679,6 +2675,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add SELECT VALUE as synonym for SELECT RAW
 * 2016-03-26 - IS [ NOT ] KNOWN
     * Add IS [ NOT ] KNOWN as a synonym for IS [ NOT ] VALUED
+* 2016-03-26 - WITHIN
+    * Simplify syntax of WITHIN by removing _name-expr_
 
 ### Open issues
 
