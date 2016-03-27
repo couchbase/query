@@ -162,9 +162,9 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.mi}, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -181,7 +181,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 			})
 		}
 
-		rv = append(rv, datastore.AnnotatedPair{
+		rv = append(rv, value.AnnotatedPair{
 			Key:   k,
 			Value: item,
 		})
@@ -210,17 +210,17 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }

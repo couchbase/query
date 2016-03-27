@@ -53,9 +53,9 @@ func (b *storeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.si}, nil
 }
 
-func (b *storeKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *storeKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -72,7 +72,7 @@ func (b *storeKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []error
 			})
 		}
 
-		rv = append(rv, datastore.AnnotatedPair{
+		rv = append(rv, value.AnnotatedPair{
 			Key:   k,
 			Value: item,
 		})
@@ -92,17 +92,17 @@ func (b *storeKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 	return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
 }
 
-func (b *storeKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *storeKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *storeKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *storeKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *storeKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *storeKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

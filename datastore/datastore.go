@@ -71,29 +71,17 @@ type Keyspace interface {
 	Indexers() ([]Indexer, errors.Error)            // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string) ([]AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
-	//Fetch(keys []string, projection, filter expression.Expression) ([]AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
+	Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) // Bulk key-value fetch from this keyspace
+	//Fetch(keys []string, projection, filter expression.Expression) ([]value.AnnotatedPair, errors.Error) // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	Insert(inserts []Pair) ([]Pair, errors.Error)     // Bulk key-value insert into this keyspace
-	Update(updates []Pair) ([]Pair, errors.Error)     // Bulk key-value updates into this keyspace
-	Upsert(upserts []Pair) ([]Pair, errors.Error)     // Bulk key-value upserts into this keyspace
-	Delete(deletes []string) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
+	Insert(inserts []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value insert into this keyspace
+	Update(updates []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value updates into this keyspace
+	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) // Bulk key-value upserts into this keyspace
+	Delete(deletes []string) ([]string, errors.Error)         // Bulk key-value deletes from this keyspace
 
 	Release() // Release any resources held by this object
-}
-
-// Key-value pair
-type Pair struct {
-	Key   string
-	Value value.Value
-}
-
-// Key-value pair
-type AnnotatedPair struct {
-	Key   string
-	Value value.AnnotatedValue
 }
 
 // Globally accessible Datastore instance

@@ -253,9 +253,9 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.fi}, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 
@@ -277,7 +277,7 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 			})
 		}
 
-		rv = append(rv, datastore.AnnotatedPair{
+		rv = append(rv, value.AnnotatedPair{
 			Key:   k,
 			Value: item,
 		})
@@ -316,13 +316,13 @@ func opToString(op int) string {
 	return "unknown operation"
 }
 
-func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) performOp(op int, kvPairs []value.Pair) ([]value.Pair, errors.Error) {
 
 	if len(kvPairs) == 0 {
 		return nil, errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())
 	}
 
-	insertedKeys := make([]datastore.Pair, 0)
+	insertedKeys := make([]value.Pair, 0)
 	var returnErr errors.Error
 
 	// this lock can be mode more granular FIXME
@@ -379,15 +379,15 @@ func (b *keyspace) performOp(op int, kvPairs []datastore.Pair) ([]datastore.Pair
 
 }
 
-func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(INSERT, inserts)
 }
 
-func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(UPDATE, updates)
 }
 
-func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(UPSERT, upserts)
 }
 

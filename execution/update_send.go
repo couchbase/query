@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -164,4 +163,4 @@ func (this *SendUpdate) readonly() bool {
 	return false
 }
 
-var _UPDATE_POOL = datastore.NewPairPool(_BATCH_SIZE)
+var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

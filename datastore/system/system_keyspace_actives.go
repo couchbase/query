@@ -54,9 +54,9 @@ func (b *activeRequestsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) 
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *activeRequestsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	server.ActiveRequestsForEach(func(id string, request server.Request) {
 		item := value.NewAnnotatedValue(map[string]interface{}{
@@ -93,7 +93,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair
 		item.SetAttachment("meta", map[string]interface{}{
 			"id": id,
 		})
-		rv = append(rv, datastore.AnnotatedPair{
+		rv = append(rv, value.AnnotatedPair{
 			Key:   id,
 			Value: item,
 		})
@@ -101,17 +101,17 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair
 	return rv, errs
 }
 
-func (b *activeRequestsKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *activeRequestsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *activeRequestsKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *activeRequestsKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *activeRequestsKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *activeRequestsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

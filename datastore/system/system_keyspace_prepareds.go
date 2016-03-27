@@ -53,9 +53,9 @@ func (b *preparedsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
 		plan.PreparedDo(key, func(entry *plan.CacheEntry) {
@@ -77,7 +77,7 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []e
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": key,
 			})
-			rv = append(rv, datastore.AnnotatedPair{
+			rv = append(rv, value.AnnotatedPair{
 				Key:   key,
 				Value: item,
 			})
@@ -86,17 +86,17 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []e
 	return rv, errs
 }
 
-func (b *preparedsKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *preparedsKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *preparedsKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *preparedsKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *preparedsKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *preparedsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }

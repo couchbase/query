@@ -652,7 +652,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return indexers, nil
 }
 
-func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 
 	if len(keys) == 0 {
 		return nil, nil
@@ -667,10 +667,10 @@ func (b *keyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Err
 	}
 
 	i := 0
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for k, av := range bulkResponse {
 		for _, v := range av {
-			var doc datastore.AnnotatedPair
+			var doc value.AnnotatedPair
 			doc.Key = k
 
 			Value := value.NewAnnotatedValue(value.NewValue(v.Body))
@@ -754,13 +754,13 @@ func getMeta(key string, meta map[string]interface{}) (cas uint64, flags uint32,
 
 }
 
-func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors.Error) {
 
 	if len(inserts) == 0 {
 		return nil, nil
 	}
 
-	insertedKeys := make([]datastore.Pair, 0, len(inserts))
+	insertedKeys := make([]value.Pair, 0, len(inserts))
 	var err error
 
 	for _, kv := range inserts {
@@ -827,16 +827,16 @@ func (b *keyspace) performOp(op int, inserts []datastore.Pair) ([]datastore.Pair
 
 }
 
-func (b *keyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(INSERT, inserts)
 
 }
 
-func (b *keyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(UPDATE, updates)
 }
 
-func (b *keyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	return b.performOp(UPSERT, upserts)
 }
 

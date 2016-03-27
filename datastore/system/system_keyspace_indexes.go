@@ -97,9 +97,9 @@ func (b *indexKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *indexKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys)*2)
+	rv := make([]value.AnnotatedPair, 0, len(keys)*2)
 
 	for _, key := range keys {
 		pairs, err := b.fetchOne(key)
@@ -117,8 +117,8 @@ func (b *indexKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []error
 	return rv, errs
 }
 
-func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.Error) {
-	rv := make([]datastore.AnnotatedPair, 0, 2)
+func (b *indexKeyspace) fetchOne(key string) ([]value.AnnotatedPair, errors.Error) {
+	rv := make([]value.AnnotatedPair, 0, 2)
 	ids := strings.SplitN(key, "/", 3)
 
 	actualStore := b.namespace.store.actualStore
@@ -176,7 +176,7 @@ func (b *indexKeyspace) fetchOne(key string) ([]datastore.AnnotatedPair, errors.
 			doc.SetField("is_primary", true)
 		}
 
-		rv = append(rv, datastore.AnnotatedPair{key, doc})
+		rv = append(rv, value.AnnotatedPair{key, doc})
 	}
 
 	return rv, nil
@@ -210,17 +210,17 @@ func newIndexesKeyspace(p *namespace) (*indexKeyspace, errors.Error) {
 	return b, nil
 }
 
-func (b *indexKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *indexKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *indexKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *indexKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }
 
-func (b *indexKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *indexKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "Not yet implemented.")
 }

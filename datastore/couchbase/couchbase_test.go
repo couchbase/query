@@ -93,9 +93,9 @@ func TestServer(t *testing.T) {
 	}
 
 	fmt.Printf("Keys fetched %v", pair)
-	insertKey := datastore.Pair{Key: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
+	insertKey := value.Pair{Key: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
 
-	_, err = ks.Insert([]datastore.Pair{insertKey})
+	_, err = ks.Insert([]value.Pair{insertKey})
 	if err != nil {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 func TestFile(t *testing.T) {
@@ -124,33 +125,33 @@ func TestFile(t *testing.T) {
 	// DML test cases
 
 	fred := freds[0].Value
-	var dmlKey datastore.Pair
+	var dmlKey value.Pair
 	dmlKey.Key = "fred2"
 	dmlKey.Value = fred
 
-	_, err = keyspace.Insert([]datastore.Pair{dmlKey})
+	_, err = keyspace.Insert([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, err = keyspace.Update([]datastore.Pair{dmlKey})
+	_, err = keyspace.Update([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
 	dmlKey.Key = "fred3"
-	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
 	// negative cases
-	_, err = keyspace.Insert([]datastore.Pair{dmlKey})
+	_, err = keyspace.Insert([]value.Pair{dmlKey})
 	if err == nil {
 		t.Errorf("Insert should not have succeeded for fred2")
 	}
@@ -161,13 +162,13 @@ func TestFile(t *testing.T) {
 		fmt.Printf("Warning: Failed to delete. Error %v", err)
 	}
 
-	_, err = keyspace.Update([]datastore.Pair{dmlKey})
+	_, err = keyspace.Update([]value.Pair{dmlKey})
 	if err == nil {
 		t.Errorf("Update should have failed. Key fred3 doesn't exist")
 	}
 
 	// finally upsert the key. this should work
-	_, err = keyspace.Upsert([]datastore.Pair{dmlKey})
+	_, err = keyspace.Upsert([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}

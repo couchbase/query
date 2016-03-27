@@ -53,9 +53,9 @@ func (b *dualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.di}, nil
 }
 
-func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *dualKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -72,7 +72,7 @@ func (b *dualKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors
 			})
 		}
 
-		rv = append(rv, datastore.AnnotatedPair{
+		rv = append(rv, value.AnnotatedPair{
 			Key:   k,
 			Value: item,
 		})
@@ -85,15 +85,15 @@ func (b *dualKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error)
 	return value.NewAnnotatedValue(nil), nil
 }
 
-func (b *dualKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *dualKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
-func (b *dualKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *dualKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
-func (b *dualKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *dualKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 

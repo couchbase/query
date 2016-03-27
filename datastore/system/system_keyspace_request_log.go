@@ -51,9 +51,9 @@ func (b *requestLogKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []errors.Error) {
+func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	var errs []errors.Error
-	rv := make([]datastore.AnnotatedPair, 0, len(keys))
+	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
 		accounting.RequestDo(key, func(entry *accounting.RequestLogEntry) {
@@ -89,7 +89,7 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 			item.SetAttachment("meta", map[string]interface{}{
 				"id": key,
 			})
-			rv = append(rv, datastore.AnnotatedPair{
+			rv = append(rv, value.AnnotatedPair{
 				Key:   key,
 				Value: item,
 			})
@@ -98,17 +98,17 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]datastore.AnnotatedPair, []
 	return rv, errs
 }
 
-func (b *requestLogKeyspace) Insert(inserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *requestLogKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Update(updates []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *requestLogKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *requestLogKeyspace) Upsert(upserts []datastore.Pair) ([]datastore.Pair, errors.Error) {
+func (b *requestLogKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
