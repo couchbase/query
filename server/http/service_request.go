@@ -410,25 +410,29 @@ func getReadonly(a httpRequestArgs, isGet bool) (value.Tristate, errors.Error) {
 }
 
 func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, errors.Error) {
+	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
 	cred_data, err := a.getCredentials()
 	if err != nil {
 		return nil, err
 	}
 
+	// Credentials can come from the cred_data, from the Basic authorization field
+	// in  the request, both, or neither. If from both, the credentials are combined.
+	// If neither, this function should return nil, nil.
+	var creds datastore.Credentials = nil
+
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
-		creds := datastore.Credentials{}
+		creds = datastore.Credentials{}
 		for _, cred := range cred_data {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
 			if user_ok && pass_ok {
 				creds[user] = pass
 			} else {
-				err = errors.NewServiceErrorMissingValue("user or pass")
-				break
+				return nil, errors.NewServiceErrorMissingValue("user or pass")
 			}
 		}
-		return creds, nil
 	}
 
 	if len(auths) > 0 {
@@ -443,7 +447,9 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 			// Authorization header is in format "user:pass"
 			// per http://tools.ietf.org/html/rfc1945#section-10.2
 			u_details := strings.Split(string(decoded_creds), ":")
-			creds := datastore.Credentials{}
+			if creds == nil {
+				creds = datastore.Credentials{}
+			}
 			switch len(u_details) {
 			case 2:
 				creds[u_details[0]] = u_details[1]
@@ -454,11 +460,11 @@ func getCredentials(a httpRequestArgs, auths []string) (datastore.Credentials, e
 				// Authorization header format is incorrect
 				return nil, errors.NewServiceErrorBadValue(nil, CREDS)
 			}
-			return creds, nil
 		}
 	}
 
-	return nil, err
+	// If we have credentials from neither source, creds will be uninitialized, i.e. nil.
+	return creds, nil
 }
 
 const MAX_CLIENTID = 64
