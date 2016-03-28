@@ -2,7 +2,7 @@
 
 + Status: DRAFT/PROPOSAL
 + Latest: [n1ql-dml](https://github.com/couchbase/query/blob/master/docs/n1ql-dml.md)
-+ Modified: 2015-04-04
++ Modified: 2016-03-28
 
 ## Introduction
 
@@ -280,32 +280,32 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
       properties together on a line by line basis and they may be
       stored separately.
 * 2014-02-06 - Transactions
-    * Removed transaction statements for now.
+    * Remove transaction statements for now
 * 2014-02-12 - UPSERT
-    * Added UPSERT option to INSERT
+    * Add UPSERT option to INSERT
 * 2014-02-13 - RETURNING
     * Omit result expressions to return raw value
 * 2014-02-16 - RETURNING RAW
-    * Added RETURNING RAW
+    * Add RETURNING RAW
 * 2014-02-17 - KEY / KEYS
-    * Cleaned up usage of KEY and kEYS.
+    * Clean up usage of KEY and kEYS
 * 2014-02-18 - RETURNING list
     * Require RETURNING list
 * 2014-06-24 - VALUES exprs
-    * Changed VALUES to multiple exprs
+    * Change VALUES to multiple exprs
 * 2014-06-24 - RETURNING star
     * Allow star in RETURNING
 * 2014-07-02 - MERGE source
     * Support VALUES as MERGE source
     * Allow JOIN sources to be aliased
 * 2014-08-10 - WITHIN
-    * Added WITHIN
+    * Add WITHIN
 * 2014-09-02 - MERGE
-    * Factored out merge actions
+    * Factor out merge actions
 * 2014-09-06 - MERGE
     * Simiplify MERGE syntax: remove from-term.
 * 2014-09-10 - VALUES expr
-    * Changed VALUES back to single expr
+    * Change VALUES back to single expr
 * 2014-10-11 - Syntax
     * Simplify MERGE
     * Change KEYS to USE [ PRIMARY ] KEYS
@@ -319,7 +319,9 @@ Generator](http://railroad.my28msec.com/) ![](diagram/.png)
 * 2015-04-03 - Hints
     * Add syntax for index hints
 * 2015-04-04 - LIMIT
-    * Explain that LIMIT is not exact.
+    * Explain that LIMIT is not exact
+* 2016-03-28 - Ranging over objects
+    * Add syntax for UPDATE with ranging over objects
 
 ### Open Issues
 
