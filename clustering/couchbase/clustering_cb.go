@@ -141,7 +141,6 @@ func (this *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 }
 
 func (this *cbConfigStore) Authorize(credentials map[string]string, privileges []clustering.Privilege) errors.Error {
-
 	if len(credentials) == 0 {
 		return errors.NewAdminAuthError(nil, "no credentials provided")
 	}
@@ -149,12 +148,12 @@ func (this *cbConfigStore) Authorize(credentials map[string]string, privileges [
 	for username, password := range credentials {
 		auth, err := cbauth.Auth(username, password)
 		if err != nil {
-			return errors.NewAdminAuthError(err, "")
+			return errors.NewAdminAuthError(err, "unable to authenticate with given credential")
 		}
 		for _, requested := range privileges {
 			switch requested {
 			case clustering.PRIV_SYS_ADMIN:
-				isAdmin, err := auth.IsAdmin()
+				isAdmin, err := auth.IsAllowed("cluster.settings!write")
 				if err != nil {
 					return errors.NewAdminAuthError(err, "")
 				}
@@ -163,10 +162,16 @@ func (this *cbConfigStore) Authorize(credentials map[string]string, privileges [
 				}
 				return errors.NewAdminAuthError(nil, "sys admin requires administrator credentials")
 			case clustering.PRIV_READ:
-				if auth.CanReadAnyMetadata() {
+				isPermitted, err := auth.IsAllowed("cluster.settings!read")
+				if err != nil {
+					return errors.NewAdminAuthError(err, "")
+				}
+				if isPermitted {
 					return nil
 				}
 				return errors.NewAdminAuthError(nil, "read not authorized")
+			default:
+				return errors.NewAdminAuthError(nil, fmt.Sprintf("unexpected authorization %v", requested))
 			}
 		}
 	}
