@@ -25,7 +25,7 @@ type Formalizer struct {
 
 	keyspace    string
 	allowed     *value.ScopeValue
-	identifiers map[string]bool
+	identifiers *value.ScopeValue
 }
 
 /*
@@ -41,7 +41,7 @@ func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := &Formalizer{
 		keyspace:    keyspace,
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
-		identifiers: make(map[string]bool),
+		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 	}
 
 	if keyspace != "" {
@@ -57,12 +57,12 @@ Visitor method for an Any Range Predicate that maps the
 children of the input ANY expression.
 */
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
-	sv, err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(sv)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -77,12 +77,12 @@ Visitor method for an Every Range Predicate that maps the
 children of the input EVERY expression.
 */
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
-	sv, err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(sv)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -97,12 +97,12 @@ Visitor method for an Any and Every Range Predicate that maps the
 children of the input ANY AND EVERY expression.
 */
 func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
-	sv, err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(sv)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -117,12 +117,12 @@ Visitor method for an Array Range Transform that maps the
 children of the input ARRAY expression.
 */
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
-	sv, err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(sv)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -137,12 +137,12 @@ Visitor method for an First Range Transform that maps the
 children of the input FIRST expression.
 */
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
-	sv, err := this.PushBindings(expr.Bindings())
+	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
 	}
 
-	defer this.PopBindings(sv)
+	defer this.PopBindings()
 
 	err = expr.MapChildren(this)
 	if err != nil {
@@ -158,10 +158,7 @@ Formalize Identifier.
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	_, ok := this.allowed.Field(expr.Identifier())
 	if ok {
-		if this.identifiers != nil {
-			this.identifiers[expr.Identifier()] = true
-		}
-
+		this.identifiers.SetField(expr.Identifier(), value.TRUE_VALUE)
 		return expr, nil
 	}
 
@@ -205,39 +202,41 @@ to interface which is populated using the bindings in the
 scope of the parent which is listed by the value allowed.
 Bring the bindings that have parrent allowed into scope.
 */
-func (this *Formalizer) PushBindings(bindings Bindings) (sv *value.ScopeValue, err error) {
-	sv = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
+func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
+	allowed := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
+	identifiers := value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
 
 	var expr Expression
 	for _, b := range bindings {
 		expr, err = this.Map(b.Expression())
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		b.SetExpression(expr)
-		sv.SetField(b.Variable(), b.Variable())
+		allowed.SetField(b.Variable(), value.TRUE_VALUE)
+		if b.NameVariable() != "" {
+			allowed.SetField(b.NameVariable(), value.TRUE_VALUE)
+		}
 	}
 
-	this.allowed = sv
-	return sv, nil
+	this.allowed = allowed
+	this.identifiers = identifiers
+	return nil
 }
 
 /*
 Set scope to parent's scope.
 */
-func (this *Formalizer) PopBindings(sv *value.ScopeValue) {
-	this.allowed = sv.Parent().(*value.ScopeValue)
+func (this *Formalizer) PopBindings() {
+	this.allowed = this.allowed.Parent().(*value.ScopeValue)
+	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
 }
 
 func (this *Formalizer) Copy() *Formalizer {
 	f := NewFormalizer(this.keyspace, nil)
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
-
-	for ident, val := range this.identifiers {
-		f.identifiers[ident] = val
-	}
-
+	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
 	return f
 }
 
@@ -257,10 +256,11 @@ func (this *Formalizer) Allowed() *value.ScopeValue {
 	return this.allowed
 }
 
-func (this *Formalizer) SetIdentifiers(identifiers map[string]bool) {
-	this.identifiers = identifiers
+func (this *Formalizer) Identifiers() *value.ScopeValue {
+	return this.identifiers
 }
 
-func (this *Formalizer) Identifiers() map[string]bool {
-	return this.identifiers
+// Argument must be non-nil
+func (this *Formalizer) SetIdentifiers(identifiers *value.ScopeValue) {
+	this.identifiers = identifiers
 }

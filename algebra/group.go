@@ -58,7 +58,7 @@ func (this *Group) Formalize(f *expression.Formalizer) error {
 	}
 
 	if this.letting != nil {
-		_, err = f.PushBindings(this.letting)
+		err = f.PushBindings(this.letting)
 		if err != nil {
 			return err
 		}

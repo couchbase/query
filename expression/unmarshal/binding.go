@@ -18,9 +18,10 @@ import (
 
 func UnmarshalBinding(body []byte) (*expression.Binding, error) {
 	var _unmarshalled struct {
-		Var  string `json:"variable"`
-		Expr string `json:"expr"`
-		Desc bool   `json:"descend"`
+		NameVar string `json:"name_var"`
+		Var     string `json:"var"`
+		Expr    string `json:"expr"`
+		Desc    bool   `json:"desc"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -33,18 +34,15 @@ func UnmarshalBinding(body []byte) (*expression.Binding, error) {
 		return nil, err
 	}
 
-	if _unmarshalled.Desc {
-		return expression.NewDescendantBinding(_unmarshalled.Var, expr), nil
-	} else {
-		return expression.NewBinding(_unmarshalled.Var, expr), nil
-	}
+	return expression.NewBinding(_unmarshalled.NameVar, _unmarshalled.Var, expr, _unmarshalled.Desc), nil
 }
 
 func UnmarshalBindings(body []byte) (expression.Bindings, error) {
 	var _unmarshalled []struct {
-		Var  string `json:"variable"`
-		Expr string `json:"expr"`
-		Desc bool   `json:"descend"`
+		NameVar string `json:"name_var"`
+		Var     string `json:"var"`
+		Expr    string `json:"expr"`
+		Desc    bool   `json:"desc"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -59,11 +57,7 @@ func UnmarshalBindings(body []byte) (expression.Bindings, error) {
 			return nil, err
 		}
 
-		if binding.Desc {
-			bindings[i] = expression.NewDescendantBinding(binding.Var, expr)
-		} else {
-			bindings[i] = expression.NewBinding(binding.Var, expr)
-		}
+		bindings[i] = expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
 	}
 
 	return bindings, nil

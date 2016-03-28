@@ -92,7 +92,7 @@ func (b *keyspaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors
 		}
 
 		rv = append(rv, value.AnnotatedPair{
-			Key:   k,
+			Name:  k,
 			Value: item,
 		})
 	}

@@ -73,7 +73,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	}
 
 	if this.let != nil {
-		_, err = f.PushBindings(this.let)
+		err = f.PushBindings(this.let)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	this.correlated = false
 	immediate := f.Allowed().GetValue().Fields()
 
-	for ident, _ := range f.Identifiers() {
+	for ident, _ := range f.Identifiers().Fields() {
 		if _, ok := immediate[ident]; !ok {
 			this.correlated = true
 			break

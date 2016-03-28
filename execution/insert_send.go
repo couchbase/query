@@ -138,7 +138,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			}
 		}
 
-		dpair.Key, ok = key.Actual().(string)
+		dpair.Name, ok = key.Actual().(string)
 		if !ok {
 			context.Error(errors.NewInsertKeyTypeError(key))
 			continue

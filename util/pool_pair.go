@@ -7,20 +7,38 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package value
+package util
 
-type Pairs []Pair
+import (
+	"sync"
+)
 
-// Key-value pair
-type Pair struct {
-	Name  string
-	Value Value
+type PairPool struct {
+	pool *sync.Pool
+	size int
 }
 
-type AnnotatedPairs []AnnotatedPair
+func NewPairPool(size int) *PairPool {
+	rv := &PairPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]Pair, 0, size)
+			},
+		},
+		size: size,
+	}
 
-// Key-value pair
-type AnnotatedPair struct {
-	Name  string
-	Value AnnotatedValue
+	return rv
+}
+
+func (this *PairPool) Get() []Pair {
+	return this.pool.Get().([]Pair)
+}
+
+func (this *PairPool) Put(s []Pair) {
+	if cap(s) < this.size || cap(s) > 2*this.size {
+		return
+	}
+
+	this.pool.Put(s[0:0])
 }

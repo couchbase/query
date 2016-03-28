@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"github.com/couchbase/query/util"
+)
+
 /*
 Type Empty struct
 */
@@ -163,6 +167,13 @@ Null has no fields to list. Hence return nil.
 */
 func (this *nullValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this nullValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 /*

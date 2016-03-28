@@ -10,6 +10,7 @@
 package expression
 
 import (
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -55,29 +56,11 @@ It returns an ARRAY value.
 func (this *Array) Type() value.Type { return value.ARRAY }
 
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
-	missing := false
-	null := false
+	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, bpairs)
 
-	barr := make([][]interface{}, len(this.bindings))
-	for i, b := range this.bindings {
-		bv, err := b.Expression().Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		}
-
-		if b.Descend() {
-			buffer := make([]interface{}, 0, 256)
-			bv = value.NewValue(bv.Descendants(buffer))
-		}
-
-		switch bv.Type() {
-		case value.ARRAY:
-			barr[i] = bv.Actual().([]interface{})
-		case value.MISSING:
-			missing = true
-		default:
-			null = true
-		}
+	if err != nil {
+		return nil, err
 	}
 
 	if missing {
@@ -88,18 +71,18 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	n := -1
-	for _, b := range barr {
-		if n < 0 || len(b) < n {
-			n = len(b)
-		}
-	}
-
 	rv := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
-			cv.SetField(b.Variable(), barr[j][i])
+			if b.NameVariable() == "" {
+				cv.SetField(b.Variable(), bvals[j][i])
+			} else {
+				pair := bpairs[j][i]
+				logging.Infof("var=%v, name=%v", b.NameVariable(), pair.Name)
+				cv.SetField(b.NameVariable(), pair.Name)
+				cv.SetField(b.Variable(), pair.Value)
+			}
 		}
 
 		if this.when != nil {
@@ -127,29 +110,11 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
-	missing := false
-	null := false
+	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, bpairs)
 
-	barr := make([][]interface{}, len(this.bindings))
-	for i, b := range this.bindings {
-		bv, err := b.Expression().Evaluate(item, context)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if b.Descend() {
-			buffer := make([]interface{}, 0, 256)
-			bv = value.NewValue(bv.Descendants(buffer))
-		}
-
-		switch bv.Type() {
-		case value.ARRAY:
-			barr[i] = bv.Actual().([]interface{})
-		case value.MISSING:
-			missing = true
-		default:
-			null = true
-		}
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if missing {
@@ -160,19 +125,18 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil, nil
 	}
 
-	n := -1
-	for _, b := range barr {
-		if n < 0 || len(b) < n {
-			n = len(b)
-		}
-	}
-
 	var rv []interface{}
 	var rvs value.Values
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
-			cv.SetField(b.Variable(), barr[j][i])
+			if b.NameVariable() == "" {
+				cv.SetField(b.Variable(), bvals[j][i])
+			} else {
+				pair := bpairs[j][i]
+				cv.SetField(b.NameVariable(), pair.Name)
+				cv.SetField(b.Variable(), pair.Value)
+			}
 		}
 
 		if this.when != nil {

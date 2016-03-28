@@ -11,6 +11,8 @@ package value
 
 import (
 	"math"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -196,6 +198,13 @@ Bool has no fields to list. Hence return nil.
 */
 func (this boolValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this boolValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 /*

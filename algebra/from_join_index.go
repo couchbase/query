@@ -124,8 +124,8 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 	p.Allowed().SetField(alias, alias)
 	this.right.keys, err = p.Map(this.right.keys)
 
-	for ident, val := range p.Identifiers() {
-		f.Identifiers()[ident] = val
+	for ident, val := range p.Identifiers().Fields() {
+		f.Identifiers().SetField(ident, val)
 	}
 
 	return

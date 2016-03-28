@@ -167,7 +167,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			fv = pv
 		}
 
-		fetchMap[pair.Key] = fv
+		fetchMap[pair.Name] = fv
 	}
 
 	// Preserve order of keys

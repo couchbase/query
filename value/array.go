@@ -11,6 +11,8 @@ package value
 
 import (
 	"bytes"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -224,16 +226,6 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
-/*
-It flattens out the elements of the array and appends it into
-the buffer. This is done in child first (depth first) order.
-In the event the buffer is full (capacity < length of the
-buffer + the current element), then grow the buffer by
-twice of length of the buffer + this element + 1.  Once the
-buffer has space,range over the slice, append the children
-to the buffer, and call Descendants recursively until there
-are no elements left. Finally return the buffer.
-*/
 func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -249,11 +241,22 @@ func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
-/*
-No fields to list. Hence return nil.
-*/
 func (this sliceValue) Fields() map[string]interface{} {
 	return nil
+}
+
+func (this sliceValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	if cap(buffer) < len(buffer)+len(this) {
+		buf2 := make([]util.Pair, len(buffer), (len(buffer)+len(this)+1)<<1)
+		copy(buf2, buffer)
+		buffer = buf2
+	}
+
+	for _, child := range this {
+		buffer = NewValue(child).DescendantFields(buffer)
+	}
+
+	return buffer
 }
 
 /*
@@ -313,60 +316,30 @@ func (this *listValue) Truth() bool {
 	return this.slice.Truth()
 }
 
-/*
-Call implemented Copy method for slice in *listValue.
-Return a pointer to listValue whose entry is the return
-value of the call to slicevalues copy method.
-*/
 func (this *listValue) Copy() Value {
 	return &listValue{this.slice.Copy().(sliceValue)}
 }
 
-/*
-Call implemented CopyForUpdate method for slice in *listValue.
-*/
 func (this *listValue) CopyForUpdate() Value {
 	return this.slice.CopyForUpdate()
 }
 
-/*
-Call implemented Field method for slice in *listValue.
-*/
 func (this *listValue) Field(field string) (Value, bool) {
 	return this.slice.Field(field)
 }
 
-/*
-Call implemented SetField method for slice in *listValue.
-*/
 func (this *listValue) SetField(field string, val interface{}) error {
 	return this.slice.SetField(field, val)
 }
 
-/*
-Call implemented UnsetField method for slice in *listValue.
-*/
 func (this *listValue) UnsetField(field string) error {
 	return this.slice.UnsetField(field)
 }
 
-/*
-Call implemented Index method for slice in *listValue.
-*/
 func (this *listValue) Index(index int) (Value, bool) {
 	return this.slice.Index(index)
 }
 
-/*
-It checks to see if there is a necessity to grow the slice.
-If the index is greater than the length of the receiver
-slice, check capacity next. In the event the index is
-smaller than the capacity, assign the current slice to
-the new slice from 0 to index+1. If the capacity is reached,
-then grow the slice. Make a slice with length index+1 and
-capacity twice the length, and reset the receiver. Finally
-call the SetIndex method for the sliceValue.
-*/
 func (this *listValue) SetIndex(index int, val interface{}) error {
 	if index >= len(this.slice) {
 		if index < cap(this.slice) {
@@ -381,37 +354,26 @@ func (this *listValue) SetIndex(index int, val interface{}) error {
 	return this.slice.SetIndex(index, val)
 }
 
-/*
-Call implemented Slice method for slice in *listValue.
-*/
 func (this *listValue) Slice(start, end int) (Value, bool) {
 	return this.slice.Slice(start, end)
 }
 
-/*
-Call implemented SliceTail method for slice in *listValue.
-*/
 func (this *listValue) SliceTail(start int) (Value, bool) {
 	return this.slice.SliceTail(start)
 }
 
-/*
-Call implemented Descendants method for slice in *listValue.
-*/
 func (this *listValue) Descendants(buffer []interface{}) []interface{} {
 	return this.slice.Descendants(buffer)
 }
 
-/*
-Call implemented Fields method for slice in *listValue.
-*/
 func (this *listValue) Fields() map[string]interface{} {
 	return this.slice.Fields()
 }
 
-/*
-Append a small value.
-*/
+func (this *listValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return this.slice.DescendantFields(buffer)
+}
+
 func (this *listValue) Successor() Value {
 	return this.slice.Successor()
 }
@@ -482,9 +444,6 @@ func arrayCompare(array1, array2 []interface{}) Value {
 	return NewValue(len(array1) - len(array2))
 }
 
-/*
-It allows for a copy of every element of the array by using a copyFunc.
-*/
 func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	if source == nil {
 		return nil

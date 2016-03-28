@@ -11,6 +11,8 @@ package value
 
 import (
 	"fmt"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -173,6 +175,13 @@ MISSING has no fields to list. Hence return nil.
 */
 func (this missingValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this missingValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 /*

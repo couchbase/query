@@ -126,7 +126,7 @@ func TestFile(t *testing.T) {
 
 	fred := freds[0].Value
 	var dmlKey value.Pair
-	dmlKey.Key = "fred2"
+	dmlKey.Name = "fred2"
 	dmlKey.Value = fred
 
 	_, err = keyspace.Insert([]value.Pair{dmlKey})
@@ -144,7 +144,7 @@ func TestFile(t *testing.T) {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	dmlKey.Key = "fred3"
+	dmlKey.Name = "fred3"
 	_, err = keyspace.Upsert([]value.Pair{dmlKey})
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)

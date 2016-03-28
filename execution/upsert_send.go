@@ -108,7 +108,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			}
 		}
 
-		dpair.Key, ok = key.Actual().(string)
+		dpair.Name, ok = key.Actual().(string)
 		if !ok {
 			context.Error(errors.NewUpsertKeyTypeError(key))
 			continue

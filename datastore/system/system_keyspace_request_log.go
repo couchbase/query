@@ -90,7 +90,7 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 				"id": key,
 			})
 			rv = append(rv, value.AnnotatedPair{
-				Key:   key,
+				Name:  key,
 				Value: item,
 			})
 		})

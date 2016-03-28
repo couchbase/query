@@ -7,20 +7,12 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package value
+package util
 
 type Pairs []Pair
 
 // Key-value pair
 type Pair struct {
 	Name  string
-	Value Value
-}
-
-type AnnotatedPairs []AnnotatedPair
-
-// Key-value pair
-type AnnotatedPair struct {
-	Name  string
-	Value AnnotatedValue
+	Value interface{}
 }

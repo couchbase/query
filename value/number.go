@@ -12,6 +12,8 @@ package value
 import (
 	"math"
 	"strconv"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -241,6 +243,13 @@ As number has no fields, return nil.
 */
 func (this floatValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this floatValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 /*

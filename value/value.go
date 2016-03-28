@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/couchbase/query/util"
 	json "github.com/dustin/gojson"
 )
 
@@ -279,12 +280,25 @@ type Value interface {
 
 	/*
 	   Lists the descendants of an array or object in depth first
-	   order (multilevel list flattening) by adding it to an input
+	   order (multilevel list flattening) by appending to an input
 	   buffer and returning it.
 	*/
 	Descendants(buffer []interface{}) []interface{}
 
+	/*
+	   Lists the name-value fields in this value. Nil for
+	   non-object values.
+	*/
 	Fields() map[string]interface{}
+
+	/*
+
+	   Lists the descendant fields of an array or object in depth
+	   first order (multilevel list flattening) by adding it to an
+	   input buffer and returning it.
+
+	*/
+	DescendantFields(buffer []util.Pair) []util.Pair
 
 	/*
 	   Returns an approximate successor to this value, or nil. An

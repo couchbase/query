@@ -12,6 +12,8 @@ package value
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/couchbase/query/util"
 )
 
 type binaryValue []byte
@@ -116,6 +118,10 @@ func (this binaryValue) Descendants(buffer []interface{}) []interface{} {
 
 func (this binaryValue) Fields() map[string]interface{} {
 	return nil
+}
+
+func (this binaryValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 func (this binaryValue) Successor() Value {

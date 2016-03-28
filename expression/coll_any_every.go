@@ -53,29 +53,11 @@ It returns a Boolean value.
 func (this *AnyEvery) Type() value.Type { return value.BOOLEAN }
 
 func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, error) {
-	missing := false
-	null := false
+	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, bpairs)
 
-	barr := make([][]interface{}, len(this.bindings))
-	for i, b := range this.bindings {
-		bv, err := b.Expression().Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		}
-
-		if b.Descend() {
-			buffer := make([]interface{}, 0, 256)
-			bv = value.NewValue(bv.Descendants(buffer))
-		}
-
-		switch bv.Type() {
-		case value.ARRAY:
-			barr[i] = bv.Actual().([]interface{})
-		case value.MISSING:
-			missing = true
-		default:
-			null = true
-		}
+	if err != nil {
+		return nil, err
 	}
 
 	if missing {
@@ -86,17 +68,16 @@ func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	n := -1
-	for _, b := range barr {
-		if n < 0 || len(b) < n {
-			n = len(b)
-		}
-	}
-
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
-			cv.SetField(b.Variable(), barr[j][i])
+			if b.NameVariable() == "" {
+				cv.SetField(b.Variable(), bvals[j][i])
+			} else {
+				pair := bpairs[j][i]
+				cv.SetField(b.NameVariable(), pair.Name)
+				cv.SetField(b.Variable(), pair.Value)
+			}
 		}
 
 		sv, e := this.satisfies.Evaluate(cv, context)
@@ -105,7 +86,7 @@ func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 
 		if !sv.Truth() {
-			return value.NewValue(false), nil
+			return value.FALSE_VALUE, nil
 		}
 	}
 

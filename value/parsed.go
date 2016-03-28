@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/couchbase/query/util"
 	jsonpointer "github.com/dustin/go-jsonpointer"
 )
 
@@ -181,9 +182,8 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 }
 
 /*
-Return the buffer if the parsedType is binary. If not call parse
-and then the Descendants method on that value with the input
-buffer.
+Return the buffer if the parsedType is binary. If not call parse and
+then the Descendants method on that value with the input buffer.
 */
 func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 	if this.parsedType == BINARY {
@@ -195,6 +195,18 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 
 func (this *parsedValue) Fields() map[string]interface{} {
 	return this.unwrap().Fields()
+}
+
+/*
+Return the buffer if the parsedType is binary. If not call parse and
+then the DescendantFields method on that value with the input buffer.
+*/
+func (this *parsedValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	if this.parsedType == BINARY {
+		return buffer
+	}
+
+	return this.unwrap().DescendantFields(buffer)
 }
 
 func (this *parsedValue) Successor() Value {

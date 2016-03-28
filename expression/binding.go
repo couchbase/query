@@ -14,85 +14,64 @@ import (
 	"sort"
 )
 
-/*
-Type Bindings is a slice of pointers to
-Binding.
-*/
 type Bindings []*Binding
 
 /*
-Bindings is a helper class. Type Binding is a struct
-with three fields, variable, expression and descend.
+Binding is a helper class.
 */
 type Binding struct {
-	variable string     `json:"variable"`
-	expr     Expression `json:"expr"`
-	descend  bool       `json:"descend"`
+	nameVariable string     `json:"name_var"`
+	variable     string     `json:"var"`
+	expr         Expression `json:"expr"`
+	descend      bool       `json:"desc"`
 }
 
-/*
-This method returns a pointer to the Binding struct with
-input variable and expression used to set the fields of
-the structure. The descend boolean field is set to false.
-*/
-func NewBinding(variable string, expr Expression) *Binding {
-	return &Binding{variable, expr, false}
+func NewBinding(nameVariable, variable string, expr Expression, descend bool) *Binding {
+	return &Binding{nameVariable, variable, expr, descend}
 }
 
-/*
-This method returns a new binding with the descendant
-field for the Binding struct set to true.
-*/
-func NewDescendantBinding(variable string, expr Expression) *Binding {
-	return &Binding{variable, expr, true}
+func NewSimpleBinding(variable string, expr Expression) *Binding {
+	return &Binding{"", variable, expr, false}
 }
 
 func (this *Binding) Copy() *Binding {
 	return &Binding{
-		variable: this.variable,
-		expr:     this.expr.Copy(),
-		descend:  this.descend,
+		nameVariable: this.nameVariable,
+		variable:     this.variable,
+		expr:         this.expr.Copy(),
+		descend:      this.descend,
 	}
 }
 
-/*
-This method is used to access the variable field
-of the receiver which is of type Binding.
-*/
+func (this *Binding) NameVariable() string {
+	return this.nameVariable
+}
+
 func (this *Binding) Variable() string {
 	return this.variable
 }
 
-/*
-This method is used to access the expression field
-of the receiver which is of type Binding.
-*/
 func (this *Binding) Expression() Expression {
 	return this.expr
 }
 
-/*
-This method is used to set the expression field
-of the receiver which is of type Binding.
-*/
 func (this *Binding) SetExpression(expr Expression) {
 	this.expr = expr
 }
 
-/*
-This method is used to access the descend field
-of the receiver which is of type Binding.
-*/
 func (this *Binding) Descend() bool {
 	return this.descend
 }
 
 func (this *Binding) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 3)
-	r["variable"] = this.variable
-	r["expr"] = NewStringer().Visit(this.expr)
+	if this.nameVariable != "" {
+		r["name_var"] = this.nameVariable
+	}
+	r["var"] = this.variable
+	r["expr"] = this.expr.String()
 	if this.descend {
-		r["descend"] = this.descend
+		r["desc"] = this.descend
 	}
 
 	return json.Marshal(r)
@@ -107,6 +86,7 @@ func (this Bindings) EquivalentTo(other Bindings) bool {
 		o := other[i]
 		if b.variable != o.variable ||
 			b.descend != o.descend ||
+			b.nameVariable != o.nameVariable ||
 			!b.expr.EquivalentTo(o.expr) {
 			return false
 		}
@@ -124,6 +104,7 @@ func (this Bindings) SubsetOf(other Bindings) bool {
 		o := other[i]
 		if b.variable != o.variable ||
 			(b.descend && !o.descend) ||
+			b.nameVariable != o.nameVariable ||
 			!b.expr.EquivalentTo(o.expr) {
 			return false
 		}
@@ -172,10 +153,14 @@ func (this Bindings) Expressions() Expressions {
 }
 
 func (this Bindings) Identifiers() Expressions {
-	exprs := make(Expressions, len(this))
+	exprs := make(Expressions, 0, 2*len(this))
 
-	for i, b := range this {
-		exprs[i] = NewIdentifier(b.variable)
+	for _, b := range this {
+		if b.nameVariable != "" {
+			exprs = append(exprs, NewIdentifier(b.nameVariable))
+		}
+
+		exprs = append(exprs, NewIdentifier(b.variable))
 	}
 
 	return exprs
@@ -197,7 +182,9 @@ func (this Bindings) Len() int {
 }
 
 func (this Bindings) Less(i, j int) bool {
-	return this[i].variable < this[j].variable
+	return this[i].nameVariable < this[j].nameVariable ||
+		(this[i].nameVariable == this[j].nameVariable &&
+			this[i].variable < this[j].variable)
 }
 
 func (this Bindings) Swap(i, j int) {

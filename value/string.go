@@ -12,6 +12,8 @@ package value
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -199,6 +201,13 @@ No fields to list. Hence return nil.
 */
 func (this stringValue) Fields() map[string]interface{} {
 	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this stringValue) DescendantFields(buffer []util.Pair) []util.Pair {
+	return buffer
 }
 
 /*

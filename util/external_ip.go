@@ -10,18 +10,17 @@
 package util
 
 import (
+	"errors"
 	"net"
 	"strings"
-
-	"github.com/couchbase/query/errors"
 )
 
 // helper function to determine the external IP address of a query node -
 // used to create a name for the query node in NewQueryNode function.
-func ExternalIP() (string, errors.Error) {
+func ExternalIP() (string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", errors.NewError(err, "")
+		return "", err
 	}
 	result := ""
 
@@ -34,7 +33,7 @@ func ExternalIP() (string, errors.Error) {
 		}
 		addrs, err := iface.Addrs()
 		if err != nil {
-			return "", errors.NewError(err, "")
+			return "", err
 		}
 		for _, addr := range addrs {
 			var ip net.IP
@@ -57,5 +56,5 @@ func ExternalIP() (string, errors.Error) {
 			}
 		}
 	}
-	return result, errors.NewError(nil, "Not connected to the network")
+	return result, errors.New("Not connected to the network")
 }

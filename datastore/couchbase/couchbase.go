@@ -671,7 +671,7 @@ func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) 
 	for k, av := range bulkResponse {
 		for _, v := range av {
 			var doc value.AnnotatedPair
-			doc.Key = k
+			doc.Name = k
 
 			Value := value.NewAnnotatedValue(value.NewValue(v.Body))
 
@@ -764,7 +764,7 @@ func (b *keyspace) performOp(op int, inserts []value.Pair) ([]value.Pair, errors
 	var err error
 
 	for _, kv := range inserts {
-		key := kv.Key
+		key := kv.Name
 		val := kv.Value.Actual()
 
 		//mv := kv.Value.GetAttachment("meta")

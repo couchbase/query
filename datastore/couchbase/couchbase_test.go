@@ -93,15 +93,15 @@ func TestServer(t *testing.T) {
 	}
 
 	fmt.Printf("Keys fetched %v", pair)
-	insertKey := value.Pair{Key: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
+	insertKey := value.Pair{Name: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
 
 	_, err = ks.Insert([]value.Pair{insertKey})
 	if err != nil {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
-	deleted, err := ks.Delete([]string{insertKey.Key})
-	if err != nil || (len(deleted) != 1 && deleted[0] != insertKey.Key) {
+	deleted, err := ks.Delete([]string{insertKey.Name})
+	if err != nil || (len(deleted) != 1 && deleted[0] != insertKey.Name) {
 		t.Fatalf("Failed to delete %v", err)
 	}
 

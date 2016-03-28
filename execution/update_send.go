@@ -113,7 +113,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 
 		pairs = pairs[0 : i+1]
-		pairs[i].Key = key
+		pairs[i].Name = key
 
 		clone := item.GetAttachment("clone")
 		switch clone := clone.(type) {

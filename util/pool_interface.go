@@ -36,7 +36,7 @@ func (this *InterfacePool) Get() []interface{} {
 }
 
 func (this *InterfacePool) Put(s []interface{}) {
-	if cap(s) != this.size {
+	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}
 

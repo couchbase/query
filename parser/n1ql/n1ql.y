@@ -1047,7 +1047,7 @@ bindings COMMA binding
 binding:
 alias EQ expr
 {
-    $$ = expression.NewBinding($1, $3)
+    $$ = expression.NewSimpleBinding($1, $3)
 }
 ;
 
@@ -1491,12 +1491,22 @@ update_bindings COMMA update_binding
 update_binding:
 variable IN path_expr
 {
-    $$ = expression.NewBinding($1, $3)
+    $$ = expression.NewSimpleBinding($1, $3)
 }
 |
 variable WITHIN path_expr
 {
-    $$ = expression.NewDescendantBinding($1, $3)
+    $$ = expression.NewBinding("", $1, $3, true)
+}
+|
+variable COLON variable IN path_expr
+{
+    $$ = expression.NewBinding($1, $3, $5, false)
+}
+|
+variable COLON variable WITHIN path_expr
+{
+    $$ = expression.NewBinding($1, $3, $5, true)
 }
 ;
 
@@ -2352,7 +2362,7 @@ members COMMA member
 member:
 STR COLON expr
 {
-    $$ = expression.NewBinding($1, $3)
+    $$ = expression.NewSimpleBinding($1, $3)
 }
 ;
 
@@ -2567,12 +2577,22 @@ coll_bindings COMMA coll_binding
 coll_binding:
 variable IN expr
 {
-    $$ = expression.NewBinding($1, $3)
+    $$ = expression.NewSimpleBinding($1, $3)
 }
 |
 variable WITHIN expr
 {
-    $$ = expression.NewDescendantBinding($1, $3)
+    $$ = expression.NewBinding("", $1, $3, true)
+}
+|
+variable COLON variable IN expr
+{
+    $$ = expression.NewBinding($1, $3, $5, false)
+}
+|
+variable COLON variable WITHIN expr
+{
+    $$ = expression.NewBinding($1, $3, $5, true)
 }
 ;
 

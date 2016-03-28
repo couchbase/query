@@ -199,7 +199,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 		if !this.correlated {
 			// Determine if this is a correlated subquery
 			immediate := f.Allowed().GetValue().Fields()
-			for ident, _ := range f.Identifiers() {
+			for ident, _ := range f.Identifiers().Fields() {
 				if _, ok := immediate[ident]; !ok {
 					this.correlated = true
 					break
@@ -215,7 +215,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 	if !this.correlated {
 		prevIdentifiers := parent.Identifiers()
 		defer parent.SetIdentifiers(prevIdentifiers)
-		parent.SetIdentifiers(make(map[string]bool))
+		parent.SetIdentifiers(value.NewScopeValue(make(map[string]interface{}, 16), nil))
 	}
 
 	if this.limit != nil {
@@ -233,7 +233,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
 	}
 
 	if !this.correlated {
-		this.correlated = len(parent.Identifiers()) > 0
+		this.correlated = len(parent.Identifiers().Fields()) > 0
 	}
 
 	return err

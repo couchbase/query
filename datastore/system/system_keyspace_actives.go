@@ -94,7 +94,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 			"id": id,
 		})
 		rv = append(rv, value.AnnotatedPair{
-			Key:   id,
+			Name:  id,
 			Value: item,
 		})
 	})

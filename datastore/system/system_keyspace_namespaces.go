@@ -77,7 +77,7 @@ func (b *namespaceKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 		}
 
 		rv = append(rv, value.AnnotatedPair{
-			Key:   k,
+			Name:  k,
 			Value: item,
 		})
 	}

@@ -278,7 +278,7 @@ func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) 
 		}
 
 		rv = append(rv, value.AnnotatedPair{
-			Key:   k,
+			Name:  k,
 			Value: item,
 		})
 	}
@@ -333,7 +333,7 @@ func (b *keyspace) performOp(op int, kvPairs []value.Pair) ([]value.Pair, errors
 		var file *os.File
 		var err error
 
-		key := kv.Key
+		key := kv.Name
 		value, _ := json.Marshal(kv.Value.Actual())
 		filename := filepath.Join(b.path(), key+".json")
 

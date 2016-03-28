@@ -152,14 +152,14 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 		return nil, cfgErr
 	}
 	var self clustering.QueryNode
-	ip, err := util.ExternalIP()
-	if err != nil {
-		return nil, err
+	ip, er := util.ExternalIP()
+	if er != nil {
+		return nil, errors.NewAdminGetNodeError(er, "localhost")
 	}
 
 	name, er := os.Hostname()
 	if er != nil {
-		return nil, err
+		return nil, errors.NewAdminGetNodeError(er, "localhost")
 	}
 
 	cm := cfgStore.ConfigurationManager()

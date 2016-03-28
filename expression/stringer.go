@@ -613,6 +613,12 @@ func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within s
 			io.WriteString(w, ", ")
 		}
 
+		if b.nameVariable != "" {
+			io.WriteString(w, "`")
+			io.WriteString(w, b.nameVariable)
+			io.WriteString(w, "` : ")
+		}
+
 		io.WriteString(w, "`")
 		io.WriteString(w, b.variable)
 		io.WriteString(w, "`")
