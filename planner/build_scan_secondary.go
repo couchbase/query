@@ -203,7 +203,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if limit != nil && (arrayIndex || !allowedPushDown(index, entry)) {
+		if limit != nil && (arrayIndex || !allowedPushDown(entry)) {
 			limit = nil
 			this.limit = nil
 		}
@@ -272,8 +272,8 @@ func nonKeysPredExpression(alias string, keys expression.Expressions, pred, cond
 	return condPred
 }
 
-func allowedPushDown(index datastore.Index, entry *indexEntry) bool {
-	if len(entry.keys) > 1 {
+func allowedPushDown(entry *indexEntry) bool {
+	if len(entry.sargKeys) != 1 {
 		return false
 	} else {
 		for _, span := range entry.spans {

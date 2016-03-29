@@ -70,8 +70,7 @@ outer:
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if this.countAgg != nil && !arrayIndex && (len(entry.spans) == 1) &&
-			(len(entry.keys) == 1) && allowedPushDown(index, entry) {
+		if this.countAgg != nil && !arrayIndex && (len(entry.spans) == 1) && allowedPushDown(entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
 				op := this.countAgg.Operand()
@@ -88,7 +87,7 @@ outer:
 			}
 		}
 
-		if limit != nil && (arrayIndex || !allowedPushDown(index, entry)) {
+		if limit != nil && (arrayIndex || !allowedPushDown(entry)) {
 			limit = nil
 			this.limit = nil
 		}
