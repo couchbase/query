@@ -32,7 +32,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.children = append(this.children, scan)
 
 	if this.coveringScan != nil {
-		coverer := expression.NewCoverer(this.coveringScan.Covers())
+		coverer := expression.NewCoverer(this.coveringScan.Covers(), this.coveringScan.FilterCovers())
 		err = this.cover.MapExpressions(coverer)
 		if err != nil {
 			return err

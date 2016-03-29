@@ -41,18 +41,20 @@ outer:
 
 		// Include covering expression from index WHERE clause
 		coveringExprs := keys
-		var filterCovers map[string]value.Value
+		var filterCovers map[*expression.Cover]value.Value
+
 		if entry.cond != nil {
-			filterCovers = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+			var err error
+			fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+			filterCovers, err = mapFilterCovers(fc)
+			if err != nil {
+				return nil, err
+			}
+
 			coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
 			copy(coveringExprs, keys)
-			for s, _ := range filterCovers {
-				expr, err := parser.Parse(s)
-				if err != nil {
-					return nil, err
-				}
-
-				coveringExprs = append(coveringExprs, expr)
+			for c, _ := range filterCovers {
+				coveringExprs = append(coveringExprs, c.Covered())
 			}
 		}
 
@@ -113,4 +115,23 @@ outer:
 	}
 
 	return nil, nil
+}
+
+func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
+	if fc == nil {
+		return nil, nil
+	}
+
+	rv := make(map[*expression.Cover]value.Value, len(fc))
+	for s, v := range fc {
+		expr, err := parser.Parse(s)
+		if err != nil {
+			return nil, err
+		}
+
+		c := expression.NewCover(expr)
+		rv[c] = v
+	}
+
+	return rv, nil
 }

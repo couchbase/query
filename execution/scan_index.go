@@ -166,8 +166,8 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 					covers := this.plan.Covers()
 					if len(covers) > 0 {
-						for s, v := range this.plan.FilterCovers() {
-							av.SetCover(s, v)
+						for c, v := range this.plan.FilterCovers() {
+							av.SetCover(c.Text(), v)
 						}
 
 						// Matches planner.builder.buildCoveringScan()

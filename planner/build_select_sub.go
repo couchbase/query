@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
@@ -112,13 +113,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	if this.coveringScan != nil || this.countScan != nil {
 		var covers expression.Covers
+		var filterCovers map[*expression.Cover]value.Value
+
 		if this.countScan != nil {
 			covers = this.countScan.Covers()
+			// filterCovers is nil here
 		} else {
 			covers = this.coveringScan.Covers()
-
+			filterCovers = this.coveringScan.FilterCovers()
 		}
-		coverer := expression.NewCoverer(covers)
+
+		coverer := expression.NewCoverer(covers, filterCovers)
 		err = this.cover.MapExpressions(coverer)
 		if err != nil {
 			return nil, err

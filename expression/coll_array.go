@@ -10,7 +10,6 @@
 package expression
 
 import (
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -79,7 +78,6 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 				cv.SetField(b.Variable(), bvals[j][i])
 			} else {
 				pair := bpairs[j][i]
-				logging.Infof("var=%v, name=%v", b.NameVariable(), pair.Name)
 				cv.SetField(b.NameVariable(), pair.Name)
 				cv.SetField(b.Variable(), pair.Value)
 			}

@@ -27,12 +27,12 @@ type IndexScan struct {
 	distinct     bool
 	limit        expression.Expression
 	covers       expression.Covers
-	filterCovers map[string]value.Value
+	filterCovers map[*expression.Cover]value.Value
 }
 
 func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans,
 	distinct bool, limit expression.Expression, covers expression.Covers,
-	filterCovers map[string]value.Value) *IndexScan {
+	filterCovers map[*expression.Cover]value.Value) *IndexScan {
 	return &IndexScan{
 		index:        index,
 		term:         term,
@@ -76,7 +76,7 @@ func (this *IndexScan) Covers() expression.Covers {
 	return this.covers
 }
 
-func (this *IndexScan) FilterCovers() map[string]value.Value {
+func (this *IndexScan) FilterCovers() map[*expression.Cover]value.Value {
 	return this.filterCovers
 }
 
@@ -106,7 +106,12 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	}
 
 	if len(this.filterCovers) > 0 {
-		r["filter_covers"] = this.filterCovers
+		fc := make(map[string]value.Value, len(this.filterCovers))
+		for c, v := range this.filterCovers {
+			fc[c.String()] = v
+		}
+
+		r["filter_covers"] = fc
 	}
 
 	if this.duration != 0 {
@@ -167,7 +172,18 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	this.filterCovers = _unmarshalled.FilterCovers
+	if _unmarshalled.FilterCovers != nil {
+		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.FilterCovers))
+		for k, v := range _unmarshalled.FilterCovers {
+			expr, err := parser.Parse(k)
+			if err != nil {
+				return err
+			}
+
+			c := expression.NewCover(expr)
+			this.filterCovers[c] = v
+		}
+	}
 
 	indexer, err := k.Indexer(_unmarshalled.Using)
 	if err != nil {

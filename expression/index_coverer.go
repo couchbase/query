@@ -9,19 +9,31 @@
 
 package expression
 
+import (
+	"github.com/couchbase/query/value"
+)
+
 type Coverer struct {
 	MapperBase
 
-	covered []*Cover
+	covers       []*Cover
+	filterCovers map[*Cover]value.Value
 }
 
-func NewCoverer(covered []*Cover) *Coverer {
+func NewCoverer(covers []*Cover, filterCovers map[*Cover]value.Value) *Coverer {
 	rv := &Coverer{
-		covered: covered,
+		covers:       covers,
+		filterCovers: filterCovers,
 	}
 
 	rv.mapFunc = func(expr Expression) (Expression, error) {
-		for _, c := range covered {
+		for _, c := range covers {
+			if c.Covered().EquivalentTo(expr) {
+				return c, nil
+			}
+		}
+
+		for c, _ := range filterCovers {
 			if c.Covered().EquivalentTo(expr) {
 				return c, nil
 			}
@@ -34,8 +46,12 @@ func NewCoverer(covered []*Cover) *Coverer {
 	return rv
 }
 
-func (this *Coverer) Covered() []*Cover {
-	return this.covered
+func (this *Coverer) Covers() []*Cover {
+	return this.covers
+}
+
+func (this *Coverer) FilterCovers() map[*Cover]value.Value {
+	return this.filterCovers
 }
 
 // Constant

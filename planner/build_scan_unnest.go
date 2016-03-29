@@ -13,7 +13,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -243,18 +242,20 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 
 	// Include covering expression from index WHERE clause
 	coveringExprs := keys
-	var filterCovers map[string]value.Value
+	var filterCovers map[*expression.Cover]value.Value
+
 	if entry.cond != nil {
-		filterCovers = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		var err error
+		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		filterCovers, err = mapFilterCovers(fc)
+		if err != nil {
+			return nil, err
+		}
+
 		coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
 		copy(coveringExprs, keys)
-		for s, _ := range filterCovers {
-			expr, err := parser.Parse(s)
-			if err != nil {
-				return nil, err
-			}
-
-			coveringExprs = append(coveringExprs, expr)
+		for c, _ := range filterCovers {
+			coveringExprs = append(coveringExprs, c.Covered())
 		}
 	}
 
