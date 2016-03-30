@@ -80,6 +80,10 @@ func (this *subsetFactory) VisitFirst(expr *expression.First) (interface{}, erro
 	return newSubsetDefault(expr), nil
 }
 
+func (this *subsetFactory) VisitObject(expr *expression.Object) (interface{}, error) {
+	return newSubsetDefault(expr), nil
+}
+
 func (this *subsetFactory) VisitIn(expr *expression.In) (interface{}, error) {
 	return newSubsetDefault(expr), nil
 }

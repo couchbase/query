@@ -126,13 +126,6 @@ func (this *Field) Constructor() FunctionConstructor {
 	}
 }
 
-/*
-Set Field to input value val. Evaluate the first and second operands
-in the Field. If the first type is missing, set the target as the item.
-If the second type is a string, call the SetField method to set the
-string value second to the input value and return true if no error is
-encountered during setting. For all other types return false.
-*/
 func (this *Field) Set(item, val value.Value, context Context) bool {
 	first, er := this.First().Evaluate(item, context)
 	if er != nil {
@@ -153,13 +146,6 @@ func (this *Field) Set(item, val value.Value, context Context) bool {
 	}
 }
 
-/*
-Unset the Field value. Evaluate the first and second operands
-in the Field. If the first type is missing, set the target as the item.
-If the second type is a string, call the UnsetField method on the second
-operand. Return true if no error is encountered during setting. For
-all other types return false.
-*/
 func (this *Field) Unset(item value.Value, context Context) bool {
 	second, er := this.Second().Evaluate(item, context)
 	if er != nil {

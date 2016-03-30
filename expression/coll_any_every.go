@@ -14,19 +14,13 @@ import (
 )
 
 /*
-Represents range predicate Every, that allow testing of a bool
-condition over the elements or attributes of a collection or
-object. Type AnyEvery is a struct that implements collPred.
+Represents range predicate ANY AND EVERY, that allow testing of a bool
+condition over the elements of a collection or object.
 */
 type AnyEvery struct {
 	collPredBase
 }
 
-/*
-This method returns a pointer to the AnyEvery struct that has the
-bindings and satisfies fields populated by the input args
-bindings and expression satisfies.
-*/
 func NewAnyEvery(bindings Bindings, satisfies Expression) Expression {
 	rv := &AnyEvery{
 		collPredBase: collPredBase{
@@ -39,17 +33,10 @@ func NewAnyEvery(bindings Bindings, satisfies Expression) Expression {
 	return rv
 }
 
-/*
-It calls the VisitAnyEvery method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *AnyEvery) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAnyEvery(this)
 }
 
-/*
-It returns a Boolean value.
-*/
 func (this *AnyEvery) Type() value.Type { return value.BOOLEAN }
 
 func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, error) {

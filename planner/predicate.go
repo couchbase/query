@@ -87,6 +87,10 @@ func (this *predicate) VisitFirst(expr *expression.First) (interface{}, error) {
 	return this.test(expr)
 }
 
+func (this *predicate) VisitObject(expr *expression.Object) (interface{}, error) {
+	return this.test(expr)
+}
+
 func (this *predicate) VisitIn(expr *expression.In) (interface{}, error) {
 	return this.test(expr)
 }

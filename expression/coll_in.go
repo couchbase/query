@@ -14,18 +14,12 @@ import (
 )
 
 /*
-Represents the Collection expression In. Type In is a
-struct that implements BinaryFunctionBase.
+Represents the collection expression IN.
 */
 type In struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewIn calls NewBinaryFunctionBase
-to define In collection expression with input operand
-expressions first and second, as input.
-*/
 func NewIn(first, second Expression) Function {
 	rv := &In{
 		*NewBinaryFunctionBase("in", first, second),
@@ -35,23 +29,12 @@ func NewIn(first, second Expression) Function {
 	return rv
 }
 
-/*
-It calls the VisitIn method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *In) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIn(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *In) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *In) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -69,11 +52,7 @@ func (this *In) FilterCovers(covers map[string]value.Value) map[string]value.Val
 
 /*
 IN evaluates to TRUE if the right-hand-side first value is an array
-and directly contains the left-hand-side second value. If either
-of the input operands are missing, return missing value, and
-if the second is not an array return null. Range over the elements of the
-array and check if any element is equal to the first value, return true.
-For all other cases, return false.
+and directly contains the left-hand-side second value.
 */
 func (this *In) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -92,10 +71,6 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 	return value.FALSE_VALUE, nil
 }
 
-/*
-The constructor returns a NewIn with the operands
-cast to a Function as the FunctionConstructor.
-*/
 func (this *In) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIn(operands[0], operands[1])
@@ -103,10 +78,7 @@ func (this *In) Constructor() FunctionConstructor {
 }
 
 /*
-This function implements the not in collection operation.
-It calls the NewNot over the NewIn to return an expression that
-is a complement of the NewIn method boolean return type.
-(NewNot represents the Not logical operation)
+This function implements the NOT IN collection operation.
 */
 func NewNotIn(first, second Expression) Expression {
 	return NewNot(NewIn(first, second))

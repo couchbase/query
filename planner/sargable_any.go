@@ -43,7 +43,7 @@ func newSargableAny(pred *expression.Any) *sargableAny {
 			return false, nil
 		}
 
-		mappings := expression.Expressions{array.Mapping()}
+		mappings := expression.Expressions{array.ValueMapping()}
 		return SargableFor(pred.Satisfies(), mappings) > 0, nil
 	}
 

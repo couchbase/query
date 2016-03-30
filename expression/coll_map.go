@@ -14,23 +14,22 @@ import (
 )
 
 /*
-Type collMap represents a struct that implements ExpressionBase.
-It refers to the fields or attributes of a collection or map
-used for Range transforms. Contains fields mapping and
-bindings, and a when expression.
+Base for ARRAY, FIRST, and OBJECT collection expressions.
 */
 type collMap interface {
 	Expression
-	Mapping() Expression
+	NameMapping() Expression
+	ValueMapping() Expression
 	Bindings() Bindings
 	When() Expression
 }
 
 type collMapBase struct {
 	ExpressionBase
-	mapping  Expression
-	bindings Bindings
-	when     Expression
+	nameMapping  Expression
+	valueMapping Expression
+	bindings     Bindings
+	when         Expression
 }
 
 func (this *collMapBase) EquivalentTo(other Expression) bool {
@@ -43,19 +42,20 @@ func (this *collMapBase) EquivalentTo(other Expression) bool {
 	}
 
 	o := other.(collMap)
-	return this.mapping.EquivalentTo(o.Mapping()) &&
+	return this.valueMapping.EquivalentTo(o.ValueMapping()) &&
 		this.bindings.EquivalentTo(o.Bindings()) &&
-		Equivalent(this.when, o.When())
+		Equivalent(this.when, o.When()) &&
+		Equivalent(this.nameMapping, o.NameMapping())
 }
 
-/*
-Returns the children as expressions of the collMap.
-Append the mapping, binding expressions and the
-when condition if present.
-*/
 func (this *collMapBase) Children() Expressions {
-	d := make(Expressions, 0, 2+len(this.bindings))
-	d = append(d, this.mapping)
+	d := make(Expressions, 0, 3+len(this.bindings))
+
+	if this.nameMapping != nil {
+		d = append(d, this.nameMapping)
+	}
+
+	d = append(d, this.valueMapping)
 
 	for _, b := range this.bindings {
 		d = append(d, b.Expression())
@@ -68,13 +68,15 @@ func (this *collMapBase) Children() Expressions {
 	return d
 }
 
-/*
-Map one set of expressions to another expression.
-(Map Expresions associated with bindings and
-the when expression if it exists. ).
-*/
 func (this *collMapBase) MapChildren(mapper Mapper) (err error) {
-	this.mapping, err = mapper.Map(this.mapping)
+	if this.nameMapping != nil {
+		this.nameMapping, err = mapper.Map(this.nameMapping)
+		if err != nil {
+			return
+		}
+	}
+
+	this.valueMapping, err = mapper.Map(this.valueMapping)
 	if err != nil {
 		return
 	}
@@ -94,8 +96,12 @@ func (this *collMapBase) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
-func (this *collMapBase) Mapping() Expression {
-	return this.mapping
+func (this *collMapBase) NameMapping() Expression {
+	return this.nameMapping
+}
+
+func (this *collMapBase) ValueMapping() Expression {
+	return this.valueMapping
 }
 
 func (this *collMapBase) Bindings() Bindings {

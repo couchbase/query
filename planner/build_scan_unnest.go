@@ -193,7 +193,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 		return nil, nil, nil
 	}
 
-	arrayMapping := array.Mapping()
+	arrayMapping := array.ValueMapping()
 	nestedMapping, ok := arrayMapping.(*expression.All)
 	if ok {
 		alias := expression.NewIdentifier(unnest.As())
@@ -211,7 +211,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 
 		return nil, nil, nil
 	} else {
-		mappings := expression.Expressions{array.Mapping()}
+		mappings := expression.Expressions{array.ValueMapping()}
 		if SargableFor(pred, mappings) == 0 {
 			return nil, nil, nil
 		}

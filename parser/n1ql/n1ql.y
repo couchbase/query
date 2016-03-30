@@ -2613,6 +2613,11 @@ FIRST expr FOR coll_bindings opt_when END
 {
     $$ = expression.NewFirst($2, $4, $5)
 }
+|
+OBJECT expr COLON expr FOR coll_bindings opt_when END
+{
+    $$ = expression.NewObject($2, $4, $6, $7)
+}
 ;
 
 

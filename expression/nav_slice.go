@@ -64,13 +64,6 @@ slicing. It returns a new array containing a subset of the source,
 containing the elements from position start to end-1. The element at
 start is included, while the element at end is not. If end is omitted,
 all elements from start to the end of the source array are included.
-The source is the first argument. If it is missing return a missing
-value. The first argument represents start. If missing return missing.
-If there are more than 2 arguments, then an end is specified. Check
-its type, and if missing return missing value. Since start and end
-represent indices, make sure they are integer values and if not return
-null value. Call Slice or Slice tail on the source (depending on whether
-end is specified) to return the specified slice.
 */
 func (this *Slice) Apply(context Context, args ...value.Value) (rv value.Value, re error) {
 	source := args[0]

@@ -14,26 +14,19 @@ import (
 )
 
 /*
-Represents range transform Array, that allow you to map and
-filter the elements or attributes of a collection or object(s).
-ARRAY evaluates to an array of the operand expression. Type
-Array is a struct that implements collMap.
+Represents range transform ARRAY, that allow you to map and filter the
+elements of a collection or objects.
 */
 type Array struct {
 	collMapBase
 }
 
-/*
-This method returns a pointer to the Array struct that has the
-bindings,mapping and when fields populated by the input args
-bindings and expression when/mapping.
-*/
 func NewArray(mapping Expression, bindings Bindings, when Expression) Expression {
 	rv := &Array{
 		collMapBase: collMapBase{
-			mapping:  mapping,
-			bindings: bindings,
-			when:     when,
+			valueMapping: mapping,
+			bindings:     bindings,
+			when:         when,
 		},
 	}
 
@@ -41,17 +34,10 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 	return rv
 }
 
-/*
-It calls the VisitArray method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitArray(this)
 }
 
-/*
-It returns an ARRAY value.
-*/
 func (this *Array) Type() value.Type { return value.ARRAY }
 
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -94,7 +80,7 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 			}
 		}
 
-		mv, e := this.mapping.Evaluate(cv, context)
+		mv, e := this.valueMapping.Evaluate(cv, context)
 		if e != nil {
 			return nil, e
 		}
@@ -148,7 +134,7 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 			}
 		}
 
-		mv, mvs, e := this.mapping.EvaluateForIndex(cv, context)
+		mv, mvs, e := this.valueMapping.EvaluateForIndex(cv, context)
 		if e != nil {
 			return nil, nil, e
 		} else if mvs != nil {
@@ -175,5 +161,5 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 }
 
 func (this *Array) Copy() Expression {
-	return NewArray(this.mapping.Copy(), this.bindings.Copy(), Copy(this.when))
+	return NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
 }

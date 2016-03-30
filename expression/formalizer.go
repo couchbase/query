@@ -16,9 +16,7 @@ import (
 )
 
 /*
-Convert expressions to its full equivalent form.
-Type Formalizer inherits from MapperBase. It has fields
-Allowed and keyspace of type value and string.
+Convert expressions to full form qualified by keyspace aliases.
 */
 type Formalizer struct {
 	MapperBase
@@ -28,10 +26,6 @@ type Formalizer struct {
 	identifiers *value.ScopeValue
 }
 
-/*
-This method returns a pointer to a Formalizer struct
-with allowed set to a new map of type string to interface.
-*/
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	var pv value.Value
 	if parent != nil {
@@ -52,10 +46,6 @@ func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	return rv
 }
 
-/*
-Visitor method for an Any Range Predicate that maps the
-children of the input ANY expression.
-*/
 func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -72,10 +62,6 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	return expr, nil
 }
 
-/*
-Visitor method for an Every Range Predicate that maps the
-children of the input EVERY expression.
-*/
 func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -92,10 +78,6 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	return expr, nil
 }
 
-/*
-Visitor method for an Any and Every Range Predicate that maps the
-children of the input ANY AND EVERY expression.
-*/
 func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -112,10 +94,6 @@ func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	return expr, nil
 }
 
-/*
-Visitor method for an Array Range Transform that maps the
-children of the input ARRAY expression.
-*/
 func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 	err := this.PushBindings(expr.Bindings())
 	if err != nil {
@@ -132,11 +110,23 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 	return expr, nil
 }
 
-/*
-Visitor method for an First Range Transform that maps the
-children of the input FIRST expression.
-*/
 func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
+	err := this.PushBindings(expr.Bindings())
+	if err != nil {
+		return nil, err
+	}
+
+	defer this.PopBindings()
+
+	err = expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	return expr, nil
+}
+
+func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
 	err := this.PushBindings(expr.Bindings())
 	if err != nil {
 		return nil, err
@@ -197,10 +187,7 @@ func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
 }
 
 /*
-Visitor method for Bindings. Value is a new map from string
-to interface which is populated using the bindings in the
-scope of the parent which is listed by the value allowed.
-Bring the bindings that have parrent allowed into scope.
+Create new scope containing bindings.
 */
 func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 	allowed := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
@@ -226,7 +213,7 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 }
 
 /*
-Set scope to parent's scope.
+Restore scope to parent's scope.
 */
 func (this *Formalizer) PopBindings() {
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)

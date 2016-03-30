@@ -91,6 +91,10 @@ func (this *sargBase) VisitFirst(expr *expression.First) (interface{}, error) {
 	return this.sarger(expr)
 }
 
+func (this *sargBase) VisitObject(expr *expression.Object) (interface{}, error) {
+	return this.sarger(expr)
+}
+
 func (this *sargBase) VisitIn(expr *expression.In) (interface{}, error) {
 	return this.sarger(expr)
 }

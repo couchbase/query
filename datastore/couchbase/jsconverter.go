@@ -196,6 +196,10 @@ func (this *JSConverter) VisitFirst(expr *expression.First) (interface{}, error)
 	return nil, fmt.Errorf("Expression not implemented")
 }
 
+func (this *JSConverter) VisitObject(expr *expression.Object) (interface{}, error) {
+	return nil, fmt.Errorf("Expression not implemented")
+}
+
 func (this *JSConverter) VisitIn(expr *expression.In) (interface{}, error) {
 	return nil, fmt.Errorf("Expression not implemented")
 }

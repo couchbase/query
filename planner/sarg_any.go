@@ -44,7 +44,7 @@ func newSargAny(pred *expression.Any) *sargAny {
 			return nil, nil
 		}
 
-		return sargFor(pred.Satisfies(), array.Mapping(), false)
+		return sargFor(pred.Satisfies(), array.ValueMapping(), false)
 	}
 
 	return rv

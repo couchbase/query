@@ -60,15 +60,6 @@ func (this *Element) Evaluate(item value.Value, context Context) (value.Value, e
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method evaluates the element using the first and second value
-and returns the result value. If the second operand type is missing
-then return a missing value. If it is a number, check if it is an
-absolute number (equal to its trucated value), and return the element
-at that index using the Index method. If it isnt a number or missing,
-then check the first elements type. If it is missing return missing
-otherwise return null value.
-*/
 func (this *Element) Apply(context Context, first, second value.Value) (value.Value, error) {
 	switch second.Type() {
 	case value.NUMBER:
@@ -98,13 +89,6 @@ func (this *Element) Constructor() FunctionConstructor {
 	}
 }
 
-/*
-Set value at index. Evaluate the first and second operands.
-If the second is an abosulte number(integer) then call
-SetIndex method to set that index in the first operand with
-value val. If the SetIndex method is successful return true.
-For all other cases return false.
-*/
 func (this *Element) Set(item, val value.Value, context Context) bool {
 	second, er := this.Second().Evaluate(item, context)
 	if er != nil {

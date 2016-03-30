@@ -112,6 +112,10 @@ func (this *MapperBase) VisitFirst(expr *First) (interface{}, error) {
 	return this.visit(expr)
 }
 
+func (this *MapperBase) VisitObject(expr *Object) (interface{}, error) {
+	return this.visit(expr)
+}
+
 // Comparison
 
 func (this *MapperBase) VisitBetween(expr *Between) (interface{}, error) {

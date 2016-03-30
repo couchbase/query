@@ -14,10 +14,7 @@ import (
 )
 
 /*
-Type collPred represents a struct that implements ExpressionBase.
-It refers to the fields or attributes of a collection or map
-used for Range predicates. Contains fields bindings, and satisfies
-of type expression.
+Base for ANY, EVERY, and ANY AND EVERY collection predicates.
 */
 type collPred interface {
 	Expression
@@ -56,11 +53,6 @@ func (this *collPredBase) Children() Expressions {
 	return d
 }
 
-/*
-Map one set of expressions to another expression.
-(Map Expresions associated with bindings and
-the satisfies expression if it exists ).
-*/
 func (this *collPredBase) MapChildren(mapper Mapper) (err error) {
 	err = this.bindings.MapExpressions(mapper)
 	if err != nil {

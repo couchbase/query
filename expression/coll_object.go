@@ -14,17 +14,18 @@ import (
 )
 
 /*
-Represents range transform FIRST, that allow you to map and filter the
-elements of a collection or object.
+Represents range transform OBJECT, that allow you to map and filter
+the elements of a collection or object.
 */
-type First struct {
+type Object struct {
 	collMapBase
 }
 
-func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression {
-	rv := &First{
+func NewObject(nameMapping, valueMapping Expression, bindings Bindings, when Expression) Expression {
+	rv := &Object{
 		collMapBase: collMapBase{
-			valueMapping: mapping,
+			nameMapping:  nameMapping,
+			valueMapping: valueMapping,
 			bindings:     bindings,
 			when:         when,
 		},
@@ -34,13 +35,13 @@ func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression
 	return rv
 }
 
-func (this *First) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFirst(this)
+func (this *Object) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitObject(this)
 }
 
-func (this *First) Type() value.Type { return this.valueMapping.Type() }
+func (this *Object) Type() value.Type { return value.OBJECT }
 
-func (this *First) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *Object) Evaluate(item value.Value, context Context) (value.Value, error) {
 	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
 	defer collReleaseBuffers(bvals, bpairs)
 
@@ -56,6 +57,7 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
+	rv := make(map[string]interface{}, n)
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
@@ -79,17 +81,34 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 			}
 		}
 
-		mv, e := this.valueMapping.Evaluate(cv, context)
+		nv, e := this.nameMapping.Evaluate(cv, context)
 		if e != nil {
 			return nil, e
 		}
 
-		return mv, nil
+		switch nv.Type() {
+		case value.STRING:
+			// Do nothing
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		default:
+			return value.NULL_VALUE, nil
+		}
+
+		vv, e := this.valueMapping.Evaluate(cv, context)
+		if e != nil {
+			return nil, e
+		}
+
+		if vv.Type() != value.MISSING {
+			rv[nv.Actual().(string)] = vv
+		}
 	}
 
-	return value.MISSING_VALUE, nil
+	return value.NewValue(rv), nil
 }
 
-func (this *First) Copy() Expression {
-	return NewFirst(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+func (this *Object) Copy() Expression {
+	return NewObject(this.nameMapping.Copy(), this.valueMapping.Copy(),
+		this.bindings.Copy(), Copy(this.when))
 }

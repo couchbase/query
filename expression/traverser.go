@@ -111,6 +111,10 @@ func (this *TraverserBase) VisitFirst(expr *First) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
+func (this *TraverserBase) VisitObject(expr *Object) (interface{}, error) {
+	return nil, this.TraverseList(expr.Children())
+}
+
 // Comparison
 
 func (this *TraverserBase) VisitBetween(expr *Between) (interface{}, error) {

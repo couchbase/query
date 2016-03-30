@@ -80,6 +80,10 @@ func (this *sargableFactory) VisitFirst(expr *expression.First) (interface{}, er
 	return newSargableDefault(expr), nil
 }
 
+func (this *sargableFactory) VisitObject(expr *expression.Object) (interface{}, error) {
+	return newSargableDefault(expr), nil
+}
+
 func (this *sargableFactory) VisitIn(expr *expression.In) (interface{}, error) {
 	return newSargableDefault(expr), nil
 }

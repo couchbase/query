@@ -14,19 +14,13 @@ import (
 )
 
 /*
-Represents range predicate Any, that allow testing of a bool
-condition over the elements or attributes of a collection or
-object. Type Any is a struct that implements collPred.
+Represents range predicate ANY, that allow testing of a bool condition
+over the elements of a collection or object.
 */
 type Any struct {
 	collPredBase
 }
 
-/*
-This method returns a pointer to the Any struct that has the
-bindings and satisfies fields populated by the input args
-bindings and expression satisfies.
-*/
 func NewAny(bindings Bindings, satisfies Expression) Expression {
 	rv := &Any{
 		collPredBase: collPredBase{
@@ -39,17 +33,10 @@ func NewAny(bindings Bindings, satisfies Expression) Expression {
 	return rv
 }
 
-/*
-It calls the VisitAny method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
 func (this *Any) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAny(this)
 }
 
-/*
-It returns a Boolean value.
-*/
 func (this *Any) Type() value.Type { return value.BOOLEAN }
 
 func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error) {

@@ -164,22 +164,6 @@ func (this *Stringer) VisitAny(expr *Any) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *Stringer) VisitArray(expr *Array) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("array ")
-	buf.WriteString(this.Visit(expr.mapping))
-	buf.WriteString(" for ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-
-	if expr.when != nil {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(expr.when))
-	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
-}
-
 func (this *Stringer) VisitEvery(expr *Every) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("every ")
@@ -200,18 +184,10 @@ func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *Stringer) VisitExists(expr *Exists) (interface{}, error) {
+func (this *Stringer) VisitArray(expr *Array) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("(exists ")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(")")
-	return buf.String(), nil
-}
-
-func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("first ")
-	buf.WriteString(this.Visit(expr.mapping))
+	buf.WriteString("array ")
+	buf.WriteString(this.Visit(expr.valueMapping))
 	buf.WriteString(" for ")
 	this.visitBindings(expr.bindings, &buf, " in ", " within ")
 
@@ -221,6 +197,48 @@ func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
 	}
 
 	buf.WriteString(" end")
+	return buf.String(), nil
+}
+
+func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("first ")
+	buf.WriteString(this.Visit(expr.valueMapping))
+	buf.WriteString(" for ")
+	this.visitBindings(expr.bindings, &buf, " in ", " within ")
+
+	if expr.when != nil {
+		buf.WriteString(" when ")
+		buf.WriteString(this.Visit(expr.when))
+	}
+
+	buf.WriteString(" end")
+	return buf.String(), nil
+}
+
+func (this *Stringer) VisitObject(expr *Object) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("object ")
+	buf.WriteString(this.Visit(expr.nameMapping))
+	buf.WriteString(" : ")
+	buf.WriteString(this.Visit(expr.valueMapping))
+	buf.WriteString(" for ")
+	this.visitBindings(expr.bindings, &buf, " in ", " within ")
+
+	if expr.when != nil {
+		buf.WriteString(" when ")
+		buf.WriteString(this.Visit(expr.when))
+	}
+
+	buf.WriteString(" end")
+	return buf.String(), nil
+}
+
+func (this *Stringer) VisitExists(expr *Exists) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString("(exists ")
+	buf.WriteString(this.Visit(expr.Operand()))
+	buf.WriteString(")")
 	return buf.String(), nil
 }
 
