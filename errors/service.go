@@ -93,3 +93,8 @@ func NewServiceErrorScanVectorBadUUID(uuid interface{}) Error {
 	return &err{level: EXCEPTION, ICode: 1150, IKey: "service.io.request.type",
 		InternalMsg: fmt.Sprintf("Bad UUID %v. Expected a string.", uuid), InternalCaller: CallerN(1)}
 }
+
+func NewServiceErrorDecodeNil() Error {
+	return &err{level: EXCEPTION, ICode: 1160, IKey: "service.io.request.type",
+		InternalMsg: "Failed to decode nil value.", InternalCaller: CallerN(1)}
+}

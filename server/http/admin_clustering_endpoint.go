@@ -12,7 +12,6 @@ package http
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -445,7 +444,10 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	case "GET":
 		return fillSettings(settings, srvr), nil
 	case "POST":
-		decoder := json.NewDecoder(req.Body)
+		decoder, e := getJsonDecoder(req.Body)
+		if e != nil {
+			return nil, e
+		}
 		err := decoder.Decode(&settings)
 		if err != nil {
 			return nil, errors.NewAdminDecodingError(err)
@@ -489,7 +491,10 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 
 func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error) {
 	var cluster clustering.Cluster
-	decoder := json.NewDecoder(req.Body)
+	decoder, e := getJsonDecoder(req.Body)
+	if e != nil {
+		return nil, e
+	}
 	err := decoder.Decode(&cluster)
 	if err != nil {
 		return nil, errors.NewAdminDecodingError(err)
@@ -499,7 +504,10 @@ func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error)
 
 func getNodeFromRequest(req *http.Request) (clustering.QueryNode, errors.Error) {
 	var node clustering.QueryNode
-	decoder := json.NewDecoder(req.Body)
+	decoder, e := getJsonDecoder(req.Body)
+	if e != nil {
+		return nil, e
+	}
 	err := decoder.Decode(&node)
 	if err != nil {
 		return nil, errors.NewAdminDecodingError(err)

@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -620,6 +621,13 @@ func (this *urlArgs) getNamedArgs() (map[string]value.Value, errors.Error) {
 	return args, nil
 }
 
+func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
+	if r == nil {
+		return nil, errors.NewServiceErrorDecodeNil()
+	}
+	return json.NewDecoder(r), nil
+}
+
 // Positional args are of the form: args=json_list
 func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
 	var positionalArgs value.Values
@@ -631,7 +639,10 @@ func (this *urlArgs) getPositionalArgs() (value.Values, errors.Error) {
 
 	var args []interface{}
 
-	decoder := json.NewDecoder(strings.NewReader(args_field))
+	decoder, err := getJsonDecoder(strings.NewReader(args_field))
+	if err != nil {
+		return positionalArgs, err
+	}
 	e := decoder.Decode(&args)
 	if e != nil {
 		return positionalArgs, errors.NewServiceErrorBadValue(e, ARGS)
@@ -708,7 +719,10 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	}
 
 	var target interface{}
-	decoder := json.NewDecoder(strings.NewReader(scan_vector_data_field))
+	decoder, err := getJsonDecoder(strings.NewReader(scan_vector_data_field))
+	if err != nil {
+		return nil, err
+	}
 	e := decoder.Decode(&target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTOR)
@@ -725,7 +739,10 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	}
 
 	var target interface{}
-	decoder := json.NewDecoder(strings.NewReader(scan_vectors_data_field))
+	decoder, err := getJsonDecoder(strings.NewReader(scan_vectors_data_field))
+	if err != nil {
+		return nil, err
+	}
 	e := decoder.Decode(&target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(e, SCAN_VECTORS)
@@ -776,7 +793,10 @@ func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
 
 	creds_field, err := this.formValue(CREDS)
 	if err == nil && creds_field != "" {
-		decoder := json.NewDecoder(strings.NewReader(creds_field))
+		decoder, err := getJsonDecoder(strings.NewReader(creds_field))
+		if err != nil {
+			return creds_data, err
+		}
 		e := decoder.Decode(&creds_data)
 		if e != nil {
 			err = errors.NewServiceErrorBadValue(e, CREDS)
@@ -826,7 +846,10 @@ type jsonArgs struct {
 // create a jsonArgs structure from the given http request.
 func newJsonArgs(req *http.Request) (*jsonArgs, errors.Error) {
 	var p jsonArgs
-	decoder := json.NewDecoder(req.Body)
+	decoder, e := getJsonDecoder(req.Body)
+	if e != nil {
+		return nil, e
+	}
 	err := decoder.Decode(&p.args)
 	if err != nil {
 		return nil, errors.NewServiceErrorBadValue(err, "JSON request body")
