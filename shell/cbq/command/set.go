@@ -65,8 +65,12 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 			for name, value := range QueryParam {
 				//Do not print the password when printing the credentials
 				if name == "creds" {
+					var users string
+					for _, v := range *value {
+						users = users + " " + strings.Join(usernames(fmt.Sprintf("%s", v)), "")
+					}
 
-					valuestr = fmt.Sprintln("Parameter name :", name, "Usernames", usernames(fmt.Sprintf("%s", *value)))
+					valuestr = fmt.Sprintln("Parameter name :", name, "Value [", users, "]")
 					_, werr = io.WriteString(W, valuestr)
 
 				} else {
@@ -137,15 +141,25 @@ func (this *Set) PrintHelp(desc bool) (int, string) {
 }
 
 func usernames(arrcreds string) []string {
-	arrcreds = strings.Replace(arrcreds, "[", "", -1)
-	arrcreds = strings.Replace(arrcreds, "]", "", -1)
+
+	//arrcreds = strings.Replace(arrcreds, "[", "", -1)
+	//arrcreds = strings.Replace(arrcreds, "]", "", -1)
+
 	arrcreds = strings.Replace(arrcreds, "\"", "", -1)
-	tmpval := strings.Split(arrcreds, " ")
+	users := strings.Split(arrcreds, ",")
 
 	var unames []string
-	for i := 0; i < len(tmpval); i++ {
-		tmp := strings.Split(tmpval[i], ":")
-		unames = append(unames, "\""+tmp[0]+"\"")
+	unames = append(unames, "\"")
+	next := false
+	for _, v := range users {
+		if next == true {
+			unames = append(unames, ",")
+		}
+		tmp := strings.Split(v, ":")
+		unames = append(unames, tmp[0]+":*")
+		next = true
 	}
+	unames = append(unames, "\" ")
+
 	return unames
 }

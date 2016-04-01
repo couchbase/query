@@ -66,7 +66,9 @@ func (this *Echo) ExecCommand(args []string) (int, string) {
 
 				tmpstr := ValToStr(v)
 				tmp := usernames(tmpstr)
-				tmpstr = strings.Replace(tmp[0], "\"", "", -1)
+
+				fval := strings.Join(tmp, "")
+				tmpstr = strings.Replace(fval, "\"", "", -1)
 
 				//Use the string value directly as output.
 				_, werr = io.WriteString(W, tmpstr)
