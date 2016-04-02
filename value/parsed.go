@@ -199,14 +199,14 @@ func (this *parsedValue) Fields() map[string]interface{} {
 
 /*
 Return the buffer if the parsedType is binary. If not call parse and
-then the DescendantFields method on that value with the input buffer.
+then the DescendantPairs method on that value with the input buffer.
 */
-func (this *parsedValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this *parsedValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	if this.parsedType == BINARY {
 		return buffer
 	}
 
-	return this.unwrap().DescendantFields(buffer)
+	return this.unwrap().DescendantPairs(buffer)
 }
 
 func (this *parsedValue) Successor() Value {

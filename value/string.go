@@ -206,7 +206,7 @@ func (this stringValue) Fields() map[string]interface{} {
 /*
 Returns the input buffer as is.
 */
-func (this stringValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this stringValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 

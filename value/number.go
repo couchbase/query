@@ -248,7 +248,7 @@ func (this floatValue) Fields() map[string]interface{} {
 /*
 Returns the input buffer as is.
 */
-func (this floatValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this floatValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 

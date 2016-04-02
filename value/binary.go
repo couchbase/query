@@ -120,7 +120,7 @@ func (this binaryValue) Fields() map[string]interface{} {
 	return nil
 }
 
-func (this binaryValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this binaryValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 

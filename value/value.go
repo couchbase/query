@@ -292,13 +292,11 @@ type Value interface {
 	Fields() map[string]interface{}
 
 	/*
-
-	   Lists the descendant fields of an array or object in depth
-	   first order (multilevel list flattening) by adding it to an
+	   Lists the descendant pairs of an array or object in depth
+	   first order (multilevel list flattening) by appending to an
 	   input buffer and returning it.
-
 	*/
-	DescendantFields(buffer []util.Pair) []util.Pair
+	DescendantPairs(buffer []util.IPair) []util.IPair
 
 	/*
 	   Returns an approximate successor to this value, or nil. An

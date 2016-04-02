@@ -203,7 +203,7 @@ func (this boolValue) Fields() map[string]interface{} {
 /*
 Returns the input buffer as is.
 */
-func (this boolValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this boolValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 

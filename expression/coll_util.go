@@ -15,7 +15,7 @@ import (
 )
 
 func collEval(bindings Bindings, item value.Value, context Context) (
-	bvals [][]interface{}, bpairs [][]util.Pair, n int, missing, null bool, err error) {
+	bvals [][]interface{}, bpairs [][]util.IPair, n int, missing, null bool, err error) {
 	var bv value.Value
 
 	for i, b := range bindings {
@@ -24,8 +24,19 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 			return
 		}
 
+		switch bv.Type() {
+		case value.MISSING:
+			missing = true
+			return
+		case value.OBJECT, value.ARRAY:
+			// Do nothing
+		default:
+			null = true
+			continue
+		}
+
 		if b.NameVariable() == "" {
-			if b.Descend() && (bv.Type() == value.ARRAY || bv.Type() == value.OBJECT) {
+			if b.Descend() {
 				buffer := _INTERFACE_POOL.Get()
 				bv = value.NewValue(bv.Descendants(buffer))
 			}
@@ -36,39 +47,35 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 					bvals = make([][]interface{}, len(bindings))
 				}
 				bvals[i] = bv.Actual().([]interface{})
-			case value.MISSING:
-				missing = true
-				return
 			default:
 				null = true
 			}
 		} else {
-			var bp []util.Pair
-			if b.Descend() && (bv.Type() == value.OBJECT || bv.Type() == value.ARRAY) {
-				bp = _PAIR_POOL.Get()
-				bp = bv.DescendantFields(bp)
-			} else if bv.Type() == value.OBJECT {
-				bp = _PAIR_POOL.Get()
-				for k, v := range bv.Fields() {
-					bp = append(bp, util.Pair{k, v})
+			bp := _IPAIR_POOL.Get()
+
+			if b.Descend() {
+				bp = bv.DescendantPairs(bp)
+			} else {
+				switch bv.Type() {
+				case value.OBJECT:
+					for n, v := range bv.Fields() {
+						bp = append(bp, util.IPair{n, v})
+					}
+				case value.ARRAY:
+					for n, v := range bv.Actual().([]interface{}) {
+						bp = append(bp, util.IPair{n, v})
+					}
+				default:
+					// We never get here
+					null = true
+					continue
 				}
 			}
 
-			if bp != nil {
-				if bpairs == nil {
-					bpairs = make([][]util.Pair, len(bindings))
-				}
-				bpairs[i] = bp
-				continue
+			if bpairs == nil {
+				bpairs = make([][]util.IPair, len(bindings))
 			}
-
-			switch bv.Type() {
-			case value.MISSING:
-				missing = true
-				return
-			default:
-				null = true
-			}
+			bpairs[i] = bp
 		}
 	}
 
@@ -94,7 +101,7 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 }
 
 // Release buffers to pools
-func collReleaseBuffers(bvals [][]interface{}, bpairs [][]util.Pair) {
+func collReleaseBuffers(bvals [][]interface{}, bpairs [][]util.IPair) {
 	for _, b := range bvals {
 		if b != nil {
 			_INTERFACE_POOL.Put(b)
@@ -103,10 +110,10 @@ func collReleaseBuffers(bvals [][]interface{}, bpairs [][]util.Pair) {
 
 	for _, b := range bpairs {
 		if b != nil {
-			_PAIR_POOL.Put(b)
+			_IPAIR_POOL.Put(b)
 		}
 	}
 }
 
 var _INTERFACE_POOL = util.NewInterfacePool(1024)
-var _PAIR_POOL = util.NewPairPool(1024)
+var _IPAIR_POOL = util.NewIPairPool(1024)

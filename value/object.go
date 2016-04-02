@@ -204,19 +204,19 @@ func (this objectValue) Fields() map[string]interface{} {
 	return this
 }
 
-func (this objectValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this objectValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	names := sortedNames(this)
 
 	if cap(buffer) < len(buffer)+len(this) {
-		buf2 := make([]util.Pair, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]util.IPair, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
 
 	for _, name := range names {
 		val := this[name]
-		buffer = append(buffer, util.Pair{name, val})
-		buffer = NewValue(val).DescendantFields(buffer)
+		buffer = append(buffer, util.IPair{name, val})
+		buffer = NewValue(val).DescendantPairs(buffer)
 	}
 
 	return buffer

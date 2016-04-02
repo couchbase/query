@@ -9,18 +9,36 @@
 
 package util
 
-type Pairs []Pair
+import (
+	"sync"
+)
 
-// Key-value pair
-type Pair struct {
-	Name  string
-	Value interface{}
+type IPairPool struct {
+	pool *sync.Pool
+	size int
 }
 
-type IPairs []IPair
+func NewIPairPool(size int) *IPairPool {
+	rv := &IPairPool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]IPair, 0, size)
+			},
+		},
+		size: size,
+	}
 
-// Key-value pair
-type IPair struct {
-	Name  interface{}
-	Value interface{}
+	return rv
+}
+
+func (this *IPairPool) Get() []IPair {
+	return this.pool.Get().([]IPair)
+}
+
+func (this *IPairPool) Put(s []IPair) {
+	if cap(s) < this.size || cap(s) > 2*this.size {
+		return
+	}
+
+	this.pool.Put(s[0:0])
 }

@@ -180,7 +180,7 @@ func (this missingValue) Fields() map[string]interface{} {
 /*
 Returns the input buffer as is.
 */
-func (this missingValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this missingValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 

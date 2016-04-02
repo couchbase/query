@@ -245,15 +245,16 @@ func (this sliceValue) Fields() map[string]interface{} {
 	return nil
 }
 
-func (this sliceValue) DescendantFields(buffer []util.Pair) []util.Pair {
+func (this sliceValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	if cap(buffer) < len(buffer)+len(this) {
-		buf2 := make([]util.Pair, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]util.IPair, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
 
-	for _, child := range this {
-		buffer = NewValue(child).DescendantFields(buffer)
+	for i, child := range this {
+		buffer = append(buffer, util.IPair{i, child})
+		buffer = NewValue(child).DescendantPairs(buffer)
 	}
 
 	return buffer
@@ -370,8 +371,8 @@ func (this *listValue) Fields() map[string]interface{} {
 	return this.slice.Fields()
 }
 
-func (this *listValue) DescendantFields(buffer []util.Pair) []util.Pair {
-	return this.slice.DescendantFields(buffer)
+func (this *listValue) DescendantPairs(buffer []util.IPair) []util.IPair {
+	return this.slice.DescendantPairs(buffer)
 }
 
 func (this *listValue) Successor() Value {

@@ -24,3 +24,11 @@ type AnnotatedPair struct {
 	Name  string
 	Value AnnotatedValue
 }
+
+type VPairs []VPair
+
+// Key-value pair
+type VPair struct {
+	Name  Value
+	Value Value
+}
