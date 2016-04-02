@@ -153,24 +153,27 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	timer := time.Now()
 
 	// Perform the actual INSERT
-	keys, e := this.plan.Keyspace().Insert(dpairs)
+	var er errors.Error
+	dpairs, er = this.plan.Keyspace().Insert(dpairs)
 
 	t := time.Since(timer)
 	context.AddPhaseTime("insert", t)
 	this.plan.AddTime(t)
 
 	// Update mutation count with number of inserted docs
-	context.AddMutationCount(uint64(len(keys)))
+	context.AddMutationCount(uint64(len(dpairs)))
 
-	if e != nil {
-		context.Error(e)
+	if er != nil {
+		context.Error(er)
 	}
 
 	// Capture the inserted keys in case there is a RETURNING clause
-	for i, k := range keys {
+	for _, dp := range dpairs {
+		dv := value.NewAnnotatedValue(dp.Value)
+		dv.SetAttachment("meta", map[string]interface{}{"id": dp.Name})
 		av := value.NewAnnotatedValue(make(map[string]interface{}))
-		av.SetAttachment("meta", map[string]interface{}{"id": k})
-		av.SetField(this.plan.Alias(), dpairs[i].Value)
+		av.SetAnnotations(dv)
+		av.SetField(this.plan.Alias(), dv)
 		if !this.sendItem(av) {
 			return false
 		}
