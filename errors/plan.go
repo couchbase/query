@@ -92,3 +92,12 @@ func NewNotGroupKeyOrAggError(expr string) Error {
 	return &err{level: EXCEPTION, ICode: NOT_GROUP_KEY_OR_AGG, IKey: "plan.not_group_key_or_agg",
 		InternalMsg: fmt.Sprintf("Expression must be a group key or aggregate: %s", expr), InternalCaller: CallerN(1)}
 }
+
+const NEW_INDEX_ALREADY_EXISTS = 4300
+
+func NewIndexAlreadyExistsError(idx string) Error {
+	return &err{level: EXCEPTION, ICode: NEW_INDEX_ALREADY_EXISTS,
+		IKey:           "plan.new_index_already_exists",
+		InternalMsg:    fmt.Sprintf("The index %s already exists.", idx),
+		InternalCaller: CallerN(1)}
+}
