@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 )
 
@@ -35,6 +36,22 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		return nil, err
 	}
 
+	indexer, er := keyspace.Indexer(stmt.Using())
+	if er != nil {
+		return nil, er
+	}
+
+	er = indexer.Refresh()
+	if er != nil {
+		return nil, er
+	}
+
+	// Check that the index does not already exist.
+	index, _ := indexer.IndexByName(stmt.Name())
+	if index != nil {
+		return nil, errors.NewIndexAlreadyExistsError(stmt.Name())
+	}
+
 	return plan.NewCreateIndex(keyspace, stmt), nil
 }
 
@@ -46,6 +63,11 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 	}
 
 	indexer, er := keyspace.Indexer(stmt.Using())
+	if er != nil {
+		return nil, er
+	}
+
+	er = indexer.Refresh()
 	if er != nil {
 		return nil, er
 	}
@@ -72,6 +94,10 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 
 	var index datastore.Index
 	for _, indexer := range indexers {
+		er = indexer.Refresh()
+		if er != nil {
+			return nil, er
+		}
 		index, er = indexer.IndexByName(stmt.Name())
 		if er == nil {
 			break
@@ -90,6 +116,23 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	keyspace, err := this.getNameKeyspace(ksref.Namespace(), ksref.Keyspace())
 	if err != nil {
 		return nil, err
+	}
+
+	indexer, er := keyspace.Indexer(stmt.Using())
+	if er != nil {
+		return nil, er
+	}
+
+	er = indexer.Refresh()
+	if er != nil {
+		return nil, er
+	}
+
+	for _, name := range stmt.Names() {
+		_, er := indexer.IndexByName(name)
+		if er != nil {
+			return nil, er
+		}
 	}
 
 	return plan.NewBuildIndexes(keyspace, stmt), nil
