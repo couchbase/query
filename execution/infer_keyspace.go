@@ -57,9 +57,10 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 			this.plan.AddTime(t)
 		}
 		defer addTime()
-		infer, err := context.Datastore().Inferencer(this.plan.Node().Using())
+		using := this.plan.Node().Using()
+		infer, err := context.Datastore().Inferencer(using)
 		if err != nil {
-			context.Error(errors.NewError(err, "Failed to get Inferencer"))
+			context.Error(errors.NewInferencerNotFoundError(err, string(using)))
 			return
 		}
 		go infer.InferKeyspace(this.plan.Keyspace(), this.plan.Node().With(), conn)

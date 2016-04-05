@@ -347,9 +347,9 @@ func (this *Context) Recover() {
 
 		switch err := err.(type) {
 		case error:
-			this.Fatal(errors.NewError(err, fmt.Sprintf("Panic: %v", err)))
+			this.Fatal(errors.NewExecutionPanicError(err, fmt.Sprintf("Panic: %v", err)))
 		default:
-			this.Fatal(errors.NewError(nil, fmt.Sprintf("Panic: %v", err)))
+			this.Fatal(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 		}
 	}
 }

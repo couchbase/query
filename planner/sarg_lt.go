@@ -32,6 +32,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 		if pred.First().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.Second().Static()}
 			span.Range.High = exprs
+			span.Range.Low = _NULL_EXPRS
 		} else if pred.Second().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.First().Static()}
 			span.Range.Low = exprs
@@ -40,7 +41,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		span.Range.Inclusion = datastore.NEITHER
@@ -49,3 +50,5 @@ func newSargLT(pred *expression.LT) *sargLT {
 
 	return rv
 }
+
+var _NULL_EXPRS = expression.Expressions{expression.NULL_EXPR}

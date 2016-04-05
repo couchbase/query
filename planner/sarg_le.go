@@ -30,17 +30,19 @@ func newSargLE(pred *expression.LE) *sargLE {
 		span := &plan.Span{}
 
 		if pred.First().EquivalentTo(expr2) {
-			hs := pred.Second().Static()
-			if hs != nil {
-				if rv.MissingHigh() {
+			if rv.MissingHigh() {
+				hs := pred.Second().Static()
+				if hs != nil {
 					exprs = expression.Expressions{expression.NewSuccessor(hs)}
-				} else {
-					exprs = expression.Expressions{hs}
-					span.Range.Inclusion = datastore.HIGH
+					span.Range.Inclusion = datastore.NEITHER
 				}
-
-				span.Range.High = exprs
+			} else {
+				exprs = expression.Expressions{pred.Second().Static()}
+				span.Range.Inclusion = datastore.HIGH
 			}
+
+			span.Range.High = exprs
+			span.Range.Low = _NULL_EXPRS
 		} else if pred.Second().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.First().Static()}
 			span.Range.Low = exprs
@@ -50,7 +52,7 @@ func newSargLE(pred *expression.LE) *sargLE {
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		return plan.Spans{span}, nil

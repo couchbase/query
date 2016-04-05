@@ -59,3 +59,8 @@ func NewOtherKeyNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 16007, IKey: "datastore.other.key_not_found", ICause: e,
 		InternalMsg: "Key not found " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewInferencerNotFoundError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 16020, IKey: "datastore.other.inferencer_not_found", ICause: e,
+		InternalMsg: "Inferencer not found " + msg, InternalCaller: CallerN(1)}
+}

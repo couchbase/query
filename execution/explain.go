@@ -46,7 +46,7 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 
 		bytes, err := this.plan.MarshalJSON()
 		if err != nil {
-			context.Fatal(errors.NewError(err, "Failed to marshal JSON."))
+			context.Fatal(errors.NewExplainError(err, "EXPLAIN: Error marshaling JSON."))
 			return
 		}
 

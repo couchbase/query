@@ -17,9 +17,19 @@ import (
 
 // Execution errors - errors that are created in the execution package
 
+func NewExecutionPanicError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5001, IKey: "execution.panic", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
 func NewEvaluationError(e error, termType string) Error {
 	return &err{level: EXCEPTION, ICode: 5010, IKey: "execution.evaluation_error", ICause: e,
 		InternalMsg: fmt.Sprintf("Error evaluating %s.", termType), InternalCaller: CallerN(1)}
+}
+
+func NewExplainError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: 5015, IKey: "execution.explain_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewGroupUpdateError(e error, msg string) Error {
