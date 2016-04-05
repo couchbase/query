@@ -7,22 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package util
+package value
 
 import (
 	"sync"
 )
 
-type StringPool struct {
+type ValuePool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewStringPool(size int) *StringPool {
-	rv := &StringPool{
+func NewValuePool(size int) *ValuePool {
+	rv := &ValuePool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]string, 0, size)
+				return make([]Value, 0, size)
 			},
 		},
 		size: size,
@@ -31,28 +31,32 @@ func NewStringPool(size int) *StringPool {
 	return rv
 }
 
-func (this *StringPool) Get() []string {
-	return this.pool.Get().([]string)
+func (this *ValuePool) Get() []Value {
+	return this.pool.Get().([]Value)
 }
 
-func (this *StringPool) GetSized(length int) []string {
+func (this *ValuePool) GetSized(length int) []Value {
 	if length > this.size {
-		return make([]string, length)
+		return make([]Value, length)
 	}
 
 	rv := this.Get()
 	rv = rv[0:length]
 	for i := 0; i < length; i++ {
-		rv[i] = ""
+		rv[i] = nil
 	}
 
 	return rv
 }
 
-func (this *StringPool) Put(s []string) {
+func (this *ValuePool) Put(s []Value) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}
 
 	this.pool.Put(s[0:0])
+}
+
+func (this *ValuePool) Size() int {
+	return this.size
 }

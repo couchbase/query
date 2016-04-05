@@ -245,6 +245,10 @@ func (this sliceValue) Fields() map[string]interface{} {
 	return nil
 }
 
+func (this sliceValue) FieldNames(buffer []string) []string {
+	return nil
+}
+
 func (this sliceValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]util.IPair, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -369,6 +373,10 @@ func (this *listValue) Descendants(buffer []interface{}) []interface{} {
 
 func (this *listValue) Fields() map[string]interface{} {
 	return this.slice.Fields()
+}
+
+func (this *listValue) FieldNames(buffer []string) []string {
+	return this.slice.FieldNames(buffer)
 }
 
 func (this *listValue) DescendantPairs(buffer []util.IPair) []util.IPair {

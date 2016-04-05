@@ -109,7 +109,7 @@ func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	scans := _SCAN_POOL.Get()
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
@@ -124,7 +124,7 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
-	scans := _SCAN_POOL.Get()
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)

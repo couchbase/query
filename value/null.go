@@ -169,6 +169,10 @@ func (this *nullValue) Fields() map[string]interface{} {
 	return nil
 }
 
+func (this *nullValue) FieldNames(buffer []string) []string {
+	return nil
+}
+
 /*
 Returns the input buffer as is.
 */

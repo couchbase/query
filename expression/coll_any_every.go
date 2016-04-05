@@ -40,9 +40,8 @@ func (this *AnyEvery) Accept(visitor Visitor) (interface{}, error) {
 func (this *AnyEvery) Type() value.Type { return value.BOOLEAN }
 
 func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, error) {
-	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
-	defer collReleaseBuffers(bvals, bpairs)
-
+	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
 		return nil, err
 	}

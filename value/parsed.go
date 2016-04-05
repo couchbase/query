@@ -197,6 +197,10 @@ func (this *parsedValue) Fields() map[string]interface{} {
 	return this.unwrap().Fields()
 }
 
+func (this *parsedValue) FieldNames(buffer []string) []string {
+	return this.unwrap().FieldNames(buffer)
+}
+
 /*
 Return the buffer if the parsedType is binary. If not call parse and
 then the DescendantPairs method on that value with the input buffer.

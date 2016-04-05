@@ -40,7 +40,7 @@ func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntersectScan) Copy() Operator {
-	scans := _SCAN_POOL.Get()
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, s := range this.scans {
 		scans = append(scans, s.Copy())
@@ -59,16 +59,16 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 		defer func() {
-			_SCAN_POOL.Put(this.scans)
+			_INDEX_SCAN_POOL.Put(this.scans)
 			this.scans = nil
-			_COUNT_POOL.Put(this.counts)
+			_INDEX_COUNT_POOL.Put(this.counts)
 			this.counts = nil
-			_VALUE_POOL.Put(this.values)
+			_INDEX_VALUE_POOL.Put(this.values)
 			this.values = nil
 		}()
 
-		this.counts = _COUNT_POOL.Get()
-		this.values = _VALUE_POOL.Get()
+		this.counts = _INDEX_COUNT_POOL.Get()
+		this.values = _INDEX_VALUE_POOL.Get()
 
 		channel := NewChannel()
 

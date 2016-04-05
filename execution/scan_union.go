@@ -39,7 +39,7 @@ func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *UnionScan) Copy() Operator {
-	scans := _SCAN_POOL.Get()
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for i, s := range this.scans {
 		scans[i] = s.Copy()
@@ -58,7 +58,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 		defer func() {
-			_SCAN_POOL.Put(this.scans)
+			_INDEX_SCAN_POOL.Put(this.scans)
 			this.scans = nil
 		}()
 

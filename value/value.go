@@ -292,6 +292,12 @@ type Value interface {
 	Fields() map[string]interface{}
 
 	/*
+	   Lists the field names in this value. Nil for non-object
+	   values.
+	*/
+	FieldNames(buffer []string) []string
+
+	/*
 	   Lists the descendant pairs of an array or object in depth
 	   first order (multilevel list flattening) by appending to an
 	   input buffer and returning it.

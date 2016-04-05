@@ -200,6 +200,10 @@ func (this boolValue) Fields() map[string]interface{} {
 	return nil
 }
 
+func (this boolValue) FieldNames(buffer []string) []string {
+	return nil
+}
+
 /*
 Returns the input buffer as is.
 */

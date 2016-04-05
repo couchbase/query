@@ -11,53 +11,152 @@ package execution
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) ([]value.Value, error) {
-	var err error
-	arrays := make([]value.Value, len(f.Bindings()))
+func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) (
+	arrays [][]interface{}, buffers [][]interface{}, pairs [][]util.IPair, n int, mismatch bool, err error) {
+	var bv value.Value
+
 	for i, b := range f.Bindings() {
-		arrays[i], err = b.Expression().Evaluate(val, context)
+		bv, err = b.Expression().Evaluate(val, context)
 		if err != nil {
-			return nil, err
+			return
 		}
 
-		if b.Descend() {
-			buffer := make([]interface{}, 0, 256)
-			arrays[i] = value.NewValue(arrays[i].Descendants(buffer))
+		switch bv.Type() {
+		case value.ARRAY, value.OBJECT:
+			// Do nothing
+		default:
+			mismatch = true
+			return
+		}
+
+		if b.NameVariable() == "" {
+			if b.Descend() {
+				if buffers == nil {
+					buffers = _INTERFACES_POOL.Get()
+				}
+
+				buffer := _INTERFACE_POOL.Get()
+				buffers = append(buffers, buffer)
+				bv = value.NewValue(bv.Descendants(buffer))
+			}
+
+			switch bv.Type() {
+			case value.ARRAY:
+				if arrays == nil {
+					arrays = _INTERFACES_POOL.GetSized(len(f.Bindings()))
+				}
+				arrays[i] = bv.Actual().([]interface{})
+			default:
+				mismatch = true
+				return
+			}
+		} else {
+			if pairs == nil {
+				pairs = _IPAIRS_POOL.GetSized(len(f.Bindings()))
+			}
+
+			bp := _IPAIR_POOL.Get()
+
+			if b.Descend() {
+				bp = bv.DescendantPairs(bp)
+			} else {
+				switch bv.Type() {
+				case value.OBJECT:
+					names := _NAME_POOL.GetSized(len(bv.Fields()))
+					defer _NAME_POOL.Put(names)
+					for _, n := range bv.FieldNames(names) {
+						v, _ := bv.Field(n)
+						bp = append(bp, util.IPair{n, v})
+					}
+				case value.ARRAY:
+					for n, v := range bv.Actual().([]interface{}) {
+						bp = append(bp, util.IPair{n, v})
+					}
+				}
+			}
+
+			pairs[i] = bp
 		}
 	}
 
-	return arrays, nil
+	// Return length of shortest array
+	n = -1
+	for _, a := range arrays {
+		if a != nil && (n < 0 || len(a) < n) {
+			n = len(a)
+		}
+	}
+
+	for _, p := range pairs {
+		if p != nil && (n < 0 || len(p) < n) {
+			n = len(p)
+		}
+	}
+
+	return
 }
 
-func buildFor(f *algebra.UpdateFor, val value.Value, arrays []value.Value, context *Context) ([]value.Value, error) {
-	n := -1
-	for _, a := range arrays {
-		act := a.Actual()
-		switch act := act.(type) {
-		case []interface{}:
-			if n < 0 || len(act) < n {
-				n = len(act)
-			}
-		}
-	}
+func buildFor(f *algebra.UpdateFor, val value.Value, arrays [][]interface{},
+	pairs [][]util.IPair, n int, context *Context) ([]value.Value, error) {
+	rv := _VALUE_POOL.GetSized(n)
 
-	if n < 0 {
-		return nil, nil
-	}
+	for i := 0; i < n; i++ {
+		sv := value.NewScopeValue(make(map[string]interface{}, len(f.Bindings())), val)
+		rv[i] = sv
 
-	rv := make([]value.Value, n)
-	for i, _ := range rv {
-		rv[i] = value.NewScopeValue(make(map[string]interface{}, len(f.Bindings())), val)
 		for j, b := range f.Bindings() {
-			v, ok := arrays[j].Index(i)
-			if ok {
-				rv[i].SetField(b.Variable(), v)
+			if b.NameVariable() == "" {
+				sv.SetField(b.Variable(), arrays[j][i])
+			} else {
+				pair := pairs[j][i]
+				sv.SetField(b.NameVariable(), pair.Name)
+				sv.SetField(b.Variable(), pair.Value)
 			}
 		}
 	}
 
 	return rv, nil
 }
+
+func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
+	for _, b := range buffers {
+		if b != nil {
+			_INTERFACE_POOL.Put(b)
+		}
+	}
+
+	for _, p := range pairs {
+		if p != nil {
+			_IPAIR_POOL.Put(p)
+		}
+	}
+
+	if arrays != nil {
+		_INTERFACES_POOL.Put(arrays)
+	}
+
+	if buffers != nil {
+		_INTERFACES_POOL.Put(buffers)
+	}
+
+	if pairs != nil {
+		_IPAIRS_POOL.Put(pairs)
+	}
+}
+
+func releaseValsFor(vals []value.Value) {
+	_VALUE_POOL.Put(vals)
+}
+
+var _IPAIR_POOL = util.NewIPairPool(1024)
+var _INTERFACE_POOL = util.NewInterfacePool(1024)
+var _VALUE_POOL = value.NewValuePool(1024)
+
+var _INTERFACES_POOL = util.NewInterfacesPool(8)
+var _IPAIRS_POOL = util.NewIPairsPool(8)
+
+var _NAME_POOL = util.NewStringPool(64)

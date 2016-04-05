@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2016 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-type StringPool struct {
+type IPairsPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewStringPool(size int) *StringPool {
-	rv := &StringPool{
+func NewIPairsPool(size int) *IPairsPool {
+	rv := &IPairsPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]string, 0, size)
+				return make([][]IPair, 0, size)
 			},
 		},
 		size: size,
@@ -31,25 +31,25 @@ func NewStringPool(size int) *StringPool {
 	return rv
 }
 
-func (this *StringPool) Get() []string {
-	return this.pool.Get().([]string)
+func (this *IPairsPool) Get() [][]IPair {
+	return this.pool.Get().([][]IPair)
 }
 
-func (this *StringPool) GetSized(length int) []string {
+func (this *IPairsPool) GetSized(length int) [][]IPair {
 	if length > this.size {
-		return make([]string, length)
+		return make([][]IPair, length)
 	}
 
 	rv := this.Get()
 	rv = rv[0:length]
 	for i := 0; i < length; i++ {
-		rv[i] = ""
+		rv[i] = nil
 	}
 
 	return rv
 }
 
-func (this *StringPool) Put(s []string) {
+func (this *IPairsPool) Put(s [][]IPair) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}

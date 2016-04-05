@@ -245,6 +245,10 @@ func (this floatValue) Fields() map[string]interface{} {
 	return nil
 }
 
+func (this floatValue) FieldNames(buffer []string) []string {
+	return nil
+}
+
 /*
 Returns the input buffer as is.
 */

@@ -41,9 +41,8 @@ func (this *First) Accept(visitor Visitor) (interface{}, error) {
 func (this *First) Type() value.Type { return this.valueMapping.Type() }
 
 func (this *First) Evaluate(item value.Value, context Context) (value.Value, error) {
-	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
-	defer collReleaseBuffers(bvals, bpairs)
-
+	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
 		return nil, err
 	}

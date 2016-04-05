@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-type StringPool struct {
+type InterfacesPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewStringPool(size int) *StringPool {
-	rv := &StringPool{
+func NewInterfacesPool(size int) *InterfacesPool {
+	rv := &InterfacesPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]string, 0, size)
+				return make([][]interface{}, 0, size)
 			},
 		},
 		size: size,
@@ -31,25 +31,25 @@ func NewStringPool(size int) *StringPool {
 	return rv
 }
 
-func (this *StringPool) Get() []string {
-	return this.pool.Get().([]string)
+func (this *InterfacesPool) Get() [][]interface{} {
+	return this.pool.Get().([][]interface{})
 }
 
-func (this *StringPool) GetSized(length int) []string {
+func (this *InterfacesPool) GetSized(length int) [][]interface{} {
 	if length > this.size {
-		return make([]string, length)
+		return make([][]interface{}, length)
 	}
 
 	rv := this.Get()
 	rv = rv[0:length]
 	for i := 0; i < length; i++ {
-		rv[i] = ""
+		rv[i] = nil
 	}
 
 	return rv
 }
 
-func (this *StringPool) Put(s []string) {
+func (this *InterfacesPool) Put(s [][]interface{}) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}

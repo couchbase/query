@@ -42,6 +42,6 @@ func notifyConn(stopchannel datastore.StopChannel) {
 	}
 }
 
-var _SCAN_POOL = NewOperatorPool(16)
-var _COUNT_POOL = util.NewStringIntPool(1024)
-var _VALUE_POOL = value.NewStringAnnotatedPool(1024)
+var _INDEX_SCAN_POOL = NewOperatorPool(16)
+var _INDEX_COUNT_POOL = util.NewStringIntPool(1024)
+var _INDEX_VALUE_POOL = value.NewStringAnnotatedPool(1024)

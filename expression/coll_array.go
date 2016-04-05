@@ -41,9 +41,8 @@ func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 func (this *Array) Type() value.Type { return value.ARRAY }
 
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
-	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
-	defer collReleaseBuffers(bvals, bpairs)
-
+	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +93,8 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
-	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
-	defer collReleaseBuffers(bvals, bpairs)
-
+	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
 		return nil, nil, err
 	}

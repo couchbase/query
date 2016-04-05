@@ -42,9 +42,8 @@ func (this *Object) Accept(visitor Visitor) (interface{}, error) {
 func (this *Object) Type() value.Type { return value.OBJECT }
 
 func (this *Object) Evaluate(item value.Value, context Context) (value.Value, error) {
-	bvals, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
-	defer collReleaseBuffers(bvals, bpairs)
-
+	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
+	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
 		return nil, err
 	}

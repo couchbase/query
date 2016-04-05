@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -61,11 +60,11 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 		return false
 	}
 
-	var e error
+	var err error
 	for _, t := range this.plan.Node().Terms() {
-		clone, e = setPath(t, clone, item, context)
-		if e != nil {
-			context.Error(errors.NewEvaluationError(e, "SET clause"))
+		clone, err = setPath(t, clone, item, context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "SET clause"))
 			return false
 		}
 	}
@@ -84,51 +83,50 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return nil, err
 	}
 
-	if t.Path() != nil {
-		ok := t.Path().Set(clone, v, context)
-		if !ok {
-			s := expression.NewStringer().Visit(t.Path())
-			context.Warning(errors.NewWarning(fmt.Sprintf("Unable to SET path %s", s)))
-		}
-	}
-
+	t.Path().Set(clone, v, context)
 	return clone, nil
 }
 
 func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
-	carrays, err := arraysFor(t.UpdateFor(), clone, context)
+	iarrays, ibuffers, ipairs, n, mismatch, err := arraysFor(t.UpdateFor(), item, context)
+	defer releaseBuffersFor(iarrays, ibuffers, ipairs)
 	if err != nil {
 		return nil, err
 	}
 
-	cvals, err := buildFor(t.UpdateFor(), clone, carrays, context)
+	if mismatch {
+		return clone, nil
+	}
+
+	ivals, err := buildFor(t.UpdateFor(), item, iarrays, ipairs, n, context)
+	defer releaseValsFor(ivals)
 	if err != nil {
 		return nil, err
 	}
 
-	iarrays, err := arraysFor(t.UpdateFor(), item, context)
+	carrays, cbuffers, cpairs, n, mismatch, err := arraysFor(t.UpdateFor(), clone, context)
+	defer releaseBuffersFor(carrays, cbuffers, cpairs)
 	if err != nil {
 		return nil, err
 	}
 
-	ivals, err := buildFor(t.UpdateFor(), item, iarrays, context)
+	if mismatch {
+		return clone, nil
+	}
+
+	cvals, err := buildFor(t.UpdateFor(), clone, carrays, cpairs, n, context)
+	defer releaseValsFor(cvals)
 	if err != nil {
 		return nil, err
 	}
 
-	// Clone may have been shortened by previous SET term
-	n := len(ivals)
-	if len(cvals) < n {
-		n = len(cvals)
+	// Clone may have been mutated by another term
+	if len(ivals) != len(cvals) {
+		return clone, nil
 	}
 
 	when := t.UpdateFor().When()
-	for i := 0; i < n; i++ {
-		v, err := t.Value().Evaluate(ivals[i], context)
-		if err != nil {
-			return nil, err
-		}
-
+	for i := 0; i < len(cvals); i++ {
 		if when != nil {
 			w, err := when.Evaluate(ivals[i], context)
 			if err != nil {
@@ -140,18 +138,12 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 			}
 		}
 
-		t.Path().Set(cvals[i], v, context)
-	}
-
-	// Set array elements
-	f := t.UpdateFor()
-	for a, b := range f.Bindings() {
-		switch ca := carrays[a].Actual().(type) {
-		case []interface{}:
-			for i := 0; i < n; i++ {
-				ca[i], _ = cvals[i].Field(b.Variable())
-			}
+		v, err := t.Value().Evaluate(ivals[i], context)
+		if err != nil {
+			return nil, err
 		}
+
+		t.Path().Set(cvals[i], v, context)
 	}
 
 	return clone, nil

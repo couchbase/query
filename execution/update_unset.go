@@ -54,39 +54,76 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 		return false
 	}
 
+	var err error
 	for _, t := range this.plan.Node().Terms() {
-		unsetPath(t, clone, context)
+		clone, err = unsetPath(t, clone, item, context)
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "UNSET clause"))
+			return false
+		}
 	}
 
+	item.SetAttachment("clone", clone)
 	return this.sendItem(item)
 }
 
-func unsetPath(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context) error {
+func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
 	if t.UpdateFor() != nil {
-		return unsetFor(t, clone, context)
+		return unsetFor(t, clone, item, context)
 	}
 
 	t.Path().Unset(clone, context)
-	return nil
+	return clone, nil
 }
 
-func unsetFor(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context) error {
-	arrays, e := arraysFor(t.UpdateFor(), clone, context)
-	if e != nil {
-		return e
-	}
-
-	cvals, e := buildFor(t.UpdateFor(), clone, arrays, context)
-	if e != nil {
-		return e
-	}
+func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+	var ivals []value.Value
 
 	when := t.UpdateFor().When()
+	if when != nil {
+		iarrays, ibuffers, ipairs, n, mismatch, err := arraysFor(t.UpdateFor(), item, context)
+		defer releaseBuffersFor(iarrays, ibuffers, ipairs)
+		if err != nil {
+			return nil, err
+		}
+
+		if mismatch {
+			return clone, nil
+		}
+
+		ivals, err = buildFor(t.UpdateFor(), item, iarrays, ipairs, n, context)
+		defer releaseValsFor(ivals)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	carrays, cbuffers, cpairs, n, mismatch, err := arraysFor(t.UpdateFor(), clone, context)
+	defer releaseBuffersFor(carrays, cbuffers, cpairs)
+	if err != nil {
+		return nil, err
+	}
+
+	if mismatch {
+		return clone, nil
+	}
+
+	cvals, err := buildFor(t.UpdateFor(), clone, carrays, cpairs, n, context)
+	defer releaseValsFor(cvals)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clone may have been mutated by another term
+	if ivals != nil && len(ivals) != len(cvals) {
+		return clone, nil
+	}
+
 	for i := 0; i < len(cvals); i++ {
 		if when != nil {
-			w, e := when.Evaluate(cvals[i], context)
-			if e != nil {
-				return e
+			w, err := when.Evaluate(ivals[i], context)
+			if err != nil {
+				return nil, err
 			}
 
 			if !w.Truth() {
@@ -97,5 +134,5 @@ func unsetFor(t *algebra.UnsetTerm, clone value.AnnotatedValue, context *Context
 		t.Path().Unset(cvals[i], context)
 	}
 
-	return nil
+	return clone, nil
 }

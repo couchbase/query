@@ -64,7 +64,7 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 
 	limit, err := this.plan.Limit().Evaluate(parent, context)
 	if err != nil {
-		context.Error(errors.NewError(err, ""))
+		context.Error(errors.NewEvaluationError(err, "LIMIT clause"))
 		return false
 	}
 

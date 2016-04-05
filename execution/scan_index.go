@@ -58,8 +58,8 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		spans := this.plan.Spans()
 		n := len(spans)
 		this.childChannel = make(StopChannel, n)
-		children := _SCAN_POOL.Get()
-		defer _SCAN_POOL.Put(children)
+		children := _INDEX_SCAN_POOL.Get()
+		defer _INDEX_SCAN_POOL.Put(children)
 
 		for i, span := range spans {
 			children = append(children, newSpanScan(this, span))

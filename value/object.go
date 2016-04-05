@@ -34,7 +34,10 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	buf.WriteString("{")
 
-	names := sortedNames(this)
+	names := _NAME_POOL.GetSized(len(this))
+	defer _NAME_POOL.Put(names)
+	names = sortedNames(this, names)
+
 	for i, n := range names {
 		v := NewValue(this[n])
 		if v.Type() == MISSING {
@@ -183,7 +186,9 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 }
 
 func (this objectValue) Descendants(buffer []interface{}) []interface{} {
-	names := sortedNames(this)
+	names := _NAME_POOL.GetSized(len(this))
+	defer _NAME_POOL.Put(names)
+	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -204,8 +209,14 @@ func (this objectValue) Fields() map[string]interface{} {
 	return this
 }
 
+func (this objectValue) FieldNames(buffer []string) []string {
+	return sortedNames(this, buffer)
+}
+
 func (this objectValue) DescendantPairs(buffer []util.IPair) []util.IPair {
-	names := sortedNames(this)
+	names := _NAME_POOL.GetSized(len(this))
+	defer _NAME_POOL.Put(names)
+	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]util.IPair, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -231,7 +242,11 @@ func (this objectValue) Successor() Value {
 	}
 
 	s := copyMap(this, self)
-	names := sortedNames(this)
+
+	names := _NAME_POOL.GetSized(len(this))
+	defer _NAME_POOL.Put(names)
+	names = sortedNames(this, names)
+
 	n := names[len(names)-1]
 	s[n] = NewValue(this[n]).Successor()
 	return objectValue(s)
@@ -287,10 +302,13 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 
 	// if not, proceed to do name by name comparision
 	combined := combineNames(obj1, obj2)
-	allnames := sortedNames(combined)
+
+	allNames := _NAME_POOL.GetSized(len(combined))
+	defer _NAME_POOL.Put(allNames)
+	allNames = sortedNames(combined, allNames)
 
 	// now compare the values associated with each name
-	for _, name := range allnames {
+	for _, name := range allNames {
 		val1, ok := obj1[name]
 		if !ok {
 			// obj1 did not have this name, so it is larger
@@ -323,10 +341,13 @@ func objectCompare(obj1, obj2 map[string]interface{}) Value {
 
 	// if not, proceed to do name by name comparision
 	combined := combineNames(obj1, obj2)
-	allnames := sortedNames(combined)
+
+	allNames := _NAME_POOL.GetSized(len(combined))
+	defer _NAME_POOL.Put(allNames)
+	allNames = sortedNames(combined, allNames)
 
 	// now compare the values associated with each name
-	for _, name := range allnames {
+	for _, name := range allNames {
 		val1, ok := obj1[name]
 		if !ok {
 			// obj1 did not have this name, so it is larger
@@ -363,14 +384,15 @@ func copyMap(source map[string]interface{}, copier copyFunc) map[string]interfac
 	return result
 }
 
-func sortedNames(obj map[string]interface{}) []string {
-	names := make(sort.StringSlice, 0, len(obj))
+func sortedNames(obj map[string]interface{}, buffer []string) []string {
+	i := 0
 	for name, _ := range obj {
-		names = append(names, name)
+		buffer[i] = name
+		i++
 	}
 
-	names.Sort()
-	return names
+	sort.Strings(buffer)
+	return buffer
 }
 
 func combineNames(objs ...map[string]interface{}) map[string]interface{} {
@@ -389,3 +411,5 @@ func combineNames(objs ...map[string]interface{}) map[string]interface{} {
 
 	return all
 }
+
+var _NAME_POOL = util.NewStringPool(64)
