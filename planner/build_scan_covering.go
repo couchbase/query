@@ -72,20 +72,12 @@ outer:
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if this.countAgg != nil && !arrayIndex && (len(entry.spans) == 1) && allowedPushDown(entry) {
+		if this.countAgg != nil && !arrayIndex && len(entry.spans) == 1 && allowedPushDown(entry) {
 			countIndex, ok := index.(datastore.CountIndex)
-			if ok {
-				op := this.countAgg.Operand()
-				var val value.Value
-				if op != nil {
-					val = op.Value()
-				}
-
-				if op == nil || (val != nil && val.Type() > value.NULL) {
-					this.maxParallelism = 1
-					this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
-					return this.countScan, nil
-				}
+			if ok && canPushDownCount(this.countAgg, entry) {
+				this.maxParallelism = 1
+				this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
+				return this.countScan, nil
 			}
 		}
 
@@ -134,4 +126,33 @@ func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Val
 	}
 
 	return rv, nil
+}
+
+func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
+	op := countAgg.Operand()
+	if op == nil {
+		return true
+	}
+
+	val := op.Value()
+	if val != nil {
+		return val.Type() > value.NULL
+	}
+
+	if len(entry.sargKeys) == 0 || !op.EquivalentTo(entry.sargKeys[0]) {
+		return false
+	}
+
+	if len(entry.spans) != 1 {
+		return false
+	}
+
+	span := entry.spans[0].Range
+	if len(span.Low) == 0 {
+		return false
+	}
+
+	low := span.Low[0]
+	return low.Type() > value.NULL ||
+		(low.Type() >= value.NULL && (span.Inclusion&datastore.LOW) == 0)
 }
