@@ -58,7 +58,8 @@ type builder struct {
 	where           expression.Expression // Used for index selection
 	order           *algebra.Order        // Used to collect aggregates from ORDER BY
 	limit           expression.Expression // Used for LIMIT pushdown
-	countAgg        *algebra.Count        // Used for IndexCountScan
+	countAgg        *algebra.Count        // Used for COUNT() pushdown to IndexCountScan
+	minAgg          *algebra.Min          // Used for MIN() pushdown to IndexScan
 	distinct        bool
 	children        []plan.Operator
 	subChildren     []plan.Operator

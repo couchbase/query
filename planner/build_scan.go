@@ -104,8 +104,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			limit = nil
 		}
 
-		if this.countAgg != nil && (len(minimals) == 0 || !pred.IndexPushDownAllowed()) {
-			this.countAgg = nil
+		if len(minimals) == 0 || !pred.IndexPushDownAllowed() {
+			this.resetCountMin()
 		}
 
 		if len(minimals) > 0 {

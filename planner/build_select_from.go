@@ -83,7 +83,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	}
 
 	this.resetOrderLimit()
-	this.countAgg = nil
+	this.resetCountMin()
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
@@ -93,7 +93,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countAgg = nil
+	this.resetCountMin()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -119,7 +119,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countAgg = nil
+	this.resetCountMin()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -148,7 +148,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
-	this.countAgg = nil
+	this.resetCountMin()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -173,7 +173,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 }
 
 func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
-	this.countAgg = nil
+	this.resetCountMin()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -203,7 +203,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	this.resetOrderLimit()
-	this.countAgg = nil
+	this.resetCountMin()
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
@@ -258,4 +258,9 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 func (this *builder) resetOrderLimit() {
 	this.order = nil
 	this.limit = nil
+}
+
+func (this *builder) resetCountMin() {
+	this.countAgg = nil
+	this.minAgg = nil
 }

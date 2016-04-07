@@ -162,9 +162,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		}
 	}
 
-	if this.countAgg != nil {
-		this.countAgg = nil
-	}
+	this.resetCountMin()
 
 	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
 		// This makes InterSectionscan disable limit pushdown, don't use index order

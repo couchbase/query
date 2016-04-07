@@ -48,11 +48,11 @@ func (this *Range) MarshalJSON() ([]byte, error) {
 		"Inclusion": this.Inclusion,
 	}
 
-	if this.Low != nil && isNotNull(this.Low) {
+	if this.Low != nil {
 		r["Low"] = this.Low
 	}
 
-	if this.High != nil && isNotNull(this.High) {
+	if this.High != nil {
 		r["High"] = this.High
 	}
 

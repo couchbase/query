@@ -119,14 +119,6 @@ func (this *Like) Constructor() FunctionConstructor {
 }
 
 /*
-Disallow pushing operation to index scan
-*/
-
-func (this *Like) IndexPushDownAllowed() bool {
-	return false
-}
-
-/*
 Return the regular expression without delimiters.
 */
 func (this *Like) Regexp() *regexp.Regexp {

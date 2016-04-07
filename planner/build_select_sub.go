@@ -24,14 +24,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCover := this.cover
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
+	prevMinAgg := this.minAgg
 	defer func() {
 		this.cover = prevCover
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
+		this.minAgg = prevMinAgg
 	}()
 
 	this.correlated = node.IsCorrelated()
-	this.countAgg = nil
+	this.resetCountMin()
 
 	if this.cover == nil {
 		this.cover = node
@@ -84,14 +86,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
-	if !node.Projection().Distinct() && this.order == nil {
-		if group == nil || len(aggs) == 1 {
-			for i, term := range node.Projection().Terms() {
-				count, ok := term.Expression().(*algebra.Count)
-				if i == 0 && ok {
-					this.countAgg = count
-				} else {
-					this.countAgg = nil
+	if len(aggs) == 1 && group.By() == nil {
+		for _, term := range node.Projection().Terms() {
+			switch expr := term.Expression().(type) {
+			case *algebra.Count:
+				this.countAgg = expr
+			case *algebra.Min:
+				this.minAgg = expr
+			default:
+				if expr.Value() == nil {
+					this.resetCountMin()
 					break
 				}
 			}
@@ -325,11 +329,14 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 	}
 
 	var constraint expression.Expression = expression.NewIsNotNull(first)
-	if cond != nil {
-		constraint = expression.NewAnd(cond, constraint)
-	}
 
-	return constraint
+	if cond == nil {
+		return constraint
+	} else if SubsetOf(cond, constraint) {
+		return cond
+	} else {
+		return expression.NewAnd(cond, constraint)
+	}
 }
 
 func constrainGroupProjection(term *algebra.ResultTerm, expr expression.Expression,
