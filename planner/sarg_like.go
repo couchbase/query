@@ -59,6 +59,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 		}
 
 		span.Range.Inclusion = datastore.LOW
+		span.Exact = false
 		return plan.Spans{span}, nil
 	}
 

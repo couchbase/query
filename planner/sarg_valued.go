@@ -26,7 +26,7 @@ func newSargValued(pred expression.UnaryFunction) *sargValued {
 		}
 
 		if pred.Operand().EquivalentTo(expr2) {
-			return _VALUED_SPANS, nil
+			return _EXACT_VALUED_SPANS, nil
 		}
 
 		return nil, nil

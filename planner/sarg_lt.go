@@ -44,6 +44,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 			return _VALUED_SPANS, nil
 		}
 
+		span.Exact = true
 		span.Range.Inclusion = datastore.NEITHER
 		return plan.Spans{span}, nil
 	}

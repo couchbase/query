@@ -36,8 +36,11 @@ func newSargOr(pred *expression.Or) *sargOr {
 				return nil, nil
 			}
 
-			if cspans[0] == _FULL_SPANS[0] ||
-				len(spans)+len(cspans) > 16 {
+			if cspans[0] == _EXACT_FULL_SPANS[0] {
+				return _EXACT_FULL_SPANS, nil
+			}
+
+			if cspans[0] == _FULL_SPANS[0] || len(spans)+len(cspans) > 16 {
 				return _FULL_SPANS, nil
 			}
 

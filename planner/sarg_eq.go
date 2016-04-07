@@ -48,6 +48,7 @@ func newSargEq(pred *expression.Eq) *sargEq {
 			span.Range.Inclusion = datastore.BOTH
 		}
 
+		span.Exact = true
 		return plan.Spans{span}, nil
 	}
 

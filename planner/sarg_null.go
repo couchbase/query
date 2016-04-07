@@ -22,6 +22,7 @@ func init() {
 	span.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	span.Range.High = span.Range.Low
 	span.Range.Inclusion = datastore.BOTH
+	span.Exact = true
 	_NULL_SPANS = plan.Spans{span}
 }
 
@@ -58,7 +59,7 @@ func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
 		}
 
 		if pred.Operand().EquivalentTo(expr2) {
-			return _VALUED_SPANS, nil
+			return _EXACT_VALUED_SPANS, nil
 		}
 
 		return nil, nil

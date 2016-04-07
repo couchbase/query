@@ -40,22 +40,9 @@ outer:
 		}
 
 		// Include covering expression from index WHERE clause
-		coveringExprs := keys
-		var filterCovers map[*expression.Cover]value.Value
-
-		if entry.cond != nil {
-			var err error
-			fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
-			filterCovers, err = mapFilterCovers(fc)
-			if err != nil {
-				return nil, err
-			}
-
-			coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
-			copy(coveringExprs, keys)
-			for c, _ := range filterCovers {
-				coveringExprs = append(coveringExprs, c.Covered())
-			}
+		coveringExprs, filterCovers, err := indexKeyExpressions(entry, keys)
+		if err != nil {
+			return nil, err
 		}
 
 		// Use the first available covering index
@@ -72,7 +59,7 @@ outer:
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if !arrayIndex && len(entry.spans) == 1 && allowedPushDown(entry) {
+		if !arrayIndex && len(entry.spans) == 1 && allowedPushDown(entry, pred) {
 			if this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
 				countIndex, ok := index.(datastore.CountIndex)
 				if ok {
@@ -90,7 +77,7 @@ outer:
 			}
 		}
 
-		if limit != nil && (arrayIndex || !allowedPushDown(entry)) {
+		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
 			limit = nil
 			this.limit = nil
 		}
@@ -185,4 +172,24 @@ func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 	return low != nil &&
 		(low.Type() > value.NULL ||
 			(low.Type() >= value.NULL && (span.Inclusion&datastore.LOW) == 0))
+}
+
+func indexKeyExpressions(entry *indexEntry, keys expression.Expressions) (expression.Expressions, map[*expression.Cover]value.Value, error) {
+	var filterCovers map[*expression.Cover]value.Value
+	exprs := keys
+	if entry.cond != nil {
+		var err error
+		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		filterCovers, err = mapFilterCovers(fc)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		exprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
+		copy(exprs, keys)
+		for c, _ := range filterCovers {
+			exprs = append(exprs, c.Covered())
+		}
+	}
+	return exprs, filterCovers, nil
 }

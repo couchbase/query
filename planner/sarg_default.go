@@ -18,6 +18,8 @@ import (
 var _SELF_SPANS plan.Spans
 var _FULL_SPANS plan.Spans
 var _VALUED_SPANS plan.Spans
+var _EXACT_FULL_SPANS plan.Spans
+var _EXACT_VALUED_SPANS plan.Spans
 
 func init() {
 	sspan := &plan.Span{}
@@ -34,6 +36,12 @@ func init() {
 	vspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	vspan.Range.Inclusion = datastore.NEITHER
 	_VALUED_SPANS = plan.Spans{vspan}
+
+	_EXACT_FULL_SPANS = _FULL_SPANS.Copy()
+	_EXACT_FULL_SPANS[0].Exact = true
+
+	_EXACT_VALUED_SPANS = _VALUED_SPANS.Copy()
+	_EXACT_VALUED_SPANS[0].Exact = true
 }
 
 type sargDefault struct {
@@ -43,9 +51,17 @@ type sargDefault struct {
 func newSargDefault(pred expression.Expression) *sargDefault {
 	var spans plan.Spans
 	if pred.PropagatesNull() {
-		spans = _VALUED_SPANS
+		if _, ok := pred.(*expression.Not); ok {
+			spans = _VALUED_SPANS
+		} else {
+			spans = _EXACT_VALUED_SPANS
+		}
 	} else if pred.PropagatesMissing() {
-		spans = _FULL_SPANS
+		if _, ok := pred.(*expression.Not); ok {
+			spans = _FULL_SPANS
+		} else {
+			spans = _EXACT_FULL_SPANS
+		}
 	}
 
 	rv := &sargDefault{}

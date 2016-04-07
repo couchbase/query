@@ -186,14 +186,13 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 			}
 		}
 
-		if limit != nil && !pred.CoveredBy(node.Alias(), entry.keys) {
-			var condPred expression.Expression
-			if entry.cond != nil {
-				condPred = nonKeysPredExpression(node.Alias(), entry.keys, pred, condPred)
+		if limit != nil {
+			exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
+			if err != nil {
+				return nil, err
 			}
 
-			if entry.cond == nil || condPred == nil || !condPred.EquivalentTo(entry.cond) {
-				// Predicate is not covered by index keys disable limit pushdown
+			if !pred.CoveredBy(node.Alias(), exprs) {
 				this.limit = nil
 				limit = nil
 			}
@@ -201,7 +200,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if limit != nil && (arrayIndex || !allowedPushDown(entry)) {
+		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
 			limit = nil
 			this.limit = nil
 		}
@@ -250,37 +249,20 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	return true
 }
 
-// Separate AND operands of predicate that are not matched with keys
-
-func nonKeysPredExpression(alias string, keys expression.Expressions, pred, condPred expression.Expression) expression.Expression {
-	switch expr2 := pred.(type) {
-	case *expression.And:
-		for _, op := range expr2.Operands() {
-			condPred = nonKeysPredExpression(alias, keys, op, condPred)
-		}
-	default:
-		if !pred.CoveredBy(alias, keys) {
-			if condPred == nil {
-				condPred = pred
-			} else {
-				condPred = expression.NewAnd(condPred, pred)
-			}
+func allowedPushDown(entry *indexEntry, pred expression.Expression) bool {
+	for _, span := range entry.spans {
+		if !span.Exact {
+			return false
 		}
 	}
-	return condPred
-}
 
-func allowedPushDown(entry *indexEntry) bool {
-	if len(entry.sargKeys) != 1 {
-		return false
-	} else {
-		for _, span := range entry.spans {
-			if span.Range.Low == nil && span.Range.High != nil {
-				// nulls are included disallow pushdown
-				return false
-			}
+	// check for non sargable key is in predicate
+	for i := len(entry.sargKeys); i < len(entry.keys); i++ {
+		if pred.DependsOn(entry.keys[i]) {
+			return false
 		}
 	}
+
 	return true
 }
 

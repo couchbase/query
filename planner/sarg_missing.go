@@ -26,7 +26,7 @@ func newSargNotMissing(pred *expression.IsNotMissing) *sargNotMissing {
 		}
 
 		if pred.Operand().EquivalentTo(expr2) {
-			return _FULL_SPANS, nil
+			return _EXACT_FULL_SPANS, nil
 		}
 
 		return nil, nil

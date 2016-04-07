@@ -55,6 +55,7 @@ func newSargLE(pred *expression.LE) *sargLE {
 			return _VALUED_SPANS, nil
 		}
 
+		span.Exact = true
 		return plan.Spans{span}, nil
 	}
 

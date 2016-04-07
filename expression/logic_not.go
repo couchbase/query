@@ -67,14 +67,6 @@ func (this *Not) FilterCovers(covers map[string]value.Value) map[string]value.Va
 	return covers
 }
 
-/*
-Disallow pushing operation to index scan
-*/
-
-func (this *Not) IndexPushDownAllowed() bool {
-	return false
-}
-
 func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL:

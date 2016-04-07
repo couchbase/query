@@ -100,12 +100,14 @@ type Spans []*Span
 type Span struct {
 	Seek  expression.Expressions
 	Range Range
+	Exact bool
 }
 
 func (this *Span) Copy() *Span {
 	return &Span{
 		Seek:  expression.CopyExpressions(this.Seek),
 		Range: *(this.Range.Copy()),
+		Exact: this.Exact,
 	}
 }
 

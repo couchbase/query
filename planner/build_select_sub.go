@@ -115,17 +115,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		return nil, err
 	}
 
-	if this.coveringScan != nil || this.countScan != nil {
+	if this.coveringScan != nil {
 		var covers expression.Covers
 		var filterCovers map[*expression.Cover]value.Value
 
-		if this.countScan != nil {
-			covers = this.countScan.Covers()
-			// filterCovers is nil here
-		} else {
-			covers = this.coveringScan.Covers()
-			filterCovers = this.coveringScan.FilterCovers()
-		}
+		covers = this.coveringScan.Covers()
+		filterCovers = this.coveringScan.FilterCovers()
 
 		coverer := expression.NewCoverer(covers, filterCovers)
 		err = this.cover.MapExpressions(coverer)

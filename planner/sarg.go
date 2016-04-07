@@ -22,6 +22,7 @@ func SargFor(pred expression.Expression, sargKeys expression.Expressions, total 
 	var ns plan.Spans
 
 	// Sarg compositive indexes right to left
+	exactSpan := true
 keys:
 	for i := n - 1; i >= 0; i-- {
 		r, err := sargKeys[i].Accept(s)
@@ -32,7 +33,15 @@ keys:
 		rs := r.(plan.Spans)
 		if len(rs) == 0 {
 			ns = nil
+			exactSpan = false
 			continue
+		} else if exactSpan {
+			for _, prev := range rs {
+				if !prev.Exact {
+					exactSpan = false
+					break
+				}
+			}
 		}
 
 		// Notify prev key that this key is missing a high bound
@@ -57,7 +66,8 @@ keys:
 
 		for _, prev := range rs {
 			// Full span subsumes others
-			if prev == _FULL_SPANS[0] {
+			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] {
+				exactSpan = false
 				sp = append(sp, prev)
 				ns = sp
 				continue keys
@@ -67,19 +77,23 @@ keys:
 	prevs:
 		for _, prev := range rs {
 			if len(prev.Range.Low) == 0 && len(prev.Range.High) == 0 {
+				exactSpan = false
 				sp = append(sp, prev)
 				continue
 			}
 
 			// Limit fan-out
 			if len(ns) > 16 {
+				exactSpan = false
 				sp = append(sp, prev)
 				continue
 			}
 
 			for _, next := range ns {
 				// Full span subsumes others
-				if next == _FULL_SPANS[0] || (len(next.Range.Low) == 0 && len(next.Range.High) == 0) {
+				if next == _FULL_SPANS[0] || next == _EXACT_FULL_SPANS[0] ||
+					(len(next.Range.Low) == 0 && len(next.Range.High) == 0) {
+					exactSpan = false
 					sp = append(sp, prev)
 					continue prevs
 				}
@@ -92,9 +106,12 @@ keys:
 
 				if len(pre.Range.Low) > 0 && len(next.Range.Low) > 0 {
 					pre.Range.Low = append(pre.Range.Low, next.Range.Low...)
+
 					pre.Range.Inclusion = (datastore.LOW & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.HIGH & pre.Range.Inclusion)
 					add = true
+				} else if len(pre.Range.Low) > 0 || len(next.Range.Low) > 0 {
+					exactSpan = false
 				}
 
 				if len(pre.Range.High) > 0 && len(next.Range.High) > 0 {
@@ -102,11 +119,15 @@ keys:
 					pre.Range.Inclusion = (datastore.HIGH & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.LOW & pre.Range.Inclusion)
 					add = true
+				} else if len(pre.Range.High) > 0 || len(next.Range.High) > 0 {
+					// f1 >=3 and f2 = 2 become span of {[3, 2] [] 1}, high of f2 is missing
+					exactSpan = false
 				}
 
 				if add {
 					pn = append(pn, pre)
 				} else {
+					exactSpan = false
 					break
 				}
 			}
@@ -114,6 +135,7 @@ keys:
 			if len(pn) == len(ns) {
 				sp = append(sp, pn...)
 			} else {
+				exactSpan = false
 				sp = append(sp, prev)
 			}
 		}
@@ -125,7 +147,43 @@ keys:
 		return _FULL_SPANS, nil
 	}
 
+	if exactSpan {
+		exactSpan = exactSpansForCompositeKeys(ns, sargKeys)
+	}
+
+	if !exactSpan {
+		for _, prev := range ns {
+			prev.Exact = false
+		}
+	}
+
 	return ns, nil
+}
+
+func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {
+	for _, prev := range ns {
+		if len(prev.Range.Low) != 0 && len(prev.Range.Low) != len(sargKeys) {
+			return false
+		}
+
+		if len(prev.Range.High) != 0 && len(prev.Range.High) != len(sargKeys) {
+			return false
+		}
+
+		if len(prev.Range.Low) == 0 || len(prev.Range.High) == 0 {
+			continue
+		}
+
+		// workaround for CBSE-2391. Except last key all leading keys needs to be EQ
+		for i := 0; i < len(sargKeys)-1; i++ {
+			low := prev.Range.Low[i].Value()
+			high := prev.Range.High[i].Value()
+			if low == nil || high == nil || !low.Equals(high).Truth() {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func sargFor(pred, expr expression.Expression, missingHigh bool) (plan.Spans, error) {
