@@ -124,7 +124,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Perform the actual UPSERT
 	var er errors.Error
-	dpairs, er = this.plan.Keyspace().Insert(dpairs)
+	dpairs, er = this.plan.Keyspace().Upsert(dpairs)
 
 	t := time.Since(timer)
 	context.AddPhaseTime("upsert", t)
