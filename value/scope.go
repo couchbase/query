@@ -19,9 +19,9 @@ type ScopeValue struct {
 	parent Value
 }
 
-func NewScopeValue(val interface{}, parent Value) *ScopeValue {
+func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 	return &ScopeValue{
-		Value:  NewValue(val),
+		Value:  objectValue(val),
 		parent: parent,
 	}
 }
@@ -96,4 +96,11 @@ Return the parent scope.
 */
 func (this *ScopeValue) Parent() Value {
 	return this.parent
+}
+
+/*
+Return the immediate map.
+*/
+func (this *ScopeValue) Map() map[string]interface{} {
+	return this.Value.(objectValue)
 }
