@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/clustering"
@@ -30,8 +31,18 @@ func TestCBClustering(t *testing.T) {
 	if !couchbase_running(couchbase_location) {
 		t.Skip("Couchbase not running - skipping test")
 	}
+
+	// Normally, cbauth would initialize from an environment parameter, CBAUTH_REVRPC_URL.
+	// Here in the test environment we cannot set the parameter early enough to be caught by the initilization code,
+	// so we direct cbauth to retry using a URL we provide.
+	ok, err := cbauth.InternalRetryDefaultInitWithService("query", "localhost:8091", "Administrator", "password")
+	if !ok {
+		t.Fatalf("Unable to initialize cbauth: %s", err.Error())
+	}
+
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
+
 	cs, err := NewConfigstore("http://" + couchbase_location + ":8091")
 	if err != nil {
 		t.Fatalf("Error creating configstore: ", err)

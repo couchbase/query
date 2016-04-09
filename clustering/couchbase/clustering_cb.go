@@ -41,7 +41,7 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(path, _PREFIX) {
 		path = path[len(_PREFIX):]
 	}
-	c, err := couchbase.Connect(path)
+	c, err := couchbase.ConnectWithAuth(path, cbauth.NewAuthHandler(nil))
 	if err != nil {
 		return nil, errors.NewAdminConnectionError(err, path)
 	}
