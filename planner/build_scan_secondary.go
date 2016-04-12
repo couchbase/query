@@ -21,10 +21,11 @@ import (
 )
 
 type indexEntry struct {
-	keys     expression.Expressions
-	sargKeys expression.Expressions
-	cond     expression.Expression
-	spans    plan.Spans
+	keys       expression.Expressions
+	sargKeys   expression.Expressions
+	cond       expression.Expression
+	spans      plan.Spans
+	exactSpans bool
 }
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
@@ -86,7 +87,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 		}
 
 		n := SargableFor(pred, keys)
-		entry := &indexEntry{keys, keys[0:n], cond, nil}
+		entry := &indexEntry{keys, keys[0:n], cond, nil, false}
 		all[index] = entry
 
 		if n > 0 {
@@ -113,7 +114,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 
 	minimals := make(map[datastore.Index]*indexEntry, len(sargables))
 	for s, se := range sargables {
-		spans, err := SargFor(pred, se.sargKeys, len(se.keys))
+		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
 		if err != nil || len(spans) == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
@@ -123,6 +124,7 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.E
 		}
 
 		se.spans = spans
+		se.exactSpans = exactSpans
 		minimals[s] = se
 	}
 
@@ -250,10 +252,8 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 }
 
 func allowedPushDown(entry *indexEntry, pred expression.Expression) bool {
-	for _, span := range entry.spans {
-		if !span.Exact {
-			return false
-		}
+	if !entry.exactSpans {
+		return false
 	}
 
 	// check for non sargable key is in predicate

@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (plan.Spans, error) {
+func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (plan.Spans, bool, error) {
 	n := len(sargKeys)
 	s := newSarg(pred)
 	s.SetMissingHigh(n < total)
@@ -27,7 +27,7 @@ keys:
 	for i := n - 1; i >= 0; i-- {
 		r, err := sargKeys[i].Accept(s)
 		if err != nil || r == nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		rs := r.(plan.Spans)
@@ -144,20 +144,14 @@ keys:
 	}
 
 	if len(ns) == 0 || len(ns) > 256 {
-		return _FULL_SPANS, nil
+		return _FULL_SPANS, false, nil
 	}
 
 	if exactSpan {
 		exactSpan = exactSpansForCompositeKeys(ns, sargKeys)
 	}
 
-	if !exactSpan {
-		for _, prev := range ns {
-			prev.Exact = false
-		}
-	}
-
-	return ns, nil
+	return ns, exactSpan, nil
 }
 
 func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {

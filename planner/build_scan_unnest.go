@@ -216,12 +216,13 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 			return nil, nil, nil
 		}
 
-		spans, err := SargFor(pred, mappings, len(mappings))
+		spans, exactSpans, err := SargFor(pred, mappings, len(mappings))
 		if err != nil {
 			return nil, nil, err
 		}
 
 		entry.spans = spans
+		entry.exactSpans = exactSpans
 		scan := plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
 		return plan.NewDistinctScan(scan), unnest, nil
 	}
