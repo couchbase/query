@@ -147,7 +147,7 @@ keys:
 		return _FULL_SPANS, false, nil
 	}
 
-	if exactSpan {
+	if exactSpan && len(sargKeys) > 1 {
 		exactSpan = exactSpansForCompositeKeys(ns, sargKeys)
 	}
 
@@ -155,23 +155,22 @@ keys:
 }
 
 func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {
+
 	for _, prev := range ns {
-		if len(prev.Range.Low) != 0 && len(prev.Range.Low) != len(sargKeys) {
+		if len(prev.Range.Low) != len(sargKeys) {
 			return false
 		}
 
-		if len(prev.Range.High) != 0 && len(prev.Range.High) != len(sargKeys) {
+		// trailing key is > or >=
+		if len(prev.Range.High) < len(sargKeys)-1 {
 			return false
-		}
-
-		if len(prev.Range.Low) == 0 || len(prev.Range.High) == 0 {
-			continue
 		}
 
 		// workaround for CBSE-2391. Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
 			low := prev.Range.Low[i].Value()
 			high := prev.Range.High[i].Value()
+			// Successor present in high Equals returns false
 			if low == nil || high == nil || !low.Equals(high).Truth() {
 				return false
 			}
