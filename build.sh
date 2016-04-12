@@ -11,6 +11,9 @@ cd parser/n1ql
 ./build.sh $*
 cd ../..
 
+echo go fmt ./...
+go fmt ./...
+
 echo cd server/cbq-engine
 cd server/cbq-engine
 ./build.sh $*
