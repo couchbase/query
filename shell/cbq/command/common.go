@@ -176,6 +176,13 @@ func StrToVal(param string) (val value.Value) {
 		}
 	}
 
+	// Escape any \ so that we dont conver to value.BINARY
+	if strings.Contains(param, "\\") {
+		param = strings.Replace(param, "\\", "\\\\", -1)
+		bytes := []byte(param)
+		val = value.NewValue(bytes)
+	}
+
 	bytes := []byte(param)
 
 	val = value.NewValue(bytes)
@@ -195,7 +202,6 @@ func StrToVal(param string) (val value.Value) {
 func ValToStr(item value.Value) string {
 	//Call String() method in value.Value to convert
 	//value to string.
-
 	return item.String()
 }
 
@@ -415,8 +421,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		args_str := strings.Join(args[1:], " ")
 
-		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
-
 		if vble == "histfile" {
 			//Verify if the value for histfile is valid.
 			//the path is given is relative to the HOME dir.
@@ -436,12 +440,15 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return errors.FILE_OPEN, err.Error()
 			} else {
 				HISTFILE = path
+
 			}
 		}
 
+		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
 		if err_code != 0 {
 			return err_code, err_str
 		}
+
 	}
 	return 0, ""
 }
@@ -556,19 +563,48 @@ func GetHome() (homeDir string, err_code int, err_Str string) {
 
 func GetPath(homeDir, inputPath string) (path string) {
 	//When verifying the path, check to see if input is an absolute path
-	//or not.
+	//or not. At this time for history we do not support Relative paths.
+
+	//In order to handle cases such as
+	//         \alias p /tmp/history.txt;
+	//		   \set histfile \\p;
+	//		   \echo histfile;
+	//			Output : /tmp/history;
+	//  OR     \set $a /tmp/history.txt;
+	//			\set histfile $a;
+
+	if strings.HasPrefix(inputPath, "\\\\") || strings.HasPrefix(inputPath, "$") {
+		val, err_code, _ := Resolve(inputPath)
+		if err_code != 0 {
+			//This means it wasnt an alias and we need
+			//to treat it as an input path directly.
+		} else {
+			//If there is no error, then we replace the
+			//input path with the value of the alias.
+			inputPath = ValToStr(val)
+		}
+	}
+
+	//support paths with quotations.
+	if (strings.HasPrefix(inputPath, "\"") &&
+		strings.HasSuffix(inputPath, "\"")) ||
+		(strings.HasPrefix(inputPath, "'") &&
+			strings.HasSuffix(inputPath, "'")) {
+
+		inputPath = inputPath[1 : len(inputPath)-1]
+	}
 
 	if WINDOWS {
-		//On windows, since there is no way to know if we are providing
-		//the absolute path, try and open the file with and without the
-		//userprofile prefixed to it.
+		//Check for absolute path first. If not assume that the path is
+		//relative to USERPROFILE.
 
-		_, err := os.OpenFile(inputPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-		if err != nil {
-			//Prefix the input path with the USERPROFILE. This is a relative path.
-			path = homeDir + "\\" + inputPath
-		} else {
+		if strings.HasPrefix(inputPath, "\\") ||
+			strings.Index(inputPath, ":\\") == 1 ||
+			strings.HasPrefix(inputPath, "\\\\") {
+
 			path = inputPath
+		} else {
+			path = homeDir + "\\" + inputPath
 		}
 
 	} else {

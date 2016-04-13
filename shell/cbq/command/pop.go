@@ -141,6 +141,37 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 			if err_code != 0 {
 				return err_code, err_string
 			}
+			var nval string
+
+			//Predefined variables are only allowed to be specifically
+			//popped
+			if vble == "histfile" {
+				st_val, ok := PreDefSV["histfile"]
+				if ok {
+					newval, err_code, err_str := st_val.Top()
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = ValToStr(newval)
+					//In order to store it in a format that can be read,
+					//we escaped the strings. Now we remove the escape chars.
+					nval = strings.Replace(nval, "\\\\", "\\", -1)
+					if nval != "" &&
+						(strings.HasPrefix(nval, "\"") &&
+							strings.HasSuffix(nval, "\"")) ||
+						(strings.HasPrefix(nval, "'") &&
+							strings.HasSuffix(nval, "'")) {
+						//Discount the quotes " .. "
+						nval = nval[1 : len(nval)-1]
+					}
+				} else {
+					nval = ".cbq_history"
+				}
+
+				HISTFILE = nval
+				return 0, ""
+			}
+
 		}
 	}
 	return 0, ""
