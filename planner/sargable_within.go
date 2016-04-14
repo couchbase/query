@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2016 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -13,22 +13,16 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SubsetOf(expr1, expr2 expression.Expression) bool {
-	v2 := expr2.Value()
-	if v2 != nil {
-		return v2.Truth()
-	}
-
-	if expr1.EquivalentTo(expr2) {
-		return true
-	}
-
-	s := newSubset(expr1)
-	result, _ := expr2.Accept(s)
-	return result.(bool)
+type sargableWithin struct {
+	predicate
 }
 
-func newSubset(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SUBSET_FACTORY)
-	return s.(expression.Visitor)
+func newSargableWithin(pred *expression.Within) *sargableWithin {
+	rv := &sargableWithin{}
+	rv.test = func(expr2 expression.Expression) (bool, error) {
+		return SubsetOf(pred, expr2) ||
+			SubsetOf(pred.First(), expr2), nil
+	}
+
+	return rv
 }

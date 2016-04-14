@@ -85,11 +85,11 @@ func (this *subsetFactory) VisitObject(expr *expression.Object) (interface{}, er
 }
 
 func (this *subsetFactory) VisitIn(expr *expression.In) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetIn(expr), nil
 }
 
 func (this *subsetFactory) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return newSubsetDefault(expr), nil
+	return newSubsetWithin(expr), nil
 }
 
 // Comparison

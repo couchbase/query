@@ -1,4 +1,4 @@
-//  Copyright (c) 2014 Couchbase, Inc.
+//  Copyright (c) 2016 Couchbase, Inc.
 //  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
 //  except in compliance with the License. You may obtain a copy of the License at
 //    http://www.apache.org/licenses/LICENSE-2.0
@@ -11,24 +11,26 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
-func SubsetOf(expr1, expr2 expression.Expression) bool {
-	v2 := expr2.Value()
-	if v2 != nil {
-		return v2.Truth()
-	}
-
-	if expr1.EquivalentTo(expr2) {
-		return true
-	}
-
-	s := newSubset(expr1)
-	result, _ := expr2.Accept(s)
-	return result.(bool)
+type sargIn struct {
+	sargBase
 }
 
-func newSubset(expr expression.Expression) expression.Visitor {
-	s, _ := expr.Accept(_SUBSET_FACTORY)
-	return s.(expression.Visitor)
+func newSargIn(pred *expression.In) *sargIn {
+	rv := &sargIn{}
+	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
+		if SubsetOf(pred, expr2) {
+			return _SELF_SPANS, nil
+		}
+
+		if SubsetOf(pred.First(), expr2) {
+			return _VALUED_SPANS, nil
+		}
+
+		return nil, nil
+	}
+
+	return rv
 }

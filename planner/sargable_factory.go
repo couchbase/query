@@ -85,11 +85,11 @@ func (this *sargableFactory) VisitObject(expr *expression.Object) (interface{}, 
 }
 
 func (this *sargableFactory) VisitIn(expr *expression.In) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableIn(expr), nil
 }
 
 func (this *sargableFactory) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return newSargableDefault(expr), nil
+	return newSargableWithin(expr), nil
 }
 
 // Comparison

@@ -85,11 +85,11 @@ func (this *sargFactory) VisitObject(expr *expression.Object) (interface{}, erro
 }
 
 func (this *sargFactory) VisitIn(expr *expression.In) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargIn(expr), nil
 }
 
 func (this *sargFactory) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return newSargDefault(expr), nil
+	return newSargWithin(expr), nil
 }
 
 // Comparison
