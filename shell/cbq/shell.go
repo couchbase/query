@@ -37,11 +37,11 @@ var ServerFlag string
 
 func init() {
 	const (
-		defaultserver = "http://localhost:8093/"
-		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8093\n\t\tFor Example : ./cbq -e=http://172.23.107.18:8091\n"
+		defaultServer = "http://localhost:8091/"
+		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\tFor Example : ./cbq -e=http://172.23.107.18:8091\n"
 	)
-	flag.StringVar(&ServerFlag, "engine", defaultserver, usage)
-	flag.StringVar(&ServerFlag, "e", defaultserver, "Shorthand for -engine")
+	flag.StringVar(&ServerFlag, "engine", defaultServer, usage)
+	flag.StringVar(&ServerFlag, "e", defaultServer, "Shorthand for -engine")
 }
 
 /*
