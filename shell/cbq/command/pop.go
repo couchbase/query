@@ -16,7 +16,6 @@ import (
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/value"
 )
 
 /* Pop Command */
@@ -84,7 +83,8 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 
 			if ok {
 				if NamedParam[vble].Len() == 0 {
-					n1ql.UnsetQueryParams(vble)
+					name := "$" + vble
+					n1ql.UnsetQueryParams(name)
 				} else {
 					name := "$" + vble
 					err_code, err_str := setNewParamPop(name, st_val)
@@ -94,7 +94,8 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 				}
 
 			} else {
-				n1ql.UnsetQueryParams(vble)
+				name := "$" + vble
+				n1ql.UnsetQueryParams(name)
 			}
 
 		} else if strings.HasPrefix(args[0], "-") {
@@ -201,6 +202,9 @@ func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, 
 
 		if isrestp == true && val.Len() == 0 {
 			delete(param, name)
+			if isnamep == true {
+				name = "$" + name
+			}
 			n1ql.UnsetQueryParams(name)
 		}
 
@@ -226,12 +230,9 @@ func setNewParamPop(name string, paramst *Stack) (int, string) {
 	if err_code != 0 {
 		return err_code, err_str
 	}
-	var nval string = ""
-	if newval.Type() == value.STRING {
-		nval = newval.Actual().(string)
-	} else {
-		nval = ValToStr(newval)
-	}
+
+	//Convert top of stack to string, to represent the new value.
+	nval := ValToStr(newval)
 
 	if name == "creds" {
 		// Define credentials as user/pass and convert into

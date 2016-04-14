@@ -60,7 +60,8 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
-			n1ql.UnsetQueryParams(vble)
+			name := "$" + vble
+			n1ql.UnsetQueryParams(name)
 
 		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
