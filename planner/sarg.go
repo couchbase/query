@@ -83,7 +83,7 @@ keys:
 			}
 
 			// Limit fan-out
-			if len(ns) > 16 {
+			if len(ns) > _FULL_SPAN_FANOUT {
 				exactSpan = false
 				sp = append(sp, prev)
 				continue
@@ -143,7 +143,7 @@ keys:
 		ns = sp
 	}
 
-	if len(ns) == 0 || len(ns) > 256 {
+	if len(ns) == 0 || len(ns) > (_FULL_SPAN_FANOUT*_FULL_SPAN_FANOUT) {
 		return _FULL_SPANS, false, nil
 	}
 

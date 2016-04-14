@@ -21,6 +21,8 @@ var _VALUED_SPANS plan.Spans
 var _EXACT_FULL_SPANS plan.Spans
 var _EXACT_VALUED_SPANS plan.Spans
 
+const _FULL_SPAN_FANOUT int = 16
+
 func init() {
 	sspan := &plan.Span{}
 	sspan.Range.Low = expression.Expressions{expression.TRUE_EXPR}

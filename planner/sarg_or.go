@@ -40,7 +40,7 @@ func newSargOr(pred *expression.Or) *sargOr {
 				return _EXACT_FULL_SPANS, nil
 			}
 
-			if cspans[0] == _FULL_SPANS[0] || len(spans)+len(cspans) > 16 {
+			if cspans[0] == _FULL_SPANS[0] || len(spans)+len(cspans) > _FULL_SPAN_FANOUT {
 				return _FULL_SPANS, nil
 			}
 
