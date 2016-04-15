@@ -166,11 +166,21 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 						nval = nval[1 : len(nval)-1]
 					}
 				} else {
+					err_code, err_str := PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+					if err_code != 0 {
+						return err_code, err_str
+
+					}
 					nval = ".cbq_history"
 				}
 
 				HISTFILE = nval
-				return 0, ""
+
+				//Print the path to histfile
+				err_code, err_str := printPath(HISTFILE)
+				if err_code != 0 {
+					return err_code, err_str
+				}
 			}
 
 		}

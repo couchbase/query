@@ -63,6 +63,8 @@ var (
 	HISTFILE = ".cbq_history"
 	//Is this running on windows
 	WINDOWS = false
+	//Quiet flag used to suppress printing history path
+	QUIET = false
 )
 
 /*

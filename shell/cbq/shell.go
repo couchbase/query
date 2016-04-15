@@ -433,6 +433,9 @@ func main() {
 		}
 	}
 
+	//Set QUIET to enable/disable histfile path message
+	command.QUIET = quietFlag
+
 	if timeoutFlag != "0ms" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
 	}

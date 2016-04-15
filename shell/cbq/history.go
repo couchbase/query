@@ -11,6 +11,7 @@ package main
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"strings"
 
@@ -27,6 +28,10 @@ func LoadHistory(liner *liner.State, dir string) (int, string) {
 
 		if err_code != 0 {
 			return err_code, err_str
+		}
+		//Print path to histfile on startup.
+		if !command.QUIET {
+			io.WriteString(command.W, "Path to stored history for the shell : "+path+" \n")
 		}
 	}
 	return 0, ""

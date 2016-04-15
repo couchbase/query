@@ -92,6 +92,23 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
+
+			if vble == "histfile" {
+				err_code, err_str = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+				if err_code != 0 {
+					return err_code, err_str
+
+				}
+				HISTFILE = ".cbq_history"
+
+			}
+
+			//Print the path to histfile
+			err_code, err_str = printPath(HISTFILE)
+			if err_code != 0 {
+				return err_code, err_str
+			}
+
 		}
 	}
 	return 0, ""

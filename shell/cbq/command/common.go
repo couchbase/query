@@ -260,7 +260,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 			delete(param, vble)
 		} else {
 			err_code = errors.NO_SUCH_PARAM
-			err_str = ""
+			err_str = " " + vble + " "
 		}
 	} else {
 		//To pop a value from the input stack
@@ -275,7 +275,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 			}
 		} else {
 			err_code = errors.NO_SUCH_PARAM
-			err_str = ""
+			err_str = " " + vble + " "
 		}
 	}
 	return
@@ -440,7 +440,9 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return errors.FILE_OPEN, err.Error()
 			} else {
 				HISTFILE = path
-
+				if !QUIET {
+					io.WriteString(W, "\nPath to stored history for the shell : "+path+" \n")
+				}
 			}
 		}
 
@@ -619,5 +621,20 @@ func GetPath(homeDir, inputPath string) (path string) {
 
 	}
 	return
+
+}
+
+func printPath(nval string) (int, string) {
+	if !QUIET {
+		homeDir, err_code, err_str := GetHome()
+		if err_code != 0 {
+			return err_code, err_str
+		}
+
+		path := GetPath(homeDir, nval)
+
+		io.WriteString(W, "\nPath to stored history for the shell : "+path+" \n")
+	}
+	return 0, ""
 
 }
