@@ -82,7 +82,7 @@ func (this *Push) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Push) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\PUSH \n\\PUSH <parameter> <value>\n")
+	_, werr := io.WriteString(W, "\\PUSH [ parameter value ]\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

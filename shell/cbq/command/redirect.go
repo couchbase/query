@@ -57,7 +57,7 @@ func (this *Redirect) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Redirect) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\REDIRECT <filename>\n\\REDIRECT OFF;")
+	_, werr := io.WriteString(W, "\\REDIRECT OFF | filename \n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

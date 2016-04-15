@@ -84,7 +84,7 @@ func (this *Alias) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Alias) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\ALIAS \n\\ALIAS <command name> <command>\n")
+	_, werr := io.WriteString(W, "\\ALIAS [ name value ]\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

@@ -46,10 +46,6 @@ func (this *Exit) ExecCommand(args []string) (int, string) {
 	if len(args) != 0 {
 		return errors.TOO_MANY_ARGS, ""
 	} else {
-		_, werr := io.WriteString(W, "Exiting the shell.\n")
-		if werr != nil {
-			return errors.WRITER_OUTPUT, werr.Error()
-		}
 		EXIT = true
 	}
 	return 0, ""

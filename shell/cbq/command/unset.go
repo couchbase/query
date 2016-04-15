@@ -115,7 +115,7 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Unset) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\UNSET <parameter>\n")
+	_, werr := io.WriteString(W, "\\UNSET parameter\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

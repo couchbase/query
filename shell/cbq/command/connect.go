@@ -59,13 +59,13 @@ func (this *Connect) ExecCommand(args []string) (int, string) {
 		if err != nil {
 			return errors.CONNECTION_REFUSED, ""
 		}
-		io.WriteString(W, "\nConnected to : "+SERVICE_URL+" . Type Ctrl-D / \\exit / \\quit to exit.\n")
+		io.WriteString(W, "\nConnected to : "+SERVICE_URL+" . Type Ctrl-D or \\QUIT to exit.\n")
 	}
 	return 0, ""
 }
 
 func (this *Connect) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\CONNECT <url>\n")
+	_, werr := io.WriteString(W, "\\CONNECT url\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

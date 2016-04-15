@@ -126,7 +126,7 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Set) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\SET <parameter> <value>\n")
+	_, werr := io.WriteString(W, "\\SET [ parameter value ]\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

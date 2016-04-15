@@ -43,7 +43,7 @@ func (this *Copyright) ExecCommand(args []string) (int, string) {
 	if len(args) != 0 {
 		return errors.TOO_MANY_ARGS, ""
 	} else {
-		io.WriteString(W, "Copyright (c) 2015 Couchbase, Inc. Licensed under the Apache License, Version 2.0 (the \"License\"); \nyou may not use this file except in compliance with the License. You may obtain a copy of the \nLicense at http://www.apache.org/licenses/LICENSE-2.0\nUnless required by applicable law or agreed to in writing, software distributed under the\nLicense is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,\neither express or implied. See the License for the specific language governing permissions\nand limitations under the License.")
+		io.WriteString(W, "\nCopyright (c) 2016 Couchbase, Inc. Licensed under the Apache License, Version 2.0 (the \"License\"); \nyou may not use this file except in compliance with the License. You may obtain a copy of the \nLicense at http://www.apache.org/licenses/LICENSE-2.0\nUnless required by applicable law or agreed to in writing, software distributed under the\nLicense is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,\neither express or implied. See the License for the specific language governing permissions\nand limitations under the License.\n")
 	}
 	return 0, ""
 }

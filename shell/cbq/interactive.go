@@ -225,7 +225,7 @@ func HandleInteractiveMode(prompt string) {
 					if *errorExitFlag == true {
 						if first == false {
 							first = true
-							_, werr := io.WriteString(command.W, "Exiting on first error encountered\n")
+							_, werr := io.WriteString(command.W, "\nExiting on first error encountered.\n")
 							if werr != nil {
 								s_err = command.HandleError(errors.WRITER_OUTPUT, werr.Error())
 								command.PrintError(s_err)

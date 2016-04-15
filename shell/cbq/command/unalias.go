@@ -65,7 +65,7 @@ func (this *Unalias) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Unalias) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\UNALIAS <alias name>...\n")
+	_, werr := io.WriteString(W, "\\UNALIAS name ...\n")
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
