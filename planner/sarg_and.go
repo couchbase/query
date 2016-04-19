@@ -103,6 +103,10 @@ func constrainSpan(span1, span2 *plan.Span) {
 			low1 := span1.Range.Low[0].Value()
 			low2 := span2.Range.Low[0].Value()
 
+			if span1.Exact && (low1 == nil || low2 == nil) {
+				span1.Exact = false
+			}
+
 			var res int
 			if low1 != nil && low2 != nil {
 				res = low1.Collate(low2)
@@ -135,6 +139,10 @@ func constrainSpan(span1, span2 *plan.Span) {
 
 			high1 := span1.Range.High[0].Value()
 			high2 := span2.Range.High[0].Value()
+
+			if span1.Exact && (high1 == nil || high2 == nil) {
+				span1.Exact = false
+			}
 
 			var res int
 			if high1 != nil && high2 != nil {
