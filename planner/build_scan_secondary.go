@@ -209,7 +209,7 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
 
-		if len(entry.spans) > 1 || arrayIndex {
+		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
 			// Use DistinctScan to de-dup array index scans, multiple spans
 			op = plan.NewDistinctScan(op)
 		}

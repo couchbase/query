@@ -13,7 +13,6 @@ import (
 	"math"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/value"
 )
 
 type DNF struct {
@@ -24,36 +23,6 @@ func NewDNF() *DNF {
 	rv := &DNF{}
 	rv.SetMapper(rv)
 	return rv
-}
-
-func (this *DNF) VisitIn(expr *expression.In) (interface{}, error) {
-	err := expr.MapChildren(this)
-	if err != nil {
-		return nil, err
-	}
-
-	a, ok := expr.Second().(*expression.ArrayConstruct)
-	if !ok {
-		return expr, nil
-	}
-
-	first := expr.First()
-	if len(a.Operands()) > _FULL_SPAN_FANOUT {
-		// if min, max value in the array are static convert to range
-		minVal := expression.NewArrayMin(expr.Second()).Value()
-		maxVal := expression.NewArrayMax(expr.Second()).Value()
-		if minVal != nil && minVal.Type() > value.NULL && maxVal != nil && maxVal.Type() > value.NULL {
-			return expression.NewAnd(expression.NewGE(first, expression.NewConstant(minVal)),
-				expression.NewLE(first, expression.NewConstant(maxVal))), nil
-		}
-	}
-
-	operands := make(expression.Expressions, len(a.Operands()))
-	for i, op := range a.Operands() {
-		operands[i] = expression.NewEq(first, op)
-	}
-
-	return expression.NewOr(operands...), nil
 }
 
 func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {

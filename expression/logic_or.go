@@ -98,11 +98,15 @@ func (this *Or) FilterCovers(covers map[string]value.Value) map[string]value.Val
 var _COVERS_POOL = value.NewStringValuePool(16)
 
 /*
-Range over input arguments, for all types other than missing and null,
-if the truth value of the argument is true, then return true. If
-the type is missing, return missing, and if null return null. If all
-inputs are false then return false. For null and missing, it returns
-null.
+Return TRUE for OR. This will include false positives.
+*/
+func (this *Or) MayOverlapSpans() bool {
+	return true
+}
+
+/*
+Return TRUE if any input has a truth value of TRUE, else return NULL,
+MISSING, or FALSE in that order.
 */
 func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error) {
 	missing := false

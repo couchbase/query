@@ -12,6 +12,8 @@ package value
 import (
 	"encoding/base64"
 	"fmt"
+
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -44,38 +46,28 @@ Initialize the different elements in the struct. The input
 integer decides the capacity of the objects map.
 */
 func NewSet(objectCap int) *Set {
+	mapCap := util.MaxInt(objectCap, _MAP_CAP)
+
 	return &Set{
 		booleans: make(map[bool]Value, 2),
-		numbers:  make(map[float64]Value, _MAP_CAP),
-		strings:  make(map[string]Value, _MAP_CAP),
+		numbers:  make(map[float64]Value, mapCap),
+		strings:  make(map[string]Value, mapCap),
 		arrays:   make(map[string]Value, _MAP_CAP),
 		objects:  make(map[string]Value, objectCap),
 		blobs:    make(map[string]Value, _MAP_CAP),
 	}
 }
 
-/*
-Adds a Value item to the receiver by calling Put.
-*/
 func (this *Set) Add(item Value) {
 	this.Put(item, item)
 }
 
-/*
-It adds an item of key and value to the Set. If the key is
-nil then the nills attribute is set to true for the struct
-and return from the function. We check for the keys type.
-If it is an object then call MarshalJSON and set the object
-value in the struct to this item. Similarly for array. If the
-type is null then set the nulls attribute for the receiver
-to item. For missing, the missings attribute is set.If the type
-is Boolean, number or string call actual for the key to
-convert it into native golag and then cast it to bool, float64
-or string before setting the value for that key to item. For
-the type binary, append the item to the blobs after
-converting from binary to string using base64. The default
-case throws an error since the value type is unsupported.
-*/
+func (this *Set) AddAll(items []interface{}) {
+	for _, item := range items {
+		this.Add(NewValue(item))
+	}
+}
+
 func (this *Set) Put(key, item Value) {
 	if key == nil {
 		this.nills = true
@@ -145,8 +137,6 @@ func (this *Set) Remove(key Value) {
 
 /*
 Checks if the Set has a key, and returns that corresponding value.
-Has sets a variable ok to depict true if that particular field is
-set. Finally return that boolean value.
 */
 func (this *Set) Has(key Value) bool {
 	if key == nil {
@@ -208,8 +198,7 @@ func (this *Set) Len() int {
 
 /*
 Returns a slice of Value that contains all the values in
-the Set. It creates a variable that is a slice of Values
-and appends all the existing elements in the set to it.
+the Set.
 */
 func (this *Set) Values() []Value {
 	rv := make([]Value, 0, this.Len())

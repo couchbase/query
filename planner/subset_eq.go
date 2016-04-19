@@ -66,3 +66,51 @@ func (this *subsetEq) VisitLT(expr *expression.LT) (interface{}, error) {
 
 	return false, nil
 }
+
+func (this *subsetEq) VisitIn(expr *expression.In) (interface{}, error) {
+	acons, ok := expr.Second().(*expression.ArrayConstruct)
+	if !ok {
+		return false, nil
+	}
+
+	var rhs expression.Expression
+	if this.eq.First().EquivalentTo(expr.First()) {
+		rhs = this.eq.Second()
+	} else if this.eq.Second().EquivalentTo(expr.First()) {
+		rhs = this.eq.First()
+	} else {
+		return false, nil
+	}
+
+	for _, op := range acons.Operands() {
+		if rhs.EquivalentTo(op) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (this *subsetEq) VisitWithin(expr *expression.Within) (interface{}, error) {
+	acons, ok := expr.Second().(*expression.ArrayConstruct)
+	if !ok {
+		return false, nil
+	}
+
+	var rhs expression.Expression
+	if this.eq.First().EquivalentTo(expr.First()) {
+		rhs = this.eq.Second()
+	} else if this.eq.Second().EquivalentTo(expr.First()) {
+		rhs = this.eq.First()
+	} else {
+		return false, nil
+	}
+
+	for _, op := range acons.Operands() {
+		if rhs.EquivalentTo(op) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}

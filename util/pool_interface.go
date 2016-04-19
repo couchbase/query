@@ -35,6 +35,20 @@ func (this *InterfacePool) Get() []interface{} {
 	return this.pool.Get().([]interface{})
 }
 
+func (this *InterfacePool) GetSized(length int) []interface{} {
+	if length > this.size {
+		return make([]interface{}, length)
+	}
+
+	rv := this.Get()
+	rv = rv[0:length]
+	for i := 0; i < length; i++ {
+		rv[i] = nil
+	}
+
+	return rv
+}
+
 func (this *InterfacePool) Put(s []interface{}) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return

@@ -146,30 +146,31 @@ type Expression interface {
 	FilterCovers(covers map[string]value.Value) map[string]value.Value
 
 	/*
-	   It is a utility function that returns the children of the
-	   expression. For expression a+b, a and b are the children
-	   of +.
+	   Utility function that returns the children of the
+	   expression. For expression a+b, a and b are the children.
 	*/
 	Children() Expressions
 
 	/*
-	   It is a utility function that takes in as input parameter
-	   a mapper and maps the involved expressions to an expression.
-	   If there is an error during the mapping, an error is
-	   returned.
+	   Utility function that takes in as input parameter a mapper
+	   that maps this Expression and its child expressions to
+	   expressions.  If there is an error during the mapping, an
+	   error is returned.
 	*/
 	MapChildren(mapper Mapper) error
 
 	/*
-	   This function returns an expression that is a deep copy.
+	   Deep copy.
 	*/
 	Copy() Expression
 
 	/*
-	   This method indicates if the expression allows pushing certain operation
-	   to indexscan
+	   Indicates if this expression may produce multiple
+	   overlapping spans during index sarging. For example, a < 5
+	   OR a < 10 produces overlapping spans. False positives are
+	   ok.
 	*/
-	IndexPushDownAllowed() bool
+	MayOverlapSpans() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

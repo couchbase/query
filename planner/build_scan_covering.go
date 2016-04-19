@@ -94,7 +94,7 @@ outer:
 		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
 		this.coveringScan = scan
 
-		if len(entry.spans) > 1 || arrayIndex {
+		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
 			// Use DistinctScan to de-dup array index scans, multiple spans
 			return plan.NewDistinctScan(scan), nil
 		}

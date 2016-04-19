@@ -289,16 +289,14 @@ func (this *ExpressionBase) SetExpr(expr Expression) {
 }
 
 /*
-Range over the children of the expression, and check if each child is
-allowed to pushdown operations to index. If not then return false as the operation is not
-pushable to index. If operation is pushable to index for all children, then return true.
+Return true if any child may overlap spans.
 */
-func (this *ExpressionBase) IndexPushDownAllowed() bool {
+func (this *ExpressionBase) MayOverlapSpans() bool {
 	for _, child := range this.expr.Children() {
-		if !child.IndexPushDownAllowed() {
-			return false
+		if child.MayOverlapSpans() {
+			return true
 		}
 	}
 
-	return true
+	return false
 }

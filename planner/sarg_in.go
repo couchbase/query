@@ -10,8 +10,11 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sort"
+	"github.com/couchbase/query/value"
 )
 
 type sargIn struct {
@@ -25,11 +28,43 @@ func newSargIn(pred *expression.In) *sargIn {
 			return _SELF_SPANS, nil
 		}
 
-		if SubsetOf(pred.First(), expr2) {
+		if !SubsetOf(pred.First(), expr2) {
+			return nil, nil
+		}
+
+		aval := pred.Second().Value()
+		if aval == nil {
 			return _VALUED_SPANS, nil
 		}
 
-		return nil, nil
+		array, ok := aval.Actual().([]interface{})
+		if !ok {
+			return _VALUED_SPANS, nil
+		}
+
+		// De-dup before generating spans
+		set := value.NewSet(len(array))
+		set.AddAll(array)
+		array = set.Actuals()
+
+		// Sort for EXPLAIN stability
+		sort.Sort(value.NewSorter(value.NewValue(array)))
+
+		spans := make(plan.Spans, 0, len(array))
+		for _, val := range array {
+			if val == nil {
+				continue
+			}
+
+			span := &plan.Span{}
+			span.Range.Low = expression.Expressions{expression.NewConstant(val)}
+			span.Range.High = span.Range.Low
+			span.Range.Inclusion = datastore.BOTH
+			span.Exact = true
+			spans = append(spans, span)
+		}
+
+		return spans, nil
 	}
 
 	return rv

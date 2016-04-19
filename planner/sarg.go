@@ -15,7 +15,9 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (plan.Spans, bool, error) {
+func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (
+	plan.Spans, bool, error) {
+
 	n := len(sargKeys)
 	s := newSarg(pred)
 	s.SetMissingHigh(n < total)
@@ -83,7 +85,7 @@ keys:
 			}
 
 			// Limit fan-out
-			if len(ns) > _FULL_SPAN_FANOUT {
+			if len(rs) > 1 && len(rs)*len(ns) > _FULL_SPAN_FANOUT {
 				exactSpan = false
 				sp = append(sp, prev)
 				continue
@@ -143,7 +145,7 @@ keys:
 		ns = sp
 	}
 
-	if len(ns) == 0 || len(ns) > (_FULL_SPAN_FANOUT*_FULL_SPAN_FANOUT) {
+	if len(ns) == 0 {
 		return _FULL_SPANS, false, nil
 	}
 
@@ -166,7 +168,7 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 			return false
 		}
 
-		// workaround for CBSE-2391. Except last key all leading keys needs to be EQ
+		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
 			low := prev.Range.Low[i].Value()
 			high := prev.Range.High[i].Value()
@@ -202,3 +204,5 @@ type sarg interface {
 	SetMissingHigh(bool)
 	MissingHigh() bool
 }
+
+const _FULL_SPAN_FANOUT = 8192
