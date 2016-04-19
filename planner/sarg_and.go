@@ -52,21 +52,32 @@ func newSargAnd(pred *expression.And) *sargAnd {
 }
 
 func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
-	if len(spans2) != 1 {
-		if len(spans1) == 1 {
-			spans1, spans2 = spans2.Copy(), spans1
-		} else {
-			spans1[0].Exact = false
-			return spans1
+	if len(spans2) > 1 && len(spans1) <= 1 {
+		spans1, spans2 = spans2.Copy(), spans1
+	}
+
+	// Avoid copying if possible
+	if len(spans2) <= 1 {
+		for _, span2 := range spans2 {
+			for _, span1 := range spans1 {
+				constrainSpan(span1, span2)
+			}
 		}
+
+		return spans1
 	}
 
-	span2 := spans2[0]
-	for _, span1 := range spans1 {
-		constrainSpan(span1, span2)
+	// Generate cross product of inputs
+	spans := make(plan.Spans, 0, len(spans1)*len(spans2))
+	for _, span2 := range spans2 {
+		copy1 := spans1.Copy()
+		for _, span1 := range copy1 {
+			constrainSpan(span1, span2)
+		}
+		spans = append(spans, copy1...)
 	}
 
-	return spans1
+	return spans
 }
 
 func constrainSpan(span1, span2 *plan.Span) {
@@ -75,21 +86,22 @@ func constrainSpan(span1, span2 *plan.Span) {
 		span1.Exact = false
 	}
 
+	// Adjust low bound
 	if len(span2.Range.Low) > 0 {
+		span1.Exact = span1.Exact && span2.Exact
+
 		if len(span1.Range.Low) == 0 {
+			// Get low bound from span2
+
 			span1.Range.Low = span2.Range.Low
 			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
 				(span2.Range.Inclusion & datastore.LOW)
 		} else {
+			// Keep the greater or unknown low bound from
+			// span1 and span2
+
 			low1 := span1.Range.Low[0].Value()
 			low2 := span2.Range.Low[0].Value()
-
-			/* For query parameters exact span will be false
-			   Span will be query parameter
-			*/
-			if low1 == nil || low2 == nil {
-				span1.Exact = false
-			}
 
 			var res int
 			if low1 != nil && low2 != nil {
@@ -100,29 +112,29 @@ func constrainSpan(span1, span2 *plan.Span) {
 				span1.Range.Low = span2.Range.Low
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
 					(span2.Range.Inclusion & datastore.LOW)
-			} else if low1 != nil && low2 != nil && res == 0 && (span1.Range.Inclusion&datastore.LOW) != 0 {
+			} else if low1 != nil && low2 != nil && res == 0 {
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
-					(span2.Range.Inclusion & datastore.LOW)
-
+					(span1.Range.Inclusion & span2.Range.Inclusion & datastore.LOW)
 			}
 		}
 	}
 
+	// Adjust high bound
 	if len(span2.Range.High) > 0 {
+		span1.Exact = span1.Exact && span2.Exact
+
 		if len(span1.Range.High) == 0 {
+			// Get high bound from span2
+
 			span1.Range.High = span2.Range.High
 			span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
 				(span2.Range.Inclusion & datastore.HIGH)
 		} else {
+			// Keep the lesser or unknown high bound from
+			// span1 and span2
+
 			high1 := span1.Range.High[0].Value()
 			high2 := span2.Range.High[0].Value()
-
-			/* For query parameters exact span will be false
-			   Span will be query parameter
-			*/
-			if high1 == nil || high2 == nil {
-				span1.Exact = false
-			}
 
 			var res int
 			if high1 != nil && high2 != nil {
@@ -133,9 +145,9 @@ func constrainSpan(span1, span2 *plan.Span) {
 				span1.Range.High = span2.Range.High
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
 					(span2.Range.Inclusion & datastore.HIGH)
-			} else if high1 != nil && high2 != nil && res == 0 && (span1.Range.Inclusion&datastore.HIGH) != 0 {
+			} else if high1 != nil && high2 != nil && res == 0 {
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
-					(span2.Range.Inclusion & datastore.HIGH)
+					(span1.Range.Inclusion & span2.Range.Inclusion & datastore.HIGH)
 			}
 		}
 	}
