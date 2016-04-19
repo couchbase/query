@@ -83,10 +83,27 @@ func constrainSpan(span1, span2 *plan.Span) {
 		} else {
 			low1 := span1.Range.Low[0].Value()
 			low2 := span2.Range.Low[0].Value()
-			if low1 != nil && (low2 == nil || low1.Collate(low2) < 0) {
+
+			/* For query parameters exact span will be false
+			   Span will be query parameter
+			*/
+			if low1 == nil || low2 == nil {
+				span1.Exact = false
+			}
+
+			var res int
+			if low1 != nil && low2 != nil {
+				res = low1.Collate(low2)
+			}
+
+			if low1 != nil && (low2 == nil || res < 0) {
 				span1.Range.Low = span2.Range.Low
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
 					(span2.Range.Inclusion & datastore.LOW)
+			} else if low1 != nil && low2 != nil && res == 0 && (span1.Range.Inclusion&datastore.LOW) != 0 {
+				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.HIGH) |
+					(span2.Range.Inclusion & datastore.LOW)
+
 			}
 		}
 	}
@@ -99,8 +116,24 @@ func constrainSpan(span1, span2 *plan.Span) {
 		} else {
 			high1 := span1.Range.High[0].Value()
 			high2 := span2.Range.High[0].Value()
-			if high1 != nil && high2 != nil && high1.Collate(high2) > 0 {
+
+			/* For query parameters exact span will be false
+			   Span will be query parameter
+			*/
+			if high1 == nil || high2 == nil {
+				span1.Exact = false
+			}
+
+			var res int
+			if high1 != nil && high2 != nil {
+				res = high1.Collate(high2)
+			}
+
+			if high1 != nil && (high2 == nil || res > 0) {
 				span1.Range.High = span2.Range.High
+				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
+					(span2.Range.Inclusion & datastore.HIGH)
+			} else if high1 != nil && high2 != nil && res == 0 && (span1.Range.Inclusion&datastore.HIGH) != 0 {
 				span1.Range.Inclusion = (span1.Range.Inclusion & datastore.LOW) |
 					(span2.Range.Inclusion & datastore.HIGH)
 			}
