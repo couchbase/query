@@ -18,43 +18,23 @@ import (
 func SargFor(pred expression.Expression, sargKeys expression.Expressions, total int) (
 	plan.Spans, bool, error) {
 
-	n := len(sargKeys)
-	s := newSarg(pred)
-	s.SetMissingHigh(n < total)
+	// Get sarg spans for index sarg keys. The sarg spans are
+	// truncated when they exceed the limit.
+	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, total)
+	if sargSpans == nil || err != nil {
+		return nil, exactSpan, err
+	}
+
+	n := len(sargSpans)
 	var ns plan.Spans
 
 	// Sarg compositive indexes right to left
-	exactSpan := true
 keys:
 	for i := n - 1; i >= 0; i-- {
-		r, err := sargKeys[i].Accept(s)
-		if err != nil || r == nil {
-			return nil, false, err
-		}
-
-		rs := r.(plan.Spans)
+		rs := sargSpans[i]
 		if len(rs) == 0 {
 			ns = nil
-			exactSpan = false
 			continue
-		} else if exactSpan {
-			for _, prev := range rs {
-				if !prev.Exact {
-					exactSpan = false
-					break
-				}
-			}
-		}
-
-		// Notify prev key that this key is missing a high bound
-		if i > 0 {
-			s.SetMissingHigh(false)
-			for _, prev := range rs {
-				if len(prev.Range.High) == 0 {
-					s.SetMissingHigh(true)
-					break
-				}
-			}
 		}
 
 		if ns == nil {
@@ -79,13 +59,6 @@ keys:
 	prevs:
 		for _, prev := range rs {
 			if len(prev.Range.Low) == 0 && len(prev.Range.High) == 0 {
-				exactSpan = false
-				sp = append(sp, prev)
-				continue
-			}
-
-			// Limit fan-out
-			if len(rs) > 1 && len(rs)*len(ns) > _FULL_SPAN_FANOUT {
 				exactSpan = false
 				sp = append(sp, prev)
 				continue
@@ -203,6 +176,71 @@ type sarg interface {
 	expression.Visitor
 	SetMissingHigh(bool)
 	MissingHigh() bool
+}
+
+/*
+Get sarg spans for index sarg keys. The sarg spans are truncated when
+they exceed the limit.
+*/
+func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, total int) (
+	[]plan.Spans, bool, error) {
+
+	n := len(sargKeys)
+	s := newSarg(pred)
+	s.SetMissingHigh(n < total)
+
+	exactSpan := true
+	sargSpans := make([]plan.Spans, n)
+
+	// Sarg compositive indexes right to left
+	for i := n - 1; i >= 0; i-- {
+		r, err := sargKeys[i].Accept(s)
+		if err != nil || r == nil {
+			return nil, false, err
+		}
+
+		rs := r.(plan.Spans)
+		sargSpans[i] = rs
+
+		if len(rs) == 0 {
+			exactSpan = false
+			continue
+		} else if exactSpan {
+			for _, prev := range rs {
+				if !prev.Exact {
+					exactSpan = false
+					break
+				}
+			}
+		}
+
+		// Notify prev key that this key is missing a high bound
+		if i > 0 {
+			s.SetMissingHigh(false)
+			for _, prev := range rs {
+				if len(prev.Range.High) == 0 {
+					s.SetMissingHigh(true)
+					break
+				}
+			}
+		}
+	}
+
+	// Truncate sarg spans when they exceed the limit
+	nspans := 1
+	i := 0
+	for _, spans := range sargSpans {
+		if len(spans) == 0 ||
+			(nspans > 1 && nspans*len(spans) > _FULL_SPAN_FANOUT) {
+			exactSpan = false
+			break
+		}
+
+		nspans *= len(spans)
+		i++
+	}
+
+	return sargSpans[0:i], exactSpan, nil
 }
 
 const _FULL_SPAN_FANOUT = 8192
