@@ -156,14 +156,15 @@ boundaries.
 func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 	s = regexp.QuoteMeta(s)
 	repl := regexp.MustCompile(`\\_|\\%|_|%`)
+	if s[0] != '%' {
+		s = "^" + s
+	}
+	l := len(s)
+	if l > 0 && s[l-1] != '%' {
+		s = s + "$"
+	}
 	s = repl.ReplaceAllStringFunc(s, replacer)
 
-	part, err = regexp.Compile(s)
-	if err != nil {
-		return
-	}
-
-	s = "^" + s + "$"
 	re, err = regexp.Compile(s)
 	if err != nil {
 		return
