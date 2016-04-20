@@ -910,19 +910,35 @@ func (this *jsonArgs) getPositionalArgs() (value.Values, errors.Error) {
 }
 
 func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
-	var creds_data []map[string]string
-
 	creds_field, in_request := this.getField(CREDS)
 	if !in_request {
+		return nil, nil
+	}
+
+	creds_items, arr_ok := creds_field.([]interface{})
+	if arr_ok {
+		creds_data := make([]map[string]string, len(creds_items))
+		for i, item := range creds_items {
+			map_item, map_ok := item.(map[string]interface{})
+			if map_ok {
+				map_new := make(map[string]string, len(map_item))
+				for k, v := range map_item {
+					vs, v_ok := v.(string)
+					if v_ok {
+						map_new[k] = vs
+					} else {
+						return nil, errors.NewServiceErrorTypeMismatch(CREDS,
+							"array of { user, pass }")
+					}
+				}
+				creds_data[i] = map_new
+			} else {
+				return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
+			}
+		}
 		return creds_data, nil
 	}
-
-	creds_data, type_ok := creds_field.([]map[string]string)
-	if !type_ok {
-		return creds_data, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
-	}
-
-	return creds_data, nil
+	return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
 }
 
 func (this *jsonArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {
