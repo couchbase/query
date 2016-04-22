@@ -243,6 +243,9 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 // Helper function to read file based input. Run all the commands as
 // seen in the file given by FILE_INPUT and then return the prompt.
 func readAndExec(liner *liner.State) (int, string) {
+
+	var isEOF = false
+
 	// Read input file
 	inputFile, err := os.Open(command.FILE_INPUT)
 	if err != nil {
@@ -271,22 +274,53 @@ func readAndExec(liner *liner.State) (int, string) {
 		// at the end of the read then that is the query to run. If not
 		// keep appending to the string until you reach the ;\n.
 		path, err := newFileReader.ReadString('\n')
-		if err == io.EOF {
-			// Reached end of file. We are done. So break out of the loop.
-			break
-		} else if err != nil {
+
+		if err != nil && err != io.EOF {
 			return errors.READ_FILE, err.Error()
 		}
+
 		// Remove leading and trailing spaces from the input
 		path = strings.TrimSpace(path)
+
+		if err == io.EOF {
+			// Reached end of file. We are done. So break out of the loop.
+			// Do not require the last line on the file to have a \n.
+
+			if path == "" && final_input == " " {
+				break
+			} else {
+				//This means we have some text on the last line
+				isEOF = true
+			}
+
+		}
+
+		// If any line has a comment, dont count that line for the input,
+		// add it to the history and then discard it.
+
+		if strings.HasPrefix(path, "--") || strings.HasPrefix(path, "#") {
+			errCode, errStr := UpdateHistory(liner, homeDir, path)
+			if errCode != 0 {
+				return errCode, errStr
+			}
+			continue
+		}
+
 		if strings.HasSuffix(path, ";") {
 			// The full input command has been read.
 			final_input = final_input + " " + path
 		} else {
-			// Only part of the command has been read. Hence continue
-			// reading until ; is reached.
-			final_input = final_input + " " + path
-			continue
+			if isEOF {
+				// The last line of the file has been read and it doesnt
+				// contain a ;. Hence append one and then run.
+				final_input = final_input + " " + path + ";"
+
+			} else {
+				// Only part of the command has been read. Hence continue
+				// reading until ; is reached.
+				final_input = final_input + " " + path
+				continue
+			}
 		}
 
 		// Populate the final string to execute
