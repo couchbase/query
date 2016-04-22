@@ -69,6 +69,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		}()
 
 		channel := NewChannel()
+		defer channel.Close()
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
@@ -109,11 +110,6 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		// Await children
 		for ; n > 0; n-- {
 			<-this.childChannel
-		}
-
-		select {
-		case channel.StopChannel() <- false:
-		default:
 		}
 	})
 }

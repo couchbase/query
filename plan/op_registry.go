@@ -119,7 +119,6 @@ var _OPERATORS = map[string]Operator{
 	"Discard":   &Discard{},
 	"Stream":    &Stream{},
 	"Collect":   &Collect{},
-	"Channel":   &Channel{},
 
 	// Index DDL
 	"CreatePrimaryIndex": &CreatePrimaryIndex{},

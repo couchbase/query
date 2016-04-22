@@ -406,11 +406,6 @@ func (this *builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
 	return NewCollect(), nil
 }
 
-// Channel
-func (this *builder) VisitChannel(plan *plan.Channel) (interface{}, error) {
-	return NewChannel(), nil
-}
-
 // CreateIndex
 func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (interface{}, error) {
 	return NewCreatePrimaryIndex(plan), nil

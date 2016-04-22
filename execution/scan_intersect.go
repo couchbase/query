@@ -71,6 +71,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		this.values = _INDEX_VALUE_POOL.Get()
 
 		channel := NewChannel()
+		defer channel.Close()
 
 		for _, scan := range this.scans {
 			scan.SetParent(this)
@@ -119,11 +120,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		// Await children
 		for ; n > 0; n-- {
 			<-this.childChannel
-		}
-
-		select {
-		case channel.StopChannel() <- false:
-		default:
 		}
 
 		if !stopped {

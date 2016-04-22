@@ -74,21 +74,24 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		go this.input.RunOnce(context, parent)
 
-		update := this.wrapChild(this.update)
-		delete := this.wrapChild(this.delete)
-		insert := this.wrapChild(this.insert)
+		update, updateInput := this.wrapChild(this.update)
+		delete, deleteInput := this.wrapChild(this.delete)
+		insert, insertInput := this.wrapChild(this.insert)
 
 		children := make([]Operator, 0, 3)
 
 		if update != nil {
+			defer updateInput.Close()
 			children = append(children, update)
 		}
 
 		if delete != nil {
+			defer deleteInput.Close()
 			children = append(children, delete)
 		}
 
 		if insert != nil {
+			defer insertInput.Close()
 			children = append(children, insert)
 		}
 
@@ -102,8 +105,6 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		for ok {
 			select {
 			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(children...)
 				break loop
 			default:
 			}
@@ -117,29 +118,19 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				}
 			case <-this.stopChannel: // Never closed
 				this.chanTime += time.Since(t)
-				this.notifyStop()
-				notifyChildren(children...)
 				break loop
 			}
 		}
 
-		for _, child := range children {
-			// Signal end of input data
-			select {
-			case child.Input().StopChannel() <- false:
-			default:
-			}
-		}
+		this.notifyStop()
+		notifyChildren(children...)
 
+		// Wait for all children
 		n := len(children)
 		for n > 0 {
 			select {
 			case <-this.childChannel: // Never closed
-				// Wait for all children
 				n--
-			case <-this.stopChannel: // Never closed
-				this.notifyStop()
-				notifyChildren(children...)
 			}
 		}
 	})
@@ -188,7 +179,7 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 	timer := time.Now()
 
-	fetchOk := true
+	ok = true
 	bvs, errs := this.plan.Keyspace().Fetch([]string{k})
 
 	this.duration += time.Since(timer)
@@ -196,8 +187,12 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 	for _, err := range errs {
 		context.Error(err)
 		if err.IsFatal() {
-			fetchOk = false
+			ok = false
 		}
+	}
+
+	if !ok {
+		return false
 	}
 
 	if len(bvs) > 0 {
@@ -206,31 +201,31 @@ func (this *Merge) processMatch(item value.AnnotatedValue,
 
 		// Perform UPDATE and/or DELETE
 		if update != nil {
-			fetchOk = this.mergeSendItem(update, item) && fetchOk
+			ok = this.mergeSendItem(update, item)
 		}
 
-		if delete != nil {
-			fetchOk = this.mergeSendItem(delete, item) && fetchOk
+		if ok && delete != nil {
+			ok = this.mergeSendItem(delete, item)
 		}
 	} else {
 		// Not matched; INSERT
 		if insert != nil {
-			fetchOk = this.mergeSendItem(insert, item) && fetchOk
+			ok = this.mergeSendItem(insert, item)
 		}
 	}
 
-	return fetchOk
+	return ok
 }
 
-func (this *Merge) wrapChild(op Operator) Operator {
+func (this *Merge) wrapChild(op Operator) (Operator, *Channel) {
 	if op == nil {
-		return nil
+		return nil, nil
 	}
 
 	ch := NewChannel()
-	seq := NewSequence(ch, op)
-	seq.SetInput(ch)
-	seq.SetParent(this)
-	seq.SetOutput(this.output)
-	return seq
+	op.SetInput(ch)
+	op.SetOutput(this.output)
+	op.SetParent(this)
+	op.SetStop(this)
+	return op, ch
 }

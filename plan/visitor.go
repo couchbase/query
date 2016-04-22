@@ -91,7 +91,6 @@ type Visitor interface {
 	VisitDiscard(op *Discard) (interface{}, error)
 	VisitStream(op *Stream) (interface{}, error)
 	VisitCollect(op *Collect) (interface{}, error)
-	VisitChannel(op *Channel) (interface{}, error)
 
 	// Index DDL
 	VisitCreatePrimaryIndex(op *CreatePrimaryIndex) (interface{}, error)
