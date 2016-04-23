@@ -37,7 +37,7 @@ func (this *Disconnect) MaxArgs() int {
 }
 
 func (this *Disconnect) ExecCommand(args []string) (int, string) {
-	/* Command to disconnect service. Use the NoQueryService
+	/* Command to disconnect service. Use the noQueryService
 	   flag value and the disconnect flag value to determine
 	   disconnection. If the command contains an input argument
 	   then throw an error.

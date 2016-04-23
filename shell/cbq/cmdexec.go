@@ -45,9 +45,9 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 	}
 
-	if DISCONNECT == true || NoQueryService == true {
+	if DISCONNECT == true || noQueryService == true {
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
-			NoQueryService = false
+			noQueryService = false
 			command.DISCONNECT = false
 			DISCONNECT = false
 			SERVICE_URL = ""
@@ -96,8 +96,8 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 	} else {
 		//This block handles N1QL statements
-		// If connected to a query service then NoQueryService == false.
-		if NoQueryService == true {
+		// If connected to a query service then noQueryService == false.
+		if noQueryService == true {
 			//Not connected to a query service
 			return errors.NO_CONNECTION, ""
 		} else {
@@ -105,7 +105,7 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 			   If successful execute the n1ql command. Else try to connect
 			   again.
 			*/
-			dBn1ql, err := n1ql.OpenExtended(ServerFlag)
+			dBn1ql, err := n1ql.OpenExtended(serverFlag)
 			if err != nil {
 				return errors.DRIVER_OPEN, err.Error()
 			} else {
@@ -215,13 +215,13 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 
 	// Reset the Server flag and Service_url to the current connection string.
 	if SERVICE_URL != "" {
-		ServerFlag = SERVICE_URL
+		serverFlag = SERVICE_URL
 		command.SERVICE_URL = ""
 	}
 
 	DISCONNECT = command.DISCONNECT
 	if DISCONNECT == true {
-		NoQueryService = true
+		noQueryService = true
 
 	}
 

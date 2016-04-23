@@ -178,7 +178,7 @@ func TestExecN1QLStmt(t *testing.T) {
 		testFileCmd(t)
 
 		//Test executing alias
-		ServerFlag = Server
+		serverFlag = Server
 		line = "\\\\serverversion"
 		execline(line, t)
 

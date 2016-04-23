@@ -33,15 +33,15 @@ import (
    Default value : http://localhost:8091/
    Point to the cluser/query endpoint to connect to.
 */
-var ServerFlag string
+var serverFlag string
 
 func init() {
 	const (
 		defaultServer = "http://localhost:8091/"
 		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\tFor example : ./cbq -e http://172.23.107.18:8091\n"
 	)
-	flag.StringVar(&ServerFlag, "engine", defaultServer, usage)
-	flag.StringVar(&ServerFlag, "e", defaultServer, "Shorthand for -engine")
+	flag.StringVar(&serverFlag, "engine", defaultServer, usage)
+	flag.StringVar(&serverFlag, "e", defaultServer, "Shorthand for -engine")
 }
 
 /*
@@ -49,15 +49,15 @@ func init() {
    Default value : false
    Enable/Disable startup connection to a query service/cluster endpoint.
 */
-var NoQueryService bool
+var noQueryService bool
 
 func init() {
 	const (
 		defaultval = false
 		usage      = "Start shell without connecting to a query service/cluster endpoint. \n\t\t Default : false \n\t\t Possible values : true,false"
 	)
-	flag.BoolVar(&NoQueryService, "no-engine", defaultval, usage)
-	flag.BoolVar(&NoQueryService, "ne", defaultval, " Shorthand for -no-engine")
+	flag.BoolVar(&noQueryService, "no-engine", defaultval, usage)
+	flag.BoolVar(&noQueryService, "ne", defaultval, " Shorthand for -no-engine")
 }
 
 /*
@@ -299,18 +299,18 @@ func main() {
 		os.Exit(1)
 	} else {
 		if len(args) == 1 {
-			ServerFlag = args[0]
+			serverFlag = args[0]
 		}
 	}
 
 	// If no protocol exists, then append http:// as default protocol.
-	if strings.HasPrefix(ServerFlag, "http://") == false && strings.HasPrefix(ServerFlag, "https://") == false {
-		ServerFlag = "http://" + ServerFlag
+	if strings.HasPrefix(serverFlag, "http://") == false && strings.HasPrefix(serverFlag, "https://") == false {
+		serverFlag = "http://" + serverFlag
 	}
 
 	//-engine
-	if strings.HasSuffix(ServerFlag, "/") == false {
-		ServerFlag = ServerFlag + "/"
+	if strings.HasSuffix(serverFlag, "/") == false {
+		serverFlag = serverFlag + "/"
 	}
 
 	/* -user : Accept Admin credentials. Prompt for password and set
@@ -408,24 +408,25 @@ func main() {
 		n1ql.SetQueryParams("creds", string(ac))
 	}
 
-	// Check if connection is possible to the input ServerFlag
+	// Check if connection is possible to the input serverFlag
 	// else failed to connect to.
 
-	pingerr := command.Ping(ServerFlag)
-	SERVICE_URL = ServerFlag
-	command.SERVICE_URL = ServerFlag
+	pingerr := command.Ping(serverFlag)
+	SERVICE_URL = serverFlag
+	command.SERVICE_URL = serverFlag
 	if pingerr != nil {
 		s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
 		command.PrintError(s_err)
-		ServerFlag = ""
+		serverFlag = ""
 		command.SERVICE_URL = ""
 		SERVICE_URL = ""
+		noQueryService = true
 	}
 
 	/* -quiet : Display Message only if flag not specified
 	 */
-	if !quietFlag && NoQueryService == false && pingerr == nil {
-		s := fmt.Sprintln("Connected to : " + ServerFlag + ". Type Ctrl-D or \\QUIT to exit.\n")
+	if !quietFlag && noQueryService == false && pingerr == nil {
+		s := fmt.Sprintln("Connected to : " + serverFlag + ". Type Ctrl-D or \\QUIT to exit.\n")
 		_, werr := io.WriteString(command.W, s)
 		if werr != nil {
 			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
