@@ -156,7 +156,7 @@ func NewPoolDoesNotExist(pool string) Error {
 	return &err{level: EXCEPTION, ICode: 4041, IKey: "pool_not_found", InternalMsg: fmt.Sprintf("Pool %s does not exist", pool), InternalCaller: CallerN(1)}
 }
 
-func NewTimeoutError(timeout *time.Duration) Error {
+func NewTimeoutError(timeout time.Duration) Error {
 	return &err{level: EXCEPTION, ICode: 4080, IKey: "timeout", InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1)}
 }
 

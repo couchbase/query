@@ -67,7 +67,7 @@ type Request interface {
 	Fail(err errors.Error)
 	Execute(server *Server, signature value.Value, notifyStop chan bool)
 	Failed(server *Server)
-	Expire(state State)
+	Expire(state State, timeout time.Duration)
 	SortCount() uint64
 	State() State
 	Halted() bool
@@ -241,7 +241,7 @@ func (this *BaseRequest) SetTimeout(request Request, timeout time.Duration) {
 
 	// Apply request timeout
 	if timeout > 0 {
-		time.AfterFunc(timeout, func() { request.Expire(TIMEOUT) })
+		time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) })
 	}
 }
 

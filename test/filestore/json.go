@@ -70,7 +70,7 @@ func (this *MockQuery) Failed(srvr *server.Server) {
 	this.stopAndClose(server.FATAL)
 }
 
-func (this *MockQuery) Expire(state server.State) {
+func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
 	defer this.stopAndClose(state)
 
 	this.response.err = errors.NewError(nil, "Query timed out")

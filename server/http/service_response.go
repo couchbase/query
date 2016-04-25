@@ -103,7 +103,8 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	}
 }
 
-func (this *httpRequest) Expire(state server.State) {
+func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
+	this.Errors() <- errors.NewTimeoutError(timeout)
 	this.Stop(state)
 }
 

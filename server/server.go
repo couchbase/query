@@ -426,7 +426,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	// Apply server execution timeout
 	if this.Timeout() > 0 {
-		timer := time.AfterFunc(this.Timeout(), func() { request.Expire(TIMEOUT) })
+		timer := time.AfterFunc(this.Timeout(), func() { request.Expire(TIMEOUT, this.Timeout()) })
 		defer timer.Stop()
 	}
 
