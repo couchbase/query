@@ -33,13 +33,18 @@ func (this *httpRequest) Output() execution.Output {
 func (this *httpRequest) Fail(err errors.Error) {
 	this.SetState(server.FATAL)
 	// Determine the appropriate http response code based on the error
-	httpRespCode := mapErrorToHttpResponse(err)
+	httpRespCode := mapErrorToHttpResponse(err, http.StatusInternalServerError)
 	this.setHttpCode(httpRespCode)
 	// Put the error on the errors channel
 	this.Errors() <- err
 }
 
-func mapErrorToHttpResponse(err errors.Error) int {
+func mapErrorToHttpResponse(err errors.Error, def int) int {
+
+	// please note that setting the http status only works
+	// before the body is being sent, so take care to only
+	// add here error codes that are not being generated
+	// mid body.
 	switch err.Code() {
 	case 1000: // readonly violation
 		return http.StatusForbidden
@@ -53,10 +58,14 @@ func mapErrorToHttpResponse(err errors.Error) int {
 		return http.StatusBadRequest
 	case 4000, errors.NO_SUCH_PREPARED: // plan error range
 		return http.StatusNotFound
+	case 4300:
+		return http.StatusConflict
 	case 5000:
 		return http.StatusInternalServerError
+	case 10000:
+		return http.StatusUnauthorized
 	default:
-		return http.StatusInternalServerError
+		return def
 	}
 }
 
@@ -258,6 +267,9 @@ loop:
 			if ok {
 				if this.errorCount == 0 {
 					this.writeString(",\n    \"errors\": [")
+					if this.GetState() != server.FATAL {
+						this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
+					}
 				}
 				ok = this.writeError(err, this.errorCount)
 				this.errorCount++
