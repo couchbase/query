@@ -394,7 +394,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 	// can just enforce that directly
 
 	viewOptions := map[string]interface{}{}
-	viewOptions = generateViewOptions(cons, span) /*span.Range.Low, span.Range.High, span.Range.Inclusion) */
+	viewOptions = generateViewOptions(cons, span, vi.isPrimary) /*span.Range.Low, span.Range.High, span.Range.Inclusion) */
 	viewRowChannel := make(chan cb.ViewRow)
 	viewErrChannel := make(chan errors.Error)
 	doneChannel := make(chan bool)

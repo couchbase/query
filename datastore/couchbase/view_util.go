@@ -121,7 +121,7 @@ func WalkViewInBatches(result chan cb.ViewRow, errs chan errors.Error, stop chan
 	logging.Debugf("WalkViewInBatches %s: %d rows fetched, %d rows sent", view, numRead, numSent)
 }
 
-func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) map[string]interface{} {
+func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span, isPrimary bool) map[string]interface{} {
 	viewOptions := map[string]interface{}{}
 
 	if span != nil {
@@ -131,14 +131,14 @@ func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) m
 		high := span.Range.High
 		inclusion := span.Range.Inclusion
 		if low != nil {
-			viewOptions["startkey"] = encodeValuesAsMapKey(low)
+			viewOptions["startkey"] = encodeValuesAsMapKey(low, isPrimary)
 			if inclusion == datastore.NEITHER || inclusion == datastore.HIGH {
 				viewOptions["startkey_docid"] = MAX_ID
 			}
 		}
 
 		if high != nil {
-			viewOptions["endkey"] = encodeValuesAsMapKey(high)
+			viewOptions["endkey"] = encodeValuesAsMapKey(high, isPrimary)
 			if inclusion == datastore.NEITHER || inclusion == datastore.LOW {
 				viewOptions["endkey_docid"] = MIN_ID
 			}
@@ -158,7 +158,14 @@ func generateViewOptions(cons datastore.ScanConsistency, span *datastore.Span) m
 	return viewOptions
 }
 
-func encodeValuesAsMapKey(keys value.Values) interface{} {
+func encodeValuesAsMapKey(keys value.Values, isPrimary bool) interface{} {
+	if isPrimary {
+		if len(keys) > 1 {
+			panic(fmt.Sprintf("Key value for a primary index should be length 1, found: %d", len(keys)))
+		} else {
+			return encodeValue(keys[0].Actual())
+		}
+	}
 	rv := make([]interface{}, len(keys))
 	for i, lv := range keys {
 		val := lv.Actual()
