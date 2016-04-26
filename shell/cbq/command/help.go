@@ -41,7 +41,7 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
 	if len(args) == 0 {
-		_, werr := io.WriteString(W, "\nHelp information for all shell commands.\n")
+		_, werr := io.WriteString(W, HELPMSG)
 		if werr != nil {
 			return errors.WRITER_OUTPUT, werr.Error()
 		}
@@ -85,7 +85,7 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Help) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\HELP [ args ... ]\n")
+	_, werr := io.WriteString(W, HHELP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

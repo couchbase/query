@@ -199,9 +199,9 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 		err_code, err_str := Cmd.ExecCommand(cmd_args[1:])
 		if err_code == errors.CONNECTION_REFUSED {
 			if strings.TrimSpace(SERVICE_URL) == "" {
-				io.WriteString(command.W, "\nNot connected to any cluster or query node.\n")
+				io.WriteString(command.W, command.NOCONNMSG)
 			} else {
-				err_str = err_str + "\nStill connected to : " + SERVICE_URL + ".\n"
+				err_str = err_str + "\n " + command.NewMessage(command.STARTUP, SERVICE_URL) + "\n"
 			}
 		}
 		if err_code != 0 {

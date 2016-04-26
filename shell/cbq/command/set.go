@@ -59,9 +59,8 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 			// Named Paramters
 
 			//Query Parameters
-			var valuestr string = ""
 			var werr error
-			io.WriteString(W, "Query Parameters :: \n")
+			_, werr = io.WriteString(W, QUERYP)
 			for name, value := range QueryParam {
 				//Do not print the password when printing the credentials
 				if name == "creds" {
@@ -69,41 +68,32 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 					for _, v := range *value {
 						users = users + " " + strings.Join(usernames(fmt.Sprintf("%s", v)), "")
 					}
-
-					valuestr = fmt.Sprintln("Parameter name :", name, "Value [", users, "]")
-					_, werr = io.WriteString(W, valuestr)
+					werr = printSET(name, "["+users+"]")
 
 				} else {
-					valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
-					_, werr = io.WriteString(W, valuestr)
+					werr = printSET(name, fmt.Sprintf("%v", *value))
 				}
 			}
 			_, werr = io.WriteString(W, "\n")
 
 			//Named Parameters
-			valuestr = ""
-			io.WriteString(W, "Named Parameters :: \n")
+			_, werr = io.WriteString(W, NAMEDP)
 			for name, value := range NamedParam {
-				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
-				io.WriteString(W, valuestr)
+				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
 			_, werr = io.WriteString(W, "\n")
 
 			//User Defined Session Parameters
-			valuestr = ""
-			io.WriteString(W, "User Defined Session Parameters :: \n")
+			_, werr = io.WriteString(W, USERDEFP)
 			for name, value := range UserDefSV {
-				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
-				io.WriteString(W, valuestr)
+				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
 			_, werr = io.WriteString(W, "\n")
 
 			//Predefined Session Parameters
-			valuestr = ""
-			io.WriteString(W, "Predefined Session Parameters :: \n")
+			_, werr = io.WriteString(W, PREDEFP)
 			for name, value := range PreDefSV {
-				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
-				io.WriteString(W, valuestr)
+				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
 			_, werr = io.WriteString(W, "\n")
 
@@ -126,7 +116,7 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Set) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\SET [ parameter value ]\n")
+	_, werr := io.WriteString(W, HSET)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
@@ -138,6 +128,13 @@ func (this *Set) PrintHelp(desc bool) (int, string) {
 		return errors.WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
+}
+
+func printSET(name, value string) (werr error) {
+	valuestr := NewMessage(PNAME, name) + "\n" + NewMessage(PVAL, value)
+	_, werr = io.WriteString(W, valuestr)
+	_, werr = io.WriteString(W, "\n\n")
+	return
 }
 
 func usernames(arrcreds string) []string {

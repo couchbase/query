@@ -189,7 +189,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Pop) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\POP [ parameter ]\n")
+	_, werr := io.WriteString(W, HPOP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

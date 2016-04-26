@@ -43,8 +43,8 @@ func (this *Version) ExecCommand(args []string) (int, string) {
 	if len(args) != 0 {
 		return errors.TOO_MANY_ARGS, ""
 	} else {
-		_, werr := io.WriteString(W, "SHELL VERSION : "+SHELL_VERSION+"\n")
-		_, werr = io.WriteString(W, "\nUse N1QL queries select version(); or select min_version(); to display server version.\n")
+		_, werr := io.WriteString(W, NewMessage(VERSIONMSG, SHELL_VERSION)+"\n")
+		_, werr = io.WriteString(W, SERVERVERSIONMSG)
 		if werr != nil {
 			return errors.WRITER_OUTPUT, werr.Error()
 		}
@@ -53,7 +53,7 @@ func (this *Version) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Version) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\VERSION\n")
+	_, werr := io.WriteString(W, HVERSION)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

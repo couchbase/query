@@ -47,13 +47,13 @@ func (this *Disconnect) ExecCommand(args []string) (int, string) {
 
 	} else {
 		DISCONNECT = true
-		io.WriteString(W, "\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.\n")
+		io.WriteString(W, NOCONNMSG)
 	}
 	return 0, ""
 }
 
 func (this *Disconnect) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\DISCONNECT\n")
+	_, werr := io.WriteString(W, HDISCONNECT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

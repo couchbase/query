@@ -441,7 +441,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			} else {
 				HISTFILE = path
 				if !QUIET {
-					io.WriteString(W, "\nPath to history file for the shell : "+path+" \n")
+					io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
 				}
 			}
 		}
@@ -456,76 +456,57 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 }
 
 func printDesc(cmdname string) (int, string) {
-	var werr error
+
 	switch cmdname {
 
 	case ALIAS_CMD:
-		_, werr = io.WriteString(W, "Create an alias (name) for input value. value can be shell command, query statement or string.\nIf no arguments are given, list all existing alias.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";\n")
+		return PrintStr(W, DALIAS)
 
 	case CONNECT_CMD:
-		_, werr = io.WriteString(W, "Connect to the query service or cluster endpoint URL.\n")
-		_, werr = io.WriteString(W, "Default : http://localhost:8091\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:18093 ;\n")
+		return PrintStr(W, DCONNECT)
 
 	case COPYRIGHT_CMD:
-		_, werr = io.WriteString(W, "Print Couchbase copyright information.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\COPYRIGHT;\n")
+		return PrintStr(W, DCOPYRIGHT)
 
 	case DISCONNECT_CMD:
-		_, werr = io.WriteString(W, "Disconnect from the query service or cluster endpoint.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\DISCONNECT;\n")
+		return PrintStr(W, DDISCONNECT)
 
 	case ECHO_CMD:
-		_, werr = io.WriteString(W, "Echo the input value. args can be a name (a prefixed-parameter), an alias (command alias) or \na value (any input statement).\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\\\tempalias; \n")
+		return PrintStr(W, DECHO)
 
 	case EXIT_CMD:
-		_, werr = io.WriteString(W, "Exit the shell.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\EXIT; \n\t        \\QUIT;\n")
+		return PrintStr(W, DEXIT)
 
 	case HELP_CMD:
-		_, werr = io.WriteString(W, "Display help information for input shell commands. If no args are given, it lists all existing shell commands.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;\n")
+		return PrintStr(W, DHELP)
 
 	case POP_CMD:
-		_, werr = io.WriteString(W, "Pop the value of the given parameter from the input parameter stack. parameter is a prefixed name (-creds, -$rate, $user, histfile).\nIf no arguments are given, it pops the stack for each parameter excluding the pre-defined parameters.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\POP -$r ;\n\t        \\POP $Val ; \n\t        \\POP ;\n")
+		return PrintStr(W, DPOP)
 
 	case PUSH_CMD:
-		_, werr = io.WriteString(W, "Push the value of the given parameter to the input parameter stack. parameter is a prefixed name (-creds, -$rate, $user, histfile).\nIf no arguments are given, it pushes the top value onto the respective stack for each parameter excluding the pre-defined parameters.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;\n")
+		return PrintStr(W, DPUSH)
 
 	case SET_CMD:
-		_, werr = io.WriteString(W, "Set the value of the given parameter to the input value. parameter is a prefixed name (-creds, -$rate, $user, histfile).\nIf no arguments are given, list all the existing parameters.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;\n")
+		return PrintStr(W, DSET)
 
 	case SOURCE_CMD:
-		_, werr = io.WriteString(W, "Load input file into shell.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t \\SOURCE temp1.txt ;\n")
+		return PrintStr(W, DSOURCE)
 
 	case UNALIAS_CMD:
-		_, werr = io.WriteString(W, "Delete the input alias.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\UNALIAS serverversion;\n\t        \\UNALIAS subcommand1 subcommand2 serverversion;\n")
+		return PrintStr(W, DUNALIAS)
 
 	case UNSET_CMD:
-		_, werr = io.WriteString(W, "Unset the value of the given parameter. parameter is a prefixed name (-creds, -$rate, $user, histfile). \n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\UNSET -$r ;\n\t        \\UNSET $Val ;\n")
+		return PrintStr(W, DUNSET)
 
 	case VERSION_CMD:
-		_, werr = io.WriteString(W, "Print the Shell Version.\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\VERSION;\n")
+		return PrintStr(W, DVERSION)
 
 	case REDIRECT_CMD:
-		_, werr = io.WriteString(W, "Write output of commands to file (\\REDIRECT filename). To return to STDOUT, execute \\REDIRECT OFF .\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t\t \\REDIRECT temp1.txt ;\n\t\t select * from `beer-sample`;\n\t\t \\REDIRECT OFF;")
+		return PrintStr(W, DREDIRECT)
 
 	default:
-		_, werr = io.WriteString(W, "Fix : Does not exist.\n")
+		return PrintStr(W, DDEFAULT)
 
-	}
-	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 
@@ -555,7 +536,7 @@ func GetHome() (homeDir string, err_code int, err_Str string) {
 	}
 
 	if homeDir == "" {
-		_, werr := io.WriteString(W, "\nUnable to determine home directory, history file disabled.\n")
+		_, werr := io.WriteString(W, ERRHOME)
 		if werr != nil {
 			return "", errors.WRITER_OUTPUT, werr.Error()
 		}
@@ -633,8 +614,17 @@ func printPath(nval string) (int, string) {
 
 		path := GetPath(homeDir, nval)
 
-		io.WriteString(W, "\nPath to history file for the shell : "+path+" \n")
+		io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
 	}
 	return 0, ""
 
+}
+
+//Use this method to writestring to output.
+func PrintStr(W io.Writer, val string) (int, string) {
+	_, werr := io.WriteString(W, val)
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

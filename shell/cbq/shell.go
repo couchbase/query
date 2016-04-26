@@ -38,10 +38,10 @@ var serverFlag string
 func init() {
 	const (
 		defaultServer = "http://localhost:8091/"
-		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\tFor example : ./cbq -e http://172.23.107.18:8091\n"
+		usage         = command.USERVERFLAG
 	)
 	flag.StringVar(&serverFlag, "engine", defaultServer, usage)
-	flag.StringVar(&serverFlag, "e", defaultServer, "Shorthand for -engine")
+	flag.StringVar(&serverFlag, "e", defaultServer, command.NewShorthandMsg("-engine"))
 }
 
 /*
@@ -54,10 +54,10 @@ var noQueryService bool
 func init() {
 	const (
 		defaultval = false
-		usage      = "Start shell without connecting to a query service/cluster endpoint. \n\t\t Default : false \n\t\t Possible values : true,false"
+		usage      = command.UNOENGINE
 	)
 	flag.BoolVar(&noQueryService, "no-engine", defaultval, usage)
-	flag.BoolVar(&noQueryService, "ne", defaultval, " Shorthand for -no-engine")
+	flag.BoolVar(&noQueryService, "ne", defaultval, command.NewShorthandMsg("-no-engine"))
 }
 
 /*
@@ -70,10 +70,10 @@ var quietFlag bool
 func init() {
 	const (
 		defaultval = false
-		usage      = "Enable/Disable startup connection message for the shell \n\t\t Default : false \n\t\t Possible values : true,false"
+		usage      = command.UQUIET
 	)
 	flag.BoolVar(&quietFlag, "quiet", defaultval, usage)
-	flag.BoolVar(&quietFlag, "q", defaultval, " Shorthand for -quiet")
+	flag.BoolVar(&quietFlag, "q", defaultval, command.NewShorthandMsg("-quiet"))
 }
 
 /*
@@ -88,10 +88,10 @@ var timeoutFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Query timeout parameter. Units are mandatory. \n\t\tFor example : -timeout \"10ms\". \n\t\tValid units : ns, us, ms, s, m, h"
+		usage      = command.UTIMEOUT
 	)
 	flag.StringVar(&timeoutFlag, "timeout", defaultval, usage)
-	flag.StringVar(&timeoutFlag, "t", defaultval, " Shorthand for -timeout")
+	flag.StringVar(&timeoutFlag, "t", defaultval, command.NewShorthandMsg("-timeout"))
 }
 
 /*
@@ -105,10 +105,10 @@ var userFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Username \n\t For example : -u Administrator"
+		usage      = command.UUSER
 	)
 	flag.StringVar(&userFlag, "user", defaultval, usage)
-	flag.StringVar(&userFlag, "u", defaultval, " Shorthand for -user")
+	flag.StringVar(&userFlag, "u", defaultval, command.NewShorthandMsg("-user"))
 
 }
 
@@ -124,10 +124,10 @@ var pwdFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Password \n\t For example : -p password"
+		usage      = command.UPWD
 	)
 	flag.StringVar(&pwdFlag, "password", defaultval, usage)
-	flag.StringVar(&pwdFlag, "p", defaultval, " Shorthand for -password")
+	flag.StringVar(&pwdFlag, "p", defaultval, command.NewShorthandMsg("-password"))
 
 }
 
@@ -142,10 +142,10 @@ var credsFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "A list of credentials, in the form user:password. \n\t For example : -c beer-sample:pass"
+		usage      = command.UCREDS
 	)
 	flag.StringVar(&credsFlag, "credentials", defaultval, usage)
-	flag.StringVar(&credsFlag, "c", defaultval, " Shorthand for -credentials")
+	flag.StringVar(&credsFlag, "c", defaultval, command.NewShorthandMsg("-credentials"))
 
 }
 
@@ -158,10 +158,10 @@ var versionFlag bool
 
 func init() {
 	const (
-		usage = "Shell Version \n\t Usage: -version"
+		usage = command.UVERSION
 	)
 	flag.BoolVar(&versionFlag, "version", false, usage)
-	flag.BoolVar(&versionFlag, "v", false, "Shorthand for -version")
+	flag.BoolVar(&versionFlag, "v", false, command.NewShorthandMsg("-version"))
 
 }
 
@@ -176,10 +176,10 @@ var scriptFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Single command mode. Execute input command and exit shell. \n\t For example : -script \"select * from system:keyspaces\""
+		usage      = command.USCRIPT
 	)
 	flag.StringVar(&scriptFlag, "script", defaultval, usage)
-	flag.StringVar(&scriptFlag, "s", defaultval, " Shorthand for -script")
+	flag.StringVar(&scriptFlag, "s", defaultval, command.NewShorthandMsg("-script"))
 
 }
 
@@ -189,7 +189,7 @@ func init() {
    Pretty print output
 */
 
-var prettyFlag = flag.Bool("pretty", true, "Pretty print the output.")
+var prettyFlag = flag.Bool("pretty", true, command.UPRETTY)
 
 /*
    Option        : -exit-on-error
@@ -197,7 +197,7 @@ var prettyFlag = flag.Bool("pretty", true, "Pretty print the output.")
    Exit shell after first error encountered.
 */
 
-var errorExitFlag = flag.Bool("exit-on-error", false, "Exit shell after first error encountered.")
+var errorExitFlag = flag.Bool("exit-on-error", false, command.UEXIT)
 
 /*
    Option        : -file or -f
@@ -210,10 +210,10 @@ var inputFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "File to load commands from. \n\t For example : -file temp.txt"
+		usage      = command.UINPUT
 	)
 	flag.StringVar(&inputFlag, "file", defaultval, usage)
-	flag.StringVar(&inputFlag, "f", defaultval, " Shorthand for -file")
+	flag.StringVar(&inputFlag, "f", defaultval, command.NewShorthandMsg("-file"))
 
 }
 
@@ -228,10 +228,10 @@ var outputFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "File to output commands and their results. \n\t For example : -output temp.txt"
+		usage      = command.UOUTPUT
 	)
 	flag.StringVar(&outputFlag, "output", defaultval, usage)
-	flag.StringVar(&outputFlag, "o", defaultval, " Shorthand for -output")
+	flag.StringVar(&outputFlag, "o", defaultval, command.NewShorthandMsg("-output"))
 
 }
 
@@ -246,10 +246,10 @@ var logFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "File to log commands into. \n\t For example : -logfile temp.txt"
+		usage      = command.ULOG
 	)
 	flag.StringVar(&logFlag, "logfile", defaultval, usage)
-	flag.StringVar(&logFlag, "l", defaultval, " Shorthand for -logfile")
+	flag.StringVar(&logFlag, "l", defaultval, command.NewShorthandMsg("-logfile"))
 
 }
 
@@ -328,7 +328,7 @@ func main() {
 			err = nil
 		} else {
 			// If no -p option then prompt for the password
-			password, err = promptPassword("Enter Password: ")
+			password, err = promptPassword(command.PWDMSG)
 		}
 
 		if err == nil {
@@ -368,7 +368,7 @@ func main() {
 		// Dont output the statement if we are running in single command
 		// mode.
 		if scriptFlag == "" {
-			_, werr := io.WriteString(command.W, "No input credentials. In order to connect to a server with authentication, please provide credentials.\n")
+			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
 
 			if werr != nil {
 				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
@@ -426,7 +426,7 @@ func main() {
 	/* -quiet : Display Message only if flag not specified
 	 */
 	if !quietFlag && noQueryService == false && pingerr == nil {
-		s := fmt.Sprintln("Connected to : " + serverFlag + ". Type Ctrl-D or \\QUIT to exit.\n")
+		s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
 		_, werr := io.WriteString(command.W, s)
 		if werr != nil {
 			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())

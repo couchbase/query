@@ -52,7 +52,7 @@ func (this *Exit) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Exit) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\EXIT \n\\QUIT\n")
+	_, werr := io.WriteString(W, HEXIT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

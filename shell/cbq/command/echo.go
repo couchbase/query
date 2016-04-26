@@ -101,7 +101,7 @@ func (this *Echo) ExecCommand(args []string) (int, string) {
 }
 
 func (this *Echo) PrintHelp(desc bool) (int, string) {
-	_, werr := io.WriteString(W, "\\ECHO args ...\n")
+	_, werr := io.WriteString(W, HECHO)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {

@@ -31,7 +31,7 @@ func LoadHistory(liner *liner.State, dir string) (int, string) {
 		}
 		//Print path to histfile on startup.
 		if !command.QUIET {
-			io.WriteString(command.W, "\nPath to history file for the shell : "+path+" \n")
+			io.WriteString(command.W, command.NewMessage(command.HISTORYMSG, path)+" \n")
 		}
 	}
 	return 0, ""
