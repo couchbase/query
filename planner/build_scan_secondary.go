@@ -29,7 +29,7 @@ type indexEntry struct {
 }
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
-	primaryKey expression.Expressions, dnf *DNF, formalizer *expression.Formalizer) (
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	sargables, all map[datastore.Index]*indexEntry, err error) {
 	var keys expression.Expressions
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
@@ -54,6 +54,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 					return nil, nil, err
 				}
 
+				dnf := NewDNF(key)
 				key, err = dnf.Map(key)
 				if err != nil {
 					return nil, nil, err
@@ -76,6 +77,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 				return nil, nil, err
 			}
 
+			dnf := NewDNF(cond)
 			cond, err = dnf.Map(cond)
 			if err != nil {
 				return nil, nil, err

@@ -71,8 +71,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	pred := this.where
 	if pred != nil {
-		dnf := NewDNF()
 		pred = pred.Copy()
+		dnf := NewDNF(pred)
 		pred, err = dnf.Map(pred)
 		if err != nil {
 			return
@@ -85,7 +85,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 				expression.NewFieldName("id", false)),
 		}
 
-		sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, dnf, formalizer)
+		sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 		if er != nil {
 			return nil, nil, er
 		}

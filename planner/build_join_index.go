@@ -48,7 +48,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	var pred expression.Expression
 	pred = expression.NewIsNotNull(node.Keys().Copy())
-	dnf := NewDNF()
+	dnf := NewDNF(pred)
 	pred, err = dnf.Map(pred)
 	if err != nil {
 		return nil, nil, err
@@ -57,6 +57,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	subset := pred
 	if this.where != nil {
 		subset = expression.NewAnd(subset, this.where.Copy())
+		dnf = NewDNF(subset)
 		subset, err = dnf.Map(subset)
 		if err != nil {
 			return nil, nil, err
@@ -70,7 +71,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, dnf, formalizer)
+	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
 	if err != nil {
 		return nil, nil, err
 	}

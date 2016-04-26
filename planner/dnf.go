@@ -10,17 +10,19 @@
 package planner
 
 import (
-	"math"
-
 	"github.com/couchbase/query/expression"
 )
 
 type DNF struct {
 	expression.MapperBase
+	expr         expression.Expression
+	dnfTermCount int
 }
 
-func NewDNF() *DNF {
-	rv := &DNF{}
+func NewDNF(expr expression.Expression) *DNF {
+	rv := &DNF{
+		expr: expr,
+	}
 	rv.SetMapper(rv)
 	return rv
 }
@@ -35,53 +37,14 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 		expression.NewLE(expr.First(), expr.Third())), nil
 }
 
-func (this *DNF) VisitLike(expr *expression.Like) (interface{}, error) {
-	err := expr.MapChildren(this)
-	if err != nil {
-		return nil, err
-	}
-
-	re := expr.Regexp()
-	if re == nil {
-		return expr, nil
-	}
-
-	prefix, complete := re.LiteralPrefix()
-	if complete {
-		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
-		return eq, nil
-	}
-
-	if prefix == "" {
-		return expr, nil
-	}
-
-	var and expression.Expression
-	le := expression.NewLE(expression.NewConstant(prefix), expr.First())
-	last := len(prefix) - 1
-	if prefix[last] < math.MaxUint8 {
-		bytes := []byte(prefix)
-		bytes[last]++
-		and = expression.NewAnd(le, expression.NewLT(
-			expr.First(),
-			expression.NewConstant(string(bytes))))
-	} else {
-		and = expression.NewAnd(le, expression.NewLT(
-			expr.First(),
-			expression.EMPTY_ARRAY_EXPR))
-	}
-
-	return and, nil
-}
-
 /*
-Apply Disjunctive Normal Form.
+Convert to Disjunctive Normal Form.
 
 Convert ANDs of ORs to ORs of ANDs. For example:
 
 (A OR B) AND C => (A AND C) OR (B AND C)
 
-Also apply constant folding. Remove any constant terms.
+Also apply constant folding.
 */
 func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	err := expr.MapChildren(this)
@@ -89,118 +52,24 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 		return nil, err
 	}
 
+	// Flatten nested ANDs
+	buffer := make(expression.Expressions, 0, 2*len(expr.Operands()))
+	expr = expression.NewAnd(flattenAnd(expr, buffer)...)
+
 	// Constant folding
-	var terms expression.Expressions
 	for _, term := range expr.Operands() {
 		val := term.Value()
-		if val == nil {
-			if terms == nil {
-				terms = make(expression.Expressions, 0, len(expr.Operands()))
-			}
-
-			terms = append(terms, term)
-			continue
-		}
-
-		if !val.Truth() {
+		if val != nil && !val.Truth() {
 			return expression.FALSE_EXPR, nil
 		}
 	}
 
-	if len(terms) == 0 {
-		return expression.TRUE_EXPR, nil
-	}
-
-	if len(terms) == 1 {
-		return terms[0], nil
-	}
-
-	if len(terms) < len(expr.Operands()) {
-		expr = expression.NewAnd(terms...)
-	}
-
 	// DNF
-	if dnfComplexity(expr, 16) >= 16 {
-		return expr, nil
-	} else {
-		return applyDNF(expr, 0), nil
-	}
+	return this.applyDNF(expr), nil
 }
 
 /*
-Bounded DNF, to mitigate combinatorial worst-case.
-
-Internally apply Disjunctive Normal Form.
-
-Convert ANDs of ORs to ORs of ANDs. For example:
-
-(A OR B) AND C => (A AND C) OR (B AND C)
-*/
-func applyDNF(expr *expression.And, level int) expression.Expression {
-	na := len(expr.Operands())
-	if na > 4 {
-		return expr
-	}
-
-	for i, aterm := range expr.Operands() {
-		switch aterm := aterm.(type) {
-		case *expression.Or:
-			no := len(aterm.Operands())
-			if no*na > 8 {
-				return expr
-			}
-
-			oterms := make(expression.Expressions, no)
-
-			for j, oterm := range aterm.Operands() {
-				aterms := make(expression.Expressions, na)
-				for ii, atrm := range expr.Operands() {
-					if ii == i {
-						aterms[ii] = oterm
-					} else {
-						aterms[ii] = atrm
-					}
-				}
-
-				if level > 2 {
-					oterms[j] = expression.NewAnd(aterms...)
-				} else {
-					oterms[j] = applyDNF(expression.NewAnd(aterms...), level+1)
-				}
-			}
-
-			rv := expression.NewOr(oterms...)
-			return rv
-		}
-	}
-
-	return expr
-}
-
-func dnfComplexity(expr expression.Expression, max int) int {
-	comp := 0
-
-	switch expr := expr.(type) {
-	case *expression.Or:
-		comp = len(expr.Operands())
-	}
-
-	if comp < max {
-		children := expr.Children()
-		for _, child := range children {
-			childComp := dnfComplexity(child, max-comp)
-			comp += childComp
-			if comp >= max {
-				break
-			}
-		}
-	}
-
-	return comp
-}
-
-/*
-Apply constant folding. Remove any constant terms.
+Apply constant folding.
 */
 func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	err := expr.MapChildren(this)
@@ -208,39 +77,24 @@ func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 		return nil, err
 	}
 
+	// Flatten nested ORs
+	buffer := make(expression.Expressions, 0, 2*len(expr.Operands()))
+	expr = expression.NewOr(flattenOr(expr, buffer)...)
+
 	// Constant folding
-	var terms expression.Expressions
 	for _, term := range expr.Operands() {
 		val := term.Value()
-		if val == nil {
-			if terms == nil {
-				terms = make(expression.Expressions, 0, len(expr.Operands()))
-			}
-
-			terms = append(terms, term)
-			continue
-		}
-
-		if val.Truth() {
+		if val != nil && val.Truth() {
 			return expression.TRUE_EXPR, nil
 		}
-	}
-
-	if len(terms) == 0 {
-		return expression.FALSE_EXPR, nil
-	}
-
-	if len(terms) == 1 {
-		return terms[0], nil
-	}
-
-	if len(terms) < len(expr.Operands()) {
-		expr = expression.NewOr(terms...)
 	}
 
 	return expr, nil
 }
 
+/*
+Apply DeMorgan's laws and other transformations.
+*/
 func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
@@ -251,14 +105,15 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 
 	switch operand := expr.Operand().(type) {
 	case *expression.Not:
-		exp = operand.Operand()
+		return operand.Operand(), nil
 	case *expression.And:
 		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
 			operands[i] = expression.NewNot(op)
 		}
 
-		exp = expression.NewOr(operands...)
+		or := expression.NewOr(operands...)
+		return this.VisitOr(or)
 	case *expression.Or:
 		operands := make(expression.Expressions, len(operand.Operands()))
 		for i, op := range operand.Operands() {
@@ -309,3 +164,136 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 
 	return exp, exp.MapChildren(this)
 }
+
+func flattenOr(or *expression.Or, buffer expression.Expressions) expression.Expressions {
+	operands := or.Operands()
+	for _, op := range operands {
+		switch op := op.(type) {
+		case *expression.Or:
+			buffer = flattenOr(op, buffer)
+		default:
+			if len(buffer) == cap(buffer) {
+				buffer = growBuffer(buffer)
+			}
+			buffer = append(buffer, op)
+		}
+	}
+
+	return buffer
+}
+
+func flattenAnd(and *expression.And, buffer expression.Expressions) expression.Expressions {
+	operands := and.Operands()
+	for _, op := range operands {
+		switch op := op.(type) {
+		case *expression.And:
+			buffer = flattenAnd(op, buffer)
+		default:
+			if len(buffer) == cap(buffer) {
+				buffer = growBuffer(buffer)
+			}
+			buffer = append(buffer, op)
+		}
+	}
+
+	return buffer
+}
+
+func growBuffer(buffer expression.Expressions) expression.Expressions {
+	buf := make(expression.Expressions, len(buffer), 2*len(buffer))
+	copy(buf, buffer)
+	return buf
+}
+
+/*
+Bounded DNF, to avoid exponential worst-case.
+
+Internally apply Disjunctive Normal Form.
+
+Convert ANDs of ORs to ORs of ANDs. For example:
+
+(A OR B) AND C => (A AND C) OR (B AND C)
+*/
+func (this *DNF) applyDNF(expr *expression.And) expression.Expression {
+	if this.dnfTermCount >= _MAX_DNF_COMPLEXITY {
+		return expr
+	}
+
+	complexity := dnfComplexity(expr, _MAX_DNF_COMPLEXITY-this.dnfTermCount)
+	if complexity <= 1 || this.dnfTermCount+complexity > _MAX_DNF_COMPLEXITY {
+		return expr
+	}
+
+	this.dnfTermCount += complexity
+
+	matrix := _EXPRESSIONS_POOL.Get()
+	defer _EXPRESSIONS_POOL.Put(matrix)
+	matrix = append(matrix, make(expression.Expressions, 0, len(expr.Operands())))
+
+	for _, term := range expr.Operands() {
+		switch term := term.(type) {
+		case *expression.Or:
+			matrix2 := _EXPRESSIONS_POOL.Get()
+			defer _EXPRESSIONS_POOL.Put(matrix2)
+
+			orTerms := term.Operands()
+			for _, exprs := range matrix {
+				for i, orTerm := range orTerms {
+					if i < len(orTerms)-1 {
+						exprs2 := make(expression.Expressions, len(exprs), cap(exprs))
+						copy(exprs2, exprs)
+						exprs = exprs2
+					}
+
+					switch orTerm := orTerm.(type) {
+					case *expression.And:
+						// flatten any nested AND
+						for _, t := range orTerm.Operands() {
+							exprs = append(exprs, t)
+						}
+					default:
+						exprs = append(exprs, orTerm)
+					}
+
+					matrix2 = append(matrix2, exprs)
+				}
+			}
+
+			matrix = matrix2
+		default:
+			for i, _ := range matrix {
+				matrix[i] = append(matrix[i], term)
+			}
+		}
+	}
+
+	terms := make(expression.Expressions, 0, len(matrix))
+	for _, exprs := range matrix {
+		if len(exprs) == 1 {
+			terms = append(terms, exprs[0])
+		} else {
+			terms = append(terms, expression.NewAnd(exprs...))
+		}
+	}
+
+	return expression.NewOr(terms...)
+}
+
+func dnfComplexity(expr *expression.And, max int) int {
+	comp := 1
+	for _, op := range expr.Operands() {
+		switch op := op.(type) {
+		case *expression.Or:
+			comp *= len(op.Operands())
+			if comp > max {
+				break
+			}
+		}
+	}
+
+	return comp
+}
+
+const _MAX_DNF_COMPLEXITY = 1024
+
+var _EXPRESSIONS_POOL = expression.NewExpressionsPool(_MAX_DNF_COMPLEXITY)
