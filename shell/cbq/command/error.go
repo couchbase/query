@@ -49,61 +49,61 @@ func HandleError(err int, msg string) errors.Error {
 
 	//Connection errors
 	case errors.CONNECTION_REFUSED:
-		return errors.NewShellErrorCannotConnect("Unable to connect to " + SERVICE_URL + ". " + msg)
+		return errors.NewShellErrorCannotConnect(SERVICE_URL + ". " + msg)
 	case errors.UNSUPPORTED_PROTOCOL:
-		return errors.NewShellErrorUnsupportedProtocol("Unsupported protocol scheme : " + SERVICE_URL)
+		return errors.NewShellErrorUnsupportedProtocol(SERVICE_URL)
 	case errors.NO_SUCH_HOST:
-		return errors.NewShellErrorNoSuchHost("No such host : " + SERVICE_URL)
+		return errors.NewShellErrorNoSuchHost(SERVICE_URL)
 	case errors.NO_HOST_IN_URL:
-		return errors.NewShellErrorNoHostInRequestUrl("No host in request URL : " + SERVICE_URL)
+		return errors.NewShellErrorNoHostInRequestUrl(SERVICE_URL)
 	case errors.UNKNOWN_PORT_TCP:
-		return errors.NewShellErrorUnknownPorttcp("Unknown port : " + SERVICE_URL)
+		return errors.NewShellErrorUnknownPorttcp(SERVICE_URL)
 	case errors.NO_ROUTE_TO_HOST:
-		return errors.NewShellErrorNoRouteToHost("No route to host : " + SERVICE_URL)
+		return errors.NewShellErrorNoRouteToHost(SERVICE_URL)
 	case errors.UNREACHABLE_NETWORK:
-		return errors.NewShellErrorUnreachableNetwork("Network is unreachable.")
+		return errors.NewShellErrorUnreachableNetwork("")
 	case errors.NO_CONNECTION:
-		return errors.NewShellErrorNoConnection("Not connected to any cluster. Use \\CONNECT command. ")
+		return errors.NewShellErrorNoConnection("")
 	case errors.DRIVER_OPEN:
 		return errors.NewShellErrorDriverOpen(msg)
 	case errors.INVALID_URL:
-		return errors.NewShellErrorInvalidURL("Invalid input URL : " + msg)
+		return errors.NewShellErrorInvalidURL(msg)
 
 	//Read/Write/Update file errors
 	case errors.READ_FILE:
-		return errors.NewShellErrorReadFile("Error during file read : " + msg)
+		return errors.NewShellErrorReadFile(msg)
 	case errors.WRITE_FILE:
-		return errors.NewShellErrorWriteFile("Error during file write : " + msg)
+		return errors.NewShellErrorWriteFile(msg)
 	case errors.FILE_OPEN:
-		return errors.NewShellErrorOpenFile("Unable to open file : " + msg)
+		return errors.NewShellErrorOpenFile(msg)
 	case errors.FILE_CLOSE:
-		return errors.NewShellErrorCloseFile("Unable to close file : ")
+		return errors.NewShellErrorCloseFile(msg)
 
 	//Authentication Errors.
 	case errors.INVALID_PASSWORD:
-		return errors.NewShellErrorInvalidPassword("Invalid password : " + msg)
+		return errors.NewShellErrorInvalidPassword(msg)
 	case errors.INVALID_USERNAME:
-		return errors.NewShellErrorInvalidUsername("Invalid username. ")
+		return errors.NewShellErrorInvalidUsername("")
 	case errors.MISSING_CREDENTIAL:
-		return errors.NewShellErrorMissingCredential("Username missing in -credentials/-c option.")
+		return errors.NewShellErrorMissingCredential("")
 
 	//Command Errors
 	case errors.NO_SUCH_COMMAND:
-		return errors.NewShellErrorNoSuchCommand("Command does not exist.")
+		return errors.NewShellErrorNoSuchCommand(msg)
 	case errors.NO_SUCH_PARAM:
-		return errors.NewShellErrorNoSuchParam("Parameter does not exist : " + msg)
+		return errors.NewShellErrorNoSuchParam(msg)
 	case errors.TOO_MANY_ARGS:
-		return errors.NewShellErrorTooManyArgs("Too many input arguments to command.")
+		return errors.NewShellErrorTooManyArgs("")
 	case errors.TOO_FEW_ARGS:
-		return errors.NewShellErrorTooFewArgs("Too few input arguments to command.")
+		return errors.NewShellErrorTooFewArgs("")
 	case errors.STACK_EMPTY:
-		return errors.NewShellErrorStackEmpty("Stack empty.")
+		return errors.NewShellErrorStackEmpty("")
 	case errors.NO_SUCH_ALIAS:
-		return errors.NewShellErrorNoSuchAlias("Alias does not exist : " + msg)
+		return errors.NewShellErrorNoSuchAlias(msg)
 
 	//Generic Errors
 	case errors.OPERATION_TIMEOUT:
-		return errors.NewShellErrorOperationTimeout("Operation timed out. Check query service url : " + SERVICE_URL)
+		return errors.NewShellErrorOperationTimeout(SERVICE_URL)
 	case errors.ROWS_SCAN:
 		return errors.NewShellErrorRowsScan(msg)
 	case errors.JSON_MARSHAL:
@@ -113,13 +113,13 @@ func HandleError(err int, msg string) errors.Error {
 	case errors.DRIVER_QUERY:
 		return errors.NewShellErrorDriverQueryMethod(msg)
 	case errors.WRITER_OUTPUT:
-		return errors.NewShellErrorWriterOutput("Error with io Writer. " + msg)
+		return errors.NewShellErrorWriterOutput(msg)
 	case errors.UNBALANCED_PAREN:
-		return errors.NewShellErrorUnbalancedParen("Unbalanced parenthesis in the input.")
+		return errors.NewShellErrorUnbalancedParen("")
 	case errors.ROWS_CLOSE:
 		return errors.NewShellErrorRowsClose(msg)
 	case errors.CMD_LINE_ARG:
-		return errors.NewShellErrorCmdLineArgs("Place input argument URL at the end, after input flags. ")
+		return errors.NewShellErrorCmdLineArgs("")
 
 	default:
 		return errors.NewShellErrorUnkownError(msg)
