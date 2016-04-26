@@ -20,8 +20,8 @@ const (
 	INF_DEFAULT InferenceType = "default"
 )
 
-type RandomDocumentProvider interface {
-	GetRandomDoc() (string, value.Value, errors.Error)
+type RandomEntryProvider interface {
+	GetRandomEntry() (string, value.Value, errors.Error)
 }
 
 type Inferencer interface {

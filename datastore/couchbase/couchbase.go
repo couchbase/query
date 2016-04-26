@@ -499,11 +499,11 @@ type keyspace struct {
 // the KV store.
 //
 
-func (k *keyspace) GetRandomDoc() (string, value.Value, errors.Error) {
+func (k *keyspace) GetRandomEntry() (string, value.Value, errors.Error) {
 	resp, err := k.cbbucket.GetRandomDoc()
 
 	if err != nil {
-		return "", nil, errors.NewError(err, "Error getting random doc")
+		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 
 	return fmt.Sprintf("%s", resp.Key), value.NewValue(resp.Body), nil

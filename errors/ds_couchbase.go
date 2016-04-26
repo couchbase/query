@@ -108,6 +108,13 @@ func NewCbIndexNotFoundError(e error) Error {
 		InternalMsg: "Index Not Found", InternalCaller: CallerN(1)}
 }
 
+const GET_RANDOM_ENTRY_ERROR = 12017
+
+func NewCbGetRandomEntryError(e error) Error {
+	return &err{level: EXCEPTION, ICode: GET_RANDOM_ENTRY_ERROR, IKey: "datastore.couchbase.get_random_entry_error", ICause: e,
+		InternalMsg: "Error getting random entry from keyspace", InternalCaller: CallerN(1)}
+}
+
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,
