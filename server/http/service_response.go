@@ -267,7 +267,7 @@ loop:
 			if ok {
 				if this.errorCount == 0 {
 					this.writeString(",\n    \"errors\": [")
-					if this.GetState() != server.FATAL {
+					if this.State() != server.FATAL {
 						this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 					}
 				}
