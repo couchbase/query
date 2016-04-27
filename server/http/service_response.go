@@ -41,10 +41,17 @@ func (this *httpRequest) Fail(err errors.Error) {
 
 func mapErrorToHttpResponse(err errors.Error, def int) int {
 
-	// please note that setting the http status only works
-	// before the body is being sent, so take care to only
-	// add here error codes that are not being generated
-	// mid body.
+	// MB-19307: please note that setting the http status
+	// only works if the http header has not been sent.
+	// This is the case if the whole output document is
+	// smaller than the threshold beyond which the http
+	// server starts sending the output with a chunked
+	// transfer encoding, or the first chunk has not been
+	// put together yet.
+	// For this reason, be mindful that error codes mapped
+	// here should only be generated at a point in which
+	// the request has not produced any results (ie failed
+	// in some sort of non starter way)
 	switch err.Code() {
 	case 1000: // readonly violation
 		return http.StatusForbidden
@@ -267,6 +274,13 @@ loop:
 			if ok {
 				if this.errorCount == 0 {
 					this.writeString(",\n    \"errors\": [")
+
+					// MB-19307: please check the comments
+					// in mapErrortoHttpResponse().
+					// Ideally we should set the status code
+					// only before calling writePrefix()
+					// but this is too cumbersome, having
+					// to check Execution errors as well.
 					if this.State() != server.FATAL {
 						this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 					}
