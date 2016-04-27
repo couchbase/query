@@ -18,8 +18,10 @@ func SargableFor(pred expression.Expression, exprs expression.Expressions) int {
 	n := len(exprs)
 
 	if n > 1 {
-		// Only AND predicates can sarg more than one index key
-		if _, ok := pred.(*expression.And); !ok {
+		// Only AND / OR predicates can sarg more than one index key
+		switch pred.(type) {
+		case *expression.And, *expression.Or:
+		default:
 			n = 1
 		}
 	}

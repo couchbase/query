@@ -44,24 +44,26 @@ Convert ANDs of ORs to ORs of ANDs. For example:
 
 (A OR B) AND C => (A AND C) OR (B AND C)
 
-Also apply constant folding.
+Also flatten and apply constant folding.
 */
 func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
+	// Flatten nested ANDs
+	var truth bool
+	expr, truth = flattenAnd(expr)
+	if !truth {
+		return expression.FALSE_EXPR, nil
+	}
+
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
 	}
 
 	// Flatten nested ANDs
-	buffer := make(expression.Expressions, 0, 2*len(expr.Operands()))
-	expr = expression.NewAnd(flattenAnd(expr, buffer)...)
+	expr, _ = flattenAnd(expr)
 
-	// Constant folding
-	for _, term := range expr.Operands() {
-		val := term.Value()
-		if val != nil && !val.Truth() {
-			return expression.FALSE_EXPR, nil
-		}
+	if len(expr.Operands()) == 0 {
+		return expression.TRUE_EXPR, nil
 	}
 
 	// DNF
@@ -69,24 +71,26 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 }
 
 /*
-Apply constant folding.
+Flatten and apply constant folding.
 */
 func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
+	// Flatten nested ORs
+	var truth bool
+	expr, truth = flattenOr(expr)
+	if truth {
+		return expression.TRUE_EXPR, nil
+	}
+
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
 	}
 
 	// Flatten nested ORs
-	buffer := make(expression.Expressions, 0, 2*len(expr.Operands()))
-	expr = expression.NewOr(flattenOr(expr, buffer)...)
+	expr, _ = flattenOr(expr)
 
-	// Constant folding
-	for _, term := range expr.Operands() {
-		val := term.Value()
-		if val != nil && val.Truth() {
-			return expression.TRUE_EXPR, nil
-		}
+	if len(expr.Operands()) == 0 {
+		return expression.FALSE_EXPR, nil
 	}
 
 	return expr, nil
@@ -165,44 +169,111 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	return exp, exp.MapChildren(this)
 }
 
-func flattenOr(or *expression.Or, buffer expression.Expressions) expression.Expressions {
-	operands := or.Operands()
-	for _, op := range operands {
+func flattenOr(or *expression.Or) (*expression.Or, bool) {
+	length, flatten, truth := orLength(or)
+	if !flatten || truth {
+		return or, truth
+	}
+
+	buffer := make(expression.Expressions, 0, length)
+	return expression.NewOr(orTerms(or, buffer)...), false
+}
+
+func flattenAnd(and *expression.And) (*expression.And, bool) {
+	length, flatten, truth := andLength(and)
+	if !flatten || !truth {
+		return and, truth
+	}
+
+	buffer := make(expression.Expressions, 0, length)
+	return expression.NewAnd(andTerms(and, buffer)...), true
+}
+
+func orLength(or *expression.Or) (length int, flatten, truth bool) {
+	l := 0
+	for _, op := range or.Operands() {
 		switch op := op.(type) {
 		case *expression.Or:
-			buffer = flattenOr(op, buffer)
-		default:
-			if len(buffer) == cap(buffer) {
-				buffer = growBuffer(buffer)
+			l, _, truth = orLength(op)
+			if truth {
+				return
 			}
-			buffer = append(buffer, op)
+			length += l
+			flatten = true
+		default:
+			val := op.Value()
+			if val != nil {
+				if val.Truth() {
+					truth = true
+					return
+				}
+			} else {
+				length++
+			}
 		}
 	}
 
-	return buffer
+	return
 }
 
-func flattenAnd(and *expression.And, buffer expression.Expressions) expression.Expressions {
-	operands := and.Operands()
-	for _, op := range operands {
+func andLength(and *expression.And) (length int, flatten, truth bool) {
+	truth = true
+	l := 0
+	for _, op := range and.Operands() {
 		switch op := op.(type) {
 		case *expression.And:
-			buffer = flattenAnd(op, buffer)
-		default:
-			if len(buffer) == cap(buffer) {
-				buffer = growBuffer(buffer)
+			l, _, truth = andLength(op)
+			if !truth {
+				return
 			}
-			buffer = append(buffer, op)
+			length += l
+			flatten = true
+		default:
+			val := op.Value()
+			if val != nil {
+				if !val.Truth() {
+					truth = false
+					return
+				}
+			} else {
+				length++
+			}
+		}
+	}
+
+	return
+}
+
+func orTerms(or *expression.Or, buffer expression.Expressions) expression.Expressions {
+	for _, op := range or.Operands() {
+		switch op := op.(type) {
+		case *expression.Or:
+			buffer = orTerms(op, buffer)
+		default:
+			val := op.Value()
+			if val == nil || val.Truth() {
+				buffer = append(buffer, op)
+			}
 		}
 	}
 
 	return buffer
 }
 
-func growBuffer(buffer expression.Expressions) expression.Expressions {
-	buf := make(expression.Expressions, len(buffer), 2*len(buffer))
-	copy(buf, buffer)
-	return buf
+func andTerms(and *expression.And, buffer expression.Expressions) expression.Expressions {
+	for _, op := range and.Operands() {
+		switch op := op.(type) {
+		case *expression.And:
+			buffer = andTerms(op, buffer)
+		default:
+			val := op.Value()
+			if val == nil || !val.Truth() {
+				buffer = append(buffer, op)
+			}
+		}
+	}
+
+	return buffer
 }
 
 /*
@@ -230,6 +301,7 @@ func (this *DNF) applyDNF(expr *expression.And) expression.Expression {
 	defer _EXPRESSIONS_POOL.Put(matrix)
 	matrix = append(matrix, make(expression.Expressions, 0, len(expr.Operands())))
 
+	var exprs2 expression.Expressions
 	for _, term := range expr.Operands() {
 		switch term := term.(type) {
 		case *expression.Or:
@@ -239,23 +311,24 @@ func (this *DNF) applyDNF(expr *expression.And) expression.Expression {
 			orTerms := term.Operands()
 			for _, exprs := range matrix {
 				for i, orTerm := range orTerms {
-					if i < len(orTerms)-1 {
-						exprs2 := make(expression.Expressions, len(exprs), cap(exprs))
+					if i == len(orTerms)-1 {
+						exprs2 = exprs
+					} else {
+						exprs2 = make(expression.Expressions, len(exprs), cap(exprs))
 						copy(exprs2, exprs)
-						exprs = exprs2
 					}
 
 					switch orTerm := orTerm.(type) {
 					case *expression.And:
 						// flatten any nested AND
 						for _, t := range orTerm.Operands() {
-							exprs = append(exprs, t)
+							exprs2 = append(exprs2, t)
 						}
 					default:
-						exprs = append(exprs, orTerm)
+						exprs2 = append(exprs2, orTerm)
 					}
 
-					matrix2 = append(matrix2, exprs)
+					matrix2 = append(matrix2, exprs2)
 				}
 			}
 
