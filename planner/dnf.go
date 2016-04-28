@@ -62,12 +62,15 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 	// Flatten nested ANDs
 	expr, _ = flattenAnd(expr)
 
-	if len(expr.Operands()) == 0 {
+	switch len(expr.Operands()) {
+	case 0:
 		return expression.TRUE_EXPR, nil
+	case 1:
+		return expr.Operands()[0], nil
+	default:
+		// DNF
+		return this.applyDNF(expr), nil
 	}
-
-	// DNF
-	return this.applyDNF(expr), nil
 }
 
 /*
@@ -89,11 +92,14 @@ func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 	// Flatten nested ORs
 	expr, _ = flattenOr(expr)
 
-	if len(expr.Operands()) == 0 {
+	switch len(expr.Operands()) {
+	case 0:
 		return expression.FALSE_EXPR, nil
+	case 1:
+		return expr.Operands()[0], nil
+	default:
+		return expr, nil
 	}
-
-	return expr, nil
 }
 
 /*
@@ -176,7 +182,11 @@ func flattenOr(or *expression.Or) (*expression.Or, bool) {
 	}
 
 	buffer := make(expression.Expressions, 0, length)
-	return expression.NewOr(orTerms(or, buffer)...), false
+	terms := _STRING_EXPRESSION_POOL.Get()
+	defer _STRING_EXPRESSION_POOL.Put(terms)
+	buffer = orTerms(or, buffer, terms)
+
+	return expression.NewOr(buffer...), false
 }
 
 func flattenAnd(and *expression.And) (*expression.And, bool) {
@@ -186,7 +196,11 @@ func flattenAnd(and *expression.And) (*expression.And, bool) {
 	}
 
 	buffer := make(expression.Expressions, 0, length)
-	return expression.NewAnd(andTerms(and, buffer)...), true
+	terms := _STRING_EXPRESSION_POOL.Get()
+	defer _STRING_EXPRESSION_POOL.Put(terms)
+	buffer = andTerms(and, buffer, terms)
+
+	return expression.NewAnd(buffer...), false
 }
 
 func orLength(or *expression.Or) (length int, flatten, truth bool) {
@@ -244,15 +258,20 @@ func andLength(and *expression.And) (length int, flatten, truth bool) {
 	return
 }
 
-func orTerms(or *expression.Or, buffer expression.Expressions) expression.Expressions {
+func orTerms(or *expression.Or, buffer expression.Expressions,
+	terms map[string]expression.Expression) expression.Expressions {
 	for _, op := range or.Operands() {
 		switch op := op.(type) {
 		case *expression.Or:
-			buffer = orTerms(op, buffer)
+			buffer = orTerms(op, buffer, terms)
 		default:
 			val := op.Value()
 			if val == nil || val.Truth() {
-				buffer = append(buffer, op)
+				str := op.String()
+				if _, found := terms[str]; !found {
+					terms[str] = op
+					buffer = append(buffer, op)
+				}
 			}
 		}
 	}
@@ -260,15 +279,20 @@ func orTerms(or *expression.Or, buffer expression.Expressions) expression.Expres
 	return buffer
 }
 
-func andTerms(and *expression.And, buffer expression.Expressions) expression.Expressions {
+func andTerms(and *expression.And, buffer expression.Expressions,
+	terms map[string]expression.Expression) expression.Expressions {
 	for _, op := range and.Operands() {
 		switch op := op.(type) {
 		case *expression.And:
-			buffer = andTerms(op, buffer)
+			buffer = andTerms(op, buffer, terms)
 		default:
 			val := op.Value()
 			if val == nil || !val.Truth() {
-				buffer = append(buffer, op)
+				str := op.String()
+				if _, found := terms[str]; !found {
+					terms[str] = op
+					buffer = append(buffer, op)
+				}
 			}
 		}
 	}
@@ -370,3 +394,4 @@ func dnfComplexity(expr *expression.And, max int) int {
 const _MAX_DNF_COMPLEXITY = 1024
 
 var _EXPRESSIONS_POOL = expression.NewExpressionsPool(_MAX_DNF_COMPLEXITY)
+var _STRING_EXPRESSION_POOL = expression.NewStringExpressionPool(_MAX_DNF_COMPLEXITY)

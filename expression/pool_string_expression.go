@@ -7,22 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package util
+package expression
 
 import (
 	"sync"
 )
 
-type StringBoolPool struct {
+type StringExpressionPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewStringBoolPool(size int) *StringBoolPool {
-	rv := &StringBoolPool{
+func NewStringExpressionPool(size int) *StringExpressionPool {
+	rv := &StringExpressionPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make(map[string]bool, size)
+				return make(map[string]Expression, size)
 			},
 		},
 		size: size,
@@ -31,17 +31,17 @@ func NewStringBoolPool(size int) *StringBoolPool {
 	return rv
 }
 
-func (this *StringBoolPool) Get() map[string]bool {
-	return this.pool.Get().(map[string]bool)
+func (this *StringExpressionPool) Get() map[string]Expression {
+	return this.pool.Get().(map[string]Expression)
 }
 
-func (this *StringBoolPool) Put(s map[string]bool) {
+func (this *StringExpressionPool) Put(s map[string]Expression) {
 	if s == nil || len(s) > 2*this.size {
 		return
 	}
 
 	for k, _ := range s {
-		s[k] = false
+		s[k] = nil
 		delete(s, k)
 	}
 

@@ -41,6 +41,7 @@ func (this *StringAnnotatedPool) Put(s map[string]AnnotatedValue) {
 	}
 
 	for k, _ := range s {
+		s[k] = nil
 		delete(s, k)
 	}
 

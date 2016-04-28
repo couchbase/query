@@ -41,6 +41,7 @@ func (this *StringInterfacePool) Put(s map[string]interface{}) {
 	}
 
 	for k, _ := range s {
+		s[k] = nil
 		delete(s, k)
 	}
 

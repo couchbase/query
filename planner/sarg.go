@@ -119,7 +119,7 @@ keys:
 	}
 
 	if len(ns) == 0 {
-		return _FULL_SPANS, false, nil
+		return _EMPTY_SPANS, false, nil
 	}
 
 	if exactSpan && len(sargKeys) > 1 {

@@ -41,6 +41,7 @@ func (this *StringIntPool) Put(s map[string]int) {
 	}
 
 	for k, _ := range s {
+		s[k] = 0
 		delete(s, k)
 	}
 

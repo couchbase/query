@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 type sargAnd struct {
@@ -68,13 +69,28 @@ func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
 	}
 
 	// Generate cross product of inputs
-	spans := make(plan.Spans, 0, len(spans1)*len(spans2))
+	cspans := make(plan.Spans, 0, len(spans1)*len(spans2))
 	for _, span2 := range spans2 {
 		copy1 := spans1.Copy()
 		for _, span1 := range copy1 {
 			constrainSpan(span1, span2)
 		}
-		spans = append(spans, copy1...)
+		cspans = append(cspans, copy1...)
+	}
+
+	// De-dup spans
+	hash := _STRING_SPAN_POOL.Get()
+	defer _STRING_SPAN_POOL.Put(hash)
+	for _, cspan := range cspans {
+		hash[cspan.String()] = cspan
+	}
+
+	// Discard empty spans
+	spans := make(plan.Spans, 0, len(hash))
+	for _, cspan := range hash {
+		if !isEmptySpan(cspan) {
+			spans = append(spans, cspan)
+		}
 	}
 
 	return spans
@@ -185,3 +201,30 @@ func constrainEmptySpan(span1, span2 *plan.Span) bool {
 	}
 	return false
 }
+
+/*
+False negatives allowed.
+*/
+func isEmptySpan(span *plan.Span) bool {
+	low := span.Range.Low
+	high := span.Range.High
+	n := util.MinInt(len(low), len(high))
+
+	for i := 0; i < n; i++ {
+		lv := low[i].Value()
+		hv := high[i].Value()
+		if lv == nil || hv == nil {
+			return false
+		}
+
+		c := lv.Collate(hv)
+		if c == 0 {
+			continue
+		}
+		return c > 0
+	}
+
+	return false
+}
+
+var _STRING_SPAN_POOL = plan.NewStringSpanPool(1024)

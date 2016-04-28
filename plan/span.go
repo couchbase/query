@@ -149,6 +149,11 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+func (this *Span) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
+}
+
 func (this Spans) Copy() Spans {
 	spans := make(Spans, len(this))
 	for i, s := range this {

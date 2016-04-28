@@ -18,6 +18,7 @@ import (
 var _SELF_SPANS plan.Spans
 var _FULL_SPANS plan.Spans
 var _VALUED_SPANS plan.Spans
+var _EMPTY_SPANS plan.Spans
 var _EXACT_FULL_SPANS plan.Spans
 var _EXACT_VALUED_SPANS plan.Spans
 
@@ -36,6 +37,11 @@ func init() {
 	vspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
 	vspan.Range.Inclusion = datastore.NEITHER
 	_VALUED_SPANS = plan.Spans{vspan}
+
+	espan := &plan.Span{}
+	espan.Range.High = expression.Expressions{expression.NULL_EXPR}
+	espan.Range.Inclusion = datastore.NEITHER
+	_EMPTY_SPANS = plan.Spans{espan}
 
 	_EXACT_FULL_SPANS = _FULL_SPANS.Copy()
 	_EXACT_FULL_SPANS[0].Exact = true

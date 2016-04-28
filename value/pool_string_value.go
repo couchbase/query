@@ -41,6 +41,7 @@ func (this *StringValuePool) Put(s map[string]Value) {
 	}
 
 	for k, _ := range s {
+		s[k] = nil
 		delete(s, k)
 	}
 
