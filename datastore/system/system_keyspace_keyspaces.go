@@ -50,7 +50,18 @@ func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
 			if excp == nil {
 				keyspaceIds, excp := namespace.KeyspaceIds()
 				if excp == nil {
-					count += int64(len(keyspaceIds))
+					for _, keyspaceId := range keyspaceIds {
+						// The list of keyspace ids can include memcached buckets.
+						// We do not want to include them in the count of
+						// of queryable buckets. Attempting to retrieve the keyspace
+						// record of a memcached bucket returns an error,
+						// which allows us to distinguish these buckets, and exclude them.
+						// See MB-19364 for more info.
+						_, err := namespace.KeyspaceByName(keyspaceId)
+						if err != nil {
+							count++
+						}
+					}
 				} else {
 					return 0, errors.NewSystemDatastoreError(excp, "")
 				}
@@ -239,6 +250,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
+	var numProduced int64
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
 	if err == nil {
 		for _, namespaceId := range namespaceIds {
@@ -246,12 +258,23 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 			if err == nil {
 				keyspaceIds, err := namespace.KeyspaceIds()
 				if err == nil {
-					for i, keyspaceId := range keyspaceIds {
-						if limit > 0 && int64(i) > limit {
+					for _, keyspaceId := range keyspaceIds {
+						// The list of keyspace ids can include memcached buckets.
+						// We do not want to include them in the list
+						// of queryable buckets. Attempting to retrieve the keyspace
+						// record of a memcached bucket returns an error,
+						// which allows us to distinguish these buckets, and exclude them.
+						// See MB-19364 for more info.
+						_, err := namespace.KeyspaceByName(keyspaceId)
+						if err != nil {
+							continue
+						}
+						if limit > 0 && numProduced > limit {
 							break
 						}
 						entry := datastore.IndexEntry{PrimaryKey: fmt.Sprintf("%s/%s", namespaceId, keyspaceId)}
 						conn.EntryChannel() <- &entry
+						numProduced++
 					}
 				}
 			}
