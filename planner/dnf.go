@@ -200,7 +200,7 @@ func flattenAnd(and *expression.And) (*expression.And, bool) {
 	defer _STRING_EXPRESSION_POOL.Put(terms)
 	buffer = andTerms(and, buffer, terms)
 
-	return expression.NewAnd(buffer...), false
+	return expression.NewAnd(buffer...), true
 }
 
 func orLength(or *expression.Or) (length int, flatten, truth bool) {
