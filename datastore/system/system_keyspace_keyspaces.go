@@ -250,7 +250,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	var numProduced int64
+	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()
 	if err == nil {
 		for _, namespaceId := range namespaceIds {
