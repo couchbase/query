@@ -49,7 +49,7 @@ func HandleError(err int, msg string) errors.Error {
 
 	//Connection errors
 	case errors.CONNECTION_REFUSED:
-		return errors.NewShellErrorCannotConnect(SERVICE_URL + ". " + msg)
+		return errors.NewShellErrorCannotConnect(msg)
 	case errors.UNSUPPORTED_PROTOCOL:
 		return errors.NewShellErrorUnsupportedProtocol(SERVICE_URL)
 	case errors.NO_SUCH_HOST:

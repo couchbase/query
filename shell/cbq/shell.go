@@ -253,6 +253,14 @@ func init() {
 
 }
 
+/*
+   Option        : -no-ssl-verify
+   Default Value : false
+   Skip verification of Certificates.
+*/
+
+var noSSLVerify = flag.Bool("no-ssl-verify", false, command.USSLVERIFY)
+
 /* Define credentials as user/pass and convert into
    JSON object credentials
 */
@@ -406,6 +414,16 @@ func main() {
 			os.Exit(1)
 		}
 		n1ql.SetQueryParams("creds", string(ac))
+	}
+
+	n1ql.SetSkipVerify(*noSSLVerify)
+
+	if strings.HasPrefix(serverFlag, "https://") {
+		if *noSSLVerify == false {
+			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
+		} else {
+			command.PrintStr(command.W, command.SSLVERIFY_TRUE)
+		}
 	}
 
 	// Check if connection is possible to the input serverFlag

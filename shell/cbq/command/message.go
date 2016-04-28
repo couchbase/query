@@ -35,6 +35,7 @@ const (
 	UINPUT      = " File to load commands from. \n\t For example : -file temp.txt"
 	UOUTPUT     = " File to output commands and their results. \n\t For example : -output temp.txt"
 	ULOG        = " File to log commands into. \n\t For example : -logfile temp.txt"
+	USSLVERIFY  = " Skip verification of Certificates. "
 
 	//Shorthand message for flags
 	SHORTHAND = " Shorthand for "
@@ -72,6 +73,13 @@ const (
 	USERDEFP = " User Defined Session Parameters : \n"
 	PNAME    = " Parameter name"
 	PVAL     = " Value"
+
+	//SSL
+	SSLVERIFY_FALSE = "\n If you are using self signed certificates you can rerun this command with the " +
+		"-no-ssl-verify flag.\n Note however that disabling SSL verification means that cbq will be " +
+		"vulnerable to man-in-the-middle attacks.\n\n"
+
+	SSLVERIFY_TRUE = "\n Disabling SSL verification means that cbq will be vulnerable to man-in-the-middle attacks.\n\n"
 
 	//HELP H-> Help
 	HELPMSG     = "\n Help information for all shell commands.\n"

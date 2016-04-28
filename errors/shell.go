@@ -16,7 +16,7 @@ import ()
 const (
 	//Connection errors (100 - 115)
 	CONNECTION_REFUSED       = 100
-	CONNECTION_REFUSED_MSG   = "Unable to connect to "
+	CONNECTION_REFUSED_MSG   = ""
 	UNSUPPORTED_PROTOCOL     = 101
 	UNSUPPORTED_PROTOCOL_MSG = "Unsupported protocol scheme "
 	NO_SUCH_HOST             = 102
