@@ -47,7 +47,7 @@ func newSargOr(pred *expression.Or) *sargOr {
 			spans = append(spans, cspans...)
 		}
 
-		return spans, nil
+		return deDupDiscardEmptySpans(spans), nil
 	}
 
 	return rv

@@ -78,22 +78,7 @@ func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
 		cspans = append(cspans, copy1...)
 	}
 
-	// De-dup spans
-	hash := _STRING_SPAN_POOL.Get()
-	defer _STRING_SPAN_POOL.Put(hash)
-	for _, cspan := range cspans {
-		hash[cspan.String()] = cspan
-	}
-
-	// Discard empty spans
-	spans := make(plan.Spans, 0, len(hash))
-	for _, cspan := range hash {
-		if !isEmptySpan(cspan) {
-			spans = append(spans, cspan)
-		}
-	}
-
-	return spans
+	return deDupDiscardEmptySpans(cspans)
 }
 
 func constrainSpan(span1, span2 *plan.Span) {
@@ -226,5 +211,3 @@ func isEmptySpan(span *plan.Span) bool {
 
 	return false
 }
-
-var _STRING_SPAN_POOL = plan.NewStringSpanPool(1024)
