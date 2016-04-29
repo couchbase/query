@@ -58,7 +58,7 @@ func (b *keyspaceKeyspace) Count() (int64, errors.Error) {
 						// which allows us to distinguish these buckets, and exclude them.
 						// See MB-19364 for more info.
 						_, err := namespace.KeyspaceByName(keyspaceId)
-						if err != nil {
+						if err == nil {
 							count++
 						}
 					}
