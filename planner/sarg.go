@@ -245,25 +245,20 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 }
 
 func deDupDiscardEmptySpans(cspans plan.Spans) plan.Spans {
-	var spans plan.Spans
-	// De-dup spans
-	if cspans != nil {
-		hash := _STRING_SPAN_POOL.Get()
-		defer _STRING_SPAN_POOL.Put(hash)
-		spans = make(plan.Spans, 0, len(cspans))
-		for _, cspan := range cspans {
-			str := cspan.String()
-			if _, found := hash[str]; !found && !isEmptySpan(cspan) {
-				hash[str] = cspan
-				spans = append(spans, cspan)
-			}
+	if len(cspans) <= 1 {
+		return cspans
+	}
+	hash := _STRING_SPAN_POOL.Get()
+	defer _STRING_SPAN_POOL.Put(hash)
+	spans := make(plan.Spans, 0, len(cspans))
+	for _, cspan := range cspans {
+		str := cspan.String()
+		if _, found := hash[str]; !found && !isEmptySpan(cspan) {
+			hash[str] = cspan
+			spans = append(spans, cspan)
 		}
 	}
-
-	if cspans == nil || len(spans) == 0 {
-		return nil
-	}
-	return spans
+	return spans[0:len(spans)]
 }
 
 const _FULL_SPAN_FANOUT = 8192

@@ -33,7 +33,7 @@ func newSargOr(pred *expression.Or) *sargOr {
 			}
 
 			if len(cspans) == 0 {
-				return nil, nil
+				continue
 			}
 
 			if cspans[0] == _EXACT_FULL_SPANS[0] {
