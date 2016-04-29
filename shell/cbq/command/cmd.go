@@ -65,6 +65,8 @@ var (
 	WINDOWS = false
 	//Quiet flag used to suppress printing history path
 	QUIET = false
+	//Value that represents the no-ssl-verify flag
+	SKIPVERIFY = false
 )
 
 /*

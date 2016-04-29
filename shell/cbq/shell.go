@@ -311,9 +311,13 @@ func main() {
 		}
 	}
 
-	// If no protocol exists, then append http:// as default protocol.
-	if strings.HasPrefix(serverFlag, "http://") == false && strings.HasPrefix(serverFlag, "https://") == false {
-		serverFlag = "http://" + serverFlag
+	// call command.ParseURL()
+	var errCode int
+	var errStr string
+	serverFlag, errCode, errStr = command.ParseURL(serverFlag)
+	if errCode != 0 {
+		s_err := command.HandleError(errCode, errStr)
+		command.PrintError(s_err)
 	}
 
 	//-engine
@@ -417,8 +421,9 @@ func main() {
 	}
 
 	n1ql.SetSkipVerify(*noSSLVerify)
+	command.SKIPVERIFY = *noSSLVerify
 
-	if strings.HasPrefix(serverFlag, "https://") {
+	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") {
 		if *noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {

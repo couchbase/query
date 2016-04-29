@@ -12,6 +12,8 @@ package command
 import (
 	"encoding/json"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -627,4 +629,56 @@ func PrintStr(W io.Writer, val string) (int, string) {
 		return errors.WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
+}
+
+// Method to return the new value of the server flag based on input url string
+func ParseURL(serverFlag string) (string, int, string) {
+
+	// the URL golang Parse method has the limitation that when we pass in a host that is a string
+	// and not an ip, without the protocol scheme, it mis-interprets the url string. For such cases we
+	// need to explicitely make sure that we are missing a protocol scheme.
+
+	// If no protocol exists, then append http:// as default protocol.
+
+	if !strings.HasPrefix(strings.ToLower(serverFlag), "https://") &&
+		!strings.HasPrefix(strings.ToLower(serverFlag), "http://") &&
+		!strings.HasPrefix(strings.ToLower(serverFlag), "couchbase://") &&
+		!strings.HasPrefix(strings.ToLower(serverFlag), "couchbases://") {
+		//There is something else wrong and we need to throw an error.
+		serverFlag = "http://" + serverFlag
+	}
+
+	//Parse the url
+	parsedURL, errURL := url.Parse(serverFlag)
+
+	// We now have a valid URL. Check if we have a port
+	_, portNo, _ := net.SplitHostPort(parsedURL.Host)
+	// couchbase:// and couchbases:// will represent http:// ... :8091 and
+	// https:// ... 18091 respectively. If the port is specified along with
+	// the scheme for this case, we throw an error.
+	if errURL == nil {
+		if portNo == "" {
+			if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
+
+				if strings.ToLower(parsedURL.Scheme) == "couchbase" {
+					parsedURL.Host = net.JoinHostPort(parsedURL.Host, "8091")
+					parsedURL.Scheme = "http"
+
+				} else {
+					parsedURL.Scheme = "https"
+					parsedURL.Host = net.JoinHostPort(parsedURL.Host, "18091")
+				}
+
+			}
+		} else {
+			// Cannot give port with couchbase:// couchbases://
+			if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
+				return "", errors.INVALID_URL, INVALIDPORT
+			}
+		}
+	} else {
+		return "", errors.INVALID_URL, errURL.Error()
+	}
+
+	return parsedURL.String(), 0, ""
 }

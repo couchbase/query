@@ -81,6 +81,8 @@ const (
 
 	SSLVERIFY_TRUE = "\n Disabling SSL verification means that cbq will be vulnerable to man-in-the-middle attacks.\n\n"
 
+	INVALIDPORT = "When specifying couchbase:// or couchbases://, do not specify the port.\n"
+
 	//HELP H-> Help
 	HELPMSG     = "\n Help information for all shell commands.\n"
 	HALIAS      = "\\ALIAS [ name value ]\n"

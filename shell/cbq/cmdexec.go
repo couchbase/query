@@ -201,7 +201,7 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 			if strings.TrimSpace(SERVICE_URL) == "" {
 				io.WriteString(command.W, command.NOCONNMSG)
 			} else {
-				err_str = err_str + "\n " + command.NewMessage(command.STARTUP, SERVICE_URL) + "\n"
+				err_str = err_str + "\n\n" + command.NewMessage(command.STARTUP, SERVICE_URL) + "\n"
 			}
 		}
 		if err_code != 0 {

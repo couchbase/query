@@ -51,13 +51,29 @@ func (this *Connect) ExecCommand(args []string) (int, string) {
 	} else {
 		SERVICE_URL = args[0]
 
-		if strings.HasPrefix(SERVICE_URL, "http://") == false && strings.HasPrefix(SERVICE_URL, "https://") == false {
-			SERVICE_URL = "http://" + SERVICE_URL
+		// Support couchbase couchbases when using the connect command as well.
+		// call command.ParseURL()
+		var errCode int
+		var errStr string
+		SERVICE_URL, errCode, errStr = ParseURL(SERVICE_URL)
+		if errCode != 0 {
+			return errCode, errStr
 		}
+
+		// Connect to secure ports depending on -no-ssl-verify flag when cbq is started.
+		if strings.HasPrefix(strings.ToLower(SERVICE_URL), "https://") {
+			if SKIPVERIFY == false {
+				PrintStr(W, SSLVERIFY_FALSE)
+			} else {
+				PrintStr(W, SSLVERIFY_TRUE)
+			}
+		}
+
+		// Do the check for different values here as well.
 
 		err := Ping(SERVICE_URL)
 		if err != nil {
-			return errors.CONNECTION_REFUSED, ""
+			return errors.CONNECTION_REFUSED, err.Error()
 		}
 		io.WriteString(W, NewMessage(STARTUP, SERVICE_URL)+EXITMSG)
 	}
