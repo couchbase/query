@@ -217,7 +217,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	if node.From() == nil ||
-		node.Where() != nil ||
+		(node.Where() != nil && (node.Where().Value() == nil || !node.Where().Value().Truth())) ||
 		node.Group() != nil {
 		return false, nil
 	}

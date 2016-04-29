@@ -19,15 +19,12 @@ import (
 )
 
 func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, pred, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover == nil {
 		return nil, nil
 	}
 
 	alias := node.Alias()
-	id := expression.NewField(
-		expression.NewMeta(expression.NewIdentifier(alias)),
-		expression.NewFieldName("id", false))
 	exprs := this.cover.Expressions()
 
 outer:

@@ -147,10 +147,14 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 }
 
 var _EMPTY_OBJECT_EXPR = expression.NewConstant(map[string]interface{}{})
-var _MIN_BINARY_EXPR = expression.NewConstant([]byte{})
 
 func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
-	var exp expression.Expression = expr
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	var exp expression.Expression
 
 	switch expr := expr.(type) {
 	case *expression.IsBoolean:
@@ -168,11 +172,15 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 			expression.NewGE(expr.Operand(), expression.EMPTY_ARRAY_EXPR),
 			expression.NewLT(expr.Operand(), _EMPTY_OBJECT_EXPR))
 	case *expression.IsObject:
-		// Not equivalent to IS OBJECT. Includes BINARY values.
-		exp = expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR)
+		exp = expression.NewAnd(
+			expression.NewGE(expr.Operand(), _EMPTY_OBJECT_EXPR),
+			expr)
+		return exp, nil // Avoid infinite recursion
+	default:
+		return expr, nil // Avoid infinite recursion
 	}
 
-	return exp, exp.MapChildren(this)
+	return exp, nil
 }
 
 func flattenOr(or *expression.Or) (*expression.Or, bool) {

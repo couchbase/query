@@ -71,6 +71,32 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	pred := this.where
 	if pred != nil {
+		// Handle constant TRUE predicate
+		cpred := pred.Value()
+		if cpred != nil && cpred.Truth() {
+			pred = nil
+		}
+	}
+
+	id := expression.NewField(
+		expression.NewMeta(expression.NewIdentifier(node.Alias())),
+		expression.NewFieldName("id", false))
+
+	// Handle covering primary scan
+	if this.cover != nil && pred == nil {
+		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hintIndexes, otherIndexes)
+		if scan != nil || err != nil {
+			return scan, nil, err
+		}
+	}
+
+	if pred != nil {
+		// Handle constant FALSE predicate
+		cpred := pred.Value()
+		if cpred != nil && !cpred.Truth() {
+			return _EMPTY_PLAN, nil, nil
+		}
+
 		pred = pred.Copy()
 		dnf := NewDNF(pred)
 		pred, err = dnf.Map(pred)
@@ -79,12 +105,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 
 		formalizer := expression.NewFormalizer(node.Alias(), nil)
-		primaryKey := expression.Expressions{
-			expression.NewField(
-				expression.NewMeta(expression.NewIdentifier(node.Alias())),
-				expression.NewFieldName("id", false)),
-		}
-
+		primaryKey := expression.Expressions{id}
 		sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 		if er != nil {
 			return nil, nil, er
@@ -108,7 +129,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 
 		if len(minimals) > 0 {
-			secondary, err = this.buildSecondaryScan(minimals, node, pred, limit)
+			secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
 			return secondary, nil, err
 		}
 
@@ -188,3 +209,4 @@ func allIndexes(keyspace datastore.Keyspace, indexes []datastore.Index) ([]datas
 
 var _INDEX_POOL = datastore.NewIndexPool(32)
 var _ALL_INDEX_POOL = datastore.NewIndexPool(256)
+var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{})

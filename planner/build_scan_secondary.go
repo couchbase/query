@@ -28,6 +28,75 @@ type indexEntry struct {
 	exactSpans bool
 }
 
+func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
+	if this.cover != nil {
+		scan, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+		if scan != nil || err != nil {
+			return scan, err
+		}
+	}
+
+	this.resetCountMin()
+
+	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
+		// This makes InterSectionscan disable limit pushdown, don't use index order
+		this.resetOrderLimit()
+		limit = nil
+	}
+	if this.order != nil && this.maxParallelism > 1 {
+		this.resetOrderLimit()
+		limit = nil
+	}
+
+	scans := make([]plan.Operator, 0, len(secondaries))
+	var op plan.Operator
+	for index, entry := range secondaries {
+		if this.order != nil {
+			if !this.useIndexOrder(entry, entry.keys) {
+				this.resetOrderLimit()
+				limit = nil
+			} else {
+				this.maxParallelism = 1
+			}
+		}
+
+		if limit != nil {
+			exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
+			if err != nil {
+				return nil, err
+			}
+
+			if !pred.CoveredBy(node.Alias(), exprs) {
+				this.limit = nil
+				limit = nil
+			}
+		}
+
+		arrayIndex := indexHasArrayIndexKey(index)
+
+		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
+			limit = nil
+			this.limit = nil
+		}
+
+		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
+
+		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
+			// Use DistinctScan to de-dup array index scans, multiple spans
+			op = plan.NewDistinctScan(op)
+		}
+
+		scans = append(scans, op)
+	}
+
+	if len(scans) > 1 {
+		return plan.NewIntersectScan(scans...), nil
+	} else {
+		return scans[0], nil
+	}
+}
+
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	sargables, all map[datastore.Index]*indexEntry, err error) {
@@ -155,75 +224,6 @@ outer:
 
 	return len(se.sargKeys) > len(te.sargKeys) ||
 		len(se.keys) <= len(te.keys)
-}
-
-func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, pred, limit expression.Expression) (plan.Operator, error) {
-	if this.cover != nil {
-		scan, err := this.buildCoveringScan(secondaries, node, pred, limit)
-		if scan != nil || err != nil {
-			return scan, err
-		}
-	}
-
-	this.resetCountMin()
-
-	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
-		// This makes InterSectionscan disable limit pushdown, don't use index order
-		this.resetOrderLimit()
-		limit = nil
-	}
-	if this.order != nil && this.maxParallelism > 1 {
-		this.resetOrderLimit()
-		limit = nil
-	}
-
-	scans := make([]plan.Operator, 0, len(secondaries))
-	var op plan.Operator
-	for index, entry := range secondaries {
-		if this.order != nil {
-			if !this.useIndexOrder(entry, entry.keys) {
-				this.resetOrderLimit()
-				limit = nil
-			} else {
-				this.maxParallelism = 1
-			}
-		}
-
-		if limit != nil {
-			exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
-			if err != nil {
-				return nil, err
-			}
-
-			if !pred.CoveredBy(node.Alias(), exprs) {
-				this.limit = nil
-				limit = nil
-			}
-		}
-
-		arrayIndex := indexHasArrayIndexKey(index)
-
-		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
-			limit = nil
-			this.limit = nil
-		}
-
-		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
-
-		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
-			// Use DistinctScan to de-dup array index scans, multiple spans
-			op = plan.NewDistinctScan(op)
-		}
-
-		scans = append(scans, op)
-	}
-
-	if len(scans) > 1 {
-		return plan.NewIntersectScan(scans...), nil
-	} else {
-		return scans[0], nil
-	}
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {

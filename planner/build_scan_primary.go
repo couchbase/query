@@ -28,6 +28,21 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	return plan.NewPrimaryScan(primary, keyspace, node, limit), nil
 }
 
+func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	id, limit expression.Expression, hintIndexes, otherIndexes []datastore.Index) (plan.Operator, error) {
+	primary, err := buildPrimaryIndex(keyspace, hintIndexes, otherIndexes)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := expression.Expressions{id}
+	entry := &indexEntry{keys, keys, nil, _EXACT_VALUED_SPANS, true}
+	secondaries := map[datastore.Index]*indexEntry{primary: entry}
+
+	pred := expression.NewIsNotNull(id)
+	return this.buildCoveringScan(secondaries, node, id, pred, limit)
+}
+
 func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []datastore.Index) (
 	primary datastore.PrimaryIndex, err error) {
 	ok := false

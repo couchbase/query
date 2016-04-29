@@ -386,6 +386,7 @@ the first non-whitespace byte.
 func newValueFromBytes(bytes []byte) Value {
 	parsedType := identifyType(bytes)
 
+	// Atomic types
 	switch parsedType {
 	case NUMBER, STRING, BOOLEAN, NULL:
 		var p interface{}
@@ -399,6 +400,7 @@ func newValueFromBytes(bytes []byte) Value {
 		return binaryValue(bytes)
 	}
 
+	// Container types
 	err := json.Validate(bytes)
 	if err != nil {
 		return binaryValue(bytes)
