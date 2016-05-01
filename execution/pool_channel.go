@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-type OperatorPool struct {
+type ChannelPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewOperatorPool(size int) *OperatorPool {
-	rv := &OperatorPool{
+func NewChannelPool(size int) *ChannelPool {
+	rv := &ChannelPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]Operator, 0, size)
+				return make([]*Channel, 0, size)
 			},
 		},
 		size: size,
@@ -31,11 +31,11 @@ func NewOperatorPool(size int) *OperatorPool {
 	return rv
 }
 
-func (this *OperatorPool) Get() []Operator {
-	return this.pool.Get().([]Operator)
+func (this *ChannelPool) Get() []*Channel {
+	return this.pool.Get().([]*Channel)
 }
 
-func (this *OperatorPool) Put(s []Operator) {
+func (this *ChannelPool) Put(s []*Channel) {
 	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}

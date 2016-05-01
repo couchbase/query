@@ -78,21 +78,24 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		delete, deleteInput := this.wrapChild(this.delete)
 		insert, insertInput := this.wrapChild(this.insert)
 
-		children := make([]Operator, 0, 3)
+		children := _MERGE_OPERATOR_POOL.Get()
+		defer _MERGE_OPERATOR_POOL.Put(children)
+		inputs := _MERGE_CHANNEL_POOL.Get()
+		defer _MERGE_CHANNEL_POOL.Put(inputs)
 
 		if update != nil {
-			defer updateInput.Close()
 			children = append(children, update)
+			inputs = append(inputs, updateInput)
 		}
 
 		if delete != nil {
-			defer deleteInput.Close()
 			children = append(children, delete)
+			inputs = append(inputs, deleteInput)
 		}
 
 		if insert != nil {
-			defer insertInput.Close()
 			children = append(children, insert)
+			inputs = append(inputs, insertInput)
 		}
 
 		for _, child := range children {
@@ -122,8 +125,10 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		this.notifyStop()
-		notifyChildren(children...)
+		// Close child input Channels, which will signal children
+		for _, input := range inputs {
+			input.Close()
+		}
 
 		// Wait for all children
 		n := len(children)
@@ -229,3 +234,6 @@ func (this *Merge) wrapChild(op Operator) (Operator, *Channel) {
 	op.SetStop(this)
 	return op, ch
 }
+
+var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
+var _MERGE_CHANNEL_POOL = NewChannelPool(3)

@@ -36,7 +36,7 @@ func (this *PairPool) Get() []Pair {
 }
 
 func (this *PairPool) Put(s []Pair) {
-	if cap(s) != this.size {
+	if cap(s) < this.size || cap(s) > 2*this.size {
 		return
 	}
 

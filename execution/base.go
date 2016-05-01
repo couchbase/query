@@ -209,8 +209,8 @@ func (this *base) readonly() bool {
 
 // Unblock all dependencies.
 func (this *base) notify() {
-	this.notifyParent()
 	this.notifyStop()
+	this.notifyParent()
 }
 
 // Notify parent, if any.
