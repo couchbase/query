@@ -17,6 +17,289 @@ import (
 
 ///////////////////////////////////////////////////
 //
+// ObjectAdd
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_ADD(expr, expr, expr).
+It returns an object containing the source object augmented
+with the new name, attribute pair.
+It does not do key substitution.
+Type ObjectAdd is a struct that implements TernaryFunctionBase.
+*/
+type ObjectAdd struct {
+	TernaryFunctionBase
+}
+
+/*
+The function NewObjectAdd calls NewTernaryFunctionBase to
+create a function named OBJECT_PUT with three expression as
+input.
+*/
+func NewObjectAdd(first, second, third Expression) Function {
+	rv := &ObjectAdd{
+		*NewTernaryFunctionBase("object_add", first, second, third),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type OBJECT.
+*/
+func (this *ObjectAdd) Type() value.Type { return value.OBJECT }
+
+/*
+Calls the Eval method for ternary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.TernaryEval(this, item, context)
+}
+
+/*
+This method takes in an object, a name and a value
+and returns a new object that contains the name /
+attribute pair. If the type of input is missing
+then return a missing value, and if not an object
+return a null value.
+If the key is found, an error is thrown
+*/
+func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) (value.Value, error) {
+
+	// Check for type mismatches
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.OBJECT || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	field := second.Actual().(string)
+
+	// we don't overwrite
+	_, exists := first.Field(field)
+	if exists {
+		return value.NULL_VALUE, nil
+	}
+
+	// SetField will remove if the attribute is missing, but we don't
+	// overwrite anyway, so we might just skip now
+	if third.Type() != value.MISSING {
+		rv := first.CopyForUpdate()
+		rv.SetField(field, third)
+		return rv, nil
+	}
+	return first, nil
+}
+
+/*
+The constructor returns a NewObjectAdd with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectAdd) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectAdd(operands[0], operands[1], operands[2])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectInnerPairs
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_INNERPAIRS(expr).
+It returns an array containing the attribute name and
+value pairs of the object, in N1QL collation order of
+the names. Type ObjectInnerPairs is a struct that implements
+UnaryFunctionBase.
+*/
+type ObjectInnerPairs struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewObjectInnerPairs calls NewUnaryFunctionBase to
+create a function named OBJECT_INNERPAIRS with an expression as
+input.
+*/
+func NewObjectInnerPairs(operand Expression) Function {
+	rv := &ObjectInnerPairs{
+		*NewUnaryFunctionBase("object_innerpairs", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectInnerPairs) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type ARRAY.
+*/
+func (this *ObjectInnerPairs) Type() value.Type { return value.ARRAY }
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+This method takes in an object and returns a map of name
+value pairs. If the type of input is missing then return
+a missing value, and if not an object return a null value.
+Convert it to a valid Go type. Cast it to a map from
+string to interface. Range over this map and save the keys.
+Sort the keys and range over the keys to create name and value
+pairs. Return this object.
+*/
+func (this *ObjectInnerPairs) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := removeMissing(arg)
+	keys := make(sort.StringSlice, 0, len(oa))
+	for key, _ := range oa {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	ra := make([]interface{}, len(keys))
+	for i, k := range keys {
+		ra[i] = map[string]interface{}{"name": k, "value": oa[k]}
+	}
+
+	return value.NewValue(ra), nil
+}
+
+/*
+The constructor returns a NewObjectInnerPairs with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectInnerPairs) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectInnerPairs(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectInnerValues
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_INNERVALUES(expr).
+It returns an array containing the attribute values of
+the object, in N1QL collation order. Type ObjectInnerValue
+is a struct that implements UnaryFunctionBase.
+*/
+type ObjectInnerValues struct {
+	UnaryFunctionBase
+}
+
+/*
+The function NewObjectInnerValues calls NewUnaryFunctionBase to
+create a function named OBJECT_INNERVALUES with an expression as
+input.
+*/
+func NewObjectInnerValues(operand Expression) Function {
+	rv := &ObjectInnerValues{
+		*NewUnaryFunctionBase("object_innervalues", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+It calls the VisitFunction method by passing in the receiver to
+and returns the interface. It is a visitor pattern.
+*/
+func (this *ObjectInnerValues) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+/*
+It returns a value type ARRAY.
+*/
+func (this *ObjectInnerValues) Type() value.Type { return value.ARRAY }
+
+/*
+Calls the Eval method for unary functions and passes in the
+receiver, current item and current context.
+*/
+func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+/*
+This method takes in an object and returns a slice of values
+that contains the attribute names. If the type of input is
+missing then return a missing value, and if not an
+object return a null value. Convert it to a valid Go type.
+Cast it to a map from string to interface. Range over this
+map and retrieve the keys. Sort it and then use it to save
+the corresponding values into a slice of interfaces. Return
+the slice.
+*/
+func (this *ObjectInnerValues) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := removeMissing(arg)
+	keys := make(sort.StringSlice, 0, len(oa))
+	for key, _ := range oa {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	ra := make([]interface{}, len(keys))
+	for i, k := range keys {
+		ra[i] = oa[k]
+	}
+
+	return value.NewValue(ra), nil
+}
+
+/*
+The constructor returns a NewObjectInnerValues with the an operand
+cast to a Function as the FunctionConstructor.
+*/
+func (this *ObjectInnerValues) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectInnerValues(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // ObjectLength
 //
 ///////////////////////////////////////////////////
@@ -145,16 +428,6 @@ func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Valu
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method takes in an object and returns a slice of values
-that contains the attribute names. If the type of input is
-missing then return a missing value, and if not an
-object return a null value. Convert it to a valid Go type.
-Cast it to a map from string to interface. Range over this
-map and retrieve the keys. Sort it and then use it to save
-the corresponding values into a slice of interfaces. Return
-the slice.
-*/
 func (this *ObjectNames) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -282,202 +555,6 @@ func (this *ObjectPairs) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// ObjectValues
-//
-///////////////////////////////////////////////////
-
-/*
-This represents the object function OBJECT_VALUES(expr).
-It returns an array containing the attribute values of
-the object, in N1QL collation order of the corresponding
-names. Type ObjectValues is a struct that implements
-UnaryFunctionBase.
-*/
-type ObjectValues struct {
-	UnaryFunctionBase
-}
-
-/*
-The function NewObjectValues calls NewUnaryFunctionBase to
-create a function named OBJECT_VALUES with an expression as
-input.
-*/
-func NewObjectValues(operand Expression) Function {
-	rv := &ObjectValues{
-		*NewUnaryFunctionBase("object_values", operand),
-	}
-
-	rv.expr = rv
-	return rv
-}
-
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
-func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-/*
-It returns a value type ARRAY.
-*/
-func (this *ObjectValues) Type() value.Type { return value.ARRAY }
-
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
-func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-/*
-This method takes in an object and returns a slice
-that contains the attribute values. If the type of
-input is missing then return a missing value, and
-if not an object return a null value. Convert it to
-a valid Go type. Cast it to a map from string to
-interface. Range over this map and retrieve the keys.
-Sort it and then use it to save the corresponding
-values into a slice of interfaces. Return the slice.
-*/
-func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.OBJECT {
-		return value.NULL_VALUE, nil
-	}
-
-	oa := arg.Actual().(map[string]interface{})
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
-	}
-
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = oa[k]
-	}
-
-	return value.NewValue(ra), nil
-}
-
-/*
-The constructor returns a NewObjectValues with the an operand
-cast to a Function as the FunctionConstructor.
-*/
-func (this *ObjectValues) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectValues(operands[0])
-	}
-}
-
-///////////////////////////////////////////////////
-//
-// ObjectAdd
-//
-///////////////////////////////////////////////////
-
-/*
-This represents the object function OBJECT_ADD(expr, expr, expr).
-It returns an object containing the source object augmented
-with the new name, attribute pair.
-It does not do key substitution.
-Type ObjectAdd is a struct that implements TernaryFunctionBase.
-*/
-type ObjectAdd struct {
-	TernaryFunctionBase
-}
-
-/*
-The function NewObjectAdd calls NewTernaryFunctionBase to
-create a function named OBJECT_PUT with three expression as
-input.
-*/
-func NewObjectAdd(first, second, third Expression) Function {
-	rv := &ObjectAdd{
-		*NewTernaryFunctionBase("object_add", first, second, third),
-	}
-
-	rv.expr = rv
-	return rv
-}
-
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
-func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-/*
-It returns a value type OBJECT.
-*/
-func (this *ObjectAdd) Type() value.Type { return value.OBJECT }
-
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
-func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
-}
-
-/*
-This method takes in an object, a name and a value
-and returns a new object that contains the name /
-attribute pair. If the type of input is missing
-then return a missing value, and if not an object
-return a null value.
-If the key is found, an error is thrown
-*/
-func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) (value.Value, error) {
-
-	// First must be an object, or we're out
-	if first.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.OBJECT {
-		return value.NULL_VALUE, nil
-	}
-
-	// second must be a non empty string
-	if second.Type() != value.STRING || second.Actual().(string) == "" {
-		return first, nil
-	}
-
-	field := second.Actual().(string)
-
-	// we don't overwrite
-	_, exists := first.Field(field)
-	if exists {
-		return value.NULL_VALUE, nil
-	}
-
-	// SetField will remove if the attribute is missing, but we don't
-	// overwrite anyway, so we might just skip now
-	if third.Type() != value.MISSING {
-		rv := first.CopyForUpdate()
-		rv.SetField(field, third)
-		return rv, nil
-	}
-	return first, nil
-}
-
-/*
-The constructor returns a NewObjectAdd with the an operand
-cast to a Function as the FunctionConstructor.
-*/
-func (this *ObjectAdd) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectAdd(operands[0], operands[1], operands[2])
-	}
-}
-
-///////////////////////////////////////////////////
-//
 // ObjectPut
 //
 ///////////////////////////////////////////////////
@@ -542,16 +619,11 @@ this function behaves like OBJECT_REMOVE
 */
 func (this *ObjectPut) Apply(context Context, first, second, third value.Value) (value.Value, error) {
 
-	// First must be an object, or we're out
-	if first.Type() == value.MISSING {
+	// Check for type mismatches
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.OBJECT {
+	} else if first.Type() != value.OBJECT || second.Type() != value.STRING {
 		return value.NULL_VALUE, nil
-	}
-
-	// second must be a non empty string
-	if second.Type() != value.STRING || second.Actual().(string) == "" {
-		return first, nil
 	}
 
 	field := second.Actual().(string)
@@ -629,16 +701,11 @@ If the type of input is missing then return a missing value, and
 if not an object return a null value.
 */
 func (this *ObjectRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
-	// First must be an object, or we're out
-	if first.Type() == value.MISSING {
+	// Check for type mismatches
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.OBJECT {
+	} else if first.Type() != value.OBJECT || second.Type() != value.STRING {
 		return value.NULL_VALUE, nil
-	}
-
-	// second must be a non empty string
-	if second.Type() != value.STRING || second.Actual().(string) == "" {
-		return first, nil
 	}
 
 	field := second.Actual().(string)
@@ -754,28 +821,29 @@ func (this *ObjectUnwrap) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// ObjectInnerValues
+// ObjectValues
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the object function OBJECT_INNERVALUES(expr).
+This represents the object function OBJECT_VALUES(expr).
 It returns an array containing the attribute values of
-the object, in N1QL collation order. Type ObjectInnerValue
-is a struct that implements UnaryFunctionBase.
+the object, in N1QL collation order of the corresponding
+names. Type ObjectValues is a struct that implements
+UnaryFunctionBase.
 */
-type ObjectInnerValues struct {
+type ObjectValues struct {
 	UnaryFunctionBase
 }
 
 /*
-The function NewObjectInnerValues calls NewUnaryFunctionBase to
-create a function named OBJECT_INNERVALUES with an expression as
+The function NewObjectValues calls NewUnaryFunctionBase to
+create a function named OBJECT_VALUES with an expression as
 input.
 */
-func NewObjectInnerValues(operand Expression) Function {
-	rv := &ObjectInnerValues{
-		*NewUnaryFunctionBase("object_innervalues", operand),
+func NewObjectValues(operand Expression) Function {
+	rv := &ObjectValues{
+		*NewUnaryFunctionBase("object_values", operand),
 	}
 
 	rv.expr = rv
@@ -786,41 +854,41 @@ func NewObjectInnerValues(operand Expression) Function {
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *ObjectInnerValues) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 /*
 It returns a value type ARRAY.
 */
-func (this *ObjectInnerValues) Type() value.Type { return value.ARRAY }
+func (this *ObjectValues) Type() value.Type { return value.ARRAY }
 
 /*
 Calls the Eval method for unary functions and passes in the
 receiver, current item and current context.
 */
-func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
-This method takes in an object and returns a slice of values
-that contains the attribute names. If the type of input is
-missing then return a missing value, and if not an
-object return a null value. Convert it to a valid Go type.
-Cast it to a map from string to interface. Range over this
-map and retrieve the keys. Sort it and then use it to save
-the corresponding values into a slice of interfaces. Return
-the slice.
+This method takes in an object and returns a slice
+that contains the attribute values. If the type of
+input is missing then return a missing value, and
+if not an object return a null value. Convert it to
+a valid Go type. Cast it to a map from string to
+interface. Range over this map and retrieve the keys.
+Sort it and then use it to save the corresponding
+values into a slice of interfaces. Return the slice.
 */
-func (this *ObjectInnerValues) Apply(context Context, arg value.Value) (value.Value, error) {
+func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
 
-	oa := removeMissing(arg)
+	oa := arg.Actual().(map[string]interface{})
 	keys := make(sort.StringSlice, 0, len(oa))
 	for key, _ := range oa {
 		keys = append(keys, key)
@@ -836,105 +904,12 @@ func (this *ObjectInnerValues) Apply(context Context, arg value.Value) (value.Va
 }
 
 /*
-The constructor returns a NewObjectInnerValues with the an operand
+The constructor returns a NewObjectValues with the an operand
 cast to a Function as the FunctionConstructor.
 */
-func (this *ObjectInnerValues) Constructor() FunctionConstructor {
+func (this *ObjectValues) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewObjectInnerValues(operands[0])
-	}
-}
-
-///////////////////////////////////////////////////
-//
-// ObjectInnerPairs
-//
-///////////////////////////////////////////////////
-
-/*
-This represents the object function OBJECT_INNERPAIRS(expr).
-It returns an array containing the attribute name and
-value pairs of the object, in N1QL collation order of
-the names. Type ObjectInnerPairs is a struct that implements
-UnaryFunctionBase.
-*/
-type ObjectInnerPairs struct {
-	UnaryFunctionBase
-}
-
-/*
-The function NewObjectInnerPairs calls NewUnaryFunctionBase to
-create a function named OBJECT_INNERPAIRS with an expression as
-input.
-*/
-func NewObjectInnerPairs(operand Expression) Function {
-	rv := &ObjectInnerPairs{
-		*NewUnaryFunctionBase("object_innerpairs", operand),
-	}
-
-	rv.expr = rv
-	return rv
-}
-
-/*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
-*/
-func (this *ObjectInnerPairs) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-/*
-It returns a value type ARRAY.
-*/
-func (this *ObjectInnerPairs) Type() value.Type { return value.ARRAY }
-
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
-func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.UnaryEval(this, item, context)
-}
-
-/*
-This method takes in an object and returns a map of name
-value pairs. If the type of input is missing then return
-a missing value, and if not an object return a null value.
-Convert it to a valid Go type. Cast it to a map from
-string to interface. Range over this map and save the keys.
-Sort the keys and range over the keys to create name and value
-pairs. Return this object.
-*/
-func (this *ObjectInnerPairs) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.OBJECT {
-		return value.NULL_VALUE, nil
-	}
-
-	oa := removeMissing(arg)
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
-	}
-
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = map[string]interface{}{"name": k, "value": oa[k]}
-	}
-
-	return value.NewValue(ra), nil
-}
-
-/*
-The constructor returns a NewObjectInnerPairs with the an operand
-cast to a Function as the FunctionConstructor.
-*/
-func (this *ObjectInnerPairs) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectInnerPairs(operands[0])
+		return NewObjectValues(operands[0])
 	}
 }
 
@@ -953,13 +928,13 @@ func removeMissing(arg value.Value) map[string]interface{} {
 		if !ok {
 			continue
 		}
-		newSlice := []interface{}{}
+		newSlice := make([]interface{}, 0, len(valSlice))
 		for i, subVal := range valSlice {
-			if subVal.(value.Value).Type() != value.MISSING {
+			if value.NewValue(subVal).Type() != value.MISSING {
 				newSlice = append(newSlice, valSlice[i])
 			}
 		}
-		if len(newSlice) > 1 {
+		if len(newSlice) != 1 {
 			oa[key] = newSlice
 		} else {
 			oa[key] = newSlice[0]

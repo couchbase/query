@@ -152,8 +152,10 @@ var _FUNCTIONS = map[string]Function{
 	"inf":     &PosInf{},
 	"nan":     &NaN{},
 	"neginf":  &NegInf{},
+	"neg_inf": &NegInf{},
 	"pi":      &PI{},
 	"posinf":  &PosInf{},
+	"pos_inf": &PosInf{},
 	"power":   &Power{},
 	"rad":     &Radians{},
 	"radians": &Radians{},
@@ -210,12 +212,12 @@ var _FUNCTIONS = map[string]Function{
 	"object_values":       &ObjectValues{},
 
 	// JSON
-	"json_encode": &JSONEncode{},
 	"json_decode": &JSONDecode{},
+	"json_encode": &JSONEncode{},
 
 	// ...backwards compatibility
-	"encode_json":  &JSONEncode{},
 	"decode_json":  &JSONDecode{},
+	"encode_json":  &JSONEncode{},
 	"encoded_size": &EncodedSize{},
 	"poly_length":  &PolyLength{},
 

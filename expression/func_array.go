@@ -609,7 +609,7 @@ func (this *ArrayFlatten) Apply(context Context, first, second value.Value) (val
 	}
 	depth := int(fdepth)
 
-	destArr := make([]interface{}, 0)
+	destArr := make([]interface{}, 0, 4*len(arr))
 	destArr = arrayFlattenInto(arr, destArr, depth)
 	return value.NewValue(destArr), nil
 }
@@ -623,7 +623,7 @@ func arrayFlattenInto(sourceArr, destArr []interface{}, depth int) []interface{}
 	// Copy the elements into the destination array.
 	// Recurse as necessary.
 	for _, elem := range sourceArr {
-		el := elem.(value.Value)
+		el := value.NewValue(elem)
 		if el.Type() == value.ARRAY {
 			subArr := el.Actual().([]interface{})
 			destArr = arrayFlattenInto(subArr, destArr, depth-1)

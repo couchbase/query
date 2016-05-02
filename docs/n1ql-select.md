@@ -1793,7 +1793,13 @@ __LOG(expr)__ - log base 10.
 
 __FLOOR(expr)__ - largest integer not greater than the number.
 
+__NaN()__ - not-a-number; undefined or unrepresentable numeric value.
+
+__NEGINF()__ - Negative infinity.
+
 __PI()__ - PI.
+
+__POSINF()__ - Positive infinity.
 
 __POWER(expr1, expr2)__ - expr1\*\*expr2.
 
@@ -1839,6 +1845,9 @@ array.
 __ARRAY\_IFNULL(expr)__ - return the first non-NULL value in the
 array, or NULL.
 
+__ARRAY\_INSERT(expr, pos, value)__ - new array with _value_ inserted
+at position _pos_.
+
 __ARRAY\_LENGTH(expr)__ - number of elements in the array.
 
 __ARRAY\_MAX(expr)__ - largest non-NULL, non-MISSING array element, in
@@ -1882,6 +1891,10 @@ array, or zero if there are no such values.
 
 ### Object functions
 
+__OBJECT\_ADD(expr, name, value)__ - if the name is not present in the
+object, add the name-value pair and return the resulting object, or
+else return NULL.
+
 __OBJECT\_LENGTH(expr)__ - number of name-value pairs in the object.
 
 __OBJECT\_NAMES(expr)__ - array containing the attribute names of the
@@ -1890,15 +1903,23 @@ object, in N1QL collation order.
 __OBJECT\_PAIRS(expr)__ - array containing the attribute name and
 value pairs of the object, in N1QL collation order of the names.
 
+__OBJECT\_PUT(expr, name, value)__ - object with name-value pair added
+or updated.
+
+__OBJECT\_REMOVE(expr, name, value)__ - object with name-value pair removed.
+
+__OBJECT\_UNWRAP(expr)__ - if the object contains exactly one
+name-value pair, return the pair's value, else NULL.
+
 __OBJECT\_VALUES(expr)__ - array containing the attribute values of
 the object, in N1QL collation order of the corresponding names.
 
 ### JSON functions
 
-__DECODE\_JSON(expr)__ - unmarshals the JSON-encoded string into a
+__JSON\_DECODE(expr)__ - unmarshals the JSON-encoded string into a
 N1QL value; the empty string is MISSING.
 
-__ENCODE\_JSON(expr)__ - marshals the N1QL value into a JSON-encoded
+__JSON\_ENCODE(expr)__ - marshals the N1QL value into a JSON-encoded
 string; MISSING becomes the empty string.
 
 __ENCODED\_SIZE(expr)__ - number of bytes in an uncompressed JSON
@@ -1963,11 +1984,19 @@ expr1. Returns MISSING or NULL if either input is MISSING or NULL.
 
 ### Meta functions
 
-__BASE64(expr)__ - base64-encoding of expr.
+__BASE64\_DECODE(expr)__ - base64 decoding of expr.
+
+__BASE64\_ENCODE(expr), BASE64(expr)__ - base64 encoding of expr.
 
 __META(expr)__ - meta data for the document _expr_.
 
+__MIN\_VERSION__ - minimum N1QL version supported by this server.
+
+__SELF()__ - current top-level element in N1QL pipeline.
+
 __UUID()__ - a version 4 Universally Unique Identifier(UUID).
+
+__VERSION__ - N1QL version of this server.
 
 ### Type checking functions
 
@@ -1977,8 +2006,11 @@ false.
 __IS\_ATOM(expr)__ - true if expr is a boolean, number, or string;
 else MISSING, NULL, or false.
 
+__IS\_BINARY(expr)__ - true if expr is a BINARY; else MISSING, NULL,
+or false.
+
 __IS\_BOOLEAN(expr)__ - true if expr is a boolean; else MISSING, NULL,
-orfalse.
+or false.
 
 __IS\_NUMBER(expr)__ - true if expr is a number; else MISSING, NUMBER,
 or false.
@@ -2689,8 +2721,10 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add IS [ NOT ] KNOWN as a synonym for IS [ NOT ] VALUED
 * 2016-03-26 - WITHIN
     * Simplify syntax of WITHIN by removing _name-expr_
-* 2016-05-02 - Reserved workds
+* 2016-05-02 - Reserved words
     * Update list of reserved words
+* 2016-05-02 - Functions
+    * Update list of functions
 
 ### Open issues
 

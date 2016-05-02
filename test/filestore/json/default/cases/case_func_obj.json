@@ -27,11 +27,7 @@
   {
      "statements":"SELECT OBJECT_ADD({'f1': 1}, MISSING, 2) ",
      "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
+        {}
     ]
   },
   {
@@ -48,9 +44,7 @@
      "statements":"SELECT OBJECT_ADD({'f1': 1}, 2, 2) ",
      "results": [
         {
-            "$1": {
-                "f1": 1
-            }
+            "$1": null
         }
     ]
   },
@@ -233,11 +227,7 @@
   {
      "statements":"SELECT OBJECT_PUT({'f1': 1}, MISSING, 2) ",
      "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
+        {}
     ]
   },
   {
@@ -254,9 +244,7 @@
      "statements":"SELECT OBJECT_PUT({'f1': 1}, 2, 2) ",
      "results": [
         {
-            "$1": {
-                "f1": 1
-            }
+            "$1": null
         }
     ]
   },
@@ -394,7 +382,7 @@
      ]
   },
   {
-     "statements":"select OBJECT_UNWRAP(missing)",
+     "statements":"select OBJECT_UNWRAP(MISSING)",
      "results": [
                {}
      ]
