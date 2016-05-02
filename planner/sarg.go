@@ -201,6 +201,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 
 		rs := r.(plan.Spans)
 		rs = deDupDiscardEmptySpans(rs)
+		// In composite Range Scan, Can we assume If one key Span is EMPTY can whole index span is EMPTY?
 		sargSpans[i] = rs
 
 		if len(rs) == 0 {
@@ -245,20 +246,31 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 }
 
 func deDupDiscardEmptySpans(cspans plan.Spans) plan.Spans {
-	if len(cspans) <= 1 {
+	switch len(cspans) {
+	case 0:
 		return cspans
-	}
-	hash := _STRING_SPAN_POOL.Get()
-	defer _STRING_SPAN_POOL.Put(hash)
-	spans := make(plan.Spans, 0, len(cspans))
-	for _, cspan := range cspans {
-		str := cspan.String()
-		if _, found := hash[str]; !found && !isEmptySpan(cspan) {
-			hash[str] = cspan
-			spans = append(spans, cspan)
+	case 1:
+		if isEmptySpan(cspans[0]) {
+			return _EMPTY_SPANS
 		}
+		return cspans
+	default:
+		hash := _STRING_SPAN_POOL.Get()
+		defer _STRING_SPAN_POOL.Put(hash)
+		spans := make(plan.Spans, 0, len(cspans))
+		for _, cspan := range cspans {
+			str := cspan.String()
+			if _, found := hash[str]; !found && !isEmptySpan(cspan) {
+				hash[str] = cspan
+				spans = append(spans, cspan)
+			}
+		}
+		n := len(spans)
+		if n == 0 {
+			return _EMPTY_SPANS
+		}
+		return spans[0:n]
 	}
-	return spans[0:len(spans)]
 }
 
 const _FULL_SPAN_FANOUT = 8192

@@ -38,11 +38,19 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			if len(s) == 0 {
 				continue
 			}
+			if s[0] == _EMPTY_SPANS[0] {
+				spans = _EMPTY_SPANS
+				return
+			}
 
 			if len(spans) == 0 {
 				spans = s.Copy()
 			} else {
 				spans = constrainSpans(spans, s)
+				if spans[0] == _EMPTY_SPANS[0] {
+					spans = _EMPTY_SPANS
+					return
+				}
 			}
 		}
 
@@ -65,7 +73,7 @@ func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
 			}
 		}
 
-		return spans1
+		return deDupDiscardEmptySpans(spans1)
 	}
 
 	// Generate cross product of inputs
@@ -191,6 +199,9 @@ func constrainEmptySpan(span1, span2 *plan.Span) bool {
 False negatives allowed.
 */
 func isEmptySpan(span *plan.Span) bool {
+	if span == _EMPTY_SPANS[0] {
+		return true
+	}
 	low := span.Range.Low
 	high := span.Range.High
 	n := util.MinInt(len(low), len(high))
@@ -209,5 +220,5 @@ func isEmptySpan(span *plan.Span) bool {
 		return c > 0
 	}
 
-	return false
+	return (len(low) == len(high) && (span.Range.Inclusion&datastore.BOTH) == 0)
 }
