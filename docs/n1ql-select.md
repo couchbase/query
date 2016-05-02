@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-03-26
+* Modified: 2016-05-02
 
 ## Introduction
 
@@ -2120,6 +2120,7 @@ for future use.
 * __BOOLEAN__
 * __BREAK__
 * __BUCKET__
+* __BUILD__
 * __BY__
 * __CALL__
 * __CASE__
@@ -2130,11 +2131,14 @@ for future use.
 * __COMMIT__
 * __CONNECT__
 * __CONTINUE__
+* __CORRELATE__
+* __COVER__
 * __CREATE__
 * __DATABASE__
 * __DATASET__
 * __DATASTORE__
 * __DECLARE__
+* __DECREMENT__
 * __DELETE__
 * __DERIVED__
 * __DESC__
@@ -2153,9 +2157,11 @@ for future use.
 * __EXISTS__
 * __EXPLAIN__
 * __FALSE__
+* __FETCH__
 * __FIRST__
 * __FLATTEN__
 * __FOR__
+* __FORCE__
 * __FROM__
 * __FUNCTION__
 * __GRANT__
@@ -2163,9 +2169,13 @@ for future use.
 * __GSI__
 * __HAVING__
 * __IF__
+* __IGNORE__
+* __ILIKE__
 * __IN__
 * __INCLUDE__
+* __INCREMENT__
 * __INDEX__
+* __INFER__
 * __INLINE__
 * __INNER__
 * __INSERT__
@@ -2176,6 +2186,7 @@ for future use.
 * __KEY__
 * __KEYS__
 * __KEYSPACE__
+* __KNOWN__
 * __LAST__
 * __LEFT__
 * __LET__
@@ -2203,6 +2214,7 @@ for future use.
 * __ORDER__
 * __OUTER__
 * __OVER__
+* __PARSE__
 * __PARTITION__
 * __PASSWORD__
 * __PATH__
@@ -2227,6 +2239,7 @@ for future use.
 * __SCHEMA__
 * __SELECT__
 * __SELF__
+* __SEMI__
 * __SET__
 * __SHOW__
 * __SOME__
@@ -2243,6 +2256,7 @@ for future use.
 * __UNDER__
 * __UNION__
 * __UNIQUE__
+* __UNKNOWN__
 * __UNNEST__
 * __UNSET__
 * __UPDATE__
@@ -2250,9 +2264,11 @@ for future use.
 * __USE__
 * __USER__
 * __USING__
+* __VALIDATE__
 * __VALUE__
 * __VALUED__
 * __VALUES__
+* __VIA__
 * __VIEW__
 * __WHEN__
 * __WHERE__
@@ -2673,6 +2689,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add IS [ NOT ] KNOWN as a synonym for IS [ NOT ] VALUED
 * 2016-03-26 - WITHIN
     * Simplify syntax of WITHIN by removing _name-expr_
+* 2016-05-02 - Reserved workds
+    * Update list of reserved words
 
 ### Open issues
 
