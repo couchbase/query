@@ -84,7 +84,7 @@ const (
 	INVALIDPORT = "When specifying couchbase:// or couchbases://, do not specify the port.\n"
 
 	//HELP H-> Help
-	HELPMSG     = "\n Help information for all shell commands.\n"
+	HELPMSG     = "\nHelp information for all shell commands.\n\n"
 	HALIAS      = "\\ALIAS [ name value ]\n"
 	HUNALIAS    = "\\UNALIAS name ...\n"
 	HCONNECT    = "\\CONNECT url\n"
@@ -92,7 +92,7 @@ const (
 	HCOPYRIGHT  = "\\COPYRIGHT\n"
 	HVERSION    = "\\VERSION\n"
 	HECHO       = "\\ECHO args ...\n"
-	HEXIT       = "\\EXIT \n\\QUIT\n"
+	HEXIT       = "\\QUIT \n\\EXIT\n"
 	HHELP       = "\\HELP [ args ... ]\n"
 	HSET        = "\\SET [ parameter value ]\n"
 	HPUSH       = "\\PUSH [ parameter value ]\n"
