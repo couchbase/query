@@ -47,13 +47,13 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 		}
 		num := 0
 
-		for _, val := range COMMAND_LIST {
+		for _, k := range _SORTED_CMD_LIST {
 			//Since EXIT and QUIT map to the same message, print it just once.
-			if val.Name() == "EXIT" && num == 0 {
+			if COMMAND_LIST[k].Name() == "EXIT" && num == 0 {
 				num = 1
 				continue
 			}
-			err_code, err_str := val.PrintHelp(false)
+			err_code, err_str := COMMAND_LIST[k].PrintHelp(false)
 			if err_code != 0 {
 				return err_code, err_str
 			}

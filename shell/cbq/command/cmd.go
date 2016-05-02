@@ -12,6 +12,7 @@ package command
 import (
 	"io"
 	"math"
+	"sort"
 )
 
 const (
@@ -68,6 +69,19 @@ var (
 	//Value that represents the no-ssl-verify flag
 	SKIPVERIFY = false
 )
+
+/* Value to store sorted list of keys for shell commands */
+var _SORTED_CMD_LIST []string
+
+func init() {
+	_SORTED_CMD_LIST = make([]string, MAX_COMMANDS, MAX_COMMANDS)
+	i := 0
+	for k, _ := range COMMAND_LIST {
+		_SORTED_CMD_LIST[i] = k
+		i++
+	}
+	sort.Strings(_SORTED_CMD_LIST)
+}
 
 /*
 	Define a common writer to output the responses to.
