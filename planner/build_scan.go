@@ -69,6 +69,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		return
 	}
 
+	// for Watson, restrict system keyspaces to primary scans
+	if keyspace.NamespaceId() == "#system" {
+		primary, err = this.buildPrimaryScan(keyspace, node, limit, hintIndexes, otherIndexes)
+		return nil, primary, err
+	}
+
 	pred := this.where
 	if pred != nil {
 		// Handle constant TRUE predicate
