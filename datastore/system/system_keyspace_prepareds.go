@@ -178,8 +178,7 @@ func (pi *preparedsIndex) Drop(requestId string) errors.Error {
 
 func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer close(conn.EntryChannel())
-	// NOP
+	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
 func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
