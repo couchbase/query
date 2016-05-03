@@ -21,7 +21,7 @@ import "fmt"
 
 const (
 	//Usage messages for flags. U-> Usage
-	USERVERFLAG = " URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\tFor example : ./cbq -e http://172.23.107.18:8091\n"
+	USERVERFLAG = " URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\t For example : ./cbq -e=couchbase://172.6.23.2\n\t\t\t       ./cbq -e=http://172.23.107.18:8091\n"
 	UNOENGINE   = " Start shell without connecting to a query service/cluster endpoint. \n\t\t Default : false \n\t\t Possible values : true,false"
 	UQUIET      = " Enable/Disable startup connection message for the shell \n\t\t Default : false \n\t\t Possible values : true,false"
 	UTIMEOUT    = " Query timeout parameter. Units are mandatory. \n\t\tFor example : -timeout \"10ms\". \n\t\tValid units : ns, us, ms, s, m, h"
@@ -109,7 +109,8 @@ const (
 
 	DCONNECT = "Connect to the query service or cluster endpoint URL.\n" +
 		"Default : http://localhost:8091\n" +
-		"\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         " +
+		"\tExample : \n\t        \\CONNECT couchbase://172.6.23.2 ; \n\t        " +
+		"\\CONNECT http://172.6.23.2:8091 ;\n\t        " +
 		"\\CONNECT https://my.secure.node.com:18093 ;\n"
 
 	DCOPYRIGHT = "Print Couchbase copyright information.\n" +
