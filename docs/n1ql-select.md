@@ -1842,6 +1842,10 @@ array, or zero if there are no such values.
 __ARRAY\_DISTINCT(expr)__ - new array with distinct elements of input
 array.
 
+__ARRAY\_FLATTEN(expr, depth)__ - new array with all embedded arrays
+flattened, down to the supplied depth. If depth is negative, flatten
+all descendants.
+
 __ARRAY\_IFNULL(expr)__ - return the first non-NULL value in the
 array, or NULL.
 
