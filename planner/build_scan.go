@@ -70,13 +70,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 
 	// for Watson, restrict system keyspaces to primary scans
-	if keyspace.NamespaceId() == "#system" {
-		primary, err = this.buildPrimaryScan(keyspace, node, limit, hintIndexes, otherIndexes)
-		return nil, primary, err
-	}
+	isSystem := keyspace.NamespaceId() == "#system"
 
 	pred := this.where
-	if pred != nil {
+	if pred != nil && !isSystem {
 		// Handle constant TRUE predicate
 		cpred := pred.Value()
 		if cpred != nil && cpred.Truth() {
@@ -89,14 +86,14 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewFieldName("id", false))
 
 	// Handle covering primary scan
-	if this.cover != nil && pred == nil {
+	if this.cover != nil && pred == nil && !isSystem {
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hintIndexes, otherIndexes)
 		if scan != nil || err != nil {
 			return scan, nil, err
 		}
 	}
 
-	if pred != nil {
+	if pred != nil && !isSystem {
 		// Handle constant FALSE predicate
 		cpred := pred.Value()
 		if cpred != nil && !cpred.Truth() {
