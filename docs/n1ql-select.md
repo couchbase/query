@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-05-02
+* Modified: 2016-05-03
 
 ## Introduction
 
@@ -2729,6 +2729,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Update list of reserved words
 * 2016-05-02 - Functions
     * Update list of functions
+* 2016-05-03 - ARRAY\_FLATTEN()
+    * Add ARRAY\_FLATTEN function
 
 ### Open issues
 
