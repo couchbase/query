@@ -110,6 +110,7 @@ func main() {
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorp(err.Error())
+		logging.Errorf("Shutting down.")
 		os.Exit(1)
 	}
 	datastore_package.SetDatastore(datastore)

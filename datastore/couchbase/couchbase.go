@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +36,16 @@ import (
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
+
+var REQUIRE_CBAUTH bool // Connection to authorization system must succeed.
+func init() {
+	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
+	if err != nil {
+		REQUIRE_CBAUTH = val
+	} else {
+		REQUIRE_CBAUTH = true // default
+	}
+}
 
 const (
 	PRIMARY_INDEX = "#primary"
@@ -218,37 +229,50 @@ func initCbAuth(url string) (*cb.Client, error) {
 	return &client, nil
 }
 
-// NewStore creates a new Couchbase store for the given url.
-func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
+func parseUrl(u string) (host string, username string, password string, err error) {
+	url, err := url.Parse(u)
+	if err != nil {
+		return "", "", "", err
+	}
+	if url.User == nil {
+		return "", "", "", fmt.Errorf("Unusable url %s. No user information.", u)
+	}
+	password, _ = url.User.Password()
+	if password == "" {
+		logging.Warnf("No password found in url %s.", u)
+	}
+	if url.User.Username() == "" {
+		logging.Warnf("No username found in url %s.", u)
+	}
+	return url.Host, url.User.Username(), password, nil
+}
 
+// NewStore creates a new Couchbase store for the given url.
+// In the main server, and error return here will cause the server to shut down.
+func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	var client cb.Client
 	var cbAuthInit bool
+	var err error
 
-	// try and initialize cbauth
-
+	// initialize cbauth
 	c, err := initCbAuth(u)
 	if err != nil {
-		logging.Errorf(" Unable to initialize cbauth. Error %v", err)
-		url, err := url.Parse(u)
+		logging.Errorf("Unable to initialize cbauth. Error %v", err)
+
+		// intialize cb_auth variables manually
+		host, username, password, err := parseUrl(u)
 		if err != nil {
-			return nil, errors.NewCbUrlParseError(err, "url "+u)
-		}
-
-		if url.User != nil {
-			password, _ := url.User.Password()
-			if password == "" {
-				logging.Errorf("No password found in url %s", u)
-			}
-
-			// intialize cb_auth variables manually
-			logging.Infof(" Trying to init cbauth with credentials %s %s", url.Host, url.User.Username())
-			set, err := cbauth.InternalRetryDefaultInit(url.Host, url.User.Username(), password)
+			logging.Warnf("Unable to parse url %s: %v", u, e)
+		} else {
+			logging.Infof("Trying to init cbauth with credentials %s, %s, %s",
+				host, username, password)
+			set, err := cbauth.InternalRetryDefaultInit(host, username, password)
 			if set == false || err != nil {
-				logging.Errorf(" Unable to initialize cbauth variables. Error %v", err)
+				logging.Errorf("Unable to initialize cbauth variables. Error %v", err)
 			} else {
-				c, err = initCbAuth("http://" + url.Host)
+				c, err = initCbAuth("http://" + host)
 				if err != nil {
-					logging.Errorf("Unable to initliaze cbauth.  Error %v", err)
+					logging.Errorf("Unable to initialize cbauth. Error %v", err)
 				} else {
 					client = *c
 					cbAuthInit = true
@@ -260,9 +284,12 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		cbAuthInit = true
 	}
 
-	if cbAuthInit == false {
+	if !cbAuthInit {
+		if REQUIRE_CBAUTH {
+			return nil, errors.NewUnableToInitCbAuthError(err)
+		}
 		// connect without auth
-		logging.Warnf("Unable to intialize cbAuth, access to couchbase buckets may be restricted")
+		logging.Warnf("Unable to initialize cbAuth, access to couchbase buckets may be restricted")
 		cb.HTTPClient = &http.Client{}
 		client, err = cb.Connect(u)
 		if err != nil {

@@ -115,6 +115,11 @@ func NewCbGetRandomEntryError(e error) Error {
 		InternalMsg: "Error getting random entry from keyspace", InternalCaller: CallerN(1)}
 }
 
+func NewUnableToInitCbAuthError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 12018, IKey: "datastore.couchbase.unable_to_init_cbauth_error", ICause: e,
+		InternalMsg: "Unable to initialize authorization system as required", InternalCaller: CallerN(1)}
+}
+
 // Datastore/couchbase/view index error codes
 func NewCbViewCreateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13000, IKey: "datastore.couchbase.view.create_failed", ICause: e,
