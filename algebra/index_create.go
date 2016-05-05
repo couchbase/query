@@ -83,7 +83,8 @@ func (this *CreateIndex) Signature() value.Value {
 Returns nil.
 */
 func (this *CreateIndex) Formalize() error {
-	return nil
+	f := expression.NewKeyspaceFormalizer(this.keyspace.Keyspace(), nil)
+	return this.MapExpressions(f)
 }
 
 /*

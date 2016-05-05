@@ -64,7 +64,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	}
 
-	formalizer := expression.NewFormalizer(node.Alias(), nil)
+	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	primaryKey := expression.Expressions{
 		expression.NewField(
 			expression.NewMeta(expression.NewConstant(node.Alias())),

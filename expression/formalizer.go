@@ -24,21 +24,39 @@ type Formalizer struct {
 	keyspace    string
 	allowed     *value.ScopeValue
 	identifiers *value.ScopeValue
+	mapSelf     bool // Map SELF to keyspace: used in sarging index
+	mapKeyspace bool // Map keyspace to SELF: used in creating index
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	return newFormalizer(keyspace, parent, false, false)
+}
+
+func NewSelfFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	return newFormalizer(keyspace, parent, true, false)
+}
+
+func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	return newFormalizer(keyspace, parent, false, true)
+}
+
+func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv value.Value
 	if parent != nil {
 		pv = parent.allowed
+		mapSelf = mapSelf || parent.mapSelf
+		mapKeyspace = mapKeyspace || parent.mapKeyspace
 	}
 
 	rv := &Formalizer{
 		keyspace:    keyspace,
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
+		mapSelf:     mapSelf,
+		mapKeyspace: mapKeyspace,
 	}
 
-	if keyspace != "" {
+	if !mapKeyspace && keyspace != "" {
 		rv.allowed.SetField(keyspace, keyspace)
 	}
 
@@ -146,29 +164,51 @@ func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
 Formalize Identifier.
 */
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	_, ok := this.allowed.Field(expr.Identifier())
+	identifier := expr.Identifier()
+
+	_, ok := this.allowed.Field(identifier)
 	if ok {
-		this.identifiers.SetField(expr.Identifier(), value.TRUE_VALUE)
+		this.identifiers.SetField(identifier, value.TRUE_VALUE)
 		return expr, nil
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field %v.", expr.Identifier())
+		return nil, fmt.Errorf("Ambiguous reference to field %v.", identifier)
 	}
 
-	return NewField(
-			NewIdentifier(this.keyspace),
-			NewFieldName(expr.Identifier(), expr.CaseInsensitive())),
-		nil
+	if this.mapKeyspace {
+		if identifier == this.keyspace {
+			return SELF, nil
+		} else {
+			return expr, nil
+		}
+	} else {
+		return NewField(NewIdentifier(this.keyspace),
+				NewFieldName(identifier, expr.CaseInsensitive())),
+			nil
+	}
+}
+
+/*
+Formalize SELF functions defined on indexes.
+*/
+func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
+	if this.mapSelf {
+		return NewIdentifier(this.keyspace), nil
+	} else {
+		return expr, nil
+	}
 }
 
 /*
 Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
-	meta, ok := expr.(*Meta)
-	if ok && len(meta.Operands()) == 0 && this.keyspace != "" {
-		return NewMeta(NewIdentifier(this.keyspace)), nil
+	if !this.mapKeyspace {
+		meta, ok := expr.(*Meta)
+		if ok && len(meta.Operands()) == 0 && this.keyspace != "" {
+			return NewMeta(NewIdentifier(this.keyspace)), nil
+		}
 	}
 
 	return expr, expr.MapChildren(this.mapper)
@@ -224,13 +264,15 @@ func (this *Formalizer) Copy() *Formalizer {
 	f := NewFormalizer(this.keyspace, nil)
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
 	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
+	f.mapSelf = this.mapSelf
+	f.mapKeyspace = this.mapKeyspace
 	return f
 }
 
 func (this *Formalizer) SetKeyspace(keyspace string) {
 	this.keyspace = keyspace
 
-	if keyspace != "" {
+	if !this.mapKeyspace && keyspace != "" {
 		this.allowed.SetField(keyspace, keyspace)
 	}
 }

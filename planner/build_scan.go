@@ -107,7 +107,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return
 		}
 
-		formalizer := expression.NewFormalizer(node.Alias(), nil)
+		formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 		primaryKey := expression.Expressions{id}
 		sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 		if er != nil {

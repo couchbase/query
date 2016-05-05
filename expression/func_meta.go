@@ -234,7 +234,7 @@ func (this *Self) Evaluate(item value.Value, context Context) (value.Value, erro
 }
 
 func (this *Self) Indexable() bool {
-	return false
+	return true
 }
 
 func (this *Self) CoveredBy(keyspace string, exprs Expressions) bool {
