@@ -127,10 +127,6 @@ func (this *Like) Regexp() *regexp.Regexp {
 
 /*
 This method sets the regexp field in the Like struct.
-It checks if its value is a String,
-and if not returns. Compile the string and set the regular
-expression field in the struct for the receiver to this
-compiled value.
 */
 func (this *Like) precompile() {
 	sv := this.Second().Value()
@@ -156,6 +152,13 @@ boundaries.
 func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 	s = regexp.QuoteMeta(s)
 	repl := regexp.MustCompile(`\\_|\\%|_|%`)
+	s = repl.ReplaceAllStringFunc(s, replacer)
+
+	part, err = regexp.Compile(s)
+	if err != nil {
+		return
+	}
+
 	if s[0] != '%' {
 		s = "^" + s
 	}
@@ -163,13 +166,8 @@ func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 	if l > 0 && s[l-1] != '%' {
 		s = s + "$"
 	}
-	s = repl.ReplaceAllStringFunc(s, replacer)
 
 	re, err = regexp.Compile(s)
-	if err != nil {
-		return
-	}
-
 	return
 }
 
