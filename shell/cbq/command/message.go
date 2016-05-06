@@ -21,7 +21,7 @@ import "fmt"
 
 const (
 	//Usage messages for flags. U-> Usage
-	USERVERFLAG = " URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\t For example : ./cbq -e=couchbase://172.6.23.2\n\t\t\t       ./cbq -e=http://172.23.107.18:8091\n"
+	USERVERFLAG = " URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\t\t For example : ./cbq -e couchbase://172.6.23.2\n\t\t\t       ./cbq -e http://172.23.107.18:8091\n"
 	UNOENGINE   = " Start shell without connecting to a query service/cluster endpoint. \n\t\t Default : false \n\t\t Possible values : true,false"
 	UQUIET      = " Enable/Disable startup connection message for the shell \n\t\t Default : false \n\t\t Possible values : true,false"
 	UTIMEOUT    = " Query timeout parameter. Units are mandatory. \n\t\tFor example : -timeout \"10ms\". \n\t\tValid units : ns, us, ms, s, m, h"
@@ -63,7 +63,7 @@ const (
 		"ANY KIND,\neither express or implied. See the License for the specific " +
 		"language governing permissions\nand limitations under the License.\n"
 
-	VERSIONMSG       = " SHELL VERSION : "
+	VERSIONMSG       = " SHELL VERSION "
 	SERVERVERSIONMSG = "\n Use N1QL queries select version(); or select min_version(); to display server version.\n"
 
 	//SET
