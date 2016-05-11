@@ -12,6 +12,7 @@ package couchbase
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -135,7 +137,7 @@ func (view *viewIndexer) CreatePrimaryIndex(requestId, name string, with value.V
 	// if the name matches any of the unusable indexes, return an error
 	for _, iname := range view.nonUsableIndexes {
 		if name == iname {
-			return nil, errors.NewCbViewExistsError(nil, "Non usuable index "+name)
+			return nil, errors.NewCbViewExistsError(nil, "Non usable index "+name)
 		}
 	}
 
@@ -169,7 +171,7 @@ func (view *viewIndexer) CreateIndex(requestId, name string, seekKey, rangeKey e
 	// if the name matches any of the unusable indexes, return an error
 	for _, iname := range view.nonUsableIndexes {
 		if name == iname {
-			return nil, errors.NewCbViewExistsError(nil, "Non usuable index "+name)
+			return nil, errors.NewCbViewExistsError(nil, "Non usable index "+name)
 		}
 	}
 
@@ -238,39 +240,39 @@ func (view *viewIndexer) indexesUpdated(a, b map[string]datastore.Index) bool {
 
 func (view *viewIndexer) loadViewIndexes() errors.Error {
 
-	// recreate indexes from ddocs
-	indexes := make(map[string]datastore.Index)
-	primary := make(map[string]datastore.PrimaryIndex)
-
-	defer func() {
-
-		// only if the indexes have changed then update
-		if view.indexesUpdated(view.indexes, indexes) {
-			logging.Infof("Indexes updated ")
-
-			view.Lock()
-			view.indexes = indexes
-			view.primary = primary
-			view.Unlock()
-		}
-	}()
-
-	indexList, err := loadViewIndexes(view)
+	indexList, nonUsableIndexes, err := loadViewIndexes(view)
 	if err != nil {
 		return errors.NewCbLoadIndexesError(err, "Keyspace "+view.KeyspaceId())
 	}
 
-	if len(indexList) == 0 {
-		return nil
-	}
+	// recreate indexes from ddocs
+	indexes := make(map[string]datastore.Index, len(indexList))
+	primary := make(map[string]datastore.PrimaryIndex, len(indexList))
 
 	for _, index := range indexList {
-		name := (*index).Name()
-		indexes[name] = *index
-		switch (*index).(type) {
+		name := index.Name()
+		indexes[name] = index
+		switch index.(type) {
 		case *primaryIndex:
-			primary[name] = (*index).(datastore.PrimaryIndex)
+			primary[name] = index.(datastore.PrimaryIndex)
 		}
+	}
+
+	sort.Strings(nonUsableIndexes)
+	if !util.SortedStringsEqual(view.nonUsableIndexes, nonUsableIndexes) {
+		view.Lock()
+		view.nonUsableIndexes = nonUsableIndexes
+		view.Unlock()
+	}
+
+	// only if the indexes have changed then update
+	if view.indexesUpdated(view.indexes, indexes) {
+		logging.Infof("View indexes updated.")
+
+		view.Lock()
+		view.indexes = indexes
+		view.primary = primary
+		view.Unlock()
 	}
 
 	return nil

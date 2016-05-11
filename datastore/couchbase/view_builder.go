@@ -144,16 +144,16 @@ func getMapFunction(v *viewIndexer, ddName string) (string, error) {
 
 }
 
-func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
+func loadViewIndexes(v *viewIndexer) (indexes []datastore.Index, nonUsableIndexes []string, err error) {
 
 	b := v.keyspace
 	rows, err := b.cbbucket.GetDDocsWithRetry()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	inames := make([]string, 0, len(rows.Rows))
-	nonUsableIndexes := make([]string, 0)
+	nonUsableIndexes = make([]string, 0, len(rows.Rows))
 
 	for _, row := range rows.Rows {
 		cdoc := row.DDoc
@@ -183,12 +183,12 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 
 	}
 
-	indexes := make([]*datastore.Index, 0, len(inames))
+	indexes = make([]datastore.Index, 0, len(inames))
 	for _, iname := range inames {
 		ddname := "ddl_" + iname
 		jdoc, err := getDesignDoc(b, ddname)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		jview, ok := jdoc.Views[iname]
 		if !ok {
@@ -270,16 +270,10 @@ func loadViewIndexes(v *viewIndexer) ([]*datastore.Index, error) {
 			}
 		}
 
-		indexes = append(indexes, &index)
-
-	}
-	v.nonUsableIndexes = nonUsableIndexes
-
-	if len(indexes) == 0 {
-		return nil, nil
+		indexes = append(indexes, index)
 	}
 
-	return indexes, nil
+	return indexes, nonUsableIndexes, nil
 }
 
 func newViewPrimaryIndex(v *viewIndexer, name string) (*primaryIndex, error) {
