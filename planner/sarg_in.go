@@ -58,8 +58,13 @@ func newSargIn(pred *expression.In) *sargIn {
 
 			span := &plan.Span{}
 			span.Range.Low = expression.Expressions{expression.NewConstant(val)}
-			span.Range.High = span.Range.Low
-			span.Range.Inclusion = datastore.BOTH
+			if rv.MissingHigh() {
+				span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
+				span.Range.Inclusion = datastore.LOW
+			} else {
+				span.Range.High = span.Range.Low
+				span.Range.Inclusion = datastore.BOTH
+			}
 			span.Exact = true
 			spans = append(spans, span)
 		}
