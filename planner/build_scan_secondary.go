@@ -231,25 +231,29 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	// If it makes DistinctScan don't use index order
 	if len(entry.spans) > 1 {
 		return false
-	} else {
-		for _, sk := range entry.sargKeys {
+	}
+
+	if len(keys) < len(this.order.Terms()) {
+		return false
+	}
+
+	for i, orderTerm := range this.order.Terms() {
+		if orderTerm.Descending() {
+			return false
+		}
+
+		if !orderTerm.Expression().EquivalentTo(keys[i]) {
+			return false
+		}
+
+		if i < len(entry.sargKeys) {
+			sk := entry.sargKeys[i]
 			if isArray, _ := sk.IsArrayIndexKey(); isArray {
 				return false
 			}
 		}
 	}
 
-	if len(keys) < len(this.order.Terms()) {
-		return false
-	}
-	for i, orderterm := range this.order.Terms() {
-		if orderterm.Descending() {
-			return false
-		}
-		if !orderterm.Expression().EquivalentTo(keys[i]) {
-			return false
-		}
-	}
 	return true
 }
 
