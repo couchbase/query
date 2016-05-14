@@ -27,6 +27,7 @@ func newSargOr(pred *expression.Or) *sargOr {
 
 		spans := make(plan.Spans, 0, len(pred.Operands()))
 		emptySpan := false
+		fullSpans := false
 		for _, child := range pred.Operands() {
 			cspans, err := sargFor(child, expr2, rv.MissingHigh())
 			if err != nil {
@@ -46,16 +47,25 @@ func newSargOr(pred *expression.Or) *sargOr {
 				return _EXACT_FULL_SPANS, nil
 			}
 
-			if cspans[0] == _FULL_SPANS[0] || len(spans)+len(cspans) > _FULL_SPAN_FANOUT {
+			if len(spans)+len(cspans) > _FULL_SPAN_FANOUT {
 				return _FULL_SPANS, nil
+			}
+
+			if cspans[0] == _FULL_SPANS[0] {
+				fullSpans = true
 			}
 
 			spans = append(spans, cspans...)
 		}
 
+		if fullSpans {
+			return _FULL_SPANS, nil
+		}
+
 		if emptySpan && len(spans) == 0 {
 			return _EMPTY_SPANS, nil
 		}
+
 		return deDupDiscardEmptySpans(spans), nil
 	}
 

@@ -27,6 +27,7 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			return _SELF_SPANS, nil
 		}
 
+		exactSpans := true
 		var s plan.Spans
 		for _, op := range pred.Operands() {
 
@@ -36,8 +37,10 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			}
 
 			if len(s) == 0 {
+				exactSpans = false
 				continue
 			}
+
 			if s[0] == _EMPTY_SPANS[0] {
 				spans = _EMPTY_SPANS
 				return
@@ -51,6 +54,12 @@ func newSargAnd(pred *expression.And) *sargAnd {
 					spans = _EMPTY_SPANS
 					return
 				}
+			}
+		}
+
+		if !exactSpans {
+			for _, span := range spans {
+				span.Exact = false
 			}
 		}
 

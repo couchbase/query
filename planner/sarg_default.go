@@ -57,17 +57,9 @@ type sargDefault struct {
 func newSargDefault(pred expression.Expression) *sargDefault {
 	var spans plan.Spans
 	if pred.PropagatesNull() {
-		if _, ok := pred.(*expression.Not); ok {
-			spans = _VALUED_SPANS
-		} else {
-			spans = _EXACT_VALUED_SPANS
-		}
+		spans = _VALUED_SPANS
 	} else if pred.PropagatesMissing() {
-		if _, ok := pred.(*expression.Not); ok {
-			spans = _FULL_SPANS
-		} else {
-			spans = _EXACT_FULL_SPANS
-		}
+		spans = _FULL_SPANS
 	}
 
 	rv := &sargDefault{}
