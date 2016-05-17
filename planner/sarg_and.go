@@ -37,7 +37,10 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			}
 
 			if len(s) == 0 {
-				exactSpans = false
+				if op.DependsOn(expr2) {
+					exactSpans = false
+				}
+
 				continue
 			}
 
