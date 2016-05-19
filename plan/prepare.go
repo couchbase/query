@@ -46,9 +46,14 @@ func (this *Prepare) MarshalJSON() ([]byte, error) {
 
 func (this *Prepare) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string      `json:"#operator"`
-		Prepared value.Value `json:"prepared"`
+		_        string          `json:"#operator"`
+		Prepared json.RawMessage `json:"prepared"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
-	return err
+	if err != nil {
+		return err
+	}
+
+	this.prepared = value.NewValue(_unmarshalled.Prepared)
+	return nil
 }

@@ -123,17 +123,17 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Index        string                 `json:"index"`
-		IndexId      string                 `json:"index_id"`
-		Namespace    string                 `json:"namespace"`
-		Keyspace     string                 `json:"keyspace"`
-		Using        datastore.IndexType    `json:"using"`
-		Spans        Spans                  `json:"spans"`
-		Distinct     bool                   `json:"distinct"`
-		Limit        string                 `json:"limit"`
-		Covers       []string               `json:"covers"`
-		FilterCovers map[string]value.Value `json:"filter_covers"`
+		_            string                     `json:"#operator"`
+		Index        string                     `json:"index"`
+		IndexId      string                     `json:"index_id"`
+		Namespace    string                     `json:"namespace"`
+		Keyspace     string                     `json:"keyspace"`
+		Using        datastore.IndexType        `json:"using"`
+		Spans        Spans                      `json:"spans"`
+		Distinct     bool                       `json:"distinct"`
+		Limit        string                     `json:"limit"`
+		Covers       []string                   `json:"covers"`
+		FilterCovers map[string]json.RawMessage `json:"filter_covers"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -160,7 +160,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	if _unmarshalled.Covers != nil {
+	if len(_unmarshalled.Covers) > 0 {
 		this.covers = make(expression.Covers, len(_unmarshalled.Covers))
 		for i, c := range _unmarshalled.Covers {
 			expr, err := parser.Parse(c)
@@ -172,7 +172,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	if _unmarshalled.FilterCovers != nil {
+	if len(_unmarshalled.FilterCovers) > 0 {
 		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.FilterCovers))
 		for k, v := range _unmarshalled.FilterCovers {
 			expr, err := parser.Parse(k)
@@ -181,7 +181,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 			}
 
 			c := expression.NewCover(expr)
-			this.filterCovers[c] = v
+			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
 
