@@ -110,6 +110,10 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 	this.encoded_plan = encoded_plan
 }
 
+func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
+	return this.encoded_plan != encoded_plan
+}
+
 type preparedCache struct {
 	sync.RWMutex
 	prepareds map[string]*CacheEntry
@@ -151,15 +155,32 @@ func (this *preparedCache) get(name value.Value, track bool) *Prepared {
 	return nil
 }
 
-func (this *preparedCache) add(prepared *Prepared) {
+func (this *preparedCache) add(prepared *Prepared, process func(*CacheEntry) bool) {
 	this.Lock()
+	defer this.Unlock()
+
+	ce, ok := this.prepareds[prepared.Name()]
+
+	// build one if missing
+	if !ok {
+		ce = &CacheEntry{
+			Prepared: prepared,
+		}
+	}
+	if process != nil {
+		if cont := process(ce); !cont {
+			return
+		}
+	}
+
+	// amend existing one if cleared to proceed
+	if ok {
+		ce.Prepared = prepared
+	}
 	if len(this.prepareds) > _MAX_SIZE {
 		this.prepareds = make(map[string]*CacheEntry, _CACHE_SIZE)
 	}
-	this.prepareds[prepared.Name()] = &CacheEntry{
-		Prepared: prepared,
-	}
-	this.Unlock()
+	this.prepareds[prepared.Name()] = ce
 }
 
 func (this *preparedCache) peek(prepared *Prepared) bool {
@@ -274,7 +295,7 @@ func AddPrepared(prepared *Prepared) errors.Error {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", prepared.Name()))
 	}
-	cache.add(prepared)
+	cache.add(prepared, nil)
 	return nil
 }
 
@@ -307,7 +328,7 @@ func doGetPrepared(prepared_stmt value.Value, track bool) (*Prepared, errors.Err
 		if err != nil {
 			return nil, errors.NewUnrecognizedPreparedError(err)
 		}
-		return unmarshalPrepared(prepared_bytes, "")
+		return unmarshalPrepared(prepared_bytes)
 	default:
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("Invalid prepared stmt %v", prepared_stmt))
 	}
@@ -338,7 +359,9 @@ func RecordPreparedMetrics(prepared *Prepared, requestTime, serviceTime time.Dur
 	}
 }
 
-func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
+func DecodePrepared(prepared_name string, prepared_stmt string, track bool) (*Prepared, errors.Error) {
+	var cacheErr errors.Error = nil
+
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
@@ -353,24 +376,60 @@ func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	prepared, err := unmarshalPrepared(prepared_bytes, prepared_stmt)
+	prepared, err := unmarshalPrepared(prepared_bytes)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
-	return prepared, nil
+
+	prepared.SetEncodedPlan(prepared_stmt)
+
+	// MB-19509 we now have to check that the encoded plan matches
+	// the prepared statement named in the rest API
+	if prepared.Name() != "" && prepared_name != "" &&
+		prepared_name != prepared.Name() {
+		return nil, errors.NewEncodingNameMismatchError(prepared_name)
+	}
+
+	if prepared.Name() == "" {
+		return prepared, nil
+	}
+	cache.add(prepared,
+		func(oldEntry *CacheEntry) bool {
+
+			// MB-19509: if the entry exists already, the new plan must
+			// also be for the same statement as we have in the cache
+			if oldEntry.Prepared != prepared &&
+				oldEntry.Prepared.text != prepared.text {
+				cacheErr = errors.NewPreparedEncodingMismatchError(prepared_name)
+				return false
+			}
+
+			// track the entry if required, whether we amend the plan or
+			// not, as at the end of the statement we will record the
+			// metrics anyway
+			if track {
+				atomic.AddInt32(&oldEntry.Uses, 1)
+				oldEntry.LastUse = time.Now()
+			}
+
+			// MB-19659: this is where we decide plan conflict.
+			// the current behaviour is to always use the new plan
+			// and amend the cache
+			// This is still to be finalized
+			return true
+		})
+	if cacheErr == nil {
+		return prepared, nil
+	} else {
+		return nil, cacheErr
+	}
 }
 
-func unmarshalPrepared(bytes []byte, prepared_stmt string) (*Prepared, errors.Error) {
+func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
 	prepared := &Prepared{}
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
-	}
-	if prepared_stmt != "" {
-		prepared.SetEncodedPlan(prepared_stmt)
-	}
-	if prepared.Name() != "" {
-		cache.add(prepared)
 	}
 	return prepared, nil
 }

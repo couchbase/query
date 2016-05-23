@@ -73,22 +73,38 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	var prepared *plan.Prepared
 
 	if err == nil {
-		prepared, err = getPrepared(httpArgs)
-		plan, plan_err := getEncodedPlan(httpArgs)
-		if err != nil && err.Code() == errors.NO_SUCH_PREPARED {
+		var decoded_plan *plan.Prepared
+		var prepared_name string
+
+		prepared_name, prepared, err = getPrepared(httpArgs)
+		encoded_plan, plan_err := getEncodedPlan(httpArgs)
+
+		// MB-18841 (encoded_plan processing affects latency)
+		// MB-19509 (encoded_plan may corrupt cache)
+		// MB-19659 (spurious 4080 on multi node reprepare)
+		// If an encoded_plan has been supplied, only decode it
+		// when the prepared statement can't be found or the plan
+		// is different.
+		// DecodePrepared() will make sure that the plan is only
+		// updated if it matches the REST API encoded_plan
+		// requirements.
+		if encoded_plan != "" && plan_err == nil &&
+			((err != nil && err.Code() == errors.NO_SUCH_PREPARED) ||
+				(err == nil && prepared != nil &&
+					prepared.MismatchingEncodedPlan(encoded_plan))) {
+
+			// Monitoring API: we only need to track the prepared
+			// statement if we couldn't do it in getPrepared()
+			decoded_plan, plan_err = plan.DecodePrepared(prepared_name, encoded_plan, (prepared == nil))
 			if plan_err != nil {
 				err = plan_err
-			}
-			if plan_err == nil && plan != nil {
-				prepared = plan
+			} else if decoded_plan != nil {
+				prepared = decoded_plan
 				err = nil
 			}
 		}
 		if err == nil && plan_err != nil {
 			err = plan_err
-		}
-		if prepared != nil && plan != nil && prepared.EncodedPlan() != plan.EncodedPlan() {
-			err = errors.NewPreparedEncodingMismatchError(prepared.Name())
 		}
 	}
 
@@ -278,22 +294,19 @@ func isValidParameter(a string) bool {
 	return false
 }
 
-func getPrepared(a httpRequestArgs) (*plan.Prepared, errors.Error) {
+func getPrepared(a httpRequestArgs) (string, *plan.Prepared, errors.Error) {
 	prepared_field, err := a.getValue(PREPARED)
 	if err != nil || prepared_field == nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	// Monitoring API: track prepared statement access
-	return plan.TrackPrepared(prepared_field)
+	prepared, err := plan.TrackPrepared(prepared_field)
+	return prepared_field.Actual().(string), prepared, err
 }
 
-func getEncodedPlan(a httpRequestArgs) (*plan.Prepared, errors.Error) {
-	prepared_field, err := a.getString(ENCODED_PLAN, "")
-	if err != nil || prepared_field == "" {
-		return nil, err
-	}
-	return plan.DecodePrepared(prepared_field)
+func getEncodedPlan(a httpRequestArgs) (string, errors.Error) {
+	return a.getString(ENCODED_PLAN, "")
 }
 
 func getCompression(a httpRequestArgs) (Compression, errors.Error) {
