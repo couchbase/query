@@ -77,13 +77,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			return false
 		}
 
-		if result.As() == "" {
-			return this.sendItem(value.NewAnnotatedValue(v))
-		}
-
 		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
-		sv.SetField(result.As(), v)
+		if result.As() != "" {
+			sv.SetField(result.As(), v)
+		}
 		av := value.NewAnnotatedValue(sv)
+		av.SetAnnotations(item)
 		av.SetAttachment("projection", v)
 		return this.sendItem(av)
 	} else {
