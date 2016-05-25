@@ -325,6 +325,7 @@ const (
 	_TIMEOUT         = "timeout"
 	_CMPTHRESHOLD    = "completed-threshold"
 	_CMPLIMIT        = "completed-limit"
+	_PRETTY          = "pretty"
 )
 
 type checker func(interface{}) bool
@@ -368,6 +369,7 @@ var _CHECKERS = map[string]checker{
 	_TIMEOUT:         checkNumber,
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
+	_PRETTY:          checkBool,
 }
 
 type setter func(*server.Server, interface{})
@@ -429,6 +431,10 @@ var _SETTERS = map[string]setter{
 		value, _ := o.(float64)
 		accounting.RequestsSetLimit(int(value))
 	},
+	_PRETTY: func(s *server.Server, o interface{}) {
+		value, _ := o.(bool)
+		s.SetPretty(value)
+	},
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -486,6 +492,7 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_LOGLEVEL] = srvr.LogLevel()
 	settings[_CMPTHRESHOLD] = accounting.RequestsThreshold()
 	settings[_CMPLIMIT] = accounting.RequestsLimit()
+	settings[_PRETTY] = srvr.Pretty()
 	return settings
 }
 

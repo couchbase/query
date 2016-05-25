@@ -189,7 +189,7 @@ func Run(mockServer *MockServer, q, namespace string) ([]interface{}, []errors.E
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: datastore.SCAN_PLUS}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, value.FALSE, metrics, value.TRUE, consistency, "", nil)
+	base := server.NewBaseRequest(q, nil, nil, nil, namespace, 0, value.FALSE, metrics, value.TRUE, value.TRUE, consistency, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
@@ -258,7 +258,7 @@ func Start(site, pool, namespace string) *MockServer {
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, namespace,
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
+		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

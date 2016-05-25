@@ -57,6 +57,7 @@ type Request interface {
 	Readonly() value.Tristate
 	Metrics() value.Tristate
 	Signature() value.Tristate
+	Pretty() value.Tristate
 	ScanConsistency() datastore.ScanConsistency
 	ScanVectorSource() timestamp.ScanVectorSource
 	RequestTime() time.Time
@@ -147,6 +148,7 @@ type BaseRequest struct {
 	readonly       value.Tristate
 	signature      value.Tristate
 	metrics        value.Tristate
+	pretty         value.Tristate
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
 	phaseTimes     map[string]time.Duration
@@ -195,7 +197,7 @@ func newClientContextIDImpl(id string) *clientContextIDImpl {
 }
 
 func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[string]value.Value, positionalArgs value.Values,
-	namespace string, maxParallelism int, readonly, metrics, signature value.Tristate, consistency ScanConfiguration,
+	namespace string, maxParallelism int, readonly, metrics, signature, pretty value.Tristate, consistency ScanConfiguration,
 	client_id string, creds datastore.Credentials) *BaseRequest {
 	rv := &BaseRequest{
 		statement:      statement,
@@ -207,6 +209,7 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		readonly:       readonly,
 		signature:      signature,
 		metrics:        metrics,
+		pretty:         pretty,
 		consistency:    consistency,
 		credentials:    creds,
 		requestTime:    time.Now(),
@@ -291,6 +294,10 @@ func (this *BaseRequest) Signature() value.Tristate {
 
 func (this *BaseRequest) Metrics() value.Tristate {
 	return this.metrics
+}
+
+func (this *BaseRequest) Pretty() value.Tristate {
+	return this.pretty
 }
 
 func (this *BaseRequest) ScanConsistency() datastore.ScanConsistency {

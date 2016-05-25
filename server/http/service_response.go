@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +25,15 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
+)
+
+const (
+	PRETTY_RESULT_PREFIX string = "        "
+	PRETTY_RESULT_INDENT string = "    "
+	PRETTY_PREFIX        string = "    "
+	PRETTY_INDENT        string = "    "
+	NO_PRETTY_PREFIX     string = ""
+	NO_PRETTY_INDENT     string = ""
 )
 
 func (this *httpRequest) Output() execution.Output {
@@ -91,13 +101,14 @@ func (this *httpRequest) setHttpCode(httpRespCode int) {
 func (this *httpRequest) Failed(srvr *server.Server) {
 	defer this.stopAndClose(server.FATAL)
 
+	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
-	this.writeRequestID()
-	this.writeClientContextID()
-	this.writeErrors()
-	this.writeWarnings()
-	this.writeState("")
-	this.writeMetrics(srvr.Metrics())
+	this.writeRequestID(prefix)
+	this.writeClientContextID(prefix)
+	this.writeErrors(prefix, indent)
+	this.writeWarnings(prefix, indent)
+	this.writeState("", prefix)
+	this.writeMetrics(srvr.Metrics(), prefix, indent)
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
 }
@@ -105,12 +116,14 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
 	this.NotifyStop(stopNotify)
 
+	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
+
 	this.setHttpCode(http.StatusOK)
-	this.writePrefix(srvr, signature)
-	stopped := this.writeResults()
+	this.writePrefix(srvr, signature, prefix, indent)
+	stopped := this.writeResults(srvr.Pretty())
 
 	state := this.State()
-	this.writeSuffix(srvr.Metrics(), state)
+	this.writeSuffix(srvr.Metrics(), state, prefix, indent)
 	this.writer.noMoreData()
 	if stopped {
 		this.Close()
@@ -129,40 +142,50 @@ func (this *httpRequest) stopAndClose(state server.State) {
 	this.Close()
 }
 
-func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value) bool {
+func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value, prefix, indent string) bool {
 	return this.writeString("{\n") &&
-		this.writeRequestID() &&
-		this.writeClientContextID() &&
-		this.writeSignature(srvr.Signature(), signature) &&
-		this.writeString(",\n    \"results\": [")
+		this.writeRequestID(prefix) &&
+		this.writeClientContextID(prefix) &&
+		this.writeSignature(srvr.Signature(), signature, prefix, indent) &&
+		this.writeString(fmt.Sprintf(",\n%s\"results\": [", prefix))
 }
 
-func (this *httpRequest) writeRequestID() bool {
-	return this.writeString(fmt.Sprintf("    \"requestID\": \"%s\"", this.Id().String()))
+func (this *httpRequest) writeRequestID(prefix string) bool {
+	return this.writeString(fmt.Sprintf("%s\"requestID\": \"%s\"", prefix, this.Id().String()))
 }
 
-func (this *httpRequest) writeClientContextID() bool {
+func (this *httpRequest) writeClientContextID(prefix string) bool {
 	if !this.ClientID().IsValid() {
 		return true
 	}
-	return this.writeString(fmt.Sprintf(",\n    \"clientContextID\": \"%s\"", this.ClientID().String()))
+	return this.writeString(fmt.Sprintf(",\n%s\"clientContextID\": \"%s\"", prefix, this.ClientID().String()))
 }
 
-func (this *httpRequest) writeSignature(server_flag bool, signature value.Value) bool {
+func (this *httpRequest) writeSignature(server_flag bool, signature value.Value, prefix, indent string) bool {
 	s := this.Signature()
-	if s == value.FALSE ||
-		(s == value.NONE && !server_flag) {
+	if s == value.FALSE || (s == value.NONE && !server_flag) {
 		return true
 	}
-	return this.writeString(",\n    \"signature\": ") &&
-		this.writeValue(signature)
+	return this.writeString(fmt.Sprintf(",\n%s\"signature\": ", prefix)) && this.writeValue(signature, prefix, indent)
+}
+
+func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {
+	p := this.Pretty()
+	if p == value.FALSE || (p == value.NONE && !serverPretty) {
+		return NO_PRETTY_PREFIX, NO_PRETTY_INDENT
+	} else if result {
+		return PRETTY_RESULT_PREFIX, PRETTY_RESULT_INDENT
+	} else {
+		return PRETTY_PREFIX, PRETTY_INDENT
+	}
 }
 
 // returns true if the request has already been stopped
 // (eg through timeout or delete)
-func (this *httpRequest) writeResults() bool {
+func (this *httpRequest) writeResults(pretty bool) bool {
 	var item value.Value
 
+	prefix, indent := this.prettyStrings(pretty, true)
 	ok := true
 	for ok {
 		select {
@@ -180,7 +203,8 @@ func (this *httpRequest) writeResults() bool {
 			if this.Halted() {
 				return true
 			}
-			if ok && !this.writeResult(item) {
+
+			if ok && !this.writeResult(item, prefix, indent) {
 				return false
 			}
 		case <-this.StopExecute():
@@ -196,10 +220,16 @@ func (this *httpRequest) writeResults() bool {
 	return false
 }
 
-func (this *httpRequest) writeResult(item value.Value) bool {
+func (this *httpRequest) writeResult(item value.Value, prefix, indent string) bool {
 	var success bool
+	var err error
+	var bytes []byte
 
-	bytes, err := json.MarshalIndent(item, "        ", "    ")
+	if prefix != "" || indent != "" {
+		bytes, err = json.MarshalIndent(item, prefix, indent)
+	} else {
+		bytes, err = json.Marshal(item)
+	}
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
 		this.SetState(server.FATAL)
@@ -216,31 +246,37 @@ func (this *httpRequest) writeResult(item value.Value) bool {
 	this.resultCount++
 
 	if success {
-		success = this.writeString("        ") &&
-			this.writeString(string(bytes))
+		success = this.writeString(prefix) && this.writeString(string(bytes))
 	}
 	if !success {
 		this.SetState(server.CLOSED)
 	}
+
 	return success
 }
 
-func (this *httpRequest) writeValue(item value.Value) bool {
-	bytes, err := json.MarshalIndent(item, "    ", "    ")
+func (this *httpRequest) writeValue(item value.Value, prefix, indent string) bool {
+	var err error
+	var bytes []byte
+
+	if indent == "" && prefix == "" {
+		bytes, err = json.Marshal(item)
+	} else {
+		bytes, err = json.MarshalIndent(item, prefix, indent)
+	}
 	if err != nil {
-		s := fmt.Sprintf("\"ERROR: %v\"", err)
-		return this.writeString(s)
+		return this.writeString(fmt.Sprintf("\"ERROR: %v\"", err))
 	}
 
 	return this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeSuffix(metrics bool, state server.State) bool {
-	return this.writeString("\n    ]") &&
-		this.writeErrors() &&
-		this.writeWarnings() &&
-		this.writeState(state) &&
-		this.writeMetrics(metrics) &&
+func (this *httpRequest) writeSuffix(metrics bool, state server.State, prefix, indent string) bool {
+	return this.writeString(fmt.Sprintf("\n%s]", prefix)) &&
+		this.writeErrors(prefix, indent) &&
+		this.writeWarnings(prefix, indent) &&
+		this.writeState(state, prefix) &&
+		this.writeMetrics(metrics, prefix, indent) &&
 		this.writeString("\n}\n")
 }
 
@@ -248,7 +284,7 @@ func (this *httpRequest) writeString(s string) bool {
 	return this.writer.writeString(s)
 }
 
-func (this *httpRequest) writeState(state server.State) bool {
+func (this *httpRequest) writeState(state server.State, prefix string) bool {
 	if state == "" {
 		state = this.State()
 	}
@@ -261,10 +297,10 @@ func (this *httpRequest) writeState(state server.State) bool {
 		}
 	}
 
-	return this.writeString(fmt.Sprintf(",\n    \"status\": \"%s\"", state))
+	return this.writeString(fmt.Sprintf(",\n%s\"status\": \"%s\"", prefix, state))
 }
 
-func (this *httpRequest) writeErrors() bool {
+func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 	var err errors.Error
 	ok := true
 loop:
@@ -273,7 +309,7 @@ loop:
 		case err, ok = <-this.Errors():
 			if ok {
 				if this.errorCount == 0 {
-					this.writeString(",\n    \"errors\": [")
+					this.writeString(fmt.Sprintf(",\n%s\"errors\": [", prefix))
 
 					// MB-19307: please check the comments
 					// in mapErrortoHttpResponse().
@@ -285,7 +321,7 @@ loop:
 						this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 					}
 				}
-				ok = this.writeError(err, this.errorCount)
+				ok = this.writeError(err, this.errorCount, prefix, indent)
 				this.errorCount++
 			}
 		default:
@@ -293,10 +329,15 @@ loop:
 		}
 	}
 
-	return this.errorCount == 0 || this.writeString("\n    ]")
+	var s string
+	if prefix != "" {
+		s = fmt.Sprintf("\n%s", prefix)
+	}
+	return this.errorCount == 0 || this.writeString(fmt.Sprintf("%s]", s))
+
 }
 
-func (this *httpRequest) writeWarnings() bool {
+func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 	var err errors.Error
 	ok := true
 loop:
@@ -305,9 +346,9 @@ loop:
 		case err, ok = <-this.Warnings():
 			if ok {
 				if this.warningCount == 0 {
-					this.writeString(",\n    \"warnings\": [")
+					this.writeString(fmt.Sprintf(",\n%s\"warnings\": [", prefix))
 				}
-				ok = this.writeError(err, this.warningCount)
+				ok = this.writeError(err, this.warningCount, prefix, indent)
 				this.warningCount++
 			}
 		default:
@@ -315,76 +356,104 @@ loop:
 		}
 	}
 
-	return this.warningCount == 0 || this.writeString("\n    ]")
+	var s string
+	if prefix != "" {
+		s = fmt.Sprintf("\n%s", prefix)
+	}
+	return this.warningCount == 0 || this.writeString(fmt.Sprintf("%s]", s))
 }
 
-func (this *httpRequest) writeError(err errors.Error, count int) bool {
-	var rv bool
-	if count == 0 {
-		rv = this.writeString("\n")
-	} else {
-		rv = this.writeString(",\n")
+func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent string) bool {
+
+	newPrefix := strings.Join([]string{prefix, indent}, "")
+
+	if count != 0 && !this.writeString(",") {
+		return false
+	}
+	if prefix != "" && !this.writeString("\n") {
+		return false
 	}
 
 	m := map[string]interface{}{
 		"code": err.Code(),
 		"msg":  err.Error(),
 	}
-	bytes, er := json.MarshalIndent(m, "        ", "    ")
+
+	var er error
+	var bytes []byte
+
+	if newPrefix == "" && indent == "" {
+		bytes, er = json.Marshal(m)
+	} else {
+		bytes, er = json.MarshalIndent(m, newPrefix, indent)
+	}
 	if er != nil {
 		return false
 	}
 
-	return rv &&
-		this.writeString("        ") &&
-		this.writeString(string(bytes))
+	return this.writeString(newPrefix) && this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeMetrics(metrics bool) bool {
+func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool {
 	m := this.Metrics()
-	if m == value.FALSE ||
-		(m == value.NONE && !metrics) {
+	if m == value.FALSE || (m == value.NONE && !metrics) {
 		return true
+	}
+
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = fmt.Sprintf("\n%s", strings.Join([]string{prefix, indent}, ""))
 	}
 
 	ts := time.Since(this.ServiceTime())
 	tr := time.Since(this.RequestTime())
-	rv := this.writeString(",\n    \"metrics\": {") &&
-		this.writeString(fmt.Sprintf("\n        \"elapsedTime\": \"%v\"", tr)) &&
-		this.writeString(fmt.Sprintf(",\n        \"executionTime\": \"%v\"", ts)) &&
-		this.writeString(fmt.Sprintf(",\n        \"resultCount\": %d", this.resultCount)) &&
-		this.writeString(fmt.Sprintf(",\n        \"resultSize\": %d", this.resultSize))
-
-	if this.MutationCount() > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        \"mutationCount\": %d", this.MutationCount()))
+	rv := this.writeString(fmt.Sprintf(",\n%s\"metrics\": {", prefix)) &&
+		this.writeString(fmt.Sprintf("%s\"elapsedTime\": \"%v\"", newPrefix, tr)) &&
+		this.writeString(fmt.Sprintf(",%s\"executionTime\": \"%v\"", newPrefix, ts)) &&
+		this.writeString(fmt.Sprintf(",%s\"resultCount\": %d", newPrefix, this.resultCount)) &&
+		this.writeString(fmt.Sprintf(",%s\"resultSize\": %d", newPrefix, this.resultSize))
+	if !rv {
+		return false
 	}
 
-	if this.SortCount() > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        \"sortCount\": %d", this.SortCount()))
+	if this.MutationCount() > 0 && !this.writeString(fmt.Sprintf(",%s\"mutationCount\": %d", newPrefix, this.MutationCount())) {
+		return false
 	}
 
-	if this.errorCount > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        \"errorCount\": %d", this.errorCount))
+	if this.SortCount() > 0 && !this.writeString(fmt.Sprintf(",%s\"sortCount\": %d", newPrefix, this.SortCount())) {
+		return false
 	}
 
-	if this.warningCount > 0 {
-		rv = rv && this.writeString(fmt.Sprintf(",\n        \"warningCount\": %d", this.warningCount))
+	if this.errorCount > 0 && !this.writeString(fmt.Sprintf(",%s\"errorCount\": %d", newPrefix, this.errorCount)) {
+		return false
+	}
+
+	if this.warningCount > 0 && !this.writeString(fmt.Sprintf(",%s\"warningCount\": %d", newPrefix, this.warningCount)) {
+		return false
 	}
 
 	if logging.LogLevel() == logging.DEBUG {
 		timings := this.GetTimings()
 		if timings != nil {
-			e, err := json.MarshalIndent(timings, "\t", "    ")
-			if err == nil {
-				rv = rv && this.writeString(fmt.Sprintf(",\n        \"executionTimings\": %s", e))
+			var e []byte
+			var err error
+			if indent != "" {
+				e, err = json.MarshalIndent(timings, "\t", indent)
 			} else {
-				logging.Infop("Error writing timings",
-					logging.Pair{"error", err})
+				e, err = json.Marshal(timings)
+			}
+			if err != nil || this.writeString(fmt.Sprintf(",%s\"executionTimings\": %s", newPrefix, e)) {
+				logging.Infop("Error writing timings", logging.Pair{"error", err})
 			}
 		}
 	}
 
-	return rv && this.writeString("\n    }")
+	if prefix == "" {
+		return this.writeString("}")
+	} else {
+		return this.writeString(fmt.Sprintf("\n%s}", prefix))
+	}
+
 }
 
 // responseDataManager is an interface for managing response data. It is used by httpRequest to take care of

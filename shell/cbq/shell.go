@@ -275,6 +275,12 @@ func main() {
 
 	flag.Parse()
 
+	if *prettyFlag {
+		n1ql.SetQueryParams("pretty", "true")
+	} else {
+		n1ql.SetQueryParams("pretty", "false")
+	}
+
 	if outputFlag != "" {
 		// Redirect all output to the given file.
 		// This is handled in the HandleInteractiveMode() method

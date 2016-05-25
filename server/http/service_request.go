@@ -176,10 +176,6 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		pretty, err = httpArgs.getTristate(PRETTY)
 	}
 
-	if err == nil && pretty == value.FALSE {
-		err = errors.NewServiceErrorNotImplemented("pretty", "false")
-	}
-
 	var consistency *scanConfigImpl
 
 	if err == nil {
@@ -197,7 +193,7 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 	}
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
-		max_parallelism, readonly, metrics, signature, consistency, client_id, creds)
+		max_parallelism, readonly, metrics, signature, pretty, consistency, client_id, creds)
 
 	rv := &httpRequest{
 		BaseRequest: *base,

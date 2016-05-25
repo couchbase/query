@@ -163,7 +163,7 @@ func Run(mockServer *MockServer, q string) ([]interface{}, []errors.Error, error
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, scanConfiguration, "", nil)
+	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, value.TRUE, scanConfiguration, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
@@ -228,7 +228,7 @@ func Start(site, pool string) *MockServer {
 	// the variable and not the package...
 	server.SetActives(http.NewActiveRequests())
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, "json",
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false)
+		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

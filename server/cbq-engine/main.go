@@ -43,6 +43,7 @@ var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout,
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
+var PRETTY = flag.Bool("pretty", true, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", 1024, "Maximum number of queued requests")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
@@ -144,10 +145,9 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
-		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE)
+		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE, *PRETTY)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

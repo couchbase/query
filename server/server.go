@@ -60,6 +60,7 @@ type Server struct {
 	memprofile  string
 	cpuprofile  string
 	enterprise  bool
+	pretty      bool
 }
 
 // Default Keep Alive Length
@@ -69,7 +70,7 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 func NewServer(store datastore.Datastore, sys datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	channel, plusChannel RequestChannel, servicers, plusServicers, maxParallelism int,
-	timeout time.Duration, signature, metrics bool, enterprise bool) (*Server, errors.Error) {
+	timeout time.Duration, signature, metrics, enterprise, pretty bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		systemstore: sys,
@@ -85,6 +86,7 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 		done:        make(chan bool),
 		plusDone:    make(chan bool),
 		enterprise:  enterprise,
+		pretty:      pretty,
 	}
 
 	// special case handling for the atomic specfic stuff
@@ -133,6 +135,18 @@ func (this *Server) Signature() bool {
 
 func (this *Server) Metrics() bool {
 	return this.metrics
+}
+
+func (this *Server) Pretty() bool {
+	this.RLock()
+	defer this.RUnlock()
+	return this.pretty
+}
+
+func (this *Server) SetPretty(pretty bool) {
+	this.Lock()
+	defer this.Unlock()
+	this.pretty = pretty
 }
 
 func (this *Server) KeepAlive() int {
