@@ -11,6 +11,7 @@ package value
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/couchbase/query/util"
 )
@@ -44,6 +45,11 @@ MISSING is marshalled as NULL in JSON arrays.
 */
 func (this missingValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
+}
+
+func (this missingValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	_, err := w.Write(_NULL_BYTES)
+	return err
 }
 
 /*

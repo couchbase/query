@@ -10,6 +10,7 @@
 package value
 
 import (
+	"io"
 	"math"
 
 	"github.com/couchbase/query/util"
@@ -50,6 +51,15 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 	} else {
 		return _FALSE_BYTES, nil
 	}
+}
+
+func (this boolValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	b, err := this.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 /*

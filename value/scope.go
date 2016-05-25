@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"io"
+)
+
 /*
 ScopeValue provides alias scoping for subqueries, ranging, LETs,
 projections, etc. It is a type struct that inherits Value and
@@ -28,6 +32,10 @@ func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
+}
+
+func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	return this.Value.WriteJSON(w, prefix, indent)
 }
 
 func (this *ScopeValue) Copy() Value {

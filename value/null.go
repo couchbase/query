@@ -10,6 +10,8 @@
 package value
 
 import (
+	"io"
+
 	"github.com/couchbase/query/util"
 )
 
@@ -39,6 +41,11 @@ func (this *nullValue) String() string {
 
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
+}
+
+func (this *nullValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	_, err := w.Write(_NULL_BYTES)
+	return err
 }
 
 /*

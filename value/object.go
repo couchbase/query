@@ -12,6 +12,7 @@ package value
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"sort"
 
 	"github.com/couchbase/query/util"
@@ -66,6 +67,67 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 
 	buf.WriteString("}")
 	return buf.Bytes(), nil
+}
+
+func (this objectValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
+	if this == nil {
+		_, err = w.Write(_NULL_BYTES)
+		return
+	}
+
+	if _, err = w.Write([]byte{'{'}); err != nil {
+		return
+	}
+
+	names := _NAME_POOL.GetSized(len(this))
+	defer _NAME_POOL.Put(names)
+	names = sortedNames(this, names)
+
+	newPrefix := prefix + indent
+
+	for i, n := range names {
+		v := NewValue(this[n])
+		if v.Type() == MISSING {
+			continue
+		}
+
+		if i > 0 {
+			if _, err = w.Write([]byte{','}); err != nil {
+				return
+			}
+		}
+
+		if err = writeJsonNewline(w, newPrefix); err != nil {
+			return
+		}
+
+		b, err := json.Marshal(n)
+		if err != nil {
+			return err
+		}
+
+		if _, err = w.Write(b); err != nil {
+			return err
+		}
+		if _, err = w.Write([]byte{':'}); err != nil {
+			return err
+		}
+		if prefix != "" || indent != "" {
+			if _, err = w.Write([]byte{' '}); err != nil {
+				return err
+			}
+		}
+
+		if err = v.WriteJSON(w, newPrefix, indent); err != nil {
+			return err
+		}
+	}
+
+	if err = writeJsonNewline(w, prefix); err != nil {
+		return
+	}
+	_, err = w.Write([]byte{'}'})
+	return err
 }
 
 /*
@@ -410,6 +472,18 @@ func combineNames(objs ...map[string]interface{}) map[string]interface{} {
 	}
 
 	return all
+}
+
+func writeJsonNewline(w io.Writer, prefix string) (err error) {
+	if prefix != "" {
+		if _, err = w.Write([]byte{'\n'}); err != nil {
+			return
+		}
+
+		_, err = io.WriteString(w, prefix)
+	}
+
+	return
 }
 
 var _NAME_POOL = util.NewStringPool(64)

@@ -9,6 +9,10 @@
 
 package value
 
+import (
+	"io"
+)
+
 type AnnotatedChannel chan AnnotatedValue
 type AnnotatedValues []AnnotatedValue
 
@@ -66,6 +70,10 @@ func (this *annotatedValue) String() string {
 
 func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
+}
+
+func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	return this.Value.WriteJSON(w, prefix, indent)
 }
 
 func (this *annotatedValue) Copy() Value {

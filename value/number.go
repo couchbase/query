@@ -10,6 +10,7 @@
 package value
 
 import (
+	"io"
 	"math"
 	"strconv"
 
@@ -55,6 +56,15 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 		s := strconv.FormatFloat(f, 'f', -1, 64)
 		return []byte(s), nil
 	}
+}
+
+func (this floatValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	b, err := this.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 /*

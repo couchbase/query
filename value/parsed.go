@@ -11,6 +11,7 @@ package value
 
 import (
 	"encoding/json"
+	"io"
 	"strconv"
 
 	"github.com/couchbase/query/util"
@@ -32,6 +33,10 @@ func (this *parsedValue) String() string {
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
+}
+
+func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	return this.unwrap().WriteJSON(w, prefix, indent)
 }
 
 func (this *parsedValue) Type() Type {

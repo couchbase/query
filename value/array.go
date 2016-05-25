@@ -11,6 +11,7 @@ package value
 
 import (
 	"bytes"
+	"io"
 
 	"github.com/couchbase/query/util"
 )
@@ -31,6 +32,41 @@ func (this sliceValue) String() string {
 
 func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
+}
+
+func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
+	if this == nil {
+		_, err = w.Write(_NULL_BYTES)
+		return
+	}
+
+	if _, err = w.Write([]byte{'['}); err != nil {
+		return
+	}
+
+	newPrefix := prefix + indent
+
+	for i, e := range this {
+		if i > 0 {
+			if _, err = w.Write([]byte{','}); err != nil {
+				return
+			}
+		}
+		if err = writeJsonNewline(w, newPrefix); err != nil {
+			return
+		}
+
+		v := NewValue(e)
+		if err = v.WriteJSON(w, newPrefix, indent); err != nil {
+			return
+		}
+	}
+
+	if err = writeJsonNewline(w, prefix); err != nil {
+		return
+	}
+	_, err = w.Write([]byte{']'})
+	return err
 }
 
 /*
@@ -294,6 +330,10 @@ func (this *listValue) String() string {
 
 func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
+}
+
+func (this *listValue) WriteJSON(w io.Writer, prefix, indent string) (err error) {
+	return this.slice.WriteJSON(w, prefix, indent)
 }
 
 /*

@@ -16,6 +16,7 @@ package value
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 
 	"github.com/couchbase/query/util"
@@ -316,6 +317,12 @@ type Value interface {
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value
+
+	/*
+	   Write JSON marshal.
+	*/
+
+	WriteJSON(w io.Writer, prefix, indent string) error
 }
 
 /*

@@ -12,6 +12,7 @@ package value
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/couchbase/query/util"
 )
@@ -24,6 +25,11 @@ func (this binaryValue) String() string {
 
 func (this binaryValue) MarshalJSON() ([]byte, error) {
 	return []byte(this.String()), nil
+}
+
+func (this binaryValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	_, err := w.Write([]byte(this.String()))
+	return err
 }
 
 func (this binaryValue) Type() Type {

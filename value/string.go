@@ -12,6 +12,7 @@ package value
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/couchbase/query/util"
 )
@@ -46,6 +47,15 @@ characters.
 */
 func (this stringValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(this))
+}
+
+func (this stringValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	b, err := json.Marshal(string(this))
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 /*
