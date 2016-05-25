@@ -652,6 +652,14 @@ func (this *Type) Evaluate(item value.Value, context Context) (value.Value, erro
 	return this.UnaryEval(this, item, context)
 }
 
+func (this *Type) PropagatesMissing() bool {
+	return false
+}
+
+func (this *Type) PropagatesNull() bool {
+	return false
+}
+
 /*
 It returns the type of the input value as a string value.
 */

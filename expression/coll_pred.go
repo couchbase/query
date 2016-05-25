@@ -28,6 +28,14 @@ type collPredBase struct {
 	satisfies Expression
 }
 
+func (this *collPredBase) PropagatesMissing() bool {
+	return false
+}
+
+func (this *collPredBase) PropagatesNull() bool {
+	return false
+}
+
 func (this *collPredBase) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true

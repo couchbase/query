@@ -20,8 +20,9 @@ type sargableUnary struct {
 func newSargableUnary(pred expression.UnaryFunction) *sargableUnary {
 	rv := &sargableUnary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(pred, expr2) ||
-			pred.Operand().EquivalentTo(expr2), nil
+		return pred.Operand().EquivalentTo(expr2) ||
+				defaultSargable(pred, expr2),
+			nil
 	}
 
 	return rv

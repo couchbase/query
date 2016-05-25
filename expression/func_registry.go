@@ -168,6 +168,7 @@ var _FUNCTIONS = map[string]Function{
 	"trunc":   &Trunc{},
 
 	// Array
+	"array_add":      &ArrayPut{},
 	"array_append":   &ArrayAppend{},
 	"array_avg":      &ArrayAvg{},
 	"array_concat":   &ArrayConcat{},

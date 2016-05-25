@@ -31,6 +31,11 @@ type sargNull struct {
 }
 
 func newSargNull(pred *expression.IsNull) *sargNull {
+	var spans plan.Spans
+	if pred.PropagatesMissing() {
+		spans = _FULL_SPANS
+	}
+
 	rv := &sargNull{}
 	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
@@ -41,7 +46,7 @@ func newSargNull(pred *expression.IsNull) *sargNull {
 			return _NULL_SPANS, nil
 		}
 
-		return nil, nil
+		return spans, nil
 	}
 
 	return rv
@@ -52,6 +57,13 @@ type sargNotNull struct {
 }
 
 func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
+	var spans plan.Spans
+	if pred.PropagatesNull() {
+		spans = _VALUED_SPANS
+	} else if pred.PropagatesMissing() {
+		spans = _FULL_SPANS
+	}
+
 	rv := &sargNotNull{}
 	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
@@ -62,7 +74,7 @@ func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
 			return _EXACT_VALUED_SPANS, nil
 		}
 
-		return nil, nil
+		return spans, nil
 	}
 
 	return rv

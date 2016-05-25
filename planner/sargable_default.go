@@ -20,11 +20,14 @@ type sargableDefault struct {
 func newSargableDefault(pred expression.Expression) *sargableDefault {
 	rv := &sargableDefault{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(pred, expr2) ||
-				((pred.PropagatesMissing() || pred.PropagatesNull()) &&
-					pred.DependsOn(expr2)),
-			nil
+		return defaultSargable(pred, expr2), nil
 	}
 
 	return rv
+}
+
+func defaultSargable(pred, expr2 expression.Expression) bool {
+	return SubsetOf(pred, expr2) ||
+		((pred.PropagatesMissing() || pred.PropagatesNull()) &&
+			pred.DependsOn(expr2))
 }

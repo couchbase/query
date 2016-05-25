@@ -20,7 +20,7 @@ type sargableAny struct {
 func newSargableAny(pred *expression.Any) *sargableAny {
 	rv := &sargableAny{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if SubsetOf(pred, expr2) {
+		if defaultSargable(pred, expr2) {
 			return true, nil
 		}
 

@@ -19,6 +19,13 @@ type sargAnyEvery struct {
 }
 
 func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
+	var spans plan.Spans
+	if pred.PropagatesNull() {
+		spans = _VALUED_SPANS
+	} else if pred.PropagatesMissing() {
+		spans = _FULL_SPANS
+	}
+
 	rv := &sargAnyEvery{}
 	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
 		if SubsetOf(pred, expr2) {
@@ -27,21 +34,21 @@ func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
 
 		all, ok := expr2.(*expression.All)
 		if !ok {
-			return nil, nil
+			return spans, nil
 		}
 
 		array, ok := all.Array().(*expression.Array)
 		if !ok {
-			return nil, nil
+			return spans, nil
 		}
 
 		if !pred.Bindings().SubsetOf(array.Bindings()) {
-			return nil, nil
+			return spans, nil
 		}
 
 		if array.When() != nil &&
 			!SubsetOf(pred.Satisfies(), array.When()) {
-			return nil, nil
+			return spans, nil
 		}
 
 		return sargFor(pred.Satisfies(), array.ValueMapping(), false)

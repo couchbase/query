@@ -32,6 +32,14 @@ type collMapBase struct {
 	when         Expression
 }
 
+func (this *collMapBase) PropagatesMissing() bool {
+	return false
+}
+
+func (this *collMapBase) PropagatesNull() bool {
+	return false
+}
+
 func (this *collMapBase) EquivalentTo(other Expression) bool {
 	if this.ValueEquals(other) {
 		return true

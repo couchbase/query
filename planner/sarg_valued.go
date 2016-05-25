@@ -29,7 +29,7 @@ func newSargValued(pred expression.UnaryFunction) *sargValued {
 			return _EXACT_VALUED_SPANS, nil
 		}
 
-		return nil, nil
+		return _VALUED_SPANS, nil
 	}
 
 	return rv

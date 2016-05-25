@@ -37,7 +37,7 @@ func newSargLT(pred *expression.LT) *sargLT {
 			exprs = expression.Expressions{pred.First().Static()}
 			span.Range.Low = exprs
 		} else {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {

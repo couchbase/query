@@ -20,6 +20,10 @@ type sargableOr struct {
 func newSargableOr(pred *expression.Or) *sargableOr {
 	rv := &sargableOr{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
+		if SubsetOf(pred, expr2) {
+			return true, nil
+		}
+
 		exprs := expression.Expressions{expr2}
 		for _, child := range pred.Operands() {
 			if SargableFor(child, exprs) == 0 {

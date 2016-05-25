@@ -29,7 +29,7 @@ func newSargIn(pred *expression.In) *sargIn {
 		}
 
 		if !SubsetOf(pred.First(), expr2) {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		aval := pred.Second().Value()

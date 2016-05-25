@@ -20,9 +20,10 @@ type sargableBinary struct {
 func newSargableBinary(pred expression.BinaryFunction) *sargableBinary {
 	rv := &sargableBinary{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(pred, expr2) ||
-			pred.First().EquivalentTo(expr2) ||
-			pred.Second().EquivalentTo(expr2), nil
+		return pred.First().EquivalentTo(expr2) ||
+				pred.Second().EquivalentTo(expr2) ||
+				defaultSargable(pred, expr2),
+			nil
 	}
 
 	return rv

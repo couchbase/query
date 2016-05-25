@@ -31,11 +31,6 @@ type ArrayAppend struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayAppend calls NewBinaryFunctionBase to
-create a function named ARRAY_APPEND with the two
-expressions as input.
-*/
 func NewArrayAppend(first, second Expression) Function {
 	rv := &ArrayAppend{
 		*NewBinaryFunctionBase("array_append", first, second),
@@ -46,8 +41,7 @@ func NewArrayAppend(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -64,6 +58,10 @@ receiver, current item and current context.
 */
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
+}
+
+func (this *ArrayAppend) PropagatesNull() bool {
+	return false
 }
 
 /*
@@ -111,12 +109,6 @@ type ArrayAvg struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayAvg takes as input an expression and returns
-a pointer to the ArrayAvg struct that calls NewUnaryFunctionBase to
-create a function named ARRAY_AVG with an input operand as the
-expression.
-*/
 func NewArrayAvg(operand Expression) Function {
 	rv := &ArrayAvg{
 		*NewUnaryFunctionBase("array_avg", operand),
@@ -127,8 +119,7 @@ func NewArrayAvg(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -205,11 +196,6 @@ type ArrayConcat struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayConcat calls NewBinaryFunctionBase to
-create a function named ARRAY_CONCAT with the two
-expressions as input.
-*/
 func NewArrayConcat(first, second Expression) Function {
 	rv := &ArrayConcat{
 		*NewBinaryFunctionBase("array_concat", first, second),
@@ -220,8 +206,7 @@ func NewArrayConcat(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -284,11 +269,6 @@ type ArrayContains struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayContains calls NewBinaryFunctionBase to
-create a function named ARRAY_CONTAINS with the two
-expressions as input.
-*/
 func NewArrayContains(first, second Expression) Function {
 	rv := &ArrayContains{
 		*NewBinaryFunctionBase("array_contains", first, second),
@@ -299,8 +279,7 @@ func NewArrayContains(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -341,13 +320,14 @@ if it does.
 func (this *ArrayContains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY {
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
 	}
 
 	fa := first.Actual().([]interface{})
 	for _, f := range fa {
-		if second.Equals(value.NewValue(f)).Truth() {
+		fv := value.NewValue(f)
+		if second.Equals(fv).Truth() {
 			return value.TRUE_VALUE, nil
 		}
 	}
@@ -380,12 +360,6 @@ type ArrayCount struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayCount takes as input an expression
-and returns a pointer to the ArrayCount struct that calls
-NewUnaryFunctionBase to create a function named ARRAY_COUNT
-with an input operand as the expression.
-*/
 func NewArrayCount(operand Expression) Function {
 	rv := &ArrayCount{
 		*NewUnaryFunctionBase("array_count", operand),
@@ -396,8 +370,7 @@ func NewArrayCount(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -417,11 +390,10 @@ func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value
 }
 
 /*
-This method calculates the number of elements in the
-array. If the input argument is missing return missing
-value, and if it isnt an array then return a null value.
-Range through the array and count the values that are'nt
-null and missing. Return this value.
+This method calculates the number of non-NULL elements in the
+array. If the input argument is missing return missing value, and if
+it is not an array then return a null value.  Range through the array
+and count the values that are not null and missing. Return this value.
 */
 func (this *ArrayCount) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -468,12 +440,6 @@ type ArrayDistinct struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayDistinct takes as input an expression
-and returns a pointer to the ArrayDistinct struct that
-calls NewUnaryFunctionBase to create a function named
-ARRAY_DISTINCT with an input operand as the expression.
-*/
 func NewArrayDistinct(operand Expression) Function {
 	rv := &ArrayDistinct{
 		*NewUnaryFunctionBase("array_distinct", operand),
@@ -484,8 +450,7 @@ func NewArrayDistinct(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -551,11 +516,6 @@ type ArrayFlatten struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayFlatten calls NewBinaryFunctionBase to
-create a function named ARRAY_FLATTEN with the two
-expressions as input.
-*/
 func NewArrayFlatten(first, second Expression) Function {
 	rv := &ArrayFlatten{
 		*NewBinaryFunctionBase("array_flatten", first, second),
@@ -566,8 +526,7 @@ func NewArrayFlatten(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayFlatten) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -661,12 +620,6 @@ type ArrayIfNull struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayIfNull takes as input an expression
-and returns a pointer to the ArrayIfNull struct that calls
-NewUnaryFunctionBase to create a function named ARRAY_IFNULL
-with an input operand as the expression.
-*/
 func NewArrayIfNull(operand Expression) Function {
 	rv := &ArrayIfNull{
 		*NewUnaryFunctionBase("array_ifnull", operand),
@@ -677,8 +630,7 @@ func NewArrayIfNull(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -745,11 +697,6 @@ type ArrayInsert struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewArrayInsert calls NewTernaryFunctionBase to
-create a function named ARRAY_INSERT with the three
-expressions as input.
-*/
 func NewArrayInsert(first, second, third Expression) Function {
 	rv := &ArrayInsert{
 		*NewTernaryFunctionBase("array_insert", first, second, third),
@@ -760,8 +707,7 @@ func NewArrayInsert(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -780,16 +726,18 @@ func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Valu
 	return this.TernaryEval(this, item, context)
 }
 
+func (this *ArrayInsert) PropagatesNull() bool {
+	return false
+}
+
 /*
 This method inserts the third value to the first value at the second position.
 */
 func (this *ArrayInsert) Apply(context Context, first, second, third value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
-	} else if third.Type() == value.MISSING {
-		return first, nil
 	}
 
 	/* the position needs to be an integer */
@@ -847,12 +795,6 @@ type ArrayLength struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayLength takes as input an expression
-and returns a pointer to the ArrayLength struct that
-calls NewUnaryFunctionBase to create a function named
-ARRAY_LENGTH with an input operand as the expression.
-*/
 func NewArrayLength(operand Expression) Function {
 	rv := &ArrayLength{
 		*NewUnaryFunctionBase("array_length", operand),
@@ -863,8 +805,7 @@ func NewArrayLength(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -926,12 +867,6 @@ type ArrayMax struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayMax takes as input an expression
-and returns a pointer to the ArrayMax struct that calls
-NewUnaryFunctionBase to create a function named ARRAY_MAX
-with an input operand as the expression.
-*/
 func NewArrayMax(operand Expression) Function {
 	rv := &ArrayMax{
 		*NewUnaryFunctionBase("array_max", operand),
@@ -942,8 +877,7 @@ func NewArrayMax(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1013,12 +947,6 @@ type ArrayMin struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayMin takes as input an expression
-and returns a pointer to the ArrayMin struct that calls
-NewUnaryFunctionBase to create a function named ARRAY_MIN
-with an input operand as the expression.
-*/
 func NewArrayMin(operand Expression) Function {
 	rv := &ArrayMin{
 		*NewUnaryFunctionBase("array_min", operand),
@@ -1029,8 +957,7 @@ func NewArrayMin(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1101,12 +1028,6 @@ type ArrayPosition struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayPosition takes as input two expressions
-and returns a pointer to the ArrayPosition struct that calls
-NewBinaryFunctionBase to create a function named ARRAY_POSITION
-with an input operands as the expressions.
-*/
 func NewArrayPosition(first, second Expression) Function {
 	rv := &ArrayPosition{
 		*NewBinaryFunctionBase("array_position", first, second),
@@ -1117,8 +1038,7 @@ func NewArrayPosition(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1146,13 +1066,14 @@ non array values return null. If not found then return -1.
 func (this *ArrayPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY {
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
 	}
 
 	fa := first.Actual().([]interface{})
 	for i, f := range fa {
-		if second.Equals(value.NewValue(f)).Truth() {
+		fv := value.NewValue(f)
+		if second.Equals(fv).Truth() {
 			return value.NewValue(float64(i)), nil
 		}
 	}
@@ -1185,11 +1106,6 @@ type ArrayPrepend struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayPrepend calls NewBinaryFunctionBase to
-create a function named ARRAY_PREPEND with the two
-expressions as input.
-*/
 func NewArrayPrepend(first, second Expression) Function {
 	rv := &ArrayPrepend{
 		*NewBinaryFunctionBase("array_prepend", first, second),
@@ -1200,8 +1116,7 @@ func NewArrayPrepend(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1220,6 +1135,10 @@ func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Val
 	return this.BinaryEval(this, item, context)
 }
 
+func (this *ArrayPrepend) PropagatesNull() bool {
+	return false
+}
+
 /*
 This method prepends the first value to the second value, by
 reversing the input to the append method. If either
@@ -1227,12 +1146,10 @@ of the input argument types are missing, or not an array return
 a missing and null value respectively.
 */
 func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if second.Type() == value.MISSING {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if second.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
-	} else if first.Type() == value.MISSING {
-		return second, nil
 	}
 
 	s := second.Actual().([]interface{})
@@ -1268,11 +1185,6 @@ type ArrayPut struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayPut calls NewBinaryFunctionBase to
-create a function named ARRAY_PUT with the two
-expressions as input.
-*/
 func NewArrayPut(first, second Expression) Function {
 	rv := &ArrayPut{
 		*NewBinaryFunctionBase("array_put", first, second),
@@ -1283,8 +1195,7 @@ func NewArrayPut(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1304,19 +1215,17 @@ func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 /*
-This method appends the value into the array if it isnt
+This method appends the value into the array if it is not
 present. Range over the array and check if the value exists.
 If it does return the array as is. If either of the input
 argument types are missing, or not an array return a missing
 and null value respectively.
 */
 func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY {
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
-	} else if second.Type() == value.MISSING {
-		return first, nil
 	}
 
 	f := first.Actual().([]interface{})
@@ -1359,11 +1268,6 @@ type ArrayRange struct {
 	FunctionBase
 }
 
-/*
-The method NewArrayRange calls NewFunctionBase to
-create a function named ARRAY_RANGE with input
-arguments as the operands from the input expression.
-*/
 func NewArrayRange(operands ...Expression) Function {
 	rv := &ArrayRange{
 		*NewFunctionBase("array_range", operands...),
@@ -1374,8 +1278,7 @@ func NewArrayRange(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1470,11 +1373,6 @@ type ArrayRemove struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayRemove calls NewBinaryFunctionBase to
-create a function named ARRAY_REMOVE with the two
-expressions as input.
-*/
 func NewArrayRemove(first, second Expression) Function {
 	rv := &ArrayRemove{
 		*NewBinaryFunctionBase("array_remove", first, second),
@@ -1485,8 +1383,7 @@ func NewArrayRemove(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1510,16 +1407,10 @@ This method removes all the occurences of the second value from the
 first array value.
 */
 func (this *ArrayRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING {
-		return first, nil
-	}
-
-	if first.Type() != value.ARRAY {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
 		return value.NULL_VALUE, nil
-	}
-
-	if second.Type() <= value.NULL {
-		return first, nil
 	}
 
 	fa := first.Actual().([]interface{})
@@ -1529,7 +1420,8 @@ func (this *ArrayRemove) Apply(context Context, first, second value.Value) (valu
 
 	ra := make([]interface{}, 0, len(fa))
 	for _, f := range fa {
-		if !second.Equals(value.NewValue(f)).Truth() {
+		fv := value.NewValue(f)
+		if !second.Equals(fv).Truth() {
 			ra = append(ra, f)
 		}
 	}
@@ -1562,11 +1454,6 @@ type ArrayRepeat struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewArrayRepeat calls NewBinaryFunctionBase to
-create a function named ARRAY_REPEAT with the two
-expressions as input.
-*/
 func NewArrayRepeat(first, second Expression) Function {
 	rv := &ArrayRepeat{
 		*NewBinaryFunctionBase("array_repeat", first, second),
@@ -1577,8 +1464,7 @@ func NewArrayRepeat(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1597,10 +1483,14 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 	return this.BinaryEval(this, item, context)
 }
 
+func (this *ArrayRepeat) PropagatesNull() bool {
+	return false
+}
+
 /*
 This method creates a new slice and repeats the first value
 second value number of times. If either of the input values
-are missing, return a missing value. If the first value is
+are missing, return a missing value. If the second value is
 less than 0, or not an absolute number then return a null
 value.
 */
@@ -1651,11 +1541,6 @@ type ArrayReplace struct {
 	FunctionBase
 }
 
-/*
-The method NewArrayReplace calls NewFunctionBase to
-create a function named ARRAY_REPLACE with input
-arguments as the operands from the input expression.
-*/
 func NewArrayReplace(operands ...Expression) Function {
 	rv := &ArrayReplace{
 		*NewFunctionBase("array_replace", operands...),
@@ -1666,8 +1551,7 @@ func NewArrayReplace(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1686,6 +1570,10 @@ func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Val
 	return this.Eval(this, item, context)
 }
 
+func (this *ArrayReplace) PropagatesNull() bool {
+	return false
+}
+
 /*
 This method returns an array that contains the values
 as arg 1, replaced by the 2nd argument value. If a third
@@ -1697,12 +1585,10 @@ func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Val
 	v1 := args[1]
 	v2 := args[2]
 
-	if av.Type() == value.MISSING {
+	if av.Type() == value.MISSING || v1.Type() == value.MISSING || v2.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if av.Type() != value.ARRAY {
+	} else if av.Type() != value.ARRAY || v1.Type() == value.NULL {
 		return value.NULL_VALUE, nil
-	} else if v1.Type() == value.MISSING {
-		return av, nil
 	}
 
 	aa := av.Actual().([]interface{})
@@ -1750,12 +1636,6 @@ type ArrayReverse struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArrayReverse takes as input an expression and returns
-a pointer to the ArrayReverse struct that calls NewUnaryFunctionBase to
-create a function named ARRAY_REVERSE with an input operand as the
-expression.
-*/
 func NewArrayReverse(operand Expression) Function {
 	rv := &ArrayReverse{
 		*NewUnaryFunctionBase("array_reverse", operand),
@@ -1766,8 +1646,7 @@ func NewArrayReverse(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1836,12 +1715,6 @@ type ArraySort struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArraySort takes as input an expression and returns
-a pointer to the ArrayAvg struct that calls NewUnaryFunctionBase to
-create a function named ARRAY_SORT with an input operand as the
-expression.
-*/
 func NewArraySort(operand Expression) Function {
 	rv := &ArraySort{
 		*NewUnaryFunctionBase("array_sort", operand),
@@ -1852,8 +1725,7 @@ func NewArraySort(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -1915,9 +1787,6 @@ type ArrayStar struct {
 	UnaryFunctionBase
 }
 
-/*
-Constructor.
-*/
 func NewArrayStar(operand Expression) Function {
 	rv := &ArrayStar{
 		*NewUnaryFunctionBase("array_star", operand),
@@ -2011,12 +1880,6 @@ type ArraySum struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewArraySum takes as input an expression and returns
-a pointer to the ArraySum struct that calls NewUnaryFunctionBase to
-create a function named ARRAY_SUM with an input operand as the
-expression.
-*/
 func NewArraySum(operand Expression) Function {
 	rv := &ArraySum{
 		*NewUnaryFunctionBase("array_sum", operand),
@@ -2027,8 +1890,7 @@ func NewArraySum(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)

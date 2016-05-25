@@ -43,7 +43,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 		}
 
 		if !pred.First().EquivalentTo(expr2) {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		span := &plan.Span{}

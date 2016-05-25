@@ -33,7 +33,7 @@ func newSargEq(pred *expression.Eq) *sargEq {
 		} else if pred.Second().EquivalentTo(expr2) {
 			span.Range.Low = expression.Expressions{pred.First().Static()}
 		} else {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		if span.Range.Low[0] == nil {

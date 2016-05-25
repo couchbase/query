@@ -79,7 +79,7 @@ func TestObjectAdd_replace(t *testing.T) {
 	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(3)
-	er := value.NewValue(value.NULL_VALUE)
+	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
 	testObjectAdd(e1, e2, e3, er, false, t)
 }
 
@@ -89,7 +89,7 @@ func TestObjectAdd_remove(t *testing.T) {
 	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(value.MISSING_VALUE)
-	er := value.NewValue(value.NULL_VALUE)
+	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
 	testObjectAdd(e1, e2, e3, er, false, t)
 }
 

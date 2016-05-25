@@ -20,8 +20,9 @@ type sargableIn struct {
 func newSargableIn(pred *expression.In) *sargableIn {
 	rv := &sargableIn{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return SubsetOf(pred, expr2) ||
-			SubsetOf(pred.First(), expr2), nil
+		return SubsetOf(pred.First(), expr2) ||
+				defaultSargable(pred, expr2),
+			nil
 	}
 
 	return rv

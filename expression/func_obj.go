@@ -32,11 +32,6 @@ type ObjectAdd struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewObjectAdd calls NewTernaryFunctionBase to
-create a function named OBJECT_PUT with three expression as
-input.
-*/
 func NewObjectAdd(first, second, third Expression) Function {
 	rv := &ObjectAdd{
 		*NewTernaryFunctionBase("object_add", first, second, third),
@@ -47,8 +42,7 @@ func NewObjectAdd(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
@@ -67,13 +61,19 @@ func (this *ObjectAdd) Evaluate(item value.Value, context Context) (value.Value,
 	return this.TernaryEval(this, item, context)
 }
 
+func (this *ObjectAdd) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectAdd) PropagatesNull() bool {
+	return false
+}
+
 /*
-This method takes in an object, a name and a value
-and returns a new object that contains the name /
-attribute pair. If the type of input is missing
-then return a missing value, and if not an object
-return a null value.
-If the key is found, an error is thrown
+This method takes in an object, a name and a value and returns a new
+object that contains the name / attribute pair. If the first input is
+missing then return a missing value, and if not an object return a
+null value.
 */
 func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) (value.Value, error) {
 
@@ -89,7 +89,7 @@ func (this *ObjectAdd) Apply(context Context, first, second, third value.Value) 
 	// we don't overwrite
 	_, exists := first.Field(field)
 	if exists {
-		return value.NULL_VALUE, nil
+		return first, nil
 	}
 
 	// SetField will remove if the attribute is missing, but we don't
@@ -605,6 +605,14 @@ receiver, current item and current context.
 */
 func (this *ObjectPut) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
+}
+
+func (this *ObjectPut) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectPut) PropagatesNull() bool {
+	return false
 }
 
 /*

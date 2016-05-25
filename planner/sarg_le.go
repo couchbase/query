@@ -48,7 +48,7 @@ func newSargLE(pred *expression.LE) *sargLE {
 			span.Range.Low = exprs
 			span.Range.Inclusion = datastore.LOW
 		} else {
-			return nil, nil
+			return _VALUED_SPANS, nil
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {

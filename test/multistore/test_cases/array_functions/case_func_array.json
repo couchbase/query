@@ -357,13 +357,7 @@
  {
      "statements":"select ARRAY_INSERT([1, 2, 3], 0, MISSING)",
      "results": [
-        {
-            "$1": [
-                1,
-                2,
-                3
-            ]
-        }
+        {}
     ]
   },
  {
