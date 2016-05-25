@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-05-03
+* Modified: 2016-05-25
 
 ## Introduction
 
@@ -77,13 +77,17 @@ _from-term:_
 
 ![](diagram/from-term.png)
 
-_from-path:_
+_from-keyspace:_
 
-![](diagram/from-path.png)
+![](diagram/from-keyspace.png)
 
 _namespace:_
 
 ![](diagram/namespace.png)
+
+_keyspace:_
+
+![](diagram/keyspace.png)
 
 _use-clause:_
 
@@ -324,37 +328,6 @@ To specify multiple keys:
 
 In the FROM clause of a subquery, USE KEYS is mandatory for the
 primary keyspace.
-
-### Nested paths
-
-Nested paths can be specified. For each document in the keyspace, the
-path is evaluated and its value becomes an input the query. For a
-given document, if any element of the path is NULL or MISSING, that
-document is skipped and does not contribute any inputs to the query.
-
-If some customer documents contain a _primary\_contact_ object, the
-following query can retrieve them:
-
-        SELECT * FROM customer.primary_contact
-
-=>
-
-        [
-            { "name" : "John Smith", "phone" : "+1-650-555-1234", "address" : { ... } },
-            { "name" : "Jane Brown", "phone" : "+1-650-555-5678", "address" : { ... } }
-        ]
-
-Nested paths can have arbitrary depth and can include array
-subscripts.
-
-        SELECT * FROM customer.primary_contact.address
-
-=>
-
-        [
-            { "street" : "101 Main St.", "zip" : "94040" },
-            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
-        ]
 
 ### Lookup joins
 
@@ -779,45 +752,6 @@ _index-join-predicate:_
 
 In other respects, the semantics of index nests are the same as lookup
 nests: INNER, LEFT OUTER, chaining, handling of NULL and MISSING, etc.
-
-### Arrays
-
-If an array occurs along a path, the array may be subscripted to
-select one element.
-
-Array values - for each customer, the entire _address_ array is
-selected:
-
-        SELECT a FROM customer.address a
-
-=>
-
-        [
-            {
-                "a": [
-                          { "street" : "101 Main St.", "zip" : "94040" },
-                          { "street" : "300 Broadway", "zip" : "10011" }
-                      ]
-            },
-            {
-                "a": [
-                          { "street" : "3500 Wilshire Blvd.", "zip" : "90210" },
-                          { "street" : "4120 Alamo Dr.", "zip" : "75019" }
-                      ]
-            }
-        ]
-
-Subscripting - for each customer, the first element of the _address_
-array is selected:
-
-        SELECT * FROM customer.address[0]
-
-=>
-
-        [
-            { "street" : "101 Main St.", "zip" : "94040" },
-            { "street" : "3500 Wilshire Blvd.", "zip" : "90210" }
-        ]
 
 ## WHERE clause
 
@@ -2731,6 +2665,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Update list of functions
 * 2016-05-03 - ARRAY\_FLATTEN()
     * Add ARRAY\_FLATTEN function
+* 2016-05-25 - Paths in FROM clause
+    * Remove support for paths in FROM clause
 
 ### Open issues
 

@@ -24,19 +24,20 @@ alias ::= identifier
  *  from clause
  */
 from-clause ::= 'FROM' from-term
-from-term ::= from-path ('AS'? alias)? use-clause? | '(' select ')' 'AS'? alias | from-term join-clause | from-term nest-clause | from-term unnest-clause
-from-path ::= (namespace ':')? path
+from-term ::= from-keyspace ('AS'? alias)? use-clause? | '(' select ')' 'AS'? alias | from-term join-clause | from-term nest-clause | from-term unnest-clause
+from-keyspace ::= (namespace ':')? keyspace
 namespace ::= identifier
+keyspace ::= identifier
 use-clause ::= use-keys-clause | use-index-clause
 use-keys-clause ::= 'USE' 'PRIMARY'? 'KEYS' expr
 use-index-clause ::= 'USE' 'INDEX' '(' index-ref (',' index-ref)* ')'
 index-ref ::= index-name index-using?
-join-clause ::= join-type? 'JOIN' from-path ('AS'? alias)? join-predicate
+join-clause ::= join-type? 'JOIN' from-keyspace ('AS'? alias)? join-predicate
 join-type ::= 'INNER' | 'LEFT' 'OUTER'?
 join-predicate ::= lookup-join-predicate | index-join-predicate
 lookup-join-predicate ::= 'ON' 'PRIMARY'? 'KEYS' expr
 index-join-predicate ::= 'ON' 'PRIMARY'? 'KEY' expr 'FOR' alias
-nest-clause ::= join-type? 'NEST' from-path ('AS'? alias)? join-predicate
+nest-clause ::= join-type? 'NEST' from-keyspace ('AS'? alias)? join-predicate
 unnest-clause ::= join-type? ('UNNEST' | 'FLATTEN') expr ('AS'? alias)?
 
 /*
