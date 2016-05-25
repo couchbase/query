@@ -3,7 +3,7 @@
 	"statements": "prepare test from select name, statement, uses from system:prepareds",
 	"results": [
         {
-            "encoded_plan": "H4sIAAAJbogA/5ySQUvDQBCF/0rYXhSC4DU3LwVvhR5FmiV5bbduNuvMRFpL/e3Opm2CQQR7y7558+ab7B4NQtXWqFfR22AKY3ITbAP9ErDoqY0gKy2Z4mhm48Es8d5pL9TyVW2drwna//LT9NTJtiX3mVy96aaUBbnG0mFZKWFuXKixV3UWz7JKbzhwtFWijoRoCTVfFrnqMz6woFG1Yxc2qtRY286LOeWTaZas9/AD0k3Mc0i1/R/aFOQ5OHHWL6jdoUpXQWAFXgmo4X4g9jEZ78ohunwoU3R536f9WmexOg1B/jJ1DE711ynU3IURScvJoZu5D+exAff/6rxPMe5bPJ6mOUsh2KYfYNhtgpWOkLovr2/HbbrsAXaUEtr1pM2CvYw/N0uvNltT22QMr4xZysuzISfPUv/FMeU8fQcAAP//nEAlaA8DAAA=",
+            "encoded_plan":"H4sIAAAJbogA/5ySQWvjMBCF/4pRLrtgFvbq214WegvkWEos7JdEqSypM+OSNKS/vSMnsUlaCs3Nenrz/M2MDgahiS3aZfI2mMqY0gTbQb8ELHqKCWQlkqkOZjYdzAIvvdZCLe/NxvmWoPWP16Z/vWwiubfsGkx3pczJdZb2i0YJS+NCi52qs3SSVXrGnpNtMnUiJEto+dzIRZ/xngWdqj27sFalxcr2XsyxvP7bf0iz+VnobcTckvUefuzqrrYfghNn/ZziFk1eBYEVeCmgjgc3dikbf9UjYP2nzoD174Hpy3sWq8wI8p2pZ3C+f/o0HRcmJL3ODp2Pe3Uea/DQ6Gkq1TS16u/xNmchBNsNPzDs1sFKT8jV59e35ZiXPcJOUka7nLRYsJNpRUV+tcWKYlcwvDIWOa8sxpyyyPVnxy3n8SMAAP//3FLCCA8DAAA=",
             "name": "test",
             "operator": {
                 "#operator": "Sequence",
@@ -21,15 +21,15 @@
                                     "using": "default"
                                 },
                                 {
+                                    "#operator": "Fetch",
+                                    "keyspace": "prepareds",
+                                    "namespace": "#system"
+                                },
+                                {
                                     "#operator": "Parallel",
                                     "~child": {
                                         "#operator": "Sequence",
                                         "~children": [
-                                            {
-                                                "#operator": "Fetch",
-                                                "keyspace": "prepareds",
-                                                "namespace": "#system"
-                                            },
                                             {
                                                 "#operator": "InitialProject",
                                                 "result_terms": [

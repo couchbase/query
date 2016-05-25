@@ -685,7 +685,9 @@ func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) 
 		return nil, nil
 	}
 
-	bulkResponse, err := b.cbbucket.GetBulkAll(keys)
+	bulkResponse, keyCount, err := b.cbbucket.GetBulk(keys)
+	defer b.cbbucket.ReleaseGetBulkPools(keyCount, bulkResponse)
+
 	if err != nil {
 		// Ignore "Not found" keys
 		if !isNotFoundError(err) {
@@ -695,8 +697,8 @@ func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) 
 
 	i := 0
 	rv := make([]value.AnnotatedPair, 0, len(keys))
-	for k, av := range bulkResponse {
-		for _, v := range av {
+	for k, v := range bulkResponse {
+		for j := 0; j < keyCount[k]; j++ {
 			var doc value.AnnotatedPair
 			doc.Name = k
 
@@ -721,7 +723,6 @@ func (b *keyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) 
 			rv = append(rv, doc)
 			i++
 		}
-
 	}
 
 	logging.Debugf("Fetched %d keys ", i)

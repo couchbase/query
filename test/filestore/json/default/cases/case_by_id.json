@@ -32,15 +32,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "((meta(`game`).`id`) = \"damien\")"
@@ -109,15 +109,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "(\"damien\" = (meta(`game`).`id`))"
@@ -206,15 +206,15 @@
                             }
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "(((meta(`game`).`id`) = \"damien\") or ((meta(`game`).`id`) = \"dustin\"))"
@@ -308,15 +308,15 @@
                             }
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "((((meta(`game`).`id`) = \"damien\") or ((meta(`game`).`id`) = \"dustin\")) or ((meta(`game`).`id`) = \"junyi\"))"
@@ -383,15 +383,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "(((meta(`game`).`id`) = \"damien\") or ((`game`.`name`) = \"foo\"))"
@@ -446,15 +446,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "any `id` in [\"damien\", \"dustin\", \"junyi\"] satisfies ((meta(`game`).`id`) = `id`) end"
@@ -521,15 +521,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "Filter",
                                         "condition": "any `id` in [\"damien\", \"dustin\", \"does_not_exist\"] satisfies (((meta(`game`).`id`) = `id`) or (`id` is not null)) end"
@@ -653,16 +653,16 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "game",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "maxParallelism": 1,
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "game",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "InitialGroup",
                                         "aggregates": [
@@ -746,15 +746,15 @@
                     "using": "default"
                 },
                 {
+                    "#operator": "Fetch",
+                    "keyspace": "game",
+                    "namespace": "default"
+                },
+                {
                     "#operator": "Parallel",
                     "~child": {
                         "#operator": "Sequence",
                         "~children": [
-                            {
-                                "#operator": "Fetch",
-                                "keyspace": "game",
-                                "namespace": "default"
-                            },
                             {
                                 "#operator": "Filter",
                                 "condition": "(5 \u003c (`game`.`score`))"

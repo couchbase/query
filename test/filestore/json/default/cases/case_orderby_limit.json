@@ -38,15 +38,15 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "catalog",
+                            "namespace": "default"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "catalog",
-                                        "namespace": "default"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
@@ -111,16 +111,16 @@
                             "using": "default"
                         },
                         {
+                            "#operator": "Fetch",
+                            "keyspace": "user_profile",
+                            "namespace": "default",
+                            "projection": "`personal_details`"
+                        },
+                        {
                             "#operator": "Parallel",
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
-                                    {
-                                        "#operator": "Fetch",
-                                        "keyspace": "user_profile",
-                                        "namespace": "default",
-                                        "projection": "`personal_details`"
-                                    },
                                     {
                                         "#operator": "InitialProject",
                                         "result_terms": [
