@@ -167,22 +167,5 @@ func (this *IndexJoin) fetch(entry *datastore.IndexEntry, context *Context) (
 		return nil, fetchOk
 	}
 
-	pair := pairs[0]
-	av := pair.Value
-
-	// Apply projection, if any
-	projection := this.plan.Term().Projection()
-	if projection != nil {
-		projectedItem, e := projection.Evaluate(av, context)
-		if e != nil {
-			context.Error(errors.NewEvaluationError(e, "join path"))
-			return nil, false
-		}
-
-		pv := value.NewAnnotatedValue(projectedItem)
-		pv.SetAnnotations(av)
-		av = pv
-	}
-
-	return av, fetchOk
+	return pairs[0].Value, fetchOk
 }

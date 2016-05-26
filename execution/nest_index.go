@@ -188,31 +188,9 @@ func (this *IndexNest) fetch(entries []*datastore.IndexEntry, context *Context) 
 		return nil, fetchOk
 	}
 
-	projection := this.plan.Term().Projection()
 	nvs := make([]interface{}, 0, len(pairs))
 	for _, pair := range pairs {
-		nestItem := pair.Value
-		var nv value.AnnotatedValue
-
-		// Apply projection, if any
-		if projection != nil {
-			projectedItem, e := projection.Evaluate(nestItem, context)
-			if e != nil {
-				context.Error(errors.NewEvaluationError(e, "nest path"))
-				return nil, false
-			}
-
-			if projectedItem.Type() == value.MISSING {
-				continue
-			}
-
-			nv = value.NewAnnotatedValue(projectedItem)
-			nv.SetAnnotations(nestItem)
-		} else {
-			nv = nestItem
-		}
-
-		nvs = append(nvs, nv)
+		nvs = append(nvs, pair.Value)
 	}
 
 	return nvs, fetchOk

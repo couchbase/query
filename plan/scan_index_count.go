@@ -107,10 +107,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(
-		_unmarshalled.namespace, _unmarshalled.keyspace,
-		nil, "", nil, nil)
-
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.namespace, _unmarshalled.keyspace, "", nil, nil)
 	this.spans = _unmarshalled.spans
 
 	if _unmarshalled.covers != nil {

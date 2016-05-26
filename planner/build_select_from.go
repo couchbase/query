@@ -223,9 +223,7 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	}
 
 	from, ok := node.From().(*algebra.KeyspaceTerm)
-	if !ok ||
-		from.Projection() != nil ||
-		from.Keys() != nil {
+	if !ok || from.Keys() != nil {
 		return false, nil
 	}
 

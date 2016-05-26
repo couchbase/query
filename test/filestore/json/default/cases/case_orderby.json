@@ -126,7 +126,7 @@
     },
 
     {
-        "statements": "SELECT  C.list AS L FROM default:catalog.pricing AS C ORDER BY C.savings  DESC",
+        "statements": "SELECT  pricing.list AS L FROM default:catalog ORDER BY pricing.savings  DESC",
         "results": [
         {
             "L": 799
@@ -141,7 +141,7 @@
     },
 
     {
-        "statements": "SELECT first_name, state, age FROM default:user_profile.personal_details ORDER BY age, first_name LIMIT 3",
+        "statements": "SELECT personal_details.first_name AS first_name, personal_details.state, personal_details.age AS age FROM default:user_profile ORDER BY age, first_name LIMIT 3",
         "results": [
         {
             "age": 17,

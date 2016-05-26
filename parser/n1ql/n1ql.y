@@ -321,7 +321,7 @@ tokOffset	 int
 %type <keyspaceTerm>     keyspace_term join_term index_join_term
 %type <subqueryTerm>     subquery_term
 %type <b>                opt_join_type
-%type <path>             path opt_subpath
+%type <path>             path
 %type <s>                namespace_name keyspace_name
 %type <use>              opt_use
 %type <expr>             use_keys on_keys on_key
@@ -834,19 +834,19 @@ FLATTEN
 ;
 
 keyspace_term:
-keyspace_name opt_subpath opt_as_alias opt_use
+keyspace_name opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4.Keys(), $4.Indexes())
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3.Keys(), $3.Indexes())
 }
 |
-namespace_name COLON keyspace_name opt_subpath opt_as_alias opt_use
+namespace_name COLON keyspace_name opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6.Keys(), $6.Indexes())
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
 }
 |
-SYSTEM COLON keyspace_name opt_subpath opt_as_alias opt_use
+SYSTEM COLON keyspace_name opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6.Keys(), $6.Indexes())
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5.Keys(), $5.Indexes())
 }
 ;
 
@@ -862,36 +862,36 @@ LPAREN fullselect RPAREN as_alias
 ;
 
 join_term:
-keyspace_name opt_subpath opt_as_alias on_keys
+keyspace_name opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4, nil)
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, nil)
 }
 |
-namespace_name COLON keyspace_name opt_subpath opt_as_alias on_keys
+namespace_name COLON keyspace_name opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6, nil)
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, nil)
 }
 |
-SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_keys
+SYSTEM COLON keyspace_name opt_as_alias on_keys
 {
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6, nil)
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, nil)
 }
 ;
 
 index_join_term:
-keyspace_name opt_subpath opt_as_alias on_key
+keyspace_name opt_as_alias on_key
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, $4, nil)
+    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3, nil)
 }
 |
-namespace_name COLON keyspace_name opt_subpath opt_as_alias on_key
+namespace_name COLON keyspace_name opt_as_alias on_key
 {
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, $6, nil)
+    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5, nil)
 }
 |
-SYSTEM COLON keyspace_name opt_subpath opt_as_alias on_key
+SYSTEM COLON keyspace_name opt_as_alias on_key
 {
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, $6, nil)
+    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, nil)
 }
 ;
 
@@ -901,18 +901,6 @@ IDENT
 
 keyspace_name:
 IDENT
-;
-
-opt_subpath:
-/* empty */
-{
-    $$ = nil
-}
-|
-DOT path
-{
-    $$ = $2
-}
 ;
 
 opt_use:

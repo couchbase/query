@@ -896,7 +896,7 @@
        ]
     },
     {
-        "statements" : "SELECT DISTINCT customer_name, orders3.orderlines FROM default:orders3 INNER JOIN default:contacts.name customer_name  ON KEYS orders3.customers ORDER BY customer_name,orders3.orderlines",
+        "statements" : "SELECT DISTINCT contacts.name AS customer_name, orders3.orderlines FROM default:orders3 INNER JOIN default:contacts ON KEYS orders3.customers ORDER BY customer_name,orders3.orderlines",
          "results": [
         {
             "customer_name": "dave",

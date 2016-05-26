@@ -153,8 +153,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 	this.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(this.keyFor)),
 		expression.NewFieldName("id", false))
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		nil, _unmarshalled.As, keys_expr, nil)
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, keys_expr, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
 	if err != nil {
 		return err

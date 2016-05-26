@@ -9,7 +9,7 @@
     },
 
     {
-        "statements": "SELECT title, genre, director[1], runtime FROM default:catalog.details ORDER BY title",
+        "statements": "SELECT details.title AS title, details.genre, details.director[1], details.runtime FROM default:catalog ORDER BY title",
         "results": [
         {
             "genre": [
@@ -39,7 +39,7 @@
     },
 
     {
-        "statements": "SELECT title, genre, director[1], `type`, runtime FROM default:catalog.details ORDER BY title",
+        "statements": "SELECT details.title AS title, details.genre, details.director[1], details.`type`, details.runtime FROM default:catalog ORDER BY title",
         "results": [
         {
             "genre": [
@@ -69,7 +69,7 @@
     },
 
     {
-        "statements": "SELECT actors[0], actors[1], director FROM default:catalog.details WHERE actors[0] = \"Jessica Chastain\" ORDER BY actors[0]",
+        "statements": "SELECT details.actors[0], details.actors[1], details.director FROM default:catalog WHERE details.actors[0] = \"Jessica Chastain\" ORDER BY details.actors[0]",
         "results": [
         {
             "$1": "Jessica Chastain",
@@ -96,7 +96,7 @@
     },
 
     {
-        "statements": "SELECT * FROM default:contacts.children ORDER BY contacts.children.name",
+        "statements": "SELECT children FROM default:contacts WHERE children IS NOT MISSING ORDER BY children.name",
         "results": [
         {
             "children": [
@@ -342,7 +342,7 @@
     },
 
     {
-        "statements": "SELECT 1, * FROM default:catalog.pricing ORDER BY 1",
+        "statements": "SELECT 1, pricing FROM default:catalog ORDER BY pricing.list",
         "results": [
         {
             "$1": 1,
@@ -376,7 +376,7 @@
 
 
     {
-        "statements": "SELECT list, * FROM default:catalog.pricing ORDER BY list",
+        "statements": "SELECT pricing.list, pricing FROM default:catalog ORDER BY list",
         "results": [
         {
             "list": 300,

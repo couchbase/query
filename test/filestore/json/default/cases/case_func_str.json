@@ -23,7 +23,7 @@
     },
 
     {
-        "statements": "SELECT lower(title) as title FROM default:catalog.details ORDER BY title",
+        "statements": "SELECT lower(details.title) as title FROM default:catalog ORDER BY title",
         "results": [
         {
             "title": "inferno"
@@ -50,7 +50,7 @@
    ]
     },
    {
-        "statements": "SELECT lower(actors[0]) as act FROM default:catalog.details ORDER BY act",
+        "statements": "SELECT lower(details.actors[0]) as act FROM default:catalog ORDER BY act",
         "results": [
         {},
         {
@@ -78,7 +78,7 @@
     },
 
     {
-        "statements": "SELECT lower(pricing.length) as len FROM default:catalog.dimensions ORDER BY len",
+        "statements": "SELECT lower(dimensions.pricing.length) as len FROM default:catalog ORDER BY len",
         "results": [
          {},
         {},
@@ -102,7 +102,7 @@
     },
 
     {
-        "statements": "SELECT upper(title) as title FROM default:catalog.details ORDER BY title",
+        "statements": "SELECT upper(details.title) as title FROM default:catalog ORDER BY title",
         "results": [
         {
             "title": "INFERNO"
@@ -130,7 +130,7 @@
     },
 
     {
-        "statements": "SELECT upper(actors[0]) as act FROM default:catalog.details ORDER BY act",
+        "statements": "SELECT upper(details.actors[0]) as act FROM default:catalog ORDER BY act",
         "results": [
         {},
         {
@@ -158,7 +158,7 @@
     },
 
     {
-        "statements": "SELECT upper(pricing.length) as len FROM default:catalog.dimensions ORDER BY len",
+        "statements": "SELECT upper(dimensions.pricing.length) as len FROM default:catalog ORDER BY len",
         "results": [
         {},
         {},

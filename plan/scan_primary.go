@@ -105,10 +105,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.term = algebra.NewKeyspaceTerm(
-		_unmarshalled.Names, _unmarshalled.Keys,
-		nil, "", nil, nil)
-
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, "", nil, nil)
 	indexer, err := this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err

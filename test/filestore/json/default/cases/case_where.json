@@ -36,7 +36,7 @@
     ]
     },
     {
-        "statements": "SELECT actors FROM default:catalog.details WHERE actors[0] = \"Jessica Chastain\" ORDER BY actors",
+        "statements": "SELECT details.actors AS actors FROM default:catalog WHERE details.actors[0] = \"Jessica Chastain\" ORDER BY actors",
         "results": [
         {
             "actors": [

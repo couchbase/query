@@ -98,27 +98,9 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	}
 
 	found := len(pairs) > 0
-	projection := this.plan.Term().Projection()
 
 	// Attach and send
 	for i, pair := range pairs {
-		joinItem := pair.Value
-		var jv value.AnnotatedValue
-
-		// Apply projection, if any
-		if projection != nil {
-			projectedItem, e := projection.Evaluate(joinItem, context)
-			if e != nil {
-				context.Error(errors.NewEvaluationError(e, "join path"))
-				return false
-			}
-
-			jv = value.NewAnnotatedValue(projectedItem)
-			jv.SetAnnotations(joinItem)
-		} else {
-			jv = joinItem
-		}
-
 		var av value.AnnotatedValue
 		if i < len(pairs)-1 {
 			av = value.NewAnnotatedValue(item.Copy())
@@ -126,7 +108,7 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 			av = item
 		}
 
-		av.SetField(this.plan.Term().Alias(), jv)
+		av.SetField(this.plan.Term().Alias(), pair.Value)
 
 		if !this.sendItem(av) {
 			return false

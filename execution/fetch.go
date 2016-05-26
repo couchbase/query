@@ -146,28 +146,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			return false
 		}
 
-		var fv value.AnnotatedValue
-
-		// Apply projection, if any
-		projection := this.plan.Term().Projection()
-		if projection != nil {
-			projectedItem, e := projection.Evaluate(pv, context)
-			if e != nil {
-				context.Error(errors.NewEvaluationError(e, "fetch path"))
-				return false
-			}
-
-			if projectedItem.Type() == value.MISSING {
-				continue
-			}
-
-			fv = value.NewAnnotatedValue(projectedItem)
-			fv.SetAnnotations(pv)
-		} else {
-			fv = pv
-		}
-
-		fetchMap[pair.Name] = fv
+		fetchMap[pair.Name] = pv
 	}
 
 	// Preserve order of keys

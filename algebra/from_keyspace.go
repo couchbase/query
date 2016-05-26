@@ -32,17 +32,16 @@ Specific primary keys within a keyspace can be specified.  Only values
 having those primary keys will be included as inputs to the query.
 */
 type KeyspaceTerm struct {
-	namespace  string
-	keyspace   string
-	projection expression.Path
-	as         string
-	keys       expression.Expression
-	indexes    IndexRefs
+	namespace string
+	keyspace  string
+	as        string
+	keys      expression.Expression
+	indexes   IndexRefs
 }
 
-func NewKeyspaceTerm(namespace, keyspace string, projection expression.Path, as string,
+func NewKeyspaceTerm(namespace, keyspace string, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
-	return &KeyspaceTerm{namespace, keyspace, projection, as, keys, indexes}
+	return &KeyspaceTerm{namespace, keyspace, as, keys, indexes}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -50,19 +49,10 @@ func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-This method maps all the constituent terms, namely projection and keys
-in the FROM clause.
+This method maps all the constituent terms, namely keys in the FROM
+clause.
 */
 func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
-	if this.projection != nil {
-		expr, err := mapper.Map(this.projection)
-		if err != nil {
-			return err
-		}
-
-		this.projection = expr.(expression.Path)
-	}
-
 	if this.keys != nil {
 		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
@@ -77,12 +67,7 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
    Returns all contained Expressions.
 */
 func (this *KeyspaceTerm) Expressions() expression.Expressions {
-	exprs := make(expression.Expressions, 0, 2)
-
-	if this.projection != nil {
-		exprs = append(exprs, this.projection)
-	}
-
+	exprs := make(expression.Expressions, 0, 1)
 	if this.keys != nil {
 		exprs = append(exprs, this.keys)
 	}
@@ -117,10 +102,6 @@ func (this *KeyspaceTerm) toString(join bool) string {
 	}
 
 	s += "`" + this.keyspace + "`"
-
-	if this.projection != nil {
-		s += "." + this.projection.String()
-	}
 
 	if this.as != "" {
 		s += " as `" + this.as + "`"
@@ -179,8 +160,6 @@ Returns the alias string.
 func (this *KeyspaceTerm) Alias() string {
 	if this.as != "" {
 		return this.as
-	} else if this.projection != nil {
-		return this.projection.Alias()
 	} else {
 		return this.keyspace
 	}
@@ -207,13 +186,6 @@ Returns the keyspace string (buckets).
 */
 func (this *KeyspaceTerm) Keyspace() string {
 	return this.keyspace
-}
-
-/*
-Returns the path (projection expression).
-*/
-func (this *KeyspaceTerm) Projection() expression.Path {
-	return this.projection
 }
 
 /*
@@ -249,8 +221,5 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	}
 	r["namespace"] = this.namespace
 	r["keyspace"] = this.keyspace
-	if this.projection != nil {
-		r["projection"] = expression.NewStringer().Visit(this.projection)
-	}
 	return json.Marshal(r)
 }

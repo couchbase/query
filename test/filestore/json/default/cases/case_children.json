@@ -1,6 +1,6 @@
 [
     {
-        "statements": "SELECT children as offspring FROM default:contacts.children ORDER BY children",
+        "statements": "SELECT children as offspring FROM default:contacts WHERE children IS NOT MISSING ORDER BY children",
         "results": [
            {
             "offspring": [

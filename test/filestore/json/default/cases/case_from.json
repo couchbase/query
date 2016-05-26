@@ -1,6 +1,6 @@
 [
     {
-        "statements": "SELECT D.actors[0] AS act FROM default:catalog.details AS D ORDER BY act",
+        "statements": "SELECT details.actors[0] AS act FROM default:catalog AS D ORDER BY act",
         "results": [
         {},
         {
@@ -13,12 +13,7 @@
     },
 
     {
-        "statements": "select name from default:contacts.children[0] order by name",
-        "error": "Property reference name missing qualifier bucket/alias"
-    },
-
-    {
-        "statements": "select C.name from default:contacts.children[0] as C where C.name = \"xena\" order by C.name",
+        "statements": "select children[0].name AS name from default:contacts as C where children[0].name = \"xena\" order by name",
         "results": [
         {
             "name": "xena"
@@ -27,17 +22,11 @@
     },
 
     {
-        "statements": "SELECT price.list FROM default:catalog.pricing AS price WHERE price.pct_savings > 20 ORDER BY price.list",
+        "statements": "SELECT pricing.list FROM default:catalog WHERE pricing.pct_savings > 20 ORDER BY pricing.list",
         "results": [
         {
             "list": 599
         }
-    ]
-    },
-
-    {
-        "statements": "SELECT type FROM default:catalog.non.existing[3].apath ORDER BY type",
-        "results": [
     ]
     },
 

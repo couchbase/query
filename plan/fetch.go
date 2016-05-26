@@ -11,12 +11,9 @@ package plan
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Fetch struct {
@@ -50,9 +47,6 @@ func (this *Fetch) Term() *algebra.KeyspaceTerm {
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "Fetch"}
-	if this.term.Projection() != nil {
-		r["projection"] = expression.NewStringer().Visit(this.term.Projection())
-	}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	if this.term.As() != "" {
@@ -67,35 +61,18 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
-		Proj  string `json:"projection"`
 		Names string `json:"namespace"`
 		Keys  string `json:"keyspace"`
 		As    string `json:"as"`
 	}
-	var proj_expr expression.Path
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	if _unmarshalled.Proj != "" {
-		expr, err := parser.Parse(_unmarshalled.Proj)
-		if err != nil {
-			return err
-		}
-
-		_proj_expr, is_path := expr.(expression.Path)
-		if !is_path {
-			return fmt.Errorf("Fetch.UnmarshalJSON: cannot resolve path expression from %s", _unmarshalled.Proj)
-		}
-		proj_expr = _proj_expr
-	}
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		proj_expr, _unmarshalled.As, nil, nil)
-
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
-
 	return err
 }
 
@@ -130,9 +107,6 @@ func (this *DummyFetch) Term() *algebra.KeyspaceTerm {
 
 func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "DummyFetch"}
-	if this.term.Projection() != nil {
-		r["projection"] = expression.NewStringer().Visit(this.term.Projection())
-	}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	if this.term.As() != "" {
@@ -144,34 +118,17 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
-		Proj  string `json:"projection"`
 		Names string `json:"namespace"`
 		Keys  string `json:"keyspace"`
 		As    string `json:"as"`
 	}
-	var proj_expr expression.Path
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
-	if _unmarshalled.Proj != "" {
-		expr, err := parser.Parse(_unmarshalled.Proj)
-		if err != nil {
-			return err
-		}
-
-		_proj_expr, is_path := expr.(expression.Path)
-		if !is_path {
-			return fmt.Errorf("DummyFetch.UnmarshalJSON: cannot resolve path expression from %s", _unmarshalled.Proj)
-		}
-		proj_expr = _proj_expr
-	}
-	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys,
-		proj_expr, _unmarshalled.As, nil, nil)
-
+	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
-
 	return err
 }
