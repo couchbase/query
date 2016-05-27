@@ -12,6 +12,7 @@ This document provides links to external design documents; links are provided un
 
 * [N1QL Query API](http://goo.gl/ezpmVx) - design document for query REST API
 * [Prepared Statements](http://goo.gl/T8l7nd) - design document for prepared statements
+* [encoded_plan](https://goo.gl/aeGjlj)- design document for REST API encoded_plan
 * [N1QL Error Handling](http://goo.gl/IzZA0y) - design document for error handling
 * [N1QL - JDBC Type Mapping](http://goo.gl/akKrBe) - design document for mapping N1QL types to JDBC
 
