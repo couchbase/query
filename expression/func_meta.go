@@ -241,6 +241,17 @@ func (this *Self) CoveredBy(keyspace string, exprs Expressions) bool {
 	return false
 }
 
+func (this *Self) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	for _, key := range groupKeys {
+		if this.EquivalentTo(key) {
+			return true, nil
+		}
+	}
+
+	return false, this
+}
+
 func (this *Self) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return SELF }
 }

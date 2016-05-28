@@ -130,6 +130,22 @@ func (this *Identifier) Copy() Expression {
 	return this
 }
 
+func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	for _, key := range groupKeys {
+		if this.EquivalentTo(key) {
+			return true, nil
+		}
+	}
+
+	_, found := allowed.Field(this.identifier)
+	if found {
+		return true, nil
+	}
+
+	return false, this
+}
+
 /*
 Call SetField using item value and set the identifier
 string to the value. The SetField method returns a

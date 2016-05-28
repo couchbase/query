@@ -424,14 +424,6 @@ func (this *Position) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes in two values and returns a value that
-corresponds to the second expressions position in the
-first.  If the input type is missing return missing, and
-if it isnt string then return null value. Use the Index
-method defined by the strings package to calculate the
-offset position of the second string. Return that value.
-*/
 func (this *Position) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -503,15 +495,6 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method returns a string value that repeats the first value
-second number of times. If either of the input values are
-missing, return a missing value, and if the first isnt a string
-and the second isnt a number then return a null value. Check if the
-number n is less than 0 and if it isnt an integer, then return null
-value. Call the Repeat method from the strings package with the
-string and number and return that stringvalue.
-*/
 func (this *Repeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

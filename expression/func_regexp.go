@@ -310,19 +310,6 @@ func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.V
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes in two values and returns a value that
-corresponds to the first position of the regular expression
-pattern (already set or populated using the second value)
-in the first string value, or -1 if it isnt found. If the
-input type is missing return missing, and if it isnt
-string then return null value. Use the FindStringIndex
-method in the regexp package to return a two-element slice
-of integers defining the location of the leftmost match in
-the string of the regular expression as per the Go Docs. Return
-the first element of this slice as a value. If a FindStringIndex
-returns nil, then the regexp pattern isnt found. Hence return -1.
-*/
 func (this *RegexpPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

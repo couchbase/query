@@ -201,12 +201,6 @@ type IsBinary struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewIsBinary takes as input an expression and returns
-a pointer to the IsBinary struct that calls NewUnaryFunctionBase to
-create a function named IS_BOOL with an input operand as the
-expression.
-*/
 func NewIsBinary(operand Expression) Function {
 	rv := &IsBinary{
 		*NewUnaryFunctionBase("is_binary", operand),
@@ -217,8 +211,7 @@ func NewIsBinary(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IsBinary) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)

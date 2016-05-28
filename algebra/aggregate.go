@@ -169,6 +169,11 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 	return nil
 }
 
+func (this *AggregateBase) SurvivesGrouping(groupKeys expression.Expressions,
+	allowed *value.ScopeValue) (bool, expression.Expression) {
+	return true, nil
+}
+
 /*
 Base class for queries that have the DISTINCT keyword for aggregate
 functions. Type DistinctAggregateBase is a struct that inherits

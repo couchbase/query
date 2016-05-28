@@ -162,16 +162,6 @@ func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, er
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method returns value based on input argument type. If
-the type is lower than the array in N1QL defined ordering,
-then we return the argument itself. If it is an array value
-and it has only one element the result of the Apply method
-on this single element is returned. It it is an object
-and has only one element, then the result of the Apply
-method on this single value is returned. For all other cases
-we return a NULL.
-*/
 func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() < value.ARRAY {
 		return arg, nil
@@ -531,13 +521,6 @@ func (this *ToString) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-It returns a string based on the input expr value. Values
-missing, null and strings return themselves. False, true
-(boolean) and numbers return their string representation.
-This is done using the Sprint method defined in fmt for Go.
-All other values map to null.
-*/
 func (this *ToString) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.STRING:

@@ -54,31 +54,31 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// Constrain projection to GROUP keys and aggregates
 	if group != nil {
-		groupExprs := group.By()
+		groupKeys := group.By()
 		letting := group.Letting()
 		if letting != nil {
-			groupExprs = append(groupExprs, letting.Identifiers()...)
+			groupKeys = append(groupKeys, letting.Identifiers()...)
 		}
 
 		proj := node.Projection().Terms()
+		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
 		for _, p := range proj {
-			err = constrainGroupProjection(p, p.Expression(), groupExprs)
+			err = constrainGroupProjection(p, groupKeys, allowed)
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		if this.order != nil {
-			aliases := make(map[string]bool, len(proj))
-			for _, t := range node.Projection().Terms() {
+			for _, t := range proj {
 				if t.As() != "" {
-					aliases[t.As()] = true
+					allowed.SetField(t.As(), true)
 				}
 			}
 
 			ord := this.order.Expressions()
 			for _, o := range ord {
-				err = constrainGroupSort(o, o, groupExprs, aliases)
+				err = constrainGroupTerm(o, groupKeys, allowed)
 				if err != nil {
 					return nil, err
 				}
@@ -334,68 +334,21 @@ func constrainAggregate(cond expression.Expression, aggs map[string]algebra.Aggr
 	}
 }
 
-func constrainGroupProjection(term *algebra.ResultTerm, expr expression.Expression,
-	groupExprs expression.Expressions) errors.Error {
+func constrainGroupProjection(term *algebra.ResultTerm, groupKeys expression.Expressions,
+	allowed *value.ScopeValue) errors.Error {
+	expr := term.Expression()
 	if expr == nil {
 		return errors.NewNotGroupKeyOrAggError(term.String())
 	}
 
-	if _, ok := expr.(algebra.Aggregate); ok {
-		return nil
-	}
-
-	for _, groupExpr := range groupExprs {
-		if expr.EquivalentTo(groupExpr) {
-			return nil
-		}
-	}
-
-	// Error if expr is not a group key and depends on data
-	if _, ok := expr.(*expression.Identifier); ok {
-		return errors.NewNotGroupKeyOrAggError(term.String())
-	}
-
-	// Error if expr is not a group key and depends on data
-	if _, ok := expr.(*expression.Self); ok {
-		return errors.NewNotGroupKeyOrAggError(term.String())
-	}
-
-	for _, child := range expr.Children() {
-		err := constrainGroupProjection(term, child, groupExprs)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return constrainGroupTerm(expr, groupKeys, allowed)
 }
 
-func constrainGroupSort(term, expr expression.Expression, groupExprs expression.Expressions, aliases map[string]bool) errors.Error {
-	if _, ok := expr.(algebra.Aggregate); ok {
-		return nil
-	}
-
-	for _, groupExpr := range groupExprs {
-		if expr.EquivalentTo(groupExpr) {
-			return nil
-		}
-	}
-
-	// Error if expr is not a group key, depends on data, and is not a projected alias
-	if id, ok := expr.(*expression.Identifier); ok && !aliases[id.Identifier()] {
-		return errors.NewNotGroupKeyOrAggError(term.String())
-	}
-
-	// Error if expr is not a group key and depends on data
-	if _, ok := expr.(*expression.Self); ok {
-		return errors.NewNotGroupKeyOrAggError(term.String())
-	}
-
-	for _, child := range expr.Children() {
-		err := constrainGroupSort(term, child, groupExprs, aliases)
-		if err != nil {
-			return err
-		}
+func constrainGroupTerm(expr expression.Expression, groupKeys expression.Expressions,
+	allowed *value.ScopeValue) errors.Error {
+	ok, _ := expr.SurvivesGrouping(groupKeys, allowed)
+	if !ok {
+		return errors.NewNotGroupKeyOrAggError(expr.String())
 	}
 
 	return nil

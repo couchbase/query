@@ -171,6 +171,13 @@ type Expression interface {
 	   ok.
 	*/
 	MayOverlapSpans() bool
+
+	/*
+	   Indicates if this expression may be a projection or
+	   ordering term in an aggregation query.
+	*/
+
+	SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (bool, Expression)
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

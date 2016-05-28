@@ -289,7 +289,7 @@ func (this *ExpressionBase) SetExpr(expr Expression) {
 }
 
 /*
-Return true if any child may overlap spans.
+Return TRUE if any child may overlap spans.
 */
 func (this *ExpressionBase) MayOverlapSpans() bool {
 	for _, child := range this.expr.Children() {
@@ -299,4 +299,22 @@ func (this *ExpressionBase) MayOverlapSpans() bool {
 	}
 
 	return false
+}
+
+func (this *ExpressionBase) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	for _, key := range groupKeys {
+		if this.expr.EquivalentTo(key) {
+			return true, nil
+		}
+	}
+
+	for _, child := range this.expr.Children() {
+		ok, expr := child.SurvivesGrouping(groupKeys, allowed)
+		if !ok {
+			return ok, expr
+		}
+	}
+
+	return true, nil
 }

@@ -1487,13 +1487,6 @@ func (this *ArrayRepeat) PropagatesNull() bool {
 	return false
 }
 
-/*
-This method creates a new slice and repeats the first value
-second value number of times. If either of the input values
-are missing, return a missing value. If the second value is
-less than 0, or not an absolute number then return a null
-value.
-*/
 func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

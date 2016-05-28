@@ -11,6 +11,9 @@ package expression
 
 import (
 	"reflect"
+
+	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -75,6 +78,31 @@ func (this *collPredBase) MapChildren(mapper Mapper) (err error) {
 	return
 }
 
+func (this *collPredBase) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	for _, key := range groupKeys {
+		if this.EquivalentTo(key) {
+			return true, nil
+		}
+	}
+
+	vars := _VARS_POOL.Get()
+	defer _VARS_POOL.Put(vars)
+	allowed = value.NewScopeValue(vars, allowed)
+	for _, b := range this.bindings {
+		allowed.SetField(b.Variable(), true)
+	}
+
+	for _, child := range this.Children() {
+		ok, expr := child.SurvivesGrouping(groupKeys, allowed)
+		if !ok {
+			return ok, expr
+		}
+	}
+
+	return true, nil
+}
+
 func (this *collPredBase) Bindings() Bindings {
 	return this.bindings
 }
@@ -82,3 +110,5 @@ func (this *collPredBase) Bindings() Bindings {
 func (this *collPredBase) Satisfies() Expression {
 	return this.satisfies
 }
+
+var _VARS_POOL = util.NewStringInterfacePool(8)
