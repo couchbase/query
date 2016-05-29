@@ -15,17 +15,12 @@ import (
 
 /*
 Logical terms allow for combining other expressions using boolean logic.
-Standard NOT operators are supported. Type Not is a struct that
-implements UnaryFunctionBase.
+Standard NOT operators are supported.
 */
 type Not struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewNot calls NewUnaryFunctionBase to define Not
-with input operand expression as input.
-*/
 func NewNot(operand Expression) Function {
 	rv := &Not{
 		*NewUnaryFunctionBase("not", operand),
@@ -36,22 +31,14 @@ func NewNot(operand Expression) Function {
 }
 
 /*
-It calls the VisitNot method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Not) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitNot(this)
 }
 
-/*
-It returns a value type Boolean.
-*/
 func (this *Not) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Not) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -81,8 +68,7 @@ func (this *Not) Apply(context Context, arg value.Value) (value.Value, error) {
 }
 
 /*
-The constructor returns a NewNot by casting the receiver to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Not) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

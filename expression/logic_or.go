@@ -15,17 +15,12 @@ import (
 
 /*
 Logical terms allow for combining other expressions using boolean logic.
-Standard OR operators are supported. Type Or is a struct that
-implements CommutativeFunctionBase.
+Standard OR operators are supported.
 */
 type Or struct {
 	CommutativeFunctionBase
 }
 
-/*
-The function NewOr calls NewCommutativeFunctionBase to define OR
-with input operand expressions as input.
-*/
 func NewOr(operands ...Expression) *Or {
 	rv := &Or{
 		*NewCommutativeFunctionBase("or", operands...),
@@ -36,22 +31,14 @@ func NewOr(operands ...Expression) *Or {
 }
 
 /*
-It calls the VisitOr method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Or) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitOr(this)
 }
 
-/*
-It returns a value type Boolean.
-*/
 func (this *Or) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method and passes in the receiver, current item
-and current context.
-*/
 func (this *Or) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -135,7 +122,7 @@ func (this *Or) Apply(context Context, args ...value.Value) (value.Value, error)
 }
 
 /*
-Returns NewOr as FunctionConstructor.
+Factory method pattern.
 */
 func (this *Or) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

@@ -13,6 +13,9 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+/*
+Expression that implements array indexing in CREATE INDEX.
+*/
 type All struct {
 	ExpressionBase
 	array    Expression
@@ -29,6 +32,9 @@ func NewAll(array Expression, distinct bool) *All {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *All) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAll(this)
 }

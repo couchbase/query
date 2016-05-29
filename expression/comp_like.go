@@ -17,14 +17,11 @@ import (
 
 /*
 Comparison terms allow for comparing two expressions.
-Like and not like are used to to search for a specified
+LIKE and NOT LIKE are used to to search for a specified
 pattern in an expression. The LIKE operator allows for
 wildcard matching of string values. The right-hand side
 of the operator is a pattern, optionally containg '%'
-and '_' wildcard characters. Type Like is a struct that
-implements BinaryFunctionBase. It has a field that
-represents a regular expression. Regexp is the
-representation of a compiled regular expression.
+and '_' wildcard characters.
 */
 type Like struct {
 	BinaryFunctionBase
@@ -32,11 +29,6 @@ type Like struct {
 	part *regexp.Regexp
 }
 
-/*
-The function NewLike calls NewBinaryFunctionBase
-to define the like comparison expression with input
-operand expressions first and second, as input.
-*/
 func NewLike(first, second Expression) Function {
 	rv := &Like{
 		*NewBinaryFunctionBase("like", first, second),
@@ -50,22 +42,14 @@ func NewLike(first, second Expression) Function {
 }
 
 /*
-It calls the VisitLike method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Like) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLike(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *Like) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Like) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -81,11 +65,6 @@ func (this *Like) FilterCovers(covers map[string]value.Value) map[string]value.V
 	return covers
 }
 
-/*
-This method evaluates the between comparison operation and returns a
-value representing if first value is LIKE the second. If either of
-the input operands is MISSING or NULL, return MISSING or NULL.
-*/
 func (this *Like) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -109,8 +88,7 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 }
 
 /*
-The constructor returns a NewLike with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Like) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -198,10 +176,7 @@ func replacer(s string) string {
 }
 
 /*
-This function implements the not like operation. It calls
-the NewLike method to return an expression that
-is a complement of the its return type (boolean).
-(NewNot represents the Not logical operation)
+This function implements the NOT LIKE operation.
 */
 func NewNotLike(first, second Expression) Expression {
 	return NewNot(NewLike(first, second))

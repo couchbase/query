@@ -15,17 +15,12 @@ import (
 
 /*
 Logical terms allow for combining other expressions using boolean logic.
-Standard AND operators are supported. Type And is a struct that
-implements CommutativeFunctionBase.
+Standard AND operators are supported.
 */
 type And struct {
 	CommutativeFunctionBase
 }
 
-/*
-The function NewAnd calls NewCommutativeFunctionBase to define AND
-with input operand expressions as input.
-*/
 func NewAnd(operands ...Expression) *And {
 	rv := &And{
 		*NewCommutativeFunctionBase("and", operands...),
@@ -36,22 +31,14 @@ func NewAnd(operands ...Expression) *And {
 }
 
 /*
-It calls the VisitAnd method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *And) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAnd(this)
 }
 
-/*
-It returns a value type Boolean.
-*/
 func (this *And) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method and passes in the receiver, current item
-and current context.
-*/
 func (this *And) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -71,10 +58,8 @@ func (this *And) FilterCovers(covers map[string]value.Value) map[string]value.Va
 }
 
 /*
-Range over input arguments, for all types other than missing and null,
-if the truth value of the argument is false, then return false. If
-the type is missing, return missing, and if null return null. If all
-inputs are true, return true. For null and missing, it returns missing.
+Return FALSE if any known input has a truth value of FALSE, else
+return MISSING, NULL, or TRUE in that order.
 */
 func (this *And) Apply(context Context, args ...value.Value) (value.Value, error) {
 	missing := false
@@ -103,7 +88,7 @@ func (this *And) Apply(context Context, args ...value.Value) (value.Value, error
 }
 
 /*
-Returns NewAnd as FunctionConstructor.
+Factory method pattern.
 */
 func (this *And) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

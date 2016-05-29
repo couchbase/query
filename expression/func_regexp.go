@@ -25,22 +25,13 @@ import (
 /*
 This represents the String function REGEXP_CONTAINS(expr, pattern).
 It returns true if the string value contains the regular expression
-pattern. Type RegexpContains is a struct that implements
-BinaryFunctionBase. It has a field that
-represents a regular expression. Regexp is the
-representation of a compiled regular expression.
+pattern.
 */
 type RegexpContains struct {
 	BinaryFunctionBase
 	re *regexp.Regexp
 }
 
-/*
-The function NewRegexpContains calls NewBinaryFunctionBase to
-create a function named REGEXP_CONTAINS with the two
-expressions as input. It calls precompile to populate the
-regexp field in the struct.
-*/
 func NewRegexpContains(first, second Expression) Function {
 	rv := &RegexpContains{
 		*NewBinaryFunctionBase("regexp_contains", first, second),
@@ -53,22 +44,14 @@ func NewRegexpContains(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *RegexpContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *RegexpContains) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *RegexpContains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -84,17 +67,6 @@ func (this *RegexpContains) FilterCovers(covers map[string]value.Value) map[stri
 	return covers
 }
 
-/*
-This method takes in two values and returns a value that
-corresponds to whether the regular expression (already set
-or populated using the second value) contains the first
-string. If the input type is missing return missing, and
-if it isnt string then return null value. Use the
-FindStringIndex method in the regexp package to return
-a two-element slice of integers defining the location of
-the leftmost match in the string of the regular expression as per the
-Go Docs. A return value of nil indicates no match. Return this value.
-*/
 func (this *RegexpContains) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -118,8 +90,7 @@ func (this *RegexpContains) Apply(context Context, first, second value.Value) (v
 }
 
 /*
-The constructor returns a NewRegexpContains with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *RegexpContains) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -136,10 +107,7 @@ func (this *RegexpContains) Constructor() FunctionConstructor {
 /*
 This represents the String function REGEXP_LIKE(expr, pattern).
 It returns true if the string value matches the regular
-expression pattern. Type RegexpLike is a struct that implements
-BinaryFunctionBase. It has a field that represents a regular
-expression. Regexp is the representation of a compiled regular
-expression.
+expression pattern.
 */
 type RegexpLike struct {
 	BinaryFunctionBase
@@ -147,12 +115,6 @@ type RegexpLike struct {
 	part *regexp.Regexp
 }
 
-/*
-The function NewRegexpLike calls NewBinaryFunctionBase to
-create a function named REGEXP_LIKE with the two
-expressions as input. It calls precompile to populate the
-regexp field in the struct.
-*/
 func NewRegexpLike(first, second Expression) Function {
 	rv := &RegexpLike{
 		*NewBinaryFunctionBase("regexp_like", first, second),
@@ -167,22 +129,14 @@ func NewRegexpLike(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *RegexpLike) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *RegexpLike) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *RegexpLike) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -198,14 +152,6 @@ func (this *RegexpLike) FilterCovers(covers map[string]value.Value) map[string]v
 	return covers
 }
 
-/*
-This method takes in two values and returns a value that
-corresponds to whether the first string value matches the
-regular expression (already set or populated using the
-second value) If the input type is missing return missing, and
-if it isnt string then return null value. Use the MatchString
-method to compare the regexp and string and return that value.
-*/
 func (this *RegexpLike) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -229,8 +175,7 @@ func (this *RegexpLike) Apply(context Context, first, second value.Value) (value
 }
 
 /*
-The constructor returns a NewRegexpLike with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *RegexpLike) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -262,22 +207,13 @@ func (this *RegexpLike) Regexp() *regexp.Regexp {
 /*
 This represents the String function REGEXP_POSITION(expr, pattern)
 It returns the first position of the regular expression pattern
-within the string, or -1. Type RegexpPosition is a struct that
-implements BinaryFunctionBase. It has a field that represents a
-regular expression. Regexp is the representation of a compiled
-regular expression.
+within the string, or -1.
 */
 type RegexpPosition struct {
 	BinaryFunctionBase
 	re *regexp.Regexp
 }
 
-/*
-The function NewRegexpPosition calls NewBinaryFunctionBase to
-create a function named REGEXP_POSITION with the two
-expressions as input. It calls precompile to populate the
-regexp field in the struct.
-*/
 func NewRegexpPosition(first, second Expression) Function {
 	rv := &RegexpPosition{
 		*NewBinaryFunctionBase("regexp_position", first, second),
@@ -290,22 +226,14 @@ func NewRegexpPosition(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *RegexpPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *RegexpPosition) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *RegexpPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -338,8 +266,7 @@ func (this *RegexpPosition) Apply(context Context, first, second value.Value) (v
 }
 
 /*
-The constructor returns a NewRegexpPosition with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *RegexpPosition) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -357,22 +284,13 @@ func (this *RegexpPosition) Constructor() FunctionConstructor {
 This represents the String function
 REGEXP_REPLACE(expr, pattern, repl [, n ]). It returns a
 new string with occurences of pattern replaced with repl.
-If n is given, at most n replacements are performed. Type
-RegexpReplace is a struct that implements FunctionBase.
-It has a field that represents a regular expression. Regexp
-is the representation of a compiled regular expression.
+If n is given, at most n replacements are performed.
 */
 type RegexpReplace struct {
 	FunctionBase
 	re *regexp.Regexp
 }
 
-/*
-The function NewRegexpReplace calls NewFunctionBase to
-create a function named REGEXP_REPLACE with the two
-expressions as input. It calls precompile to populate the
-regexp field in the struct.
-*/
 func NewRegexpReplace(operands ...Expression) Function {
 	rv := &RegexpReplace{
 		*NewFunctionBase("regexp_replace", operands...),
@@ -385,41 +303,18 @@ func NewRegexpReplace(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *RegexpReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *RegexpReplace) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for functions and passes in the
-receiver, current item and current context.
-*/
 func (this *RegexpReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-/*
-For Regexp Replace there can be either 3 or 4 input arguments.
-It searches for occurences of the regular expression pattern
-(representing the substring already set or populated using the
-second value) in the first arg (the expr) and replaces it with
-the third arg (the repacer). If there are only 3 args then use
-the ReplaceAllLiteralString method in the Regexp package to
-return a string after replacing matches of the Regexp with the
-replacement string. If the fourth arg exists it contains
-the replacements to a maximum number. Make sure its an integer
-value, and call ReplaceAllString. Keep track of the count.
-If either of the first three input arg values are missing
-return a missing, or if not a string return a null value. If
-the fourth input arg is not a number return a null value.
-*/
 func (this *RegexpReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 
@@ -488,9 +383,11 @@ function is 4.
 func (this *RegexpReplace) MaxArgs() int { return 4 }
 
 /*
-The constructor returns a NewRegexpReplace as the FunctionConstructor.
+Factory method pattern.
 */
-func (this *RegexpReplace) Constructor() FunctionConstructor { return NewRegexpReplace }
+func (this *RegexpReplace) Constructor() FunctionConstructor {
+	return NewRegexpReplace
+}
 
 /*
 This method compiles and sets the regular expression re

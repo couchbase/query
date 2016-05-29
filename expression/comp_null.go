@@ -13,20 +13,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-/*
-Comparison terms allow for comparing two expressions.
-Type IsNull is a a struct that implements
-UnaryFunctionBase.
-*/
 type IsNull struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewIsNull calls NewUnaryFunctionBase
-to define isnull comparison expression with input operand
-expression as input.
-*/
 func NewIsNull(operand Expression) Function {
 	rv := &IsNull{
 		*NewUnaryFunctionBase("isnull", operand),
@@ -37,22 +27,14 @@ func NewIsNull(operand Expression) Function {
 }
 
 /*
-It calls the VisitIsNull method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsNull(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *IsNull) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *IsNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -72,12 +54,6 @@ func (this *IsNull) FilterCovers(covers map[string]value.Value) map[string]value
 	return covers
 }
 
-/*
-Evaluates the Is Null comparison operation for expressions.
-If the type of input argument is a null value, return true,
-if missing return a missing value and by for all other types
-return a false value.
-*/
 func (this *IsNull) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.NULL:
@@ -90,8 +66,7 @@ func (this *IsNull) Apply(context Context, arg value.Value) (value.Value, error)
 }
 
 /*
-The constructor returns a NewIsNull with the operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *IsNull) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -148,6 +123,9 @@ func (this *IsNotNull) Apply(context Context, arg value.Value) (value.Value, err
 	}
 }
 
+/*
+Factory method pattern.
+*/
 func (this *IsNotNull) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIsNotNull(operands[0])

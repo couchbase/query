@@ -18,19 +18,13 @@ import (
 /*
 Nested expressions are used to access fields inside of objects.
 This is done using the dot operator. By default the field names
-are case sensitive. Type Field is a struct that implements
-BinaryFunctionBase and has a boolean value caseInsensitive to
-determine the case of the field name.
+are case sensitive.
 */
 type Field struct {
 	BinaryFunctionBase
 	caseInsensitive bool
 }
 
-/*
-The function NewField calls NewBinaryFunctionBase to define the
-field with input operand expressions first and second, as input.
-*/
 func NewField(first, second Expression) *Field {
 	rv := &Field{
 		BinaryFunctionBase: *NewBinaryFunctionBase("field", first, second),
@@ -46,30 +40,18 @@ func NewField(first, second Expression) *Field {
 }
 
 /*
-It calls the VisitField method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Field) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitField(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *Field) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-Return the expression alias of the receiver Field by
-calling the Alias method on the second operand.
-*/
 func (this *Field) Alias() string {
 	return this.Second().Alias()
 }
@@ -117,8 +99,7 @@ func (this *Field) Apply(context Context, first, second value.Value) (value.Valu
 }
 
 /*
-The constructor returns a NewField with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Field) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -192,10 +173,6 @@ type FieldName struct {
 	caseInsensitive bool
 }
 
-/*
-The function NewFieldName returns a pointer to a FieldName that
-sets the name to the input expression.
-*/
 func NewFieldName(name string, caseInsensitive bool) Expression {
 	rv := &FieldName{
 		Constant: Constant{
@@ -210,8 +187,7 @@ func NewFieldName(name string, caseInsensitive bool) Expression {
 }
 
 /*
-It calls the VisitFieldName method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *FieldName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFieldName(this)

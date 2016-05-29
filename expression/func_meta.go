@@ -24,8 +24,7 @@ import (
 
 /*
 This represents the function BASE64_ENCODE(expr). It returns the
-base64-encoding of expr. Type Base64Encode is a struct that implements
-UnaryFunctionBase.
+base64-encoding of expr.
 */
 type Base64Encode struct {
 	UnaryFunctionBase
@@ -40,6 +39,9 @@ func NewBase64Encode(operand Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Base64Encode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -60,6 +62,9 @@ func (this *Base64Encode) Apply(context Context, operand value.Value) (value.Val
 	return value.NewValue(str), nil
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Base64Encode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewBase64Encode(operands[0])
@@ -74,8 +79,7 @@ func (this *Base64Encode) Constructor() FunctionConstructor {
 
 /*
 This represents the function BASE64_DECODE(expr). It returns the
-base64-decoding of expr. Type Base64Decode is a struct that implements
-UnaryFunctionBase.
+base64-decoding of expr.
 */
 type Base64Decode struct {
 	UnaryFunctionBase
@@ -90,6 +94,9 @@ func NewBase64Decode(operand Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Base64Decode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -115,6 +122,9 @@ func (this *Base64Decode) Apply(context Context, operand value.Value) (value.Val
 	}
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Base64Decode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewBase64Decode(operands[0])
@@ -143,6 +153,9 @@ func NewMeta(operands ...Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -181,6 +194,9 @@ func (this *Meta) MinArgs() int { return 0 }
 
 func (this *Meta) MaxArgs() int { return 1 }
 
+/*
+Factory method pattern.
+*/
 func (this *Meta) Constructor() FunctionConstructor {
 	return NewMeta
 }
@@ -194,8 +210,7 @@ func (this *Meta) Constructor() FunctionConstructor {
 /*
 This represents the Meta function SELF(). It makes the
 result into a valid json value after removing the object
-mapper. It is a type struct that implements
-NullaryFunctionBase.
+mapper.
 */
 type Self struct {
 	NullaryFunctionBase
@@ -203,11 +218,6 @@ type Self struct {
 
 var SELF = NewSelf()
 
-/*
-The function NewSelf returns a pointer to the
-NewNullaryFunctionBase to create a function SELF. It has
-no input arguments.
-*/
 func NewSelf() Function {
 	rv := &Self{
 		*NewNullaryFunctionBase("self"),
@@ -217,6 +227,9 @@ func NewSelf() Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Self) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSelf(this)
 }
@@ -252,6 +265,9 @@ func (this *Self) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeVa
 	return false, this
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Self) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return SELF }
 }
@@ -264,8 +280,7 @@ func (this *Self) Constructor() FunctionConstructor {
 
 /*
 This represents the Meta function UUID(). It returns
-a version 4 Universally Unique Identifier. Type Uuid
-is a struct that implements NullaryFunctionBase.
+a version 4 Universally Unique Identifier.
 */
 type Uuid struct {
 	NullaryFunctionBase
@@ -281,6 +296,9 @@ func NewUuid() Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Uuid) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -300,6 +318,9 @@ func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, erro
 	return value.NewValue(u), nil
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Uuid) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUuid()
@@ -329,6 +350,9 @@ func NewVersion() Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Version) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -352,6 +376,9 @@ func (this *Version) Indexable() bool {
 	return false
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Version) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewVersion()
@@ -381,6 +408,9 @@ func NewMinVersion() Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *MinVersion) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -404,6 +434,9 @@ func (this *MinVersion) Indexable() bool {
 	return false
 }
 
+/*
+Factory method pattern.
+*/
 func (this *MinVersion) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMinVersion()

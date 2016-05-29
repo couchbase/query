@@ -36,6 +36,9 @@ func NewUnnestPosition(operand Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *UnnestPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -69,6 +72,9 @@ func (this *UnnestPosition) Apply(context Context, operand value.Value) (value.V
 	return value.NewValue(pos), nil
 }
 
+/*
+Factory method pattern.
+*/
 func (this *UnnestPosition) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUnnestPosition(operands[0])

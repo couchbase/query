@@ -15,9 +15,7 @@ import (
 
 /*
 An identifier is a symbolic reference to a particular value
-in the current context. Type identifier is a struct that
-implements ExpressionBase. It contains a variable identifier
-of type string that represents identifiers.
+in the current context.
 */
 type Identifier struct {
 	ExpressionBase
@@ -25,10 +23,6 @@ type Identifier struct {
 	caseInsensitive bool
 }
 
-/*
-This method returns a pointer to an Identifier structure
-that has its identifier field populated by the input argument.
-*/
 func NewIdentifier(identifier string) *Identifier {
 	rv := &Identifier{
 		identifier: identifier,
@@ -39,17 +33,12 @@ func NewIdentifier(identifier string) *Identifier {
 }
 
 /*
-It calls the VisitIdentifier method by passing in the receiver to
-process identifier expressions, and returns the interface. It is
-a visitor pattern.
+Visitor pattern.
 */
 func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIdentifier(this)
 }
 
-/*
-It returns JSON value that is all-encompassing.
-*/
 func (this *Identifier) Type() value.Type { return value.JSON }
 
 /*
@@ -69,9 +58,6 @@ func (this *Identifier) Value() value.Value {
 	return nil
 }
 
-/*
-Return the identifier string field of the receiver.
-*/
 func (this *Identifier) Alias() string {
 	return this.identifier
 }
@@ -83,11 +69,6 @@ func (this *Identifier) Indexable() bool {
 	return true
 }
 
-/*
-This method checks if the input expression is an Identifier type.
-It it is return true if the identifiers are equal. If not return
-false.
-*/
 func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Identifier:
@@ -112,16 +93,10 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions) bool {
 	return false
 }
 
-/*
-Since identifiers dont have children this returns nil.
-*/
 func (this *Identifier) Children() Expressions {
 	return nil
 }
 
-/*
-Returns nil.
-*/
 func (this *Identifier) MapChildren(mapper Mapper) error {
 	return nil
 }
@@ -146,23 +121,11 @@ func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.S
 	return false, this
 }
 
-/*
-Call SetField using item value and set the identifier
-string to the value. The SetField method returns a
-boolean value. If it is nil return true since no error
-was encountered while setting the field.
-*/
 func (this *Identifier) Set(item, val value.Value, context Context) bool {
 	er := item.SetField(this.identifier, val)
 	return er == nil
 }
 
-/*
-Call UnsetField using item value and unset the identifier.
-(delete it). The UnsetField returns a boolean value. If it
-is nil return true since no error was encountered while
-setting the field.
-*/
 func (this *Identifier) Unset(item value.Value, context Context) bool {
 	er := item.UnsetField(this.identifier)
 	return er == nil

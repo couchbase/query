@@ -41,8 +41,7 @@ type Expression interface {
 	json.Marshaler
 
 	/*
-	   It takes as input a Visitor type and returns an interface
-	   and error. It represents a visitor pattern.
+	   Visitor pattern.
 	*/
 	Accept(visitor Visitor) (interface{}, error)
 

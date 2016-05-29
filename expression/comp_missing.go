@@ -13,20 +13,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-/*
-Comparison terms allow for comparing two expressions.
-Type IsMissing is a a struct that implements
-UnaryFunctionBase.
-*/
 type IsMissing struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewIsMissing calls NewUnaryFunctionBase
-to define ismissing comparison expression with input operand
-expression as input.
-*/
 func NewIsMissing(operand Expression) Function {
 	rv := &IsMissing{
 		*NewUnaryFunctionBase("ismissing", operand),
@@ -37,22 +27,14 @@ func NewIsMissing(operand Expression) Function {
 }
 
 /*
-It calls the VisitIsMissing method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsMissing(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *IsMissing) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *IsMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -76,11 +58,6 @@ func (this *IsMissing) FilterCovers(covers map[string]value.Value) map[string]va
 	return covers
 }
 
-/*
-Evaluates the Is Missing comparison operation for expressions.
-Return true if the input argument value is a missing value,
-else return false.
-*/
 func (this *IsMissing) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING:
@@ -91,8 +68,7 @@ func (this *IsMissing) Apply(context Context, arg value.Value) (value.Value, err
 }
 
 /*
-The constructor returns a NewIsMissing with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *IsMissing) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -113,6 +89,9 @@ func NewIsNotMissing(operand Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *IsNotMissing) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsNotMissing(this)
 }
@@ -151,6 +130,9 @@ func (this *IsNotMissing) Apply(context Context, arg value.Value) (value.Value, 
 	}
 }
 
+/*
+Factory method pattern.
+*/
 func (this *IsNotMissing) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIsNotMissing(operands[0])

@@ -26,19 +26,12 @@ import (
 /*
 This represents the type conversion function TO_ARRAY(expr).
 It returns an array where a missing, null and arrays map
-to themselves and all other values are wrapped in an array.
-ToArray is a struct that implements UnaryFunctionBase.
+to themselves and other non-binary values are wrapped in an array.
 */
 type ToArray struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToArray takes as input an expression and returns
-a pointer to the ToArray struct that calls NewUnaryFunctionBase to
-create a function named TO_ARRAY with an input operand as the
-expression.
-*/
 func NewToArray(operand Expression) Function {
 	rv := &ToArray{
 		*NewUnaryFunctionBase("to_array", operand),
@@ -49,31 +42,17 @@ func NewToArray(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Array value.
-*/
 func (this *ToArray) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
-
-/*
-It returns the argument itself if type of the input value is Null,
-a value below this (N!QL order) or an Array. Otherwise convert the
-argument to a valid Go type ang cast it to a slice of interface.
-*/
 func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() <= value.NULL {
 		return arg, nil
@@ -87,8 +66,7 @@ func (this *ToArray) Apply(context Context, arg value.Value) (value.Value, error
 }
 
 /*
-The constructor returns a NewToArray with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToArray) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -108,19 +86,12 @@ It returns atomic values where, missing, null, boolean,
 numbers and strings, are themselves, arrays of length 1
 are the result of TO_ATOM() on their single element and
 objects of length 1 are the result of TO_ATOM() on their
-single value. All other values return null. ToAtom is a
-struct that implements UnaryFunctionBase.
+single value. All other values return null.
 */
 type ToAtom struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToAtom takes as input an expression and returns
-a pointer to the ToAtom struct that calls NewUnaryFunctionBase to
-create a function named TO_ATOM with an input operand as the
-expression.
-*/
 func NewToAtom(operand Expression) Function {
 	rv := &ToAtom{
 		*NewUnaryFunctionBase("to_atom", operand),
@@ -131,41 +102,27 @@ func NewToAtom(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns the type of the operand. If its type is lower than
-that of the ARRAY as per type ordering defined by N!QL specs
-return that type, else return a JSON value.
-*/
 func (this *ToAtom) Type() value.Type {
 	t := this.Operand().Type()
-	if t < value.ARRAY {
-		return t
-	} else if t == value.BINARY {
+	if t < value.ARRAY || t == value.BINARY {
 		return t
 	} else {
 		return value.JSON
 	}
 }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToAtom) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error) {
-	if arg.Type() < value.ARRAY {
-		return arg, nil
-	} else if arg.Type() == value.BINARY {
+	if arg.Type() < value.ARRAY || arg.Type() == value.BINARY {
 		return arg, nil
 	} else {
 		switch a := arg.Actual().(type) {
@@ -186,8 +143,7 @@ func (this *ToAtom) Apply(context Context, arg value.Value) (value.Value, error)
 }
 
 /*
-The constructor returns a NewToAtom with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToAtom) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -206,18 +162,12 @@ This represents the type conversion function TO_BOOL(expr).
 It returns boolean values where missing, null, false map to
 themselves. Numbers +0, -0 and NaN, empty strings, arrays
 and objects as expr map to false. All other values are
-true. ToBoolean is a struct that implements UnaryFunctionBase.
+true.
 */
 type ToBoolean struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToBoolean takes as input an expression and returns
-a pointer to the ToBoolean struct that calls NewUnaryFunctionBase to
-create a function named TO_BOOL with an input operand as the
-expression.
-*/
 func NewToBoolean(operand Expression) Function {
 	rv := &ToBoolean{
 		*NewUnaryFunctionBase("to_boolean", operand),
@@ -228,34 +178,18 @@ func NewToBoolean(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToBoolean) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Boolean value.
-*/
 func (this *ToBoolean) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToBoolean) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-If the input argument type is a missing, null or boolean value, it returns
-itself. Check to see the Go type of the input. If it is float64, then
-use the isNaN(returns if input is not a number) method defined in the math
-package and make sure that it returns false and the number is not 0, return
-true. If type is string, slice of interface or map which are are not empty,
-return true. All other input types return NULLs.
-*/
 func (this *ToBoolean) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.BOOLEAN:
@@ -279,8 +213,7 @@ func (this *ToBoolean) Apply(context Context, arg value.Value) (value.Value, err
 }
 
 /*
-The constructor returns a NewToBoolean with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToBoolean) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -300,18 +233,11 @@ It returns number values where missing, null, and numbers
 map to themselves. False is 0, true is 1, strings that
 parse as numbers are those numbers and all other values
 are null (For e.g. "123" is 123 but "a12" will be NULL).
-ToNumber is a struct that implements UnaryFunctionBase.
 */
 type ToNumber struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToNumber takes as input an expression and returns
-a pointer to the ToNumber struct that calls NewUnaryFunctionBase to
-create a function named TO_NUM with an input operand as the
-expression.
-*/
 func NewToNumber(operand Expression) Function {
 	rv := &ToNumber{
 		*NewUnaryFunctionBase("to_number", operand),
@@ -322,52 +248,34 @@ func NewToNumber(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToNumber) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ToNumber) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-It returns number values where missing, null, and numbers
-return themselves. If the input Go type (obtained by calling
-the Actual method) is bool then, if value is false return 0,
-and if true return 1. For strings use the ParseFloat method
-defined in strconv to determine if the parsed string is a
-valid number and return that number. For all other types
-return a Null value.
-*/
 func (this *ToNumber) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
-	case value.BOOLEAN, value.STRING:
-		switch a := arg.Actual().(type) {
-		case bool:
-			if a {
-				return value.ONE_VALUE, nil
-			} else {
-				return value.ZERO_VALUE, nil
-			}
-		case string:
-			f, err := strconv.ParseFloat(a, 64)
-			if err == nil {
-				return value.NewValue(f), nil
-			}
+	case value.BOOLEAN:
+		a := arg.Actual().(bool)
+		if a {
+			return value.ONE_VALUE, nil
+		} else {
+			return value.ZERO_VALUE, nil
+		}
+	case value.STRING:
+		s := arg.Actual().(string)
+		f, err := strconv.ParseFloat(s, 64)
+		if err == nil {
+			return value.NewValue(f), nil
 		}
 	}
 
@@ -375,8 +283,7 @@ func (this *ToNumber) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewToNumber with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToNumber) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -394,19 +301,12 @@ func (this *ToNumber) Constructor() FunctionConstructor {
 This represents the type conversion function TOOBJ(expr).
 It returns an object value. The input of types missing,
 null and object return themselves. For all other values,
-return an _EMPTY_OBJECT value. ToObject is a struct that
-implements UnaryFunctionBase.
+return an _EMPTY_OBJECT value.
 */
 type ToObject struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToObject takes as input an expression and returns
-a pointer to the ToObject struct that calls NewUnaryFunctionBase to
-create a function named TO_OBJ with an input operand as the
-expression.
-*/
 func NewToObject(operand Expression) Function {
 	rv := &ToObject{
 		*NewUnaryFunctionBase("to_object", operand),
@@ -417,37 +317,20 @@ func NewToObject(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToObject) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Object value.
-*/
 func (this *ToObject) Type() value.Type { return value.OBJECT }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToObject) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-Variable _EMPTY_OBJECT is a N1QL value that is a map from
-string to interface. It is an OBJECT that has no entries.
-*/
 var _EMPTY_OBJECT = value.NewValue(map[string]interface{}{})
 
-/*
-This method returns an object value. The input of types
-missing, null and object return themselves. For all other
-values, return an _EMPTY_OBJECT value.
-*/
 func (this *ToObject) Apply(context Context, arg value.Value) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.OBJECT:
@@ -458,8 +341,7 @@ func (this *ToObject) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewToObject with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToObject) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -478,19 +360,12 @@ This represents the type conversion function TOSTR(expr).
 It returns a string based on the input expr value. Values
 missing, null and strings return themselves. False, true
 (boolean) and numbers return their string representation.
-All other values map to null. ToString is a struct that
-implements UnaryFunctionBase.
+All other values map to null.
 */
 type ToString struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewToString takes as input an expression and returns
-a pointer to the ToString struct that calls NewUnaryFunctionBase to
-create a function named TO_STR with an input operand as the
-expression.
-*/
 func NewToString(operand Expression) Function {
 	rv := &ToString{
 		*NewUnaryFunctionBase("to_string", operand),
@@ -501,22 +376,14 @@ func NewToString(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ToString) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a String value.
-*/
 func (this *ToString) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ToString) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -549,8 +416,7 @@ func (this *ToString) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewToString with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ToString) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

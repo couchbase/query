@@ -23,9 +23,8 @@ import (
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_APPEND(expr, value).
-It returns a new array with value appended. Type ArrayAppend
-is a struct that implements BinaryFunctionBase.
+This represents the array function ARRAY_APPEND(expr, value, ...).
+It returns a new array with values appended.
 */
 type ArrayAppend struct {
 	BinaryFunctionBase
@@ -47,15 +46,8 @@ func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -64,13 +56,6 @@ func (this *ArrayAppend) PropagatesNull() bool {
 	return false
 }
 
-/*
-This method evaluates the array append function. If either
-of the input argument types are missing, or not an array return
-a missing and null value respectively. Use the append method
-to append the second expression to the first expression. Return
-the new array.
-*/
 func (this *ArrayAppend) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -84,8 +69,7 @@ func (this *ArrayAppend) Apply(context Context, first, second value.Value) (valu
 }
 
 /*
-The constructor returns a NewArrayAppend with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayAppend) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -102,8 +86,7 @@ func (this *ArrayAppend) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_AVG(expr). It returns
 the arithmetic mean (average) of all the non-NULL number values
-in the array, or NULL if there are no such values. Type ArrayAvg
-is a struct that implements UnaryFunctionBase.
+in the array, or NULL if there are no such values.
 */
 type ArrayAvg struct {
 	UnaryFunctionBase
@@ -125,15 +108,8 @@ func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ArrayAvg) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -171,8 +147,7 @@ func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewArrayAvg with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayAvg) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -187,10 +162,9 @@ func (this *ArrayAvg) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_CONCAT(expr1, expr2).
+This represents the array function ARRAY_CONCAT(expr1, expr2, ...).
 It returns a new array with the concatenation of the input
-arrays. Type ArrayConcat is a struct that implements
-BinaryFunctionBase.
+arrays.
 */
 type ArrayConcat struct {
 	BinaryFunctionBase
@@ -212,24 +186,16 @@ func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-The method concatenates two arrays and returns this value. If either
-of the input values are missing, return a missing value. For all
-non array values, return a null value. Use the append method for
-this purpose.
+The method concatenates arrays and returns this value. If any of the
+input values are missing, return a missing value. For all non array
+values, return a null value.
 */
 func (this *ArrayConcat) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
@@ -245,8 +211,7 @@ func (this *ArrayConcat) Apply(context Context, first, second value.Value) (valu
 }
 
 /*
-The constructor returns a NewArrayConcat with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayConcat) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -262,8 +227,7 @@ func (this *ArrayConcat) Constructor() FunctionConstructor {
 
 /*
 This represents the array function ARRAY_CONTAINS(expr, value).
-It returns true if the array contains value. Type ArrayContains
-is a struct that implements BinaryFunctionBase.
+It returns true if the array contains value.
 */
 type ArrayContains struct {
 	BinaryFunctionBase
@@ -285,15 +249,8 @@ func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Boolean value.
-*/
 func (this *ArrayContains) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -336,8 +293,7 @@ func (this *ArrayContains) Apply(context Context, first, second value.Value) (va
 }
 
 /*
-The constructor returns a NewArrayContains with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayContains) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -353,8 +309,7 @@ func (this *ArrayContains) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_COUNT(expr).
 It resturns a count of all the non-NULL values in the
-array, or zero if there are no such values. Type ArrayCount
-is a struct that implements UnaryFunctionBase.
+array, or zero if there are no such values.
 */
 type ArrayCount struct {
 	UnaryFunctionBase
@@ -376,15 +331,8 @@ func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ArrayCount) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -415,8 +363,7 @@ func (this *ArrayCount) Apply(context Context, arg value.Value) (value.Value, er
 }
 
 /*
-The constructor returns a NewArrayCount with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayCount) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -432,9 +379,8 @@ func (this *ArrayCount) Constructor() FunctionConstructor {
 
 /*
 This represents the array function ARRAY_DISTINCT(expr).
-It returns a new array with distinct elements of input
-array. Type ArrayDistinct is a struct that implements
-UnaryFunctionBase.
+It returns a new array with distinct elements of the input
+array.
 */
 type ArrayDistinct struct {
 	UnaryFunctionBase
@@ -456,15 +402,8 @@ func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayDistinct) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -492,8 +431,7 @@ func (this *ArrayDistinct) Apply(context Context, arg value.Value) (value.Value,
 }
 
 /*
-The constructor returns a NewArrayDistinct with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayDistinct) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -508,9 +446,9 @@ func (this *ArrayDistinct) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_FLATTEN(expr, value).
-It returns a new array with value appended. Type ArrayFlatten
-is a struct that implements BinaryFunctionBase.
+This represents the array function ARRAY_FLATTEN(expr, depth).  Nested
+array elements are flattened into the top-level array, up to the given
+depth.
 */
 type ArrayFlatten struct {
 	BinaryFunctionBase
@@ -532,26 +470,12 @@ func (this *ArrayFlatten) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayFlatten) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayFlatten) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method evaluates the array flatten function. If either
-of the input argument types are missing, or not an array return
-a missing and null value respectively. Use the append method
-to append the second expression to the first expression. Return
-the new array.
-*/
 func (this *ArrayFlatten) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -595,8 +519,7 @@ func arrayFlattenInto(sourceArr, destArr []interface{}, depth int) []interface{}
 }
 
 /*
-The constructor returns a NewArrayFlatten with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayFlatten) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -613,8 +536,7 @@ func (this *ArrayFlatten) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_IFNULL(expr).
 It returns the first non-NULL value in the array, or
-NULL. Type ArrayIfNull is a struct that implements
-UnaryFunctionBase.
+NULL.
 */
 type ArrayIfNull struct {
 	UnaryFunctionBase
@@ -636,15 +558,8 @@ func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a JSON value.
-*/
 func (this *ArrayIfNull) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -673,8 +588,7 @@ func (this *ArrayIfNull) Apply(context Context, arg value.Value) (value.Value, e
 }
 
 /*
-The constructor returns a NewArrayIfNull with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayIfNull) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -689,9 +603,8 @@ func (this *ArrayIfNull) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_INSERT(value, expr, expr).
-It returns a new array with value inserted. Type ArrayInsert
-is a struct that implements TernaryFunctionBase.
+This represents the array function ARRAY_INSERT(expr, pos, value).
+It returns a new array with value inserted.
 */
 type ArrayInsert struct {
 	TernaryFunctionBase
@@ -713,15 +626,8 @@ func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayInsert) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
@@ -731,7 +637,7 @@ func (this *ArrayInsert) PropagatesNull() bool {
 }
 
 /*
-This method inserts the third value to the first value at the second position.
+This method inserts the third value into the first array at the second position.
 */
 func (this *ArrayInsert) Apply(context Context, first, second, third value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
@@ -771,8 +677,7 @@ func (this *ArrayInsert) Apply(context Context, first, second, third value.Value
 }
 
 /*
-The constructor returns a NewArrayInsert with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayInsert) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -788,8 +693,7 @@ func (this *ArrayInsert) Constructor() FunctionConstructor {
 
 /*
 This represents the array function ARRAY_LENGTH(expr).
-It returns the number of elements in the array. Type
-ArrayLength is a struct that implements UnaryFunctionBase.
+It returns the number of elements in the array.
 */
 type ArrayLength struct {
 	UnaryFunctionBase
@@ -811,24 +715,16 @@ func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ArrayLength) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
-This method returns the length of the input array using
-the len method. If the input value is of type missing
-return a missing value, and for all non array values
-return null.
+This method returns the length of the input array. If the input value
+is of type missing return a missing value, and for all non array
+values return null.
 */
 func (this *ArrayLength) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -842,8 +738,7 @@ func (this *ArrayLength) Apply(context Context, arg value.Value) (value.Value, e
 }
 
 /*
-The constructor returns a NewArrayLength with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayLength) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -860,8 +755,7 @@ func (this *ArrayLength) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_MAX(expr). It
 returns the largest non-NULL, non-MISSING array element,
-in N1QL collation order. Type ArrayMax is a struct that
-implements UnaryFunctionBase.
+in N1QL collation order.
 */
 type ArrayMax struct {
 	UnaryFunctionBase
@@ -883,15 +777,8 @@ func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a JSON value.
-*/
 func (this *ArrayMax) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -922,8 +809,7 @@ func (this *ArrayMax) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewArrayMax with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayMax) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -940,8 +826,7 @@ func (this *ArrayMax) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_MIN(expr). It returns
 the smallest non-NULL, non-MISSING array element, in N1QL
-collation order. Type ArrayMin is a struct that implements
-UnaryFunctionBase.
+collation order.
 */
 type ArrayMin struct {
 	UnaryFunctionBase
@@ -963,15 +848,8 @@ func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a JSON value.
-*/
 func (this *ArrayMin) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -1003,8 +881,7 @@ func (this *ArrayMin) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewArrayMin with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayMin) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1021,8 +898,7 @@ func (this *ArrayMin) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_POSITION(expr, value).
 It returns the first position of value within the array, or -1.
-The position is 0-based. Type ArrayPosition is a struct that
-implements UnaryFunctionBase.
+The position is 0-based.
 */
 type ArrayPosition struct {
 	BinaryFunctionBase
@@ -1044,23 +920,16 @@ func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ArrayPosition) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
 This method ranges through the array and returns the position
-of the second value in the array (first value). If the input
-values are of type missing return a missing value, and for all
+of the second value in the array (first value). If either input
+values is of type missing return a missing value, and for all
 non array values return null. If not found then return -1.
 */
 func (this *ArrayPosition) Apply(context Context, first, second value.Value) (value.Value, error) {
@@ -1078,12 +947,11 @@ func (this *ArrayPosition) Apply(context Context, first, second value.Value) (va
 		}
 	}
 
-	return value.NewValue(float64(-1)), nil
+	return value.NEG_ONE_VALUE, nil
 }
 
 /*
-The constructor returns a NewArrayPosition with the operands cast
-to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayPosition) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1099,8 +967,7 @@ func (this *ArrayPosition) Constructor() FunctionConstructor {
 
 /*
 This represents the array function ARRAY_PREPEND(value, expr).
-It returns a new array with value prepended. Type ArrayPrepend
-is a struct that implements BinaryFunctionBase.
+It returns a new array with value prepended.
 */
 type ArrayPrepend struct {
 	BinaryFunctionBase
@@ -1122,15 +989,8 @@ func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayPrepend) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -1139,12 +999,6 @@ func (this *ArrayPrepend) PropagatesNull() bool {
 	return false
 }
 
-/*
-This method prepends the first value to the second value, by
-reversing the input to the append method. If either
-of the input argument types are missing, or not an array return
-a missing and null value respectively.
-*/
 func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1160,8 +1014,7 @@ func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (val
 }
 
 /*
-The constructor returns a NewArrayPrepend with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayPrepend) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1178,8 +1031,7 @@ func (this *ArrayPrepend) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_PUT(expr, value).
 It returns a new array with value appended, if value is not
-already present; else unmodified input array. Type ArrayPut
-is a struct that implements BinaryFunctionBase.
+already present; else unmodified input array.
 */
 type ArrayPut struct {
 	BinaryFunctionBase
@@ -1201,26 +1053,12 @@ func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayPut) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method appends the value into the array if it is not
-present. Range over the array and check if the value exists.
-If it does return the array as is. If either of the input
-argument types are missing, or not an array return a missing
-and null value respectively.
-*/
 func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1241,8 +1079,7 @@ func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.V
 }
 
 /*
-The constructor returns a NewArrayPut with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayPut) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1261,8 +1098,7 @@ This represents the array function ARRAY_RANGE(start, end [, step ]).
 It returns a new array of numbers, from start until the largest number
 less than end. Successive numbers are incremented by step. If step is
 omitted, it defaults to 1. If step is negative, decrements until the
-smallest number greater than end. Type ArrayRange is a struct that
-implements FunctionBase.
+smallest number greater than end.
 */
 type ArrayRange struct {
 	FunctionBase
@@ -1284,26 +1120,12 @@ func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayRange) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-/*
-This method returns the input arg array from start
-until the largest number less than end. Successive
-numbers are incremented by step value. If either
-of the input arguments are missing or not numbers
-then return a missing or null value.
-*/
 func (this *ArrayRange) Apply(context Context, args ...value.Value) (value.Value, error) {
 	startv := args[0]
 	endv := args[1]
@@ -1354,9 +1176,11 @@ Maximum input arguments allowed is 3.
 func (this *ArrayRange) MaxArgs() int { return 3 }
 
 /*
-Return NewArrayRange as FunctionConstructor.
+Factory method pattern.
 */
-func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange }
+func (this *ArrayRange) Constructor() FunctionConstructor {
+	return NewArrayRange
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1367,7 +1191,6 @@ func (this *ArrayRange) Constructor() FunctionConstructor { return NewArrayRange
 /*
 This represents the array function ARRAY_REMOVE(expr, value).
 It returns a new array with all occurences of value removed.
-Type ArrayRemove is a struct that implements BinaryFunctionBase.
 */
 type ArrayRemove struct {
 	BinaryFunctionBase
@@ -1389,15 +1212,8 @@ func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayRemove) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -1430,8 +1246,7 @@ func (this *ArrayRemove) Apply(context Context, first, second value.Value) (valu
 }
 
 /*
-The constructor returns a NewArrayRemove with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayRemove) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1447,8 +1262,7 @@ func (this *ArrayRemove) Constructor() FunctionConstructor {
 
 /*
 This represents the array function ARRAY_REPEAT(value, n).
-It returns a new array with value repeated n times. Type
-ArrayRepeat is a struct that implements BinaryFunctionBase.
+It returns a new array with value repeated n times.
 */
 type ArrayRepeat struct {
 	BinaryFunctionBase
@@ -1470,15 +1284,8 @@ func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayRepeat) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -1509,8 +1316,7 @@ func (this *ArrayRepeat) Apply(context Context, first, second value.Value) (valu
 }
 
 /*
-The constructor returns a NewArrayRepeat with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayRepeat) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1525,10 +1331,10 @@ func (this *ArrayRepeat) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_REPLACE(expr, value1, value2 [, n ]).
-It returns a new array with all occurences of value1 replaced with value2.
-If n is given, at most n replacements are performed. Type ArrayReplace is a
-struct that implements FunctionBase.
+This represents the array function ARRAY_REPLACE(expr, value1, value2
+[, n ]).  It returns a new array with all occurences of value1
+replaced with value2.  If n is given, at most n replacements are
+performed.
 */
 type ArrayReplace struct {
 	FunctionBase
@@ -1550,15 +1356,8 @@ func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayReplace) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -1567,12 +1366,6 @@ func (this *ArrayReplace) PropagatesNull() bool {
 	return false
 }
 
-/*
-This method returns an array that contains the values
-as arg 1, replaced by the 2nd argument value. If a third
-input argument is given (n) then at most n replacements
-are performed. Return this value.
-*/
 func (this *ArrayReplace) Apply(context Context, args ...value.Value) (value.Value, error) {
 	av := args[0]
 	v1 := args[1]
@@ -1609,9 +1402,11 @@ Maximum input arguments allowed is 4.
 func (this *ArrayReplace) MaxArgs() int { return 4 }
 
 /*
-Return NewArrayReplace as FunctionConstructor.
+Factory method pattern.
 */
-func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayReplace }
+func (this *ArrayReplace) Constructor() FunctionConstructor {
+	return NewArrayReplace
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1622,8 +1417,6 @@ func (this *ArrayReplace) Constructor() FunctionConstructor { return NewArrayRep
 /*
 This represents the array function ARRAY_REVERSE(expr).
 It returns a new array with all elements in reverse order.
-Type ArrayReverse is a struct that implements
-UnaryFunctionBase.
 */
 type ArrayReverse struct {
 	UnaryFunctionBase
@@ -1645,15 +1438,8 @@ func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArrayReverse) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -1661,8 +1447,7 @@ func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Val
 /*
 This method reverses the input array value and returns it.
 If the input value is of type missing return a missing
-value, and for all non array values return null. Range
-through the array and add it to a new slice in reverse.
+value, and for all non array values return null.
 */
 func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -1683,8 +1468,7 @@ func (this *ArrayReverse) Apply(context Context, arg value.Value) (value.Value, 
 }
 
 /*
-The constructor returns a NewArrayReverse with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArrayReverse) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1701,8 +1485,7 @@ func (this *ArrayReverse) Constructor() FunctionConstructor {
 /*
 This represents the array function ARRAY_SORT(expr). It
 returns a new array with elements sorted in N1QL collation
-order. Type ArraySort is a struct that implements
-UnaryFunctionBase.
+order.
 */
 type ArraySort struct {
 	UnaryFunctionBase
@@ -1724,9 +1507,6 @@ func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns an Array value.
-*/
 func (this *ArraySort) Type() value.Type { return value.ARRAY }
 
 /*
@@ -1738,10 +1518,9 @@ func (this *ArraySort) Evaluate(item value.Value, context Context) (value.Value,
 }
 
 /*
-This method sorts the input array value, in N1QL collation
-order. It uses the Sort method in the sort package. If the
-input value is of type missing return a missing value, and
-for all non array values return null.
+This method sorts the input array value, in N1QL collation order. If
+the input value is of type missing return a missing value, and for all
+non array values return null.
 */
 func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -1757,8 +1536,7 @@ func (this *ArraySort) Apply(context Context, arg value.Value) (value.Value, err
 }
 
 /*
-The constructor returns a NewArraySort with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArraySort) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1796,12 +1574,7 @@ func (this *ArrayStar) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-Result type is OBJECT.
-*/
-func (this *ArrayStar) Type() value.Type {
-	return value.OBJECT
-}
+func (this *ArrayStar) Type() value.Type { return value.OBJECT }
 
 func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
@@ -1848,7 +1621,7 @@ func (this *ArrayStar) Apply(context Context, arg value.Value) (value.Value, err
 }
 
 /*
-Factory.
+Factory method pattern.
 */
 func (this *ArrayStar) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1866,8 +1639,6 @@ func (this *ArrayStar) Constructor() FunctionConstructor {
 This represents the array function ARRAY_SUM(expr).
 It returns the sum of all the non-NULL number values
 in the array, or zero if there are no such values.
-Type ArraySum is a struct that implements
-UnaryFunctionBase.
 */
 type ArraySum struct {
 	UnaryFunctionBase
@@ -1889,22 +1660,15 @@ func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a Number value.
-*/
 func (this *ArraySum) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
-This method returns the sum of all the fields in the array.
-Range through the array and if the type of field is a number
+This method returns the sum of all the elements in the array.
+Range through the array and if the type of element is a number
 then add it to the sum. Return 0 if no number value exists.
 If the input value is of type missing return a missing value,
 and for all non array values return null.
@@ -1929,8 +1693,7 @@ func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewArraySum with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ArraySum) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

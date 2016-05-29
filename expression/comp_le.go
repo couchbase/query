@@ -14,21 +14,13 @@ import (
 )
 
 /*
-Comparison terms allow for comparing two expressions.
-This represents the less than equal to comparison
-operation. Type LE is a struct that implements
-BinaryFunctionBase.
+This represents the LESS THAN OR EQUAL TO comparison
+operation.
 */
 type LE struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewLE calls NewBinaryFunctionBase
-to define less than equal to comparison expression
-with input operand expressions first and second,
-as input.
-*/
 func NewLE(first, second Expression) Function {
 	rv := &LE{
 		*NewBinaryFunctionBase("le", first, second),
@@ -39,22 +31,14 @@ func NewLE(first, second Expression) Function {
 }
 
 /*
-It calls the VisitLE method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *LE) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLE(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *LE) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *LE) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -81,8 +65,7 @@ func (this *LE) Apply(context Context, first, second value.Value) (value.Value, 
 }
 
 /*
-The constructor returns a NewLE with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *LE) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

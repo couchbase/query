@@ -23,10 +23,6 @@ type Mod struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewMod calls NewBinaryFunctionBase to define Mod
-with input operand expressions as input.
-*/
 func NewMod(first, second Expression) Function {
 	rv := &Mod{
 		*NewBinaryFunctionBase("mod", first, second),
@@ -37,34 +33,18 @@ func NewMod(first, second Expression) Function {
 }
 
 /*
-It calls the VisitMod method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Mod) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMod(this)
 }
 
-/*
-It returns a value type Number.
-*/
 func (this *Mod) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Mod) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method evaluates the mod for the first and second input
-values to return a value. If the second value type is a number,
-convert to a valid Go type. Check for divide by 0. If true return
-a Null value. If the first value is a Number, calculate the mod
-and return it. If either of the two values are missing return a
-missing value. If not a number and not missing return a NULL value.
-*/
 func (this *Mod) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if second.Type() == value.NUMBER {
 		s := second.Actual().(float64)
@@ -86,8 +66,7 @@ func (this *Mod) Apply(context Context, first, second value.Value) (value.Value,
 }
 
 /*
-The constructor returns a NewMod with the an operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Mod) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

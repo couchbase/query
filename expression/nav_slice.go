@@ -17,16 +17,11 @@ import (
 
 /*
 Nested expressions are used to access slices inside of arrays.
-Type Slice is a struct that implements FunctionBase.
 */
 type Slice struct {
 	FunctionBase
 }
 
-/*
-The function NewSlice calls NewFunctionBase to define the
-slice with input operands of type expression as input.
-*/
 func NewSlice(operands ...Expression) Function {
 	rv := &Slice{
 		*NewFunctionBase("slice", operands...),
@@ -37,22 +32,14 @@ func NewSlice(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitSlice method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSlice(this)
 }
 
-/*
-It returns a value type ARRAY.
-*/
 func (this *Slice) Type() value.Type { return value.ARRAY }
 
-/*
-Calls the Eval method and passes in the
-receiver, current item and current context.
-*/
 func (this *Slice) Evaluate(item value.Value, context Context) (rv value.Value, re error) {
 	return this.Eval(this, item, context)
 }
@@ -121,7 +108,7 @@ Minimum input arguments allowed for Slices is 3.
 func (this *Slice) MaxArgs() int { return 3 }
 
 /*
-Return NewSlice as FunctionConstructor.
+Factory method pattern.
 */
 func (this *Slice) Constructor() FunctionConstructor {
 	return NewSlice

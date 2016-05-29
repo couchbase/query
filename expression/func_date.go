@@ -27,8 +27,7 @@ import (
 /*
 This represents the Date function CLOCK_MILLIS(). It
 returns the system clock at function evaluation time,
-as UNIX milliseconds and varies during a query. Type
-ClockMillis is a struct that implements NullaryFunctionBase.
+as UNIX milliseconds and varies during a query.
 */
 type ClockMillis struct {
 	NullaryFunctionBase
@@ -36,10 +35,6 @@ type ClockMillis struct {
 
 var _CLOCK_MILLIS = NewClockMillis()
 
-/*
-The function NewClockMillis calls NewNullaryFunctionBase to
-create a function named CLOCK_MILLIS.
-*/
 func NewClockMillis() Function {
 	rv := &ClockMillis{
 		*NewNullaryFunctionBase("clock_millis"),
@@ -51,16 +46,12 @@ func NewClockMillis() Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ClockMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *ClockMillis) Type() value.Type { return value.NUMBER }
 
 /*
@@ -74,8 +65,7 @@ func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Valu
 }
 
 /*
-The constructor returns a FunctionConstructor by casting the receiver to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *ClockMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _CLOCK_MILLIS }
@@ -90,18 +80,12 @@ func (this *ClockMillis) Constructor() FunctionConstructor {
 This represents the Date function CLOCK_STR([ fmt ]). It returns
 the system clock at function evaluation time, as a string in a
 supported format and varies during a query. There are a set of
-supported formats. Type ClockStr is a struct that implements
-FunctionBase.
+supported formats.
 */
 type ClockStr struct {
 	FunctionBase
 }
 
-/*
-The function NewClockStr calls NewFunctionBase to
-create a function named CLOCK_STR with input
-arguments as the operands from the input expression.
-*/
 func NewClockStr(operands ...Expression) Function {
 	rv := &ClockStr{
 		*NewFunctionBase("clock_str", operands...),
@@ -113,22 +97,14 @@ func NewClockStr(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *ClockStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -142,15 +118,6 @@ func (this *ClockStr) Value() value.Value {
 	return nil
 }
 
-/*
-Initialize format to default format. This is in the event the
-function is called without input arguments. Then it uses the
-default time format. If it has input args, and if it is a
-missing type return a missing value. It the type is not a string
-then return null value. In the event it is a string, convert the
-format to a valid Go type, cast it to a string, and call timeToStr
-function using the time package and return a NewValue.
-*/
 func (this *ClockStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
 
@@ -181,9 +148,11 @@ CLOCK_STR is 1.
 func (this *ClockStr) MaxArgs() int { return 1 }
 
 /*
-Returns receiver as FunctionConstructor.
+Factory method pattern.
 */
-func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
+func (this *ClockStr) Constructor() FunctionConstructor {
+	return NewClockStr
+}
 
 ///////////////////////////////////////////////////
 //
@@ -195,19 +164,12 @@ func (this *ClockStr) Constructor() FunctionConstructor { return NewClockStr }
 This represents the Date function DATE_ADD_MILLIS(expr,n,part).
 It performs date arithmetic. n and part are used to define an
 interval or duration, which is then added (or subtracted) to
-the UNIX timestamp, returning the result. Type DateAddMillis
-is a struct that implements TernaryFunctionBase since it has
-3 input arguments.
+the UNIX timestamp, returning the result.
 */
 type DateAddMillis struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewDateAddMillis calls NewTernaryFunctionBase to
-create a function named DATE_ADD_MILLIS with the three
-expressions as input.
-*/
 func NewDateAddMillis(first, second, third Expression) Function {
 	rv := &DateAddMillis{
 		*NewTernaryFunctionBase("date_add_millis", first, second, third),
@@ -218,37 +180,18 @@ func NewDateAddMillis(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DateAddMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date, n and part as values and returns a value.
-If any of these are missing then return a missing value. If date and n
-arent numbers or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and cast date,n to
-float64(N1QL valid number type) and part to string. If n is a floating
-point value return null value. Call the dateAdd method to a add n to
-the time obtained by converting the date to time using the millisToTime
-method. Convert the result back using timeToMillis and then return it in
-value format.
-*/
 func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (value.Value, error) {
 	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -272,8 +215,7 @@ func (this *DateAddMillis) Apply(context Context, date, n, part value.Value) (va
 }
 
 /*
-The constructor returns a NewDateAddMillis with the three operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateAddMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -291,19 +233,12 @@ func (this *DateAddMillis) Constructor() FunctionConstructor {
 This represents the Date function DATE_ADD_STR(expr,n,part).
 It performs date arithmetic. n and part are used to define an
 interval or duration, which is then added to the date string
-in a supported format, returning the result. Type DateAddStr
-is a struct that implements TernaryFunctionBase since it has
-3 input arguments.
+in a supported format, returning the result.
 */
 type DateAddStr struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewDateAddStr calls NewTernaryFunctionBase to
-create a function named DATE_ADD_STR with the three
-expressions as input.
-*/
 func NewDateAddStr(first, second, third Expression) Function {
 	rv := &DateAddStr{
 		*NewTernaryFunctionBase("date_add_str", first, second, third),
@@ -314,35 +249,18 @@ func NewDateAddStr(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *DateAddStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date, n and part as values and returns a value.
-If any of these are missing then return a missing value. If n isnt a
-number or if date and part arent strings then return a null value. Call
-Actual for these values to convert into valid Go type and cast n to
-float64(N1QL valid number type) and date,part to string. If n is a floating
-point value return null value. Call the dateAdd method to a add n to
-the time obtained. Return it in value format.
-*/
 func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value.Value, error) {
 	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -371,8 +289,7 @@ func (this *DateAddStr) Apply(context Context, date, n, part value.Value) (value
 }
 
 /*
-The constructor returns a NewDateAddStr with the three operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateAddStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -389,19 +306,12 @@ func (this *DateAddStr) Constructor() FunctionConstructor {
 /*
 This represents the Date function DATE_DIFF_MILLIS(expr1,expr2,part).
 It performs date arithmetic. It returns the elapsed time between two
-UNIX timestamps, as an integer whose unit is part. Type DateDiffMillis
-is a struct that implements TernaryFunctionBase since it has
-3 input arguments.
+UNIX timestamps, as an integer whose unit is part.
 */
 type DateDiffMillis struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewDateDiffMillis calls NewTernaryFunctionBase to
-create a function named DATE_DIFF_MILLIS with the three
-expressions as input.
-*/
 func NewDateDiffMillis(first, second, third Expression) Function {
 	rv := &DateDiffMillis{
 		*NewTernaryFunctionBase("date_diff_millis", first, second, third),
@@ -412,22 +322,14 @@ func NewDateDiffMillis(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DateDiffMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
@@ -451,8 +353,7 @@ func (this *DateDiffMillis) Apply(context Context, date1, date2, part value.Valu
 }
 
 /*
-The constructor returns a NewDateDiffMillis with the three operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateDiffMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -470,18 +371,12 @@ func (this *DateDiffMillis) Constructor() FunctionConstructor {
 This represents the Date function DATE_DIFF_STR(expr1,expr2,part).
 It performs date arithmetic and returns the elapsed time between two
 date strings in a supported format, as an integer whose unit is
-part.Type. DateAddStr is a struct that implements TernaryFunctionBase
-since it has 3 input arguments.
+part.
 */
 type DateDiffStr struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewDateDiffStr calls NewTernaryFunctionBase to
-create a function named DATE_DIFF_STR with the three
-expressions as input.
-*/
 func NewDateDiffStr(first, second, third Expression) Function {
 	rv := &DateDiffStr{
 		*NewTernaryFunctionBase("date_diff_str", first, second, third),
@@ -492,34 +387,18 @@ func NewDateDiffStr(first, second, third Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DateDiffStr) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
 
-/*
-This method takes two dates and part as input values and returns a value.
-If any of these are missing then return a missing value. If the dates
-arent numbers or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and call strToTime
-to convert the dates into valid format. dateDiff returns the difference,
-that is cast to float64 and returned.
-*/
 func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) (value.Value, error) {
 	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -549,8 +428,7 @@ func (this *DateDiffStr) Apply(context Context, date1, date2, part value.Value) 
 }
 
 /*
-The constructor returns a NewDateDiffMillis with the three operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateDiffStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -568,18 +446,12 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 This represents the Date function DATE_PART_MILLIS(expr, part).
 It returns the date part as an integer. The date expr is a
 number representing UNIX milliseconds, and part is one of the
-date part strings. DatePartMillis is a struct that implements
-BinaryFunctionBase.
+date part strings.
 */
 type DatePartMillis struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewDatePartMillis calls NewBinaryFunctionBase to
-create a function named DATE_PART_MILLIS with the two
-expressions as input.
-*/
 func NewDatePartMillis(first, second Expression) Function {
 	rv := &DatePartMillis{
 		*NewBinaryFunctionBase("date_part_millis", first, second),
@@ -590,34 +462,18 @@ func NewDatePartMillis(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date and part as values and returns a value.
-If either of these are missing then return a missing value. If date
-isnt number or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and cast date to
-float64(N1QL valid number type) and part to string. Call datePart function
-with the date converted to time format and return it as a value.
-*/
 func (this *DatePartMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -636,8 +492,7 @@ func (this *DatePartMillis) Apply(context Context, first, second value.Value) (v
 }
 
 /*
-The constructor returns a NewDatePartMillis with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DatePartMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -655,18 +510,12 @@ func (this *DatePartMillis) Constructor() FunctionConstructor {
 This represents the Date function DATE_PART_STR(expr, part).
 It returns the date part as an integer. The date expr is a
 string in a supported format, and part is one of the supported
-date part strings. DatePartStr is a struct that implements
-BinaryFunctionBase.
+date part strings.
 */
 type DatePartStr struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewDatePartStr calls NewBinaryFunctionBase to
-create a function named DATE_PART_STR with the two
-expressions as input.
-*/
 func NewDatePartStr(first, second Expression) Function {
 	rv := &DatePartStr{
 		*NewBinaryFunctionBase("date_part_str", first, second),
@@ -677,34 +526,18 @@ func NewDatePartStr(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DatePartStr) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date and part as values and returns a value.
-If either of these are missing then return a missing value. If date
-isnt number or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and cast date to
-float64(N1QL valid number type) and part to string. Call datePart function
-with the date and return it as a value.
-*/
 func (this *DatePartStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -728,8 +561,7 @@ func (this *DatePartStr) Apply(context Context, first, second value.Value) (valu
 }
 
 /*
-The constructor returns a NewDatePartStr with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DatePartStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -746,18 +578,12 @@ func (this *DatePartStr) Constructor() FunctionConstructor {
 /*
 This represents the Date function DATE_TRUNC_MILLIS(expr, part).
 It truncates UNIX timestamp so that the given date part string
-is the least significant. DateTruncMillis is a struct that
-implements BinaryFunctionBase.
+is the least significant.
 */
 type DateTruncMillis struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewDateTruncMillis calls NewBinaryFunctionBase to
-create a function named DATE_TRUNC_MILLIS with the two
-expressions as input.
-*/
 func NewDateTruncMillis(first, second Expression) Function {
 	rv := &DateTruncMillis{
 		*NewBinaryFunctionBase("date_trunc_millis", first, second),
@@ -768,35 +594,18 @@ func NewDateTruncMillis(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *DateTruncMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date and part as values and returns a value.
-If either of these are missing then return a missing value. If date
-isnt number or if part isnt a string then return a null value. Call
-Actual for these values to convert into valid Go type and cast date to
-float64(N1QL valid number type) and part to string. Convert date to Time
-format using millisToTime, and then call dateTrunc. Convert it back to
-Milliseconds and return its Value.
-*/
 func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -818,8 +627,7 @@ func (this *DateTruncMillis) Apply(context Context, first, second value.Value) (
 }
 
 /*
-The constructor returns a NewDatePartMillis with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateTruncMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -836,18 +644,12 @@ func (this *DateTruncMillis) Constructor() FunctionConstructor {
 /*
 This represents the Date function DATE_TRUNC_STR(expr, part).
 It truncates ISO 8601 timestamp so that the given date part
-string is the least significant. DateTruncStr is a struct that
-implements BinaryFunctionBase.
+string is the least significant.
 */
 type DateTruncStr struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewDateTruncStr calls NewBinaryFunctionBase to
-create a function named DATE_TRUNC_STR with the two
-expressions as input.
-*/
 func NewDateTruncStr(first, second Expression) Function {
 	rv := &DateTruncStr{
 		*NewBinaryFunctionBase("date_trunc_str", first, second),
@@ -858,35 +660,18 @@ func NewDateTruncStr(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *DateTruncStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date and part as values and returns a value.
-If either of these are missing then return a missing value. If date
-and part arent strings then return a null value. Call
-Actual for these values to convert into valid Go type and cast both
-date and expr into string. Use method strToTime to convert date to
-Time format and call the dateTrunc method. Convert it back to a
-string and return it in value format.
-*/
 func (this *DateTruncStr) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -910,8 +695,7 @@ func (this *DateTruncStr) Apply(context Context, first, second value.Value) (val
 }
 
 /*
-The constructor returns a NewDatePartMillis with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DateTruncStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -929,18 +713,12 @@ func (this *DateTruncStr) Constructor() FunctionConstructor {
 This represents the Date function MILLIS_TO_STR(expr[,fmt]).
 The date part as an integer. The date expr is a string in
 a supported format, and part is one of the supported date
-part strings. Type MillisToStr is a struct that implements
-FunctionBase.
+part strings.
 */
 type MillisToStr struct {
 	FunctionBase
 }
 
-/*
-The function MillisToStr calls NewFunctionBase to create a
-function named MILLIS_TO_STR with input arguments as the
-operands from the input expression.
-*/
 func NewMillisToStr(operands ...Expression) Function {
 	rv := &MillisToStr{
 		*NewFunctionBase("millis_to_str", operands...),
@@ -951,36 +729,18 @@ func NewMillisToStr(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *MillisToStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-/*
-Initialize format to default format value. If there is
-more than 1 argument then, that is the format. Either the
-input argument or the format are missing then return missing.
-If the expression is not a number and the format is not a
-string then return a null value. Call Actual for these values
-to convert into valid Go type and cast the expr to floar64
-and the format to string. Convert it to Time format and return
-a new stringvalue.
-*/
 func (this *MillisToStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
@@ -1014,9 +774,11 @@ is 2.
 func (this *MillisToStr) MaxArgs() int { return 2 }
 
 /*
-Returns NewMillisToStr as FunctionConstructor.
+Factory method pattern.
 */
-func (this *MillisToStr) Constructor() FunctionConstructor { return NewMillisToStr }
+func (this *MillisToStr) Constructor() FunctionConstructor {
+	return NewMillisToStr
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1027,17 +789,11 @@ func (this *MillisToStr) Constructor() FunctionConstructor { return NewMillisToS
 /*
 This represents the Date function MILLIS_TO_UTC(expr [, fmt ]).
 It converts the UNIX timestamp to a UTC string in a supported format.
-The type MillisToUTC is a struct that implements FunctionBase.
 */
 type MillisToUTC struct {
 	FunctionBase
 }
 
-/*
-The function NewMillisToUTC calls NewFunctionBase to create a
-function named MILLIS_TO_UTC with input arguments as the
-operands from the input expression.
-*/
 func NewMillisToUTC(operands ...Expression) Function {
 	rv := &MillisToUTC{
 		*NewFunctionBase("millis_to_utc", operands...),
@@ -1048,36 +804,18 @@ func NewMillisToUTC(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *MillisToUTC) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-/*
-Initialize format to default format value. If there is
-more than 1 argument then, that is the format. Either the
-input argument or the format are missing then return missing.
-If the expression is not a number and the format is not a
-string then return a null value. Call Actual for these values
-to convert into valid Go type and cast the expr to floar64
-and the format to string. Convert it to Time format, cast to UTC
-and reconvert to string, return a new stringvalue.
-*/
 func (this *MillisToUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	fv := _DEFAULT_FMT_VALUE
@@ -1111,9 +849,11 @@ is 2.
 func (this *MillisToUTC) MaxArgs() int { return 2 }
 
 /*
-Returns NewMillisToUTC as FunctionConstructor.
+Factory method pattern.
 */
-func (this *MillisToUTC) Constructor() FunctionConstructor { return NewMillisToUTC }
+func (this *MillisToUTC) Constructor() FunctionConstructor {
+	return NewMillisToUTC
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1125,18 +865,11 @@ func (this *MillisToUTC) Constructor() FunctionConstructor { return NewMillisToU
 This represents the Date function
 MILLIS_TO_ZONE_NAME(expr, tz_name [, fmt ]). It converts
 the UNIX timestamp to a string in the named time zone.
-Type MillisToZoneName is a struct that implements
-FunctionBase.
 */
 type MillisToZoneName struct {
 	FunctionBase
 }
 
-/*
-The function MillisToZoneName calls NewFunctionBase to create a
-function named MILLIS_TO_ZONE_NAME with input arguments as the
-operands from the input expression.
-*/
 func NewMillisToZoneName(operands ...Expression) Function {
 	rv := &MillisToZoneName{
 		*NewFunctionBase("millis_to_zone_name", operands...),
@@ -1147,38 +880,18 @@ func NewMillisToZoneName(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *MillisToZoneName) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-/*
-Initialize format to default format value. If there are
-more than 2 arguments then, assign the 3rd args to format. Either the
-input arguments or the format are missing then return missing.
-If the expression is not a number and the zone and format are not
-strings then return a null value. Call Actual for these values
-to convert into valid Go type and cast the expr to floar64
-and the zone name to string. Use the zone to call LoadLocation
-method in the time package that returns the location. Convert it
-to Time format in that location and return a new stringvalue by
-reconverting it to a string.
-*/
 func (this *MillisToZoneName) Apply(context Context, args ...value.Value) (value.Value, error) {
 	ev := args[0]
 	zv := args[1]
@@ -1219,9 +932,11 @@ is 3.
 func (this *MillisToZoneName) MaxArgs() int { return 3 }
 
 /*
-Returns NewMillisToZoneName as FunctionConstructor.
+Factory method pattern.
 */
-func (this *MillisToZoneName) Constructor() FunctionConstructor { return NewMillisToZoneName }
+func (this *MillisToZoneName) Constructor() FunctionConstructor {
+	return NewMillisToZoneName
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1231,8 +946,7 @@ func (this *MillisToZoneName) Constructor() FunctionConstructor { return NewMill
 /*
 This represents the Date function NOW_MILLIS(). It
 returns a statement timestamp as UNIX milliseconds
-and does not vary during a query. It is of type
-struct and implements a NullaryFunctionBase.
+and does not vary during a query.
 */
 type NowMillis struct {
 	NullaryFunctionBase
@@ -1240,10 +954,6 @@ type NowMillis struct {
 
 var _NOW_MILLIS = NewNowMillis()
 
-/*
-The function NewNowMillis() calls NewNullaryFunctionBase
-to create a function named NOW_MILLIS.
-*/
 func NewNowMillis() Function {
 	rv := &NowMillis{
 		*NewNullaryFunctionBase("now_millis"),
@@ -1255,32 +965,21 @@ func NewNowMillis() Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *NowMillis) Type() value.Type { return value.NUMBER }
 
-/*
-This method returns a value that represents the current timestamp
-in milliseconds. It gets the current time in nanoseconds using
-Now().UnixNano() and then divides it by 10^6 to convert it to
-milliseconds. It then calls Newvalue to create a value and returns
-it.
-*/
 func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	nanos := context.Now().UnixNano()
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
 /*
-Returns the receiver cast to a function to return a FunctionConstructor.
+Factory method pattern.
 */
 func (this *NowMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _NOW_MILLIS }
@@ -1296,17 +995,11 @@ func (this *NowMillis) Constructor() FunctionConstructor {
 This represents the Date function NOW_STR([fmt]).
 It returns a statement timestamp as a string in
 a supported format and does not vary during a query.
-Type NowStr is a struct that implements FunctionBase.
 */
 type NowStr struct {
 	FunctionBase
 }
 
-/*
-The function NewNowStr calls NewFunctionBase to create a
-function named NOW_STR with input arguments as the
-operands from the input expression.
-*/
 func NewNowStr(operands ...Expression) Function {
 	rv := &NowStr{
 		*NewFunctionBase("now_str", operands...),
@@ -1318,22 +1011,14 @@ func NewNowStr(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *NowStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for the receiver and passes in the
-receiver, current item and current context.
-*/
 func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -1347,14 +1032,6 @@ func (this *NowStr) Value() value.Value {
 	return nil
 }
 
-/*
-Initialize format to default format. If there is an agrs then
-assign that to the format. If the format is missing, return a
-missing value and if it isnt a string then return a null value.
-Convert it into valid Go representation and cast to a string.
-Get the current timestamp and convert it into the format string
-by calling timeToStr using the time and format. Return this value.
-*/
 func (this *NowStr) Apply(context Context, args ...value.Value) (value.Value, error) {
 	fmt := _DEFAULT_FORMAT
 
@@ -1386,9 +1063,11 @@ is 1.
 func (this *NowStr) MaxArgs() int { return 1 }
 
 /*
-Returns NewNowStr as FunctionConstructor.
+Factory method pattern.
 */
-func (this *NowStr) Constructor() FunctionConstructor { return NewNowStr }
+func (this *NowStr) Constructor() FunctionConstructor {
+	return NewNowStr
+}
 
 ///////////////////////////////////////////////////
 //
@@ -1399,17 +1078,11 @@ func (this *NowStr) Constructor() FunctionConstructor { return NewNowStr }
 /*
 This represents the Date function STR_TO_MILLIS(expr).
 It converts date in a supported format to UNIX milliseconds.
-It is of type struct that implements a UnaryFunctionBase.
 */
 type StrToMillis struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewStrToMillis calls NewUnaryFunctionBase to
-create a function named STR_TO_MILLIS with the an
-expression as input.
-*/
 func NewStrToMillis(operand Expression) Function {
 	rv := &StrToMillis{
 		*NewUnaryFunctionBase("str_to_millis", operand),
@@ -1420,34 +1093,18 @@ func NewStrToMillis(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns value type number.
-*/
 func (this *StrToMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method takes in an input argument of type value, and returns a value that is
-a timestamp.  If the input argument type is missing, then return missing, and
-if it is not a string then return null value. Convert the value to a valid Go type
-using Actual and cast it to string. Convert it into a valid time format using
-strToTime. Use function timeToMillis to convert to milliseconds and then
-return that value.
-*/
 func (this *StrToMillis) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1465,8 +1122,7 @@ func (this *StrToMillis) Apply(context Context, arg value.Value) (value.Value, e
 }
 
 /*
-The constructor returns a NewStrToMillis with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *StrToMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1483,18 +1139,12 @@ func (this *StrToMillis) Constructor() FunctionConstructor {
 /*
 This represents the Date function STR_TO_UTC(expr). It
 converts the input expression in the ISO 8601 timestamp
-to UTC. It is of type struct that implements a
-UnaryFunctionBase.
+to UTC.
 */
 type StrToUTC struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewStrToUTC calls NewUnaryFunctionBase to
-create a function named STR_TO_UTC with the an
-expression as input.
-*/
 func NewStrToUTC(operand Expression) Function {
 	rv := &StrToUTC{
 		*NewUnaryFunctionBase("str_to_utc", operand),
@@ -1505,34 +1155,18 @@ func NewStrToUTC(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns value type string.
-*/
 func (this *StrToUTC) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method takes in an input argument of type value, and returns a value that is
-a timestamp in UTC. If the input argument type is missing, then return missing, and
-if it is not a string then return null value. Convert the value to a valid Go type
-using Actual and cast it to string. Convert it into a valid time format using
-strToTime. Use function UTC() from the time package to set location to UTC,
-convert it back to a string and return its N1QL value.
-*/
 func (this *StrToUTC) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1551,8 +1185,7 @@ func (this *StrToUTC) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewStrToUTC with an operand cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *StrToUTC) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1569,17 +1202,11 @@ func (this *StrToUTC) Constructor() FunctionConstructor {
 /*
 This represents the Date function STR_TO_ZONE_NAME(expr, tz_name).
 It converts the supported timestamp string to the named time zone.
-StrToZoneName is a struct that implements BinaryFunctionBase.
 */
 type StrToZoneName struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewStrToZoneName calls NewBinaryFunctionBase to
-create a function named STR_TO_ZONE_NAME with the two
-expressions as input.
-*/
 func NewStrToZoneName(first, second Expression) Function {
 	rv := &StrToZoneName{
 		*NewBinaryFunctionBase("str_to_zone_name", first, second),
@@ -1590,34 +1217,18 @@ func NewStrToZoneName(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *StrToZoneName) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
-/*
-This method takes inputs date and part as string and timezone and returns a value.
-If either of these are missing then return a missing value and if they are not string
-then return a null value. After converting the string and time zone to valid Go type
-convert the string to valid Time using the strToTime function. Use the LoadLocation
-method from the time package to return the location with the given name. Convert
-the time to string format and return the corresponding stringvalue.
-*/
 func (this *StrToZoneName) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -1641,8 +1252,7 @@ func (this *StrToZoneName) Apply(context Context, first, second value.Value) (va
 }
 
 /*
-The constructor returns a NewStrToZoneName with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *StrToZoneName) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1659,17 +1269,11 @@ func (this *StrToZoneName) Constructor() FunctionConstructor {
 /*
 This represents the Date function DURATION_TO_STR(duration)
 It converts a duration in nanoseconds to a string
-DurationToStr is a struct that implements UnaryFunctionBase.
 */
 type DurationToStr struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewDurationToStr calls NewUnaryFunctionBase to
-create a function named DURATION_TO_STR with the expression
-as input.
-*/
 func NewDurationToStr(first Expression) Function {
 	rv := &DurationToStr{
 		*NewUnaryFunctionBase("duration_to_str", first),
@@ -1680,31 +1284,22 @@ func NewDurationToStr(first Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *DurationToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *DurationToStr) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
 /*
-This method takes a duration and converts it to its string
-representation.
+This method takes a duration and converts it to a string representation.
 If the argument is missing, it returns missing.
-If it's not an integer or the conversion fails, it returns null.
+If it's not a string or the conversion fails, it returns null.
 */
 func (this *DurationToStr) Apply(context Context, first value.Value) (value.Value, error) {
 	if first.Type() == value.MISSING {
@@ -1720,8 +1315,7 @@ func (this *DurationToStr) Apply(context Context, first value.Value) (value.Valu
 }
 
 /*
-The constructor returns a NewDurationToStr with the operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *DurationToStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -1738,17 +1332,11 @@ func (this *DurationToStr) Constructor() FunctionConstructor {
 /*
 This represents the Date function STR_TO_DURATION(string)
 It converts a string to a duration in nanoseconds.
-StrToDuration is a struct that implements UnaryFunctionBase.
 */
 type StrToDuration struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewStrToDuration calls NewUnaryFunctionBase to
-create a function named STR_TO_DURATION with the expression
-as input.
-*/
 func NewStrToDuration(first Expression) Function {
 	rv := &StrToDuration{
 		*NewUnaryFunctionBase("str_to_duration", first),
@@ -1759,22 +1347,14 @@ func NewStrToDuration(first Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *StrToDuration) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *StrToDuration) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -1802,8 +1382,7 @@ func (this *StrToDuration) Apply(context Context, first value.Value) (value.Valu
 }
 
 /*
-The constructor returns a NewStrToDuration with the operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *StrToDuration) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

@@ -62,15 +62,13 @@ type Function interface {
 	MaxArgs() int
 
 	/*
-	   Dynamic Function Constructor.
+	   Factory method pattern.
 	*/
 	Constructor() FunctionConstructor
 }
 
 /*
-FunctionConstructor enables dynamic construction of functions.
-It represents a function that takes input expressions as
-operands and returns a Function interface.
+Factory method pattern.
 */
 type FunctionConstructor func(operands ...Expression) Function
 
@@ -265,6 +263,11 @@ func (this *NullaryFunctionBase) CoveredBy(keyspace string, exprs Expressions) b
 func (this *NullaryFunctionBase) Copy() Expression {
 	function := this.expr.(Function)
 	return function.Constructor()()
+}
+
+func (this *NullaryFunctionBase) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	return true, nil
 }
 
 /*

@@ -14,17 +14,13 @@ import (
 )
 
 /*
-Represents Mult for arithmetic expressions. Type Mult
-is a struct that implements CommutativeFunctionBase.
+Represents multiplication for arithmetic expressions. Type Mult is a
+struct that implements CommutativeFunctionBase.
 */
 type Mult struct {
 	CommutativeFunctionBase
 }
 
-/*
-The function NewMult calls NewCommutativeFunctionBase to define
-mult with input operand expressions as input.
-*/
 func NewMult(operands ...Expression) Function {
 	rv := &Mult{
 		*NewCommutativeFunctionBase("mult", operands...),
@@ -35,22 +31,14 @@ func NewMult(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitMult method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitMult(this)
 }
 
-/*
-It returns a value type Number.
-*/
 func (this *Mult) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method and passes in the
-receiver, current item and current context.
-*/
 func (this *Mult) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -82,6 +70,8 @@ func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, erro
 }
 
 /*
-Returns NewAdd.
+Factory method pattern.
 */
-func (this *Mult) Constructor() FunctionConstructor { return NewMult }
+func (this *Mult) Constructor() FunctionConstructor {
+	return NewMult
+}

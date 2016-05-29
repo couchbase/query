@@ -21,10 +21,6 @@ type Add struct {
 	CommutativeFunctionBase
 }
 
-/*
-The function NewAdd calls NewCommutativeFunctionBase to define add
-with input operand expressions as input.
-*/
 func NewAdd(operands ...Expression) Function {
 	rv := &Add{
 		*NewCommutativeFunctionBase("add", operands...),
@@ -35,22 +31,14 @@ func NewAdd(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitAdd method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Add) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAdd(this)
 }
 
-/*
-It returns a value type Number.
-*/
 func (this *Add) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method and passes in the
-receiver, current item and current context.
-*/
 func (this *Add) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -82,6 +70,8 @@ func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error
 }
 
 /*
-Returns NewAdd.
+Factory method pattern.
 */
-func (this *Add) Constructor() FunctionConstructor { return NewAdd }
+func (this *Add) Constructor() FunctionConstructor {
+	return NewAdd
+}

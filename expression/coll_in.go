@@ -71,6 +71,9 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 	return value.FALSE_VALUE, nil
 }
 
+/*
+Factory method pattern.
+*/
 func (this *In) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIn(operands[0], operands[1])

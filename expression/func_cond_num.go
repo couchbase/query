@@ -24,17 +24,12 @@ import (
 /*
 This represents the Conditional function IFINF(expr1, expr2, ...)
 for numbers. It returns the first non-MISSING, non-Inf number or
-NULL. Type IfInf is a struct that implements FunctionBase.
+NULL.
 */
 type IfInf struct {
 	FunctionBase
 }
 
-/*
-The function NewIfnf calls NewFunctionBase to create a function
-named IFINF with input arguments as the operands from the input
-expression.
-*/
 func NewIfInf(operands ...Expression) Function {
 	rv := &IfInf{
 		*NewFunctionBase("ifinf", operands...),
@@ -46,16 +41,12 @@ func NewIfInf(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IfInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *IfInf) Type() value.Type { return value.NUMBER }
 
 func (this *IfInf) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -100,9 +91,11 @@ MaxInt16 = 1<<15 - 1.
 func (this *IfInf) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfInf as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfInf) Constructor() FunctionConstructor { return NewIfInf }
+func (this *IfInf) Constructor() FunctionConstructor {
+	return NewIfInf
+}
 
 ///////////////////////////////////////////////////
 //
@@ -118,11 +111,6 @@ type IfNaN struct {
 	FunctionBase
 }
 
-/*
-The function NewIfNaN calls NewFunctionBase to create a function
-named IFNAN with input arguments as the operands from the input
-expression.
-*/
 func NewIfNaN(operands ...Expression) Function {
 	rv := &IfNaN{
 		*NewFunctionBase("ifnan", operands...),
@@ -134,16 +122,12 @@ func NewIfNaN(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *IfNaN) Type() value.Type { return value.NUMBER }
 
 func (this *IfNaN) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -154,17 +138,6 @@ func (this *IfNaN) DependsOn(other Expression) bool {
 	return len(this.operands) > 0 &&
 		this.operands[0].DependsOn(other)
 }
-
-/*
-This method returns the first non missing, non infinity
-number in the input argument values. Range over the args
-and check its type. If missing, skip that value, and if
-that value is not a number, then return a NULL. In the
-event a number is first encountered, check whether f is
-an IEEE 754 "not a number" value. If false then return
-that number. If none of the above cases are satisfied
-return a Null value.
-*/
 func (this *IfNaN) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -189,15 +162,16 @@ func (this *IfNaN) MinArgs() int { return 2 }
 
 /*
 Maximum number of input arguments defined for the IfNaN
-function is MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+function is MaxInt16  = 1<<15 - 1.
 */
 func (this *IfNaN) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfNaN as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfNaN) Constructor() FunctionConstructor { return NewIfNaN }
+func (this *IfNaN) Constructor() FunctionConstructor {
+	return NewIfNaN
+}
 
 ///////////////////////////////////////////////////
 //
@@ -207,18 +181,12 @@ func (this *IfNaN) Constructor() FunctionConstructor { return NewIfNaN }
 
 /*
 This represents the Conditional function IFNANORINF(expr1, expr2, ...).
-It returns the first non-MISSING, non-Inf, non-NaN number or NULL. Type
-IfNaNOrInf is a struct that implements FunctionBase.
+It returns the first non-MISSING, non-Inf, non-NaN number or NULL.
 */
 type IfNaNOrInf struct {
 	FunctionBase
 }
 
-/*
-The function NewIfNaNOrInf calls NewFunctionBase to create a function
-named IFNANORINF with input arguments as the operands from the input
-expression.
-*/
 func NewIfNaNOrInf(operands ...Expression) Function {
 	rv := &IfNaNOrInf{
 		*NewFunctionBase("ifnanorinf", operands...),
@@ -230,16 +198,12 @@ func NewIfNaNOrInf(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *IfNaNOrInf) Type() value.Type { return value.NUMBER }
 
 func (this *IfNaNOrInf) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -251,20 +215,6 @@ func (this *IfNaNOrInf) DependsOn(other Expression) bool {
 		this.operands[0].DependsOn(other)
 }
 
-/*
-This method returns the first non-MISSING, non-Inf, non-NaN
-number or NULL in the input argument values. Range over the args
-and check its type. If missing, skip that value, and if
-that value is not a number, then return a NULL. In the
-event a number is first encountered, check whether f is
-an infinity according to the second argument (since it
-is 0 IsInf reports whether f is either infinity as per
-the math package in the Go Docs). Also check if f is
-an IEEE 754 "not a number" value using the IfNaN method
-defined in the math package. If false then return that
-number. If none of the above cases are satisfied return a
-Null value.
-*/
 func (this *IfNaNOrInf) Apply(context Context, args ...value.Value) (value.Value, error) {
 	for _, a := range args {
 		if a.Type() == value.MISSING {
@@ -289,15 +239,16 @@ func (this *IfNaNOrInf) MinArgs() int { return 2 }
 
 /*
 Maximum number of input arguments defined for the
-function is MaxInt16  = 1<<15 - 1. This is defined using the
-math package.
+function is MaxInt16  = 1<<15 - 1.
 */
 func (this *IfNaNOrInf) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfNaNOrInf as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfNaNOrInf) Constructor() FunctionConstructor { return NewIfNaNOrInf }
+func (this *IfNaNOrInf) Constructor() FunctionConstructor {
+	return NewIfNaNOrInf
+}
 
 ///////////////////////////////////////////////////
 //
@@ -307,18 +258,12 @@ func (this *IfNaNOrInf) Constructor() FunctionConstructor { return NewIfNaNOrInf
 
 /*
 This represents the Conditional function NANIF(expr1, expr2).
-It returns a NaN if expr1 = expr2; else expr1. Type NaNIf
-is a struct that implements BinaryFunctionBase.
+It returns a NaN if expr1 = expr2; else expr1.
 */
 type NaNIf struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewNaNIf calls NewBinaryFunctionBase to
-create a function named NANIF with the two
-expressions as input.
-*/
 func NewNaNIf(first, second Expression) Function {
 	rv := &NaNIf{
 		*NewBinaryFunctionBase("nanif", first, second),
@@ -329,32 +274,23 @@ func NewNaNIf(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *NaNIf) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *NaNIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-This method checks to see if the values of the two input
-expressions are equal, and if true then returns a NaN
-using the math package method NaN(). If not it returns
-the first input value. Use the Equals method for the
-two values to determine equality.
+This method checks to see if the values of the two input expressions
+are equal, and if true then returns a NaN. If not it returns the first
+input value. Use the Equals method for the two values to determine
+equality.
 */
 func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	eq := first.Equals(second)
@@ -371,8 +307,7 @@ func (this *NaNIf) Apply(context Context, first, second value.Value) (value.Valu
 }
 
 /*
-The constructor returns a NewNaNIf with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *NaNIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -388,18 +323,12 @@ func (this *NaNIf) Constructor() FunctionConstructor {
 
 /*
 This represents the Conditional function NEGINFIF(expr1, expr2).
-It returns NegInf if expr1 = expr2; else expr1. Type NegInfIf
-is a struct that implements BinaryFunctionBase.
+It returns NegInf if expr1 = expr2; else expr1.
 */
 type NegInfIf struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewNegInfIf calls NewBinaryFunctionBase to
-create a function named NEGINFIF with the two
-expressions as input.
-*/
 func NewNegInfIf(first, second Expression) Function {
 	rv := &NegInfIf{
 		*NewBinaryFunctionBase("neginfif", first, second),
@@ -410,32 +339,23 @@ func NewNegInfIf(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *NegInfIf) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *NegInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-This method checks to see if the values of the two input
-expressions are equal, and if true then returns a negative
-infinity using the math package method Inf(-1). If not it
-returns the first input value. Use the Equals method for the
-two values to determine equality.
+This method checks to see if the values of the two input expressions
+are equal, and if true then returns a negative infinity.. If not it
+returns the first input value. Use the Equals method for the two
+values to determine equality.
 */
 func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	eq := first.Equals(second)
@@ -454,8 +374,7 @@ func (this *NegInfIf) Apply(context Context, first, second value.Value) (value.V
 var _NEG_INF_VALUE = value.NewValue(math.Inf(-1))
 
 /*
-The constructor returns a NewNegInfIf with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *NegInfIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -471,18 +390,12 @@ func (this *NegInfIf) Constructor() FunctionConstructor {
 
 /*
 This represents the Conditional function POSINFIF(expr1, expr2).
-It returns PosInf if expr1 = expr2; else expr1. Type PosInfIf
-is a struct that implements BinaryFunctionBase.
+It returns PosInf if expr1 = expr2; else expr1.
 */
 type PosInfIf struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewPOSInfIf calls NewBinaryFunctionBase to
-create a function named POSINFIF with the two
-expressions as input.
-*/
 func NewPosInfIf(first, second Expression) Function {
 	rv := &PosInfIf{
 		*NewBinaryFunctionBase("posinfif", first, second),
@@ -493,32 +406,23 @@ func NewPosInfIf(first, second Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *PosInfIf) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *PosInfIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
 
 /*
-This method checks to see if the values of the two input
-expressions are equal, and if true then returns a positive
-infinity using the math package method Inf(1). If not it
-returns the first input value. Use the Equals method for the
-two values to determine equality.
+This method checks to see if the values of the two input expressions
+are equal, and if true then returns a positive infinity. If not it
+returns the first input value. Use the Equals method for the two
+values to determine equality.
 */
 func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.Value, error) {
 	eq := first.Equals(second)
@@ -537,8 +441,7 @@ func (this *PosInfIf) Apply(context Context, first, second value.Value) (value.V
 var _POS_INF_VALUE = value.NewValue(math.Inf(1))
 
 /*
-The constructor returns a NewPosInfIf with the two operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *PosInfIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

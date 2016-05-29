@@ -23,18 +23,12 @@ import (
 
 /*
 This represents the Conditional function IFMISSING(expr1, expr2, ...).
-It returns the first non-MISSING value. Type IfMissing is a struct
-that implements FunctionBase.
+It returns the first non-MISSING value.
 */
 type IfMissing struct {
 	FunctionBase
 }
 
-/*
-The function NewIfMissing calls NewFunctionBase to create a function
-named IFMISSING with input arguments as the operands from the input
-expression.
-*/
 func NewIfMissing(operands ...Expression) Function {
 	rv := &IfMissing{
 		*NewFunctionBase("ifmissing", operands...),
@@ -46,22 +40,14 @@ func NewIfMissing(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *IfMissing) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for the receiver and passes in the receiver,
-current item and current context.
-*/
 func (this *IfMissing) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -93,9 +79,11 @@ Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 func (this *IfMissing) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfMissing as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfMissing) Constructor() FunctionConstructor { return NewIfMissing }
+func (this *IfMissing) Constructor() FunctionConstructor {
+	return NewIfMissing
+}
 
 ///////////////////////////////////////////////////
 //
@@ -111,11 +99,6 @@ type IfMissingOrNull struct {
 	FunctionBase
 }
 
-/*
-The function NewIfMissingOrNull calls NewFunctionBase to create a
-function named IFMISSINGORNULL with input arguments as the operands
-from the input expression.
-*/
 func NewIfMissingOrNull(operands ...Expression) Function {
 	rv := &IfMissingOrNull{
 		*NewFunctionBase("ifmissingornull", operands...),
@@ -126,19 +109,15 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *IfMissingOrNull) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for the receiver and passes in the receiver,
-current item and current context.
-*/
 func (this *IfMissingOrNull) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
@@ -167,9 +146,11 @@ Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 func (this *IfMissingOrNull) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfMissingOrNull as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfMissingOrNull) Constructor() FunctionConstructor { return NewIfMissingOrNull }
+func (this *IfMissingOrNull) Constructor() FunctionConstructor {
+	return NewIfMissingOrNull
+}
 
 ///////////////////////////////////////////////////
 //
@@ -180,17 +161,12 @@ func (this *IfMissingOrNull) Constructor() FunctionConstructor { return NewIfMis
 /*
 This represents the Conditional function IFNULL(expr1, expr2, ...).
 It returns the first non-NULL value. Note that this function may
-return MISSING. Type IfNull is a struct that implements FunctionBase.
+return MISSING.
 */
 type IfNull struct {
 	FunctionBase
 }
 
-/*
-The function NewIfNull calls NewFunctionBase to create a function
-named IFNULL with input arguments as the operands from the input
-expression.
-*/
 func NewIfNull(operands ...Expression) Function {
 	rv := &IfNull{
 		*NewFunctionBase("ifnull", operands...),
@@ -202,16 +178,12 @@ func NewIfNull(operands ...Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *IfNull) Type() value.Type { return value.JSON }
 
 func (this *IfNull) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -247,9 +219,11 @@ Maximum number of input arguments defined is MaxInt16 = 1<<15 - 1.
 func (this *IfNull) MaxArgs() int { return math.MaxInt16 }
 
 /*
-Return NewIfNull as FunctionConstructor.
+Factory method pattern.
 */
-func (this *IfNull) Constructor() FunctionConstructor { return NewIfNull }
+func (this *IfNull) Constructor() FunctionConstructor {
+	return NewIfNull
+}
 
 ///////////////////////////////////////////////////
 //
@@ -265,10 +239,6 @@ type MissingIf struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewMissingIf calls NewBinaryFunctionBase to create a
-function named MISSINGIF with the two expressions as input.
-*/
 func NewMissingIf(first, second Expression) Function {
 	rv := &MissingIf{
 		*NewBinaryFunctionBase("missingif", first, second),
@@ -278,19 +248,15 @@ func NewMissingIf(first, second Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *MissingIf) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for binary functions and passes in the receiver,
-current item and current context.
-*/
 func (this *MissingIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -316,8 +282,7 @@ func (this *MissingIf) Apply(context Context, first, second value.Value) (value.
 }
 
 /*
-The constructor returns a NewMissingIf with the two operands cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *MissingIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -339,10 +304,6 @@ type NullIf struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewNullIf calls NewBinaryFunctionBase to create a
-function named NULLIF with the two expressions as input.
-*/
 func NewNullIf(first, second Expression) Function {
 	rv := &NullIf{
 		*NewBinaryFunctionBase("nullif", first, second),
@@ -352,19 +313,15 @@ func NewNullIf(first, second Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *NullIf) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for binary functions and passes in the receiver,
-current item and current context.
-*/
 func (this *NullIf) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -390,8 +347,7 @@ func (this *NullIf) Apply(context Context, first, second value.Value) (value.Val
 }
 
 /*
-The constructor returns a NewNullIf with the two operands cast to a
-Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *NullIf) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

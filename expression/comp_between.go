@@ -15,19 +15,13 @@ import (
 
 /*
 Comparison terms allow for comparing two expressions.
-For between and not between, we have three expressions,
-the input item and the low and high expressions. Type
-Between is a struct that implements TernaryFunctionBase.
+For BETWEEN and NOT BETWEEN, we have three expressions,
+the input item and the low and high expressions.
 */
 type Between struct {
 	TernaryFunctionBase
 }
 
-/*
-The function NewBetween calls NewTernaryFunctionBase to
-define the between operation with input operands item,
-low and high as input to the function.
-*/
 func NewBetween(item, low, high Expression) Function {
 	rv := &Between{
 		*NewTernaryFunctionBase("between", item, low, high),
@@ -38,22 +32,14 @@ func NewBetween(item, low, high Expression) Function {
 }
 
 /*
-It calls the VisitBetween method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Between) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitBetween(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *Between) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Ternary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Between) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.TernaryEval(this, item, context)
 }
@@ -92,8 +78,7 @@ func (this *Between) Apply(context Context, item, low, high value.Value) (value.
 }
 
 /*
-The constructor returns a NewEq with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Between) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -102,10 +87,7 @@ func (this *Between) Constructor() FunctionConstructor {
 }
 
 /*
-This function implements the not between operation. It calls
-the NewBetween method to return an expression that
-is a complement of the NewBetween return type (boolean).
-(NewNot represents the Not logical operation)
+This function implements the NOT BETWEEN operation.
 */
 func NewNotBetween(item, low, high Expression) Expression {
 	return NewNot(NewBetween(item, low, high))

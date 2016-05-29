@@ -18,17 +18,11 @@ import (
 /*
 Nested expressions are used to access elements inside of arrays.
 They support using the bracket notation ([position]) to access
-elements inside an array. Type Element is a struct that implements
-BinaryFunctionBase.
+elements inside an array.
 */
 type Element struct {
 	BinaryFunctionBase
 }
-
-/*
-The function NewElement calls NewBinaryFunctionBase to define the
-field with input operand expressions first and second, as input.
-*/
 
 func NewElement(first, second Expression) *Element {
 	rv := &Element{
@@ -40,22 +34,14 @@ func NewElement(first, second Expression) *Element {
 }
 
 /*
-It calls the VisitElement method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Element) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitElement(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *Element) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *Element) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -80,8 +66,7 @@ func (this *Element) Apply(context Context, first, second value.Value) (value.Va
 }
 
 /*
-The constructor returns a NewElement with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *Element) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

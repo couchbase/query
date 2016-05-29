@@ -13,18 +13,13 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-/*
-The Constant type is a struct that inherits from ExpressionBase
-and contains a value.
-*/
 type Constant struct {
 	ExpressionBase
 	value value.Value // Overshadows ExpressionBase.value
 }
 
 /*
-Define a set of constant expressions created from values for null,
-missing, true, false, zero and one.
+Pre-define commonly used constant expressions.
 */
 var NULL_EXPR = NewConstant(value.NULL_VALUE)
 var MISSING_EXPR = NewConstant(value.MISSING_VALUE)
@@ -35,11 +30,6 @@ var ONE_EXPR = NewConstant(value.ONE_VALUE)
 var EMPTY_STRING_EXPR = NewConstant(value.EMPTY_STRING_VALUE)
 var EMPTY_ARRAY_EXPR = NewConstant(value.EMPTY_ARRAY_VALUE)
 
-/*
-Create a new Constant out of an input value interface by
-calling NewValue and setting the value component of the
-struct to it. Return a pointer to the Constant structure.
-*/
 func NewConstant(val interface{}) Expression {
 	rv := &Constant{
 		value: value.NewValue(val),
@@ -50,29 +40,18 @@ func NewConstant(val interface{}) Expression {
 }
 
 /*
-Takes an input Visitor and calls VisitConstant on the receiver.
+Visitor pattern.
 */
 func (this *Constant) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitConstant(this)
 }
 
-/*
-Return the type of the value component of the struct.
-*/
 func (this *Constant) Type() value.Type { return this.value.Type() }
 
-/*
-Evaluates to the value component of the receiver. It returns nil as the
-error.
-*/
 func (this *Constant) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.value, nil
 }
 
-/*
-This method is defined to access the value of the Constant
-expression. It returns the receivers value.
-*/
 func (this *Constant) Value() value.Value {
 	return this.value
 }
@@ -112,16 +91,10 @@ func (this *Constant) CoveredBy(keyspace string, exprs Expressions) bool {
 	return true
 }
 
-/*
-Constant expressions do not have children. Hence return nil.
-*/
 func (this *Constant) Children() Expressions {
 	return nil
 }
 
-/*
-Return nil.
-*/
 func (this *Constant) MapChildren(mapper Mapper) error {
 	return nil
 }
@@ -131,4 +104,9 @@ Constants are not transformed, so no need to copy.
 */
 func (this *Constant) Copy() Expression {
 	return this
+}
+
+func (this *Constant) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
+	bool, Expression) {
+	return true, nil
 }

@@ -14,21 +14,13 @@ import (
 )
 
 /*
-Comparison terms allow for comparing two expressions.
-This represents the less than comparison
-operation. Type LT is a struct that implements
-BinaryFunctionBase.
+This represents the LESS THAN comparison
+operation.
 */
 type LT struct {
 	BinaryFunctionBase
 }
 
-/*
-The function NewLT calls NewBinaryFunctionBase
-to define less than comparison expression
-with input operand expressions first and second,
-as input.
-*/
 func NewLT(first, second Expression) Function {
 	rv := &LT{
 		*NewBinaryFunctionBase("lt", first, second),
@@ -39,22 +31,14 @@ func NewLT(first, second Expression) Function {
 }
 
 /*
-It calls the VisitLT method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *LT) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitLT(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *LT) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Binary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *LT) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.BinaryEval(this, item, context)
 }
@@ -81,8 +65,7 @@ func (this *LT) Apply(context Context, first, second value.Value) (value.Value, 
 }
 
 /*
-The constructor returns a NewLT with the operands
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *LT) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

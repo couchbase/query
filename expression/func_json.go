@@ -24,18 +24,12 @@ import (
 /*
 This represents the  json function JSON_DECODE(expr). It
 unmarshals the JSON-encoded string into a N1QL value, and
-if empty string is MISSING. Type JSONDecode is a struct
-that implements UnaryFunctionBase.
+if empty string is MISSING.
 */
 type JSONDecode struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewJSONDecode calls NewUnaryFunctionBase to
-create a function named JSON_DECODE with an expression as
-input.
-*/
 func NewJSONDecode(operand Expression) Function {
 	rv := &JSONDecode{
 		*NewUnaryFunctionBase("json_decode", operand),
@@ -46,22 +40,14 @@ func NewJSONDecode(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *JSONDecode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type JSON.
-*/
 func (this *JSONDecode) Type() value.Type { return value.JSON }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -97,8 +83,7 @@ func (this *JSONDecode) Apply(context Context, arg value.Value) (value.Value, er
 }
 
 /*
-The constructor returns a NewJSONDecode with the an operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *JSONDecode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -115,18 +100,12 @@ func (this *JSONDecode) Constructor() FunctionConstructor {
 /*
 This represents the  json function JSON_ENCODE(expr).
 It marshals the N1QL value into a JSON-encoded string.
-A MISSING becomes the empty string. Type JSONEncode
-is a struct that implements UnaryFunctionBase.
+A MISSING becomes the empty string.
 */
 type JSONEncode struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewJSONEncode calls NewUnaryFunctionBase to
-create a function named JSON_ENCODE with an expression as
-input.
-*/
 func NewJSONEncode(operand Expression) Function {
 	rv := &JSONEncode{
 		*NewUnaryFunctionBase("json_encode", operand),
@@ -137,22 +116,14 @@ func NewJSONEncode(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *JSONEncode) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type STRING.
-*/
 func (this *JSONEncode) Type() value.Type { return value.STRING }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -167,8 +138,7 @@ func (this *JSONEncode) Apply(context Context, arg value.Value) (value.Value, er
 }
 
 /*
-The constructor returns a NewJSONEncode with the an operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *JSONEncode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -193,11 +163,6 @@ type EncodedSize struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewEncodedSize calls NewUnaryFunctionBase to
-create a function named ENCODED_SIZE with an expression as
-input.
-*/
 func NewEncodedSize(operand Expression) Function {
 	rv := &EncodedSize{
 		*NewUnaryFunctionBase("encoded_size", operand),
@@ -208,38 +173,25 @@ func NewEncodedSize(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+visitor pattern.
 */
 func (this *EncodedSize) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *EncodedSize) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method returns a number value that represents the length of the bytes slice
-returned by the MarshalJSON method cast to a float64 value.
-*/
 func (this *EncodedSize) Apply(context Context, arg value.Value) (value.Value, error) {
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(float64(len(bytes))), nil
 }
 
 /*
-The constructor returns a NewEncodedSize with the an operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *EncodedSize) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -262,18 +214,12 @@ a missing and null, for a string it returns the length
 of the string, for array it returns the number of
 elements, for objects it returns the number of
 name/value pairs in the object and for any other value
-it returns a NULL. Type PolyLength is a struct that
-implements UnaryFunctionBase.
+it returns a NULL.
 */
 type PolyLength struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewPolyLength calls NewUnaryFunctionBase to
-create a function named POLY_LENGTH with an expression as
-input.
-*/
 func NewPolyLength(operand Expression) Function {
 	rv := &PolyLength{
 		*NewUnaryFunctionBase("poly_length", operand),
@@ -284,34 +230,18 @@ func NewPolyLength(operand Expression) Function {
 }
 
 /*
-It calls the VisitFunction method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *PolyLength) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-/*
-It returns a value type NUMBER.
-*/
 func (this *PolyLength) Type() value.Type { return value.NUMBER }
 
-/*
-Calls the Eval method for unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *PolyLength) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
 
-/*
-This method evaluates the input value and returns the length
-based on its type. If the input argument is a missing then
-return a missing value. Convert it to a valid Go type. If
-it is a string slice of interfaces or object then return
-its length cast as a number float64. By default return a
-null value.
-*/
 func (this *PolyLength) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
@@ -330,8 +260,7 @@ func (this *PolyLength) Apply(context Context, arg value.Value) (value.Value, er
 }
 
 /*
-The constructor returns a NewPolyLength with the an operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *PolyLength) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {

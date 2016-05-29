@@ -65,6 +65,9 @@ func (this *Exists) Apply(context Context, arg value.Value) (value.Value, error)
 	}
 }
 
+/*
+Factory method pattern.
+*/
 func (this *Exists) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewExists(operands[0])

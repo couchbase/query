@@ -13,20 +13,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-/*
-Comparison terms allow for comparing two expressions.
-Type IsValued is a a struct that implements
-UnaryFunctionBase.
-*/
 type IsValued struct {
 	UnaryFunctionBase
 }
 
-/*
-The function NewIsValued calls NewUnaryFunctionBase
-to define isvalued comparison expression with input operand
-expression as input.
-*/
 func NewIsValued(operand Expression) Function {
 	rv := &IsValued{
 		*NewUnaryFunctionBase("isvalued", operand),
@@ -37,22 +27,14 @@ func NewIsValued(operand Expression) Function {
 }
 
 /*
-It calls the VisitIsValued method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsValued(this)
 }
 
-/*
-It returns a value type BOOLEAN.
-*/
 func (this *IsValued) Type() value.Type { return value.BOOLEAN }
 
-/*
-Calls the Eval method for Unary functions and passes in the
-receiver, current item and current context.
-*/
 func (this *IsValued) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.UnaryEval(this, item, context)
 }
@@ -86,8 +68,7 @@ func (this *IsValued) Apply(context Context, arg value.Value) (value.Value, erro
 }
 
 /*
-The constructor returns a NewIsValued with the operand
-cast to a Function as the FunctionConstructor.
+Factory method pattern.
 */
 func (this *IsValued) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
@@ -108,6 +89,9 @@ func NewIsNotValued(operand Expression) Function {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *IsNotValued) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitIsNotValued(this)
 }
@@ -146,6 +130,9 @@ func (this *IsNotValued) Apply(context Context, arg value.Value) (value.Value, e
 	}
 }
 
+/*
+Factory method pattern.
+*/
 func (this *IsNotValued) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewIsNotValued(operands[0])

@@ -16,9 +16,7 @@ import (
 /*
 Simple case expressions allow for conditional matching within an expression.
 It contains search expression, when/then terms and an optional else
-expression. Type SimpleCase is a struct that implements ExpressionBase,
-and has fields searchTerm which is an expression, whenterms type slice of
-WhenTerm and elseTerm as an expression.
+expression.
 */
 type SimpleCase struct {
 	ExpressionBase
@@ -27,11 +25,6 @@ type SimpleCase struct {
 	elseTerm   Expression
 }
 
-/*
-This method returns a pointer to a SimpleCase structure
-that has its fields populated by the input search terms,
-WhenTerms and elseTerm expression.
-*/
 func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expression) Expression {
 	rv := &SimpleCase{
 		searchTerm: searchTerm,
@@ -45,25 +38,18 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 }
 
 /*
-It calls the VisitSimpleCase method by passing in the receiver to
-process case expressions and returns an interface. It is a visitor
-pattern.
+Visitor pattern.
 */
 func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSimpleCase(this)
 }
 
 /*
-If the else term is not nil then set the type to the type of the
-else expression. Range over the when terms. Set the type to be
-the when terms type only if it is greater (N1QL collation order)
-than the previously set type. Return the final set type.
-If Both the set type and the current when terms are greater than
-NULL and arent equal, then return a JSON value.
+If every term returns the same type or UNKNOWN, return that
+type. Else, return value.JSON.
 */
 func (this *SimpleCase) Type() value.Type {
 	t := value.NULL
-
 	if this.elseTerm != nil {
 		t = this.elseTerm.Type()
 	}

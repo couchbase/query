@@ -15,6 +15,9 @@ import (
 
 type Covers []*Cover
 
+/*
+Internal Expression to support covering indexing.
+*/
 type Cover struct {
 	ExpressionBase
 	covered Expression
@@ -36,6 +39,9 @@ func NewCover(covered Expression) *Cover {
 	return rv
 }
 
+/*
+Visitor pattern.
+*/
 func (this *Cover) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitCover(this)
 }
