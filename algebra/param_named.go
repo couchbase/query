@@ -127,6 +127,11 @@ func (this *NamedParameter) Copy() expression.Expression {
 	return this
 }
 
+func (this *NamedParameter) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (
+	bool, expression.Expression) {
+	return true, nil
+}
+
 /*
 Returns name.
 */

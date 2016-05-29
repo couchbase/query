@@ -125,6 +125,11 @@ func (this *PositionalParameter) Copy() expression.Expression {
 	return this
 }
 
+func (this *PositionalParameter) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (
+	bool, expression.Expression) {
+	return true, nil
+}
+
 /*
 Returns the position.
 */
