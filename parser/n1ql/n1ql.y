@@ -2364,6 +2364,16 @@ STR COLON expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
 }
+|
+expr
+{
+    name := $1.Alias()
+    if name == "" {
+        yylex.Error(fmt.Sprintf("Object member has no name: %s", $1.String()))
+    }
+
+    $$ = expression.NewSimpleBinding(name, $1)
+}
 ;
 
 array:
