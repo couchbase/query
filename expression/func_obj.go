@@ -10,6 +10,7 @@
 package expression
 
 import (
+	"math"
 	"sort"
 
 	"github.com/couchbase/query/value"
@@ -102,6 +103,85 @@ func (this *ObjectAdd) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewObjectAdd(operands[0], operands[1], operands[2])
 	}
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectConcat
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the object function OBJECT_CONCAT(expr1, expr2 ...).
+It returns a new object with the concatenation of the input
+objects.
+*/
+type ObjectConcat struct {
+	FunctionBase
+}
+
+func NewObjectConcat(operands ...Expression) Function {
+	rv := &ObjectConcat{
+		*NewFunctionBase("object_concat", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ObjectConcat) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectConcat) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ObjectConcat) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.OBJECT {
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	rv := args[0].CopyForUpdate()
+	for _, obj := range args[1:] {
+		fields := obj.Fields()
+		for n, v := range fields {
+			rv.SetField(n, v)
+		}
+	}
+
+	return rv, nil
+}
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ObjectConcat) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectConcat) MaxArgs() int { return math.MaxInt16 }
+
+/*
+Factory method pattern.
+*/
+func (this *ObjectConcat) Constructor() FunctionConstructor {
+	return NewObjectConcat
 }
 
 ///////////////////////////////////////////////////
@@ -552,17 +632,17 @@ func (this *ObjectPut) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the object function OBJECT_REMOVE(expr, expr).
-It returns an object with the name / attribute pair for
-the name passed as second parameter removed.
+This represents the object function OBJECT_REMOVE(expr, name ...).  It
+returns an object with the name / attribute pair for the name passed
+as second parameter removed.
 */
 type ObjectRemove struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewObjectRemove(first, second Expression) Function {
+func NewObjectRemove(operands ...Expression) Function {
 	rv := &ObjectRemove{
-		*NewBinaryFunctionBase("object_remove", first, second),
+		*NewFunctionBase("object_remove", operands...),
 	}
 
 	rv.expr = rv
@@ -579,37 +659,56 @@ func (this *ObjectRemove) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectRemove) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
 /*
-This method takes in an object and a name and returns
-an object with the name / attribute pair removed.
+This method takes in an object and names and returns
+an object with the name / attribute pairs removed.
 If the type of input is missing then return a missing value, and
 if not an object return a null value.
 */
-func (this *ObjectRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
-	// Check for type mismatches
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.OBJECT || second.Type() != value.STRING {
+func (this *ObjectRemove) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for i, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if i > 0 && arg.Type() != value.STRING {
+			null = true
+		}
+	}
+
+	first := args[0]
+	if null || first.Type() != value.OBJECT {
 		return value.NULL_VALUE, nil
 	}
 
-	field := second.Actual().(string)
-
 	rv := first.CopyForUpdate()
-	rv.UnsetField(field)
+	for _, name := range args[1:] {
+		n := name.Actual().(string)
+		rv.UnsetField(n)
+	}
+
 	return rv, nil
 }
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ObjectRemove) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectRemove) MaxArgs() int { return math.MaxInt16 }
 
 /*
 Factory method pattern.
 */
 func (this *ObjectRemove) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectRemove(operands[0], operands[1])
-	}
+	return NewObjectRemove
 }
 
 ///////////////////////////////////////////////////

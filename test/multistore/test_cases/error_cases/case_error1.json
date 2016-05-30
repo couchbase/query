@@ -1,6 +1,6 @@
 [
 {
-     "statements":"select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id], [\"GreanTea\"]) AS A FROM orders WHERE test_id=\"err_cases\" ORDER BY A",
+     "statements":"select ARRAY_CONCAT(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM orders WHERE test_id=\"err_cases\" ORDER BY A",
      "error": "Wrong number of arguments to function ARRAY_CONCAT. - at )"
 },
 {

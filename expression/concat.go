@@ -76,8 +76,8 @@ is 2.
 func (this *Concat) MinArgs() int { return 2 }
 
 /*
-Maximum number of input arguments defined for the concat is
-MaxInt16  = 1<<15 - 1.
+Maximum number of input arguments defined for CONCAT is
+MaxInt16 = 1<<15 - 1.
 */
 func (this *Concat) MaxArgs() int { return math.MaxInt16 }
 

@@ -196,6 +196,7 @@ var _FUNCTIONS = map[string]Function{
 
 	// Object
 	"object_add":          &ObjectAdd{},
+	"object_concat":       &ObjectConcat{},
 	"object_inner_pairs":  &ObjectInnerPairs{},
 	"object_innerpairs":   &ObjectInnerPairs{},
 	"object_inner_values": &ObjectInnerValues{},

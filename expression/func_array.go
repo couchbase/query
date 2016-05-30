@@ -23,16 +23,16 @@ import (
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_APPEND(expr, value, ...).
+This represents the array function ARRAY_APPEND(expr, value ...).
 It returns a new array with values appended.
 */
 type ArrayAppend struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayAppend(first, second Expression) Function {
+func NewArrayAppend(operands ...Expression) Function {
 	rv := &ArrayAppend{
-		*NewBinaryFunctionBase("array_append", first, second),
+		*NewFunctionBase("array_append", operands...),
 	}
 
 	rv.expr = rv
@@ -49,32 +49,48 @@ func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
 func (this *ArrayAppend) PropagatesNull() bool {
 	return false
 }
 
-func (this *ArrayAppend) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY {
+func (this *ArrayAppend) Apply(context Context, args ...value.Value) (value.Value, error) {
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+	}
+
+	first := args[0]
+	if first.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
 	f := first.Actual().([]interface{})
-	ra := append(f, second)
-	return value.NewValue(ra), nil
+	for _, arg := range args[1:] {
+		f = append(f, arg)
+	}
+
+	return value.NewValue(f), nil
 }
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayAppend) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayAppend) MaxArgs() int { return math.MaxInt16 }
 
 /*
 Factory method pattern.
 */
 func (this *ArrayAppend) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayAppend(operands[0], operands[1])
-	}
+	return NewArrayAppend
 }
 
 ///////////////////////////////////////////////////
@@ -162,17 +178,17 @@ func (this *ArrayAvg) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_CONCAT(expr1, expr2, ...).
+This represents the array function ARRAY_CONCAT(expr1, expr2 ...).
 It returns a new array with the concatenation of the input
 arrays.
 */
 type ArrayConcat struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayConcat(first, second Expression) Function {
+func NewArrayConcat(operands ...Expression) Function {
 	rv := &ArrayConcat{
-		*NewBinaryFunctionBase("array_concat", first, second),
+		*NewFunctionBase("array_concat", operands...),
 	}
 
 	rv.expr = rv
@@ -189,34 +205,47 @@ func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-/*
-The method concatenates arrays and returns this value. If any of the
-input values are missing, return a missing value. For all non array
-values, return a null value.
-*/
-func (this *ArrayConcat) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY || second.Type() != value.ARRAY {
+func (this *ArrayConcat) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.ARRAY {
+			null = true
+		}
+	}
+
+	if null {
 		return value.NULL_VALUE, nil
 	}
 
-	f := first.Actual().([]interface{})
-	s := second.Actual().([]interface{})
-	ra := append(f, s...)
-	return value.NewValue(ra), nil
+	f := args[0].Actual().([]interface{})
+	for _, arg := range args[1:] {
+		a := arg.Actual().([]interface{})
+		f = append(f, a...)
+	}
+
+	return value.NewValue(f), nil
 }
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayConcat) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayConcat) MaxArgs() int { return math.MaxInt16 }
 
 /*
 Factory method pattern.
 */
 func (this *ArrayConcat) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayConcat(operands[0], operands[1])
-	}
+	return NewArrayConcat
 }
 
 ///////////////////////////////////////////////////
@@ -603,16 +632,16 @@ func (this *ArrayIfNull) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_INSERT(expr, pos, value).
+This represents the array function ARRAY_INSERT(expr, pos, value ...).
 It returns a new array with value inserted.
 */
 type ArrayInsert struct {
-	TernaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayInsert(first, second, third Expression) Function {
+func NewArrayInsert(operands ...Expression) Function {
 	rv := &ArrayInsert{
-		*NewTernaryFunctionBase("array_insert", first, second, third),
+		*NewFunctionBase("array_insert", operands...),
 	}
 
 	rv.expr = rv
@@ -629,7 +658,7 @@ func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayInsert) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.TernaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
 func (this *ArrayInsert) PropagatesNull() bool {
@@ -637,12 +666,19 @@ func (this *ArrayInsert) PropagatesNull() bool {
 }
 
 /*
-This method inserts the third value into the first array at the second position.
+This method inserts the third and subsequent values into the first
+array at the second position.
 */
-func (this *ArrayInsert) Apply(context Context, first, second, third value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
+func (this *ArrayInsert) Apply(context Context, args ...value.Value) (value.Value, error) {
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+	}
+
+	first := args[0]
+	second := args[1]
+	if first.Type() != value.ARRAY || second.Type() != value.NUMBER {
 		return value.NULL_VALUE, nil
 	}
 
@@ -653,23 +689,31 @@ func (this *ArrayInsert) Apply(context Context, first, second, third value.Value
 	}
 
 	s := first.Actual().([]interface{})
-
 	n := int(f)
+
+	/* count negative position from end of array */
+	if n < 0 {
+		n = len(s) + n
+	}
 
 	/* position goes from 0 to end of array */
 	if n < 0 || n > len(s) {
 		return value.NULL_VALUE, nil
 	}
 
-	ra := make([]interface{}, 0, len(s)+1)
+	ra := make([]interface{}, 0, len(s)+len(args)-2)
 
 	/* corner case: append to the end */
 	if n == len(s) {
 		ra = append(ra, s...)
-		ra = append(ra, third)
+		for _, a := range args[2:] {
+			ra = append(ra, a)
+		}
 	} else {
 		ra = append(ra, s[:n]...)
-		ra = append(ra, third)
+		for _, a := range args[2:] {
+			ra = append(ra, a)
+		}
 		ra = append(ra, s[n:]...)
 	}
 
@@ -677,12 +721,20 @@ func (this *ArrayInsert) Apply(context Context, first, second, third value.Value
 }
 
 /*
+Minimum input arguments required is 3.
+*/
+func (this *ArrayInsert) MinArgs() int { return 3 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayInsert) MaxArgs() int { return math.MaxInt16 }
+
+/*
 Factory method pattern.
 */
 func (this *ArrayInsert) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayInsert(operands[0], operands[1], operands[2])
-	}
+	return NewArrayInsert
 }
 
 ///////////////////////////////////////////////////
@@ -966,16 +1018,16 @@ func (this *ArrayPosition) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_PREPEND(value, expr).
-It returns a new array with value prepended.
+This represents the array function ARRAY_PREPEND(value ..., expr).
+It returns a new array with values prepended.
 */
 type ArrayPrepend struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayPrepend(first, second Expression) Function {
+func NewArrayPrepend(operands ...Expression) Function {
 	rv := &ArrayPrepend{
-		*NewBinaryFunctionBase("array_prepend", first, second),
+		*NewFunctionBase("array_prepend", operands...),
 	}
 
 	rv.expr = rv
@@ -992,34 +1044,51 @@ func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayPrepend) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
 func (this *ArrayPrepend) PropagatesNull() bool {
 	return false
 }
 
-func (this *ArrayPrepend) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if second.Type() != value.ARRAY {
+func (this *ArrayPrepend) Apply(context Context, args ...value.Value) (value.Value, error) {
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+	}
+
+	n := len(args) - 1
+	last := args[n]
+	if last.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
-	s := second.Actual().([]interface{})
-	ra := make([]interface{}, 1, len(s)+1)
-	ra[0] = first
+	s := last.Actual().([]interface{})
+	ra := make([]interface{}, 0, len(s)+n)
+	for _, arg := range args[:n] {
+		ra = append(ra, arg)
+	}
+
 	ra = append(ra, s...)
 	return value.NewValue(ra), nil
 }
 
 /*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayPrepend) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayPrepend) MaxArgs() int { return math.MaxInt16 }
+
+/*
 Factory method pattern.
 */
 func (this *ArrayPrepend) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayPrepend(operands[0], operands[1])
-	}
+	return NewArrayPrepend
 }
 
 ///////////////////////////////////////////////////
@@ -1029,17 +1098,17 @@ func (this *ArrayPrepend) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_PUT(expr, value).
-It returns a new array with value appended, if value is not
-already present; else unmodified input array.
+This represents the array function ARRAY_PUT(expr, value ...).  It
+returns a new array with each value appended, if value is not already
+present; else unmodified input array.
 */
 type ArrayPut struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayPut(first, second Expression) Function {
+func NewArrayPut(operands ...Expression) Function {
 	rv := &ArrayPut{
-		*NewBinaryFunctionBase("array_put", first, second),
+		*NewFunctionBase("array_put", operands...),
 	}
 
 	rv.expr = rv
@@ -1056,35 +1125,57 @@ func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayPut) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *ArrayPut) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
-		return value.NULL_VALUE, nil
-	}
-
-	f := first.Actual().([]interface{})
-	for _, a := range f {
-		v := value.NewValue(a)
-		if second.Equals(v).Truth() {
-			return first, nil
+func (this *ArrayPut) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() == value.NULL {
+			null = true
 		}
 	}
 
-	ra := append(f, second)
+	first := args[0]
+	if null || first.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	pa := args[1:]
+	fa := first.Actual().([]interface{})
+	ra := fa
+ploop:
+	for _, p := range pa {
+		for _, f := range fa {
+			fv := value.NewValue(f)
+			if p.Equals(fv).Truth() {
+				continue ploop
+			}
+		}
+
+		ra = append(ra, p)
+	}
+
 	return value.NewValue(ra), nil
 }
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayPut) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayPut) MaxArgs() int { return math.MaxInt16 }
 
 /*
 Factory method pattern.
 */
 func (this *ArrayPut) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayPut(operands[0], operands[1])
-	}
+	return NewArrayPut
 }
 
 ///////////////////////////////////////////////////
@@ -1189,16 +1280,16 @@ func (this *ArrayRange) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_REMOVE(expr, value).
-It returns a new array with all occurences of value removed.
+This represents the array function ARRAY_REMOVE(expr, value ...).
+It returns a new array with all occurences of values removed.
 */
 type ArrayRemove struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewArrayRemove(first, second Expression) Function {
+func NewArrayRemove(operands ...Expression) Function {
 	rv := &ArrayRemove{
-		*NewBinaryFunctionBase("array_remove", first, second),
+		*NewFunctionBase("array_remove", operands...),
 	}
 
 	rv.expr = rv
@@ -1215,17 +1306,21 @@ func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayRemove) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-/*
-This method removes all the occurences of the second value from the
-first array value.
-*/
-func (this *ArrayRemove) Apply(context Context, first, second value.Value) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.ARRAY || second.Type() == value.NULL {
+func (this *ArrayRemove) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() == value.NULL {
+			null = true
+		}
+	}
+
+	first := args[0]
+	if null || first.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
@@ -1234,24 +1329,38 @@ func (this *ArrayRemove) Apply(context Context, first, second value.Value) (valu
 		return first, nil
 	}
 
+	aa := args[1:]
 	ra := make([]interface{}, 0, len(fa))
+floop:
 	for _, f := range fa {
 		fv := value.NewValue(f)
-		if !second.Equals(fv).Truth() {
-			ra = append(ra, f)
+		for _, a := range aa {
+			if fv.Equals(a).Truth() {
+				continue floop
+			}
 		}
+
+		ra = append(ra, f)
 	}
 
 	return value.NewValue(ra), nil
 }
 
 /*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayRemove) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayRemove) MaxArgs() int { return math.MaxInt16 }
+
+/*
 Factory method pattern.
 */
 func (this *ArrayRemove) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewArrayRemove(operands[0], operands[1])
-	}
+	return NewArrayRemove
 }
 
 ///////////////////////////////////////////////////

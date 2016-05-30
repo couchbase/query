@@ -1,33 +1,33 @@
 [
     {
-      "statements": "select ARRAY_APPEND((ARRAY ol.productId FOR ol IN orderlines END), \"GreanTea\") AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+      "statements": "select ARRAY_APPEND((ARRAY ol.productId FOR ol IN orderlines END), \"GreenTea\") AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
       "results": [
         {
             "A": [
                 "coffee01",
                 "sugar22",
-                "GreanTea"
+                "GreenTea"
             ]
         },
         {
             "A": [
                 "coffee01",
                 "sugar22",
-                "GreanTea"
+                "GreenTea"
             ]
         },
         {
             "A": [
                 "coffee01",
                 "tea111",
-                "GreanTea"
+                "GreenTea"
             ]
         },
         {
             "A": [
                 "tea111",
                 "sugar22",
-                "GreanTea"
+                "GreenTea"
             ]
         }
     ]
@@ -130,6 +130,43 @@
                 "tea111",
                 "sugar22",
                 "1235"
+            ]
+        }
+    ]
+  },
+  {
+     "statements": "select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id], [\"GreenTea\"]) AS A FROM orders WHERE test_id=\"array_func\" ORDER BY A",
+     "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1200",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1236",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                "1234",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                "1235",
+                "GreenTea"
             ]
         }
     ]

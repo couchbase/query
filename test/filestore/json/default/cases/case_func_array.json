@@ -121,8 +121,41 @@
     ]
   },
   {
-     "statements":"select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id], [\"GreanTea\"]) AS A FROM default:orders ORDER BY A",
-     "error":"Wrong number of arguments to function ARRAY_CONCAT."
+     "statements":"select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id], [\"GreenTea\"]) AS A FROM default:orders ORDER BY A",
+     "results": [
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1200",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "sugar22",
+                "1236",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "coffee01",
+                "tea111",
+                "1234",
+                "GreenTea"
+            ]
+        },
+        {
+            "A": [
+                "tea111",
+                "sugar22",
+                "1235",
+                "GreenTea"
+            ]
+        }
+    ]
   },
   {
      "statements":"SELECT ARRAY_CONTAINS(array_agg(LENGTH(title)), 7) FROM default:catalog",
