@@ -106,10 +106,28 @@ func (this *Subquery) MapChildren(mapper expression.Mapper) error {
 }
 
 /*
-Return the subquery (receiver) expression.
+Return this subquery expression.
 */
 func (this *Subquery) Copy() expression.Expression {
 	return this
+}
+
+/*
+TODO: This is overly broad. Ideally, we would allow:
+
+SELECT g, (SELECT d2.* FROM d2 USE KEYS d.g) AS d2
+FROM d
+GROUP BY g;
+
+but not allow:
+
+SELECT g, (SELECT d2.* FROM d2 USE KEYS d.foo) AS d2
+FROM d
+GROUP BY g;
+*/
+func (this *Subquery) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (
+	bool, expression.Expression) {
+	return !this.query.IsCorrelated(), nil
 }
 
 /*
