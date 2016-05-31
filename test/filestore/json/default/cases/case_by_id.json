@@ -659,7 +659,6 @@
                         },
                         {
                             "#operator": "Parallel",
-                            "maxParallelism": 1,
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
@@ -692,7 +691,6 @@
                         },
                         {
                             "#operator": "Parallel",
-                            "maxParallelism": 1,
                             "~child": {
                                 "#operator": "Sequence",
                                 "~children": [
