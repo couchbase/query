@@ -17,12 +17,7 @@ import (
 )
 
 /*
-Set implements a hash set of values. It is defined as
-a struct containing different values. _nills_ which
-is a bool type, missings and nulls which are Value's,
-booleans, numbers, strings, arrays, objects and blobs
-which are maps from bool,float64,and string to Value
-respectively.
+Set implements a hash set of Values.
 */
 type Set struct {
 	nills    bool
@@ -36,15 +31,8 @@ type Set struct {
 	blobs    map[string]Value
 }
 
-/*
-The maximum defined capacity for a map is 64 bytes.
-*/
 var _MAP_CAP = 64
 
-/*
-Initialize the different elements in the struct. The input
-integer decides the capacity of the objects map.
-*/
 func NewSet(objectCap int) *Set {
 	mapCap := util.MaxInt(objectCap, _MAP_CAP)
 
@@ -84,13 +72,11 @@ func (this *Set) Put(key, item Value) {
 	case NUMBER:
 		this.numbers[key.Actual().(float64)] = item
 	case STRING:
-		this.strings[key.Actual().(string)] = item
+		this.strings[key.String()] = item
 	case ARRAY:
-		b, _ := key.MarshalJSON()
-		this.arrays[string(b)] = item
+		this.arrays[key.String()] = item
 	case OBJECT:
-		b, _ := key.MarshalJSON()
-		this.objects[string(b)] = item
+		this.objects[key.String()] = item
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
 		this.blobs[str] = item
@@ -99,11 +85,6 @@ func (this *Set) Put(key, item Value) {
 	}
 }
 
-/*
-Deletes input key entry from the Set. If key is nil then set
-this.nills to false and return. Else depending on the key
-type, delete.
-*/
 func (this *Set) Remove(key Value) {
 	if key == nil {
 		this.nills = false
@@ -120,13 +101,11 @@ func (this *Set) Remove(key Value) {
 	case NUMBER:
 		delete(this.numbers, key.Actual().(float64))
 	case STRING:
-		delete(this.strings, key.Actual().(string))
+		delete(this.strings, key.String())
 	case ARRAY:
-		b, _ := key.MarshalJSON()
-		delete(this.arrays, string(b))
+		delete(this.arrays, key.String())
 	case OBJECT:
-		b, _ := key.MarshalJSON()
-		delete(this.objects, string(b))
+		delete(this.objects, key.String())
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
 		delete(this.blobs, str)
@@ -135,9 +114,6 @@ func (this *Set) Remove(key Value) {
 	}
 }
 
-/*
-Checks if the Set has a key, and returns that corresponding value.
-*/
 func (this *Set) Has(key Value) bool {
 	if key == nil {
 		return this.nills
@@ -154,13 +130,11 @@ func (this *Set) Has(key Value) bool {
 	case NUMBER:
 		_, ok = this.numbers[key.Actual().(float64)]
 	case STRING:
-		_, ok = this.strings[key.Actual().(string)]
+		_, ok = this.strings[key.String()]
 	case ARRAY:
-		b, _ := key.MarshalJSON()
-		_, ok = this.arrays[string(b)]
+		_, ok = this.arrays[key.String()]
 	case OBJECT:
-		b, _ := key.MarshalJSON()
-		_, ok = this.objects[string(b)]
+		_, ok = this.objects[key.String()]
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
 		_, ok = this.blobs[str]
@@ -171,12 +145,6 @@ func (this *Set) Has(key Value) bool {
 	return ok
 }
 
-/*
-Returns the length of the set by adding the length of each
-element. For missings and nulls it increments by one only
-if they arent nil, and if nills are true then it increments
-the length by one. The length is then returned.
-*/
 func (this *Set) Len() int {
 	rv := len(this.booleans) + len(this.numbers) + len(this.strings) +
 		len(this.arrays) + len(this.objects) + len(this.blobs)
@@ -196,10 +164,6 @@ func (this *Set) Len() int {
 	return rv
 }
 
-/*
-Returns a slice of Value that contains all the values in
-the Set.
-*/
 func (this *Set) Values() []Value {
 	rv := make([]Value, 0, this.Len())
 
@@ -242,11 +206,6 @@ func (this *Set) Values() []Value {
 	return rv
 }
 
-/*
-Convert the set elements into golang Type by calling
-Actual for that value, append it to a slice
-of interfaces, and return the slice.
-*/
 func (this *Set) Actuals() []interface{} {
 	rv := make([]interface{}, 0, this.Len())
 

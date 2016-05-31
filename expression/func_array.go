@@ -739,6 +739,112 @@ func (this *ArrayInsert) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayIntersect
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_INTERSECT(expr1, expr2 ...).
+It returns a new array with the intersection of the input arrays.
+*/
+type ArrayIntersect struct {
+	FunctionBase
+}
+
+func NewArrayIntersect(operands ...Expression) Function {
+	rv := &ArrayIntersect{
+		*NewFunctionBase("array_intersect", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayIntersect) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayIntersect) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArrayIntersect) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	maxLength := 0
+	minLength := math.MaxInt32
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.ARRAY {
+			null = true
+		} else if !null {
+			a := arg.Actual().([]interface{})
+			n := len(a)
+			if n > maxLength {
+				maxLength = n
+			}
+			if n < minLength {
+				minLength = n
+			}
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	bag := value.NewBag(maxLength)
+	for _, arg := range args {
+		a := arg.Actual().([]interface{})
+		// De-dup each array
+		set := value.NewSet(len(a))
+		for _, elem := range a {
+			set.Add(value.NewValue(elem))
+		}
+
+		// Add to multi-set
+		for _, elem := range set.Values() {
+			if elem != nil && elem.Type() > value.NULL {
+				bag.Add(elem)
+			}
+		}
+	}
+
+	ra := make([]interface{}, 0, minLength)
+	n := len(args)
+	for _, entry := range bag.Entries() {
+		if entry.Count == n {
+			ra = append(ra, entry.Value)
+		}
+	}
+
+	return value.NewValue(ra), nil
+}
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayIntersect) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayIntersect) MaxArgs() int { return math.MaxInt16 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayIntersect) Constructor() FunctionConstructor {
+	return NewArrayIntersect
+}
+
+///////////////////////////////////////////////////
+//
 // ArrayLength
 //
 ///////////////////////////////////////////////////
