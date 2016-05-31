@@ -1,0 +1,43 @@
+[
+    {
+        "statements": "SELECT * FROM default:contacts WHERE name = \"dave\" ORDER BY 1",
+        "pretty": true,
+        "results": [
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM default:contacts WHERE name = \"dave\" ORDER BY 1",
+        "pretty": false,
+        "results": [
+        { "contacts": { "children": [ { "age": 17, "gender": "m", "name": "aiden" }, { "age": 2, "gender": "f", "name": "bill" } ], "hobbies": [ "golf", "surfing" ], "name": "dave", "type": "contact" } }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM default:contacts WHERE name = \"ImSorryDave\" ORDER BY 1",
+        "pretty": true,
+        "results": []
+    }
+
+]

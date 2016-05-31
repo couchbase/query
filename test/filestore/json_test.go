@@ -27,11 +27,11 @@ func start() *MockServer {
 func TestSyntaxErr(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, "this is a bad query")
+	r, _, err := Run(qc, true, "this is a bad query")
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
-	r, _, err = Run(qc, "") // empty string query
+	r, _, err = Run(qc, true, "") // empty string query
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
 	}
@@ -40,17 +40,17 @@ func TestSyntaxErr(t *testing.T) {
 func TestSimpleSelect(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, "select 1 + 1")
+	r, _, err := Run(qc, true, "select 1 + 1")
 	if err != nil || len(r) == 0 {
 		t.Errorf("did not expect err %s", err.Error())
 	}
 
-	r, _, err = Run(qc, "select * from system:keyspaces")
+	r, _, err = Run(qc, true, "select * from system:keyspaces")
 	if err != nil || len(r) == 0 {
 		t.Errorf("did not expect err %s", err.Error())
 	}
 
-	r, _, err = Run(qc, "select * from default:orders")
+	r, _, err = Run(qc, true, "select * from default:orders")
 	if err != nil || len(r) == 0 {
 		t.Errorf("did not expect err %s", err.Error())
 	}
@@ -94,10 +94,17 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 				continue
 			}
 		}
+
+		pretty := true
+		p, ok := c["pretty"]
+		if ok {
+			pretty = p.(bool)
+		}
+
 		v, ok := c["preStatements"]
 		if ok {
 			preStatements := v.(string)
-			_, _, err := Run(qc, preStatements)
+			_, _, err := Run(qc, pretty, preStatements)
 			if err != nil {
 				t.Errorf("preStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i)
 			}
@@ -110,12 +117,12 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 		}
 		statements := v.(string)
 		t.Logf("  %d: %v\n", i, statements)
-		resultsActual, _, errActual := Run(qc, statements)
+		resultsActual, _, errActual := Run(qc, pretty, statements)
 
 		v, ok = c["postStatements"]
 		if ok {
 			postStatements := v.(string)
-			_, _, err := Run(qc, postStatements)
+			_, _, err := Run(qc, pretty, postStatements)
 			if err != nil {
 				t.Errorf("postStatements resulted in error: %v, for case file: %v, index: %v", err, fname, i)
 			}
@@ -124,7 +131,7 @@ func testCaseFile(t *testing.T, fname string, qc *MockServer) {
 		v, ok = c["matchStatements"]
 		if ok {
 			matchStatements := v.(string)
-			resultsMatch, _, errMatch := Run(qc, matchStatements)
+			resultsMatch, _, errMatch := Run(qc, pretty, matchStatements)
 			if !reflect.DeepEqual(errActual, errActual) {
 				t.Errorf("errors don't match, actual: %#v, expected: %#v"+
 					", for case file: %v, index: %v",

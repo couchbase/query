@@ -159,11 +159,16 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.LogRequest(0, 0, request.resultCount, 0, 0)
 }
 
-func Run(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Error, errors.Error) {
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 
-	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, value.TRUE, scanConfiguration, "", nil)
+	pretty := value.TRUE
+	if !p {
+		pretty = value.FALSE
+	}
+
+	base := server.NewBaseRequest(q, nil, nil, nil, "json", 0, value.FALSE, metrics, value.TRUE, pretty, scanConfiguration, "", nil)
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
