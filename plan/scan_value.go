@@ -73,6 +73,6 @@ func (this *ValueScan) UnmarshalJSON(body []byte) error {
 		return fmt.Errorf("Invalid VALUES expression %s", _unmarshalled.Values)
 	}
 
-	this.values, err = algebra.NewPairs(array)
+	this.values, err = algebra.NewValuesPairs(array)
 	return err
 }

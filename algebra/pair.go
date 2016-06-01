@@ -31,6 +31,23 @@ type Pair struct {
 	Value expression.Expression
 }
 
+func NewPair(key, value expression.Expression) *Pair {
+	return &Pair{
+		Key:   key,
+		Value: value,
+	}
+}
+
+func MapPairs(pairs Pairs) map[expression.Expression]expression.Expression {
+	mapping := make(map[expression.Expression]expression.Expression, len(pairs))
+
+	for _, pair := range pairs {
+		mapping[pair.Key] = pair.Value
+	}
+
+	return mapping
+}
+
 /*
 Applies mapper to the key and value expressions.
 */
@@ -120,11 +137,11 @@ Range over the operands of the input array construct
 and create new key value pair's using the NewPair()
 method and add it to Pairs. Return.
 */
-func NewPairs(array *expression.ArrayConstruct) (pairs Pairs, err error) {
+func NewValuesPairs(array *expression.ArrayConstruct) (pairs Pairs, err error) {
 	operands := array.Operands()
 	pairs = make(Pairs, len(operands))
 	for i, op := range operands {
-		pairs[i], err = NewPair(op)
+		pairs[i], err = NewValuesPair(op)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +154,7 @@ func NewPairs(array *expression.ArrayConstruct) (pairs Pairs, err error) {
 Create a key value pair using the operands of the input
 expression Array construct and return.
 */
-func NewPair(expr expression.Expression) (*Pair, error) {
+func NewValuesPair(expr expression.Expression) (*Pair, error) {
 	array, ok := expr.(*expression.ArrayConstruct)
 	if !ok {
 		return nil, fmt.Errorf("Invalid VALUES expression %s", expr.String())

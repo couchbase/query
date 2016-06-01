@@ -72,7 +72,7 @@ func (this *Set) Put(key, item Value) {
 	case NUMBER:
 		this.numbers[key.Actual().(float64)] = item
 	case STRING:
-		this.strings[key.String()] = item
+		this.strings[key.Actual().(string)] = item
 	case ARRAY:
 		this.arrays[key.String()] = item
 	case OBJECT:
@@ -101,7 +101,7 @@ func (this *Set) Remove(key Value) {
 	case NUMBER:
 		delete(this.numbers, key.Actual().(float64))
 	case STRING:
-		delete(this.strings, key.String())
+		delete(this.strings, key.Actual().(string))
 	case ARRAY:
 		delete(this.arrays, key.String())
 	case OBJECT:
@@ -130,7 +130,7 @@ func (this *Set) Has(key Value) bool {
 	case NUMBER:
 		_, ok = this.numbers[key.Actual().(float64)]
 	case STRING:
-		_, ok = this.strings[key.String()]
+		_, ok = this.strings[key.Actual().(string)]
 	case ARRAY:
 		_, ok = this.arrays[key.String()]
 	case OBJECT:

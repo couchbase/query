@@ -18,16 +18,18 @@ Represents object construction.
 */
 type ObjectConstruct struct {
 	ExpressionBase
+	mapping  map[Expression]Expression
 	bindings map[string]Expression
 }
 
-func NewObjectConstruct(bindings Bindings) Expression {
+func NewObjectConstruct(mapping map[Expression]Expression) Expression {
 	rv := &ObjectConstruct{
-		bindings: make(map[string]Expression, len(bindings)),
+		mapping:  mapping,
+		bindings: make(map[string]Expression, len(mapping)),
 	}
 
-	for _, b := range bindings {
-		rv.bindings[b.Variable()] = b.Expression()
+	for name, value := range mapping {
+		rv.bindings[name.String()] = value
 	}
 
 	rv.expr = rv
@@ -44,20 +46,39 @@ func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
-	m := make(map[string]interface{}, len(this.bindings))
+	m := make(map[string]interface{}, len(this.mapping))
 
-	for key, expr := range this.bindings {
-		val, err := expr.Evaluate(item, context)
+	for name, val := range this.mapping {
+		n, err := name.Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		}
 
-		if val.Type() != value.MISSING {
-			m[key] = val
+		if n.Type() == value.MISSING {
+			return n, nil
+		} else if n.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		v, err := val.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+
+		if v.Type() != value.MISSING {
+			m[n.Actual().(string)] = v
 		}
 	}
 
 	return value.NewValue(m), nil
+}
+
+func (this *ObjectConstruct) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ObjectConstruct) PropagatesNull() bool {
+	return false
 }
 
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
@@ -74,9 +95,9 @@ func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	for key, expr := range this.bindings {
-		oexpr, ok := ol.bindings[key]
-		if !ok || !expr.EquivalentTo(oexpr) {
+	for name, value := range this.bindings {
+		ovalue, ok := ol.bindings[name]
+		if !ok || !value.EquivalentTo(ovalue) {
 			return false
 		}
 	}
@@ -89,9 +110,9 @@ Range over the bindings and append each value to a slice of
 expressions. Return this slice.
 */
 func (this *ObjectConstruct) Children() Expressions {
-	rv := make(Expressions, 0, len(this.bindings))
-	for _, expr := range this.bindings {
-		rv = append(rv, expr)
+	rv := make(Expressions, 0, 2*len(this.mapping))
+	for name, value := range this.mapping {
+		rv = append(rv, name, value)
 	}
 
 	return rv
@@ -102,22 +123,41 @@ Range over the bindings and map the expressions to another expression.
 Reset the expression to be the new expression at its corresponding key.
 */
 func (this *ObjectConstruct) MapChildren(mapper Mapper) (err error) {
-	for key, expr := range this.bindings {
-		vexpr, err := mapper.Map(expr)
+	mapped := make(map[Expression]Expression, len(this.mapping))
+
+	for name, value := range this.mapping {
+		n, err := mapper.Map(name)
 		if err != nil {
 			return err
 		}
 
-		this.bindings[key] = vexpr
+		v, err := mapper.Map(value)
+		if err != nil {
+			return err
+		}
+
+		// Expression.String() may change after Map()
+		sname := name.String()
+		sn := n.String()
+		if sn == sname {
+			this.bindings[sn] = v
+		} else {
+			this.bindings[sname] = nil
+			delete(this.bindings, sname)
+			this.bindings[sn] = v
+		}
+
+		mapped[n] = v
 	}
 
+	this.mapping = mapped
 	return nil
 }
 
 func (this *ObjectConstruct) Copy() Expression {
-	copies := make(Bindings, 0, len(this.bindings))
-	for key, expr := range this.bindings {
-		copies = append(copies, NewSimpleBinding(key, expr.Copy()))
+	copies := make(map[Expression]Expression, len(this.mapping))
+	for name, value := range this.mapping {
+		copies[name.Copy()] = value.Copy()
 	}
 
 	return NewObjectConstruct(copies)

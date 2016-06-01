@@ -549,7 +549,6 @@
         }
     ]
     },
-
     {
         "statements" : "SELECT b.c FROM default:complex_json ORDER BY b.c",
         "results": [
@@ -571,6 +570,15 @@
             }
         }
     ]
+    },
+    {
+        "statements" : "SELECT { \"a\" || \"b\" : 1 + 2 }",
+        "results": [
+        {
+            "$1": {
+                "ab": 3
+            }
+        }
+    ]
     }
-
 ]

@@ -44,6 +44,14 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 	return this.Eval(this, item, context)
 }
 
+func (this *ArrayConstruct) PropagatesMissing() bool {
+	return false
+}
+
+func (this *ArrayConstruct) PropagatesNull() bool {
+	return false
+}
+
 func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.Value, error) {
 	aa := make([]interface{}, len(args))
 	for i, arg := range args {

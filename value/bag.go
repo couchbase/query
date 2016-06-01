@@ -101,7 +101,7 @@ func (this *Bag) Put(key, item Value) {
 
 		entry.Count++
 	case STRING:
-		akey := key.String()
+		akey := key.Actual().(string)
 		entry := this.strings[akey]
 		if entry == nil {
 			entry = &BagEntry{Value: item}
@@ -156,7 +156,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 	case NUMBER:
 		return this.numbers[key.Actual().(float64)]
 	case STRING:
-		return this.strings[key.String()]
+		return this.strings[key.Actual().(string)]
 	case ARRAY:
 		return this.arrays[key.String()]
 	case OBJECT:

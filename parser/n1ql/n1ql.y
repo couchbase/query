@@ -53,6 +53,7 @@ sortTerms        algebra.SortTerms
 
 keyspaceRef      *algebra.KeyspaceRef
 
+pair             *algebra.Pair
 pairs            algebra.Pairs
 set              *algebra.Set
 unset            *algebra.Unset
@@ -287,8 +288,8 @@ tokOffset	 int
 %type <n>                POSITIONAL_PARAM NEXT_PARAM
 %type <expr>             literal construction_expr object array
 %type <expr>             param_expr
-%type <binding>          member
-%type <bindings>         members opt_members
+%type <pair>             member
+%type <pairs>            members opt_members
 
 %type <expr>             expr c_expr b_expr
 %type <exprs>            exprs opt_exprs
@@ -2334,7 +2335,7 @@ array
 object:
 LBRACE opt_members RBRACE
 {
-    $$ = expression.NewObjectConstruct($2)
+    $$ = expression.NewObjectConstruct(algebra.MapPairs($2))
 }
 ;
 
@@ -2350,7 +2351,7 @@ members
 members:
 member
 {
-    $$ = expression.Bindings{$1}
+    $$ = algebra.Pairs{$1}
 }
 |
 members COMMA member
@@ -2360,9 +2361,9 @@ members COMMA member
 ;
 
 member:
-STR COLON expr
+expr COLON expr
 {
-    $$ = expression.NewSimpleBinding($1, $3)
+    $$ = algebra.NewPair($1, $3)
 }
 |
 expr
@@ -2372,7 +2373,7 @@ expr
         yylex.Error(fmt.Sprintf("Object member has no name: %s", $1.String()))
     }
 
-    $$ = expression.NewSimpleBinding(name, $1)
+    $$ = algebra.NewPair(expression.NewConstant(name), $1)
 }
 ;
 
