@@ -41,6 +41,9 @@ func newSargIn(pred *expression.In) *sargIn {
 		if !ok {
 			return _VALUED_SPANS, nil
 		}
+		if len(array) == 0 {
+			return _EMPTY_SPANS, nil
+		}
 
 		// De-dup before generating spans
 		set := value.NewSet(len(array))
