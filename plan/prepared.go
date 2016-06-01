@@ -108,6 +108,10 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 	this.encoded_plan = encoded_plan
 }
 
+func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
+	return this.encoded_plan != encoded_plan
+}
+
 type preparedCache struct {
 	sync.RWMutex
 	prepareds map[string]*Prepared
@@ -132,13 +136,27 @@ func (this *preparedCache) get(name value.Value) *Prepared {
 	return rv
 }
 
-func (this *preparedCache) add(prepared *Prepared) {
+
+func (this *preparedCache) add(prepared *Prepared, process func(*Prepared) bool) {
 	this.Lock()
+	defer this.Unlock()
+
+	pr, ok := this.prepareds[prepared.Name()]
+
+	// build one if missing
+	if !ok {
+		pr = prepared
+	}
+	if process != nil {
+		if cont := process(pr); !cont {
+			return
+		}
+	}
+
 	if len(this.prepareds) > _MAX_SIZE {
 		this.prepareds = make(map[string]*Prepared, _CACHE_SIZE)
 	}
-	this.prepareds[prepared.Name()] = prepared
-	this.Unlock()
+	this.prepareds[prepared.Name()] = pr
 }
 
 func (this *preparedCache) peek(prepared *Prepared) bool {
@@ -156,7 +174,7 @@ func AddPrepared(prepared *Prepared) errors.Error {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", prepared.Name()))
 	}
-	cache.add(prepared)
+	cache.add(prepared, nil)
 	return nil
 }
 
@@ -185,7 +203,9 @@ func GetPrepared(prepared_stmt value.Value) (*Prepared, errors.Error) {
 	}
 }
 
-func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
+func DecodePrepared(prepared_name string, prepared_stmt string) (*Prepared, errors.Error) {
+	var cacheErr errors.Error = nil
+
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
@@ -204,8 +224,41 @@ func DecodePrepared(prepared_stmt string) (*Prepared, errors.Error) {
 	if err != nil {
 		return nil, errors.NewPreparedDecodingError(err)
 	}
+
 	prepared.SetEncodedPlan(prepared_stmt)
-	return prepared, nil
+
+	// MB-19509 we now have to check that the encoded plan matches
+	// the prepared statement named in the rest API
+	if prepared.Name() != "" && prepared_name != "" &&
+		prepared_name != prepared.Name() {
+		return nil, errors.NewEncodingNameMismatchError(prepared_name)
+	}
+
+	if prepared.Name() == "" {
+		return prepared, nil
+	}
+	cache.add(prepared,
+		func(oldEntry *Prepared) bool {
+
+			// MB-19509: if the entry exists already, the new plan must
+			// also be for the same statement as we have in the cache
+			if oldEntry != prepared &&
+				oldEntry.text != prepared.text {
+				cacheErr = errors.NewPreparedEncodingMismatchError(prepared_name)
+				return false
+			}
+
+			// MB-19659: this is where we decide plan conflict.
+			// the current behaviour is to always use the new plan
+			// and amend the cache
+			// This is still to be finalized
+			return true
+		})
+	if cacheErr == nil {
+		return prepared, nil
+	} else {
+		return nil, cacheErr
+	}
 }
 
 func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
@@ -213,9 +266,6 @@ func unmarshalPrepared(bytes []byte) (*Prepared, errors.Error) {
 	err := prepared.UnmarshalJSON(bytes)
 	if err != nil {
 		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
-	}
-	if prepared.Name() != "" {
-		cache.add(prepared)
 	}
 	return prepared, nil
 }

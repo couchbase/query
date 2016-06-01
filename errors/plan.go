@@ -79,6 +79,13 @@ func NewPreparedEncodingMismatchError(name string) Error {
 		InternalMsg: fmt.Sprintf("Encoded plan parameter does not match encoded plan of %s", name), InternalCaller: CallerN(1)}
 }
 
+const PLAN_NAME_MISMATCH = 4090
+
+func NewEncodingNameMismatchError(name string) Error {
+	return &err{level: EXCEPTION, ICode: PLAN_NAME_MISMATCH, IKey: "plan.build_prepared.name_not_in_encoded_plan",
+		InternalMsg: fmt.Sprintf("Prepared name in encoded plan parameter is not %s", name), InternalCaller: CallerN(1)}
+}
+
 const NO_INDEX_JOIN = 4100
 
 func NewNoIndexJoinError(alias, op string) Error {
