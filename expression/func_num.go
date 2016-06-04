@@ -552,6 +552,10 @@ func (this *E) Value() value.Value {
 	return _E_VALUE
 }
 
+func (this *E) Static() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -834,6 +838,10 @@ func (this *NaN) Value() value.Value {
 	return _NAN_VALUE
 }
 
+func (this *NaN) Static() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -893,6 +901,10 @@ Returns _NEGINF_VALUE.
 */
 func (this *NegInf) Value() value.Value {
 	return _NEGINF_VALUE
+}
+
+func (this *NegInf) Static() Expression {
+	return this
 }
 
 /*
@@ -956,6 +968,10 @@ func (this *PI) Value() value.Value {
 	return _PI_VALUE
 }
 
+func (this *PI) Static() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -1014,6 +1030,10 @@ Returns _POSINF_VALUE.
 */
 func (this *PosInf) Value() value.Value {
 	return _POSINF_VALUE
+}
+
+func (this *PosInf) Static() Expression {
+	return this
 }
 
 /*
@@ -1193,6 +1213,14 @@ func (this *Random) Type() value.Type { return value.NUMBER }
 
 func (this *Random) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
+}
+
+func (this *Random) Value() value.Value {
+	return nil
+}
+
+func (this *Random) Static() Expression {
+	return nil
 }
 
 func (this *Random) Apply(context Context, args ...value.Value) (value.Value, error) {

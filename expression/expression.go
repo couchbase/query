@@ -73,16 +73,15 @@ type Expression interface {
 	/*
 	   Value() returns the static / constant value of this
 	   Expression, or nil. Expressions that depend on data,
-	   clocks, or random numbers must return nil. Used in index
+	   clocks, or randomness must return nil. Used in index
 	   selection.
 	*/
 	Value() value.Value
 
 	/*
 	   Static() returns the static / constant equivalent of this
-	   Expression, or nil. Expressions that depend on data,
-	   clocks, or random numbers must return nil. Used in index
-	   selection.
+	   Expression, or nil. Expressions that depend on data or
+	   randomness must return nil. Used in index selection.
 	*/
 	Static() Expression
 

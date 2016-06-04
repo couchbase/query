@@ -116,16 +116,14 @@ func (this *ExpressionBase) Value() value.Value {
 	return *this.value
 }
 
-/*
-Returns a Constant or nil.
-*/
 func (this *ExpressionBase) Static() Expression {
-	v := this.expr.Value()
-	if v != nil {
-		return NewConstant(v)
+	for _, child := range this.expr.Children() {
+		if child.Static() == nil {
+			return nil
+		}
 	}
 
-	return nil
+	return this.expr
 }
 
 /*

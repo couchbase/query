@@ -64,6 +64,10 @@ func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *ClockMillis) Static() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -109,11 +113,6 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 	return this.Eval(this, item, context)
 }
 
-/*
-Value() returns the static / constant value of this Expression, or
-nil. Expressions that depend on data, clocks, or random numbers must
-return nil.
-*/
 func (this *ClockStr) Value() value.Value {
 	return nil
 }
@@ -978,6 +977,10 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 	return value.NewValue(float64(nanos) / (1000000.0)), nil
 }
 
+func (this *NowMillis) Static() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -1023,11 +1026,6 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 	return this.Eval(this, item, context)
 }
 
-/*
-Value() returns the static / constant value of this Expression, or
-nil. Expressions that depend on data, clocks, or random numbers must
-return nil.
-*/
 func (this *NowStr) Value() value.Value {
 	return nil
 }

@@ -58,6 +58,10 @@ func (this *Identifier) Value() value.Value {
 	return nil
 }
 
+func (this *Identifier) Static() Expression {
+	return nil
+}
+
 func (this *Identifier) Alias() string {
 	return this.identifier
 }
