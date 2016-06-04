@@ -22,7 +22,7 @@ values-clause ::= 'VALUES' '(' expr ',' expr ')' (',' 'VALUES'? '(' expr ',' exp
 
 insert-select ::= '(' 'PRIMARY'? 'KEY' expr ( ',' 'VALUE' expr )? ')' select
 
-returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT') expr)
+returning-clause ::= 'RETURNING' (result-expr (',' result-expr)* | ('RAW' | 'ELEMENT' | 'VALUE') expr)
 
 /*
  *  upsert
@@ -41,7 +41,7 @@ update ::= 'UPDATE' keyspace-ref use-clause? set-clause? unset-clause? where-cla
 
 set-clause ::= 'SET' path '=' expr update-for? (',' path '=' expr update-for?)*
 
-update-for ::= 'FOR' (name-var ':')? var ('IN' | 'WITHIN') path (',' (name-var ':')? var ('IN' | 'WITHIN') path)* ('WHEN' cond)? 'END'
+update-for ::= ('FOR' (name-var ':')? var ('IN' | 'WITHIN') path (',' (name-var ':')? var ('IN' | 'WITHIN') path)*)+ ('WHEN' cond)? 'END'
 
 unset-clause ::= 'UNSET' path update-for? (',' path update-for?)*
 
