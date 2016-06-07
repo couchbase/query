@@ -25,13 +25,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
+	prevCoveringScan := this.coveringScan
+
 	defer func() {
 		this.cover = prevCover
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
+		this.coveringScan = prevCoveringScan
 	}()
 
+	this.coveringScan = nil
 	this.correlated = node.IsCorrelated()
 	this.resetCountMin()
 
