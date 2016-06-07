@@ -73,7 +73,8 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	return this.sendItem(item)
 }
 
-func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (
+	value.AnnotatedValue, error) {
 	if t.UpdateFor() != nil {
 		return setFor(t, clone, item, context)
 	}
@@ -87,37 +88,26 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 	return clone, nil
 }
 
-func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
-	iarrays, ibuffers, ipairs, n, mismatch, err := arraysFor(t.UpdateFor(), item, context)
-	defer releaseBuffersFor(iarrays, ibuffers, ipairs)
-	if err != nil {
-		return nil, err
-	}
-
-	if mismatch {
-		return clone, nil
-	}
-
-	ivals, err := buildFor(t.UpdateFor(), item, iarrays, ipairs, n, context)
+func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (
+	value.AnnotatedValue, error) {
+	ivals, mismatch, err := buildFor(t.UpdateFor(), item, context)
 	defer releaseValsFor(ivals)
 	if err != nil {
 		return nil, err
 	}
 
-	carrays, cbuffers, cpairs, n, mismatch, err := arraysFor(t.UpdateFor(), clone, context)
-	defer releaseBuffersFor(carrays, cbuffers, cpairs)
+	if mismatch {
+		return clone, nil
+	}
+
+	cvals, mismatch, err := buildFor(t.UpdateFor(), clone, context)
+	defer releaseValsFor(cvals)
 	if err != nil {
 		return nil, err
 	}
 
 	if mismatch {
 		return clone, nil
-	}
-
-	cvals, err := buildFor(t.UpdateFor(), clone, carrays, cpairs, n, context)
-	defer releaseValsFor(cvals)
-	if err != nil {
-		return nil, err
 	}
 
 	// Clone may have been mutated by another term

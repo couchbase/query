@@ -199,7 +199,7 @@ func UnmarshalUpdateFor(body []byte) (*algebra.UpdateFor, error) {
 		return nil, err
 	}
 
-	bindings, err := unmarshal.UnmarshalBindings(_unmarshalled.Bindings)
+	bindings, err := unmarshal.UnmarshalDimensions(_unmarshalled.Bindings)
 	if err != nil {
 		return nil, err
 	}

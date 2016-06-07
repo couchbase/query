@@ -67,7 +67,8 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 	return this.sendItem(item)
 }
 
-func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (
+	value.AnnotatedValue, error) {
 	if t.UpdateFor() != nil {
 		return unsetFor(t, clone, item, context)
 	}
@@ -76,13 +77,15 @@ func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *
 	return clone, nil
 }
 
-func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (value.AnnotatedValue, error) {
+func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (
+	value.AnnotatedValue, error) {
 	var ivals []value.Value
 
 	when := t.UpdateFor().When()
 	if when != nil {
-		iarrays, ibuffers, ipairs, n, mismatch, err := arraysFor(t.UpdateFor(), item, context)
-		defer releaseBuffersFor(iarrays, ibuffers, ipairs)
+		vals, mismatch, err := buildFor(t.UpdateFor(), item, context)
+		ivals = vals
+		defer releaseValsFor(ivals)
 		if err != nil {
 			return nil, err
 		}
@@ -90,28 +93,16 @@ func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *C
 		if mismatch {
 			return clone, nil
 		}
-
-		ivals, err = buildFor(t.UpdateFor(), item, iarrays, ipairs, n, context)
-		defer releaseValsFor(ivals)
-		if err != nil {
-			return nil, err
-		}
 	}
 
-	carrays, cbuffers, cpairs, n, mismatch, err := arraysFor(t.UpdateFor(), clone, context)
-	defer releaseBuffersFor(carrays, cbuffers, cpairs)
+	cvals, mismatch, err := buildFor(t.UpdateFor(), clone, context)
+	defer releaseValsFor(cvals)
 	if err != nil {
 		return nil, err
 	}
 
 	if mismatch {
 		return clone, nil
-	}
-
-	cvals, err := buildFor(t.UpdateFor(), clone, carrays, cpairs, n, context)
-	defer releaseValsFor(cvals)
-	if err != nil {
-		return nil, err
 	}
 
 	// Clone may have been mutated by another term

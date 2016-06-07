@@ -19,11 +19,11 @@ import (
 Represents the FOR clause in UPDATE SET/UNSET.
 */
 type UpdateFor struct {
-	bindings expression.Bindings   `json:"bindings"`
+	bindings []expression.Bindings `json:"bindings"`
 	when     expression.Expression `json:"when"`
 }
 
-func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *UpdateFor {
+func NewUpdateFor(bindings []expression.Bindings, when expression.Expression) *UpdateFor {
 	return &UpdateFor{bindings, when}
 }
 
@@ -31,9 +31,11 @@ func NewUpdateFor(bindings expression.Bindings, when expression.Expression) *Upd
 Apply mapper to expressions in the WHEN clause and bindings.
 */
 func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
-	err = this.bindings.MapExpressions(mapper)
-	if err != nil {
-		return
+	for _, b := range this.bindings {
+		err = b.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
 	}
 
 	if this.when != nil {
@@ -50,7 +52,10 @@ func (this *UpdateFor) MapExpressions(mapper expression.Mapper) (err error) {
 Returns all contained Expressions.
 */
 func (this *UpdateFor) Expressions() expression.Expressions {
-	exprs := this.bindings.Expressions()
+	exprs := this.bindings[0].Expressions()
+	for _, b := range this.bindings[1:] {
+		exprs = append(exprs, b.Expressions()...)
+	}
 
 	if this.when != nil {
 		exprs = append(exprs, this.when)
@@ -62,7 +67,7 @@ func (this *UpdateFor) Expressions() expression.Expressions {
 /*
 Returns the expression bindings for the UPDATE-FOR clause.
 */
-func (this *UpdateFor) Bindings() expression.Bindings {
+func (this *UpdateFor) Bindings() []expression.Bindings {
 	return this.bindings
 }
 

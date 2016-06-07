@@ -11,15 +11,65 @@ package execution
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) (
-	arrays [][]interface{}, buffers [][]interface{}, pairs [][]util.IPair, n int, mismatch bool, err error) {
+func buildFor(f *algebra.UpdateFor, val value.Value, context *Context) (
+	vals []value.Value, mismatch bool, err error) {
+	return buildFors(f.Bindings(), value.Values{val}, context)
+}
+
+func buildFors(dimensions []expression.Bindings, vals value.Values, context *Context) (
+	rvals []value.Value, mismatch bool, err error) {
+	if len(dimensions) == 0 {
+		return
+	}
+
+	bindings := dimensions[0]
+	nvals := _VALUE_POOL.Get()
+
+	for _, val := range vals {
+		arrays, buffers, pairs, n, mismatch, err := arraysFor(bindings, val, context)
+		defer releaseBuffersFor(arrays, buffers, pairs)
+
+		if mismatch || err != nil {
+			_VALUE_POOL.Put(nvals)
+			return nil, mismatch, err
+		}
+
+		for i := 0; i < n; i++ {
+			sv := value.NewScopeValue(make(map[string]interface{}, len(bindings)), val)
+
+			for j, b := range bindings {
+				if b.NameVariable() == "" {
+					sv.SetField(b.Variable(), arrays[j][i])
+				} else {
+					pair := pairs[j][i]
+					sv.SetField(b.NameVariable(), pair.Name)
+					sv.SetField(b.Variable(), pair.Value)
+				}
+			}
+
+			nvals = append(nvals, sv)
+		}
+	}
+
+	if len(dimensions) == 1 {
+		rvals = nvals
+		return
+	}
+
+	defer _VALUE_POOL.Put(nvals)
+	return buildFors(dimensions[1:], nvals, context)
+}
+
+func arraysFor(bindings expression.Bindings, val value.Value, context *Context) (
+	arrays, buffers [][]interface{}, pairs [][]util.IPair, n int, mismatch bool, err error) {
 	var bv value.Value
 
-	for i, b := range f.Bindings() {
+	for i, b := range bindings {
 		bv, err = b.Expression().Evaluate(val, context)
 		if err != nil {
 			return
@@ -47,7 +97,7 @@ func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) (
 			switch bv.Type() {
 			case value.ARRAY:
 				if arrays == nil {
-					arrays = _INTERFACES_POOL.GetSized(len(f.Bindings()))
+					arrays = _INTERFACES_POOL.GetSized(len(bindings))
 				}
 				arrays[i] = bv.Actual().([]interface{})
 			default:
@@ -56,7 +106,7 @@ func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) (
 			}
 		} else {
 			if pairs == nil {
-				pairs = _IPAIRS_POOL.GetSized(len(f.Bindings()))
+				pairs = _IPAIRS_POOL.GetSized(len(bindings))
 			}
 
 			bp := _IPAIR_POOL.Get()
@@ -100,26 +150,8 @@ func arraysFor(f *algebra.UpdateFor, val value.Value, context *Context) (
 	return
 }
 
-func buildFor(f *algebra.UpdateFor, val value.Value, arrays [][]interface{},
-	pairs [][]util.IPair, n int, context *Context) ([]value.Value, error) {
-	rv := _VALUE_POOL.GetSized(n)
-
-	for i := 0; i < n; i++ {
-		sv := value.NewScopeValue(make(map[string]interface{}, len(f.Bindings())), val)
-		rv[i] = sv
-
-		for j, b := range f.Bindings() {
-			if b.NameVariable() == "" {
-				sv.SetField(b.Variable(), arrays[j][i])
-			} else {
-				pair := pairs[j][i]
-				sv.SetField(b.NameVariable(), pair.Name)
-				sv.SetField(b.Variable(), pair.Value)
-			}
-		}
-	}
-
-	return rv, nil
+func releaseValsFor(vals []value.Value) {
+	_VALUE_POOL.Put(vals)
 }
 
 func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
@@ -148,15 +180,11 @@ func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
 	}
 }
 
-func releaseValsFor(vals []value.Value) {
-	_VALUE_POOL.Put(vals)
-}
-
 var _IPAIR_POOL = util.NewIPairPool(1024)
 var _INTERFACE_POOL = util.NewInterfacePool(1024)
 var _VALUE_POOL = value.NewValuePool(1024)
 
-var _INTERFACES_POOL = util.NewInterfacesPool(8)
-var _IPAIRS_POOL = util.NewIPairsPool(8)
+var _INTERFACES_POOL = util.NewInterfacesPool(64)
+var _IPAIRS_POOL = util.NewIPairsPool(64)
 
 var _NAME_POOL = util.NewStringPool(64)

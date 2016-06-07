@@ -62,3 +62,34 @@ func UnmarshalBindings(body []byte) (expression.Bindings, error) {
 
 	return bindings, nil
 }
+
+func UnmarshalDimensions(body []byte) ([]expression.Bindings, error) {
+	var _unmarshalled [][]struct {
+		NameVar string `json:"name_var"`
+		Var     string `json:"var"`
+		Expr    string `json:"expr"`
+		Desc    bool   `json:"desc"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return nil, err
+	}
+
+	dimensions := make([]expression.Bindings, len(_unmarshalled))
+	for i, u := range _unmarshalled {
+		dimension := make(expression.Bindings, len(u))
+		for j, binding := range u {
+			expr, err := parser.Parse(binding.Expr)
+			if err != nil {
+				return nil, err
+			}
+
+			dimension[j] = expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
+		}
+
+		dimensions[i] = dimension
+	}
+
+	return dimensions, nil
+}

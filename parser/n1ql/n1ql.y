@@ -28,6 +28,7 @@ whenTerm         *expression.WhenTerm
 whenTerms        expression.WhenTerms
 binding          *expression.Binding
 bindings         expression.Bindings
+dimensions       []expression.Bindings
 
 node             algebra.Node
 statement        algebra.Statement
@@ -352,8 +353,6 @@ tokOffset	 int
 %type <pairs>            values values_list next_values
 %type <expr>             key_expr opt_value_expr
 %type <projection>       returns returning opt_returning
-%type <binding>          update_binding
-%type <bindings>         update_bindings
 %type <expr>             path_expr
 %type <set>              set
 %type <setTerm>          set_term
@@ -363,7 +362,8 @@ tokOffset	 int
 %type <unsetTerms>       unset_terms
 %type <updateFor>        update_for opt_update_for
 %type <binding>          update_binding
-%type <bindings>         update_bindings
+%type <bindings>         update_dimension
+%type <dimensions>       update_dimensions
 %type <mergeActions>     merge_actions opt_merge_delete_insert
 %type <mergeUpdate>      merge_update
 %type <mergeDelete>      merge_delete
@@ -1459,19 +1459,33 @@ update_for
 ;
 
 update_for:
-FOR update_bindings opt_when END
+update_dimensions opt_when END
 {
-    $$ = algebra.NewUpdateFor($2, $3)
+    $$ = algebra.NewUpdateFor($1, $2)
 }
 ;
 
-update_bindings:
+update_dimensions:
+FOR update_dimension
+{
+    $$ = []expression.Bindings{$2}
+}
+|
+update_dimensions FOR update_dimension
+{
+    dims := make([]expression.Bindings, 0, 1+len($1))
+    dims = append(dims, $3)
+    $$ = append(dims, $1...)
+}
+;
+
+update_dimension:
 update_binding
 {
     $$ = expression.Bindings{$1}
 }
 |
-update_bindings COMMA update_binding
+update_dimension COMMA update_binding
 {
     $$ = append($1, $3)
 }
