@@ -109,8 +109,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
-	if this.limit != nil && node.Projection().Distinct() {
+	// If SELECT DISTINCT, avoid pushing ORDER, LIMIT down to index scan.
+	if node.Projection().Distinct() {
 		this.resetOrderLimit()
 	}
 
