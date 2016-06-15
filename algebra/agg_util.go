@@ -39,7 +39,7 @@ func setAdd(item, cumulative value.Value) (value.AnnotatedValue, error) {
 		return av, nil
 	}
 
-	set = value.NewSet(_OBJECT_CAP)
+	set = value.NewSet(_OBJECT_CAP, true)
 	set.Add(item)
 	av.SetAttachment("set", set)
 	return av, nil

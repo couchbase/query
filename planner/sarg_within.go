@@ -53,7 +53,7 @@ func newSargWithin(pred *expression.Within) *sargWithin {
 		}
 
 		// De-dup before generating spans
-		set := value.NewSet(len(array))
+		set := value.NewSet(len(array), true)
 		set.AddAll(array)
 		array = set.Actuals()
 

@@ -10,8 +10,6 @@
 package execution
 
 import (
-	"time"
-
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -29,7 +27,7 @@ const _DISTINCT_CAP = 1024
 func NewDistinct(plan *plan.Distinct, collect bool) *Distinct {
 	rv := &Distinct{
 		base:    newBase(),
-		set:     value.NewSet(_DISTINCT_CAP),
+		set:     value.NewSet(_DISTINCT_CAP, false),
 		plan:    plan,
 		collect: collect,
 	}
@@ -45,7 +43,7 @@ func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
 func (this *Distinct) Copy() Operator {
 	return &Distinct{
 		base: this.base.copy(),
-		set:  value.NewSet(_DISTINCT_CAP),
+		set:  value.NewSet(_DISTINCT_CAP, false),
 	}
 }
 
@@ -59,32 +57,17 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 		p = item
 	}
 
-	this.set.Put(p.(value.Value), item)
+	if !this.set.Has(p.(value.Value)) {
+		this.set.Put(p.(value.Value), item)
+		return this.collect || this.sendItem(item)
+	}
 	return true
 }
 
 func (this *Distinct) afterItems(context *Context) {
-	if this.collect {
-		return
+	if !this.collect {
+		this.set = nil
 	}
-
-	timer := time.Now()
-
-	values := this.set.Values()
-
-	t := time.Since(timer)
-	context.AddPhaseTime("distinct", t)
-	if this.plan != nil {
-		this.plan.AddTime(t)
-	}
-
-	for _, av := range values {
-		if !this.sendItem(value.NewAnnotatedValue(av)) {
-			return
-		}
-	}
-
-	this.set = nil
 }
 
 func (this *Distinct) Set() *value.Set {

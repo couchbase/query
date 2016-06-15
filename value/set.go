@@ -29,11 +29,12 @@ type Set struct {
 	arrays   map[string]Value
 	objects  map[string]Value
 	blobs    map[string]Value
+	collect  bool
 }
 
 var _MAP_CAP = 64
 
-func NewSet(objectCap int) *Set {
+func NewSet(objectCap int, collect bool) *Set {
 	mapCap := util.MaxInt(objectCap, _MAP_CAP)
 
 	return &Set{
@@ -43,6 +44,7 @@ func NewSet(objectCap int) *Set {
 		arrays:   make(map[string]Value, _MAP_CAP),
 		objects:  make(map[string]Value, objectCap),
 		blobs:    make(map[string]Value, _MAP_CAP),
+		collect:  collect,
 	}
 }
 
@@ -62,24 +64,29 @@ func (this *Set) Put(key, item Value) {
 		return
 	}
 
+	mapItem := item
+	if !this.collect {
+		mapItem = nil
+	}
+
 	switch key.Type() {
 	case MISSING:
 		this.missings = item
 	case NULL:
 		this.nulls = item
 	case BOOLEAN:
-		this.booleans[key.Actual().(bool)] = item
+		this.booleans[key.Actual().(bool)] = mapItem
 	case NUMBER:
-		this.numbers[key.Actual().(float64)] = item
+		this.numbers[key.Actual().(float64)] = mapItem
 	case STRING:
-		this.strings[key.Actual().(string)] = item
+		this.strings[key.Actual().(string)] = mapItem
 	case ARRAY:
-		this.arrays[key.String()] = item
+		this.arrays[key.String()] = mapItem
 	case OBJECT:
-		this.objects[key.String()] = item
+		this.objects[key.String()] = mapItem
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		this.blobs[str] = item
+		this.blobs[str] = mapItem
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -165,6 +172,10 @@ func (this *Set) Len() int {
 }
 
 func (this *Set) Values() []Value {
+	if !this.collect {
+		return nil
+	}
+
 	rv := make([]Value, 0, this.Len())
 
 	if this.nills {
@@ -207,6 +218,10 @@ func (this *Set) Values() []Value {
 }
 
 func (this *Set) Actuals() []interface{} {
+	if !this.collect {
+		return nil
+	}
+
 	rv := make([]interface{}, 0, this.Len())
 
 	if this.nills || this.missings != nil || this.nulls != nil {
