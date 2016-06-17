@@ -47,6 +47,7 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 		}
 
 		span := &plan.Span{}
+		span.Exact = false
 		span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
 
 		last := len(prefix) - 1
@@ -54,12 +55,14 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 			bytes := []byte(prefix)
 			bytes[last]++
 			span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
+			if re.NumSubexp() == 1 {
+				span.Exact = true
+			}
 		} else {
 			span.Range.High = _EMPTY_ARRAY
 		}
 
 		span.Range.Inclusion = datastore.LOW
-		span.Exact = false
 		return plan.Spans{span}, nil
 	}
 
