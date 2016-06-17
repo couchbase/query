@@ -195,12 +195,8 @@ func (this *DummyFetch) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DummyFetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	item.SetField(this.plan.Term().Alias(), item)
-	if !this.sendItem(item) {
-		return false
-	}
-
-	return true
+	item.SetField(this.plan.Term().Alias(), item.Copy())
+	return this.sendItem(item)
 }
 
 func (this *DummyFetch) afterItems(context *Context) {
