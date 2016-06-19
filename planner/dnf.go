@@ -10,6 +10,8 @@
 package planner
 
 import (
+	"math"
+
 	"github.com/couchbase/query/expression"
 )
 
@@ -35,6 +37,10 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 
 	return expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
 		expression.NewLE(expr.First(), expr.Third())), nil
+}
+
+func (this *DNF) VisitLike(expr *expression.Like) (interface{}, error) {
+	return this.visitLike(expr)
 }
 
 /*
@@ -157,6 +163,8 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	var exp expression.Expression
 
 	switch expr := expr.(type) {
+	case *expression.RegexpLike:
+		return this.visitLike(expr)
 	case *expression.IsBoolean:
 		exp = expression.NewLE(expr.Operand(), expression.TRUE_EXPR)
 	case *expression.IsNumber:
@@ -397,6 +405,47 @@ func dnfComplexity(expr *expression.And, max int) int {
 	}
 
 	return comp
+}
+
+func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
+	err := expr.MapChildren(this)
+	if err != nil {
+		return nil, err
+	}
+
+	re := expr.Regexp()
+	if re == nil {
+		return expr, nil
+	}
+
+	prefix, complete := re.LiteralPrefix()
+	if complete {
+		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
+		return eq, nil
+	}
+
+	if prefix == "" {
+		return expr, nil
+	}
+
+	last := len(prefix) - 1
+	if last < 0 || prefix[last] >= math.MaxUint8 {
+		return expr, nil
+	}
+
+	if re.NumSubexp() != 1 || re.String()[len(prefix):] != "(.*)" {
+		return expr, nil
+	}
+
+	// Now exactSpan = true, so we normalize to comparison
+	// operators.
+
+	ge := expression.NewGE(expr.First(), expression.NewConstant(prefix))
+	bytes := []byte(prefix)
+	bytes[last]++
+	lt := expression.NewLT(expr.First(), expression.NewConstant(string(bytes)))
+	and := expression.NewAnd(ge, lt)
+	return and, nil
 }
 
 const _MAX_DNF_COMPLEXITY = 1024
