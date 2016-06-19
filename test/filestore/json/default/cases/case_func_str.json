@@ -493,6 +493,27 @@
             "$1": "sasubquery"
         }
     ]
+    },
+    {
+       "statements": "select SUFFIXES('abc')",
+       "results": [
+        {
+            "$1": [
+                "abc",
+                "bc",
+                "c"
+            ]
+        }
+    ]
+    },
+    {
+       "statements": "select SUFFIXES('')",
+       "results": [
+        {
+            "$1": [
+            ]
+        }
+    ]
     }
 ]
 

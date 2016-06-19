@@ -830,9 +830,10 @@ func (this *Suffixes) Apply(context Context, arg value.Value) (value.Value, erro
 	}
 
 	s := arg.Actual().(string)
-	rv := make([]interface{}, len(s))
-	for i := 0; i < len(s); i++ {
-		rv[i] = s[i:]
+	rv := make([]interface{}, 0, len(s))
+	// Range over Unicode code points, not bytes
+	for i, _ := range s {
+		rv = append(rv, s[i:])
 	}
 
 	return value.NewValue(rv), nil
