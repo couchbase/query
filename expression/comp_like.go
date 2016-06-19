@@ -78,7 +78,7 @@ func (this *Like) Apply(context Context, first, second value.Value) (value.Value
 	re := this.re
 	if re == nil {
 		var err error
-		re, _, err = this.compile(s)
+		re, _, err = likeCompile(s)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func (this *Like) precompile() {
 	}
 
 	s := sv.Actual().(string)
-	re, part, err := this.compile(s)
+	re, part, err := likeCompile(s)
 	if err != nil {
 		return
 	}
@@ -127,7 +127,7 @@ returns it. Convert LIKE special characters to regexp special
 characters. Escape regexp special characters. Add start and end
 boundaries.
 */
-func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
+func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 	s = regexp.QuoteMeta(s)
 	repl := regexp.MustCompile(`\\_|\\%|_|%`)
 	s = repl.ReplaceAllStringFunc(s, replacer)
@@ -137,11 +137,11 @@ func (this *Like) compile(s string) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
-	if s[0] != '%' {
+	if s[0] != '%' && s[0] != '_' {
 		s = "^" + s
 	}
 	l := len(s)
-	if l > 0 && s[l-1] != '%' {
+	if l > 0 && s[l-1] != '%' && s[l-1] != '_' {
 		s = s + "$"
 	}
 

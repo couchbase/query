@@ -10,8 +10,6 @@
 package planner
 
 import (
-	"regexp"
-
 	"github.com/couchbase/query/expression"
 )
 
@@ -19,7 +17,7 @@ type sargableLike struct {
 	predicate
 }
 
-func newSargableLike(pred expression.BinaryFunction, re *regexp.Regexp) *sargableLike {
+func newSargableLike(pred expression.LikeFunction) *sargableLike {
 	rv := &sargableLike{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
 		return pred.First().EquivalentTo(expr2) ||

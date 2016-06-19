@@ -11,7 +11,6 @@ package planner
 
 import (
 	"math"
-	"regexp"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
@@ -22,10 +21,12 @@ type sargLike struct {
 	sargBase
 }
 
+var _EMPTY_STRING = expression.Expressions{expression.EMPTY_STRING_EXPR}
 var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
 
-func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
+func newSargLike(pred expression.LikeFunction) expression.Visitor {
 	prefix := ""
+	re := pred.Regexp()
 
 	if re != nil {
 		var complete bool
@@ -44,6 +45,10 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 
 		if !pred.First().EquivalentTo(expr2) {
 			return _VALUED_SPANS, nil
+		}
+
+		if re == nil {
+			return likeSpans(pred), nil
 		}
 
 		span := &plan.Span{}
@@ -67,4 +72,24 @@ func newSargLike(pred expression.BinaryFunction, re *regexp.Regexp) expression.V
 	}
 
 	return rv
+}
+
+func likeSpans(pred expression.LikeFunction) plan.Spans {
+	span := &plan.Span{}
+	span.Exact = false
+
+	switch pred := pred.(type) {
+	case *expression.Like:
+		span.Range.Low = expression.Expressions{expression.NewLikePrefix(pred.Second())}
+		span.Range.High = expression.Expressions{expression.NewLikeStop(pred.Second())}
+	case *expression.RegexpLike:
+		span.Range.Low = expression.Expressions{expression.NewRegexpPrefix(pred.Second())}
+		span.Range.High = expression.Expressions{expression.NewRegexpStop(pred.Second())}
+	default:
+		span.Range.Low = _EMPTY_STRING
+		span.Range.High = _EMPTY_ARRAY
+	}
+
+	span.Range.Inclusion = datastore.LOW
+	return plan.Spans{span}
 }

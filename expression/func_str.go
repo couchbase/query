@@ -128,7 +128,7 @@ func (this *Length) Evaluate(item value.Value, context Context) (value.Value, er
 /*
 This method takes in an argument value and returns its length
 as value. If the input type is missing return missing, and if
-it isnt string then return null value.
+it is not string then return null value.
 */
 func (this *Length) Apply(context Context, arg value.Value) (value.Value, error) {
 	if arg.Type() == value.MISSING {
@@ -189,7 +189,7 @@ func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, err
 /*
 This method takes in an argument value and returns a
 lowercase string as value. If the input type is
-missing return missing, and if it isnt string then
+missing return missing, and if it is not string then
 return null value.
 */
 func (this *Lower) Apply(context Context, arg value.Value) (value.Value, error) {
@@ -784,6 +784,67 @@ Factory method pattern.
 */
 func (this *Substr) Constructor() FunctionConstructor {
 	return NewSubstr
+}
+
+///////////////////////////////////////////////////
+//
+// Suffixes
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the String function SUFFIXES(expr). It returns an
+array of all the suffixes of the string value.
+*/
+type Suffixes struct {
+	UnaryFunctionBase
+}
+
+func NewSuffixes(operand Expression) Function {
+	rv := &Suffixes{
+		*NewUnaryFunctionBase("suffixes", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Suffixes) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Suffixes) Type() value.Type { return value.ARRAY }
+
+func (this *Suffixes) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Suffixes) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	s := arg.Actual().(string)
+	rv := make([]interface{}, len(s))
+	for i := 0; i < len(s); i++ {
+		rv[i] = s[i:]
+	}
+
+	return value.NewValue(rv), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *Suffixes) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewSuffixes(operands[0])
+	}
 }
 
 ///////////////////////////////////////////////////

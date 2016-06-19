@@ -38,7 +38,7 @@ func NewRegexpContains(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second, false)
+	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
 	return rv
 }
@@ -122,8 +122,8 @@ func NewRegexpLike(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second, true)
-	rv.part, _ = precompileRegexp(second, false)
+	rv.re, _ = precompileRegexp(second.Value(), true)
+	rv.part, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
 	return rv
 }
@@ -220,7 +220,7 @@ func NewRegexpPosition(first, second Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(second, false)
+	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
 	return rv
 }
@@ -297,7 +297,7 @@ func NewRegexpReplace(operands ...Expression) Function {
 		nil,
 	}
 
-	rv.re, _ = precompileRegexp(operands[1], false)
+	rv.re, _ = precompileRegexp(operands[1].Value(), false)
 	rv.expr = rv
 	return rv
 }
@@ -391,19 +391,18 @@ func (this *RegexpReplace) Constructor() FunctionConstructor {
 
 /*
 This method compiles and sets the regular expression re
-later used to set the field in the RegexpReplace structure.
+later used to set the field in the REGEXP_ function.
 If the input expression value is nil or type string, return.
 If not then call Compile with the value, to parse a regular
 expression and return, if successful, a Regexp object that
 can be used to match against text.
 */
-func precompileRegexp(rexpr Expression, full bool) (re *regexp.Regexp, err error) {
-	rv := rexpr.Value()
-	if rv == nil || rv.Type() != value.STRING {
+func precompileRegexp(rexpr value.Value, full bool) (re *regexp.Regexp, err error) {
+	if rexpr == nil || rexpr.Type() != value.STRING {
 		return
 	}
 
-	s := rv.Actual().(string)
+	s := rexpr.Actual().(string)
 	if full {
 		s = "^" + s + "$"
 	}

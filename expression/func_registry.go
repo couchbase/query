@@ -52,9 +52,6 @@ var _FUNCTIONS = map[string]Function{
 	// Comparison
 	"between":        &Between{},
 	"eq":             &Eq{},
-	"le":             &LE{},
-	"like":           &Like{},
-	"lt":             &LT{},
 	"is_known":       &IsValued{},
 	"is_missing":     &IsMissing{},
 	"is_not_known":   &IsNotValued{},
@@ -71,6 +68,13 @@ var _FUNCTIONS = map[string]Function{
 	"isnotvalued":    &IsNotValued{},
 	"isnull":         &IsNull{},
 	"isvalued":       &IsValued{},
+	"le":             &LE{},
+	"like":           &Like{},
+	"lt":             &LT{},
+	"like_prefix":    &LikePrefix{},
+	"like_stop":      &LikeStop{},
+	"regexp_prefix":  &RegexpPrefix{},
+	"regexp_stop":    &RegexpStop{},
 
 	// Concat
 	"concat": &Concat{},
@@ -134,6 +138,7 @@ var _FUNCTIONS = map[string]Function{
 	"rtrim":           &RTrim{},
 	"split":           &Split{},
 	"substr":          &Substr{},
+	"suffixes":        &Suffixes{},
 	"title":           &Title{},
 	"trim":            &Trim{},
 	"upper":           &Upper{},

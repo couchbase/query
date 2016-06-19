@@ -11,7 +11,6 @@ package planner
 
 import (
 	"math"
-	"regexp"
 
 	"github.com/couchbase/query/expression"
 )
@@ -20,7 +19,8 @@ type subsetLike struct {
 	predicate
 }
 
-func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression.Visitor {
+func newSubsetLike(expr expression.LikeFunction) expression.Visitor {
+	re := expr.Regexp()
 	if re == nil {
 		// Pattern is not a constant
 		return newSubsetDefault(expr)
@@ -52,6 +52,7 @@ func newSubsetLike(expr expression.BinaryFunction, re *regexp.Regexp) expression
 	}
 
 	sand := newSubsetAnd(and.(*expression.And))
+
 	rv := &subsetLike{}
 	rv.test = func(expr2 expression.Expression) (bool, error) {
 		if expr.EquivalentTo(expr2) {
