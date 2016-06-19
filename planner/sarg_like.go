@@ -60,7 +60,7 @@ func newSargLike(pred expression.LikeFunction) expression.Visitor {
 			bytes := []byte(prefix)
 			bytes[last]++
 			span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
-			if re.NumSubexp() == 1 {
+			if re.NumSubexp() == 1 && re.String()[len(prefix):] == "(.*)" {
 				span.Exact = true
 			}
 		} else {
