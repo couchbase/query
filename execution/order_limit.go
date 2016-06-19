@@ -215,6 +215,6 @@ func (this *OrderLimit) Push(item interface{}) {
 func (this *OrderLimit) Pop() interface{} {
 	index := len(this.values) - 1
 	item := this.values[index]
-	this.values = this.values[0:index]
+	this.values = this.values[0:index:cap(this.values)]
 	return item
 }
