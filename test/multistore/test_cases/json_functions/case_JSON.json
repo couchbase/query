@@ -29,7 +29,9 @@
 {
 	"statements":"select DECODE_JSON(\"\")",
 	"results": [
-        {}
+        {
+            "$1": null
+        }
     ]
 },
 

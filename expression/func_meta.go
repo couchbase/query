@@ -52,12 +52,12 @@ func (this *Base64Encode) Evaluate(item value.Value, context Context) (value.Val
 	return this.UnaryEval(this, item, context)
 }
 
-func (this *Base64Encode) Apply(context Context, operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
-		return operand, nil
+func (this *Base64Encode) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
 	}
 
-	bytes, _ := operand.MarshalJSON() // Ignore errors from BINARY values
+	bytes, _ := arg.MarshalJSON() // Ignore errors from BINARY values
 	str := base64.StdEncoding.EncodeToString(bytes)
 	return value.NewValue(str), nil
 }
@@ -107,14 +107,14 @@ func (this *Base64Decode) Evaluate(item value.Value, context Context) (value.Val
 	return this.UnaryEval(this, item, context)
 }
 
-func (this *Base64Decode) Apply(context Context, operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
-		return operand, nil
-	} else if operand.Type() != value.STRING {
+func (this *Base64Decode) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
-	str, err := base64.StdEncoding.DecodeString(operand.Actual().(string))
+	str, err := base64.StdEncoding.DecodeString(arg.Actual().(string))
 	if err != nil {
 		return value.NULL_VALUE, nil
 	} else {

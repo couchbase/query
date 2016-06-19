@@ -11,6 +11,7 @@ package expression
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/value"
 )
@@ -69,8 +70,9 @@ func (this *JSONDecode) Apply(context Context, arg value.Value) (value.Value, er
 	}
 
 	s := arg.Actual().(string)
+	s = strings.TrimSpace(s)
 	if s == "" {
-		return value.MISSING_VALUE, nil
+		return value.NULL_VALUE, nil
 	}
 
 	var p interface{}

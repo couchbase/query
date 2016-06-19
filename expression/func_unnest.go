@@ -49,12 +49,12 @@ func (this *UnnestPosition) Evaluate(item value.Value, context Context) (value.V
 	return this.UnaryEval(this, item, context)
 }
 
-func (this *UnnestPosition) Apply(context Context, operand value.Value) (value.Value, error) {
-	if operand.Type() == value.MISSING {
-		return operand, nil
+func (this *UnnestPosition) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
 	}
 
-	av, ok := operand.(value.AnnotatedValue)
+	av, ok := arg.(value.AnnotatedValue)
 	if !ok {
 		return value.NULL_VALUE, nil
 	}
