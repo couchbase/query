@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
 
@@ -24,7 +23,7 @@ type Order struct {
 	limit  *Limit
 }
 
-const _FALLBACK_NUM = 8192
+const _FALLBACK_NUM = 64 * 1024
 
 func NewOrder(order *algebra.Order, offset *Offset, limit *Limit) *Order {
 	return &Order{
@@ -53,7 +52,7 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	s := make([]interface{}, 0, len(this.terms))
 	for _, term := range this.terms {
 		q := make(map[string]interface{})
-		q["expr"] = expression.NewStringer().Visit(term.Expression())
+		q["expr"] = term.Expression().String()
 
 		if term.Descending() {
 			q["desc"] = term.Descending()
@@ -63,10 +62,10 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	}
 	r["sort_terms"] = s
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset.Expression())
+		r["offset"] = this.offset.Expression().String()
 	}
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit.Expression())
+		r["limit"] = this.limit.Expression().String()
 	}
 	if this.duration != 0 {
 		r["#time"] = this.duration.String()
