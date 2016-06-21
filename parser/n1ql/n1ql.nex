@@ -80,6 +80,7 @@
 /\]/		  { logToken(yylex.Text(), "RBRACKET"); return RBRACKET }
 /\]i/		  { logToken(yylex.Text(), "RBRACKET_ICASE"); return RBRACKET_ICASE }
 /;/		  { logToken(yylex.Text(), "SEMI"); return SEMI }
+/\!/		  { logToken(yylex.Text(), "NOT_A_TOKEN"); return NOT_A_TOKEN }
 
 /[aA][lL][lL]/	    			  	 { logToken(yylex.Text(), "ALL"); return ALL }
 /[aA][lL][tT][eE][rR]/				 { logToken(yylex.Text(), "ALTER"); return ALTER }
