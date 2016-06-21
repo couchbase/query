@@ -174,6 +174,7 @@ tokOffset	 int
 %token NAMESPACE
 %token NEST
 %token NOT
+%token NOT_A_TOKEN
 %token NULL
 %token NUMBER
 %token OBJECT
