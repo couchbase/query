@@ -174,7 +174,6 @@ type Expression interface {
 	   Indicates if this expression may be a projection or
 	   ordering term in an aggregation query.
 	*/
-
 	SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (bool, Expression)
 }
 
