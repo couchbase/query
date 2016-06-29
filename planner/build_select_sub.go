@@ -26,6 +26,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
 	prevCoveringScan := this.coveringScan
+	prevCountScan := this.countScan
 
 	defer func() {
 		this.cover = prevCover
@@ -33,9 +34,11 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
 		this.coveringScan = prevCoveringScan
+		this.countScan = prevCountScan
 	}()
 
 	this.coveringScan = nil
+	this.countScan = nil
 	this.correlated = node.IsCorrelated()
 	this.resetCountMin()
 
