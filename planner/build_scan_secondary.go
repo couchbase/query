@@ -39,8 +39,16 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 	this.resetCountMin()
 
+	secondaries = minimalIndexes(secondaries, true)
+
+	var err error
+	secondaries, err = sargIndexes(secondaries, pred)
+	if err != nil {
+		return nil, err
+	}
+
 	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
-		// This makes InterSectionscan disable limit pushdown, don't use index order
+		// This makes IntersectScan disable limit pushdown, don't use index order
 		this.resetOrderLimit()
 		limit = nil
 	}
@@ -169,40 +177,23 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 	return sargables, all, nil
 }
 
-func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
-	map[datastore.Index]*indexEntry, error) {
+func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
 				continue
 			}
 
-			if narrowerOrEquivalent(se, te) {
+			if narrowerOrEquivalent(se, te, shortest) {
 				delete(sargables, t)
 			}
 		}
 	}
 
-	minimals := make(map[datastore.Index]*indexEntry, len(sargables))
-	for s, se := range sargables {
-		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
-		if err != nil || len(spans) == 0 {
-			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
-				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
-			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
-				pred.String(), se.sargKeys.String(), err))
-			return nil, err
-		}
-
-		se.spans = spans
-		se.exactSpans = exactSpans
-		minimals[s] = se
-	}
-
-	return minimals, nil
+	return sargables
 }
 
-func narrowerOrEquivalent(se, te *indexEntry) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
 	}
@@ -223,7 +214,26 @@ outer:
 	}
 
 	return len(se.sargKeys) > len(te.sargKeys) ||
-		len(se.keys) <= len(te.keys)
+		(shortest && (len(se.keys) <= len(te.keys)))
+}
+
+func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
+	map[datastore.Index]*indexEntry, error) {
+	for _, se := range sargables {
+		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
+		if err != nil || len(spans) == 0 {
+			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
+				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
+			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+				pred.String(), se.sargKeys.String(), err))
+			return nil, err
+		}
+
+		se.spans = spans
+		se.exactSpans = exactSpans
+	}
+
+	return sargables, nil
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {

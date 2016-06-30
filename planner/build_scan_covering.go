@@ -88,6 +88,12 @@ outer:
 	entry := secondaries[index]
 	keys := entry.keys
 
+	// Only sarg a single covering index
+	_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
+	if err != nil {
+		return nil, err
+	}
+
 	// Include covering expression from index WHERE clause
 	_, filterCovers, err := indexKeyExpressions(entry, keys)
 	if err != nil {

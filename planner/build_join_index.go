@@ -76,11 +76,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		return nil, nil, err
 	}
 
-	minimals, err := minimalIndexes(sargables, pred)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	minimals := minimalIndexes(sargables, false)
 	if len(minimals) == 0 {
 		return nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
@@ -90,31 +86,28 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, op string) (datastore.Index, expression.Covers, error) {
-	if this.cover == nil {
-		for index, _ := range secondaries {
-			return index, nil, nil
-		}
-	}
+	if this.cover != nil {
+		alias := node.Alias()
+		exprs := this.cover.Expressions()
 
-	alias := node.Alias()
-	exprs := this.cover.Expressions()
-
-outer:
-	for index, entry := range secondaries {
-		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, entry.keys) {
-				continue outer
+	outer:
+		for index, entry := range secondaries {
+			for _, expr := range exprs {
+				if !expr.CoveredBy(alias, entry.keys) {
+					continue outer
+				}
 			}
-		}
 
-		covers := make(expression.Covers, len(entry.keys))
-		for i, key := range entry.keys {
-			covers[i] = expression.NewCover(key)
-		}
+			covers := make(expression.Covers, len(entry.keys))
+			for i, key := range entry.keys {
+				covers[i] = expression.NewCover(key)
+			}
 
-		return index, covers, nil
+			return index, covers, nil
+		}
 	}
 
+	secondaries = minimalIndexes(secondaries, true)
 	for index, _ := range secondaries {
 		return index, nil, nil
 	}

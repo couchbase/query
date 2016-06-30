@@ -114,10 +114,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			return nil, nil, er
 		}
 
-		minimals, er := minimalIndexes(sargables, pred)
-		if er != nil {
-			return nil, nil, er
-		}
+		minimals := minimalIndexes(sargables, false)
 
 		if limit != nil && len(minimals) == 0 {
 			// PrimaryScan with predicates disable pushdown
