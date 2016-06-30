@@ -88,6 +88,11 @@ outer:
 	entry := secondaries[index]
 	keys := entry.keys
 
+	// Matches execution.spanScan.RunOnce()
+	if !index.IsPrimary() {
+		keys = append(keys, id)
+	}
+
 	// Only sarg a single covering index
 	_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
 	if err != nil {
