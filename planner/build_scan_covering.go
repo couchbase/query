@@ -107,8 +107,8 @@ outer:
 
 	arrayIndex := indexHasArrayIndexKey(index)
 
-	if !arrayIndex && len(entry.spans) == 1 && allowedPushDown(entry, pred) {
-		if this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
+	if !arrayIndex && allowedPushDown(entry, pred) {
+		if this.countAgg != nil && !pred.MayOverlapSpans() && canPushDownCount(this.countAgg, entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
 				this.maxParallelism = 1

@@ -41,6 +41,7 @@ func init() {
 	espan := &plan.Span{}
 	espan.Range.High = expression.Expressions{expression.NULL_EXPR}
 	espan.Range.Inclusion = datastore.NEITHER
+	espan.Exact = true
 	_EMPTY_SPANS = plan.Spans{espan}
 
 	_EXACT_FULL_SPANS = _FULL_SPANS.Copy()
