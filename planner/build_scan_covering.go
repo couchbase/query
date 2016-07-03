@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
+func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover == nil {
 		return nil, nil
@@ -31,7 +31,7 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 	defer _COVERING_POOL.Put(covering)
 
 outer:
-	for index, entry := range secondaries {
+	for index, entry := range indexes {
 		keys := entry.keys
 
 		// Matches execution.spanScan.RunOnce()
@@ -85,7 +85,7 @@ outer:
 		}
 	}
 
-	entry := secondaries[index]
+	entry := indexes[index]
 	keys := entry.keys
 
 	// Matches execution.spanScan.RunOnce()

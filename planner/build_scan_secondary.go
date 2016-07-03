@@ -28,10 +28,10 @@ type indexEntry struct {
 	exactSpans bool
 }
 
-func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
+func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover != nil {
-		scan, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+		scan, err := this.buildCoveringScan(indexes, node, id, pred, limit)
 		if scan != nil || err != nil {
 			return scan, err
 		}
@@ -39,15 +39,15 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 	this.resetCountMin()
 
-	secondaries = minimalIndexes(secondaries, true)
+	indexes = minimalIndexes(indexes, true)
 
 	var err error
-	secondaries, err = sargIndexes(secondaries, pred)
+	indexes, err = sargIndexes(indexes, pred)
 	if err != nil {
 		return nil, err
 	}
 
-	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
+	if (this.order != nil || limit != nil) && len(indexes) > 1 {
 		// This makes IntersectScan disable limit pushdown, don't use index order
 		this.resetOrderLimit()
 		limit = nil
@@ -57,9 +57,9 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		limit = nil
 	}
 
-	scans := make([]plan.Operator, 0, len(secondaries))
+	scans := make([]plan.Operator, 0, len(indexes))
 	var op plan.Operator
-	for index, entry := range secondaries {
+	for index, entry := range indexes {
 		if this.order != nil {
 			if !this.useIndexOrder(entry, entry.keys) {
 				this.resetOrderLimit()
@@ -107,10 +107,10 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, all map[datastore.Index]*indexEntry, err error) {
+	sargables, entries map[datastore.Index]*indexEntry, err error) {
 	var keys expression.Expressions
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
-	all = make(map[datastore.Index]*indexEntry, len(indexes))
+	entries = make(map[datastore.Index]*indexEntry, len(indexes))
 
 	for _, index := range indexes {
 		if index.IsPrimary() {
@@ -167,14 +167,14 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 		n := SargableFor(pred, keys)
 		entry := &indexEntry{keys, keys[0:n], cond, nil, false}
-		all[index] = entry
+		entries[index] = entry
 
 		if n > 0 {
 			sargables[index] = entry
 		}
 	}
 
-	return sargables, all, nil
+	return sargables, entries, nil
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {

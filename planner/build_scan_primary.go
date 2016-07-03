@@ -19,8 +19,9 @@ import (
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	limit expression.Expression, hintIndexes, otherIndexes []datastore.Index) (scan *plan.PrimaryScan, err error) {
-	primary, err := buildPrimaryIndex(keyspace, hintIndexes, otherIndexes)
+	limit expression.Expression, indexes []datastore.Index, force bool) (
+	scan *plan.PrimaryScan, err error) {
+	primary, err := buildPrimaryIndex(keyspace, indexes, force)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +30,8 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 }
 
 func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id, limit expression.Expression, hintIndexes, otherIndexes []datastore.Index) (plan.Operator, error) {
-	primary, err := buildPrimaryIndex(keyspace, hintIndexes, otherIndexes)
+	id, limit expression.Expression, indexes []datastore.Index) (plan.Operator, error) {
+	primary, err := buildPrimaryIndex(keyspace, indexes, false)
 	if err != nil {
 		return nil, err
 	}
@@ -43,12 +44,12 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	return this.buildCoveringScan(secondaries, node, id, pred, limit)
 }
 
-func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []datastore.Index) (
+func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, force bool) (
 	primary datastore.PrimaryIndex, err error) {
 	ok := false
 
 	// Prefer hints
-	for _, index := range hintIndexes {
+	for _, index := range indexes {
 		if !index.IsPrimary() {
 			continue
 		}
@@ -61,20 +62,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, hintIndexes, otherIndexes []
 		}
 	}
 
-	// Consider other primary indexes
-	if otherIndexes != nil {
-		for _, index := range otherIndexes {
-			if !index.IsPrimary() {
-				continue
-			}
-
-			primary, ok = index.(datastore.PrimaryIndex)
-			if ok {
-				return
-			} else {
-				return nil, fmt.Errorf("Unable to cast index %s to primary index", index.Name())
-			}
-		}
+	if force {
+		return
 	}
 
 	// Return first online primary index

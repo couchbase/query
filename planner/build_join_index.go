@@ -39,9 +39,9 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
 	datastore.Index, expression.Covers, error) {
-	indexes := _ALL_INDEX_POOL.Get()
-	defer _ALL_INDEX_POOL.Put(indexes)
-	indexes, err := allIndexes(keyspace, indexes)
+	indexes := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(indexes)
+	indexes, err := allIndexes(keyspace, nil, indexes)
 	if err != nil {
 		return nil, nil, err
 	}
