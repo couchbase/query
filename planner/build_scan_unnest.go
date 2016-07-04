@@ -273,7 +273,6 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	// TODO: Use index order for ALL ARRAY indexes.
 	this.resetOrderLimit()
 
 	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers, filterCovers)

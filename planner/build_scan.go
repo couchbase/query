@@ -150,24 +150,41 @@ func (this *builder) buildForceScan(keyspace datastore.Keyspace, node *algebra.K
 	// Try secondary scan
 	if len(minimals) > 0 {
 		secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
-		if secondary != nil || err != nil {
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if secondary != nil && (this.coveringScan != nil || this.countScan != nil) {
 			return secondary, nil, err
 		}
 	}
 
 	// Try UNNEST scan
 	if this.from != nil {
-		secondary, err = this.buildUnnestScan(node, this.from, pred, entries)
-		if secondary != nil || err != nil {
-			this.resetCountMin()
-			return secondary, nil, err
+		unnest, err := this.buildUnnestScan(node, this.from, pred, entries)
+		if err != nil {
+			return nil, nil, err
 		}
+
+		if unnest != nil {
+			this.resetCountMin()
+
+			if secondary == nil || this.coveringScan != nil {
+				return unnest, nil, err
+			} else {
+				return plan.NewIntersectScan(secondary, unnest), nil, err
+			}
+		}
+	}
+
+	if secondary != nil {
+		return secondary, nil, err
 	}
 
 	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, true)
 
 	// PrimaryScan with predicates -- disable pushdown
-	if primary != nil || err != nil {
+	if primary != nil {
 		this.resetCountMin()
 		this.resetOrderLimit()
 	}
