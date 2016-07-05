@@ -12,20 +12,19 @@ package execution
 import (
 	"time"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type Nest struct {
-	base
+	joinBase
 	plan *plan.Nest
 }
 
 func NewNest(plan *plan.Nest) *Nest {
 	rv := &Nest{
-		base: newBase(),
-		plan: plan,
+		joinBase: newJoinBase(),
+		plan:     plan,
 	}
 
 	rv.output = rv
@@ -38,8 +37,8 @@ func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *Nest) Copy() Operator {
 	return &Nest{
-		base: this.base.copy(),
-		plan: this.plan,
+		joinBase: this.joinBase.copy(),
+		plan:     this.plan,
 	}
 }
 
@@ -51,67 +50,38 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
-	kv, e := this.plan.Term().Keys().Evaluate(item, context)
-	if e != nil {
-		context.Error(errors.NewEvaluationError(e, "NEST keys"))
+	keys, ok := this.evaluateKey(this.plan.Term().Keys(), item, context)
+	if !ok {
 		return false
 	}
 
-	actuals := kv.Actual()
-	switch actuals.(type) {
-	case []interface{}:
-	case nil:
-		actuals = []interface{}(nil)
-	default:
-		actuals = []interface{}{actuals}
-	}
+	doc := value.AnnotatedJoinPair{Value: item, Keys: keys}
+	return this.joinEnbatch(doc, this, context)
+}
 
-	acts := actuals.([]interface{})
-	if len(acts) == 0 {
-		// Outer nest
-		return !this.plan.Outer() || this.sendItem(item)
-	}
+func (this *Nest) afterItems(context *Context) {
+	this.flushBatch(context)
+}
 
-	// Build list of keys
-	keys := make([]string, 0, len(acts))
-	for _, key := range acts {
-		k := value.NewValue(key).Actual()
-		switch k := k.(type) {
-		case string:
-			keys = append(keys, k)
-		}
+func (this *Nest) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
+	if len(this.joinBatch) == 0 {
+		return true
 	}
 
 	timer := time.Now()
 
-	// Fetch
-	pairs, errs := this.plan.Keyspace().Fetch(keys)
+	keyCount := _STRING_KEYCOUNT_POOL.Get()
+	pairMap := _STRING_ANNOTATED_POOL.Get()
 
-	this.duration += time.Since(timer)
+	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
+	defer _STRING_ANNOTATED_POOL.Put(pairMap)
+	defer func() {
+		this.duration += time.Since(timer)
+	}()
 
-	fetchOk := true
-	for _, err := range errs {
-		context.Error(err)
-		if err.IsFatal() {
-			fetchOk = false
-		}
-	}
+	ftechOK := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	if len(pairs) == 0 {
-		if this.plan.Outer() {
-			item.SetField(this.plan.Term().Alias(), value.EMPTY_ARRAY_VALUE)
-			return this.sendItem(item) && fetchOk
-		} else {
-			return true
-		}
-	}
-
-	nvs := make([]interface{}, 0, len(pairs))
-	for _, pair := range pairs {
-		nvs = append(nvs, pair.Value)
-	}
-
-	// Attach and send
-	item.SetField(this.plan.Term().Alias(), nvs)
-	return this.sendItem(item) && fetchOk
+	return this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias()) && ftechOK
 }

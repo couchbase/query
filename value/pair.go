@@ -32,3 +32,11 @@ type VPair struct {
 	Name  Value
 	Value Value
 }
+
+type AnnotatedJoinPairs []AnnotatedJoinPair
+
+// Value-JoinKeys pair
+type AnnotatedJoinPair struct {
+	Value AnnotatedValue
+	Keys  []string
+}
