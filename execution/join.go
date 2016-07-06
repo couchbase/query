@@ -81,7 +81,7 @@ func (this *Join) flushBatch(context *Context) bool {
 		this.duration += time.Since(timer)
 	}()
 
-	ftechOK := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
+	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias()) && ftechOK
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
 }

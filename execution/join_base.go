@@ -86,8 +86,10 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 		}
 	}
 
-	for _, pair := range pairs {
-		pairMap[pair.Name] = pair.Value
+	if fetchOk {
+		for _, pair := range pairs {
+			pairMap[pair.Name] = pair.Value
+		}
 	}
 
 	return fetchOk

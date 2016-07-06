@@ -183,9 +183,9 @@ func (this *IndexNest) flushBatch(context *Context) bool {
 	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
 	defer _STRING_ANNOTATED_POOL.Put(pairMap)
 
-	ftechOK := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
+	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias()) && ftechOK
+	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
 }
 
 var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)
