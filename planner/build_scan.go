@@ -118,8 +118,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 
 	if len(hints) > 0 {
-		secondary, primary, err = this.buildForceScan(
-			keyspace, node, id, pred, limit, hints, primaryKey, formalizer)
+		secondary, primary, err = this.buildSubsetScan(
+			keyspace, node, id, pred, limit, hints, primaryKey, formalizer, true)
 		if secondary != nil || primary != nil || err != nil {
 			return
 		}
@@ -132,12 +132,12 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		return
 	}
 
-	return this.buildForceScan(keyspace, node, id, pred, limit, others, primaryKey, formalizer)
+	return this.buildSubsetScan(keyspace, node, id, pred, limit, others, primaryKey, formalizer, false)
 }
 
-func (this *builder) buildForceScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	id, pred, limit expression.Expression, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
 	sargables, entries, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
@@ -181,7 +181,7 @@ func (this *builder) buildForceScan(keyspace datastore.Keyspace, node *algebra.K
 		return secondary, nil, err
 	}
 
-	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, true)
+	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
 
 	// PrimaryScan with predicates -- disable pushdown
 	if primary != nil {
