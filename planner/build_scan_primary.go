@@ -22,7 +22,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	limit expression.Expression, indexes []datastore.Index, force bool) (
 	scan *plan.PrimaryScan, err error) {
 	primary, err := buildPrimaryIndex(keyspace, indexes, force)
-	if err != nil {
+	if primary == nil || err != nil {
 		return nil, err
 	}
 
