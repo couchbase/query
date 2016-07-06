@@ -449,7 +449,7 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 			} else {
 				e, err = json.Marshal(timings)
 			}
-			if err != nil || this.writeString(fmt.Sprintf(",%s\"executionTimings\": %s", newPrefix, e)) {
+			if err != nil || !this.writeString(fmt.Sprintf(",%s\"executionTimings\": %s", newPrefix, e)) {
 				logging.Infop("Error writing timings", logging.Pair{"error", err})
 			}
 		}
