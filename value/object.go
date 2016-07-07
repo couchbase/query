@@ -123,8 +123,10 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string) (err error
 		}
 	}
 
-	if err = writeJsonNewline(w, prefix); err != nil {
-		return
+	if len(names) > 0 {
+		if err = writeJsonNewline(w, prefix); err != nil {
+			return
+		}
 	}
 	_, err = w.Write([]byte{'}'})
 	return err
