@@ -307,7 +307,15 @@ func getPrepared(a httpRequestArgs) (string, *plan.Prepared, errors.Error) {
 	}
 
 	prepared, err := plan.GetPrepared(prepared_field)
-	return prepared_field.Actual().(string), prepared, err
+		if err != nil || prepared == nil {
+		return "", nil, err
+	}
+
+	prepared_name, ok := prepared_field.Actual().(string)
+	if !ok {
+		prepared_name = ""
+	}
+	return prepared_name, prepared, err
 }
 
 func getEncodedPlan(a httpRequestArgs) (string, errors.Error) {
