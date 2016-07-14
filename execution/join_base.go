@@ -174,7 +174,10 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 				return false
 			}
 		} else if outer {
-			av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+			if len(item.Keys) != 0 {
+				// non missing keys
+				av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+			}
 			if !this.sendItem(av) {
 				return false
 			}
