@@ -50,6 +50,7 @@ var _OPERATORS = map[string]Operator{
 	"IndexCountScan": &IndexCountScan{},
 	"IntersectScan":  &IntersectScan{},
 	"UnionScan":      &UnionScan{},
+	"DistinctScan":   &DistinctScan{},
 
 	// Fetch
 	"Fetch":      &Fetch{},
