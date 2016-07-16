@@ -44,7 +44,7 @@ var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", true, "Pretty output")
-var REQUEST_CAP = flag.Int("request-cap", 1024, "Maximum number of queued requests")
+var REQUEST_CAP = flag.Int("request-cap", 1024, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int("scan-cap", 0, "Maximum buffer size for primary index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
@@ -134,11 +134,28 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
+	if *ENTERPRISE && os.Getenv("GOMAXPROCS") == "" {
+		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
+
+	if !*ENTERPRISE {
+		var numCPU int
+		if os.Getenv("GOMAXPROCS") == "" {
+			numCPU = runtime.NumCPU()
+		} else {
+			numCPU = runtime.GOMAXPROCS(0)
+		}
+
+		// Use at most 4 cpus in non-enterprise mode
+		runtime.GOMAXPROCS(util.MinInt(numCPU, 4))
+	}
+
 	// Start the completed requests log
 	accounting.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
-	channel := make(server.RequestChannel, *REQUEST_CAP)
-	plusChannel := make(server.RequestChannel, *REQUEST_CAP)
+	numProcs := runtime.GOMAXPROCS(0)
+	channel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
+	plusChannel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
 
 	sys, err := system.NewDatastore(datastore)
 	if err != nil {
@@ -162,22 +179,6 @@ func main() {
 	server.SetPipelineBatch(*PIPELINE_BATCH)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
 	server.SetScanCap(*SCAN_CAP)
-
-	if server.Enterprise() && os.Getenv("GOMAXPROCS") == "" {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
-
-	if !server.Enterprise() {
-		var numCPU int
-		if os.Getenv("GOMAXPROCS") == "" {
-			numCPU = runtime.NumCPU()
-		} else {
-			numCPU = runtime.GOMAXPROCS(0)
-		}
-
-		// Use at most 4 cpus in non-enterprise mode
-		runtime.GOMAXPROCS(util.MinInt(numCPU, 4))
-	}
 
 	go server.Serve()
 	go server.PlusServe()
