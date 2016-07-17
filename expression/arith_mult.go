@@ -50,11 +50,11 @@ all other types return a null value. Return the final product.
 */
 func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
-	prod := 1.0
+	prod := value.ONE_NUMBER
 
 	for _, arg := range args {
 		if !null && arg.Type() == value.NUMBER {
-			prod *= arg.Actual().(float64)
+			prod = prod.Mult(arg.(value.NumberValue))
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {
@@ -66,7 +66,7 @@ func (this *Mult) Apply(context Context, args ...value.Value) (value.Value, erro
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(prod), nil
+	return prod, nil
 }
 
 /*

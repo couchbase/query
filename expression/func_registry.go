@@ -39,6 +39,8 @@ var _FUNCTIONS = map[string]Function{
 	// Arithmetic
 	"add":  &Add{},
 	"div":  &Div{},
+	"idiv": &IDiv{},
+	"imod": &IMod{},
 	"mod":  &Mod{},
 	"mult": &Mult{},
 	"neg":  &Neg{},

@@ -42,7 +42,7 @@
 
 /0|[1-9][0-9]*/ {
 		  // We differentiate NUM from INT
-		    lval.n, _ = strconv.Atoi(yylex.Text())
+		    lval.n, _ = strconv.ParseInt(yylex.Text(), 10, 64)
 		    logToken(yylex.Text(), "INT - %d", lval.n)
 		    return INT
 		  }
@@ -282,7 +282,7 @@
 		  }
 
 /\$[1-9][0-9]*/     {
-		    lval.n, _ = strconv.Atoi(yylex.Text()[1:])
+		    lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
 		    logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
 		    return POSITIONAL_PARAM
 		  }

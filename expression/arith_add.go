@@ -50,11 +50,11 @@ return a null value. Return the final sum.
 */
 func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
-	sum := 0.0
+	sum := value.ZERO_NUMBER
 
 	for _, arg := range args {
 		if !null && arg.Type() == value.NUMBER {
-			sum += arg.Actual().(float64)
+			sum = sum.Add(arg.(value.NumberValue))
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else {
@@ -66,7 +66,7 @@ func (this *Add) Apply(context Context, args ...value.Value) (value.Value, error
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(sum), nil
+	return sum, nil
 }
 
 /*

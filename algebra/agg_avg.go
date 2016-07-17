@@ -92,7 +92,7 @@ func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) 
 		return cumulative, nil
 	}
 
-	part := value.NewValue(map[string]interface{}{"sum": item.Actual(), "count": 1})
+	part := value.NewValue(map[string]interface{}{"sum": item, "count": value.ONE_VALUE})
 	return this.cumulatePart(part, cumulative, context)
 }
 
@@ -151,7 +151,7 @@ func (this *Avg) cumulatePart(part, cumulative value.Value, context Context) (va
 			psum.Actual(), pcount.Actual(), csum.Actual(), ccount.Actual())
 	}
 
-	cumulative.SetField("sum", psum.Actual().(float64)+csum.Actual().(float64))
-	cumulative.SetField("count", pcount.Actual().(float64)+ccount.Actual().(float64))
+	cumulative.SetField("sum", csum.(value.NumberValue).Add(psum.(value.NumberValue)))
+	cumulative.SetField("count", ccount.(value.NumberValue).Add(pcount.(value.NumberValue)))
 	return cumulative, nil
 }

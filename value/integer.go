@@ -17,18 +17,15 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-/*
-Number, represented by intValue is defined as type int64.
-*/
 type intValue int64
 
-/*
-The variables ZERO_VALUE and ONE_VALUE are initialized to
-0.0 and 1.0 respectively.
-*/
-var ZERO_VALUE Value = intValue(0)
-var ONE_VALUE Value = intValue(1)
-var NEG_ONE_VALUE Value = intValue(-1)
+var ZERO_NUMBER NumberValue = intValue(0)
+var ONE_NUMBER NumberValue = intValue(1)
+var NEG_ONE_NUMBER NumberValue = intValue(-1)
+
+var ZERO_VALUE Value = ZERO_NUMBER
+var ONE_VALUE Value = ONE_NUMBER
+var NEG_ONE_VALUE Value = NEG_ONE_NUMBER
 
 func (this intValue) String() string {
 	return strconv.FormatInt(int64(this), 10)
@@ -222,4 +219,75 @@ func (this intValue) Successor() Value {
 
 func (this intValue) unwrap() Value {
 	return this
+}
+
+/*
+NumberValue methods.
+*/
+
+func (this intValue) Add(n NumberValue) NumberValue {
+	switch n := n.(type) {
+	case intValue:
+		return this + n
+	default:
+		return floatValue(float64(this) + n.Actual().(float64))
+	}
+}
+
+func (this intValue) IDiv(n NumberValue) Value {
+	switch n := n.(type) {
+	case intValue:
+		if n == 0 {
+			return NULL_VALUE
+		} else {
+			return this / n
+		}
+	default:
+		f := n.Actual().(float64)
+		if f == 0.0 {
+			return NULL_VALUE
+		} else {
+			return this / intValue(f)
+		}
+	}
+}
+
+func (this intValue) IMod(n NumberValue) Value {
+	switch n := n.(type) {
+	case intValue:
+		if n == 0 {
+			return NULL_VALUE
+		} else {
+			return this % n
+		}
+	default:
+		f := n.Actual().(float64)
+		if f == 0.0 {
+			return NULL_VALUE
+		} else {
+			return this % intValue(f)
+		}
+	}
+}
+
+func (this intValue) Mult(n NumberValue) NumberValue {
+	switch n := n.(type) {
+	case intValue:
+		return this * n
+	default:
+		return floatValue(float64(this) * n.Actual().(float64))
+	}
+}
+
+func (this intValue) Neg() NumberValue {
+	return -this
+}
+
+func (this intValue) Sub(n NumberValue) NumberValue {
+	switch n := n.(type) {
+	case intValue:
+		return this - n
+	default:
+		return floatValue(float64(this) - n.Actual().(float64))
+	}
 }
