@@ -135,17 +135,15 @@ If the partial and current cumulative result are both float64
 numbers, add them and return.
 */
 func (this *Count) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
-	actual := part.Actual()
-	switch actual := actual.(type) {
-	case float64:
-		count := cumulative.Actual()
-		switch count := count.(type) {
-		case float64:
-			return value.NewValue(count + actual), nil
+	switch part := part.(type) {
+	case value.NumberValue:
+		switch cumulative := cumulative.(type) {
+		case value.NumberValue:
+			return cumulative.Add(part), nil
 		default:
-			return nil, fmt.Errorf("Invalid COUNT %v of type %T.", count, count)
+			return nil, fmt.Errorf("Invalid COUNT %v of type %T.", cumulative.Actual(), cumulative.Actual())
 		}
 	default:
-		return nil, fmt.Errorf("Invalid partial COUNT %v of type %T.", actual, actual)
+		return nil, fmt.Errorf("Invalid partial COUNT %v of type %T.", part.Actual(), part.Actual())
 	}
 }

@@ -52,8 +52,7 @@ a null value.
 */
 func (this *Sub) Apply(context Context, first, second value.Value) (value.Value, error) {
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
-		diff := first.Actual().(float64) - second.Actual().(float64)
-		return value.NewValue(diff), nil
+		return first.(value.NumberValue).Sub(second.(value.NumberValue)), nil
 	} else if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else {

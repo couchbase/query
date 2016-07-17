@@ -16,7 +16,7 @@ func logDebugGrammar(format string, v ...interface{}) {
 
 %union {
 s string
-n int
+n int64
 f float64
 b bool
 
@@ -2423,7 +2423,12 @@ NAMED_PARAM
 |
 POSITIONAL_PARAM
 {
-    $$ = algebra.NewPositionalParameter($1)
+    p := int($1)
+    if $1 > int64(p) {
+        yylex.Error(fmt.Sprintf("Positional parameter out of range: $%v.", $1));
+    }
+
+    $$ = algebra.NewPositionalParameter(p)
 }
 |
 NEXT_PARAM

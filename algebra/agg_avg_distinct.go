@@ -120,16 +120,15 @@ func (this *AvgDistinct) ComputeFinal(cumulative value.Value, context Context) (
 		return value.NULL_VALUE, nil
 	}
 
-	sum := 0.0
+	sum := value.ZERO_NUMBER
 	for _, v := range set.Values() {
-		a := v.Actual()
-		switch a := a.(type) {
-		case float64:
-			sum += a
+		switch v := v.(type) {
+		case value.NumberValue:
+			sum = sum.Add(v)
 		default:
-			return nil, fmt.Errorf("Invalid partial AVG %v of type %T.", a, a)
+			return nil, fmt.Errorf("Invalid partial AVG %v of type %T.", v.Actual(), v.Actual())
 		}
 	}
 
-	return value.NewValue(sum / float64(set.Len())), nil
+	return value.NewValue(sum.Actual().(float64) / float64(set.Len())), nil
 }

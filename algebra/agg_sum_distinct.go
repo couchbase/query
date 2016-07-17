@@ -103,12 +103,10 @@ func (this *SumDistinct) CumulateIntermediate(part, cumulative value.Value, cont
 }
 
 /*
-Compute the Final result. If input cumulative value is
-null then return it. Retrieve the set, if it is empty
-return a null value. Range over the values in the set
-and sum all the float64 number values, and return it.
-If a non number value is encountered in the set, throw
-an error.
+Compute the Final result. If input cumulative value is null then
+return it. Retrieve the set, if it is empty return a null value. Range
+over the values in the set and sum all the number values, and return
+it.  If a non number value is encountered in the set, throw an error.
 */
 func (this *SumDistinct) ComputeFinal(cumulative value.Value, context Context) (c value.Value, e error) {
 	if cumulative == value.NULL_VALUE {
@@ -121,16 +119,15 @@ func (this *SumDistinct) ComputeFinal(cumulative value.Value, context Context) (
 		return value.NULL_VALUE, nil
 	}
 
-	sum := 0.0
+	sum := value.ZERO_NUMBER
 	for _, v := range set.Values() {
-		a := v.Actual()
-		switch a := a.(type) {
-		case float64:
-			sum += a
+		switch v := v.(type) {
+		case value.NumberValue:
+			sum = sum.Add(v)
 		default:
-			return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", a, a)
+			return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", v.Actual(), v.Actual())
 		}
 	}
 
-	return value.NewValue(sum), nil
+	return sum, nil
 }

@@ -70,7 +70,7 @@ func (this *CountDistinct) Constructor() expression.FunctionConstructor {
 }
 
 /*
-If no input to the COUNT function with DISTINCT, then the default value
+If no input to the COUNT DISTINCT function, then the default value
 returned is a zero value.
 */
 func (this *CountDistinct) Default() value.Value { return value.ZERO_VALUE }

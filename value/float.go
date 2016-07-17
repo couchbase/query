@@ -17,15 +17,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-/*
-Number, represented by floatValue is defined as type float64.
-*/
 type floatValue float64
-
-/*
-The variables ZERO_VALUE and ONE_VALUE are initialized to
-0.0 and 1.0 respectively.
-*/
 
 var _NAN_BYTES = []byte("\"NaN\"")
 var _POS_INF_BYTES = []byte("\"+Infinity\"")
@@ -292,3 +284,59 @@ func (this floatValue) unwrap() Value {
 }
 
 var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-8)
+
+/*
+NumberValue methods.
+*/
+
+func (this floatValue) Add(n NumberValue) NumberValue {
+	return floatValue(float64(this) + n.Actual().(float64))
+}
+
+func (this floatValue) IDiv(n NumberValue) Value {
+	switch n := n.(type) {
+	case intValue:
+		if n == 0 {
+			return NULL_VALUE
+		} else {
+			return intValue(this) / n
+		}
+	default:
+		f := n.Actual().(float64)
+		if f == 0.0 {
+			return NULL_VALUE
+		} else {
+			return intValue(int64(this) / int64(f))
+		}
+	}
+}
+
+func (this floatValue) IMod(n NumberValue) Value {
+	switch n := n.(type) {
+	case intValue:
+		if n == 0 {
+			return NULL_VALUE
+		} else {
+			return intValue(this) % n
+		}
+	default:
+		f := n.Actual().(float64)
+		if f == 0.0 {
+			return NULL_VALUE
+		} else {
+			return intValue(int64(this) % int64(f))
+		}
+	}
+}
+
+func (this floatValue) Mult(n NumberValue) NumberValue {
+	return floatValue(float64(this) * n.Actual().(float64))
+}
+
+func (this floatValue) Neg() NumberValue {
+	return -this
+}
+
+func (this floatValue) Sub(n NumberValue) NumberValue {
+	return floatValue(float64(this) - n.Actual().(float64))
+}

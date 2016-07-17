@@ -122,17 +122,15 @@ func (this *Sum) cumulatePart(part, cumulative value.Value, context Context) (va
 		return part, nil
 	}
 
-	actual := part.Actual()
-	switch actual := actual.(type) {
-	case float64:
-		sum := cumulative.Actual()
-		switch sum := sum.(type) {
-		case float64:
-			return value.NewValue(sum + actual), nil
+	switch part := part.(type) {
+	case value.NumberValue:
+		switch cumulative := cumulative.(type) {
+		case value.NumberValue:
+			return cumulative.Add(part), nil
 		default:
-			return nil, fmt.Errorf("Invalid SUM %v of type %T.", sum, sum)
+			return nil, fmt.Errorf("Invalid SUM %v of type %T.", cumulative.Actual(), cumulative.Actual())
 		}
 	default:
-		return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", actual, actual)
+		return nil, fmt.Errorf("Invalid partial SUM %v of type %T.", part.Actual(), part.Actual())
 	}
 }
