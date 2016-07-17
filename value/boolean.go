@@ -21,14 +21,8 @@ BoolValue is defined as a bool type.
 */
 type boolValue bool
 
-/*
-FALSE_VALUE/ TRUE_VALUE are assigned a false and true value
-(NewValue() is called to ensure that it is a value), and
-_FALSE _BYTES / _TRUE _BYTES that are slices of bytes
-representing false and true.
-*/
-var FALSE_VALUE = NewValue(false)
-var TRUE_VALUE = NewValue(true)
+var FALSE_VALUE Value = boolValue(false)
+var TRUE_VALUE Value = boolValue(true)
 
 /*
 _FALSE _BYTES / _TRUE _BYTES that are slices of bytes
@@ -122,7 +116,7 @@ func (this boolValue) Compare(other Value) Value {
 	case *nullValue:
 		return other
 	default:
-		return NewValue(this.Collate(other))
+		return intValue(this.Collate(other))
 	}
 }
 
@@ -236,4 +230,4 @@ func (this boolValue) unwrap() Value {
 	return this
 }
 
-var _MIN_NUMBER_VALUE = NewValue(-math.MaxFloat64)
+var _MIN_NUMBER_VALUE = floatValue(-math.MaxFloat64)

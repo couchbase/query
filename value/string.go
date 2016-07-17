@@ -26,7 +26,7 @@ type stringValue string
 Define a value representing an empty string and
 assign it to EMPTY_STRING_VALUE.
 */
-var EMPTY_STRING_VALUE = NewValue("")
+var EMPTY_STRING_VALUE Value = stringValue("")
 
 /*
 Use built-in JSON string marshalling, which handles special
@@ -124,7 +124,7 @@ func (this stringValue) Compare(other Value) Value {
 	case *nullValue:
 		return other
 	default:
-		return NewValue(this.Collate(other))
+		return intValue(this.Collate(other))
 	}
 }
 
@@ -228,7 +228,7 @@ func (this stringValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 Append a low-valued byte to string.
 */
 func (this stringValue) Successor() Value {
-	return NewValue(string(this) + " ")
+	return stringValue(string(this) + " ")
 }
 
 func (this stringValue) unwrap() Value {

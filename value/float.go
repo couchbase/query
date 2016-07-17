@@ -26,9 +26,6 @@ type floatValue float64
 The variables ZERO_VALUE and ONE_VALUE are initialized to
 0.0 and 1.0 respectively.
 */
-var ZERO_VALUE = NewValue(0.0)
-var ONE_VALUE = NewValue(1.0)
-var NEG_ONE_VALUE = NewValue(-1.0)
 
 var _NAN_BYTES = []byte("\"NaN\"")
 var _POS_INF_BYTES = []byte("\"+Infinity\"")
@@ -92,6 +89,10 @@ func (this floatValue) Equals(other Value) Value {
 		if this == other {
 			return TRUE_VALUE
 		}
+	case intValue:
+		if float64(this) == float64(other) {
+			return TRUE_VALUE
+		}
 	}
 
 	return FALSE_VALUE
@@ -103,59 +104,66 @@ func (this floatValue) Collate(other Value) int {
 	case floatValue:
 		t := float64(this)
 		o := float64(other)
-
-		// NaN sorts first
-		if math.IsNaN(t) {
-			if math.IsNaN(o) {
-				return 0
-			} else {
-				return -1
-			}
-		}
-
-		if math.IsNaN(o) {
-			return 1
-		}
-
-		// NegInfinity sorts next
-		if math.IsInf(t, -1) {
-			if math.IsInf(o, -1) {
-				return 0
-			} else {
-				return -1
-			}
-		}
-
-		if math.IsInf(o, -1) {
-			return 1
-		}
-
-		// PosInfinity sorts last
-		if math.IsInf(t, 1) {
-			if math.IsInf(o, 1) {
-				return 0
-			} else {
-				return 1
-			}
-		}
-
-		if math.IsInf(o, 1) {
-			return -1
-		}
-
-		result := t - o
-		switch {
-		case result < 0.0:
-			return -1
-		case result > 0.0:
-			return 1
-		default:
-			return 0
-		}
+		return collateFloat(t, o)
+	case intValue:
+		t := float64(this)
+		o := float64(other)
+		return collateFloat(t, o)
 	default:
 		return int(NUMBER - other.Type())
 	}
 
+}
+
+func collateFloat(t, o float64) int {
+	// NaN sorts first
+	if math.IsNaN(t) {
+		if math.IsNaN(o) {
+			return 0
+		} else {
+			return -1
+		}
+	}
+
+	if math.IsNaN(o) {
+		return 1
+	}
+
+	// NegInfinity sorts next
+	if math.IsInf(t, -1) {
+		if math.IsInf(o, -1) {
+			return 0
+		} else {
+			return -1
+		}
+	}
+
+	if math.IsInf(o, -1) {
+		return 1
+	}
+
+	// PosInfinity sorts last
+	if math.IsInf(t, 1) {
+		if math.IsInf(o, 1) {
+			return 0
+		} else {
+			return 1
+		}
+	}
+
+	if math.IsInf(o, 1) {
+		return -1
+	}
+
+	result := t - o
+	switch {
+	case result < 0.0:
+		return -1
+	case result > 0.0:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (this floatValue) Compare(other Value) Value {
@@ -166,7 +174,7 @@ func (this floatValue) Compare(other Value) Value {
 	case *nullValue:
 		return other
 	default:
-		return NewValue(this.Collate(other))
+		return intValue(this.Collate(other))
 	}
 }
 
@@ -273,7 +281,7 @@ func (this floatValue) Successor() Value {
 	// Use smallest float32 instead of smallest float64, to leave
 	// room for imprecision
 	if float64(this) < 0 || (math.MaxFloat64-float64(this)) > _NUMBER_SUCCESSOR_DELTA {
-		return NewValue(float64(this) + _NUMBER_SUCCESSOR_DELTA)
+		return floatValue(float64(this) + _NUMBER_SUCCESSOR_DELTA)
 	} else {
 		return EMPTY_STRING_VALUE
 	}
