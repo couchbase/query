@@ -74,7 +74,7 @@ func (this binaryValue) Compare(other Value) Value {
 	case *nullValue:
 		return other
 	default:
-		return NewValue(this.Collate(other))
+		return intValue(this.Collate(other))
 	}
 }
 

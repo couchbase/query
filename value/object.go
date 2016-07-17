@@ -177,7 +177,7 @@ func (this objectValue) Compare(other Value) Value {
 	case objectValue:
 		return objectCompare(this, other)
 	default:
-		return NewValue(int(OBJECT - other.Type()))
+		return intValue(int(OBJECT - other.Type()))
 	}
 }
 
@@ -400,7 +400,7 @@ func objectCompare(obj1, obj2 map[string]interface{}) Value {
 	// first see if one object is longer than the other
 	delta := len(obj1) - len(obj2)
 	if delta != 0 {
-		return NewValue(delta)
+		return intValue(delta)
 	}
 
 	// if not, proceed to do name by name comparision

@@ -1,0 +1,225 @@
+//  Copieright (c) 2014 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+//  except in compliance with the License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing, software distributed under the
+//  License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+//  either express or implied. See the License for the specific language governing permissions
+//  and limitations under the License.
+
+package value
+
+import (
+	"io"
+	"math"
+	"strconv"
+
+	"github.com/couchbase/query/util"
+)
+
+/*
+Number, represented by intValue is defined as type int64.
+*/
+type intValue int64
+
+/*
+The variables ZERO_VALUE and ONE_VALUE are initialized to
+0.0 and 1.0 respectively.
+*/
+var ZERO_VALUE Value = intValue(0)
+var ONE_VALUE Value = intValue(1)
+var NEG_ONE_VALUE Value = intValue(-1)
+
+func (this intValue) String() string {
+	return strconv.FormatInt(int64(this), 10)
+}
+
+func (this intValue) MarshalJSON() ([]byte, error) {
+	s := strconv.FormatInt(int64(this), 10)
+	return []byte(s), nil
+}
+
+func (this intValue) WriteJSON(w io.Writer, prefix, indent string) error {
+	s := strconv.FormatInt(int64(this), 10)
+	b := []byte(s)
+	_, err := w.Write(b)
+	return err
+}
+
+/*
+Type Number
+*/
+func (this intValue) Type() Type {
+	return NUMBER
+}
+
+/*
+Cast receiver to float64. We cannot use int64 until Expressions can
+handle both float64 and int64.
+*/
+func (this intValue) Actual() interface{} {
+	return float64(this)
+}
+
+func (this intValue) Equals(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	case intValue:
+		if this == other {
+			return TRUE_VALUE
+		}
+	case floatValue:
+		if float64(this) == float64(other) {
+			return TRUE_VALUE
+		}
+	}
+
+	return FALSE_VALUE
+}
+
+func (this intValue) Collate(other Value) int {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case intValue:
+		switch {
+		case this < other:
+			return -1
+		case this > other:
+			return 1
+		default:
+			return 0
+		}
+	case floatValue:
+		return -other.Collate(this)
+	default:
+		return int(NUMBER - other.Type())
+	}
+
+}
+
+func (this intValue) Compare(other Value) Value {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case missingValue:
+		return other
+	case *nullValue:
+		return other
+	default:
+		return intValue(this.Collate(other))
+	}
+}
+
+/*
+Returns true in the event the receiver is not 0 and it isn’t
+a NaN value
+*/
+func (this intValue) Truth() bool {
+	return this != 0
+}
+
+/*
+Return receiver
+*/
+func (this intValue) Copy() Value {
+	return this
+}
+
+/*
+Return receiver
+*/
+func (this intValue) CopyForUpdate() Value {
+	return this
+}
+
+/*
+Calls missingField.
+*/
+func (this intValue) Field(field string) (Value, bool) {
+	return missingField(field), false
+}
+
+/*
+Not valid for NUMBER.
+*/
+func (this intValue) SetField(field string, val interface{}) error {
+	return Unsettable(field)
+}
+
+/*
+Not valid for NUMBER.
+*/
+func (this intValue) UnsetField(field string) error {
+	return Unsettable(field)
+}
+
+/*
+Calls missingIndex.
+*/
+func (this intValue) Index(index int) (Value, bool) {
+	return missingIndex(index), false
+}
+
+/*
+Not valid for NUMBER.
+*/
+func (this intValue) SetIndex(index int, val interface{}) error {
+	return Unsettable(index)
+}
+
+/*
+Returns NULL_VALUE
+*/
+func (this intValue) Slice(start, end int) (Value, bool) {
+	return NULL_VALUE, false
+}
+
+/*
+Returns NULL_VALUE
+*/
+func (this intValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this intValue) Descendants(buffer []interface{}) []interface{} {
+	return buffer
+}
+
+/*
+As number has no fields, return nil.
+*/
+func (this intValue) Fields() map[string]interface{} {
+	return nil
+}
+
+func (this intValue) FieldNames(buffer []string) []string {
+	return nil
+}
+
+/*
+Returns the input buffer as is.
+*/
+func (this intValue) DescendantPairs(buffer []util.IPair) []util.IPair {
+	return buffer
+}
+
+/*
+NUMBER is succeeded by STRING.
+*/
+func (this intValue) Successor() Value {
+	if this < math.MaxInt64 {
+		return intValue(this + 1)
+	} else {
+		return EMPTY_STRING_VALUE
+	}
+}
+
+func (this intValue) unwrap() Value {
+	return this
+}

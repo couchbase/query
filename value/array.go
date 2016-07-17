@@ -24,7 +24,7 @@ type sliceValue []interface{}
 /*
 EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 */
-var EMPTY_ARRAY_VALUE = NewValue([]interface{}{})
+var EMPTY_ARRAY_VALUE Value = sliceValue([]interface{}{})
 
 func (this sliceValue) String() string {
 	return marshalString(this)
@@ -125,7 +125,7 @@ func (this sliceValue) Compare(other Value) Value {
 	case *listValue:
 		return arrayCompare(this, other.slice)
 	default:
-		return NewValue(int(ARRAY - other.Type()))
+		return intValue(int(ARRAY - other.Type()))
 	}
 }
 
@@ -239,7 +239,7 @@ func (this sliceValue) Slice(start, end int) (Value, bool) {
 	}
 
 	if start <= end && start >= 0 && end <= len(this) {
-		return NewValue(this[start:end]), true
+		return sliceValue(this[start:end]), true
 	}
 
 	return MISSING_VALUE, false
@@ -258,7 +258,7 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	}
 
 	if start >= 0 {
-		return NewValue(this[start:]), true
+		return sliceValue(this[start:]), true
 	}
 
 	return MISSING_VALUE, false
@@ -492,7 +492,7 @@ func arrayCompare(array1, array2 []interface{}) Value {
 		}
 	}
 
-	return NewValue(len(array1) - len(array2))
+	return intValue(len(array1) - len(array2))
 }
 
 func copySlice(source []interface{}, copier copyFunc) []interface{} {

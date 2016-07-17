@@ -325,12 +325,8 @@ type Value interface {
 	WriteJSON(w io.Writer, prefix, indent string) error
 }
 
-/*
-This is defined as a slice of reflect Types and has 3 pre-defined
-types (reflect.TypeOf returns the type of the input argument, string,
-boolean, and number.
-*/
 var _CONVERSIONS = []reflect.Type{
+	reflect.TypeOf(int64(0)),
 	reflect.TypeOf(0.0),
 	reflect.TypeOf(false),
 	reflect.TypeOf(""),
@@ -347,6 +343,8 @@ func NewValue(val interface{}) Value {
 	switch val := val.(type) {
 	case Value:
 		return val
+	case int64:
+		return intValue(val)
 	case float64:
 		return floatValue(val)
 	case string:
@@ -362,7 +360,7 @@ func NewValue(val interface{}) Value {
 	case map[string]interface{}:
 		return objectValue(val)
 	case int:
-		return floatValue(val)
+		return intValue(val)
 	case []Value:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {
