@@ -79,7 +79,7 @@ func (this *Constant) EquivalentTo(other Expression) bool {
 	case *FieldName:
 		return !other.caseInsensitive && (this.value == other.value)
 	default:
-		return this.ValueEquals(other)
+		return this.valueEquivalentTo(other)
 	}
 }
 

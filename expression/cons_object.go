@@ -82,7 +82,7 @@ func (this *ObjectConstruct) PropagatesNull() bool {
 }
 
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 

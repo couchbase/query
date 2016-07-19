@@ -206,7 +206,7 @@ func (this *FieldName) EquivalentTo(other Expression) bool {
 		return (this.name == other.name) &&
 			(this.caseInsensitive == other.caseInsensitive)
 	default:
-		return this.ValueEquals(other)
+		return this.valueEquivalentTo(other)
 	}
 }
 

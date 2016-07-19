@@ -189,7 +189,7 @@ Indicates if this expression is equivalent to the other expression.
 False negatives are allowed. Used in index selection.
 */
 func (this *ExpressionBase) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 
@@ -265,16 +265,14 @@ func (this *ExpressionBase) FilterCovers(covers map[string]value.Value) map[stri
 	return covers
 }
 
-/*
-Return true if the receiver Expression value and the input expression
-value are equal and not nil; else false.
-*/
-func (this *ExpressionBase) ValueEquals(other Expression) bool {
+func (this *ExpressionBase) valueEquivalentTo(other Expression) bool {
 	thisValue := this.expr.Value()
 	otherValue := other.Value()
 
 	return thisValue != nil && otherValue != nil &&
-		thisValue.Equals(otherValue).Truth()
+		(thisValue.Equals(otherValue).Truth() ||
+			(thisValue.Type() == value.NULL && otherValue.Type() == value.NULL) ||
+			(thisValue.Type() == value.MISSING && otherValue.Type() == value.MISSING))
 }
 
 /*
