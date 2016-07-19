@@ -40,7 +40,7 @@ func (this *collPredBase) PropagatesNull() bool {
 }
 
 func (this *collPredBase) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 

@@ -43,7 +43,7 @@ func (this *collMapBase) PropagatesNull() bool {
 }
 
 func (this *collMapBase) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 

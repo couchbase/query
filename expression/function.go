@@ -423,17 +423,8 @@ func NewCommutativeBinaryFunctionBase(name string, first, second Expression) *Co
 	}
 }
 
-/*
-Returns a boolean value representing if the function expressions are
-equivalent to the input other expression. First compare receiver and
-input expressions using ValueEquals method defined in base.go. If true
-then return true. Compare the name of the two functions, and then length
-of their operands. If either of these are not the same return false.
-Compare the operands with each other to see if any of the combinations
-are equal to each other and if so return true; else false.
-*/
 func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 
@@ -542,17 +533,8 @@ func NewCommutativeFunctionBase(name string, operands ...Expression) *Commutativ
 	}
 }
 
-/*
-Returns a boolean value representing if the function expressions are
-equivalent to the input other expression. First compare receiver and
-input expressions using ValueEquals method defined in base.go. If true
-then return true. Compare the name of the two functions, and then length
-of their operands. If either of these are not the same return false.
-Compare the operands with each other to see if any of the combinations
-are equal to each other and if so return true; else false.
-*/
 func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
-	if this.ValueEquals(other) {
+	if this.valueEquivalentTo(other) {
 		return true
 	}
 
