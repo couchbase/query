@@ -176,7 +176,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 						}
 
 						// Matches planner.builder.buildCoveringScan()
-						av.SetCover(covers[len(entry.EntryKey)].Text(),
+						av.SetCover(covers[len(covers)-1].Text(),
 							value.NewValue(entry.PrimaryKey))
 
 						av.SetField(this.plan.Term().Alias(), av)
