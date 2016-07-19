@@ -90,6 +90,18 @@ func (this floatValue) Equals(other Value) Value {
 	return FALSE_VALUE
 }
 
+func (this floatValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case floatValue:
+		return this == other
+	case intValue:
+		return float64(this) == float64(other)
+	default:
+		return false
+	}
+}
+
 func (this floatValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -267,23 +279,33 @@ func (this floatValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 }
 
 /*
-NUMBER is succeeded by STRING.
+Obey N1QL collation order for numbers. After that, NUMBER is succeeded
+by STRING.
 */
 func (this floatValue) Successor() Value {
-	// Use smallest float32 instead of smallest float64, to leave
-	// room for imprecision
-	if float64(this) < 0 || (math.MaxFloat64-float64(this)) > _NUMBER_SUCCESSOR_DELTA {
-		return floatValue(float64(this) + _NUMBER_SUCCESSOR_DELTA)
-	} else {
+	// NaN sorts lowest
+	t := float64(this)
+
+	if math.IsNaN(t) {
+		return floatValue(math.Inf(-1))
+	}
+
+	// -Inf sorts next
+	if math.IsInf(t, -1) {
+		return floatValue(-math.MaxFloat64)
+	}
+
+	// +Inf sorts last
+	if math.IsInf(t, 1) || this >= math.MaxFloat64 {
 		return EMPTY_STRING_VALUE
 	}
+
+	return floatValue(math.Nextafter(t, math.MaxFloat64))
 }
 
 func (this floatValue) unwrap() Value {
 	return this
 }
-
-var _NUMBER_SUCCESSOR_DELTA = float64(1.0e-8)
 
 /*
 NumberValue methods.

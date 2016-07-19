@@ -152,9 +152,19 @@ func (this objectValue) Equals(other Value) Value {
 		return other
 	case objectValue:
 		return objectEquals(this, other)
+	default:
+		return FALSE_VALUE
 	}
+}
 
-	return FALSE_VALUE
+func (this objectValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case objectValue:
+		return objectEquivalent(this, other)
+	default:
+		return false
+	}
 }
 
 func (this objectValue) Collate(other Value) int {
@@ -352,6 +362,25 @@ func objectEquals(obj1, obj2 map[string]interface{}) Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func objectEquivalent(obj1, obj2 map[string]interface{}) bool {
+	if len(obj1) != len(obj2) {
+		return false
+	}
+
+	for name1, val1 := range obj1 {
+		val2, ok := obj2[name1]
+		if !ok {
+			return false
+		}
+
+		if !NewValue(val1).EquivalentTo(NewValue(val2)) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

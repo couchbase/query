@@ -51,6 +51,10 @@ func (this *parsedValue) Equals(other Value) Value {
 	return this.unwrap().Equals(other)
 }
 
+func (this *parsedValue) EquivalentTo(other Value) bool {
+	return this.unwrap().EquivalentTo(other)
+}
+
 func (this *parsedValue) Collate(other Value) int {
 	return this.unwrap().Collate(other)
 }

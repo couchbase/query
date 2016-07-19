@@ -92,6 +92,16 @@ func (this stringValue) Equals(other Value) Value {
 	return FALSE_VALUE
 }
 
+func (this stringValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case stringValue:
+		return this == other
+	default:
+		return false
+	}
+}
+
 /*
 If other is type stringValue, compare with receiver,
 if its less than (string comparison) return -1, greater

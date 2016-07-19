@@ -188,6 +188,11 @@ type Value interface {
 	Equals(other Value) Value
 
 	/*
+	   Equivalence.
+	*/
+	EquivalentTo(other Value) bool
+
+	/*
 	   Returns –int, 0 or +int depending on if the receiver this
 	   sorts less than, equal to, or greater than the input
 	   argument Value to the method. It uses the type order

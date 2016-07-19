@@ -70,12 +70,6 @@ func (this boolValue) Actual() interface{} {
 	return bool(this)
 }
 
-/*
-If other is a boolValue, compare it with the receiver. If
-it is a parsedValue or annotated value then call Equals
-by parsing other or Values respectively. If it is any other
-type we return false.
-*/
 func (this boolValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -90,6 +84,16 @@ func (this boolValue) Equals(other Value) Value {
 	}
 
 	return FALSE_VALUE
+}
+
+func (this boolValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case boolValue:
+		return this == other
+	default:
+		return false
+	}
 }
 
 func (this boolValue) Collate(other Value) int {

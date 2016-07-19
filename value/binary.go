@@ -56,6 +56,16 @@ func (this binaryValue) Equals(other Value) Value {
 	return FALSE_VALUE
 }
 
+func (this binaryValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case binaryValue:
+		return bytes.Equal(this, other)
+	default:
+		return false
+	}
+}
+
 func (this binaryValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {

@@ -270,9 +270,7 @@ func (this *ExpressionBase) valueEquivalentTo(other Expression) bool {
 	otherValue := other.Value()
 
 	return thisValue != nil && otherValue != nil &&
-		(thisValue.Equals(otherValue).Truth() ||
-			(thisValue.Type() == value.NULL && otherValue.Type() == value.NULL) ||
-			(thisValue.Type() == value.MISSING && otherValue.Type() == value.MISSING))
+		thisValue.EquivalentTo(otherValue)
 }
 
 /*

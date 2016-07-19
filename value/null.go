@@ -63,16 +63,20 @@ func (this *nullValue) Actual() interface{} {
 }
 
 /*
-Returns false.
+Returns MISSING or NULL.
 */
 func (this *nullValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other.Type() {
 	case MISSING:
 		return other
+	default:
+		return this
 	}
+}
 
-	return this
+func (this *nullValue) EquivalentTo(other Value) bool {
+	return other.Type() == NULL
 }
 
 /*

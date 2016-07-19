@@ -96,9 +96,21 @@ func (this sliceValue) Equals(other Value) Value {
 		return arrayEquals(this, other)
 	case *listValue:
 		return arrayEquals(this, other.slice)
+	default:
+		return FALSE_VALUE
 	}
+}
 
-	return FALSE_VALUE
+func (this sliceValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case sliceValue:
+		return arrayEquivalent(this, other)
+	case *listValue:
+		return arrayEquivalent(this, other.slice)
+	default:
+		return false
+	}
 }
 
 func (this sliceValue) Collate(other Value) int {
@@ -351,6 +363,10 @@ func (this *listValue) Equals(other Value) Value {
 	return this.slice.Equals(other)
 }
 
+func (this *listValue) EquivalentTo(other Value) bool {
+	return this.slice.EquivalentTo(other)
+}
+
 func (this *listValue) Collate(other Value) int {
 	return this.slice.Collate(other)
 }
@@ -460,6 +476,20 @@ func arrayEquals(array1, array2 []interface{}) Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func arrayEquivalent(array1, array2 []interface{}) bool {
+	if len(array1) != len(array2) {
+		return false
+	}
+
+	for i, item1 := range array1 {
+		if !NewValue(item1).EquivalentTo(NewValue(array2[i])) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

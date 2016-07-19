@@ -78,6 +78,18 @@ func (this intValue) Equals(other Value) Value {
 	return FALSE_VALUE
 }
 
+func (this intValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case intValue:
+		return this == other
+	case floatValue:
+		return float64(this) == float64(other)
+	default:
+		return false
+	}
+}
+
 func (this intValue) Collate(other Value) int {
 	other = other.unwrap()
 	switch other := other.(type) {
