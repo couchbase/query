@@ -325,6 +325,9 @@ func (this sliceValue) Successor() Value {
 	return sliceValue(append(this, nil))
 }
 
+func (this sliceValue) Recycle() {
+}
+
 func (this sliceValue) unwrap() Value {
 	return this
 }
@@ -443,6 +446,10 @@ func (this *listValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 
 func (this *listValue) Successor() Value {
 	return this.slice.Successor()
+}
+
+func (this *listValue) Recycle() {
+	this.slice.Recycle()
 }
 
 func (this *listValue) unwrap() Value {

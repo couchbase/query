@@ -241,6 +241,9 @@ func (this stringValue) Successor() Value {
 	return stringValue(string(this) + " ")
 }
 
+func (this stringValue) Recycle() {
+}
+
 func (this stringValue) unwrap() Value {
 	return this
 }

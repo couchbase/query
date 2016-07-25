@@ -205,6 +205,9 @@ func (this missingValue) Successor() Value {
 	return NULL_VALUE
 }
 
+func (this missingValue) Recycle() {
+}
+
 func (this missingValue) unwrap() Value {
 	return this
 }

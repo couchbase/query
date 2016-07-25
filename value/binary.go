@@ -148,6 +148,9 @@ func (this binaryValue) Successor() Value {
 	return binaryValue(append(this, byte(0)))
 }
 
+func (this binaryValue) Recycle() {
+}
+
 func (this binaryValue) unwrap() Value {
 	return this
 }

@@ -226,6 +226,12 @@ func (this *parsedValue) Successor() Value {
 	return this.unwrap().Successor()
 }
 
+func (this *parsedValue) Recycle() {
+	if this.parsed != nil {
+		this.parsed.Recycle()
+	}
+}
+
 /*
 Delayed parse.
 */

@@ -198,6 +198,9 @@ func (this *nullValue) Successor() Value {
 	return FALSE_VALUE
 }
 
+func (this nullValue) Recycle() {
+}
+
 func (this *nullValue) unwrap() Value {
 	return this
 }

@@ -228,6 +228,8 @@ func (this *httpRequest) writeResult(item value.Value, buf *bytes.Buffer, prefix
 
 	buf.Reset()
 	err := item.WriteJSON(buf, prefix, indent)
+	item.Recycle()
+
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
 		this.SetState(server.FATAL)

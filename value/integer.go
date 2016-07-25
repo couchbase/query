@@ -229,6 +229,9 @@ func (this intValue) Successor() Value {
 	}
 }
 
+func (this intValue) Recycle() {
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }

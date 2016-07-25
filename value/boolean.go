@@ -230,6 +230,9 @@ func (this boolValue) Successor() Value {
 	}
 }
 
+func (this boolValue) Recycle() {
+}
+
 func (this boolValue) unwrap() Value {
 	return this
 }

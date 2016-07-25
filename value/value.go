@@ -171,6 +171,11 @@ type Value interface {
 	json.Marshaler
 
 	/*
+	   Marshal JSON and write it out.
+	*/
+	WriteJSON(w io.Writer, prefix, indent string) error
+
+	/*
 	   Returns the type of the input based on the previously
 	   defined Types(Data type constant).
 	*/
@@ -319,15 +324,15 @@ type Value interface {
 	Successor() Value
 
 	/*
+	   Recycle this Value's memory. This Value should not be
+	   referenced or used after this call.
+	*/
+	Recycle()
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value
-
-	/*
-	   Write JSON marshal.
-	*/
-
-	WriteJSON(w io.Writer, prefix, indent string) error
 }
 
 var _CONVERSIONS = []reflect.Type{

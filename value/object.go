@@ -326,6 +326,9 @@ func (this objectValue) Successor() Value {
 	return objectValue(s)
 }
 
+func (this objectValue) Recycle() {
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }
