@@ -279,6 +279,12 @@ func (this *Server) Servicers() int {
 func (this *Server) SetServicers(servicers int) {
 	this.Lock()
 	defer this.Unlock()
+
+	// MB-19683 - don't restart if no change
+	if int(atomic.LoadInt64(&this.servicers)) == servicers {
+		return
+	}
+
 	// Stop the current set of servicers
 	close(this.done)
 	logging.Infop("SetServicers - waiting for current servicers to finish")
@@ -298,6 +304,12 @@ func (this *Server) PlusServicers() int {
 func (this *Server) SetPlusServicers(plusServicers int) {
 	this.Lock()
 	defer this.Unlock()
+
+	// MB-19683 - don't restart if no change
+	if int(atomic.LoadInt64(&this.plusServicers)) == plusServicers {
+		return
+	}
+
 	// Stop the current set of servicers
 	close(this.plusDone)
 	logging.Infop("SetPlusServicers - waiting for current plusServicers to finish")
