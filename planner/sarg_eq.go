@@ -32,8 +32,10 @@ func newSargEq(pred *expression.Eq) *sargEq {
 			span.Range.Low = expression.Expressions{pred.Second().Static()}
 		} else if pred.Second().EquivalentTo(expr2) {
 			span.Range.Low = expression.Expressions{pred.First().Static()}
-		} else {
+		} else if pred.DependsOn(expr2) {
 			return _VALUED_SPANS, nil
+		} else {
+			return nil, nil
 		}
 
 		if span.Range.Low[0] == nil {

@@ -29,7 +29,11 @@ func newSargValued(pred expression.UnaryFunction) *sargValued {
 			return _EXACT_VALUED_SPANS, nil
 		}
 
-		return _VALUED_SPANS, nil
+		if pred.Operand().DependsOn(expr2) {
+			return _VALUED_SPANS, nil
+		}
+
+		return nil, nil
 	}
 
 	return rv

@@ -32,23 +32,28 @@ func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
 			return _SELF_SPANS, nil
 		}
 
+		sp := spans
+		if !pred.DependsOn(expr2) {
+			sp = nil
+		}
+
 		all, ok := expr2.(*expression.All)
 		if !ok {
-			return spans, nil
+			return sp, nil
 		}
 
 		array, ok := all.Array().(*expression.Array)
 		if !ok {
-			return spans, nil
+			return sp, nil
 		}
 
 		if !pred.Bindings().SubsetOf(array.Bindings()) {
-			return spans, nil
+			return sp, nil
 		}
 
 		if array.When() != nil &&
 			!SubsetOf(pred.Satisfies(), array.When()) {
-			return spans, nil
+			return sp, nil
 		}
 
 		return sargFor(pred.Satisfies(), array.ValueMapping(), false)

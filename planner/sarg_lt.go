@@ -36,8 +36,10 @@ func newSargLT(pred *expression.LT) *sargLT {
 		} else if pred.Second().EquivalentTo(expr2) {
 			exprs = expression.Expressions{pred.First().Static()}
 			span.Range.Low = exprs
-		} else {
+		} else if pred.DependsOn(expr2) {
 			return _VALUED_SPANS, nil
+		} else {
+			return nil, nil
 		}
 
 		if len(exprs) == 0 || exprs[0] == nil {

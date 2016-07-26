@@ -30,7 +30,11 @@ func newSargWithin(pred *expression.Within) *sargWithin {
 		}
 
 		if !SubsetOf(pred.First(), expr2) {
-			return _VALUED_SPANS, nil
+			if pred.DependsOn(expr2) {
+				return _VALUED_SPANS, nil
+			} else {
+				return nil, nil
+			}
 		}
 
 		aval := pred.Second().Value()
