@@ -119,7 +119,7 @@ keys:
 	}
 
 	if len(ns) == 0 {
-		return _EMPTY_SPANS, false, nil
+		return _EMPTY_SPANS, true, nil
 	}
 
 	if exactSpan && len(sargKeys) > 1 {
@@ -201,13 +201,20 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 
 		rs := r.(plan.Spans)
 		rs = deDupDiscardEmptySpans(rs)
-		// In composite Range Scan, Can we assume If one key Span is EMPTY can whole index span is EMPTY?
+
 		sargSpans[i] = rs
 
 		if len(rs) == 0 {
 			exactSpan = false
 			continue
-		} else if exactSpan {
+		}
+
+		// If one key span is EMPTY then whole index span can be EMPTY
+		if rs[0] == _EMPTY_SPANS[0] {
+			return []plan.Spans{_EMPTY_SPANS}, true, nil
+		}
+
+		if exactSpan {
 			for _, prev := range rs {
 				if !prev.Exact {
 					exactSpan = false
