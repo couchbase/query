@@ -44,7 +44,11 @@ func newSargLike(pred expression.LikeFunction) expression.Visitor {
 		}
 
 		if !pred.First().EquivalentTo(expr2) {
-			return _VALUED_SPANS, nil
+			if pred.DependsOn(expr2) {
+				return _VALUED_SPANS, nil
+			} else {
+				return nil, nil
+			}
 		}
 
 		if re == nil {

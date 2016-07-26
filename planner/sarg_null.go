@@ -46,7 +46,11 @@ func newSargNull(pred *expression.IsNull) *sargNull {
 			return _NULL_SPANS, nil
 		}
 
-		return spans, nil
+		if pred.Operand().DependsOn(expr2) {
+			return spans, nil
+		}
+
+		return nil, nil
 	}
 
 	return rv
@@ -74,7 +78,11 @@ func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
 			return _EXACT_VALUED_SPANS, nil
 		}
 
-		return spans, nil
+		if pred.Operand().DependsOn(expr2) {
+			return spans, nil
+		}
+
+		return nil, nil
 	}
 
 	return rv
