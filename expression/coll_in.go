@@ -50,6 +50,10 @@ func (this *In) FilterCovers(covers map[string]value.Value) map[string]value.Val
 	return covers
 }
 
+func (this *In) MayOverlapSpans() bool {
+	return this.Second().Value() == nil
+}
+
 /*
 IN evaluates to TRUE if the right-hand-side first value is an array
 and directly contains the left-hand-side second value.
