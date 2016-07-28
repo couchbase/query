@@ -36,35 +36,56 @@ func newSargIn(pred *expression.In) *sargIn {
 			}
 		}
 
+		var array expression.Expressions
+
 		aval := pred.Second().Value()
-		if aval == nil {
-			return _VALUED_SPANS, nil
+		if aval != nil {
+			vals, ok := aval.Actual().([]interface{})
+			if !ok || len(vals) == 0 {
+				return _EMPTY_SPANS, nil
+			}
+
+			// De-dup before generating spans
+			set := value.NewSet(len(vals), true)
+			set.AddAll(vals)
+			vals = set.Actuals()
+
+			// Sort for EXPLAIN stability
+			sort.Sort(value.NewSorter(value.NewValue(vals)))
+
+			array = make(expression.Expressions, len(vals))
+			for i, val := range vals {
+				array[i] = expression.NewConstant(val)
+			}
 		}
 
-		array, ok := aval.Actual().([]interface{})
-		if !ok {
-			return _VALUED_SPANS, nil
+		if array == nil {
+			acons, ok := pred.Second().(*expression.ArrayConstruct)
+			if !ok {
+				return _VALUED_SPANS, nil
+			}
+
+			array = acons.Operands()
 		}
+
 		if len(array) == 0 {
 			return _EMPTY_SPANS, nil
 		}
 
-		// De-dup before generating spans
-		set := value.NewSet(len(array), true)
-		set.AddAll(array)
-		array = set.Actuals()
-
-		// Sort for EXPLAIN stability
-		sort.Sort(value.NewSorter(value.NewValue(array)))
-
 		spans := make(plan.Spans, 0, len(array))
-		for _, val := range array {
-			if val == nil {
+		for _, elem := range array {
+			static := elem.Static()
+			if static == nil {
+				return _VALUED_SPANS, nil
+			}
+
+			val := static.Value()
+			if val != nil && val.Type() <= value.NULL {
 				continue
 			}
 
 			span := &plan.Span{}
-			span.Range.Low = expression.Expressions{expression.NewConstant(val)}
+			span.Range.Low = expression.Expressions{static}
 			if rv.MissingHigh() {
 				span.Range.High = expression.Expressions{expression.NewSuccessor(span.Range.Low[0])}
 				span.Range.Inclusion = datastore.LOW
