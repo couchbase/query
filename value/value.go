@@ -19,8 +19,8 @@ import (
 	"io"
 	"reflect"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
-	json "github.com/dustin/gojson"
 )
 
 type Tristate int
