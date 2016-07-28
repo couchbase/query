@@ -45,6 +45,9 @@ func init() {
 	} else {
 		REQUIRE_CBAUTH = true // default
 	}
+
+	// start the fetch workers for servicing the BulkGet operations
+	cb.InitBulkGet()
 }
 
 const (
