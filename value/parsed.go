@@ -10,10 +10,10 @@
 package value
 
 import (
-	"encoding/json"
 	"io"
 	"strconv"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 	jsonpointer "github.com/dustin/go-jsonpointer"
 )
