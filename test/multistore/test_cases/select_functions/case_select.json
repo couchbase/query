@@ -392,5 +392,52 @@
             "qty": 1
         }
     ]
+    },
+    {
+        "statements" : "select 9223372036854775807, -9223372036854775807",
+        "results": [
+        {
+            "$1": 9223372036854775807,
+            "$2": -9223372036854775807
+        }
+    ]
+    },
+    {
+        "statements" : "select big, little from orders where test_id=\"select_big_int\" and type=\"value\"",
+        "results": [
+        {
+            "big": 9223372036854775807,
+            "little": -9223372036854775807
+        }
+    ]
+    },
+    {
+        "statements" : "select raw big from orders where test_id=\"select_big_int\" and type=\"value\"",
+        "results": [
+            9223372036854775807
+    ]
+    },
+    {
+        "statements" : "select raw little from orders where test_id=\"select_big_int\" and type=\"value\"",
+        "results": [
+            -9223372036854775807
+    ]
+    },
+    {
+        "statements" : "select sum(num) as total, type from orders where test_id=\"select_big_int\" and type=\"aggr\" group by type",
+        "results": [
+        {
+            "total": 9223372036854775807,
+            "type": "aggr"
+        }
+    ]
+    },
+    {
+        "statements" : "select count(1) as total from orders where test_id=\"select_big_int\" and num > 90",
+        "results": [
+        {
+            "total": 2
+        }
+    ]
     }
 ]
