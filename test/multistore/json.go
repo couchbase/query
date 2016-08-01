@@ -10,7 +10,7 @@
 package multistore
 
 import (
-	"encoding/json"
+	json "github.com/couchbase/go_json"
 	go_er "errors"
 	"fmt"
 	"github.com/couchbase/query/accounting"
@@ -138,7 +138,8 @@ func (this *MockQuery) writeResult(item value.Value) bool {
 
 	this.resultCount++
 
-	var resultLine map[string]interface{}
+	//var resultLine map[string]interface{}
+	var resultLine interface{}
 	json.Unmarshal(bytes, &resultLine)
 
 	this.response.results = append(this.response.results, resultLine)
