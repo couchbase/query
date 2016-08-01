@@ -43,8 +43,14 @@
 /0|[1-9][0-9]*/ {
 		  // We differentiate NUM from INT
 		    lval.n, _ = strconv.ParseInt(yylex.Text(), 10, 64)
-		    logToken(yylex.Text(), "INT - %d", lval.n)
-		    return INT
+		    if (lval.n > math.MinInt64 && lval.n < math.MaxInt64) || strconv.FormatInt(lval.n, 10) == yylex.Text() {
+		        logToken(yylex.Text(), "INT - %d", lval.n)
+			return INT
+		    } else {
+		        lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
+			logToken(yylex.Text(), "NUM - %f", lval.f)
+			return NUM
+		    }
 		  }
 
 /(\/\*)([^\*]|(\*)+[^\/])*((\*)+\/)/ {
@@ -304,6 +310,7 @@
 //
 package n1ql
 
+import "math"
 import "strconv"
 import "github.com/couchbase/clog"
 

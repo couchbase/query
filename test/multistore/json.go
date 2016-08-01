@@ -10,9 +10,15 @@
 package multistore
 
 import (
-	json "github.com/couchbase/go_json"
 	go_er "errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"strconv"
+	"time"
+
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
@@ -27,11 +33,6 @@ import (
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
-	"io/ioutil"
-	"os"
-	"reflect"
-	"strconv"
-	"time"
 )
 
 /*

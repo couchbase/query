@@ -240,13 +240,20 @@ func (this intValue) unwrap() Value {
 NumberValue methods.
 */
 
+/*
+Handle overflow per http://blog.regehr.org/archives/1139
+*/
 func (this intValue) Add(n NumberValue) NumberValue {
 	switch n := n.(type) {
 	case intValue:
-		return this + n
-	default:
-		return floatValue(float64(this) + n.Actual().(float64))
+		rv := intValue(uint64(this) + uint64(n))
+		if (this >= 0 && n >= 0 && rv >= 0) ||
+			(this < 0 && n < 0 && rv < 0) {
+			return rv
+		}
 	}
+
+	return floatValue(float64(this) + n.Actual().(float64))
 }
 
 func (this intValue) IDiv(n NumberValue) Value {
@@ -285,24 +292,37 @@ func (this intValue) IMod(n NumberValue) Value {
 	}
 }
 
+/*
+Handle overflow per
+http://stackoverflow.com/questions/1815367/multiplication-of-large-numbers-how-to-catch-overflow
+*/
 func (this intValue) Mult(n NumberValue) NumberValue {
 	switch n := n.(type) {
 	case intValue:
-		return this * n
-	default:
-		return floatValue(float64(this) * n.Actual().(float64))
+		rv := this * n
+		if this == 0 || rv/this == n {
+			return rv
+		}
 	}
+
+	return floatValue(float64(this) * n.Actual().(float64))
 }
 
 func (this intValue) Neg() NumberValue {
+	if this == math.MinInt64 {
+		return -floatValue(this)
+	}
+
 	return -this
 }
 
 func (this intValue) Sub(n NumberValue) NumberValue {
 	switch n := n.(type) {
 	case intValue:
-		return this - n
-	default:
-		return floatValue(float64(this) - n.Actual().(float64))
+		if n > math.MinInt64 {
+			return this.Add(-n)
+		}
 	}
+
+	return floatValue(float64(this) - n.Actual().(float64))
 }
