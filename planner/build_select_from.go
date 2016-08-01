@@ -113,7 +113,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	}
 
 	join := plan.NewJoin(keyspace, node)
-	this.subChildren = append(this.subChildren, join)
+	this.children = append(this.children, join)
 	return nil, nil
 }
 
@@ -172,7 +172,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	}
 
 	nest := plan.NewNest(keyspace, node)
-	this.subChildren = append(this.subChildren, nest)
+	this.children = append(this.children, nest)
 	return nil, nil
 }
 
@@ -218,7 +218,8 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 	}
 
 	unnest := plan.NewUnnest(node)
-	this.subChildren = append(this.subChildren, unnest)
+	parallel := plan.NewParallel(plan.NewSequence(unnest), this.maxParallelism)
+	this.children = append(this.children, parallel)
 	return nil, nil
 }
 
