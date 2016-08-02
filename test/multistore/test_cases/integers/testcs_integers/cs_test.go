@@ -7,7 +7,7 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package testfs
+package testcs_integers
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ using the statements in insert_orders.json.
 */
 func TestInsertCaseFiles(t *testing.T) {
 	fmt.Println("\n\nInserting values into Bucket for Select Functions \n\n ")
-	qc := start()
+	qc := Start_test()
 	matches, err := filepath.Glob("../insert.json")
 	if err != nil {
 		t.Errorf("glob failed: %v", err)
@@ -41,7 +41,7 @@ func TestInsertCaseFiles(t *testing.T) {
 }
 
 func TestAllCaseFiles(t *testing.T) {
-	qc := start()
+	qc := Start_test()
 	matches, err := filepath.Glob("../case_*.json")
 	if err != nil {
 		t.Errorf("glob failed: %v", err)
@@ -61,10 +61,10 @@ func TestAllCaseFiles(t *testing.T) {
 }
 
 func TestCleanupData(t *testing.T) {
-	qc := start()
+	qc := Start_test()
 
-	_, _, errfs := Run_test(qc, "delete from orders where test_id = \"select_func\"")
-	if errfs != nil {
-		t.Errorf("did not expect err %s", errfs.Error())
+	_, _, errcs := Run_test(qc, "delete from orders where test_id = \"select_big_int\"")
+	if errcs != nil {
+		t.Errorf("did not expect err %s", errcs.Error())
 	}
 }

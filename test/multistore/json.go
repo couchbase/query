@@ -139,7 +139,6 @@ func (this *MockQuery) writeResult(item value.Value) bool {
 
 	this.resultCount++
 
-	//var resultLine map[string]interface{}
 	var resultLine interface{}
 	json.Unmarshal(bytes, &resultLine)
 
