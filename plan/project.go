@@ -19,24 +19,31 @@ import (
 
 type InitialProject struct {
 	readonly
-	projection *algebra.Projection
-	terms      ProjectTerms
+	projection    *algebra.Projection
+	terms         ProjectTerms
+	starTermCount int
 }
 
 func NewInitialProject(projection *algebra.Projection) *InitialProject {
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
+	rv := &InitialProject{
+		projection: projection,
+		terms:      terms,
+	}
+
 	for i, res := range results {
 		terms[i] = &ProjectTerm{
 			result: res,
 		}
+
+		if res.Star() {
+			rv.starTermCount++
+		}
 	}
 
-	return &InitialProject{
-		projection: projection,
-		terms:      terms,
-	}
+	return rv
 }
 
 func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
@@ -53,6 +60,10 @@ func (this *InitialProject) Projection() *algebra.Projection {
 
 func (this *InitialProject) Terms() ProjectTerms {
 	return this.terms
+}
+
+func (this *InitialProject) StarTermCount() int {
+	return this.starTermCount
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
