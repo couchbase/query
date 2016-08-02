@@ -97,7 +97,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	pv := value.NewAnnotatedValue(sv)
 	pv.SetAnnotations(item)
 
-	p := value.NewValue(make(map[string]interface{}, n+32))
+	p := value.NewValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
 	pv.SetAttachment("projection", p)
 
 	for _, term := range this.plan.Terms() {
