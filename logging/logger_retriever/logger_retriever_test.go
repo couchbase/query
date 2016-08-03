@@ -11,7 +11,6 @@ package logger_retriever
 
 import (
 	"testing"
-
 	/*
 		"github.com/couchbase/query/logging"
 	*/)
