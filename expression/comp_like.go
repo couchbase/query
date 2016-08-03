@@ -137,7 +137,7 @@ func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
-	if s[0] != '%' && s[0] != '_' {
+	if s != "" && s[0] != '%' && s[0] != '_' {
 		s = "^" + s
 	}
 	l := len(s)
