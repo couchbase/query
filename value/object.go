@@ -327,7 +327,7 @@ func (this objectValue) Successor() Value {
 }
 
 func (this objectValue) Recycle() {
-	json.RecycleJson(this.Actual())
+	recycle(this)
 }
 
 func (this objectValue) unwrap() Value {

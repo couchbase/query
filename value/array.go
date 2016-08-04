@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"io"
 
-	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 )
 
@@ -327,7 +326,7 @@ func (this sliceValue) Successor() Value {
 }
 
 func (this sliceValue) Recycle() {
-	json.RecycleJson(this.Actual())
+	recycle(this)
 }
 
 func (this sliceValue) unwrap() Value {
