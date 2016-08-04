@@ -11,10 +11,10 @@ package value
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"sort"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 )
 
@@ -327,6 +327,7 @@ func (this objectValue) Successor() Value {
 }
 
 func (this objectValue) Recycle() {
+	json.RecycleJson(this.Actual())
 }
 
 func (this objectValue) unwrap() Value {
