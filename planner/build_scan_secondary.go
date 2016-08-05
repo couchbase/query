@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 type indexEntry struct {
@@ -237,34 +238,76 @@ func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expr
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
-
-	// If it makes DistinctScan don't use index order
 	if len(entry.spans) > 1 {
 		return false
 	}
 
-	if len(keys) < len(this.order.Terms()) {
-		return false
+	var filters map[string]value.Value
+	if entry.cond != nil {
+		filters = entry.cond.FilterCovers(make(map[string]value.Value, 16))
 	}
 
-	for i, orderTerm := range this.order.Terms() {
+	i := 0
+	var prevOrderTerm *algebra.SortTerm
+	for _, orderTerm := range this.order.Terms() {
+		// orderTerm is constant
+		if orderTerm.Expression().Value() != nil {
+			continue
+		}
+
+		// non-constant orderTerms are more than index keys
+		if i >= len(keys) {
+			// match with condition EQ terms
+			if equalConditionFilter(filters, orderTerm.Expression().String()) {
+				continue
+			}
+			return false
+		}
+
 		if orderTerm.Descending() {
 			return false
 		}
 
-		if !orderTerm.Expression().EquivalentTo(keys[i]) {
+		if prevOrderTerm != nil && orderTerm.Expression().EquivalentTo(prevOrderTerm.Expression()) {
+			continue
+		}
+		prevOrderTerm = orderTerm
+
+		if isArray, _ := entry.keys[i].IsArrayIndexKey(); isArray {
 			return false
 		}
 
-		if i < len(entry.sargKeys) {
-			sk := entry.sargKeys[i]
-			if isArray, _ := sk.IsArrayIndexKey(); isArray {
+	loop:
+		for {
+			if orderTerm.Expression().EquivalentTo(keys[i]) {
+				// orderTerm matched with index key
+				i++
+				break loop
+			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
+				// orderTerm matched with Condition EQ
+				break loop
+			} else if equalRangeKey(i, entry.spans[0].Range.Low, entry.spans[0].Range.High) {
+				// orderTerm matched with leading Equal Range key
+				i++
+				if i >= len(keys) {
+					return false
+				}
+			} else {
 				return false
 			}
 		}
 	}
 
 	return true
+}
+
+func equalConditionFilter(filters map[string]value.Value, str string) bool {
+	if filters == nil {
+		return false
+	}
+
+	v, ok := filters[str]
+	return ok && v != nil
 }
 
 func allowedPushDown(entry *indexEntry, pred expression.Expression) bool {
