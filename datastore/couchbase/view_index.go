@@ -181,7 +181,12 @@ func (view *viewIndexer) CreateIndex(requestId, name string, seekKey, rangeKey e
 	var err error
 
 	if with != nil {
-		idx, err = newViewIndexFromExistingMap(name, with.Actual().(string), rangeKey, view)
+		s, ok := with.Actual().(string)
+		if !ok || s == "" {
+			return nil, errors.NewCbViewCreateError(nil, "WITH value must be a string naming a design doc.")
+		}
+
+		idx, err = newViewIndexFromExistingMap(name, s, rangeKey, view)
 	} else {
 		idx, err = newViewIndex(name, rangeKey, where, view)
 	}
