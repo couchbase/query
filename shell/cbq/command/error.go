@@ -100,6 +100,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorStackEmpty("")
 	case errors.NO_SUCH_ALIAS:
 		return errors.NewShellErrorNoSuchAlias(msg)
+	case errors.BATCH_MODE:
+		return errors.NewShellErrorBatchMode("")
 
 	//Generic Errors
 	case errors.OPERATION_TIMEOUT:

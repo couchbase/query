@@ -144,9 +144,28 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 			}
 			var nval string
 
-			//Predefined variables are only allowed to be specifically
-			//popped
-			if vble == "histfile" {
+			if vble == "batch" {
+				st_val, ok := PreDefSV["batch"]
+				if ok {
+					newval, err_code, err_str := st_val.Top()
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = ValToStr(newval)
+					nval = handleStrings(nval)
+				} else {
+					err_code, err_str := PushValue_Helper(false, PreDefSV, "batch", "off")
+					if err_code != 0 {
+						return err_code, err_str
+
+					}
+					nval = "off"
+				}
+				BATCH = nval
+
+			} else if vble == "histfile" {
+				//Predefined variables are only allowed to be specifically
+				//popped
 				st_val, ok := PreDefSV["histfile"]
 				if ok {
 					newval, err_code, err_str := st_val.Top()
@@ -154,17 +173,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 						return err_code, err_str
 					}
 					nval = ValToStr(newval)
-					//In order to store it in a format that can be read,
-					//we escaped the strings. Now we remove the escape chars.
-					nval = strings.Replace(nval, "\\\\", "\\", -1)
-					if nval != "" &&
-						(strings.HasPrefix(nval, "\"") &&
-							strings.HasSuffix(nval, "\"")) ||
-						(strings.HasPrefix(nval, "'") &&
-							strings.HasSuffix(nval, "'")) {
-						//Discount the quotes " .. "
-						nval = nval[1 : len(nval)-1]
-					}
+					nval = handleStrings(nval)
 				} else {
 					err_code, err_str := PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
 					if err_code != 0 {
@@ -266,4 +275,19 @@ func setNewParamPop(name string, paramst *Stack) (int, string) {
 	}
 	n1ql.SetQueryParams(name, nval)
 	return 0, ""
+}
+
+func handleStrings(nval string) string {
+	//In order to store it in a format that can be read,
+	//we escaped the strings. Now we remove the escape chars.
+	nval = strings.Replace(nval, "\\\\", "\\", -1)
+	if nval != "" &&
+		(strings.HasPrefix(nval, "\"") &&
+			strings.HasSuffix(nval, "\"")) ||
+		(strings.HasPrefix(nval, "'") &&
+			strings.HasSuffix(nval, "'")) {
+		//Discount the quotes " .. "
+		nval = nval[1 : len(nval)-1]
+	}
+	return nval
 }

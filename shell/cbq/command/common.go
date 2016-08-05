@@ -29,6 +29,7 @@ var (
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"histfile": Stack_Helper(),
+		"batch":    Stack_Helper(),
 		//"autoconfig": Stack_Helper(),
 	}
 )
@@ -49,6 +50,13 @@ func init() {
 	//var werr error
 
 	err_code, err_str = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+	if err_code != 0 {
+		s_err := HandleError(err_code, err_str)
+		PrintError(s_err)
+
+	}
+
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "batch", BATCH)
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
@@ -446,6 +454,8 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 					io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
 				}
 			}
+		} else if vble == "batch" {
+			BATCH = args_str
 		}
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)

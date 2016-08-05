@@ -103,6 +103,16 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 
 			}
 
+			if vble == "batch" {
+				err_code, err_str = PushValue_Helper(false, PreDefSV, "batch", "off")
+				if err_code != 0 {
+					return err_code, err_str
+
+				}
+				BATCH = "off"
+
+			}
+
 			//Print the path to histfile
 			err_code, err_str = printPath(HISTFILE)
 			if err_code != 0 {

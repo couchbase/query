@@ -22,11 +22,110 @@ import (
 	"github.com/peterh/liner"
 )
 
+var batch_run = false
+
+func command_alias(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+	// This block handles aliases
+	commandkey := line[2:]
+	commandkey = strings.TrimSpace(commandkey)
+
+	val, ok := command.AliasCommand[commandkey]
+
+	if !ok {
+		return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
+	}
+
+	// If outputting to a file, then add the statement to the file as well.
+	if command.FILE_RW_MODE == true {
+		_, werr := io.WriteString(command.W, val+"\n")
+		if werr != nil {
+			return errors.WRITER_OUTPUT, werr.Error()
+		}
+	}
+
+	err_code, err_str := dispatch_command(val, w, interactive, liner)
+	/* Error handling for Shell errors and errors recieved from
+	   godbc/n1ql.
+	*/
+	if err_code != 0 {
+		return err_code, err_str
+	}
+	return 0, ""
+
+}
+
+func command_shell(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+	if len(strings.TrimSpace(line)) == 1 {
+		// A single \ (with whitespaces) is used to run the input statements
+		// in batch mode for AsterixDB. For such a case, we run the statements the
+		// same way we execute N1QL statements.
+		// Run all the commands in the buffer in 1 go.
+
+		batch_run = true
+		err_code, err_str := dispatch_command(stringBuffer.String(), w, interactive, liner)
+		if err_code != 0 {
+			return err_code, err_str
+		}
+		stringBuffer.Reset()
+
+	} else {
+		//This block handles the shell commands
+		err_code, err_str := ExecShellCmd(line, liner)
+		if err_code != 0 {
+			return err_code, err_str
+		}
+	}
+	return 0, ""
+}
+
+func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
+	//This block handles N1QL statements
+	// If connected to a query service then noQueryService == false.
+	if noQueryService == true {
+		//Not connected to a query service
+		return errors.NO_CONNECTION, ""
+	} else {
+		/* Try opening a connection to the endpoint. If successful, ping.
+		   If successful execute the n1ql command. Else try to connect
+		   again.
+		*/
+		dBn1ql, err := n1ql.OpenExtended(serverFlag)
+		if err != nil {
+			return errors.DRIVER_OPEN, err.Error()
+		} else {
+			//Successfully logged into the server
+
+			// Check if executing in batch mode for Asterix db.
+			if command.BATCH == "on" && batch_run == false {
+				// This means we need to save the batched statements.
+				// Set line to be the set of queries input in batch mode.
+				// line = some buffer
+				line = line + ";"
+				_, err = stringBuffer.WriteString(line)
+				if err != nil {
+					return errors.STRING_WRITE, err.Error()
+				}
+			} else {
+				if batch_run == true {
+					batch_run = false
+				}
+				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
+				if err_code != 0 {
+					return err_code, err_str
+				}
+			}
+
+		}
+
+	}
+	return 0, ""
+}
+
 /*
-This method executes the input command or statement. It
-returns an error code and optionally a non empty error message.
+This method is the handler that calls execution methods based on the input command
+or statement. It returns an error code and optionally a non empty error message.
 */
-func execute_input(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
 	line = strings.TrimSpace(line)
 	command.W = w
 
@@ -61,62 +160,26 @@ func execute_input(line string, w io.Writer, interactive bool, liner *liner.Stat
 	}
 
 	if strings.HasPrefix(line, "\\\\") {
-		// This block handles aliases
-		commandkey := line[2:]
-		commandkey = strings.TrimSpace(commandkey)
-
-		val, ok := command.AliasCommand[commandkey]
-
-		if !ok {
-			return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
-		}
-
-		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			_, werr := io.WriteString(command.W, val+"\n")
-			if werr != nil {
-				return errors.WRITER_OUTPUT, werr.Error()
-			}
-		}
-
-		err_code, err_str := execute_input(val, w, interactive, liner)
-		/* Error handling for Shell errors and errors recieved from
-		   godbc/n1ql.
-		*/
-		if err_code != 0 {
-			return err_code, err_str
+		// handles aliases
+		errCode, errStr := command_alias(line, w, interactive, liner)
+		if errCode != 0 {
+			return errCode, errStr
 		}
 
 	} else if strings.HasPrefix(line, "\\") {
-		//This block handles the shell commands
-		err_code, err_str := ExecShellCmd(line, liner)
-		if err_code != 0 {
-			return err_code, err_str
+		// handles shell commands
+		errCode, errStr := command_shell(line, w, interactive, liner)
+		if errCode != 0 {
+			return errCode, errStr
 		}
 
 	} else {
-		//This block handles N1QL statements
-		// If connected to a query service then noQueryService == false.
-		if noQueryService == true {
-			//Not connected to a query service
-			return errors.NO_CONNECTION, ""
-		} else {
-			/* Try opening a connection to the endpoint. If successful, ping.
-			   If successful execute the n1ql command. Else try to connect
-			   again.
-			*/
-			dBn1ql, err := n1ql.OpenExtended(serverFlag)
-			if err != nil {
-				return errors.DRIVER_OPEN, err.Error()
-			} else {
-				//Successfully logged into the server
-				err_code, err_str := ExecN1QLStmt(line, dBn1ql, w)
-				if err_code != 0 {
-					return err_code, err_str
-				}
-			}
-
+		// handles input queries, both n1ql and asterix
+		errCode, errStr := command_query(line, w, liner)
+		if errCode != 0 {
+			return errCode, errStr
 		}
+
 	}
 
 	return 0, ""
@@ -349,7 +412,7 @@ func readAndExec(liner *liner.State) (int, string) {
 
 		}
 
-		errCode, errStr := execute_input(final_input, command.W, false, liner)
+		errCode, errStr := dispatch_command(final_input, command.W, false, liner)
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
 			command.PrintError(s_err)

@@ -68,6 +68,8 @@ var (
 	QUIET = false
 	//Value that represents the no-ssl-verify flag
 	SKIPVERIFY = false
+	//Batch flag is used to send queries to the Asterix backend.
+	BATCH = "off"
 )
 
 /* Value to store sorted list of keys for shell commands */

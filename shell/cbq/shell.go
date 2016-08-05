@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -265,15 +266,36 @@ var noSSLVerify = flag.Bool("no-ssl-verify", false, command.USSLVERIFY)
    JSON object credentials
 */
 
+/*
+   Option        : -batch or -b
+   Args          : on/off
+   Batch mode for sending queries to Asterix.
+*/
+
+var batchFlag string
+
+func init() {
+	const (
+		defaultval = "off"
+		usage      = command.UBATCH
+	)
+	flag.StringVar(&batchFlag, "batch", defaultval, usage)
+	flag.StringVar(&batchFlag, "b", defaultval, command.NewShorthandMsg("-batch"))
+}
+
 var (
-	SERVICE_URL string
-	DISCONNECT  bool
-	EXIT        bool
+	SERVICE_URL  string
+	DISCONNECT   bool
+	EXIT         bool
+	stringBuffer bytes.Buffer
 )
 
 func main() {
 
 	flag.Parse()
+
+	// Initialize Global buffer to store queries for batch mode.
+	stringBuffer.Write([]byte(""))
 
 	if *prettyFlag {
 		n1ql.SetQueryParams("pretty", "true")
@@ -468,6 +490,19 @@ func main() {
 
 	if timeoutFlag != "0ms" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
+	}
+
+	// If batch flag is enabled
+	if batchFlag != "off" {
+		if strings.ToLower(batchFlag) == "on" {
+			command.BATCH = batchFlag
+		} else {
+			s_err := command.HandleError(errors.BATCH_MODE, "")
+			command.PrintError(s_err)
+		}
+
+	} else {
+		command.BATCH = batchFlag
 	}
 
 	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.

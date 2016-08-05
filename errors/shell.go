@@ -68,6 +68,10 @@ const (
 	STACK_EMPTY_MSG     = "Stack empty."
 	NO_SUCH_ALIAS       = 141
 	NO_SUCH_ALIAS_MSG   = "Alias does not exist "
+	BATCH_MODE          = 142
+	BATCH_MODE_MSG      = "Error when running in batch mode. Incorrect input value"
+	STRING_WRITE        = 143
+	STRING_WRITE_MSG    = "Cannot write to string buffer. "
 
 	//Generic Errors (170 - 199)
 	OPERATION_TIMEOUT     = 170
@@ -190,6 +194,16 @@ func NewShellErrorStackEmpty(msg string) Error {
 
 func NewShellErrorNoSuchAlias(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_SUCH_ALIAS, IKey: "shell.alias.does.not.exist", InternalMsg: NO_SUCH_ALIAS_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorBatchMode(msg string) Error {
+	return &err{level: EXCEPTION, ICode: BATCH_MODE, IKey: "batch.mode.incorrect.input", InternalMsg: BATCH_MODE_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorStringWrite(msg string) Error {
+	return &err{level: EXCEPTION, ICode: STRING_WRITE, IKey: "string.buffer.write.error", InternalMsg: STRING_WRITE_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 

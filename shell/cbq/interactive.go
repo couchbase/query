@@ -105,7 +105,7 @@ func HandleInteractiveMode(prompt string) {
 			}
 		}
 
-		err_code, err_str := execute_input(scriptFlag, command.W, false, liner)
+		err_code, err_str := dispatch_command(scriptFlag, command.W, false, liner)
 		if err_code != 0 {
 			s_err := command.HandleError(err_code, err_str)
 			command.PrintError(s_err)
@@ -131,7 +131,7 @@ func HandleInteractiveMode(prompt string) {
 			}
 		}
 
-		errCode, errStr := execute_input(input_command, command.W, false, liner)
+		errCode, errStr := dispatch_command(input_command, command.W, false, liner)
 		if errCode != 0 {
 			s_err := command.HandleError(errCode, errStr)
 			command.PrintError(s_err)
@@ -207,7 +207,7 @@ func HandleInteractiveMode(prompt string) {
 						command.PrintError(s_err)
 					}
 				}
-				err_code, err_string = execute_input(inputString, command.W, true, liner)
+				err_code, err_string = dispatch_command(inputString, command.W, true, liner)
 				/* Error handling for Shell errors and errors recieved from
 				   godbc/n1ql.
 				*/
@@ -239,7 +239,7 @@ func HandleInteractiveMode(prompt string) {
 
 				/* For the \EXIT and \QUIT shell commands we need to
 				   make sure that we close the liner and then exit. In
-				   the event an error is returned from execute_input after
+				   the event an error is returned from dispatch_command after
 				   the \EXIT command, then handle the error and exit with
 				   exit code 1 (which is for general errors).
 				*/

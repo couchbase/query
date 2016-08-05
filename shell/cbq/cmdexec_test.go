@@ -30,7 +30,7 @@ func execline(line string, t *testing.T) {
 	w := bufio.NewWriter(&b)
 	command.SetWriter(w)
 
-	errC, errS := execute_input(line, w, true, liner)
+	errC, errS := dispatch_command(line, w, true, liner)
 	w.Flush()
 	if errC != 0 {
 		t.Errorf("Error :: %v, %s", line, command.HandleError(errC, errS))
