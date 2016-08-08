@@ -58,14 +58,15 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 	for _, key := range keys {
 		accounting.RequestDo(key, func(entry *accounting.RequestLogEntry) {
 			item := value.NewAnnotatedValue(map[string]interface{}{
-				"RequestId":   key,
-				"State":       entry.State,
-				"ElapsedTime": entry.ElapsedTime.String(),
-				"ServiceTime": entry.ServiceTime.String(),
-				"ResultCount": entry.ResultCount,
-				"ResultSize":  entry.ResultSize,
-				"ErrorCount":  entry.ErrorCount,
-				"Time":        entry.Time.String(),
+				"RequestId":       key,
+				"State":           entry.State,
+				"ElapsedTime":     entry.ElapsedTime.String(),
+				"ServiceTime":     entry.ServiceTime.String(),
+				"ResultCount":     entry.ResultCount,
+				"ResultSize":      entry.ResultSize,
+				"ErrorCount":      entry.ErrorCount,
+				"Time":            entry.Time.String(),
+				"ScanConsistency": entry.ScanConsistency,
 			})
 			if entry.ClientId != "" {
 				item.SetField("ClientContextID", entry.ClientId)

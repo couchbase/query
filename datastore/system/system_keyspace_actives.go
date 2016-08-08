@@ -60,11 +60,12 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 
 	server.ActiveRequestsForEach(func(id string, request server.Request) {
 		item := value.NewAnnotatedValue(map[string]interface{}{
-			"RequestId":     id,
-			"RequestTime":   request.RequestTime().String(),
-			"ElapsedTime":   time.Since(request.RequestTime()).String(),
-			"ExecutionTime": time.Since(request.ServiceTime()).String(),
-			"State":         request.State(),
+			"RequestId":       id,
+			"RequestTime":     request.RequestTime().String(),
+			"ElapsedTime":     time.Since(request.RequestTime()).String(),
+			"ExecutionTime":   time.Since(request.ServiceTime()).String(),
+			"State":           request.State(),
+			"ScanConsistency": request.ScanConsistency(),
 		})
 		cId := request.ClientID().String()
 		if cId != "" {

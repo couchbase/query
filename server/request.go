@@ -547,7 +547,7 @@ func (this *BaseRequest) LogRequest(requestTime time.Duration, serviceTime time.
 		this.Prepared(), this.FmtPhaseTimes(),
 		this.FmtPhaseCounts(), this.FmtPhaseOperators(),
 		string(this.State()), this.Id().String(),
-		this.ClientID().String())
+		this.ClientID().String(), string(this.ScanConsistency()))
 }
 
 func sendStop(ch chan bool) {

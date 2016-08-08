@@ -30,22 +30,23 @@ import (
 )
 
 type RequestLogEntry struct {
-	RequestId      string
-	ClientId       string
-	ElapsedTime    time.Duration
-	ServiceTime    time.Duration
-	Statement      string
-	Plan           *plan.Prepared
-	State          string
-	ResultCount    int
-	ResultSize     int
-	ErrorCount     int
-	PreparedName   string
-	PreparedText   string
-	Time           time.Time
-	PhaseTimes     map[string]interface{}
-	PhaseCounts    map[string]interface{}
-	PhaseOperators map[string]interface{}
+	RequestId       string
+	ClientId        string
+	ElapsedTime     time.Duration
+	ServiceTime     time.Duration
+	Statement       string
+	Plan            *plan.Prepared
+	State           string
+	ScanConsistency string
+	ResultCount     int
+	ResultSize      int
+	ErrorCount      int
+	PreparedName    string
+	PreparedText    string
+	Time            time.Time
+	PhaseTimes      map[string]interface{}
+	PhaseCounts     map[string]interface{}
+	PhaseOperators  map[string]interface{}
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -124,22 +125,24 @@ func LogRequest(request_time time.Duration, service_time time.Duration,
 	phaseTimes map[string]interface{},
 	phaseCounts map[string]interface{},
 	phaseOperators map[string]interface{},
-	state string, id string, clientId string) {
+	state string, id string, clientId string,
+	scanConsistency string) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
 	}
 
 	re := &RequestLogEntry{
-		RequestId:   id,
-		ClientId:    clientId,
-		State:       state,
-		ElapsedTime: request_time,
-		ServiceTime: service_time,
-		ResultCount: result_count,
-		ResultSize:  result_size,
-		ErrorCount:  error_count,
-		Time:        time.Now(),
+		RequestId:       id,
+		ClientId:        clientId,
+		State:           state,
+		ElapsedTime:     request_time,
+		ServiceTime:     service_time,
+		ResultCount:     result_count,
+		ResultSize:      result_size,
+		ErrorCount:      error_count,
+		Time:            time.Now(),
+		ScanConsistency: scanConsistency,
 	}
 	if stmt != "" {
 		re.Statement = stmt
