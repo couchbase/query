@@ -248,10 +248,9 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	}
 
 	i := 0
-	var prevOrderTerm *algebra.SortTerm
 	for _, orderTerm := range this.order.Terms() {
 		// orderTerm is constant
-		if orderTerm.Expression().Value() != nil {
+		if orderTerm.Expression().Static() != nil {
 			continue
 		}
 
@@ -267,11 +266,6 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		if orderTerm.Descending() {
 			return false
 		}
-
-		if prevOrderTerm != nil && orderTerm.Expression().EquivalentTo(prevOrderTerm.Expression()) {
-			continue
-		}
-		prevOrderTerm = orderTerm
 
 		if isArray, _ := entry.keys[i].IsArrayIndexKey(); isArray {
 			return false

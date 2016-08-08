@@ -48,7 +48,8 @@ keys:
 
 		for _, prev := range rs {
 			// Full span subsumes others
-			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] {
+			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] ||
+				(len(prev.Range.Low) == 0 && len(prev.Range.High) == 0) {
 				exactSpan = false
 				sp = append(sp, prev)
 				ns = sp
@@ -58,12 +59,6 @@ keys:
 
 	prevs:
 		for _, prev := range rs {
-			if len(prev.Range.Low) == 0 && len(prev.Range.High) == 0 {
-				exactSpan = false
-				sp = append(sp, prev)
-				continue
-			}
-
 			for _, next := range ns {
 				// Full span subsumes others
 				if next == _FULL_SPANS[0] || next == _EXACT_FULL_SPANS[0] ||
