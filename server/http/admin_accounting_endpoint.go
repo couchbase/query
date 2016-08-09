@@ -29,7 +29,7 @@ const (
 	vitalsPrefix     = adminPrefix + "/vitals"
 	preparedsPrefix  = adminPrefix + "/prepareds"
 	requestsPrefix   = adminPrefix + "/active_requests"
-	completedPrefix  = adminPrefix + "/completed_requests"
+	completedsPrefix = adminPrefix + "/completed_requests"
 	expvarsRoute     = "/debug/vars"
 	jsonPrefix       = adminPrefix + "/json_stats"
 )
@@ -60,11 +60,14 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequests)
 	}
-	completedHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCompletedRequests)
-	}
 	requestHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequest)
+	}
+	completedsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequests)
+	}
+	completedHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequest)
 	}
 	jsonHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doJson)
@@ -73,15 +76,16 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:              {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":  {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                  {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:               {handler: preparedsHandler, methods: []string{"GET"}},
-		preparedsPrefix + "/{name}":   {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
-		requestsPrefix:                {handler: requestsHandler, methods: []string{"GET"}},
-		requestsPrefix + "/{request}": {handler: requestHandler, methods: []string{"GET", "DELETE"}},
-		completedPrefix:               {handler: completedHandler, methods: []string{"GET"}},
-		jsonPrefix:                    {handler: jsonHandler, methods: []string{"GET"}},
+		accountingPrefix:                {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":    {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                    {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                 {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix + "/{name}":     {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
+		requestsPrefix:                  {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix + "/{request}":   {handler: requestHandler, methods: []string{"GET", "DELETE"}},
+		completedsPrefix:                {handler: completedsHandler, methods: []string{"GET"}},
+		completedsPrefix + "/{request}": {handler: completedHandler, methods: []string{"GET"}},
+		jsonPrefix:                      {handler: jsonHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -229,6 +233,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
+		reqMap["scanConsistency"] = request.ScanConsistency()
 
 		p := request.Output().FmtPhaseTimes()
 		if p != nil {
@@ -288,6 +293,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
+		requests[i]["scanConsistency"] = request.ScanConsistency()
 
 		p := request.Output().FmtPhaseTimes()
 		if p != nil {
@@ -307,9 +313,39 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return requests, nil
 }
 
+func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	requestId := vars["request"]
+	reqMap := map[string]interface{}{}
+	accounting.RequestDo(requestId, func(request *accounting.RequestLogEntry) {
+		reqMap["requestId"] = request.RequestId
+		if request.ClientId != "" {
+			reqMap["clientContextID"] = request.ClientId
+		}
+		reqMap["state"] = request.State
+		reqMap["scanConsistency"] = request.ScanConsistency
+		if request.Statement != "" {
+			reqMap["statement"] = request.Statement
+		}
+		if request.PreparedName != "" {
+			reqMap["preparedName"] = request.PreparedName
+			reqMap["preparedText"] = request.PreparedText
+		}
+		reqMap["requestTime"] = request.Time
+		reqMap["elapsedTime"] = request.ElapsedTime.String()
+		reqMap["serviceTime"] = request.ServiceTime.String()
+		reqMap["resultCount"] = request.ResultCount
+		reqMap["resultSize"] = request.ResultSize
+		reqMap["errorCount"] = request.ErrorCount
+		if request.PhaseTimes != nil {
+			reqMap["phaseTimes"] = request.PhaseTimes
+		}
+	})
+	return reqMap, nil
+}
+
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	numRequests := accounting.RequestsCount()
-
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0
 
@@ -325,6 +361,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["clientContextID"] = request.ClientId
 		}
 		requests[i]["state"] = request.State
+		requests[i]["scanConsistency"] = request.ScanConsistency
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement
 		}
