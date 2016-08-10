@@ -30,6 +30,7 @@ const (
 	preparedsPrefix  = adminPrefix + "/prepareds"
 	requestsPrefix   = adminPrefix + "/active_requests"
 	completedsPrefix = adminPrefix + "/completed_requests"
+	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
 	jsonPrefix       = adminPrefix + "/json_stats"
 )
@@ -69,6 +70,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	completedHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doCompletedRequest)
 	}
+	preparedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPreparedIndex)
+	}
+	requestIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doRequestIndex)
+	}
+	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedIndex)
+	}
 	jsonHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doJson)
 	}
@@ -76,16 +86,19 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:                {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":    {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                    {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:                 {handler: preparedsHandler, methods: []string{"GET"}},
-		preparedsPrefix + "/{name}":     {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
-		requestsPrefix:                  {handler: requestsHandler, methods: []string{"GET"}},
-		requestsPrefix + "/{request}":   {handler: requestHandler, methods: []string{"GET", "DELETE"}},
-		completedsPrefix:                {handler: completedsHandler, methods: []string{"GET"}},
-		completedsPrefix + "/{request}": {handler: completedHandler, methods: []string{"GET"}},
-		jsonPrefix:                      {handler: jsonHandler, methods: []string{"GET"}},
+		accountingPrefix:                      {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
+		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "DELETE"}},
+		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET"}},
+		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET"}},
+		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
+		jsonPrefix:                            {handler: jsonHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -384,6 +397,45 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	}
 	accounting.RequestsForeach(snapshot)
 	return requests, nil
+}
+
+func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	return plan.NamePrepareds(), nil
+}
+
+func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numEntries, err := endpoint.actives.Count()
+	if err != nil {
+		return nil, err
+	}
+	requests := make([]string, numEntries)
+	i := 0
+	snapshot := func(requestId string, request server.Request) {
+		if i >= numEntries {
+			requests = append(requests, requestId)
+		} else {
+			requests[i] = requestId
+		}
+		i++
+	}
+	endpoint.actives.ForEach(snapshot)
+	return requests, nil
+}
+
+func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numEntries := accounting.RequestsCount()
+	completed := make([]string, numEntries)
+	i := 0
+	snapshot := func(requestId string, request *accounting.RequestLogEntry) {
+		if i >= numEntries {
+			completed = append(completed, requestId)
+		} else {
+			completed[i] = requestId
+		}
+		i++
+	}
+	accounting.RequestsForeach(snapshot)
+	return completed, nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {
