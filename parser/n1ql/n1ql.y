@@ -354,7 +354,6 @@ tokOffset	 int
 %type <pairs>            values values_list next_values
 %type <expr>             key_expr opt_value_expr
 %type <projection>       returns returning opt_returning
-%type <expr>             path_expr
 %type <set>              set
 %type <setTerm>          set_term
 %type <setTerms>         set_terms
@@ -1493,22 +1492,22 @@ update_dimension COMMA update_binding
 ;
 
 update_binding:
-variable IN path_expr
+variable IN expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
 }
 |
-variable WITHIN path_expr
+variable WITHIN expr
 {
     $$ = expression.NewBinding("", $1, $3, true)
 }
 |
-variable COLON variable IN path_expr
+variable COLON variable IN expr
 {
     $$ = expression.NewBinding($1, $3, $5, false)
 }
 |
-variable COLON variable WITHIN path_expr
+variable COLON variable WITHIN expr
 {
     $$ = expression.NewBinding($1, $3, $5, true)
 }
@@ -1516,13 +1515,6 @@ variable COLON variable WITHIN path_expr
 
 variable:
 IDENT
-;
-
-path_expr:
-path
-{
-    $$ = $1
-}
 ;
 
 opt_when:
