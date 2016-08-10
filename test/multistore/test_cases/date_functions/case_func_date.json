@@ -318,5 +318,21 @@
             "$1": -1
         }
     ]
+   },
+   {
+     "statements":"select DATE_DIFF_MILLIS(1465634581881,1465634581882,'millisecond')",
+     "results": [
+        {
+            "$1": -1
+        }
+    ]
+   },
+   {
+     "statements":"select DATE_DIFF_MILLIS(1465634581881,1465634581880,'millisecond')",
+     "results": [
+        {
+            "$1": 1
+        }
+    ]
    }
   ]

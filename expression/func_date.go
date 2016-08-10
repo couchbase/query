@@ -1792,7 +1792,17 @@ func setDate(d *date, t time.Time) {
 	d.year = t.Year()
 	d.doy = t.YearDay()
 	d.hour, d.minute, d.second = t.Clock()
-	d.millisecond = t.Nanosecond() / 1000000
+	d.millisecond = round(float64(t.Nanosecond()) / 1000000.0)
+}
+
+/*
+Round input float64 value to int.
+*/
+func round(f float64) int {
+	if math.Abs(f) < 0.5 {
+		return 0
+	}
+	return int(f + math.Copysign(0.5, f))
 }
 
 /*
