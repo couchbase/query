@@ -152,6 +152,8 @@ func (this objectValue) Equals(other Value) Value {
 		return other
 	case objectValue:
 		return objectEquals(this, other)
+	case copiedObjectValue:
+		return objectEquals(this, other.objectValue)
 	default:
 		return FALSE_VALUE
 	}
@@ -162,6 +164,8 @@ func (this objectValue) EquivalentTo(other Value) bool {
 	switch other := other.(type) {
 	case objectValue:
 		return objectEquivalent(this, other)
+	case copiedObjectValue:
+		return objectEquivalent(this, other.objectValue)
 	default:
 		return false
 	}
@@ -172,6 +176,8 @@ func (this objectValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case objectValue:
 		return objectCollate(this, other)
+	case copiedObjectValue:
+		return objectCollate(this, other.objectValue)
 	default:
 		return int(OBJECT - other.Type())
 	}
@@ -186,6 +192,8 @@ func (this objectValue) Compare(other Value) Value {
 		return other
 	case objectValue:
 		return objectCompare(this, other)
+	case copiedObjectValue:
+		return objectCompare(this, other.objectValue)
 	default:
 		return intValue(int(OBJECT - other.Type()))
 	}
@@ -199,7 +207,7 @@ func (this objectValue) Truth() bool {
 }
 
 func (this objectValue) Copy() Value {
-	return objectValue(copyMap(this, self))
+	return copiedObjectValue{objectValue: objectValue(copyMap(this, self))}
 }
 
 func (this objectValue) CopyForUpdate() Value {

@@ -7,6 +7,13 @@ func recycle(o interface{}) {
 		return
 	}
 
+	_, ok := o.(copiedObjectValue)
+	if ok {
+		// The copied object value is a map that does not own its elements.
+		// Recycling can therefore stop right here. It does not need to go deeper.
+		return
+	}
+
 	// Do we need to get at the base type?
 	act, ok := o.(Value)
 	if ok {
