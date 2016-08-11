@@ -69,8 +69,13 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 			}
 		}
 
+		av := value.NewAnnotatedValue(cv)
+		if ai, ok := item.(value.AnnotatedValue); ok {
+			av.SetAnnotations(ai)
+		}
+
 		if this.when != nil {
-			wv, e := this.when.Evaluate(cv, context)
+			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
 				return nil, e
 			}
@@ -80,7 +85,7 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 			}
 		}
 
-		nv, e := this.nameMapping.Evaluate(cv, context)
+		nv, e := this.nameMapping.Evaluate(av, context)
 		if e != nil {
 			return nil, e
 		}
@@ -94,7 +99,7 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 			return value.NULL_VALUE, nil
 		}
 
-		vv, e := this.valueMapping.Evaluate(cv, context)
+		vv, e := this.valueMapping.Evaluate(av, context)
 		if e != nil {
 			return nil, e
 		}
