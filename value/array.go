@@ -94,6 +94,8 @@ func (this sliceValue) Equals(other Value) Value {
 		return other
 	case sliceValue:
 		return arrayEquals(this, other)
+	case copiedSliceValue:
+		return arrayEquals(this, other.sliceValue)
 	case *listValue:
 		return arrayEquals(this, other.slice)
 	default:
@@ -106,6 +108,8 @@ func (this sliceValue) EquivalentTo(other Value) bool {
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayEquivalent(this, other)
+	case copiedSliceValue:
+		return arrayEquivalent(this, other.sliceValue)
 	case *listValue:
 		return arrayEquivalent(this, other.slice)
 	default:
@@ -118,6 +122,8 @@ func (this sliceValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayCollate(this, other)
+	case copiedSliceValue:
+		return arrayCollate(this, other.sliceValue)
 	case *listValue:
 		return arrayCollate(this, other.slice)
 	default:
@@ -134,6 +140,8 @@ func (this sliceValue) Compare(other Value) Value {
 		return other
 	case sliceValue:
 		return arrayCompare(this, other)
+	case copiedSliceValue:
+		return arrayCompare(this, other.sliceValue)
 	case *listValue:
 		return arrayCompare(this, other.slice)
 	default:
@@ -154,7 +162,7 @@ Call copySlice on the receiver and self and cast it to a
 sliceValue.
 */
 func (this sliceValue) Copy() Value {
-	return sliceValue(copySlice(this, self))
+	return copiedSliceValue{sliceValue: sliceValue(copySlice(this, self))}
 }
 
 /*
@@ -450,7 +458,6 @@ func (this *listValue) Successor() Value {
 }
 
 func (this *listValue) Recycle() {
-	this.slice.Recycle()
 }
 
 func (this *listValue) unwrap() Value {

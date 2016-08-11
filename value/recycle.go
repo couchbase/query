@@ -7,10 +7,22 @@ func recycle(o interface{}) {
 		return
 	}
 
+	// copiedObjectValue and copiedSliceValue do not own their elements.
+	// Recycling can therefore stop here.
 	_, ok := o.(copiedObjectValue)
 	if ok {
-		// The copied object value is a map that does not own its elements.
-		// Recycling can therefore stop right here. It does not need to go deeper.
+		return
+	}
+	_, ok = o.(*copiedObjectValue)
+	if ok {
+		return
+	}
+	_, ok = o.(copiedSliceValue)
+	if ok {
+		return
+	}
+	_, ok = o.(*copiedSliceValue)
+	if ok {
 		return
 	}
 
