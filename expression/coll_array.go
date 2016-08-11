@@ -68,8 +68,13 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 			}
 		}
 
+		av := value.NewAnnotatedValue(cv)
+		if ai, ok := item.(value.AnnotatedValue); ok {
+			av.SetAnnotations(ai)
+		}
+
 		if this.when != nil {
-			wv, e := this.when.Evaluate(cv, context)
+			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
 				return nil, e
 			}
@@ -79,7 +84,7 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 			}
 		}
 
-		mv, e := this.valueMapping.Evaluate(cv, context)
+		mv, e := this.valueMapping.Evaluate(av, context)
 		if e != nil {
 			return nil, e
 		}

@@ -1168,10 +1168,7 @@ func (this *Radians) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 /*
-This represents the number function ROUND(expr [, digits ]).
-It rounds the value to the given number of integer digits to
-the right of the decimal point (left if digits is negative).
-digits is 0 if not given.
+This represents the function RANDOM(), with an optional seed.
 */
 type Random struct {
 	FunctionBase

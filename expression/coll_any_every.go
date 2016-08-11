@@ -66,7 +66,12 @@ func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, 
 			}
 		}
 
-		sv, e := this.satisfies.Evaluate(cv, context)
+		av := value.NewAnnotatedValue(cv)
+		if ai, ok := item.(value.AnnotatedValue); ok {
+			av.SetAnnotations(ai)
+		}
+
+		sv, e := this.satisfies.Evaluate(av, context)
 		if e != nil {
 			return nil, e
 		}
