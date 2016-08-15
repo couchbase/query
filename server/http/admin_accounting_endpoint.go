@@ -10,7 +10,6 @@
 package http
 
 import (
-	"bytes"
 	"net/http"
 	"time"
 
@@ -116,12 +115,10 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (
 }
 
 func addMetricData(name string, stats map[string]interface{}, metrics map[string]interface{}) {
-	var key_name bytes.Buffer
 	for metric_type, metric_value := range metrics {
-		key_name.WriteString(name)
-		key_name.WriteString(".")
-		key_name.WriteString(metric_type)
-		stats[key_name.String()] = metric_value
+
+		// MB-20521: avoid reusing preallocated buffers
+		stats[name + "." + metric_type] = metric_value
 	}
 }
 
