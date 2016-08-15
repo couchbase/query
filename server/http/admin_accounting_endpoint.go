@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"time"
 
-	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -31,7 +30,6 @@ const (
 	completedsPrefix = adminPrefix + "/completed_requests"
 	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
-	jsonPrefix       = adminPrefix + "/json_stats"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -78,9 +76,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doCompletedIndex)
 	}
-	jsonHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doJson)
-	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -97,7 +92,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
-		jsonPrefix:                            {handler: jsonHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -143,10 +137,6 @@ func addMetricData(name string, stats map[string]interface{}, metrics map[string
 		// MB-20521 avoid buffers that are reused
 		stats[name+"."+metric_type] = metric_value
 	}
-}
-
-func doJson(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
-	return json.ReportJson(), nil
 }
 
 func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {

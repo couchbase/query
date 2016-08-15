@@ -144,7 +144,6 @@ func cleanupRecycleList(rl *recycleList) {
 	recycleListPool.Put(rl)
 }
 
-
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
 	this.NotifyStop(stopNotify)
 
