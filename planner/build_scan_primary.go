@@ -92,7 +92,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, f
 
 	if primary == nil {
 		return nil, fmt.Errorf(
-			"No primary index on keyspace %s. Use CREATE PRIMARY INDEX to create one.",
+			"No index available on keyspace %s that matches your query. Use CREATE INDEX or CREATE PRIMARY INDEX to create an index, or check that your expected index is online.",
 			keyspace.Name())
 	}
 
