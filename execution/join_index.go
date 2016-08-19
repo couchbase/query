@@ -172,7 +172,7 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 }
 
 func (this *IndexJoin) afterItems(context *Context) {
-	if len(this.plan.Covers()) != 0 {
+	if len(this.plan.Covers()) == 0 {
 		this.flushBatch(context)
 	}
 }

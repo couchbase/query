@@ -165,7 +165,7 @@ func (this *IndexNest) nestCoveredEntries(item value.AnnotatedValue,
 }
 
 func (this *IndexNest) afterItems(context *Context) {
-	if len(this.plan.Covers()) != 0 {
+	if len(this.plan.Covers()) == 0 {
 		this.flushBatch(context)
 	}
 }
