@@ -72,7 +72,7 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 		// Else MISSING, return rv=nil
 	default:
 		// Coerce scalar into array
-		rv = value.Values{value.NewValue(act)}
+		rv = value.Values{val}
 	}
 
 	return nil, rv, nil
