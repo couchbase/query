@@ -36,7 +36,11 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	return this.unwrap().WriteJSON(w, prefix, indent)
+	if prefix != "" || indent != "" || this.raw == nil {
+		return this.unwrap().WriteJSON(w, prefix, indent)
+	}
+	_, err := w.Write(this.raw)
+	return err
 }
 
 func (this *parsedValue) Type() Type {
