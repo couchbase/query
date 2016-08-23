@@ -33,6 +33,87 @@ var first = false
 
 var homeDir string
 
+// Handle output flag
+
+func handleOPModeFlag(outputFile **os.File, prevFile *string) {
+	// If an output flag is defined
+	var err error
+
+	if outputFlag != "" {
+		*prevFile = command.FILE_OUTPUT
+
+		*outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+		command.SetDispVal("", "")
+		if err != nil {
+			s_err := command.HandleError(errors.FILE_OPEN, err.Error())
+			command.PrintError(s_err)
+		}
+
+		command.SetWriter(io.Writer(*outputFile))
+	}
+}
+
+// Handle input flag
+
+func handleIPModeFlag(liner **liner.State) {
+	if inputFlag != "" {
+		//Read each line from the file and call execute query
+		input_command := "\\source " + inputFlag
+
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_RW_MODE == true {
+			_, werr := io.WriteString(command.W, input_command+"\n")
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
+		}
+
+		errCode, errStr := dispatch_command(input_command, command.W, false, *liner)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+			(*liner).Close()
+			os.Clearenv()
+			os.Exit(1)
+		}
+		(*liner).Close()
+		os.Clearenv()
+		os.Exit(0)
+	}
+}
+
+// Handle script flag - single command mode
+
+func handleScriptFlag(liner **liner.State) {
+	// Handle the file input and script options here so as to add
+	// the commands to the history.
+	if scriptFlag != "" {
+		//Execute the input command
+
+		// If outputting to a file, then add the statement to the file as well.
+		if command.FILE_RW_MODE == true {
+			_, werr := io.WriteString(command.W, scriptFlag+"\n")
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
+		}
+
+		err_code, err_str := dispatch_command(scriptFlag, command.W, false, *liner)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
+			(*liner).Close()
+			os.Clearenv()
+			os.Exit(1)
+		}
+		(*liner).Close()
+		os.Clearenv()
+		os.Exit(0)
+	}
+}
+
 /* This method is used to handle user interaction with the
    cli. After combining the multi line input, it is sent to
    the execute_inpu method which parses and executes the
@@ -43,25 +124,14 @@ var homeDir string
 func HandleInteractiveMode(prompt string) {
 
 	// Variables used for output to file
-	var err error
+
 	outputFile := os.Stdout
 	prevFile := ""
 	prevreset := command.Getreset()
 	prevfgRed := command.GetfgRed()
 
-	// If an output flag is defined
-	if outputFlag != "" {
-		prevFile = command.FILE_OUTPUT
-		outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-		command.SetDispVal("", "")
-		if err != nil {
-			s_err := command.HandleError(errors.FILE_OPEN, err.Error())
-			command.PrintError(s_err)
-		}
-
-		defer outputFile.Close()
-		command.SetWriter(io.Writer(outputFile))
-	}
+	handleOPModeFlag(&outputFile, &prevFile)
+	defer outputFile.Close()
 
 	// Find the HOME environment variable using GetHome
 	var err_code = 0
@@ -91,60 +161,10 @@ func HandleInteractiveMode(prompt string) {
 	inputLine := []string{}
 	fullPrompt := prompt + QRY_PROMPT1
 
-	// Handle the file input and script options here so as to add
-	// the commands to the history.
-	if scriptFlag != "" {
-		//Execute the input command
+	handleScriptFlag(&liner)
+	handleIPModeFlag(&liner)
 
-		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			_, werr := io.WriteString(command.W, scriptFlag+"\n")
-			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-				command.PrintError(s_err)
-			}
-		}
-
-		err_code, err_str := dispatch_command(scriptFlag, command.W, false, liner)
-		if err_code != 0 {
-			s_err := command.HandleError(err_code, err_str)
-			command.PrintError(s_err)
-			liner.Close()
-			os.Clearenv()
-			os.Exit(1)
-		}
-		liner.Close()
-		os.Clearenv()
-		os.Exit(0)
-	}
-
-	if inputFlag != "" {
-		//Read each line from the file and call execute query
-		input_command := "\\source " + inputFlag
-
-		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			_, werr := io.WriteString(command.W, input_command+"\n")
-			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-				command.PrintError(s_err)
-			}
-		}
-
-		errCode, errStr := dispatch_command(input_command, command.W, false, liner)
-		if errCode != 0 {
-			s_err := command.HandleError(errCode, errStr)
-			command.PrintError(s_err)
-			liner.Close()
-			os.Clearenv()
-			os.Exit(1)
-		}
-		liner.Close()
-		os.Clearenv()
-		os.Exit(0)
-	}
 	// End handling the options
-
 	for {
 		line, err := liner.Prompt(fullPrompt)
 		if err != nil {
