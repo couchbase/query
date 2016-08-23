@@ -36,10 +36,11 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 }
 
 func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	if prefix != "" || indent != "" || this.raw == nil {
+	raw := this.raw
+	if prefix != "" || indent != "" || raw == nil {
 		return this.unwrap().WriteJSON(w, prefix, indent)
 	}
-	_, err := w.Write(this.raw)
+	_, err := w.Write(raw)
 	return err
 }
 
@@ -91,12 +92,15 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		return missingField(field), false
 	}
 
-	res, err := jsonpointer.Find(this.raw, "/"+field)
-	if err != nil {
-		return missingField(field), false
-	}
-	if res != nil {
-		return NewValue(res), true
+	raw := this.raw
+	if raw != nil {
+		res, err := jsonpointer.Find(raw, "/"+field)
+		if err != nil {
+			return missingField(field), false
+		}
+		if res != nil {
+			return NewValue(res), true
+		}
 	}
 
 	return missingField(field), false
@@ -138,12 +142,13 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		return missingIndex(index), false
 	}
 
-	if this.raw != nil {
-		if index < 0 {
-			return this.unwrap().Index(index)
-		}
+	if index < 0 {
+		return this.unwrap().Index(index)
+	}
 
-		res, err := jsonpointer.Find(this.raw, "/"+strconv.Itoa(index))
+	raw := this.raw
+	if raw != nil {
+		res, err := jsonpointer.Find(raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
 		}
@@ -253,6 +258,9 @@ func (this *parsedValue) unwrap() Value {
 				this.parsed = NewValue(p)
 			}
 		}
+
+		// Release raw memory when no longer needed
+		this.raw = nil
 	}
 
 	return this.parsed
