@@ -162,6 +162,7 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE, *PRETTY)

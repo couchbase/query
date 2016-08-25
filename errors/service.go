@@ -98,3 +98,8 @@ func NewServiceErrorDecodeNil() Error {
 	return &err{level: EXCEPTION, ICode: 1160, IKey: "service.io.request.type",
 		InternalMsg: "Failed to decode nil value.", InternalCaller: CallerN(1)}
 }
+
+func NewServiceErrorHttpMethod(method string) Error {
+	return &err{level: EXCEPTION, ICode: 1170, IKey: "service.io.request.method",
+		InternalMsg: fmt.Sprintf("Unsupported method %s", method), InternalCaller: CallerN(1)}
+}

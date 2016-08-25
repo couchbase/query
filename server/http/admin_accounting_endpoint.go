@@ -127,7 +127,7 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (
 		}
 		return stats, nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -156,7 +156,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	case "DELETE":
 		return nil, reg.Unregister(name)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -168,6 +168,7 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	} else {
 		reg.Counter(accounting.INVALID_REQUESTS).Inc(1)
 	}
+
 	return nil, nil
 }
 
@@ -177,7 +178,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 		acctStore := endpoint.server.AccountingStore()
 		return acctStore.Vitals()
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -195,7 +196,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	case "GET":
 		return plan.GetPrepared(value.NewValue(name))
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -204,7 +205,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	case "GET":
 		return plan.SnapshotPrepared(), nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -256,7 +257,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 		return true, nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -316,32 +317,51 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	vars := mux.Vars(req)
 	requestId := vars["request"]
-	reqMap := map[string]interface{}{}
-	accounting.RequestDo(requestId, func(request *accounting.RequestLogEntry) {
-		reqMap["requestId"] = request.RequestId
-		if request.ClientId != "" {
-			reqMap["clientContextID"] = request.ClientId
+
+	switch req.Method {
+	case "GET":
+		reqMap := map[string]interface{}{}
+		accounting.RequestDo(requestId, func(request *accounting.RequestLogEntry) {
+			reqMap["requestId"] = request.RequestId
+			if request.ClientId != "" {
+				reqMap["clientContextID"] = request.ClientId
+			}
+			reqMap["state"] = request.State
+			reqMap["scanConsistency"] = request.ScanConsistency
+			if request.Statement != "" {
+				reqMap["statement"] = request.Statement
+			}
+			if request.PreparedName != "" {
+				reqMap["preparedName"] = request.PreparedName
+				reqMap["preparedText"] = request.PreparedText
+			}
+			reqMap["requestTime"] = request.Time
+			reqMap["elapsedTime"] = request.ElapsedTime.String()
+			reqMap["serviceTime"] = request.ServiceTime.String()
+			reqMap["resultCount"] = request.ResultCount
+			reqMap["resultSize"] = request.ResultSize
+			reqMap["errorCount"] = request.ErrorCount
+			if request.PhaseTimes != nil {
+				reqMap["phaseTimes"] = request.PhaseTimes
+			}
+			if request.PhaseCounts != nil {
+				reqMap["phaseCounts"] = request.PhaseCounts
+			}
+			if request.PhaseOperators != nil {
+				reqMap["phaseOperators"] = request.PhaseOperators
+			}
+		})
+		return reqMap, nil
+	case "DELETE":
+		err := accounting.RequestDelete(requestId)
+		if err != nil {
+			return nil, err
+		} else {
+			return true, nil
 		}
-		reqMap["state"] = request.State
-		reqMap["scanConsistency"] = request.ScanConsistency
-		if request.Statement != "" {
-			reqMap["statement"] = request.Statement
-		}
-		if request.PreparedName != "" {
-			reqMap["preparedName"] = request.PreparedName
-			reqMap["preparedText"] = request.PreparedText
-		}
-		reqMap["requestTime"] = request.Time
-		reqMap["elapsedTime"] = request.ElapsedTime.String()
-		reqMap["serviceTime"] = request.ServiceTime.String()
-		reqMap["resultCount"] = request.ResultCount
-		reqMap["resultSize"] = request.ResultSize
-		reqMap["errorCount"] = request.ErrorCount
-		if request.PhaseTimes != nil {
-			reqMap["phaseTimes"] = request.PhaseTimes
-		}
-	})
-	return reqMap, nil
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -377,6 +397,12 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		requests[i]["errorCount"] = request.ErrorCount
 		if request.PhaseTimes != nil {
 			requests[i]["phaseTimes"] = request.PhaseTimes
+		}
+		if request.PhaseCounts != nil {
+			requests[i]["phaseCounts"] = request.PhaseCounts
+		}
+		if request.PhaseOperators != nil {
+			requests[i]["phaseOperators"] = request.PhaseOperators
 		}
 
 		// FIXME more stats

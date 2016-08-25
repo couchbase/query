@@ -12,7 +12,6 @@ package util
 import (
 	"errors"
 	"net"
-	"strings"
 )
 
 // helper function to determine the external IP address of a query node -
@@ -51,9 +50,9 @@ func ExternalIP() (string, error) {
 				continue // not an ipv4 address
 			}
 			result = ip.String()
-			if strings.HasPrefix(result, "192") {
-				return result, nil
-			}
+
+			// Any address is good, not just private networks
+			return result, nil
 		}
 	}
 	return result, errors.New("Not connected to the network")
