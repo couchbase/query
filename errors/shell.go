@@ -54,6 +54,8 @@ const (
 	INVALID_USERNAME_MSG   = "Invalid username. "
 	MISSING_CREDENTIAL     = 123
 	MISSING_CREDENTIAL_MSG = "Username missing in -credentials/-c option."
+	INVALID_CREDENTIAL     = 124
+	INVALID_CREDENTIAL_MSG = "Invalid format for credentials. Separate username and password by a :. "
 
 	//Command Errors (136 - 169)
 	NO_SUCH_COMMAND     = 136
@@ -167,6 +169,11 @@ func NewShellErrorInvalidUsername(msg string) Error {
 
 func NewShellErrorMissingCredential(msg string) Error {
 	return &err{level: EXCEPTION, ICode: MISSING_CREDENTIAL, IKey: "shell.missing.credentials", InternalMsg: MISSING_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorInvalidCredential(msg string) Error {
+	return &err{level: EXCEPTION, ICode: INVALID_CREDENTIAL, IKey: "shell.invalid.credentials", InternalMsg: INVALID_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 

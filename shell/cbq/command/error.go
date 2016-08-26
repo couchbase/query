@@ -86,6 +86,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorInvalidUsername("")
 	case errors.MISSING_CREDENTIAL:
 		return errors.NewShellErrorMissingCredential("")
+	case errors.INVALID_CREDENTIAL:
+		return errors.NewShellErrorInvalidCredential("")
 
 	//Command Errors
 	case errors.NO_SUCH_COMMAND:

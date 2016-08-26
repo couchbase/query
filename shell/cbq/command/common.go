@@ -303,7 +303,15 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
 	format as expected by godbc/n1ql creds.
 	*/
+
 	for _, i := range cred {
+
+		// Make sure the format of the credentials is correct.
+		// If not return an error.
+		if !strings.Contains(i, ":") {
+			return nil, errors.INVALID_CREDENTIAL, ""
+		}
+
 		up := strings.Split(i, ":")
 
 		//Make sure there are no leading and trailing spaces
