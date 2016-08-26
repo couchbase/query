@@ -13,6 +13,7 @@ import (
 
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/query/datastore"
+	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
@@ -413,7 +414,8 @@ func (idx *viewIndex) putDesignDoc() error {
 	}
 
 	if err := idx.keyspace.cbbucket.PutDDoc(idx.DDocName(), &put); err != nil {
-		return err
+		logging.Errorf("Unable to store view definition. Map function is: %v", view.Map)
+		return qerrors.NewCbViewDefError(err)
 	}
 
 	var saved *ddocJSON = nil
