@@ -187,6 +187,9 @@ func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.S
 
 func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 
+	// Add back the ; for queries to support fully qualified
+	// asterix queries along with N1QL queries.
+	line = line + QRY_EOL
 	rows, err := dBn1ql.QueryRaw(line)
 
 	if rows != nil {
