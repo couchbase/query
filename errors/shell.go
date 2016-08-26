@@ -76,24 +76,26 @@ const (
 	STRING_WRITE_MSG    = "Cannot write to string buffer. "
 
 	//Generic Errors (170 - 199)
-	OPERATION_TIMEOUT     = 170
-	OPERATION_TIMEOUT_MSG = "Operation timed out. Check query service url "
-	ROWS_SCAN             = 171
-	ROWS_SCAN_MSG         = ""
-	JSON_MARSHAL          = 172
-	JSON_MARSHAL_MSG      = ""
-	JSON_UNMARSHAL        = 173
-	JSON_UNMARSHAL_MSG    = ""
-	DRIVER_QUERY          = 174
-	DRIVER_QUERY_MSG      = ""
-	WRITER_OUTPUT         = 175
-	WRITER_OUTPUT_MSG     = "Error with io Writer. "
-	UNBALANCED_PAREN      = 176
-	UNBALANCED_PAREN_MSG  = "Unbalanced parenthesis in the input."
-	ROWS_CLOSE            = 177
-	ROWS_CLOSE_MSG        = ""
-	CMD_LINE_ARG          = 178
-	CMD_LINE_ARG_MSG      = "Place input argument URL at the end, after input flags. "
+	OPERATION_TIMEOUT           = 170
+	OPERATION_TIMEOUT_MSG       = "Operation timed out. Check query service url "
+	ROWS_SCAN                   = 171
+	ROWS_SCAN_MSG               = ""
+	JSON_MARSHAL                = 172
+	JSON_MARSHAL_MSG            = ""
+	JSON_UNMARSHAL              = 173
+	JSON_UNMARSHAL_MSG          = ""
+	DRIVER_QUERY                = 174
+	DRIVER_QUERY_MSG            = ""
+	WRITER_OUTPUT               = 175
+	WRITER_OUTPUT_MSG           = "Error with io Writer. "
+	UNBALANCED_PAREN            = 176
+	UNBALANCED_PAREN_MSG        = "Unbalanced parenthesis in the input."
+	ROWS_CLOSE                  = 177
+	ROWS_CLOSE_MSG              = ""
+	CMD_LINE_ARG                = 178
+	CMD_LINE_ARG_MSG            = "Place input argument URL at the end, after input flags. "
+	INVALID_INPUT_ARGUMENTS     = 179
+	INVALID_INPUT_ARGUMENTS_MSG = "Input Argument format is invalid."
 
 	//Untracked error
 	UNKNOWN_ERROR     = 199
@@ -253,4 +255,8 @@ func NewShellErrorCmdLineArgs(msg string) Error {
 
 func NewShellErrorUnkownError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorInvalidInputArguments(msg string) Error {
+	return &err{level: EXCEPTION, ICode: INVALID_INPUT_ARGUMENTS, IKey: "shell.invalid.input.arguments", InternalMsg: INVALID_INPUT_ARGUMENTS_MSG + msg, InternalCaller: CallerN(1)}
 }

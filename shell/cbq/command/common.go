@@ -216,16 +216,22 @@ func ValToStr(item value.Value) string {
 }
 
 /* Helper function to push or set a value in a stack. */
-func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (err_code int, err_str string) {
+func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) (err_code int, err_str string) {
 	err_code = 0
 	err_str = ""
 
 	st_Val, ok := param[vble]
 
-	v, err_code, err_str := Resolve(value)
+	v, err_code, err_str := Resolve(value_ip)
 	if err_code != 0 {
 		return err_code, err_str
 	} else {
+
+		//if the input value is a BINARY value, then throw an error.
+		if v.Type() == value.BINARY {
+			return errors.INVALID_INPUT_ARGUMENTS, ""
+		}
+
 		//Stack already exists
 		if ok {
 			if set == true {
