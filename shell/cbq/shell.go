@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
@@ -377,6 +378,16 @@ func main() {
 				command.PrintError(s_err)
 				os.Exit(1)
 			} else {
+				// Error out in cases where password contains escape sequences
+				// or ctrl chars.
+				for _, c := range bytes.Runes(password) {
+					if !unicode.IsPrint(c) {
+						s_err := command.HandleError(errors.INVALID_PASSWORD, "")
+						command.PrintError(s_err)
+						os.Exit(1)
+					}
+				}
+
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
 				// The driver needs the username/password to query the cluster endpoint,
 				// which may require authorization.
