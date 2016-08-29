@@ -50,7 +50,7 @@ func (this *All) Evaluate(item value.Value, context Context) (value.Value, error
 func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
 	val, vals, err := this.array.EvaluateForIndex(item, context)
 	if err != nil {
-		return val, vals, err
+		return nil, nil, err
 	}
 
 	if vals != nil {
@@ -58,18 +58,17 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 	}
 
 	var rv value.Values
-	act := val.Actual()
-	switch act := act.(type) {
-	case []interface{}:
+	switch val.Type() {
+	case value.ARRAY:
+		act := val.Actual().([]interface{})
 		rv = make(value.Values, len(act))
 		for i, a := range act {
 			rv[i] = value.NewValue(a)
 		}
-	case nil:
-		if val.Type() == value.NULL {
-			rv = _NULL_ARRAY
-		}
-		// Else MISSING, return rv=nil
+	case value.NULL:
+		rv = _NULL_ARRAY
+	case value.MISSING:
+		rv = _MISSING_ARRAY
 	default:
 		// Coerce scalar into array
 		rv = value.Values{val}
@@ -79,6 +78,8 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 }
 
 var _NULL_ARRAY = value.Values{value.NULL_VALUE}
+
+var _MISSING_ARRAY = value.Values{value.MISSING_VALUE}
 
 func (this *All) IsArrayIndexKey() (bool, bool) {
 	return true, this.distinct
