@@ -42,7 +42,16 @@ func (b *preparedsKeyspace) Name() string {
 }
 
 func (b *preparedsKeyspace) Count() (int64, errors.Error) {
-	return int64(plan.CountPrepareds()), nil
+	var count int
+
+	count = 0
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "prepareds", func(id string) {
+		count++
+	}, func(warn errors.Error) {
+
+		// FIXME Count does not handle warnings
+	})
+	return int64(plan.CountPrepareds() + count), nil
 }
 
 func (b *preparedsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -58,30 +67,59 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		plan.PreparedDo(key, func(entry *plan.CacheEntry) {
+		node, remoteKey := _REMOTEACCESS.SplitKey(key)
 
-			itemMap := map[string]interface{}{
-				"name":         key,
-				"uses":         entry.Uses,
-				"statement":    entry.Prepared.Text(),
-				"encoded_plan": entry.Prepared.EncodedPlan(),
-			}
-			if entry.Uses > 0 {
-				itemMap["lastUse"] = entry.LastUse.String()
-				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
-					time.Duration(entry.Uses)).String()
-				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-					time.Duration(entry.Uses)).String()
-			}
-			item := value.NewAnnotatedValue(itemMap)
-			item.SetAttachment("meta", map[string]interface{}{
-				"id": key,
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+				"prepareds", "GET",
+				func(doc map[string]interface{}) {
+
+					remoteValue := value.NewAnnotatedValue(doc)
+					remoteValue.SetField("Node", node)
+					remoteValue.SetAttachment("meta", map[string]interface{}{
+						"id": key,
+					})
+					rv = append(rv, value.AnnotatedPair{
+						Name:  key,
+						Value: remoteValue,
+					})
+				},
+
+				// FIXME Fetch() does not handle warnings
+				func(warn errors.Error) {
+				})
+		} else {
+
+			// local entry
+			plan.PreparedDo(key, func(entry *plan.CacheEntry) {
+
+				itemMap := map[string]interface{}{
+					"name":         key,
+					"uses":         entry.Uses,
+					"statement":    entry.Prepared.Text(),
+					"encoded_plan": entry.Prepared.EncodedPlan(),
+				}
+				if node != "" {
+					itemMap["Node"] = node
+				}
+				if entry.Uses > 0 {
+					itemMap["lastUse"] = entry.LastUse.String()
+					itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
+						time.Duration(entry.Uses)).String()
+					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
+						time.Duration(entry.Uses)).String()
+				}
+				item := value.NewAnnotatedValue(itemMap)
+				item.SetAttachment("meta", map[string]interface{}{
+					"id": key,
+				})
+				rv = append(rv, value.AnnotatedPair{
+					Name:  key,
+					Value: item,
+				})
 			})
-			rv = append(rv, value.AnnotatedPair{
-				Name:  key,
-				Value: item,
-			})
-		})
+		}
 	}
 	return rv, errs
 }
@@ -102,8 +140,26 @@ func (b *preparedsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.E
 }
 
 func (b *preparedsKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+	var err errors.Error
+
 	for i, name := range deletes {
-		err := plan.DeletePrepared(name)
+		node, remoteKey := _REMOTEACCESS.SplitKey(name)
+
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+
+			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+				"prepareds", "DELETE",
+				nil,
+
+				// FIXME Delete() doesn't do warnings
+				func(warn errors.Error) {
+				})
+
+			// local entry
+		} else {
+			err = plan.DeletePrepared(name)
+		}
 		if err != nil {
 			deleted := make([]string, i)
 			if i > 0 {
@@ -187,7 +243,13 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 	names := plan.NamePrepareds()
 
 	for _, name := range names {
-		entry := datastore.IndexEntry{PrimaryKey: name}
+		entry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), name)}
 		conn.EntryChannel() <- &entry
 	}
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "prepareds", func(id string) {
+		indexEntry := datastore.IndexEntry{PrimaryKey: id}
+		conn.EntryChannel() <- &indexEntry
+	}, func(warn errors.Error) {
+		conn.Warning(warn)
+	})
 }

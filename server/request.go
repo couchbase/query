@@ -121,6 +121,10 @@ func ActiveRequestsDelete(id string) bool {
 	return actives.Delete(id, true)
 }
 
+func ActiveRequestsGet(id string) (Request, errors.Error) {
+	return actives.Get(id)
+}
+
 func ActiveRequestsForEach(f func(string, Request)) {
 	actives.ForEach(f)
 }

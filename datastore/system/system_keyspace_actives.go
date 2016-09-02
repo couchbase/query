@@ -42,8 +42,17 @@ func (b *activeRequestsKeyspace) Name() string {
 }
 
 func (b *activeRequestsKeyspace) Count() (int64, errors.Error) {
+	var count int
+
+	count = 0
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
+		count++
+	}, func(warn errors.Error) {
+
+		// FIXME Count does not handle warnings
+	})
 	c, err := server.ActiveRequestsCount()
-	return int64(c), err
+	return int64(c + count), err
 }
 
 func (b *activeRequestsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -58,47 +67,83 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 	var errs []errors.Error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
-	server.ActiveRequestsForEach(func(id string, request server.Request) {
-		item := value.NewAnnotatedValue(map[string]interface{}{
-			"RequestId":       id,
-			"RequestTime":     request.RequestTime().String(),
-			"ElapsedTime":     time.Since(request.RequestTime()).String(),
-			"ExecutionTime":   time.Since(request.ServiceTime()).String(),
-			"State":           request.State(),
-			"ScanConsistency": request.ScanConsistency(),
-		})
-		cId := request.ClientID().String()
-		if cId != "" {
-			item.SetField("ClientContextID", cId)
+	for _, key := range keys {
+		node, remoteKey := _REMOTEACCESS.SplitKey(key)
+
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+				"active_requests", "GET",
+				func(doc map[string]interface{}) {
+
+					remoteValue := value.NewAnnotatedValue(doc)
+					remoteValue.SetField("Node", node)
+					remoteValue.SetAttachment("meta", map[string]interface{}{
+						"id": key,
+					})
+					rv = append(rv, value.AnnotatedPair{
+						Name:  key,
+						Value: remoteValue,
+					})
+				},
+
+				// FIXME Fetch() does not handle warnings
+				func(warn errors.Error) {
+				})
+		} else {
+
+			// local entry
+			request, err := server.ActiveRequestsGet(key)
+
+			if err != nil {
+				errs = append(errs, err)
+			}
+			if request != nil {
+				item := value.NewAnnotatedValue(map[string]interface{}{
+					"RequestId":       key,
+					"RequestTime":     request.RequestTime().String(),
+					"ElapsedTime":     time.Since(request.RequestTime()).String(),
+					"ExecutionTime":   time.Since(request.ServiceTime()).String(),
+					"State":           request.State(),
+					"ScanConsistency": request.ScanConsistency(),
+				})
+				if node != "" {
+					item.SetField("Node", node)
+				}
+				cId := request.ClientID().String()
+				if cId != "" {
+					item.SetField("ClientContextID", cId)
+				}
+				if request.Statement() != "" {
+					item.SetField("Statement", request.Statement())
+				}
+				p := request.Output().FmtPhaseTimes()
+				if p != nil {
+					item.SetField("PhaseTimes", p)
+				}
+				p = request.Output().FmtPhaseCounts()
+				if p != nil {
+					item.SetField("PhaseCounts", p)
+				}
+				p = request.Output().FmtPhaseOperators()
+				if p != nil {
+					item.SetField("PhaseOperators", p)
+				}
+				if request.Prepared() != nil {
+					p := request.Prepared()
+					item.SetField("Prepared.Name", p.Name())
+					item.SetField("Prepared.Text", p.Text())
+				}
+				item.SetAttachment("meta", map[string]interface{}{
+					"id": key,
+				})
+				rv = append(rv, value.AnnotatedPair{
+					Name:  key,
+					Value: item,
+				})
+			}
 		}
-		if request.Statement() != "" {
-			item.SetField("Statement", request.Statement())
-		}
-		p := request.Output().FmtPhaseTimes()
-		if p != nil {
-			item.SetField("PhaseTimes", p)
-		}
-		p = request.Output().FmtPhaseCounts()
-		if p != nil {
-			item.SetField("PhaseCounts", p)
-		}
-		p = request.Output().FmtPhaseOperators()
-		if p != nil {
-			item.SetField("PhaseOperators", p)
-		}
-		if request.Prepared() != nil {
-			p := request.Prepared()
-			item.SetField("Prepared.Name", p.Name())
-			item.SetField("Prepared.Text", p.Text())
-		}
-		item.SetAttachment("meta", map[string]interface{}{
-			"id": id,
-		})
-		rv = append(rv, value.AnnotatedPair{
-			Name:  id,
-			Value: item,
-		})
-	})
+	}
 	return rv, errs
 }
 
@@ -118,8 +163,27 @@ func (b *activeRequestsKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, err
 }
 
 func (b *activeRequestsKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+	var done bool
+
 	for i, name := range deletes {
-		done := server.ActiveRequestsDelete(name)
+		node, remoteKey := _REMOTEACCESS.SplitKey(name)
+
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+
+			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+				"active_requests", "DELETE",
+				nil,
+
+				// FIXME Delete() doesn't do warnings
+				func(warn errors.Error) {
+				})
+			done = true
+
+			// local entry
+		} else {
+			done = server.ActiveRequestsDelete(name)
+		}
 
 		// save memory allocations by making a new slice only on errors
 		if !done {
@@ -202,18 +266,16 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
-	numRequests, err := server.ActiveRequestsCount()
-	if err != nil {
-		conn.Error(err)
-		return
-	}
-	requestIds := make([]string, numRequests)
+
 	server.ActiveRequestsForEach(func(id string, request server.Request) {
-		requestIds = append(requestIds, id)
+		entry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
+		conn.EntryChannel() <- &entry
 	})
 
-	for _, name := range requestIds {
-		entry := datastore.IndexEntry{PrimaryKey: name}
-		conn.EntryChannel() <- &entry
-	}
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
+		indexEntry := datastore.IndexEntry{PrimaryKey: id}
+		conn.EntryChannel() <- &indexEntry
+	}, func(warn errors.Error) {
+		conn.Warning(warn)
+	})
 }
