@@ -125,8 +125,9 @@ outer:
 		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
 			this.maxParallelism = 1
 			limit = expression.ONE_EXPR
-			this.coveringScan = plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-			return this.coveringScan, nil
+			scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
+			this.coveringScans = append(this.coveringScans, scan)
+			return scan, nil
 		}
 	}
 
@@ -145,7 +146,7 @@ outer:
 	}
 
 	scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-	this.coveringScan = scan
+	this.coveringScans = append(this.coveringScans, scan)
 
 	if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
 		// Use DistinctScan to de-dup array index scans, multiple spans

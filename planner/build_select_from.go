@@ -68,7 +68,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	this.children = append(this.children, scan)
 
-	if this.coveringScan == nil && this.countScan == nil {
+	if len(this.coveringScans) == 0 && this.countScan == nil {
 		fetch := plan.NewFetch(keyspace, node)
 		this.children = append(this.children, fetch)
 	}

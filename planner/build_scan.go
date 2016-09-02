@@ -154,7 +154,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 			return nil, nil, err
 		}
 
-		if secondary != nil && (this.coveringScan != nil || this.countScan != nil) {
+		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
 			return secondary, nil, err
 		}
 	}
@@ -169,7 +169,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		if unnest != nil {
 			this.resetCountMin()
 
-			if secondary == nil || this.coveringScan != nil {
+			if secondary == nil || len(this.coveringScans) > 0 {
 				return unnest, nil, err
 			} else {
 				return plan.NewIntersectScan(secondary, unnest), nil, err

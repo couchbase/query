@@ -96,21 +96,17 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		}
 	}
 
-	if len(this.plan.Covers()) != 0 {
-		return this.nestCoveredEntries(item, entries, context)
-	} else {
-		var doc value.AnnotatedJoinPair
+	var doc value.AnnotatedJoinPair
 
-		doc.Value = item
-		if len(entries) != 0 {
-			doc.Keys = make([]string, 0, len(entries))
-			for _, entry := range entries {
-				doc.Keys = append(doc.Keys, entry.PrimaryKey)
-			}
+	doc.Value = item
+	if len(entries) != 0 {
+		doc.Keys = make([]string, 0, len(entries))
+		for _, entry := range entries {
+			doc.Keys = append(doc.Keys, entry.PrimaryKey)
 		}
-
-		return this.joinEnbatch(doc, this, context)
 	}
+
+	return this.joinEnbatch(doc, this, context)
 }
 
 func (this *IndexNest) scan(id string, context *Context,
@@ -131,43 +127,8 @@ func (this *IndexNest) scan(id string, context *Context,
 	wg.Done()
 }
 
-func (this *IndexNest) nestCoveredEntries(item value.AnnotatedValue,
-	entries []*datastore.IndexEntry, context *Context) (ok bool) {
-	var nvs []interface{}
-
-	if len(entries) > 0 {
-		covers := this.plan.Covers()
-		nvs = make([]interface{}, len(entries))
-		for i, entry := range entries {
-			nv := value.NewAnnotatedValue(nil)
-			meta := map[string]interface{}{"id": entry.PrimaryKey}
-			nv.SetAttachment("meta", meta)
-
-			for i, c := range covers {
-				nv.SetCover(c.Text(), entry.EntryKey[i])
-			}
-
-			nvs[i] = nv
-		}
-	}
-
-	if len(nvs) > 0 {
-		item.SetField(this.plan.Term().Alias(), nvs)
-	} else {
-		if !this.plan.Outer() {
-			return true
-		}
-
-		item.SetField(this.plan.Term().Alias(), value.EMPTY_ARRAY_VALUE)
-	}
-
-	return this.sendItem(item)
-}
-
 func (this *IndexNest) afterItems(context *Context) {
-	if len(this.plan.Covers()) == 0 {
-		this.flushBatch(context)
-	}
+	this.flushBatch(context)
 }
 
 func (this *IndexNest) flushBatch(context *Context) bool {

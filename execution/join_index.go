@@ -97,7 +97,7 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 		}
 	}
 
-	if len(this.plan.Covers()) != 0 {
+	if this.plan.Covering() {
 		return this.joinCoveredEntries(item, entries, context)
 	} else {
 		var doc value.AnnotatedJoinPair
@@ -144,22 +144,31 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 	}()
 
 	covers := this.plan.Covers()
+	filterCovers := this.plan.FilterCovers()
 
 	for j, entry := range entries {
-		jv := value.NewAnnotatedValue(nil)
-		meta := map[string]interface{}{"id": entry.PrimaryKey}
-		jv.SetAttachment("meta", meta)
-
-		for i, c := range covers {
-			jv.SetCover(c.Text(), entry.EntryKey[i])
-		}
-
 		var joined value.AnnotatedValue
 		if j < len(entries)-1 {
 			joined = item.Copy().(value.AnnotatedValue)
 		} else {
 			joined = item
 		}
+
+		for c, v := range filterCovers {
+			joined.SetCover(c.Text(), v)
+		}
+
+		for i, ek := range entry.EntryKey {
+			joined.SetCover(covers[i].Text(), ek)
+		}
+
+		joined.SetCover(covers[len(covers)-1].Text(),
+			value.NewValue(entry.PrimaryKey))
+
+		// For chained INDEX JOIN's
+		jv := value.NewAnnotatedValue(nil)
+		meta := map[string]interface{}{"id": entry.PrimaryKey}
+		jv.SetAttachment("meta", meta)
 
 		joined.SetField(this.plan.Term().Alias(), jv)
 

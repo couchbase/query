@@ -64,7 +64,7 @@ type builder struct {
 	children        []plan.Operator
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
-	coveringScan    *plan.IndexScan
+	coveringScans   []plan.Operator
 	countScan       *plan.IndexCountScan
 }
 
