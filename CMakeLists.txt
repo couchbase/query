@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
-PROJECT (query)
+PROJECT (query NONE)
 
 # This project is intended to be built as part of a Couchbase Server build,
 # but for nominal support building stand-alone, the following variables
@@ -13,6 +13,9 @@ PROJECT (query)
 #
 # GODEPSDIR - should point to a Go workspace directory containing all
 #      transitive Go dependencies
+#
+# In addition, projects that only require the end-user cbq utility may set
+# CBQ_ONLY to enable only that target.
 
 INCLUDE (FindCouchbaseGo)
 
@@ -22,18 +25,20 @@ ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
 ENDIF(BUILD_ENTERPRISE)
 
-GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+IF (NOT CBQ_ONLY)
+  GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
-GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
-  GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
-  DEPENDS n1ql-yacc INSTALL_PATH bin
-  GOVERSION 1.4.x
-  GOTAGS ${_gotags})
+  GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
+    GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
+    DEPENDS n1ql-yacc INSTALL_PATH bin
+    GOVERSION 1.4.x
+    GOTAGS ${_gotags})
 
-GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
-  GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
-  DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
-  GOVERSION 1.4.x)
+  GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
+    GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
+    DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
+    GOVERSION 1.4.x)
+ENDIF (NOT CBQ_ONLY)
 
 GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
