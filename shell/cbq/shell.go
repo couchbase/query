@@ -507,6 +507,13 @@ func main() {
 	if batchFlag != "off" {
 		if strings.ToLower(batchFlag) == "on" {
 			command.BATCH = batchFlag
+			//SET batch mode here
+			err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", batchFlag)
+			if err_code != 0 {
+				s_err := command.HandleError(err_code, err_str)
+				command.PrintError(s_err)
+
+			}
 		} else {
 			s_err := command.HandleError(errors.BATCH_MODE, "")
 			command.PrintError(s_err)
