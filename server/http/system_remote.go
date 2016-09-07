@@ -34,6 +34,9 @@ type systemRemoteHttp struct {
 	configStore clustering.ConfigurationStore
 }
 
+// flags that we've evaluated WhoAmI, and couldn't establish it
+const _UNSET = "_"
+
 func NewSystemRemoteAccess(cfgStore clustering.ConfigurationStore) system.SystemRemoteAccess {
 	return &systemRemoteHttp{
 		localNode:   "",
@@ -271,7 +274,7 @@ func (this *systemRemoteHttp) WhoAmI() string {
 
 		// not part of a cluster if there isn't a configStore
 		if this.configStore == nil {
-			this.localNode = "-"
+			this.localNode = _UNSET
 			return ""
 		}
 
@@ -303,9 +306,9 @@ func (this *systemRemoteHttp) WhoAmI() string {
 		// This is consistent with the /admin/config endpoint:
 		// even if we did work out a likely node name, we are not
 		// part of a cluster if we don't find ourselves in it.
-		this.localNode = "_"
+		this.localNode = _UNSET
 		return ""
-	} else if this.localNode == "_" {
+	} else if this.localNode == _UNSET {
 		return ""
 	}
 	return this.localNode

@@ -67,11 +67,11 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		node, remoteKey := _REMOTEACCESS.SplitKey(key)
+		node, localKey := _REMOTEACCESS.SplitKey(key)
 
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
-			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
 				"prepareds", "GET",
 				func(doc map[string]interface{}) {
 
@@ -92,10 +92,9 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 		} else {
 
 			// local entry
-			plan.PreparedDo(key, func(entry *plan.CacheEntry) {
-
+			plan.PreparedDo(localKey, func(entry *plan.CacheEntry) {
 				itemMap := map[string]interface{}{
-					"name":         key,
+					"name":         localKey,
 					"uses":         entry.Uses,
 					"statement":    entry.Prepared.Text(),
 					"encoded_plan": entry.Prepared.EncodedPlan(),
@@ -143,12 +142,12 @@ func (b *preparedsKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	var err errors.Error
 
 	for i, name := range deletes {
-		node, remoteKey := _REMOTEACCESS.SplitKey(name)
+		node, localKey := _REMOTEACCESS.SplitKey(name)
 
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
 
-			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
 				"prepareds", "DELETE",
 				nil,
 
@@ -158,7 +157,7 @@ func (b *preparedsKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 			// local entry
 		} else {
-			err = plan.DeletePrepared(name)
+			err = plan.DeletePrepared(localKey)
 		}
 		if err != nil {
 			deleted := make([]string, i)

@@ -65,11 +65,11 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		node, remoteKey := _REMOTEACCESS.SplitKey(key)
+		node, localKey := _REMOTEACCESS.SplitKey(key)
 
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
-			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
 				"completed_requests", "GET",
 				func(doc map[string]interface{}) {
 
@@ -90,9 +90,9 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 		} else {
 
 			// local entry
-			accounting.RequestDo(key, func(entry *accounting.RequestLogEntry) {
+			accounting.RequestDo(localKey, func(entry *accounting.RequestLogEntry) {
 				item := value.NewAnnotatedValue(map[string]interface{}{
-					"RequestId":       key,
+					"RequestId":       localKey,
 					"State":           entry.State,
 					"ElapsedTime":     entry.ElapsedTime.String(),
 					"ServiceTime":     entry.ServiceTime.String(),
@@ -156,12 +156,12 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	var err errors.Error
 
 	for i, name := range deletes {
-		node, remoteKey := _REMOTEACCESS.SplitKey(name)
+		node, localKey := _REMOTEACCESS.SplitKey(name)
 
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
 
-			_REMOTEACCESS.GetRemoteDoc(node, remoteKey,
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
 				"completed_requests", "DELETE",
 				nil,
 
@@ -171,7 +171,7 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 			// local entry
 		} else {
-			err = accounting.RequestDelete(name)
+			err = accounting.RequestDelete(localKey)
 		}
 
 		// save memory allocations by making a new slice only on errors
