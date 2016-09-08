@@ -10,8 +10,8 @@
 package value
 
 import (
-	"encoding/json"
 	"fmt"
+	json "github.com/couchbase/go_json"
 	"io"
 
 	"github.com/couchbase/query/util"
@@ -33,7 +33,7 @@ Use built-in JSON string marshalling, which handles special
 characters.
 */
 func (this stringValue) String() string {
-	bytes, err := json.Marshal(string(this))
+	bytes, err := json.MarshalNoEscape(string(this))
 	if err != nil {
 		// We should not get here.
 		panic(fmt.Sprintf("Error marshaling Value %v: %v", this, err))
@@ -46,11 +46,11 @@ Use built-in JSON string marshalling, which handles special
 characters.
 */
 func (this stringValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(this))
+	return json.MarshalNoEscape(string(this))
 }
 
 func (this stringValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	b, err := json.Marshal(string(this))
+	b, err := json.MarshalNoEscape(string(this))
 	if err != nil {
 		return err
 	}
