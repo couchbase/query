@@ -261,7 +261,17 @@ func init() {
    Skip verification of Certificates.
 */
 
-var noSSLVerify = flag.Bool("no-ssl-verify", false, command.USSLVERIFY)
+var noSSLVerify bool
+
+func init() {
+	const (
+		defaultval = false
+		usage      = command.USSLVERIFY
+	)
+	flag.BoolVar(&noSSLVerify, "no-ssl-verify", defaultval, usage)
+	flag.BoolVar(&noSSLVerify, "skip-verify", defaultval, "Synonym for no-ssl-verify.")
+
+}
 
 /* Define credentials as user/pass and convert into
    JSON object credentials
@@ -459,11 +469,11 @@ func main() {
 		n1ql.SetQueryParams("creds", string(ac))
 	}
 
-	n1ql.SetSkipVerify(*noSSLVerify)
-	command.SKIPVERIFY = *noSSLVerify
+	n1ql.SetSkipVerify(noSSLVerify)
+	command.SKIPVERIFY = noSSLVerify
 
 	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") {
-		if *noSSLVerify == false {
+		if noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {
 			command.PrintStr(command.W, command.SSLVERIFY_TRUE)
