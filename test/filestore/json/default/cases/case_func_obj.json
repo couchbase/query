@@ -103,36 +103,36 @@
             "objpairs": [
                 {
                     "name": "actors",
-                    "value": [
+                    "val": [
                         "Benedict Cumberbatch",
                         "Martin Freeman"
                     ]
                 },
                 {
                     "name": "director",
-                    "value": [
+                    "val": [
                         "Euros Lyn",
                         "Paul Mcguigan"
                     ]
                 },
                 {
                     "name": "format",
-                    "value": "Box Set"
+                    "val": "Box Set"
                 },
                 {
                     "name": "genre",
-                    "value": [
+                    "val": [
                         "Crime",
                         "Thriller"
                     ]
                 },
                 {
                     "name": "runtime",
-                    "value": "266.0 mins"
+                    "val": "266.0 mins"
                 },
                 {
                     "name": "title",
-                    "value": "SHERLOCK: SERIES 1"
+                    "val": "SHERLOCK: SERIES 1"
                 }
             ]
         },
@@ -140,33 +140,33 @@
             "objpairs": [
                 {
                     "name": "actors",
-                    "value": [
+                    "val": [
                         "Jessica Chastain",
                         "Mark Strong"
                     ]
                 },
                 {
                     "name": "director",
-                    "value": "Kathryn Bigelow"
+                    "val": "Kathryn Bigelow"
                 },
                 {
                     "name": "format",
-                    "value": "DVD"
+                    "val": "DVD"
                 },
                 {
                     "name": "genre",
-                    "value": [
+                    "val": [
                         "Action",
                         "Thriller"
                     ]
                 },
                 {
                     "name": "runtime",
-                    "value": "157 mins"
+                    "val": "157 mins"
                 },
                 {
                     "name": "title",
-                    "value": "ZERO DARK THIRTY"
+                    "val": "ZERO DARK THIRTY"
                 }
             ]
         },
@@ -174,26 +174,26 @@
             "objpairs": [
                 {
                     "name": "author",
-                    "value": "Dan Brown"
+                    "val": "Dan Brown"
                 },
                 {
                     "name": "genre",
-                    "value": [
+                    "val": [
                         "Fiction",
                         "Thriller"
                     ]
                 },
                 {
                     "name": "package",
-                    "value": "Hardcover"
+                    "val": "Hardcover"
                 },
                 {
                     "name": "published",
-                    "value": "05/14/2013"
+                    "val": "05/14/2013"
                 },
                 {
                     "name": "title",
-                    "value": "INFERNO"
+                    "val": "INFERNO"
                 }
             ]
         }

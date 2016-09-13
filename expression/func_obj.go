@@ -247,7 +247,7 @@ func (this *ObjectInnerPairs) Apply(context Context, arg value.Value) (value.Val
 	sort.Sort(keys)
 	ra := make([]interface{}, len(keys))
 	for i, k := range keys {
-		ra[i] = map[string]interface{}{"name": k, "value": oa[k]}
+		ra[i] = map[string]interface{}{"name": k, "val": oa[k]}
 	}
 
 	return value.NewValue(ra), nil
@@ -527,7 +527,7 @@ func (this *ObjectPairs) Apply(context Context, arg value.Value) (value.Value, e
 	sort.Sort(keys)
 	ra := make([]interface{}, len(keys))
 	for i, k := range keys {
-		ra[i] = map[string]interface{}{"name": k, "value": oa[k]}
+		ra[i] = map[string]interface{}{"name": k, "val": oa[k]}
 	}
 
 	return value.NewValue(ra), nil
