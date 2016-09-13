@@ -97,6 +97,7 @@ var _FUNCTIONS = map[string]Function{
 	// Date
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
+	"array_date_range":    &ArrayDateRange{},
 	"date_add_millis":     &DateAddMillis{},
 	"date_add_str":        &DateAddStr{},
 	"date_diff_millis":    &DateDiffMillis{},

@@ -20,6 +20,168 @@ import (
 
 ///////////////////////////////////////////////////
 //
+// ArrayDateRange
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function ARRAY_DATE_RANGE(expr,expr,part,[n]).
+It returns a range of dates from expr1 to expr2. n and part are used to
+define an interval and duration.
+*/
+type ArrayDateRange struct {
+	FunctionBase
+}
+
+func NewArrayDateRange(operands ...Expression) Function {
+	rv := &ArrayDateRange{
+		*NewFunctionBase("array_date_range", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayDateRange) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayDateRange) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayDateRange) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArrayDateRange) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	// Populate the args
+	startDate := args[0]
+	endDate := args[1]
+	part := args[2]
+
+	// Default value for the increment is 1.
+	n := value.ONE_VALUE
+	if len(args) > 3 {
+		n = args[3]
+	}
+
+	// If input arguments are missing then return missing, and if they arent valid types,
+	// return null.
+	if startDate.Type() == value.MISSING || endDate.Type() == value.MISSING ||
+		n.Type() == value.MISSING || part.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+
+	} else if startDate.Type() != value.STRING || endDate.Type() != value.STRING ||
+		n.Type() != value.NUMBER || part.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Convert start date to time format.
+	da1 := startDate.Actual().(string)
+	t1, fmt1, err := strToTimeFormat(da1)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Convert end date to time format.
+	da2 := endDate.Actual().(string)
+	t2, fmt2, err := strToTimeFormat(da2)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// The dates need to be the same format, if not, return null.
+	if fmt1 != fmt2 {
+		return value.NULL_VALUE, nil
+	}
+
+	// Increment
+	step := n.Actual().(float64)
+
+	// Return null value for decimal increments.
+	if step != math.Trunc(step) {
+		return value.NULL_VALUE, nil
+	}
+
+	// If the two dates are the same, return an empty array.
+	if t1.String() == t2.String() {
+		return value.EMPTY_ARRAY_VALUE, nil
+	}
+
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	val, err := dateDiff(t1, t2, partStr)
+	if val < 0 {
+		val = -val
+	}
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	rv := make([]interface{}, 0, val)
+
+	// If the start date is after the end date
+	if t1.String() > t2.String() {
+
+		// And the increment is positive return empty array. If
+		// the increment is negative, so populate the array with
+		// decresing dates.
+		if step >= 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	} else {
+		// If end date is after start date but the increment is negative.
+		if step < 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	}
+
+	// Max date value is end date/ t2.
+	// Keep incrementing start date by step for part, and add it to
+	// the array to be returned.
+	start := t1
+
+	// Populate the array now
+	// Until you reach the end date
+	for (step > 0.0 && start.String() <= t2.String()) ||
+		(step < 0.0 && start.String() >= t2.String()) {
+		// Compute the new time
+		rv = append(rv, timeToStr(start, fmt1))
+		t, err := dateAdd(start, int(step), partStr)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+
+		start = t
+	}
+
+	return value.NewValue(rv), nil
+
+}
+
+/*
+Minimum input arguments required is 3.
+*/
+func (this *ArrayDateRange) MinArgs() int { return 3 }
+
+/*
+Maximum input arguments allowed is 4.
+*/
+func (this *ArrayDateRange) MaxArgs() int { return 4 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayDateRange) Constructor() FunctionConstructor {
+	return NewArrayDateRange
+}
+
+///////////////////////////////////////////////////
+//
 // ClockMillis
 //
 ///////////////////////////////////////////////////
