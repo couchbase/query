@@ -173,16 +173,26 @@ func init() {
    Single command mode
 */
 
-var scriptFlag string
+type scripts []string
+
+var scriptFlag scripts
 
 func init() {
 	const (
-		defaultval = ""
-		usage      = command.USCRIPT
+		usage = command.USCRIPT
 	)
-	flag.StringVar(&scriptFlag, "script", defaultval, usage)
-	flag.StringVar(&scriptFlag, "s", defaultval, command.NewShorthandMsg("-script"))
+	flag.Var(&scriptFlag, "script", usage)
+	flag.Var(&scriptFlag, "s", command.NewShorthandMsg("-script"))
 
+}
+
+func (s *scripts) String() string {
+	return fmt.Sprintf("%s", *s)
+}
+
+func (s *scripts) Set(val string) error {
+	*s = append(*s, val)
+	return nil
 }
 
 /*
@@ -428,7 +438,7 @@ func main() {
 		// un-authenticated servers.
 		// Dont output the statement if we are running in single command
 		// mode.
-		if scriptFlag == "" {
+		if len(scriptFlag) == 0 {
 			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
 
 			if werr != nil {

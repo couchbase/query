@@ -88,26 +88,32 @@ func handleIPModeFlag(liner **liner.State) {
 func handleScriptFlag(liner **liner.State) {
 	// Handle the file input and script options here so as to add
 	// the commands to the history.
-	if scriptFlag != "" {
+	if len(scriptFlag) != 0 {
 		//Execute the input command
 
-		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			_, werr := io.WriteString(command.W, scriptFlag+"\n")
-			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+		// Run all the commands
+		for i := 0; i < len(scriptFlag); i++ {
+			// If outputting to a file, then add the statement to the file as well.
+			if command.FILE_RW_MODE == true {
+				_, werr := io.WriteString(command.W, scriptFlag[i]+"\n")
+				if werr != nil {
+					s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+					command.PrintError(s_err)
+				}
+			}
+
+			err_code, err_str := dispatch_command(scriptFlag[i], command.W, false, *liner)
+			if err_code != 0 {
+				_, werr := io.WriteString(command.W, "\n "+scriptFlag[i]+"\n")
+				if werr != nil {
+					s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+					command.PrintError(s_err)
+				}
+				s_err := command.HandleError(err_code, err_str)
 				command.PrintError(s_err)
 			}
 		}
 
-		err_code, err_str := dispatch_command(scriptFlag, command.W, false, *liner)
-		if err_code != 0 {
-			s_err := command.HandleError(err_code, err_str)
-			command.PrintError(s_err)
-			(*liner).Close()
-			os.Clearenv()
-			os.Exit(1)
-		}
 		(*liner).Close()
 		os.Clearenv()
 		os.Exit(0)
