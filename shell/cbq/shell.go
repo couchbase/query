@@ -490,29 +490,30 @@ func main() {
 		}
 	}
 
-	// Check if connection is possible to the input serverFlag
-	// else failed to connect to.
-
-	pingerr := command.Ping(serverFlag)
-	SERVICE_URL = serverFlag
-	command.SERVICE_URL = serverFlag
-	if pingerr != nil {
-		s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
-		command.PrintError(s_err)
-		serverFlag = ""
-		command.SERVICE_URL = ""
-		SERVICE_URL = ""
-		noQueryService = true
-	}
-
-	/* -quiet : Display Message only if flag not specified
-	 */
-	if !quietFlag && noQueryService == false && pingerr == nil {
-		s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
-		_, werr := io.WriteString(command.W, s)
-		if werr != nil {
-			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+	if noQueryService == false {
+		// Check if connection is possible to the input serverFlag
+		// else failed to connect to.
+		pingerr := command.Ping(serverFlag)
+		SERVICE_URL = serverFlag
+		command.SERVICE_URL = serverFlag
+		if pingerr != nil {
+			s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
 			command.PrintError(s_err)
+			serverFlag = ""
+			command.SERVICE_URL = ""
+			SERVICE_URL = ""
+			noQueryService = true
+		}
+
+		/* -quiet : Display Message only if flag not specified
+		 */
+		if !quietFlag && pingerr == nil {
+			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
+			_, werr := io.WriteString(command.W, s)
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
 		}
 	}
 
