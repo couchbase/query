@@ -24,7 +24,8 @@ type Set struct {
 	missings Value
 	nulls    Value
 	booleans map[bool]Value
-	numbers  map[float64]Value
+	floats   map[float64]Value
+	ints     map[int64]Value
 	strings  map[string]Value
 	arrays   map[string]Value
 	objects  map[string]Value
@@ -39,7 +40,8 @@ func NewSet(objectCap int, collect bool) *Set {
 
 	return &Set{
 		booleans: make(map[bool]Value, 2),
-		numbers:  make(map[float64]Value, mapCap),
+		floats:   make(map[float64]Value, mapCap),
+		ints:     make(map[int64]Value, mapCap),
 		strings:  make(map[string]Value, mapCap),
 		arrays:   make(map[string]Value, _MAP_CAP),
 		objects:  make(map[string]Value, objectCap),
@@ -77,7 +79,20 @@ func (this *Set) Put(key, item Value) {
 	case BOOLEAN:
 		this.booleans[key.Actual().(bool)] = mapItem
 	case NUMBER:
-		this.numbers[key.Actual().(float64)] = mapItem
+		num := key.unwrap()
+		switch num := num.(type) {
+		case floatValue:
+			f := float64(num)
+			if IsInt(f) {
+				this.ints[int64(num)] = mapItem
+			} else {
+				this.floats[float64(num)] = mapItem
+			}
+		case intValue:
+			this.ints[int64(num)] = mapItem
+		default:
+			panic(fmt.Sprintf("Unsupported value type %T.", key))
+		}
 	case STRING:
 		this.strings[key.Actual().(string)] = mapItem
 	case ARRAY:
@@ -106,7 +121,20 @@ func (this *Set) Remove(key Value) {
 	case BOOLEAN:
 		delete(this.booleans, key.Actual().(bool))
 	case NUMBER:
-		delete(this.numbers, key.Actual().(float64))
+		num := key.unwrap()
+		switch num := num.(type) {
+		case floatValue:
+			f := float64(num)
+			if IsInt(f) {
+				delete(this.ints, int64(f))
+			} else {
+				delete(this.floats, f)
+			}
+		case intValue:
+			delete(this.ints, int64(num))
+		default:
+			panic(fmt.Sprintf("Unsupported value type %T.", key))
+		}
 	case STRING:
 		delete(this.strings, key.Actual().(string))
 	case ARRAY:
@@ -135,7 +163,20 @@ func (this *Set) Has(key Value) bool {
 	case BOOLEAN:
 		_, ok = this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		_, ok = this.numbers[key.Actual().(float64)]
+		num := key.unwrap()
+		switch num := num.(type) {
+		case floatValue:
+			f := float64(num)
+			if IsInt(f) {
+				_, ok = this.ints[int64(f)]
+			} else {
+				_, ok = this.floats[f]
+			}
+		case intValue:
+			_, ok = this.ints[int64(num)]
+		default:
+			panic(fmt.Sprintf("Unsupported value type %T.", key))
+		}
 	case STRING:
 		_, ok = this.strings[key.Actual().(string)]
 	case ARRAY:
@@ -153,7 +194,7 @@ func (this *Set) Has(key Value) bool {
 }
 
 func (this *Set) Len() int {
-	rv := len(this.booleans) + len(this.numbers) + len(this.strings) +
+	rv := len(this.booleans) + len(this.floats) + len(this.ints) + len(this.strings) +
 		len(this.arrays) + len(this.objects) + len(this.blobs)
 
 	if this.nills {
@@ -194,7 +235,11 @@ func (this *Set) Values() []Value {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.numbers {
+	for _, av := range this.floats {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.ints {
 		rv = append(rv, av)
 	}
 
@@ -232,7 +277,11 @@ func (this *Set) Actuals() []interface{} {
 		rv = append(rv, av.Actual())
 	}
 
-	for _, av := range this.numbers {
+	for _, av := range this.floats {
+		rv = append(rv, av.Actual())
+	}
+
+	for _, av := range this.ints {
 		rv = append(rv, av.Actual())
 	}
 

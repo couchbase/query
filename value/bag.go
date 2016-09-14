@@ -24,7 +24,8 @@ type Bag struct {
 	missings *BagEntry
 	nulls    *BagEntry
 	booleans map[bool]*BagEntry
-	numbers  map[float64]*BagEntry
+	floats   map[float64]*BagEntry
+	ints     map[int64]*BagEntry
 	strings  map[string]*BagEntry
 	arrays   map[string]*BagEntry
 	objects  map[string]*BagEntry
@@ -41,7 +42,8 @@ func NewBag(objectCap int) *Bag {
 
 	return &Bag{
 		booleans: make(map[bool]*BagEntry, 2),
-		numbers:  make(map[float64]*BagEntry, mapCap),
+		floats:   make(map[float64]*BagEntry, mapCap),
+		ints:     make(map[int64]*BagEntry, mapCap),
 		strings:  make(map[string]*BagEntry, mapCap),
 		arrays:   make(map[string]*BagEntry, _MAP_CAP),
 		objects:  make(map[string]*BagEntry, objectCap),
@@ -92,14 +94,41 @@ func (this *Bag) Put(key, item Value) {
 
 		entry.Count++
 	case NUMBER:
-		akey := key.Actual().(float64)
-		entry := this.numbers[akey]
-		if entry == nil {
-			entry = &BagEntry{Value: item}
-			this.numbers[akey] = entry
-		}
+		num := key.unwrap()
+		switch num := num.(type) {
+		case floatValue:
+			f := float64(num)
+			if IsInt(f) {
+				akey := int64(f)
+				entry := this.ints[akey]
+				if entry == nil {
+					entry = &BagEntry{Value: item}
+					this.ints[akey] = entry
+				}
 
-		entry.Count++
+				entry.Count++
+			} else {
+				akey := f
+				entry := this.floats[akey]
+				if entry == nil {
+					entry = &BagEntry{Value: item}
+					this.floats[akey] = entry
+				}
+
+				entry.Count++
+			}
+		case intValue:
+			akey := int64(num)
+			entry := this.ints[akey]
+			if entry == nil {
+				entry = &BagEntry{Value: item}
+				this.ints[akey] = entry
+			}
+
+			entry.Count++
+		default:
+			panic(fmt.Sprintf("Unsupported value type %T.", key))
+		}
 	case STRING:
 		akey := key.Actual().(string)
 		entry := this.strings[akey]
@@ -154,7 +183,20 @@ func (this *Bag) Entry(key Value) *BagEntry {
 	case BOOLEAN:
 		return this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		return this.numbers[key.Actual().(float64)]
+		num := key.unwrap()
+		switch num := num.(type) {
+		case floatValue:
+			f := float64(num)
+			if IsInt(f) {
+				return this.ints[int64(f)]
+			} else {
+				return this.floats[f]
+			}
+		case intValue:
+			return this.ints[int64(num)]
+		default:
+			panic(fmt.Sprintf("Unsupported value type %T.", key))
+		}
 	case STRING:
 		return this.strings[key.Actual().(string)]
 	case ARRAY:
@@ -170,7 +212,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 }
 
 func (this *Bag) DistinctLen() int {
-	rv := len(this.booleans) + len(this.numbers) + len(this.strings) +
+	rv := len(this.booleans) + len(this.floats) + len(this.ints) + len(this.strings) +
 		len(this.arrays) + len(this.objects) + len(this.blobs)
 
 	if this.nills != nil {
@@ -207,7 +249,11 @@ func (this *Bag) Entries() []*BagEntry {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.numbers {
+	for _, av := range this.floats {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.ints {
 		rv = append(rv, av)
 	}
 

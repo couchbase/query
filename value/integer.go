@@ -326,3 +326,7 @@ func (this intValue) Sub(n NumberValue) NumberValue {
 
 	return floatValue(float64(this) - n.Actual().(float64))
 }
+
+func IsInt(x float64) bool {
+	return x == float64(int64(x))
+}
