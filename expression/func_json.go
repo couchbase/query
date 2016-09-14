@@ -314,7 +314,8 @@ func (this *Tokens) Apply(context Context, arg value.Value) (value.Value, error)
 		return value.MISSING_VALUE, nil
 	}
 
-	set := value.NewSet(64, true)
+	set := _SET_POOL.Get()
+	defer _SET_POOL.Put(set)
 	set = arg.Tokens(set)
 	items := set.Items()
 	return value.NewValue(items), nil
@@ -328,3 +329,5 @@ func (this *Tokens) Constructor() FunctionConstructor {
 		return NewTokens(operands[0])
 	}
 }
+
+var _SET_POOL = value.NewSetPool(64, true)

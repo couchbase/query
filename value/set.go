@@ -29,7 +29,7 @@ type Set struct {
 	strings  map[string]Value
 	arrays   map[string]Value
 	objects  map[string]Value
-	blobs    map[string]Value
+	binaries map[string]Value
 	collect  bool
 }
 
@@ -45,7 +45,7 @@ func NewSet(objectCap int, collect bool) *Set {
 		strings:  make(map[string]Value, mapCap),
 		arrays:   make(map[string]Value, _MAP_CAP),
 		objects:  make(map[string]Value, objectCap),
-		blobs:    make(map[string]Value, _MAP_CAP),
+		binaries: make(map[string]Value, _MAP_CAP),
 		collect:  collect,
 	}
 }
@@ -101,7 +101,7 @@ func (this *Set) Put(key, item Value) {
 		this.objects[key.String()] = mapItem
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		this.blobs[str] = mapItem
+		this.binaries[str] = mapItem
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -143,7 +143,7 @@ func (this *Set) Remove(key Value) {
 		delete(this.objects, key.String())
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		delete(this.blobs, str)
+		delete(this.binaries, str)
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -185,7 +185,7 @@ func (this *Set) Has(key Value) bool {
 		_, ok = this.objects[key.String()]
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		_, ok = this.blobs[str]
+		_, ok = this.binaries[str]
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -195,7 +195,7 @@ func (this *Set) Has(key Value) bool {
 
 func (this *Set) Len() int {
 	rv := len(this.booleans) + len(this.floats) + len(this.ints) + len(this.strings) +
-		len(this.arrays) + len(this.objects) + len(this.blobs)
+		len(this.arrays) + len(this.objects) + len(this.binaries)
 
 	if this.nills {
 		rv++
@@ -255,7 +255,7 @@ func (this *Set) Values() []Value {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.blobs {
+	for _, av := range this.binaries {
 		rv = append(rv, av)
 	}
 
@@ -297,7 +297,7 @@ func (this *Set) Actuals() []interface{} {
 		rv = append(rv, av.Actual())
 	}
 
-	for _, av := range this.blobs {
+	for _, av := range this.binaries {
 		rv = append(rv, av.Actual())
 	}
 
@@ -347,9 +347,50 @@ func (this *Set) Items() []interface{} {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.blobs {
+	for _, av := range this.binaries {
 		rv = append(rv, av)
 	}
 
 	return rv
+}
+
+func (this *Set) Clear() {
+	this.nills = false
+	this.missings = nil
+	this.nulls = nil
+
+	for k, _ := range this.booleans {
+		this.booleans[k] = nil
+		delete(this.booleans, k)
+	}
+
+	for k, _ := range this.floats {
+		this.floats[k] = nil
+		delete(this.floats, k)
+	}
+
+	for k, _ := range this.ints {
+		this.ints[k] = nil
+		delete(this.ints, k)
+	}
+
+	for k, _ := range this.strings {
+		this.strings[k] = nil
+		delete(this.strings, k)
+	}
+
+	for k, _ := range this.arrays {
+		this.arrays[k] = nil
+		delete(this.arrays, k)
+	}
+
+	for k, _ := range this.objects {
+		this.objects[k] = nil
+		delete(this.objects, k)
+	}
+
+	for k, _ := range this.binaries {
+		this.binaries[k] = nil
+		delete(this.binaries, k)
+	}
 }

@@ -29,7 +29,7 @@ type Bag struct {
 	strings  map[string]*BagEntry
 	arrays   map[string]*BagEntry
 	objects  map[string]*BagEntry
-	blobs    map[string]*BagEntry
+	binaries map[string]*BagEntry
 }
 
 type BagEntry struct {
@@ -47,7 +47,7 @@ func NewBag(objectCap int) *Bag {
 		strings:  make(map[string]*BagEntry, mapCap),
 		arrays:   make(map[string]*BagEntry, _MAP_CAP),
 		objects:  make(map[string]*BagEntry, objectCap),
-		blobs:    make(map[string]*BagEntry, _MAP_CAP),
+		binaries: make(map[string]*BagEntry, _MAP_CAP),
 	}
 }
 
@@ -158,10 +158,10 @@ func (this *Bag) Put(key, item Value) {
 		entry.Count++
 	case BINARY:
 		akey := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		entry := this.blobs[akey]
+		entry := this.binaries[akey]
 		if entry == nil {
 			entry = &BagEntry{Value: item}
-			this.blobs[akey] = entry
+			this.binaries[akey] = entry
 		}
 
 		entry.Count++
@@ -205,7 +205,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 		return this.objects[key.String()]
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
-		return this.blobs[str]
+		return this.binaries[str]
 	default:
 		panic(fmt.Sprintf("Unsupported value type %T.", key))
 	}
@@ -213,7 +213,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 
 func (this *Bag) DistinctLen() int {
 	rv := len(this.booleans) + len(this.floats) + len(this.ints) + len(this.strings) +
-		len(this.arrays) + len(this.objects) + len(this.blobs)
+		len(this.arrays) + len(this.objects) + len(this.binaries)
 
 	if this.nills != nil {
 		rv++
@@ -269,7 +269,7 @@ func (this *Bag) Entries() []*BagEntry {
 		rv = append(rv, av)
 	}
 
-	for _, av := range this.blobs {
+	for _, av := range this.binaries {
 		rv = append(rv, av)
 	}
 
