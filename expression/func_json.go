@@ -314,7 +314,7 @@ func (this *Tokens) Apply(context Context, arg value.Value) (value.Value, error)
 		return value.MISSING_VALUE, nil
 	}
 
-	set := value.NewSet(256, true)
+	set := value.NewSet(64, true)
 	set = arg.Tokens(set)
 	items := set.Items()
 	return value.NewValue(items), nil
