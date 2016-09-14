@@ -138,7 +138,7 @@ func (this *Length) Apply(context Context, arg value.Value) (value.Value, error)
 	}
 
 	rv := len(arg.Actual().(string))
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*
@@ -343,7 +343,7 @@ func (this *Position) Apply(context Context, first, second value.Value) (value.V
 	}
 
 	rv := strings.Index(first.Actual().(string), second.Actual().(string))
-	return value.NewValue(float64(rv)), nil
+	return value.NewValue(rv), nil
 }
 
 /*

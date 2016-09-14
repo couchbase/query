@@ -232,6 +232,11 @@ func (this intValue) Successor() Value {
 func (this intValue) Recycle() {
 }
 
+func (this intValue) Tokens(set *Set) *Set {
+	set.Add(this)
+	return set
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }

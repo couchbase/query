@@ -233,6 +233,11 @@ func (this boolValue) Successor() Value {
 func (this boolValue) Recycle() {
 }
 
+func (this boolValue) Tokens(set *Set) *Set {
+	set.Add(this)
+	return set
+}
+
 func (this boolValue) unwrap() Value {
 	return this
 }

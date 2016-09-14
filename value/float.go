@@ -306,6 +306,11 @@ func (this floatValue) Successor() Value {
 func (this floatValue) Recycle() {
 }
 
+func (this floatValue) Tokens(set *Set) *Set {
+	set.Add(this)
+	return set
+}
+
 func (this floatValue) unwrap() Value {
 	return this
 }

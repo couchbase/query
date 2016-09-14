@@ -259,10 +259,10 @@ func (this *RegexpPosition) Apply(context Context, first, second value.Value) (v
 
 	loc := re.FindStringIndex(f)
 	if loc == nil {
-		return value.NewValue(-1.0), nil
+		return value.NewValue(-1), nil
 	}
 
-	return value.NewValue(float64(loc[0])), nil
+	return value.NewValue(loc[0]), nil
 }
 
 /*

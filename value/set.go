@@ -84,9 +84,9 @@ func (this *Set) Put(key, item Value) {
 		case floatValue:
 			f := float64(num)
 			if IsInt(f) {
-				this.ints[int64(num)] = mapItem
+				this.ints[int64(f)] = mapItem
 			} else {
-				this.floats[float64(num)] = mapItem
+				this.floats[f] = mapItem
 			}
 		case intValue:
 			this.ints[int64(num)] = mapItem
@@ -299,6 +299,56 @@ func (this *Set) Actuals() []interface{} {
 
 	for _, av := range this.blobs {
 		rv = append(rv, av.Actual())
+	}
+
+	return rv
+}
+
+func (this *Set) Items() []interface{} {
+	if !this.collect {
+		return nil
+	}
+
+	rv := make([]interface{}, 0, this.Len())
+
+	if this.nills {
+		rv = append(rv, nil)
+	}
+
+	if this.missings != nil {
+		rv = append(rv, this.missings)
+	}
+
+	if this.nulls != nil {
+		rv = append(rv, this.nulls)
+	}
+
+	for _, av := range this.booleans {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.floats {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.ints {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.strings {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.arrays {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.objects {
+		rv = append(rv, av)
+	}
+
+	for _, av := range this.blobs {
+		rv = append(rv, av)
 	}
 
 	return rv

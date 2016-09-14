@@ -13,6 +13,8 @@ import (
 	"fmt"
 	json "github.com/couchbase/go_json"
 	"io"
+	"strings"
+	"unicode"
 
 	"github.com/couchbase/query/util"
 )
@@ -242,6 +244,19 @@ func (this stringValue) Successor() Value {
 }
 
 func (this stringValue) Recycle() {
+}
+
+func (this stringValue) Tokens(set *Set) *Set {
+	fields := strings.FieldsFunc(string(this),
+		func(c rune) bool {
+			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+		})
+
+	for _, field := range fields {
+		set.Add(stringValue(field))
+	}
+
+	return set
 }
 
 func (this stringValue) unwrap() Value {

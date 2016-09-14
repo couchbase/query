@@ -189,7 +189,7 @@ func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Valu
 
 func (this *EncodedSize) Apply(context Context, arg value.Value) (value.Value, error) {
 	bytes, _ := arg.MarshalJSON()
-	return value.NewValue(float64(len(bytes))), nil
+	return value.NewValue(len(bytes)), nil
 }
 
 /*
@@ -251,11 +251,11 @@ func (this *PolyLength) Apply(context Context, arg value.Value) (value.Value, er
 
 	switch oa := arg.Actual().(type) {
 	case string:
-		return value.NewValue(float64(len(oa))), nil
+		return value.NewValue(len(oa)), nil
 	case []interface{}:
-		return value.NewValue(float64(len(oa))), nil
+		return value.NewValue(len(oa)), nil
 	case map[string]interface{}:
-		return value.NewValue(float64(len(oa))), nil
+		return value.NewValue(len(oa)), nil
 	default:
 		return value.NULL_VALUE, nil
 	}
@@ -267,5 +267,64 @@ Factory method pattern.
 func (this *PolyLength) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewPolyLength(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// Tokens
+//
+///////////////////////////////////////////////////
+
+/*
+MB-20850. Enumerate list of all tokens within the operand. For
+strings, this is the list of discrete words within the string. For all
+other atomic JSON values, it is the operand itself. For arrays, all
+the individual array elements are tokenized. And for objects, the
+names are included verbatim, while the values are tokenized.
+*/
+type Tokens struct {
+	UnaryFunctionBase
+}
+
+func NewTokens(operand Expression) Function {
+	rv := &Tokens{
+		*NewUnaryFunctionBase("tokens", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Tokens) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Tokens) Type() value.Type { return value.ARRAY }
+
+func (this *Tokens) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Tokens) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	}
+
+	set := value.NewSet(256, true)
+	set = arg.Tokens(set)
+	items := set.Items()
+	return value.NewValue(items), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *Tokens) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewTokens(operands[0])
 	}
 }

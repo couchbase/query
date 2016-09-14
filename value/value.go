@@ -330,6 +330,11 @@ type Value interface {
 	Recycle()
 
 	/*
+	   MB-20850. List all the atomic tokens of a value.
+	*/
+	Tokens(set *Set) *Set
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value

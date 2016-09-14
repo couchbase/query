@@ -384,7 +384,7 @@ func (this *ObjectLength) Apply(context Context, arg value.Value) (value.Value, 
 	}
 
 	oa := arg.Actual().(map[string]interface{})
-	return value.NewValue(float64(len(oa))), nil
+	return value.NewValue(len(oa)), nil
 }
 
 /*

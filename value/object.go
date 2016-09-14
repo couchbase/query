@@ -338,6 +338,15 @@ func (this objectValue) Recycle() {
 	recycle(this)
 }
 
+func (this objectValue) Tokens(set *Set) *Set {
+	for k, v := range this {
+		set.Add(NewValue(k))
+		set = NewValue(v).Tokens(set)
+	}
+
+	return set
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }

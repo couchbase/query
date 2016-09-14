@@ -227,14 +227,20 @@ var _FUNCTIONS = map[string]Function{
 	"object_values":       &ObjectValues{},
 
 	// JSON
-	"json_decode": &JSONDecode{},
-	"json_encode": &JSONEncode{},
-
-	// ...backwards compatibility
 	"decode_json":  &JSONDecode{},
 	"encode_json":  &JSONEncode{},
 	"encoded_size": &EncodedSize{},
+	"json_decode":  &JSONDecode{},
+	"json_encode":  &JSONEncode{},
 	"poly_length":  &PolyLength{},
+	"tokens":       &Tokens{},
+
+	// Base64
+	"base64":        &Base64Encode{},
+	"base64_decode": &Base64Decode{},
+	"base64_encode": &Base64Encode{},
+	"decode_base64": &Base64Decode{},
+	"encode_base64": &Base64Encode{},
 
 	// Comparison
 	"greatest":  &Greatest{},
@@ -268,18 +274,11 @@ var _FUNCTIONS = map[string]Function{
 	"posinfif":      &PosInfIf{},
 
 	// Meta
-	"base64_encode": &Base64Encode{},
-	"base64_decode": &Base64Decode{},
-
-	// ...backwards compatibility
-	"base64":        &Base64Encode{},
-	"encode_base64": &Base64Encode{},
-	"decode_base64": &Base64Decode{},
-	"meta":          &Meta{},
-	"min_version":   &MinVersion{},
-	"self":          &Self{},
-	"uuid":          &Uuid{},
-	"version":       &Version{},
+	"meta":        &Meta{},
+	"min_version": &MinVersion{},
+	"self":        &Self{},
+	"uuid":        &Uuid{},
+	"version":     &Version{},
 
 	// Type checking
 	"is_array":   &IsArray{},

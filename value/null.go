@@ -187,7 +187,7 @@ func (this *nullValue) FieldNames(buffer []string) []string {
 /*
 Returns the input buffer as is.
 */
-func (this nullValue) DescendantPairs(buffer []util.IPair) []util.IPair {
+func (this *nullValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 
@@ -198,7 +198,12 @@ func (this *nullValue) Successor() Value {
 	return FALSE_VALUE
 }
 
-func (this nullValue) Recycle() {
+func (this *nullValue) Recycle() {
+}
+
+func (this *nullValue) Tokens(set *Set) *Set {
+	set.Add(this)
+	return set
 }
 
 func (this *nullValue) unwrap() Value {

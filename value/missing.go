@@ -208,6 +208,10 @@ func (this missingValue) Successor() Value {
 func (this missingValue) Recycle() {
 }
 
+func (this missingValue) Tokens(set *Set) *Set {
+	return set
+}
+
 func (this missingValue) unwrap() Value {
 	return this
 }

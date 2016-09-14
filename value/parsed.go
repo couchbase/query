@@ -241,6 +241,10 @@ func (this *parsedValue) Recycle() {
 	}
 }
 
+func (this *parsedValue) Tokens(set *Set) *Set {
+	return this.unwrap().Tokens(set)
+}
+
 /*
 Delayed parse.
 */
