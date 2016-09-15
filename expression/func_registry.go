@@ -102,6 +102,7 @@ var _FUNCTIONS = map[string]Function{
 	"date_add_str":        &DateAddStr{},
 	"date_diff_millis":    &DateDiffMillis{},
 	"date_diff_str":       &DateDiffStr{},
+	"date_format_str":     &DateFormatStr{},
 	"date_part_millis":    &DatePartMillis{},
 	"date_part_str":       &DatePartStr{},
 	"date_trunc_millis":   &DateTruncMillis{},

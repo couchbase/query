@@ -599,6 +599,71 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// DateFormatStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DATE_FORMAT_STR(expr, format).
+It returns the input date in the expected format.
+*/
+type DateFormatStr struct {
+	BinaryFunctionBase
+}
+
+func NewDateFormatStr(first, second Expression) Function {
+	rv := &DateFormatStr{
+		*NewBinaryFunctionBase("date_format_str", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DateFormatStr) Type() value.Type { return value.STRING }
+
+func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *DateFormatStr) Apply(context Context, first, second value.Value) (value.Value, error) {
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	t, err := strToTime(str)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	format := second.Actual().(string)
+
+	return value.NewValue(timeToStr(t, format)), nil
+
+}
+
+/*
+Factory method pattern.
+*/
+func (this *DateFormatStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateFormatStr(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // DatePartMillis
 //
 ///////////////////////////////////////////////////
