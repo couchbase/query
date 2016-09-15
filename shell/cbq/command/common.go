@@ -346,6 +346,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[2:]
 
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
+
 		args_str := strings.Join(args[1:], " ")
 
 		err_code, err_str := PushValue_Helper(pushvalue, NamedParam, vble, args_str)
@@ -368,6 +372,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 		vble = vble[1:]
+
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
 
 		vble = strings.ToLower(vble)
 
@@ -428,6 +436,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		// For User defined session variables
 		vble := args[0]
 		vble = vble[1:]
+
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
 
 		args_str := strings.Join(args[1:], " ")
 
