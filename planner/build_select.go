@@ -45,12 +45,9 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.cover = nil
 	}
 
-	if limit != nil {
-		if offset != nil {
-			this.limit = expression.NewAdd(offset, limit)
-		} else {
-			this.limit = limit
-		}
+	this.limit = limit
+	if limit != nil && offset != nil {
+		this.limit = expression.NewAdd(offset, limit)
 	}
 
 	sub, err := stmt.Subresult().Accept(this)
