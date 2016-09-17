@@ -241,8 +241,8 @@ func (this *parsedValue) Recycle() {
 	}
 }
 
-func (this *parsedValue) Tokens(set *Set) *Set {
-	return this.unwrap().Tokens(set)
+func (this *parsedValue) Tokens(set *Set, names bool) *Set {
+	return this.unwrap().Tokens(set, names)
 }
 
 /*

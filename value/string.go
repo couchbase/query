@@ -246,7 +246,7 @@ func (this stringValue) Successor() Value {
 func (this stringValue) Recycle() {
 }
 
-func (this stringValue) Tokens(set *Set) *Set {
+func (this stringValue) Tokens(set *Set, names bool) *Set {
 	fields := strings.FieldsFunc(string(this),
 		func(c rune) bool {
 			return !unicode.IsLetter(c) && !unicode.IsNumber(c)

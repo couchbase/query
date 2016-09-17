@@ -332,7 +332,7 @@ type Value interface {
 	/*
 	   MB-20850. List all the atomic tokens of a value.
 	*/
-	Tokens(set *Set) *Set
+	Tokens(set *Set, names bool) *Set
 
 	/*
 	   Returns a value that is not wrapped. For internal use.

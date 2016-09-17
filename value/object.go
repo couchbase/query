@@ -338,10 +338,13 @@ func (this objectValue) Recycle() {
 	recycle(this)
 }
 
-func (this objectValue) Tokens(set *Set) *Set {
-	for k, v := range this {
-		set.Add(NewValue(k))
-		set = NewValue(v).Tokens(set)
+func (this objectValue) Tokens(set *Set, names bool) *Set {
+	for n, v := range this {
+		if names {
+			set.Add(NewValue(n))
+		}
+
+		set = NewValue(v).Tokens(set, names)
 	}
 
 	return set

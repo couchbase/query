@@ -151,7 +151,7 @@ func (this binaryValue) Successor() Value {
 func (this binaryValue) Recycle() {
 }
 
-func (this binaryValue) Tokens(set *Set) *Set {
+func (this binaryValue) Tokens(set *Set, names bool) *Set {
 	set.Add(this)
 	return set
 }

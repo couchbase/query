@@ -269,5 +269,38 @@
             ]
         }
     ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'a': {'b': 'hello', 'c': 'world!'}}))",
+  "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, FALSE))",
+  "results": [
+        {
+            "$1": [
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, 0))",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
 }
 ]
