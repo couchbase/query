@@ -19,6 +19,7 @@ elements of a collection or objects.
 */
 type Array struct {
 	collMapBase
+	identity bool // True if this is the identity mapping, i.e. it does not transform its input.
 }
 
 func NewArray(mapping Expression, bindings Bindings, when Expression) Expression {
@@ -28,6 +29,11 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 			bindings:     bindings,
 			when:         when,
 		},
+	}
+
+	if v, ok := mapping.(*Identifier); ok && when == nil && len(bindings) == 1 &&
+		!bindings[0].Descend() && v.Identifier() == bindings[0].Variable() {
+		rv.identity = true
 	}
 
 	rv.expr = rv
@@ -41,6 +47,10 @@ func (this *Array) Accept(visitor Visitor) (interface{}, error) {
 func (this *Array) Type() value.Type { return value.ARRAY }
 
 func (this *Array) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if this.identity {
+		return this.identityEval(item, context)
+	}
+
 	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
 	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
@@ -98,6 +108,10 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 }
 
 func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
+	if this.identity {
+		return this.identityEvalForIndex(item, context)
+	}
+
 	bvals, buffers, bpairs, n, missing, null, err := collEval(this.bindings, item, context)
 	defer collReleaseBuffers(bvals, buffers, bpairs)
 	if err != nil {
@@ -112,8 +126,7 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil, nil
 	}
 
-	var rv []interface{}
-	var rvs value.Values
+	var rv, rvs value.Values
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
@@ -142,12 +155,12 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 			return nil, nil, e
 		} else if mvs != nil {
 			if rvs == nil {
-				rvs = make(value.Values, 0, n*8)
+				rvs = make(value.Values, 0, n*(1+len(mvs)))
 			}
 			rvs = append(rvs, mvs...)
 		} else if mv != nil && mv.Type() != value.MISSING {
 			if rv == nil {
-				rv = make([]interface{}, 0, n)
+				rv = make(value.Values, 0, n)
 			}
 			rv = append(rv, mv)
 		}
@@ -155,14 +168,54 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 
 	if rvs != nil {
 		return nil, rvs, nil
+	} else if rv != nil {
+		return nil, rv, nil
 	} else {
-		if rv == nil {
-			rv = make([]interface{}, 0)
-		}
-		return value.NewValue(rv), nil, nil
+		return nil, _EMPTY_VALUES, nil
 	}
 }
 
+var _EMPTY_VALUES = make(value.Values, 0)
+
 func (this *Array) Copy() Expression {
 	return NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
+}
+
+func (this *Array) identityEval(item value.Value, context Context) (value.Value, error) {
+	val, err := this.bindings[0].Expression().Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	switch val.Type() {
+	case value.ARRAY, value.MISSING:
+		return val, nil
+	default:
+		return value.NULL_VALUE, nil
+	}
+}
+
+func (this *Array) identityEvalForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
+	val, vals, err := this.bindings[0].Expression().EvaluateForIndex(item, context)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if vals != nil {
+		return nil, vals, nil
+	}
+
+	switch val.Type() {
+	case value.ARRAY:
+		act := val.Actual().([]interface{})
+		vals = make(value.Values, len(act))
+		for i, a := range act {
+			vals[i] = value.NewValue(a)
+		}
+		return nil, vals, nil
+	case value.MISSING:
+		return val, nil, nil
+	default:
+		return value.NULL_VALUE, nil, nil
+	}
 }
