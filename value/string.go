@@ -246,14 +246,31 @@ func (this stringValue) Successor() Value {
 func (this stringValue) Recycle() {
 }
 
-func (this stringValue) Tokens(set *Set, names bool) *Set {
+func (this stringValue) Tokens(set *Set, options Value) *Set {
+	var caseFunc func(string) string
+	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
+		caseStr := caseOption.Actual().(string)
+		switch strings.ToLower(caseStr) {
+		case "lower":
+			caseFunc = strings.ToLower
+		case "upper":
+			caseFunc = strings.ToUpper
+		}
+	}
+
 	fields := strings.FieldsFunc(string(this),
 		func(c rune) bool {
 			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
 		})
 
-	for _, field := range fields {
-		set.Add(stringValue(field))
+	if caseFunc == nil {
+		for _, field := range fields {
+			set.Add(stringValue(field))
+		}
+	} else {
+		for _, field := range fields {
+			set.Add(stringValue(caseFunc(field)))
+		}
 	}
 
 	return set

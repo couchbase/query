@@ -315,21 +315,26 @@ func (this *Tokens) Apply(context Context, args ...value.Value) (value.Value, er
 		return value.MISSING_VALUE, nil
 	}
 
-	names := true
+	options := _EMPTY_OPTIONS
 	if len(args) >= 2 {
-		if args[1].Type() == value.BOOLEAN {
-			names = args[1].Truth()
-		} else {
+		switch args[1].Type() {
+		case value.OBJECT:
+			options = args[1]
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		default:
 			return value.NULL_VALUE, nil
 		}
 	}
 
 	set := _SET_POOL.Get()
 	defer _SET_POOL.Put(set)
-	set = arg.Tokens(set, names)
+	set = arg.Tokens(set, options)
 	items := set.Items()
 	return value.NewValue(items), nil
 }
+
+var _EMPTY_OPTIONS = value.NewValue(map[string]interface{}{})
 
 func (this *Tokens) MinArgs() int { return 1 }
 

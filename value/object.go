@@ -338,13 +338,18 @@ func (this objectValue) Recycle() {
 	recycle(this)
 }
 
-func (this objectValue) Tokens(set *Set, names bool) *Set {
+func (this objectValue) Tokens(set *Set, options Value) *Set {
+	names := true
+	if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+		names = n.Truth()
+	}
+
 	for n, v := range this {
 		if names {
-			set.Add(NewValue(n))
+			set = NewValue(n).Tokens(set, options)
 		}
 
-		set = NewValue(v).Tokens(set, names)
+		set = NewValue(v).Tokens(set, options)
 	}
 
 	return set

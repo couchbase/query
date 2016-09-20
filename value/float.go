@@ -306,7 +306,7 @@ func (this floatValue) Successor() Value {
 func (this floatValue) Recycle() {
 }
 
-func (this floatValue) Tokens(set *Set, names bool) *Set {
+func (this floatValue) Tokens(set *Set, options Value) *Set {
 	set.Add(this)
 	return set
 }

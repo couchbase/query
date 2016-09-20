@@ -201,7 +201,7 @@ func (this *nullValue) Successor() Value {
 func (this *nullValue) Recycle() {
 }
 
-func (this *nullValue) Tokens(set *Set, names bool) *Set {
+func (this *nullValue) Tokens(set *Set, options Value) *Set {
 	set.Add(this)
 	return set
 }

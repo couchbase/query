@@ -285,7 +285,7 @@
     ]
 },
 {
-  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, FALSE))",
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false}))",
   "results": [
         {
             "$1": [
@@ -300,6 +300,31 @@
   "results": [
         {
             "$1": null
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false, 'case':'upper'}))",
+  "results": [
+        {
+            "$1": [
+                "HELLO",
+                "WORLD"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'AA': {'BB': 'HELLO', 'CC': 'WORLD!'}}, {'names':true, 'case':'lower'}))",
+  "results": [
+        {
+            "$1": [
+                "aa",
+                "bb",
+                "cc",
+                "hello",
+                "world"
+            ]
         }
     ]
 }

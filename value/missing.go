@@ -208,7 +208,7 @@ func (this missingValue) Successor() Value {
 func (this missingValue) Recycle() {
 }
 
-func (this missingValue) Tokens(set *Set, names bool) *Set {
+func (this missingValue) Tokens(set *Set, options Value) *Set {
 	return set
 }
 

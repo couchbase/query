@@ -337,9 +337,9 @@ func (this sliceValue) Recycle() {
 	recycle(this)
 }
 
-func (this sliceValue) Tokens(set *Set, names bool) *Set {
+func (this sliceValue) Tokens(set *Set, options Value) *Set {
 	for _, v := range this {
-		set = NewValue(v).Tokens(set, names)
+		set = NewValue(v).Tokens(set, options)
 	}
 
 	return set
@@ -468,8 +468,8 @@ func (this *listValue) Successor() Value {
 func (this *listValue) Recycle() {
 }
 
-func (this *listValue) Tokens(set *Set, names bool) *Set {
-	return this.slice.Tokens(set, names)
+func (this *listValue) Tokens(set *Set, options Value) *Set {
+	return this.slice.Tokens(set, options)
 }
 
 func (this *listValue) unwrap() Value {
