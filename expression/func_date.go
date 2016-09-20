@@ -675,12 +675,12 @@ number representing UNIX milliseconds, and part is one of the
 date part strings.
 */
 type DatePartMillis struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewDatePartMillis(first, second Expression) Function {
+func NewDatePartMillis(operands ...Expression) Function {
 	rv := &DatePartMillis{
-		*NewBinaryFunctionBase("date_part_millis", first, second),
+		*NewFunctionBase("date_part_millis", operands...),
 	}
 
 	rv.expr = rv
@@ -697,10 +697,22 @@ func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *DatePartMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	first := args[0]
+	second := args[1]
+
+	// Initialize timezone to nil to avoid processing if not specified.
+	timeZone := _NIL_VALUE
+
+	// Check if time zone is set
+	if len(args) > 2 {
+		timeZone = args[2]
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -709,7 +721,30 @@ func (this *DatePartMillis) Apply(context Context, first, second value.Value) (v
 
 	millis := first.Actual().(float64)
 	part := second.Actual().(string)
-	rv, err := datePart(millisToTime(millis), part)
+
+	// Convert the input millis to *Time
+	timeVal := millisToTime(millis)
+
+	if timeZone != _NIL_VALUE {
+		// Process the timezone component as it isnt nil
+		if timeZone.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+		if timeZone.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		// Get the timezone and the *Location.
+		tz := timeZone.Actual().(string)
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+		// Use the timezone to get corresponding time component.
+		timeVal = timeVal.In(loc)
+	}
+
+	rv, err := datePart(timeVal, part)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -718,12 +753,20 @@ func (this *DatePartMillis) Apply(context Context, first, second value.Value) (v
 }
 
 /*
+Minimum input arguments required.
+*/
+func (this *DatePartMillis) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *DatePartMillis) MaxArgs() int { return 3 }
+
+/*
 Factory method pattern.
 */
 func (this *DatePartMillis) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewDatePartMillis(operands[0], operands[1])
-	}
+	return NewDatePartMillis
 }
 
 ///////////////////////////////////////////////////

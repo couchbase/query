@@ -485,5 +485,45 @@
             "$1": "2016-05-15"
         }
     ]
+   },
+   {
+    "statements":"select date_part_millis(1463284740000,'day','UTC')",
+    "results": [
+        {
+            "$1": 15
+        }
+    ]
+   },
+   {
+    "statements":"select str_to_utc(millis_to_str(1463284740000))",
+    "results": [
+        {
+            "$1": "2016-05-15T03:59:00Z"
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_millis(1463284740000,'day','US/Eastern')",
+    "results": [
+        {
+            "$1": 14
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_millis(1463284740000,'day','Europe/London')",
+    "results": [
+        {
+            "$1": 15
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_millis(1463284740000,'day','Asia/Tokyo')",
+    "results": [
+        {
+            "$1": 15
+        }
+    ]
    }
 ]
