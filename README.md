@@ -1,4 +1,7 @@
-# Query README
+<p align="center">
+  <img src="resources/couchbase_logo.png" width="600" height="150"/>
+  <img src="resources/n1ql_logo.png" width="150" height="150"/>
+</p>
 
 * Latest: [Query README](https://github.com/couchbase/query/blob/master/README.md)
 * Modified: 2015-04-25
