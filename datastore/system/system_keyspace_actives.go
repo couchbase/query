@@ -77,7 +77,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 				func(doc map[string]interface{}) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
-					remoteValue.SetField("Node", node)
+					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{
 						"id": key,
 					})
@@ -100,39 +100,39 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 			}
 			if request != nil {
 				item := value.NewAnnotatedValue(map[string]interface{}{
-					"RequestId":       localKey,
-					"RequestTime":     request.RequestTime().String(),
-					"ElapsedTime":     time.Since(request.RequestTime()).String(),
-					"ExecutionTime":   time.Since(request.ServiceTime()).String(),
-					"State":           request.State(),
-					"ScanConsistency": request.ScanConsistency(),
+					"requestId":       localKey,
+					"requestTime":     request.RequestTime().String(),
+					"elapsedTime":     time.Since(request.RequestTime()).String(),
+					"executionTime":   time.Since(request.ServiceTime()).String(),
+					"state":           request.State(),
+					"scanConsistency": request.ScanConsistency(),
 				})
 				if node != "" {
-					item.SetField("Node", node)
+					item.SetField("node", node)
 				}
 				cId := request.ClientID().String()
 				if cId != "" {
-					item.SetField("ClientContextID", cId)
+					item.SetField("clientContextID", cId)
 				}
 				if request.Statement() != "" {
-					item.SetField("Statement", request.Statement())
+					item.SetField("statement", request.Statement())
 				}
 				p := request.Output().FmtPhaseTimes()
 				if p != nil {
-					item.SetField("PhaseTimes", p)
+					item.SetField("phaseTimes", p)
 				}
 				p = request.Output().FmtPhaseCounts()
 				if p != nil {
-					item.SetField("PhaseCounts", p)
+					item.SetField("phaseCounts", p)
 				}
 				p = request.Output().FmtPhaseOperators()
 				if p != nil {
-					item.SetField("PhaseOperators", p)
+					item.SetField("phaseOperators", p)
 				}
 				if request.Prepared() != nil {
 					p := request.Prepared()
-					item.SetField("Prepared.Name", p.Name())
-					item.SetField("Prepared.Text", p.Text())
+					item.SetField("preparedName", p.Name())
+					item.SetField("preparedText", p.Text())
 				}
 				item.SetAttachment("meta", map[string]interface{}{
 					"id": key,

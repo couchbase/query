@@ -5,30 +5,30 @@
 	]
 	},
 	{
-	"statements": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests",
+	"statements": "select errorCount, resultCount, resultSize, statement from system:completed_requests",
 	"results": [
         {
-            "ErrorCount": 0,
-            "ResultCount": 0,
-            "ResultSize": 0,
-            "Statement": "delete from system:completed_requests"
+            "errorCount": 0,
+            "resultCount": 0,
+            "resultSize": 0,
+            "statement": "delete from system:completed_requests"
         }
 	]
 	},
 	{
-	"statements": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests order by Statement",
+	"statements": "select errorCount, resultCount, resultSize, statement from system:completed_requests order by statement",
 	"results": [
         {
-            "ErrorCount": 0,
-            "ResultCount": 0,
-            "ResultSize": 0,
-            "Statement": "delete from system:completed_requests"
+            "errorCount": 0,
+            "resultCount": 0,
+            "resultSize": 0,
+            "statement": "delete from system:completed_requests"
         },
         {
-            "ErrorCount": 0,
-            "ResultCount": 1,
-            "ResultSize": 0,
-            "Statement": "select ErrorCount, ResultCount, ResultSize, Statement from system:completed_requests"
+            "errorCount": 0,
+            "resultCount": 1,
+            "resultSize": 0,
+            "statement": "select errorCount, resultCount, resultSize, statement from system:completed_requests"
         }
 	]
 	}

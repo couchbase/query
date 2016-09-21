@@ -220,15 +220,15 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		reqMap["requestId"] = request.Id().String()
 		cId := request.ClientID().String()
 		if cId != "" {
-			reqMap["request.clientContextID"] = cId
+			reqMap["clientContextID"] = cId
 		}
 		if request.Statement() != "" {
-			reqMap["request.statement"] = request.Statement()
+			reqMap["statement"] = request.Statement()
 		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
-			reqMap["prepared.name"] = p.Name()
-			reqMap["prepared.statement"] = p.Text()
+			reqMap["preparedName"] = p.Name()
+			reqMap["preparedText"] = p.Text()
 		}
 		reqMap["requestTime"] = request.RequestTime()
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
@@ -280,15 +280,15 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["requestId"] = request.Id().String()
 		cId := request.ClientID().String()
 		if cId != "" {
-			requests[i]["request.clientContextID"] = cId
+			requests[i]["clientContextID"] = cId
 		}
 		if request.Statement() != "" {
-			requests[i]["request.statement"] = request.Statement()
+			requests[i]["statement"] = request.Statement()
 		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
-			requests[i]["prepared.name"] = p.Name()
-			requests[i]["prepared.statement"] = p.Text()
+			requests[i]["preparedName"] = p.Name()
+			requests[i]["preparedStatement"] = p.Text()
 		}
 		requests[i]["requestTime"] = request.RequestTime()
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()

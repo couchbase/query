@@ -74,7 +74,7 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 				func(doc map[string]interface{}) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
-					remoteValue.SetField("Node", node)
+					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{
 						"id": key,
 					})
@@ -92,37 +92,37 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 			// local entry
 			accounting.RequestDo(localKey, func(entry *accounting.RequestLogEntry) {
 				item := value.NewAnnotatedValue(map[string]interface{}{
-					"RequestId":       localKey,
-					"State":           entry.State,
-					"ElapsedTime":     entry.ElapsedTime.String(),
-					"ServiceTime":     entry.ServiceTime.String(),
-					"ResultCount":     entry.ResultCount,
-					"ResultSize":      entry.ResultSize,
-					"ErrorCount":      entry.ErrorCount,
-					"Time":            entry.Time.String(),
-					"ScanConsistency": entry.ScanConsistency,
+					"requestId":       localKey,
+					"state":           entry.State,
+					"elapsedTime":     entry.ElapsedTime.String(),
+					"serviceTime":     entry.ServiceTime.String(),
+					"resultCount":     entry.ResultCount,
+					"resultSize":      entry.ResultSize,
+					"errorCount":      entry.ErrorCount,
+					"time":            entry.Time.String(),
+					"scanConsistency": entry.ScanConsistency,
 				})
 				if node != "" {
-					item.SetField("Node", node)
+					item.SetField("node", node)
 				}
 				if entry.ClientId != "" {
-					item.SetField("ClientContextID", entry.ClientId)
+					item.SetField("clientContextID", entry.ClientId)
 				}
 				if entry.Statement != "" {
-					item.SetField("Statement", entry.Statement)
+					item.SetField("statement", entry.Statement)
 				}
 				if entry.PreparedName != "" {
-					item.SetField("PreparedName", entry.PreparedName)
-					item.SetField("PreparedText", entry.PreparedText)
+					item.SetField("preparedName", entry.PreparedName)
+					item.SetField("preparedText", entry.PreparedText)
 				}
 				if entry.PhaseTimes != nil {
-					item.SetField("PhaseTimes", entry.PhaseTimes)
+					item.SetField("phaseTimes", entry.PhaseTimes)
 				}
 				if entry.PhaseCounts != nil {
-					item.SetField("PhaseCounts", entry.PhaseCounts)
+					item.SetField("phaseCounts", entry.PhaseCounts)
 				}
 				if entry.PhaseOperators != nil {
-					item.SetField("PhaseOperators", entry.PhaseOperators)
+					item.SetField("phaseOperators", entry.PhaseOperators)
 				}
 				item.SetAttachment("meta", map[string]interface{}{
 					"id": key,

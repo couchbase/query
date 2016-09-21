@@ -10,6 +10,7 @@
 package system
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -75,10 +76,15 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 				"prepareds", "GET",
 				func(doc map[string]interface{}) {
 
+					plan := doc["operator"]
+					doc["statement"] = doc["text"]
+					delete(doc, "operator")
+					delete(doc, "text")
 					remoteValue := value.NewAnnotatedValue(doc)
-					remoteValue.SetField("Node", node)
+					remoteValue.SetField("node", node)
 					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id": key,
+						"id":   key,
+						"plan": plan,
 					})
 					rv = append(rv, value.AnnotatedPair{
 						Name:  key,
@@ -100,7 +106,7 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 					"encoded_plan": entry.Prepared.EncodedPlan(),
 				}
 				if node != "" {
-					itemMap["Node"] = node
+					itemMap["node"] = node
 				}
 				if entry.Uses > 0 {
 					itemMap["lastUse"] = entry.LastUse.String()
@@ -110,8 +116,10 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 						time.Duration(entry.Uses)).String()
 				}
 				item := value.NewAnnotatedValue(itemMap)
+				bytes, _ := json.Marshal(entry.Prepared.Operator)
 				item.SetAttachment("meta", map[string]interface{}{
-					"id": key,
+					"id":   key,
+					"plan": bytes,
 				})
 				rv = append(rv, value.AnnotatedPair{
 					Name:  key,
