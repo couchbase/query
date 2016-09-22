@@ -63,10 +63,11 @@ func (this floatValue) Type() Type {
 	return NUMBER
 }
 
-/*
-Cast receiver to float64(Go type).
-*/
 func (this floatValue) Actual() interface{} {
+	return float64(this)
+}
+
+func (this floatValue) ActualForIndex() interface{} {
 	return float64(this)
 }
 

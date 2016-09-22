@@ -44,18 +44,25 @@ func (this intValue) WriteJSON(w io.Writer, prefix, indent string) error {
 }
 
 /*
-Type Number
+Type NUMBER
 */
 func (this intValue) Type() Type {
 	return NUMBER
 }
 
 /*
-Cast receiver to float64. We cannot use int64 until Expressions can
-handle both float64 and int64.
+Cast receiver to float64. We cannot use int64 unless all Expressions
+can handle both float64 and int64.
 */
 func (this intValue) Actual() interface{} {
 	return float64(this)
+}
+
+/*
+Return int64 and avoid any lossiness due to rounding / representation.
+*/
+func (this intValue) ActualForIndex() interface{} {
+	return int64(this)
 }
 
 func (this intValue) Equals(other Value) Value {

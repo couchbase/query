@@ -182,10 +182,14 @@ type Value interface {
 	Type() Type
 
 	/*
-	   N1QL to native Go representation of method receiver. It
-	   returns an interface.
+	   N1QL to native Go representation.
 	*/
 	Actual() interface{}
+
+	/*
+	   N1QL to native Go representation. Exact for indexing.
+	*/
+	ActualForIndex() interface{}
 
 	/*
 	   Equality comparison. It is faster than Collate().

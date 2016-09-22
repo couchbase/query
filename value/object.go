@@ -143,6 +143,10 @@ func (this objectValue) Actual() interface{} {
 	return (map[string]interface{})(this)
 }
 
+func (this objectValue) ActualForIndex() interface{} {
+	return (map[string]interface{})(this)
+}
+
 func (this objectValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {

@@ -78,10 +78,11 @@ func (this sliceValue) Type() Type {
 	return ARRAY
 }
 
-/*
-Cast receiver to an interface and return it.
-*/
 func (this sliceValue) Actual() interface{} {
+	return ([]interface{})(this)
+}
+
+func (this sliceValue) ActualForIndex() interface{} {
 	return ([]interface{})(this)
 }
 
@@ -377,6 +378,10 @@ func (this *listValue) Type() Type { return ARRAY }
 
 func (this *listValue) Actual() interface{} {
 	return this.slice.Actual()
+}
+
+func (this *listValue) ActualForIndex() interface{} {
+	return this.slice.ActualForIndex()
 }
 
 func (this *listValue) Equals(other Value) Value {

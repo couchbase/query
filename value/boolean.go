@@ -63,10 +63,11 @@ func (this boolValue) Type() Type {
 	return BOOLEAN
 }
 
-/*
-Cast receiver to bool and return.
-*/
 func (this boolValue) Actual() interface{} {
+	return bool(this)
+}
+
+func (this boolValue) ActualForIndex() interface{} {
 	return bool(this)
 }
 

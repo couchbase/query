@@ -78,6 +78,10 @@ func (this missingValue) Actual() interface{} {
 	return nil
 }
 
+func (this missingValue) ActualForIndex() interface{} {
+	return nil
+}
+
 /*
 Returns MISSING.
 */

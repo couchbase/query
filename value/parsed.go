@@ -52,6 +52,10 @@ func (this *parsedValue) Actual() interface{} {
 	return this.unwrap().Actual()
 }
 
+func (this *parsedValue) ActualForIndex() interface{} {
+	return this.unwrap().ActualForIndex()
+}
+
 func (this *parsedValue) Equals(other Value) Value {
 	return this.unwrap().Equals(other)
 }

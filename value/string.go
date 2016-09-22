@@ -67,10 +67,11 @@ func (this stringValue) Type() Type {
 	return STRING
 }
 
-/*
-Cast receiver to string and return.
-*/
 func (this stringValue) Actual() interface{} {
+	return string(this)
+}
+
+func (this stringValue) ActualForIndex() interface{} {
 	return string(this)
 }
 

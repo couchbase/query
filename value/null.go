@@ -62,6 +62,10 @@ func (this *nullValue) Actual() interface{} {
 	return nil
 }
 
+func (this *nullValue) ActualForIndex() interface{} {
+	return nil
+}
+
 /*
 Returns MISSING or NULL.
 */

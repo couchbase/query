@@ -40,6 +40,10 @@ func (this binaryValue) Actual() interface{} {
 	return []byte(this)
 }
 
+func (this binaryValue) ActualForIndex() interface{} {
+	return []byte(this)
+}
+
 func (this binaryValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {

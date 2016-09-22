@@ -558,3 +558,55 @@ func TestArraySetIndexLongerThanExistingArray(t *testing.T) {
 		t.Errorf("Expected [gerald] got %v", valval)
 	}
 }
+
+func TestActual(t *testing.T) {
+	val := NewValue(10.5)
+	f, ok := val.Actual().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", f, f)
+	}
+
+	val = NewValue(-10.5)
+	f, ok = val.Actual().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", f, f)
+	}
+
+	val = NewValue(10)
+	i, ok := val.Actual().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", i, i)
+	}
+
+	val = NewValue(-10)
+	i, ok = val.Actual().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", i, i)
+	}
+}
+
+func TestActualForIndex(t *testing.T) {
+	val := NewValue(10.5)
+	f, ok := val.ActualForIndex().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", f, f)
+	}
+
+	val = NewValue(-10.5)
+	f, ok = val.ActualForIndex().(float64)
+	if !ok {
+		t.Errorf("Expected float64, got %v of type %T", f, f)
+	}
+
+	val = NewValue(10)
+	i, ok := val.ActualForIndex().(int64)
+	if !ok {
+		t.Errorf("Expected int64, got %v of type %T", i, i)
+	}
+
+	val = NewValue(-10)
+	i, ok = val.ActualForIndex().(int64)
+	if !ok {
+		t.Errorf("Expected int64, got %v of type %T", i, i)
+	}
+}
