@@ -580,5 +580,26 @@
             }
         }
     ]
+    },
+    {
+        "statements" : "SELECT * FROM default:tags ORDER BY name LIMIT 1",
+        "results": [
+        {
+            "tags": {
+                "name": "beer"
+            }
+        }
+    ]
+    },
+    {
+        "statements" : "SELECT * FROM default:tags LET foo=1 ORDER BY name LIMIT 1",
+        "results": [
+        {
+            "foo": 1,
+            "tags": {
+                "name": "beer"
+            }
+        }
+    ]
     }
 ]

@@ -31,11 +31,13 @@ func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 }
 
 func (this *ScopeValue) MarshalJSON() ([]byte, error) {
-	return this.Value.MarshalJSON()
+	val := objectValue(this.Fields())
+	return val.MarshalJSON()
 }
 
 func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	return this.Value.WriteJSON(w, prefix, indent)
+	val := objectValue(this.Fields())
+	return val.WriteJSON(w, prefix, indent)
 }
 
 func (this *ScopeValue) Copy() Value {
