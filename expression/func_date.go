@@ -317,6 +317,186 @@ func (this *ClockStr) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ClockTZ
+//
+///////////////////////////////////////////////////
+/*
+This represents the Date function CLOCK_TZ(timezone, [ fmt ]).
+It returns the system clock at function evaluation time, as a
+string in a supported format and input timezone and varies
+during a query. There are a set of supported formats.
+*/
+type ClockTZ struct {
+	FunctionBase
+}
+
+func NewClockTZ(operands ...Expression) Function {
+	rv := &ClockTZ{
+		*NewFunctionBase("clock_tz", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ClockTZ) Type() value.Type { return value.STRING }
+
+func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ClockTZ) Value() value.Value {
+	return nil
+}
+
+func (this *ClockTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	// Get current time
+	timeVal := time.Now()
+
+	tz := args[0]
+
+	if tz.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if tz.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Get the timezone and the *Location.
+	timeZone := tz.Actual().(string)
+	loc, err := time.LoadLocation(timeZone)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Use the timezone to get corresponding time component.
+	timeVal = timeVal.In(loc)
+
+	// Check format
+	if len(args) > 1 {
+		fv := args[1]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	return value.NewValue(timeToStr(timeVal, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+CLOCK_TZ is 1.
+*/
+func (this *ClockTZ) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowable for the defined function
+CLOCK_TZ is 2.
+*/
+func (this *ClockTZ) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *ClockTZ) Constructor() FunctionConstructor {
+	return NewClockTZ
+}
+
+///////////////////////////////////////////////////
+//
+// ClockUTC
+//
+///////////////////////////////////////////////////
+/*
+This represents the Date function CLOCK_UTC([ fmt ]). It returns
+the system clock at function evaluation time, as a string in a
+supported format in UTC and varies during a query. There are a
+set of supported formats.
+*/
+type ClockUTC struct {
+	FunctionBase
+}
+
+func NewClockUTC(operands ...Expression) Function {
+	rv := &ClockUTC{
+		*NewFunctionBase("clock_utc", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ClockUTC) Type() value.Type { return value.STRING }
+
+func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ClockUTC) Value() value.Value {
+	return nil
+}
+
+func (this *ClockUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	// Get current time in UTC
+	t := time.Now().UTC()
+
+	return value.NewValue(timeToStr(t, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+CLOCK_UTC is 0.
+*/
+func (this *ClockUTC) MinArgs() int { return 0 }
+
+/*
+Maximum input arguments allowable for the defined function
+CLOCK_UTC is 1.
+*/
+func (this *ClockUTC) MaxArgs() int { return 1 }
+
+/*
+Factory method pattern.
+*/
+func (this *ClockUTC) Constructor() FunctionConstructor {
+	return NewClockUTC
+}
+
+///////////////////////////////////////////////////
+//
 // DateAddMillis
 //
 ///////////////////////////////////////////////////
@@ -1335,6 +1515,183 @@ Factory method pattern.
 */
 func (this *NowStr) Constructor() FunctionConstructor {
 	return NewNowStr
+}
+
+///////////////////////////////////////////////////
+//
+// NowTz
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function NOW_TZ(timezone, [fmt]).
+It returns a statement timestamp as a string in
+a supported format for input timezone and does not vary
+during a query.
+*/
+type NowTZ struct {
+	FunctionBase
+}
+
+func NewNowTZ(operands ...Expression) Function {
+	rv := &NowTZ{
+		*NewFunctionBase("now_tz", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NowTZ) Type() value.Type { return value.STRING }
+
+func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *NowTZ) Value() value.Value {
+	return nil
+}
+
+func (this *NowTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+	now := context.Now()
+
+	tz := args[0]
+
+	if tz.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if tz.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Get the timezone and the *Location.
+	timeZone := tz.Actual().(string)
+	loc, err := time.LoadLocation(timeZone)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Use the timezone to get corresponding time component.
+	now = now.In(loc)
+
+	// Check format
+	if len(args) > 1 {
+		fv := args[1]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+is 1.
+*/
+func (this *NowTZ) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments required for the defined function
+is 2.
+*/
+func (this *NowTZ) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *NowTZ) Constructor() FunctionConstructor {
+	return NewNowTZ
+}
+
+///////////////////////////////////////////////////
+//
+// NowUTC
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function NOW_STR([fmt]).
+It returns a statement timestamp as a string in
+a supported format and does not vary during a query.
+*/
+type NowUTC struct {
+	FunctionBase
+}
+
+func NewNowUTC(operands ...Expression) Function {
+	rv := &NowUTC{
+		*NewFunctionBase("now_utc", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NowUTC) Type() value.Type { return value.STRING }
+
+func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *NowUTC) Value() value.Value {
+	return nil
+}
+
+func (this *NowUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	now := context.Now().UTC()
+	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+is 0.
+*/
+func (this *NowUTC) MinArgs() int { return 0 }
+
+/*
+Maximum input arguments required for the defined function
+is 1.
+*/
+func (this *NowUTC) MaxArgs() int { return 1 }
+
+/*
+Factory method pattern.
+*/
+func (this *NowUTC) Constructor() FunctionConstructor {
+	return NewNowUTC
 }
 
 ///////////////////////////////////////////////////

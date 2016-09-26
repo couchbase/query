@@ -199,26 +199,30 @@
      "statements":"select `shipped-on` as a from orders where test_id = \"datefunc\" order by a",
      "results": [
         {},
-        {},
         {
             "a": null
         },
         {
             "a": "2012/01/02"
+        },
+        {
+            "a": "2016-09-26T11:33:16.209-07:00"
         }
     ]
    },
    {
-     "description":"date not in correct format",
+     "description":"date not in correct format gives null",
      "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",    
      "results": [
-        {},
         {},
         {
             "a": null
         },
         {
             "a": null
+        },
+        {
+            "a": 9
         }
     ]
    },
@@ -550,6 +554,151 @@
     "results": [
         {
             "$1": 15
+        }
+    ]
+   },
+   {
+    "statements":"select DATE_PART_STR(CLOCK_UTC(),'timezone')",
+    "results": [
+        {
+            "$1": 0
+        }
+    ]
+   },
+   {
+    "statements":"select DATE_PART_STR(CLOCK_TZ('US/Eastern'),'timezone')",
+    "results": [
+        {
+            "$1": -14400
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_Str('2016-09-26T11:33:16.209-04:00','timezone')",
+    "results": [
+        {
+            "$1": -14400
+        }
+    ]
+   },
+   {
+    "statements":"select DATE_PART_STR(CLOCK_TZ('UTC'),'timezone')",
+    "results": [
+        {
+            "$1": 0
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_Str('2016-09-26T11:33:16.209-07:00','timezone')",
+    "results": [
+        {
+            "$1": -25200
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_Str(clock_local(),'decade')",
+    "results": [
+        {
+            "$1": 201
+        }
+    ]
+   },
+   {
+    "statements":"select date_part_str(now_local(),'decade')",
+    "results": [
+        {
+            "$1": 201
+        }
+    ]
+   },
+   {
+    "statements":"select DATE_PART_STR(NOW_UTC(),'timezone')",
+    "results": [
+        {
+            "$1": 0
+        }
+    ]
+   },
+   {
+    "statements":"select DATE_PART_STR(NOW_TZ('US/Eastern'),'timezone')",
+    "results": [
+        {
+            "$1": -14400
+        }
+    ]
+   },
+   {
+    "statements":"select MILLIS_TO_LOCAL(1.453485008e+12,'2006-01-02')",
+    "results": [
+        {
+            "$1": "2016-01-22"
+        }
+    ]
+   },
+   {
+    "statements":"select millis_to_zone_name(1.453485008e+12,'UTC')",
+    "results": [
+        {
+            "$1": "2016-01-22T17:50:08Z"
+        }
+    ]
+   },
+   {
+    "statements":"select millis_to_tz(1.453485008e+12,'UTC')",
+    "results": [
+        {
+            "$1": "2016-01-22T17:50:08Z"
+        }
+    ]
+   },
+   {
+    "statements":"select str_to_tz('2016-01-22T09:50:08-08:00', 'UTC')",
+    "results": [
+        {
+            "$1": "2016-01-22T17:50:08Z"
+        }
+    ]
+   },
+   {
+    "statements":"select str_to_zone_name('2016-01-22T09:50:08-08:00', 'UTC')",
+    "results": [
+        {
+            "$1": "2016-01-22T17:50:08Z"
+        }
+    ]
+   },
+   {
+    "statements":"select str_to_tz(`shipped-on`, 'UTC') a from orders order by a",
+    "results": [
+        {},
+        {
+            "a": null
+        },
+        {
+            "a": null
+        },
+        {
+            "a": "2016-09-26T18:33:16.209Z"
+        }
+    ]
+   },
+   {
+    "statements":"select str_to_zone_name(`shipped-on`, 'UTC'), date_part_millis(STR_TO_MILLIS(`shipped-on`), 'hour', 'US/Pacific') a from orders order by a",
+    "results": [
+        {},
+        {
+            "$1": null,
+            "a": null
+        },
+        {
+            "$1": null,
+            "a": null
+        },
+        {
+            "$1": "2016-09-26T18:33:16.209Z",
+            "a": 11
         }
     ]
    }
