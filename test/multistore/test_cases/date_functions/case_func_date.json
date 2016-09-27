@@ -670,7 +670,7 @@
     ]
    },
    {
-    "statements":"select str_to_tz(`shipped-on`, 'UTC') a from orders order by a",
+    "statements":"select str_to_tz(`shipped-on`, 'UTC') a from orders where test_id = \"datefunc\" order by a",
     "results": [
         {},
         {
@@ -685,7 +685,7 @@
     ]
    },
    {
-    "statements":"select str_to_zone_name(`shipped-on`, 'UTC'), date_part_millis(STR_TO_MILLIS(`shipped-on`), 'hour', 'US/Pacific') a from orders order by a",
+    "statements":"select str_to_zone_name(`shipped-on`, 'UTC'), date_part_millis(STR_TO_MILLIS(`shipped-on`), 'hour', 'US/Pacific') a from orders where test_id = \"datefunc\" order by a",
     "results": [
         {},
         {
