@@ -97,6 +97,17 @@ func TestArrayIndex(t *testing.T) {
 		Run(qc, "DROP INDEX product.ivw", Namespace_CBS)
 		Run(qc, "DROP INDEX product.cover_ivw", Namespace_CBS)
 
+		// Create array index on TOKENS()
+		Run(qc, "CREATE INDEX tokenindex ON product ((distinct (array lower(to_string(d)) for d in tokens(description) end)))", Namespace_CBS)
+		Run(qc, "CREATE INDEX tokenindex1 on product(ALL ARRAY r  FOR r IN tokens(name) END)", Namespace_CBS)
+		Run(qc, "CREATE INDEX tokenindex2 on product (ALL DISTINCT ARRAY l for l in tokens(imageURL) END)", Namespace_CBS)
+
+		runMatch("case_array_index_tokens.json", qc, t)
+
+		Run(qc, "DROP INDEX product.tokenindex", Namespace_CBS)
+		Run(qc, "DROP INDEX product.tokenindex1", Namespace_CBS)
+		Run(qc, "DROP INDEX product.tokenindex2", Namespace_CBS)
+
 		Run(qc, "create primary index on product ", Namespace_CBS)
 		Run(qc, "create primary index on purchase", Namespace_CBS)
 
