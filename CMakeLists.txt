@@ -25,23 +25,32 @@ ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
 ENDIF(BUILD_ENTERPRISE)
 
+# For compatibility with MacOS Sierra
+SET (GOVERSION 1.4.x)
+
+IF (APPLE)
+  IF (${GOVERSION} VERSION_LESS ${GO_MAC_MINIMUM_VERSION})
+    SET (GOVERSION ${GO_MAC_MINIMUM_VERSION)
+  ENDIF ()
+ENDIF()
+
 IF (NOT CBQ_ONLY)
   GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
     GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
     DEPENDS n1ql-yacc INSTALL_PATH bin
-    GOVERSION 1.4.x
+    GOVERSION ${GOVERSION}
     GOTAGS ${_gotags})
 
   GoInstall (TARGET cbq.old PACKAGE github.com/couchbase/query/shell/cbq.old
     GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
     DEPENDS n1ql-yacc cbq-engine INSTALL_PATH bin
-    GOVERSION 1.4.x)
+    GOVERSION ${GOVERSION})
 ENDIF (NOT CBQ_ONLY)
 
 GoInstall (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
   INSTALL_PATH bin
-  GOVERSION 1.4.x)
+  GOVERSION ${GOVERSION})
 
