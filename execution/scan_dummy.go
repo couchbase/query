@@ -47,6 +47,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 		if parent != nil {
 			cv := value.NewScopeValue(_EMPTY_OBJECT, parent)
 			av = value.NewAnnotatedValue(cv)
+			av.CopyCovers(parent)
 		}
 
 		this.sendItem(av)

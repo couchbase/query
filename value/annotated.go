@@ -41,6 +41,7 @@ type AnnotatedValue interface {
 	Covers() map[string]Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
+	CopyCovers(val Value)
 	SetAnnotations(av AnnotatedValue)
 }
 
@@ -140,6 +141,25 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 	}
 
 	this.covers[key] = val
+}
+
+func (this *annotatedValue) CopyCovers(val Value) {
+	if val == nil {
+		return
+	}
+
+	av, ok := val.(AnnotatedValue)
+	if !ok || len(av.Covers()) == 0 {
+		return
+	}
+
+	if this.covers == nil {
+		this.covers = make(map[string]Value, len(av.Covers()))
+	}
+
+	for k, v := range av.Covers() {
+		this.covers[k] = v
+	}
 }
 
 func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {

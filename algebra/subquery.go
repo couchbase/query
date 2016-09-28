@@ -52,6 +52,9 @@ It calls the VisitSubquery method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
 func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
+	if m, ok := visitor.(*expression.Coverer); ok {
+		return this, this.Select().MapExpressions(m)
+	}
 	return visitor.VisitSubquery(this)
 }
 

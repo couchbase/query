@@ -159,6 +159,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 				if ok {
 					cv := value.NewScopeValue(make(map[string]interface{}), parent)
 					av := value.NewAnnotatedValue(cv)
+					av.CopyCovers(parent)
 
 					// For downstream Fetch
 					meta := map[string]interface{}{"id": entry.PrimaryKey}

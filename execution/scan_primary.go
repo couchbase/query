@@ -93,6 +93,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 			if ok {
 				cv := value.NewScopeValue(make(map[string]interface{}), parent)
 				av := value.NewAnnotatedValue(cv)
+				av.CopyCovers(parent)
 				av.SetAttachment("meta", map[string]interface{}{"id": entry.PrimaryKey})
 				ok = this.sendItem(av)
 				lastEntry = entry
