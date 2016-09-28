@@ -248,6 +248,7 @@ func (this stringValue) Recycle() {
 }
 
 func (this stringValue) Tokens(set *Set, options Value) *Set {
+	// Set case folding function, if specified
 	var caseFunc func(string) string
 	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
 		caseStr := caseOption.Actual().(string)
@@ -259,10 +260,37 @@ func (this stringValue) Tokens(set *Set, options Value) *Set {
 		}
 	}
 
-	fields := strings.FieldsFunc(string(this),
-		func(c rune) bool {
+	// Set tokenizing and right trim functions. If specials is
+	// specified as true, tokenize on whitespace, and then right
+	// trim special characters. Otherwise, tokenize on whitespace
+	// and special characters. specials=true can be used to
+	// preserve email addresses, url's, hyphenated phone numbers,
+	// etc.
+	var fieldsFunc func(rune) bool
+	var rtrimFunc func(rune) bool
+	if specialsOption, ok := options.Field("specials"); ok &&
+		specialsOption.Type() == BOOLEAN && specialsOption.Truth() {
+		fieldsFunc = func(c rune) bool {
+			return unicode.IsSpace(c)
+		}
+		rtrimFunc = func(c rune) bool {
 			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
-		})
+		}
+	} else {
+		fieldsFunc = func(c rune) bool {
+			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+		}
+	}
+
+	// Tokenize
+	fields := strings.FieldsFunc(string(this), fieldsFunc)
+
+	// Apply right trim if necessary
+	if rtrimFunc != nil {
+		for f, field := range fields {
+			fields[f] = strings.TrimRightFunc(field, rtrimFunc)
+		}
+	}
 
 	if caseFunc == nil {
 		for _, field := range fields {
