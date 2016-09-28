@@ -48,26 +48,17 @@ func (this *Subquery) String() string {
 }
 
 /*
-It calls the VisitSubquery method by passing in the receiver to
-and returns the interface. It is a visitor pattern.
+Visitor pattern.
 */
 func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
-	if m, ok := visitor.(*expression.Coverer); ok {
-		return this, this.Select().MapExpressions(m)
-	}
 	return visitor.VisitSubquery(this)
 }
 
 /*
-Return a value of type ARRAY. The result of the subquery
-is returned as an array.
+Subqueries return a value of type ARRAY.
 */
 func (this *Subquery) Type() value.Type { return value.ARRAY }
 
-/*
-Call the evaluate method for subqueries and pass in the query and
-current item. Call the method using the current context.
-*/
 func (this *Subquery) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
 	return context.(Context).EvaluateSubquery(this.query, item)
 }
@@ -105,7 +96,7 @@ func (this *Subquery) Children() expression.Expressions {
 Map inner query's Expressions.
 */
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
-	return this.query.Expressions().MapExpressions(mapper)
+	return this.query.MapExpressions(mapper)
 }
 
 /*

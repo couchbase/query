@@ -10,8 +10,8 @@
 package plan
 
 import (
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 type readonly struct {
