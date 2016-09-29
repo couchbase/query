@@ -320,12 +320,11 @@ tokOffset	 int
 %type <subselect>        subselect
 %type <subselect>        select_from
 %type <subselect>        from_select
-%type <fromTerm>         from_term from opt_from
+%type <fromTerm>         from_term from opt_from simple_from_term
 %type <keyspaceTerm>     keyspace_term join_term index_join_term
-%type <subqueryTerm>     subquery_term
 %type <b>                opt_join_type
 %type <path>             path
-%type <s>                namespace_name keyspace_name
+%type <s>                namespace_name keyspace_name namespace_term
 %type <use>              opt_use
 %type <expr>             use_keys on_keys on_key
 %type <indexRefs>        use_index index_refs
@@ -792,15 +791,7 @@ FROM from_term
 ;
 
 from_term:
-keyspace_term
-{
-    $$ = $1
-}
-|
-subquery_term
-{
-    $$ = $1
-}
+simple_from_term
 |
 from_term opt_join_type JOIN join_term
 {
@@ -828,6 +819,32 @@ from_term opt_join_type unnest expr opt_as_alias
 }
 ;
 
+simple_from_term:
+keyspace_term
+{
+    $$ = $1
+}
+|
+expr opt_as_alias opt_use
+{
+     switch other := $1.(type) {
+         case *algebra.Subquery:
+              if $3 != algebra.EMPTY_USE {
+                   yylex.Error("FROM Subquery should not have USE KEYS.")
+              }
+              $$ = algebra.NewSubqueryTerm(other.Select(), $2)
+         case *expression.Identifier:
+              ksterm := algebra.NewKeyspaceTerm("", other.Alias(), $2, $3.Keys(), $3.Indexes())
+              $$ = algebra.NewExpressionTerm(other, $2, ksterm)
+         default:
+              if $3 != algebra.EMPTY_USE {
+                  yylex.Error("FROM Expression should not have USE KEYS.")
+              }
+              $$ = algebra.NewExpressionTerm(other,$2, nil)
+     }
+}
+;
+
 unnest:
 UNNEST
 |
@@ -835,30 +852,9 @@ FLATTEN
 ;
 
 keyspace_term:
-keyspace_name opt_as_alias opt_use
+namespace_term COLON keyspace_name opt_as_alias opt_use
 {
-    $$ = algebra.NewKeyspaceTerm("", $1, $2, $3.Keys(), $3.Indexes())
-}
-|
-namespace_name COLON keyspace_name opt_as_alias opt_use
-{
-    $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
-}
-|
-SYSTEM COLON keyspace_name opt_as_alias opt_use
-{
-    $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5.Keys(), $5.Indexes())
-}
-;
-
-subquery_term:
-LPAREN fullselect RPAREN as_alias
-{
-    if $4 == "" {
-        yylex.Error("Subquery in FROM clause must have an alias.")
-    } else {
-        $$ = algebra.NewSubqueryTerm($2, $4)
-    }
+     $$ = algebra.NewKeyspaceTerm($1, $3, $4, $5.Keys(), $5.Indexes())
 }
 ;
 
@@ -893,6 +889,16 @@ namespace_name COLON keyspace_name opt_as_alias on_key
 SYSTEM COLON keyspace_name opt_as_alias on_key
 {
     $$ = algebra.NewKeyspaceTerm("#system", $3, $4, $5, nil)
+}
+;
+
+
+namespace_term:
+namespace_name
+|
+SYSTEM
+{
+    $$ = "#system"
 }
 ;
 
@@ -1563,16 +1569,21 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE INTO keyspace_ref USING keyspace_term ON key_expr merge_actions opt_limit opt_returning
+MERGE INTO keyspace_ref USING simple_from_term ON key_expr merge_actions opt_limit opt_returning
 {
-    source := algebra.NewMergeSourceFrom($5, "")
-    $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
-}
-|
-MERGE INTO keyspace_ref USING LPAREN fullselect RPAREN as_alias ON key_expr merge_actions opt_limit opt_returning
-{
-    source := algebra.NewMergeSourceSelect($6, $8)
-    $$ = algebra.NewMerge($3, source, $10, $11, $12, $13)
+     switch other := $5.(type) {
+         case *algebra.SubqueryTerm:
+              source := algebra.NewMergeSourceSelect(other.Subquery(), other.Alias())
+              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+         case *algebra.ExpressionTerm:
+              source := algebra.NewMergeSourceExpression(other, "")
+              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+         case *algebra.KeyspaceTerm:
+              source := algebra.NewMergeSourceFrom(other, "")
+              $$ = algebra.NewMerge($3, source, $7, $8, $9, $10)
+         default:
+	      yylex.Error("MERGE source term is UNKNOWN.")
+     }
 }
 ;
 
