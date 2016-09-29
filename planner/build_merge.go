@@ -28,6 +28,13 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		children = append(children, sel.(plan.Operator))
+	} else if source.ExpressionTerm() != nil {
+		_, err := source.ExpressionTerm().Accept(this)
+		if err != nil {
+			return nil, err
+		}
+		children = append(children, this.children...)
+		subChildren = append(subChildren, this.subChildren...)
 	} else {
 		if source.From() == nil {
 			return nil, fmt.Errorf("MERGE missing source.")
@@ -41,7 +48,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		// Update local operator slices with results of building From:
 		children = append(children, this.children...)
 		subChildren = append(subChildren, this.subChildren...)
-
 	}
 
 	if source.As() != "" {

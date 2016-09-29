@@ -96,6 +96,10 @@ func (this *builder) VisitKeyScan(plan *plan.KeyScan) (interface{}, error) {
 	return NewKeyScan(plan), nil
 }
 
+func (this *builder) VisitExpressionScan(plan *plan.ExpressionScan) (interface{}, error) {
+	return NewExpressionScan(plan), nil
+}
+
 func (this *builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
 	return NewValueScan(plan), nil
 }

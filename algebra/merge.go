@@ -263,9 +263,10 @@ struct containing three fields, the from keyspace
 term, the select query and the alias as string.
 */
 type MergeSource struct {
-	from  *KeyspaceTerm `json:"from"`
-	query *Select       `json:"select"`
-	as    string        `json:"as"`
+	from  *KeyspaceTerm   `json:"from"`
+	query *Select         `json:"select"`
+	expr  *ExpressionTerm `json:"expr"`
+	as    string          `json:"as"`
 }
 
 /*
@@ -295,11 +296,31 @@ func NewMergeSourceSelect(query *Select, as string) *MergeSource {
 }
 
 /*
+The function NewMergeSourceExpression returns a pointer
+to the MergeSource struct by assigning the input
+attributes to the fields of the struct, setting
+the expr and the alias.
+*/
+func NewMergeSourceExpression(expr *ExpressionTerm, as string) *MergeSource {
+	return &MergeSource{
+		expr: expr,
+		as:   as,
+	}
+}
+
+/*
 Applies mapper to the query expressions.
 */
 func (this *MergeSource) MapExpressions(mapper expression.Mapper) (err error) {
 	if this.query != nil {
 		err = this.query.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.expr != nil {
+		err = this.expr.MapExpressions(mapper)
 		if err != nil {
 			return
 		}
@@ -316,6 +337,10 @@ func (this *MergeSource) Expressions() expression.Expressions {
 		return this.query.Expressions()
 	}
 
+	if this.expr != nil {
+		return this.expr.Expressions()
+	}
+
 	return nil
 }
 
@@ -327,7 +352,11 @@ func (this *MergeSource) Privileges() (datastore.Privileges, errors.Error) {
 		return this.from.Privileges()
 	}
 
-	return this.query.Privileges()
+	if this.query != nil {
+		return this.query.Privileges()
+	}
+
+	return this.expr.Privileges()
 }
 
 /*
@@ -349,9 +378,17 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 		}
 	}
 
+	if this.expr != nil {
+		_, err = this.expr.Formalize(expression.NewFormalizer("", nil))
+		if err != nil {
+			return
+		}
+	}
+
 	keyspace := this.Alias()
 	if keyspace == "" {
-		return nil, fmt.Errorf("MergeSource missing alias.")
+		err = errors.NewNoTermNameError("MergeSource", "plan.mergesource.requires_name_or_alias")
+		return nil, err
 	}
 
 	f = expression.NewFormalizer(keyspace, nil)
@@ -373,6 +410,13 @@ func (this *MergeSource) Select() *Select {
 }
 
 /*
+Return the ExpressionTerm for the merge source.
+*/
+func (this *MergeSource) ExpressionTerm() *ExpressionTerm {
+	return this.expr
+}
+
+/*
 Return alias defined by as.
 */
 func (this *MergeSource) As() string {
@@ -388,6 +432,8 @@ func (this *MergeSource) Alias() string {
 		return this.as
 	} else if this.from != nil {
 		return this.from.Alias()
+	} else if this.expr != nil {
+		return this.expr.Alias()
 	} else {
 		return ""
 	}
