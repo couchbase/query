@@ -60,7 +60,6 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		cv := value.NewScopeValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
-		av.CopyCovers(parent)
 		av.SetAttachment("count", value.NewValue(count))
 		this.sendItem(av)
 	})

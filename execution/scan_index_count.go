@@ -83,8 +83,9 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 		}
+
 		av := value.NewAnnotatedValue(count)
-		av.CopyCovers(parent)
+		av.InheritCovers(parent)
 		this.sendItem(av)
 	})
 }

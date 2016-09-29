@@ -54,7 +54,6 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 			sv.SetField(result.As(), v)
 		}
 		av := value.NewAnnotatedValue(sv)
-		av.CopyCovers(item)
 		return this.sendItem(av)
 	}
 }

@@ -38,10 +38,10 @@ type AnnotatedValue interface {
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
-	Covers() map[string]Value
+	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
-	CopyCovers(val Value)
+	InheritCovers(val Value)
 	SetAnnotations(av AnnotatedValue)
 }
 
@@ -49,20 +49,30 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	switch val := val.(type) {
 	case AnnotatedValue:
 		return val
+	case *ScopeValue:
+		av := &annotatedValue{
+			Value: val,
+		}
+
+		av.InheritCovers(val.Parent())
+		return av
 	case Value:
 		av := &annotatedValue{
 			Value: val,
 		}
 		return av
 	default:
-		return NewAnnotatedValue(NewValue(val))
+		av := &annotatedValue{
+			Value: NewValue(val),
+		}
+		return av
 	}
 }
 
 type annotatedValue struct {
 	Value
 	attachments map[string]interface{}
-	covers      map[string]Value
+	covers      Value
 }
 
 func (this *annotatedValue) String() string {
@@ -123,13 +133,14 @@ func (this *annotatedValue) RemoveAttachment(key string) {
 	}
 }
 
-func (this *annotatedValue) Covers() map[string]Value {
+func (this *annotatedValue) Covers() Value {
 	return this.covers
 }
 
 func (this *annotatedValue) GetCover(key string) Value {
 	if this.covers != nil {
-		return this.covers[key]
+		rv, _ := this.covers.Field(key)
+		return rv
 	}
 
 	return nil
@@ -137,28 +148,34 @@ func (this *annotatedValue) GetCover(key string) Value {
 
 func (this *annotatedValue) SetCover(key string, val Value) {
 	if this.covers == nil {
-		this.covers = make(map[string]Value)
+		this.covers = NewScopeValue(make(map[string]interface{}), nil)
 	}
 
-	this.covers[key] = val
+	this.covers.SetField(key, val)
 }
 
-func (this *annotatedValue) CopyCovers(val Value) {
-	if val == nil {
+func (this *annotatedValue) InheritCovers(val Value) {
+	if this.covers != nil || val == nil {
 		return
 	}
 
-	av, ok := val.(AnnotatedValue)
-	if !ok || len(av.Covers()) == 0 {
-		return
-	}
+	switch val := val.(type) {
+	case AnnotatedValue:
+		this.covers = NewScopeValue(map[string]interface{}{}, val.Covers())
+	case *ScopeValue:
+		// Find the first ancestor that is not a ScopeValue
+		var parent Value = val
+		for p, ok := parent.(*ScopeValue); ok; p, ok = parent.(*ScopeValue) {
+			parent = p.Parent()
+			if parent == nil {
+				return
+			}
+		}
 
-	if this.covers == nil {
-		this.covers = make(map[string]Value, len(av.Covers()))
-	}
-
-	for k, v := range av.Covers() {
-		this.covers[k] = v
+		// Inherit covers from parent / ancestor
+		if pv, ok := parent.(AnnotatedValue); ok && pv.Covers() != nil {
+			this.covers = NewScopeValue(map[string]interface{}{}, pv.Covers())
+		}
 	}
 }
 

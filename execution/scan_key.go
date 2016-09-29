@@ -65,7 +65,6 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		for _, key := range acts {
 			cv := value.NewScopeValue(make(map[string]interface{}), parent)
 			av := value.NewAnnotatedValue(cv)
-			av.CopyCovers(parent)
 			av.SetAttachment("meta", map[string]interface{}{"id": key})
 			if !this.sendItem(av) {
 				break
