@@ -86,6 +86,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorInvalidUsername("")
 	case errors.MISSING_CREDENTIAL:
 		return errors.NewShellErrorMissingCredential("")
+	case errors.INVALID_CREDENTIAL:
+		return errors.NewShellErrorInvalidCredential("")
 
 	//Command Errors
 	case errors.NO_SUCH_COMMAND:
@@ -100,6 +102,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorStackEmpty("")
 	case errors.NO_SUCH_ALIAS:
 		return errors.NewShellErrorNoSuchAlias(msg)
+	case errors.BATCH_MODE:
+		return errors.NewShellErrorBatchMode("")
 
 	//Generic Errors
 	case errors.OPERATION_TIMEOUT:
@@ -120,6 +124,8 @@ func HandleError(err int, msg string) errors.Error {
 		return errors.NewShellErrorRowsClose(msg)
 	case errors.CMD_LINE_ARG:
 		return errors.NewShellErrorCmdLineArgs("")
+	case errors.INVALID_INPUT_ARGUMENTS:
+		return errors.NewShellErrorInvalidInputArguments("")
 
 	default:
 		return errors.NewShellErrorUnkownError(msg)

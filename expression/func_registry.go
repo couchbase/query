@@ -97,23 +97,34 @@ var _FUNCTIONS = map[string]Function{
 	// Date
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
+	"clock_local":         &ClockStr{},
+	"clock_tz":            &ClockTZ{},
+	"clock_utc":           &ClockUTC{},
+	"array_date_range":    &ArrayDateRange{},
 	"date_add_millis":     &DateAddMillis{},
 	"date_add_str":        &DateAddStr{},
 	"date_diff_millis":    &DateDiffMillis{},
 	"date_diff_str":       &DateDiffStr{},
+	"date_format_str":     &DateFormatStr{},
 	"date_part_millis":    &DatePartMillis{},
 	"date_part_str":       &DatePartStr{},
 	"date_trunc_millis":   &DateTruncMillis{},
 	"date_trunc_str":      &DateTruncStr{},
 	"duration_to_str":     &DurationToStr{},
 	"millis":              &StrToMillis{},
+	"millis_to_local":     &MillisToStr{},
 	"millis_to_str":       &MillisToStr{},
+	"millis_to_tz":        &MillisToZoneName{},
 	"millis_to_utc":       &MillisToUTC{},
 	"millis_to_zone_name": &MillisToZoneName{},
+	"now_local":           &NowStr{},
 	"now_millis":          &NowMillis{},
 	"now_str":             &NowStr{},
+	"now_tz":              &NowTZ{},
+	"now_utc":             &NowUTC{},
 	"str_to_duration":     &StrToDuration{},
 	"str_to_millis":       &StrToMillis{},
+	"str_to_tz":           &StrToZoneName{},
 	"str_to_utc":          &StrToUTC{},
 	"str_to_zone_name":    &StrToZoneName{},
 
@@ -226,14 +237,20 @@ var _FUNCTIONS = map[string]Function{
 	"object_values":       &ObjectValues{},
 
 	// JSON
-	"json_decode": &JSONDecode{},
-	"json_encode": &JSONEncode{},
-
-	// ...backwards compatibility
 	"decode_json":  &JSONDecode{},
 	"encode_json":  &JSONEncode{},
 	"encoded_size": &EncodedSize{},
+	"json_decode":  &JSONDecode{},
+	"json_encode":  &JSONEncode{},
 	"poly_length":  &PolyLength{},
+	"tokens":       &Tokens{},
+
+	// Base64
+	"base64":        &Base64Encode{},
+	"base64_decode": &Base64Decode{},
+	"base64_encode": &Base64Encode{},
+	"decode_base64": &Base64Decode{},
+	"encode_base64": &Base64Encode{},
 
 	// Comparison
 	"greatest":  &Greatest{},
@@ -267,18 +284,11 @@ var _FUNCTIONS = map[string]Function{
 	"posinfif":      &PosInfIf{},
 
 	// Meta
-	"base64_encode": &Base64Encode{},
-	"base64_decode": &Base64Decode{},
-
-	// ...backwards compatibility
-	"base64":        &Base64Encode{},
-	"encode_base64": &Base64Encode{},
-	"decode_base64": &Base64Decode{},
-	"meta":          &Meta{},
-	"min_version":   &MinVersion{},
-	"self":          &Self{},
-	"uuid":          &Uuid{},
-	"version":       &Version{},
+	"meta":        &Meta{},
+	"min_version": &MinVersion{},
+	"self":        &Self{},
+	"uuid":        &Uuid{},
+	"version":     &Version{},
 
 	// Type checking
 	"is_array":   &IsArray{},

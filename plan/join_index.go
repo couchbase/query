@@ -16,28 +16,32 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 type IndexJoin struct {
 	readonly
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
-	outer    bool
-	keyFor   string
-	idExpr   expression.Expression
-	index    datastore.Index
-	covers   expression.Covers
+	keyspace     datastore.Keyspace
+	term         *algebra.KeyspaceTerm
+	outer        bool
+	keyFor       string
+	idExpr       expression.Expression
+	index        datastore.Index
+	covers       expression.Covers
+	filterCovers map[*expression.Cover]value.Value
 }
 
 func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
-	index datastore.Index, covers expression.Covers) *IndexJoin {
+	index datastore.Index, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value) *IndexJoin {
 	rv := &IndexJoin{
-		keyspace: keyspace,
-		term:     join.Right(),
-		outer:    join.Outer(),
-		keyFor:   join.For(),
-		index:    index,
-		covers:   covers,
+		keyspace:     keyspace,
+		term:         join.Right(),
+		outer:        join.Outer(),
+		keyFor:       join.For(),
+		index:        index,
+		covers:       covers,
+		filterCovers: filterCovers,
 	}
 
 	rv.idExpr = expression.NewField(
@@ -82,6 +86,10 @@ func (this *IndexJoin) Covers() expression.Covers {
 	return this.covers
 }
 
+func (this *IndexJoin) FilterCovers() map[*expression.Cover]value.Value {
+	return this.filterCovers
+}
+
 func (this *IndexJoin) Covering() bool {
 	return len(this.covers) > 0
 }
@@ -111,6 +119,15 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 		scan["covers"] = this.covers
 	}
 
+	if len(this.filterCovers) > 0 {
+		fc := make(map[string]value.Value, len(this.filterCovers))
+		for c, v := range this.filterCovers {
+			fc[c.String()] = v
+		}
+
+		scan["filter_covers"] = fc
+	}
+
 	r["scan"] = scan
 	if this.duration != 0 {
 		r["#time"] = this.duration.String()
@@ -128,10 +145,11 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		As    string `json:"as"`
 		For   string `json:"for"`
 		Scan  struct {
-			Index   string              `json:"index"`
-			IndexId string              `json:"index_id"`
-			Using   datastore.IndexType `json:"using"`
-			Covers  []string            `json:"covers"`
+			Index        string                     `json:"index"`
+			IndexId      string                     `json:"index_id"`
+			Using        datastore.IndexType        `json:"using"`
+			Covers       []string                   `json:"covers"`
+			FilterCovers map[string]json.RawMessage `json:"filter_covers"`
 		} `json:"scan"`
 	}
 
@@ -179,6 +197,19 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			}
 
 			this.covers[i] = expression.NewCover(expr)
+		}
+	}
+
+	if len(_unmarshalled.Scan.FilterCovers) > 0 {
+		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.Scan.FilterCovers))
+		for k, v := range _unmarshalled.Scan.FilterCovers {
+			expr, err := parser.Parse(k)
+			if err != nil {
+				return err
+			}
+
+			c := expression.NewCover(expr)
+			this.filterCovers[c] = value.NewValue(v)
 		}
 	}
 

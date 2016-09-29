@@ -51,25 +51,17 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, limit expression.Expression) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
-	var indexes, hintIndexes, otherIndexes []datastore.Index
-	hints := node.Indexes()
-	if hints != nil {
-		indexes = _INDEX_POOL.Get()
-		defer _INDEX_POOL.Put(indexes)
-		indexes, err = allHints(keyspace, hints, indexes)
-		hintIndexes = indexes
-	} else {
-		indexes = _ALL_INDEX_POOL.Get()
-		defer _ALL_INDEX_POOL.Put(indexes)
-		indexes, err = allIndexes(keyspace, indexes)
-		otherIndexes = indexes
+	var hints []datastore.Index
+	if len(node.Indexes()) > 0 {
+		hints = _HINT_POOL.Get()
+		defer _HINT_POOL.Put(hints)
+		hints, err = allHints(keyspace, node.Indexes(), hints)
+		if err != nil {
+			return
+		}
 	}
 
-	if err != nil {
-		return
-	}
-
-	// for Watson, restrict system keyspaces to primary scans
+	// Restrict system keyspaces to primary scans
 	isSystem := keyspace.NamespaceId() == "#system"
 
 	pred := this.where
@@ -87,62 +79,14 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	// Handle covering primary scan
 	if this.cover != nil && pred == nil && !isSystem {
-		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hintIndexes, otherIndexes)
+		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hints)
 		if scan != nil || err != nil {
 			return scan, nil, err
 		}
 	}
 
 	if pred != nil && !isSystem {
-		// Handle constant FALSE predicate
-		cpred := pred.Value()
-		if cpred != nil && !cpred.Truth() {
-			return _EMPTY_PLAN, nil, nil
-		}
-
-		pred = pred.Copy()
-		dnf := NewDNF(pred)
-		pred, err = dnf.Map(pred)
-		if err != nil {
-			return
-		}
-
-		formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
-		primaryKey := expression.Expressions{id}
-		sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
-		if er != nil {
-			return nil, nil, er
-		}
-
-		minimals, er := minimalIndexes(sargables, pred)
-		if er != nil {
-			return nil, nil, er
-		}
-
-		if limit != nil && len(minimals) == 0 {
-			// PrimaryScan with predicates disable pushdown
-			prevLimit := this.limit
-			defer func() { this.limit = prevLimit }()
-			this.limit = nil
-			limit = nil
-		}
-
-		if len(minimals) == 0 {
-			this.resetCountMin()
-		}
-
-		if len(minimals) > 0 {
-			secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
-			return secondary, nil, err
-		}
-
-		if this.from != nil {
-			// Try for an UNNEST scan
-			secondary, err = this.buildUnnestScan(node, this.from, pred, all)
-			if secondary != nil || err != nil {
-				return secondary, nil, err
-			}
-		}
+		return this.buildPredicateScan(keyspace, node, id, pred, limit, hints)
 	}
 
 	if this.order != nil {
@@ -150,7 +94,101 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		limit = nil
 	}
 
-	primary, err = this.buildPrimaryScan(keyspace, node, limit, hintIndexes, otherIndexes)
+	primary, err = this.buildPrimaryScan(keyspace, node, limit, hints, false)
+	return nil, primary, err
+}
+
+func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	id, pred, limit expression.Expression, hints []datastore.Index) (
+	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+	// Handle constant FALSE predicate
+	cpred := pred.Value()
+	if cpred != nil && !cpred.Truth() {
+		return _EMPTY_PLAN, nil, nil
+	}
+
+	pred = pred.Copy()
+	dnf := NewDNF(pred)
+	pred, err = dnf.Map(pred)
+	if err != nil {
+		return
+	}
+
+	primaryKey := expression.Expressions{id}
+	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
+
+	if len(hints) > 0 {
+		secondary, primary, err = this.buildSubsetScan(
+			keyspace, node, id, pred, limit, hints, primaryKey, formalizer, true)
+		if secondary != nil || primary != nil || err != nil {
+			return
+		}
+	}
+
+	others := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(others)
+	others, err = allIndexes(keyspace, hints, others)
+	if err != nil {
+		return
+	}
+
+	return this.buildSubsetScan(keyspace, node, id, pred, limit, others, primaryKey, formalizer, false)
+}
+
+func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	id, pred, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
+	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
+	sargables, entries, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	if er != nil {
+		return nil, nil, er
+	}
+
+	minimals := minimalIndexes(sargables, false)
+
+	// Try secondary scan
+	if len(minimals) > 0 {
+		secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
+			return secondary, nil, err
+		}
+	}
+
+	// Try UNNEST scan
+	if this.from != nil {
+		unnest, err := this.buildUnnestScan(node, this.from, pred, entries)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if unnest != nil {
+			this.resetCountMin()
+
+			if secondary == nil || len(this.coveringScans) > 0 {
+				return unnest, nil, err
+			} else {
+				return plan.NewIntersectScan(secondary, unnest), nil, err
+			}
+		}
+	}
+
+	if secondary != nil {
+		return secondary, nil, err
+	}
+
+	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
+
+	// PrimaryScan with predicates -- disable pushdown
+	if primary != nil {
+		this.resetCountMin()
+		this.resetOrderLimit()
+	}
+
 	return nil, primary, err
 }
 
@@ -181,10 +219,19 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	return indexes, nil
 }
 
-func allIndexes(keyspace datastore.Keyspace, indexes []datastore.Index) ([]datastore.Index, error) {
+func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) ([]datastore.Index, error) {
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err
+	}
+
+	var skipMap map[datastore.Index]bool
+	if len(skip) > 0 {
+		skipMap = _SKIP_POOL.Get()
+		defer _SKIP_POOL.Put(skipMap)
+		for _, s := range skip {
+			skipMap[s] = true
+		}
 	}
 
 	for _, indexer := range indexers {
@@ -194,6 +241,11 @@ func allIndexes(keyspace datastore.Keyspace, indexes []datastore.Index) ([]datas
 		}
 
 		for _, idx := range idxes {
+			// Skip index if listed
+			if len(skipMap) > 0 && skipMap[idx] {
+				continue
+			}
+
 			state, _, er := idx.State()
 			if er != nil {
 				logging.Errorp("Index selection", logging.Pair{"error", er.Error()})
@@ -210,6 +262,7 @@ func allIndexes(keyspace datastore.Keyspace, indexes []datastore.Index) ([]datas
 	return indexes, nil
 }
 
-var _INDEX_POOL = datastore.NewIndexPool(32)
-var _ALL_INDEX_POOL = datastore.NewIndexPool(256)
+var _INDEX_POOL = datastore.NewIndexPool(256)
+var _HINT_POOL = datastore.NewIndexPool(32)
+var _SKIP_POOL = datastore.NewIndexBoolPool(32)
 var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{})

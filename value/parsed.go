@@ -52,8 +52,16 @@ func (this *parsedValue) Actual() interface{} {
 	return this.unwrap().Actual()
 }
 
+func (this *parsedValue) ActualForIndex() interface{} {
+	return this.unwrap().ActualForIndex()
+}
+
 func (this *parsedValue) Equals(other Value) Value {
 	return this.unwrap().Equals(other)
+}
+
+func (this *parsedValue) EquivalentTo(other Value) bool {
+	return this.unwrap().EquivalentTo(other)
 }
 
 func (this *parsedValue) Collate(other Value) int {
@@ -138,12 +146,12 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		return missingIndex(index), false
 	}
 
+	if index < 0 {
+		return this.unwrap().Index(index)
+	}
+
 	raw := this.raw
 	if raw != nil {
-		if index < 0 {
-			return this.unwrap().Index(index)
-		}
-
 		res, err := jsonpointer.Find(raw, "/"+strconv.Itoa(index))
 		if err != nil {
 			return missingIndex(index), false
@@ -229,6 +237,16 @@ func (this *parsedValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 
 func (this *parsedValue) Successor() Value {
 	return this.unwrap().Successor()
+}
+
+func (this *parsedValue) Recycle() {
+	if this.parsed != nil {
+		this.parsed.Recycle()
+	}
+}
+
+func (this *parsedValue) Tokens(set *Set, options Value) *Set {
+	return this.unwrap().Tokens(set, options)
 }
 
 /*

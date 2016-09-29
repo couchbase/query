@@ -171,21 +171,35 @@ type Value interface {
 	json.Marshaler
 
 	/*
+	   Marshal JSON and write it out.
+	*/
+	WriteJSON(w io.Writer, prefix, indent string) error
+
+	/*
 	   Returns the type of the input based on the previously
 	   defined Types(Data type constant).
 	*/
 	Type() Type
 
 	/*
-	   N1QL to native Go representation of method receiver. It
-	   returns an interface.
+	   N1QL to native Go representation.
 	*/
 	Actual() interface{}
+
+	/*
+	   N1QL to native Go representation. Exact for indexing.
+	*/
+	ActualForIndex() interface{}
 
 	/*
 	   Equality comparison. It is faster than Collate().
 	*/
 	Equals(other Value) Value
+
+	/*
+	   Equivalence.
+	*/
+	EquivalentTo(other Value) bool
 
 	/*
 	   Returns –int, 0 or +int depending on if the receiver this
@@ -314,15 +328,20 @@ type Value interface {
 	Successor() Value
 
 	/*
+	   Recycle this Value's memory. This Value should not be
+	   referenced or used after this call.
+	*/
+	Recycle()
+
+	/*
+	   MB-20850. List all the atomic tokens of a value.
+	*/
+	Tokens(set *Set, options Value) *Set
+
+	/*
 	   Returns a value that is not wrapped. For internal use.
 	*/
 	unwrap() Value
-
-	/*
-	   Write JSON marshal.
-	*/
-
-	WriteJSON(w io.Writer, prefix, indent string) error
 }
 
 var _CONVERSIONS = []reflect.Type{

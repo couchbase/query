@@ -10,9 +10,11 @@
 package value
 
 import (
-	"encoding/json"
 	"fmt"
+	json "github.com/couchbase/go_json"
 	"io"
+	"strings"
+	"unicode"
 
 	"github.com/couchbase/query/util"
 )
@@ -33,7 +35,7 @@ Use built-in JSON string marshalling, which handles special
 characters.
 */
 func (this stringValue) String() string {
-	bytes, err := json.Marshal(string(this))
+	bytes, err := json.MarshalNoEscape(string(this))
 	if err != nil {
 		// We should not get here.
 		panic(fmt.Sprintf("Error marshaling Value %v: %v", this, err))
@@ -46,11 +48,11 @@ Use built-in JSON string marshalling, which handles special
 characters.
 */
 func (this stringValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(this))
+	return json.MarshalNoEscape(string(this))
 }
 
 func (this stringValue) WriteJSON(w io.Writer, prefix, indent string) error {
-	b, err := json.Marshal(string(this))
+	b, err := json.MarshalNoEscape(string(this))
 	if err != nil {
 		return err
 	}
@@ -65,10 +67,11 @@ func (this stringValue) Type() Type {
 	return STRING
 }
 
-/*
-Cast receiver to string and return.
-*/
 func (this stringValue) Actual() interface{} {
+	return string(this)
+}
+
+func (this stringValue) ActualForIndex() interface{} {
 	return string(this)
 }
 
@@ -90,6 +93,16 @@ func (this stringValue) Equals(other Value) Value {
 	}
 
 	return FALSE_VALUE
+}
+
+func (this stringValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case stringValue:
+		return this == other
+	default:
+		return false
+	}
 }
 
 /*
@@ -229,6 +242,67 @@ Append a low-valued byte to string.
 */
 func (this stringValue) Successor() Value {
 	return stringValue(string(this) + " ")
+}
+
+func (this stringValue) Recycle() {
+}
+
+func (this stringValue) Tokens(set *Set, options Value) *Set {
+	// Set case folding function, if specified
+	var caseFunc func(string) string
+	if caseOption, ok := options.Field("case"); ok && caseOption.Type() == STRING {
+		caseStr := caseOption.Actual().(string)
+		switch strings.ToLower(caseStr) {
+		case "lower":
+			caseFunc = strings.ToLower
+		case "upper":
+			caseFunc = strings.ToUpper
+		}
+	}
+
+	// Set tokenizing and right trim functions. If specials is
+	// specified as true, tokenize on whitespace, and then right
+	// trim special characters. Otherwise, tokenize on whitespace
+	// and special characters. specials=true can be used to
+	// preserve email addresses, url's, hyphenated phone numbers,
+	// etc.
+	var fieldsFunc func(rune) bool
+	var rtrimFunc func(rune) bool
+	if specialsOption, ok := options.Field("specials"); ok &&
+		specialsOption.Type() == BOOLEAN && specialsOption.Truth() {
+		fieldsFunc = func(c rune) bool {
+			return unicode.IsSpace(c)
+		}
+		rtrimFunc = func(c rune) bool {
+			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+		}
+	} else {
+		fieldsFunc = func(c rune) bool {
+			return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+		}
+	}
+
+	// Tokenize
+	fields := strings.FieldsFunc(string(this), fieldsFunc)
+
+	// Apply right trim if necessary
+	if rtrimFunc != nil {
+		for f, field := range fields {
+			fields[f] = strings.TrimRightFunc(field, rtrimFunc)
+		}
+	}
+
+	if caseFunc == nil {
+		for _, field := range fields {
+			set.Add(stringValue(field))
+		}
+	} else {
+		for _, field := range fields {
+			set.Add(stringValue(caseFunc(field)))
+		}
+	}
+
+	return set
 }
 
 func (this stringValue) unwrap() Value {

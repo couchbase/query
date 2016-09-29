@@ -160,3 +160,10 @@ func NewCbViewIndexesLoadingError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: 13008, IKey: "datastore.couchbase.view.not_found", ICause: e,
 		InternalMsg: "Failed to load indexes for keyspace " + msg, InternalCaller: CallerN(1)}
 }
+
+func NewCbViewDefError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 13009, IKey: "datastore.couchbase.view.def_failed", ICause: e,
+		InternalMsg: "Unable to store the view definition. Not all index target expressions are supported. " +
+			"Check whether the JavaScript of the view definition is valid. The map function has been output to query.log.",
+		InternalCaller: CallerN(1)}
+}

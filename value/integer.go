@@ -44,18 +44,25 @@ func (this intValue) WriteJSON(w io.Writer, prefix, indent string) error {
 }
 
 /*
-Type Number
+Type NUMBER
 */
 func (this intValue) Type() Type {
 	return NUMBER
 }
 
 /*
-Cast receiver to float64. We cannot use int64 until Expressions can
-handle both float64 and int64.
+Cast receiver to float64. We cannot use int64 unless all Expressions
+can handle both float64 and int64.
 */
 func (this intValue) Actual() interface{} {
 	return float64(this)
+}
+
+/*
+Return int64 and avoid any lossiness due to rounding / representation.
+*/
+func (this intValue) ActualForIndex() interface{} {
+	return int64(this)
 }
 
 func (this intValue) Equals(other Value) Value {
@@ -76,6 +83,18 @@ func (this intValue) Equals(other Value) Value {
 	}
 
 	return FALSE_VALUE
+}
+
+func (this intValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case intValue:
+		return this == other
+	case floatValue:
+		return float64(this) == float64(other)
+	default:
+		return false
+	}
 }
 
 func (this intValue) Collate(other Value) int {
@@ -217,6 +236,14 @@ func (this intValue) Successor() Value {
 	}
 }
 
+func (this intValue) Recycle() {
+}
+
+func (this intValue) Tokens(set *Set, options Value) *Set {
+	set.Add(this)
+	return set
+}
+
 func (this intValue) unwrap() Value {
 	return this
 }
@@ -310,4 +337,8 @@ func (this intValue) Sub(n NumberValue) NumberValue {
 	}
 
 	return floatValue(float64(this) - n.Actual().(float64))
+}
+
+func IsInt(x float64) bool {
+	return x == float64(int64(x))
 }

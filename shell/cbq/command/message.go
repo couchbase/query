@@ -36,6 +36,7 @@ const (
 	UOUTPUT     = " File to output commands and their results. \n\t For example : -output temp.txt"
 	ULOG        = " File to log commands into. \n\t For example : -logfile temp.txt"
 	USSLVERIFY  = " Skip verification of Certificates. "
+	UBATCH      = " Batch mode for sending queries to Asterix. Values : on/off"
 
 	//Shorthand message for flags
 	SHORTHAND = " Shorthand for "

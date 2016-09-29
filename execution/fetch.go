@@ -15,7 +15,6 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -70,6 +69,11 @@ func (this *Fetch) afterItems(context *Context) {
 
 func (this *Fetch) flushBatch(context *Context) bool {
 	defer this.releaseBatch()
+	if this.batchSize < cap(this.output.ItemChannel()) {
+		defer func() {
+			this.batchSize = cap(this.output.ItemChannel())
+		}()
+	}
 
 	if len(this.batch) == 0 {
 		return true
@@ -105,11 +109,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	var bclen int
-	if len(this.batch) == this.batchSize {
-		bclen = len(this.output.ItemChannel())
-	}
-
 	timer := time.Now()
 
 	// Fetch
@@ -118,13 +117,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	t := time.Since(timer)
 	context.AddPhaseTime("fetch", t)
 	this.plan.AddTime(t)
-
-	if len(this.batch) == this.batchSize {
-		aclen := len(this.output.ItemChannel())
-		if ((bclen - aclen) > this.batchSize) || (aclen+this.batchSize) < cap(this.output.ItemChannel()) {
-			this.batchSize = util.MinInt(2*this.batchSize, cap(this.output.ItemChannel()))
-		}
-	}
 
 	fetchOk := true
 	for _, err := range errs {
@@ -139,14 +131,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	// Attach meta
 	for _, pair := range pairs {
-		pv, ok := pair.Value.(value.AnnotatedValue)
-		if !ok {
-			context.Fatal(errors.NewInvalidValueError(fmt.Sprintf(
-				"Invalid fetch value %v of type %T", pair.Value)))
-			return false
-		}
-
-		fetchMap[pair.Name] = pv
+		fetchMap[pair.Name] = pair.Value
 	}
 
 	// Preserve order of keys

@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
@@ -171,16 +173,26 @@ func init() {
    Single command mode
 */
 
-var scriptFlag string
+type scripts []string
+
+var scriptFlag scripts
 
 func init() {
 	const (
-		defaultval = ""
-		usage      = command.USCRIPT
+		usage = command.USCRIPT
 	)
-	flag.StringVar(&scriptFlag, "script", defaultval, usage)
-	flag.StringVar(&scriptFlag, "s", defaultval, command.NewShorthandMsg("-script"))
+	flag.Var(&scriptFlag, "script", usage)
+	flag.Var(&scriptFlag, "s", command.NewShorthandMsg("-script"))
 
+}
+
+func (s *scripts) String() string {
+	return fmt.Sprintf("%s", *s)
+}
+
+func (s *scripts) Set(val string) error {
+	*s = append(*s, val)
+	return nil
 }
 
 /*
@@ -259,21 +271,52 @@ func init() {
    Skip verification of Certificates.
 */
 
-var noSSLVerify = flag.Bool("no-ssl-verify", false, command.USSLVERIFY)
+var noSSLVerify bool
+
+func init() {
+	const (
+		defaultval = false
+		usage      = command.USSLVERIFY
+	)
+	flag.BoolVar(&noSSLVerify, "no-ssl-verify", defaultval, usage)
+	flag.BoolVar(&noSSLVerify, "skip-verify", defaultval, "Synonym for no-ssl-verify.")
+
+}
 
 /* Define credentials as user/pass and convert into
    JSON object credentials
 */
 
+/*
+   Option        : -batch or -b
+   Args          : on/off
+   Batch mode for sending queries to Asterix.
+*/
+
+var batchFlag string
+
+func init() {
+	const (
+		defaultval = "off"
+		usage      = command.UBATCH
+	)
+	flag.StringVar(&batchFlag, "batch", defaultval, usage)
+	flag.StringVar(&batchFlag, "b", defaultval, command.NewShorthandMsg("-batch"))
+}
+
 var (
-	SERVICE_URL string
-	DISCONNECT  bool
-	EXIT        bool
+	SERVICE_URL  string
+	DISCONNECT   bool
+	EXIT         bool
+	stringBuffer bytes.Buffer
 )
 
 func main() {
 
 	flag.Parse()
+
+	// Initialize Global buffer to store queries for batch mode.
+	stringBuffer.Write([]byte(""))
 
 	if *prettyFlag {
 		n1ql.SetQueryParams("pretty", "true")
@@ -355,6 +398,16 @@ func main() {
 				command.PrintError(s_err)
 				os.Exit(1)
 			} else {
+				// Error out in cases where password contains escape sequences
+				// or ctrl chars.
+				for _, c := range bytes.Runes(password) {
+					if !unicode.IsPrint(c) {
+						s_err := command.HandleError(errors.INVALID_PASSWORD, "")
+						command.PrintError(s_err)
+						os.Exit(1)
+					}
+				}
+
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
 				// The driver needs the username/password to query the cluster endpoint,
 				// which may require authorization.
@@ -385,7 +438,7 @@ func main() {
 		// un-authenticated servers.
 		// Dont output the statement if we are running in single command
 		// mode.
-		if scriptFlag == "" {
+		if len(scriptFlag) == 0 {
 			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
 
 			if werr != nil {
@@ -426,40 +479,41 @@ func main() {
 		n1ql.SetQueryParams("creds", string(ac))
 	}
 
-	n1ql.SetSkipVerify(*noSSLVerify)
-	command.SKIPVERIFY = *noSSLVerify
+	n1ql.SetSkipVerify(noSSLVerify)
+	command.SKIPVERIFY = noSSLVerify
 
 	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") {
-		if *noSSLVerify == false {
+		if noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {
 			command.PrintStr(command.W, command.SSLVERIFY_TRUE)
 		}
 	}
 
-	// Check if connection is possible to the input serverFlag
-	// else failed to connect to.
-
-	pingerr := command.Ping(serverFlag)
-	SERVICE_URL = serverFlag
-	command.SERVICE_URL = serverFlag
-	if pingerr != nil {
-		s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
-		command.PrintError(s_err)
-		serverFlag = ""
-		command.SERVICE_URL = ""
-		SERVICE_URL = ""
-		noQueryService = true
-	}
-
-	/* -quiet : Display Message only if flag not specified
-	 */
-	if !quietFlag && noQueryService == false && pingerr == nil {
-		s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
-		_, werr := io.WriteString(command.W, s)
-		if werr != nil {
-			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+	if noQueryService == false {
+		// Check if connection is possible to the input serverFlag
+		// else failed to connect to.
+		pingerr := command.Ping(serverFlag)
+		SERVICE_URL = serverFlag
+		command.SERVICE_URL = serverFlag
+		if pingerr != nil {
+			s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
 			command.PrintError(s_err)
+			serverFlag = ""
+			command.SERVICE_URL = ""
+			SERVICE_URL = ""
+			noQueryService = true
+		}
+
+		/* -quiet : Display Message only if flag not specified
+		 */
+		if !quietFlag && pingerr == nil {
+			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
+			_, werr := io.WriteString(command.W, s)
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
 		}
 	}
 
@@ -468,6 +522,26 @@ func main() {
 
 	if timeoutFlag != "0ms" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
+	}
+
+	// If batch flag is enabled
+	if batchFlag != "off" {
+		if strings.ToLower(batchFlag) == "on" {
+			command.BATCH = batchFlag
+			//SET batch mode here
+			err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", batchFlag)
+			if err_code != 0 {
+				s_err := command.HandleError(err_code, err_str)
+				command.PrintError(s_err)
+
+			}
+		} else {
+			s_err := command.HandleError(errors.BATCH_MODE, "")
+			command.PrintError(s_err)
+		}
+
+	} else {
+		command.BATCH = batchFlag
 	}
 
 	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.

@@ -26,18 +26,16 @@ type IndexNest struct {
 	keyFor   string
 	idExpr   expression.Expression
 	index    datastore.Index
-	covers   expression.Covers
 }
 
 func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
-	index datastore.Index, covers expression.Covers) *IndexNest {
+	index datastore.Index) *IndexNest {
 	rv := &IndexNest{
 		keyspace: keyspace,
 		term:     nest.Right(),
 		outer:    nest.Outer(),
 		keyFor:   nest.For(),
 		index:    index,
-		covers:   covers,
 	}
 
 	rv.idExpr = expression.NewField(
@@ -78,14 +76,6 @@ func (this *IndexNest) Index() datastore.Index {
 	return this.index
 }
 
-func (this *IndexNest) Covers() expression.Covers {
-	return this.covers
-}
-
-func (this *IndexNest) Covering() bool {
-	return len(this.covers) > 0
-}
-
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "IndexNest"}
 	r["namespace"] = this.term.Namespace()
@@ -105,10 +95,6 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 		"index":    this.index.Name(),
 		"index_id": this.index.Id(),
 		"using":    this.index.Type(),
-	}
-
-	if this.covers != nil {
-		scan["covers"] = this.covers
 	}
 
 	r["scan"] = scan
@@ -131,7 +117,6 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 			Index   string              `json:"index"`
 			IndexId string              `json:"index_id"`
 			Using   datastore.IndexType `json:"using"`
-			Covers  []string            `json:"covers"`
 		} `json:"scan"`
 	}
 
@@ -165,21 +150,5 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.index, err = indexer.IndexById(_unmarshalled.Scan.IndexId)
-	if err != nil {
-		return err
-	}
-
-	if _unmarshalled.Scan.Covers != nil {
-		this.covers = make(expression.Covers, len(_unmarshalled.Scan.Covers))
-		for i, c := range _unmarshalled.Scan.Covers {
-			expr, err := parser.Parse(c)
-			if err != nil {
-				return err
-			}
-
-			this.covers[i] = expression.NewCover(expr)
-		}
-	}
-
-	return nil
+	return err
 }

@@ -51,15 +51,15 @@
             "infopairs": [
                 {
                     "name": "cardExpiry",
-                    "value": "2011-10-12"
+                    "val": "2011-10-12"
                 },
                 {
                     "name": "cardNumber",
-                    "value": "1211-1221-1234-2201"
+                    "val": "1211-1221-1234-2201"
                 },
                 {
                     "name": "cardType",
-                    "value": "americanexpress"
+                    "val": "americanexpress"
                 }
             ]
         },
@@ -67,15 +67,15 @@
             "infopairs": [
                 {
                     "name": "cardExpiry",
-                    "value": "2011-10-12"
+                    "val": "2011-10-12"
                 },
                 {
                     "name": "cardNumber",
-                    "value": "1211-1221-1234-2201"
+                    "val": "1211-1221-1234-2201"
                 },
                 {
                     "name": "cardType",
-                    "value": "americanexpress"
+                    "val": "americanexpress"
                 }
             ]
         },
@@ -83,15 +83,15 @@
             "infopairs": [
                 {
                     "name": "cardExpiry",
-                    "value": "2011-10-12"
+                    "val": "2011-10-12"
                 },
                 {
                     "name": "cardNumber",
-                    "value": "1211-1221-1234-2201"
+                    "val": "1211-1221-1234-2201"
                 },
                 {
                     "name": "cardType",
-                    "value": "americanexpress"
+                    "val": "americanexpress"
                 }
             ]
         }

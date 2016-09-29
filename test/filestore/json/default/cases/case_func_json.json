@@ -164,5 +164,200 @@
             "$1": null
         }
     ]
+},
+{
+  "statements":"select TOKENS(MISSING)",
+  "results": [
+        {
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(NULL)",
+  "results": [
+        {
+            "$1": [
+                null
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(FALSE)",
+  "results": [
+        {
+            "$1": [
+                false
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(TRUE)",
+  "results": [
+        {
+            "$1": [
+                true
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(0)",
+  "results": [
+        {
+            "$1": [
+                0
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(-1.5)",
+  "results": [
+        {
+            "$1": [
+                -1.5
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS(10)",
+  "results": [
+        {
+            "$1": [
+                10
+            ]
+        }
+    ]
+},
+{
+  "statements":"select TOKENS('hello')",
+  "results": [
+        {
+            "$1": [
+                "hello"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS('Hello, World!'))",
+  "results": [
+        {
+            "$1": [
+                "Hello",
+                "World"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS([NULL, FALSE, TRUE, -1.5, 0, 10, 'Hello, World!']))",
+  "results": [
+        {
+            "$1": [
+                null,
+                false,
+                true,
+                -1.5,
+                0,
+                10,
+                "Hello",
+                "World"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'a': {'b': 'hello', 'c': 'world!'}}))",
+  "results": [
+        {
+            "$1": [
+                "a",
+                "b",
+                "c",
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false}))",
+  "results": [
+        {
+            "$1": [
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, 0))",
+  "results": [
+        {
+            "$1": null
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'aa': {'bb': 'hello', 'cc': 'world!'}}, {'names':false, 'case':'upper'}))",
+  "results": [
+        {
+            "$1": [
+                "HELLO",
+                "WORLD"
+            ]
+        }
+    ]
+},
+{
+  "statements":"select ARRAY_SORT(TOKENS({'AA': {'BB': 'HELLO', 'CC': 'WORLD!'}}, {'names':true, 'case':'lower'}))",
+  "results": [
+        {
+            "$1": [
+                "aa",
+                "bb",
+                "cc",
+                "hello",
+                "world"
+            ]
+        }
+    ]
+},
+{
+  "description": "Test TOKENS() with specials.",
+  "statements":"SELECT ARRAY_SORT( TOKENS( [ 'jim@abc.com, kim@abc.com, http://abc.com/, 408-555-1212' ] ) )",
+  "results": [
+        {
+            "$1": [
+                "1212",
+                "408",
+                "555",
+                "abc",
+                "com",
+                "http",
+                "jim",
+                "kim"
+            ]
+        }
+    ]
+},
+{
+  "description": "Test TOKENS() with specials.",
+  "statements":"SELECT ARRAY_SORT( TOKENS( [ 'jim@abc.com, kim@abc.com, http://abc.com/, 408-555-1212' ], { 'specials': true } ) )",
+  "results": [
+        {
+            "$1": [
+                "408-555-1212",
+                "http://abc.com",
+                "jim@abc.com",
+                "kim@abc.com"
+            ]
+        }
+    ]
 }
 ]

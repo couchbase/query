@@ -203,7 +203,7 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		return cfgStore.ConfigurationManager().AddCluster(cluster)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -225,7 +225,7 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request)
 	case "DELETE":
 		return cfgStore.ConfigurationManager().RemoveCluster(cluster)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -250,7 +250,7 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (
 		}
 		return cluster.ClusterManager().AddQueryNode(node)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -273,7 +273,7 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	case "DELETE":
 		return cluster.ClusterManager().RemoveQueryNodeByName(node)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -473,7 +473,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		return fillSettings(settings, srvr), nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 

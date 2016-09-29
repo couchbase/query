@@ -56,6 +56,27 @@ func (this *Field) Alias() string {
 	return this.Second().Alias()
 }
 
+func (this *Field) Indexable() bool {
+	if !this.BinaryFunctionBase.Indexable() {
+		return false
+	}
+
+	// MB-16772. For META() expressions, only META().id is
+	// indexable.
+
+	if _, ok := this.First().(*Meta); !ok {
+		return true
+	}
+
+	second := this.Second().Value()
+	if second == nil {
+		return false
+	}
+
+	sv, ok := second.Actual().(string)
+	return ok && sv == "id"
+}
+
 func (this *Field) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Field:

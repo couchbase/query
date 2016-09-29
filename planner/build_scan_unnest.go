@@ -101,6 +101,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			if cop != nil || err != nil {
 				return cop, err
 			} else {
+				this.resetOrderLimit()
 				return op, nil
 			}
 		}
@@ -275,7 +276,7 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 	this.resetOrderLimit()
 
 	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers, filterCovers)
-	this.coveringScan = scan
+	this.coveringScans = append(this.coveringScans, scan)
 	return plan.NewDistinctScan(scan), nil
 }
 

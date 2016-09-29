@@ -40,6 +40,10 @@ func (this binaryValue) Actual() interface{} {
 	return []byte(this)
 }
 
+func (this binaryValue) ActualForIndex() interface{} {
+	return []byte(this)
+}
+
 func (this binaryValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -54,6 +58,16 @@ func (this binaryValue) Equals(other Value) Value {
 	}
 
 	return FALSE_VALUE
+}
+
+func (this binaryValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case binaryValue:
+		return bytes.Equal(this, other)
+	default:
+		return false
+	}
 }
 
 func (this binaryValue) Collate(other Value) int {
@@ -136,6 +150,14 @@ func (this binaryValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 
 func (this binaryValue) Successor() Value {
 	return binaryValue(append(this, byte(0)))
+}
+
+func (this binaryValue) Recycle() {
+}
+
+func (this binaryValue) Tokens(set *Set, options Value) *Set {
+	set.Add(this)
+	return set
 }
 
 func (this binaryValue) unwrap() Value {

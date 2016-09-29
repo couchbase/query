@@ -1279,6 +1279,9 @@ type scanConfigImpl struct {
 }
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
+	if this == nil {
+		return datastore.UNBOUNDED
+	}
 	switch this.scan_level {
 	case server.NOT_BOUNDED:
 		return datastore.UNBOUNDED

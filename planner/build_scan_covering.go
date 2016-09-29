@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEntry,
+func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover == nil {
 		return nil, nil
@@ -26,9 +26,12 @@ func (this *builder) buildCoveringScan(secondaries map[datastore.Index]*indexEnt
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
+	arrayIndexCount := 0
+	covering := _COVERING_POOL.Get()
+	defer _COVERING_POOL.Put(covering)
 
 outer:
-	for index, entry := range secondaries {
+	for index, entry := range indexes {
 		keys := entry.keys
 
 		// Matches execution.spanScan.RunOnce()
@@ -37,7 +40,7 @@ outer:
 		}
 
 		// Include covering expression from index WHERE clause
-		coveringExprs, filterCovers, err := indexKeyExpressions(entry, keys)
+		coveringExprs, _, err := indexKeyExpressions(entry, keys)
 		if err != nil {
 			return nil, err
 		}
@@ -49,57 +52,108 @@ outer:
 			}
 		}
 
-		covers := make(expression.Covers, 0, len(keys))
-		for _, key := range keys {
-			covers = append(covers, expression.NewCover(key))
+		if indexHasArrayIndexKey(index) {
+			arrayIndexCount++
 		}
 
-		arrayIndex := indexHasArrayIndexKey(index)
-
-		if !arrayIndex && len(entry.spans) == 1 && allowedPushDown(entry, pred) {
-			if this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
-				countIndex, ok := index.(datastore.CountIndex)
-				if ok {
-					this.maxParallelism = 1
-					this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
-					return this.countScan, nil
-				}
-			}
-
-			if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
-				this.maxParallelism = 1
-				limit = expression.ONE_EXPR
-				this.coveringScan = plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-				return this.coveringScan, nil
-			}
-		}
-
-		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
-			limit = nil
-			this.limit = nil
-		}
-
-		if this.order != nil && !this.useIndexOrder(entry, keys) {
-			this.resetOrderLimit()
-			limit = nil
-		}
-
-		if this.order != nil {
-			this.maxParallelism = 1
-		}
-
-		scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-		this.coveringScan = scan
-
-		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
-			// Use DistinctScan to de-dup array index scans, multiple spans
-			return plan.NewDistinctScan(scan), nil
-		}
-
-		return scan, nil
+		covering = append(covering, index)
 	}
 
-	return nil, nil
+	// No covering index available
+	if len(covering) == 0 {
+		return nil, nil
+	}
+
+	// Avoid array indexes if possible
+	if arrayIndexCount > 0 && arrayIndexCount < len(covering) {
+		for i, c := range covering {
+			if indexHasArrayIndexKey(c) {
+				covering[i] = nil
+			}
+		}
+	}
+
+	// Use shortest covering index
+	index := covering[0]
+	for _, c := range covering[1:] {
+		if c == nil {
+			continue
+		} else if index == nil {
+			index = c
+		} else if len(c.RangeKey()) < len(index.RangeKey()) {
+			index = c
+		}
+	}
+
+	entry := indexes[index]
+	keys := entry.keys
+
+	// Matches execution.spanScan.RunOnce()
+	if !index.IsPrimary() {
+		keys = append(keys, id)
+	}
+
+	// Only sarg a single covering index
+	_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
+	if err != nil {
+		return nil, err
+	}
+
+	// Include covering expression from index WHERE clause
+	_, filterCovers, err := indexKeyExpressions(entry, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	covers := make(expression.Covers, 0, len(keys))
+	for _, key := range keys {
+		covers = append(covers, expression.NewCover(key))
+	}
+
+	arrayIndex := indexHasArrayIndexKey(index)
+
+	if !arrayIndex && allowedPushDown(entry, pred) {
+		if this.countAgg != nil && !pred.MayOverlapSpans() && canPushDownCount(this.countAgg, entry) {
+			countIndex, ok := index.(datastore.CountIndex)
+			if ok {
+				this.maxParallelism = 1
+				this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
+				return this.countScan, nil
+			}
+		}
+
+		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
+			this.maxParallelism = 1
+			limit = expression.ONE_EXPR
+			scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
+			this.coveringScans = append(this.coveringScans, scan)
+			return scan, nil
+		}
+	}
+
+	if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
+		limit = nil
+		this.limit = nil
+	}
+
+	if this.order != nil && !this.useIndexOrder(entry, keys) {
+		this.resetOrderLimit()
+		limit = nil
+	}
+
+	if this.order != nil {
+		this.maxParallelism = 1
+	}
+
+	scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
+	this.coveringScans = append(this.coveringScans, scan)
+
+	if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
+		// Use DistinctScan to de-dup array index scans, multiple spans
+		return plan.NewDistinctScan(scan), nil
+	}
+
+	return scan, nil
 }
 
 func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
@@ -190,3 +244,5 @@ func indexKeyExpressions(entry *indexEntry, keys expression.Expressions) (expres
 	}
 	return exprs, filterCovers, nil
 }
+
+var _COVERING_POOL = datastore.NewIndexPool(256)

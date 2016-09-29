@@ -72,17 +72,25 @@ func (this missingValue) Type() Type {
 }
 
 /*
-Returns nil, since this is not a valid Go type.
+Returns nil.
 */
 func (this missingValue) Actual() interface{} {
 	return nil
 }
 
+func (this missingValue) ActualForIndex() interface{} {
+	return nil
+}
+
 /*
-Returns false.
+Returns MISSING.
 */
 func (this missingValue) Equals(other Value) Value {
 	return this
+}
+
+func (this missingValue) EquivalentTo(other Value) bool {
+	return other.Type() == MISSING
 }
 
 /*
@@ -199,6 +207,13 @@ MISSING is succeeded by NULL.
 */
 func (this missingValue) Successor() Value {
 	return NULL_VALUE
+}
+
+func (this missingValue) Recycle() {
+}
+
+func (this missingValue) Tokens(set *Set, options Value) *Set {
+	return set
 }
 
 func (this missingValue) unwrap() Value {

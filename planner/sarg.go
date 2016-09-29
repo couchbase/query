@@ -48,7 +48,8 @@ keys:
 
 		for _, prev := range rs {
 			// Full span subsumes others
-			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] {
+			if prev == _FULL_SPANS[0] || prev == _EXACT_FULL_SPANS[0] ||
+				(len(prev.Range.Low) == 0 && len(prev.Range.High) == 0) {
 				exactSpan = false
 				sp = append(sp, prev)
 				ns = sp
@@ -58,12 +59,6 @@ keys:
 
 	prevs:
 		for _, prev := range rs {
-			if len(prev.Range.Low) == 0 && len(prev.Range.High) == 0 {
-				exactSpan = false
-				sp = append(sp, prev)
-				continue
-			}
-
 			for _, next := range ns {
 				// Full span subsumes others
 				if next == _FULL_SPANS[0] || next == _EXACT_FULL_SPANS[0] ||
@@ -85,7 +80,7 @@ keys:
 					pre.Range.Inclusion = (datastore.LOW & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.HIGH & pre.Range.Inclusion)
 					add = true
-				} else if len(pre.Range.Low) > 0 || len(next.Range.Low) > 0 {
+				} else if len(next.Range.Low) > 0 {
 					exactSpan = false
 				}
 
@@ -94,7 +89,7 @@ keys:
 					pre.Range.Inclusion = (datastore.HIGH & pre.Range.Inclusion & next.Range.Inclusion) |
 						(datastore.LOW & pre.Range.Inclusion)
 					add = true
-				} else if len(pre.Range.High) > 0 || len(next.Range.High) > 0 {
+				} else if len(next.Range.High) > 0 {
 					// f1 >=3 and f2 = 2 become span of {[3, 2] [] 1}, high of f2 is missing
 					exactSpan = false
 				}
@@ -132,21 +127,9 @@ keys:
 func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {
 
 	for _, prev := range ns {
-		if len(prev.Range.Low) != len(sargKeys) {
-			return false
-		}
-
-		// trailing key is > or >=
-		if len(prev.Range.High) < len(sargKeys)-1 {
-			return false
-		}
-
 		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
-			low := prev.Range.Low[i].Value()
-			high := prev.Range.High[i].Value()
-			// Successor present in high Equals returns false
-			if low == nil || high == nil || !low.Equals(high).Truth() {
+			if !equalRangeKey(i, prev.Range.Low, prev.Range.High) {
 				return false
 			}
 		}
@@ -278,6 +261,30 @@ func deDupDiscardEmptySpans(cspans plan.Spans) plan.Spans {
 		}
 		return spans[0:n]
 	}
+}
+
+func equalRangeKey(keyIndex int, low, high expression.Expressions) bool {
+	if keyIndex >= len(low) || keyIndex >= len(high) {
+		return false
+	}
+
+	if low[keyIndex] == high[keyIndex] {
+		return true
+	}
+
+	if low[keyIndex] == nil || high[keyIndex] == nil {
+		return false
+	}
+
+	var highExp expression.Expression
+	switch hs := high[keyIndex].(type) {
+	case *expression.Successor:
+		highExp = hs.Operand()
+	default:
+		highExp = high[keyIndex]
+	}
+
+	return highExp.EquivalentTo(low[keyIndex])
 }
 
 const _FULL_SPAN_FANOUT = 8192

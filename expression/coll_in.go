@@ -65,14 +65,29 @@ func (this *In) Apply(context Context, first, second value.Value) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
+	var missing, null bool
 	sa := second.Actual().([]interface{})
 	for _, s := range sa {
-		if first.Equals(value.NewValue(s)).Truth() {
-			return value.TRUE_VALUE, nil
+		v := value.NewValue(s)
+		if first.Type() > value.NULL && v.Type() > value.NULL {
+			if first.Equals(v).Truth() {
+				return value.TRUE_VALUE, nil
+			}
+		} else if v.Type() == value.MISSING {
+			missing = true
+		} else {
+			// first.Type() == value.NULL || v.Type() == value.NULL
+			null = true
 		}
 	}
 
-	return value.FALSE_VALUE, nil
+	if null {
+		return value.NULL_VALUE, nil
+	} else if missing {
+		return value.MISSING_VALUE, nil
+	} else {
+		return value.FALSE_VALUE, nil
+	}
 }
 
 /*

@@ -181,26 +181,36 @@ type MetricReporter interface {
 
 // Define names for all the metrics we are interested in:
 const (
-	REQUESTS         = "requests"
-	SELECTS          = "selects"
-	UPDATES          = "updates"
-	INSERTS          = "inserts"
-	DELETES          = "deletes"
-	UNKNOWN          = "unknown"
+	REQUESTS  = "requests"
+	CANCELLED = "cancelled"
+
+	UNBOUNDED = "unbounded"
+	AT_PLUS   = "at_plus"
+	SCAN_PLUS = "scan_plus"
+
+	SELECTS = "selects"
+	UPDATES = "updates"
+	INSERTS = "inserts"
+	DELETES = "deletes"
+	UNKNOWN = "unknown"
+
 	ACTIVE_REQUESTS  = "active_requests"
 	QUEUED_REQUESTS  = "queued_requests"
 	INVALID_REQUESTS = "invalid_requests"
-	REQUEST_TIME     = "request_time"
-	SERVICE_TIME     = "service_time"
-	RESULT_COUNT     = "result_count"
-	RESULT_SIZE      = "result_size"
-	ERRORS           = "errors"
-	WARNINGS         = "warnings"
-	MUTATIONS        = "mutations"
-	REQUESTS_250MS   = "requests_250ms"
-	REQUESTS_500MS   = "requests_500ms"
-	REQUESTS_1000MS  = "requests_1000ms"
-	REQUESTS_5000MS  = "requests_5000ms"
+
+	REQUEST_TIME = "request_time"
+	SERVICE_TIME = "service_time"
+
+	RESULT_COUNT = "result_count"
+	RESULT_SIZE  = "result_size"
+	ERRORS       = "errors"
+	WARNINGS     = "warnings"
+	MUTATIONS    = "mutations"
+
+	REQUESTS_250MS  = "requests_250ms"
+	REQUESTS_500MS  = "requests_500ms"
+	REQUESTS_1000MS = "requests_1000ms"
+	REQUESTS_5000MS = "requests_5000ms"
 
 	DURATION_0MS    = 0 * time.Millisecond
 	DURATION_250MS  = 250 * time.Millisecond
@@ -210,10 +220,12 @@ const (
 
 	REQUEST_RATE  = "request_rate"
 	REQUEST_TIMER = "request_timer"
-	PREPARED      = "prepared"
+
+	PREPARED = "prepared"
 )
 
-var metricNames = []string{REQUESTS, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
+var metricNames = []string{REQUESTS, CANCELLED, SELECTS, UPDATES, INSERTS, DELETES, ACTIVE_REQUESTS, QUEUED_REQUESTS, INVALID_REQUESTS,
+	UNBOUNDED, AT_PLUS, SCAN_PLUS,
 	REQUEST_TIME, SERVICE_TIME, RESULT_COUNT, RESULT_SIZE, ERRORS, REQUESTS_250MS, REQUESTS_500MS, REQUESTS_1000MS,
 	REQUESTS_5000MS, WARNINGS, MUTATIONS}
 
@@ -245,10 +257,22 @@ func RegisterMetrics(acctstore AccountingStore) {
 func RecordMetrics(acctstore AccountingStore,
 	request_time time.Duration, service_time time.Duration,
 	result_count int, result_size int,
-	error_count int, warn_count int, stmt string, prepared *plan.Prepared) {
+	error_count int, warn_count int, stmt string, prepared *plan.Prepared,
+	cancelled bool, scanConsistency string) {
 
 	ms := acctstore.MetricRegistry()
 	ms.Counter(REQUESTS).Inc(1)
+	if cancelled {
+		ms.Counter(CANCELLED).Inc(1)
+	}
+	switch scanConsistency {
+	case "unbounded":
+		ms.Counter(UNBOUNDED).Inc(1)
+	case "scan_plus":
+		ms.Counter(SCAN_PLUS).Inc(1)
+	case "at_plus":
+		ms.Counter(AT_PLUS).Inc(1)
+	}
 	ms.Counter(REQUEST_TIME).Inc(int64(request_time))
 	ms.Counter(SERVICE_TIME).Inc(int64(service_time))
 	ms.Counter(RESULT_COUNT).Inc(int64(result_count))

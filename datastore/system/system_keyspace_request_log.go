@@ -40,7 +40,16 @@ func (b *requestLogKeyspace) Name() string {
 }
 
 func (b *requestLogKeyspace) Count() (int64, errors.Error) {
-	return int64(accounting.RequestsCount()), nil
+	var count int
+
+	count = 0
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
+		count++
+	}, func(warn errors.Error) {
+
+		// FIXME Count does not handle warnings
+	})
+	return int64(accounting.RequestsCount() + count), nil
 }
 
 func (b *requestLogKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -56,44 +65,74 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 	rv := make([]value.AnnotatedPair, 0, len(keys))
 
 	for _, key := range keys {
-		accounting.RequestDo(key, func(entry *accounting.RequestLogEntry) {
-			item := value.NewAnnotatedValue(map[string]interface{}{
-				"RequestId":   key,
-				"State":       entry.State,
-				"ElapsedTime": entry.ElapsedTime.String(),
-				"ServiceTime": entry.ServiceTime.String(),
-				"ResultCount": entry.ResultCount,
-				"ResultSize":  entry.ResultSize,
-				"ErrorCount":  entry.ErrorCount,
-				"Time":        entry.Time.String(),
+		node, localKey := _REMOTEACCESS.SplitKey(key)
+
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+				"completed_requests", "GET",
+				func(doc map[string]interface{}) {
+
+					remoteValue := value.NewAnnotatedValue(doc)
+					remoteValue.SetField("node", node)
+					remoteValue.SetAttachment("meta", map[string]interface{}{
+						"id": key,
+					})
+					rv = append(rv, value.AnnotatedPair{
+						Name:  key,
+						Value: remoteValue,
+					})
+				},
+
+				// FIXME Fetch() does not handle warnings
+				func(warn errors.Error) {
+				})
+		} else {
+
+			// local entry
+			accounting.RequestDo(localKey, func(entry *accounting.RequestLogEntry) {
+				item := value.NewAnnotatedValue(map[string]interface{}{
+					"requestId":       localKey,
+					"state":           entry.State,
+					"elapsedTime":     entry.ElapsedTime.String(),
+					"serviceTime":     entry.ServiceTime.String(),
+					"resultCount":     entry.ResultCount,
+					"resultSize":      entry.ResultSize,
+					"errorCount":      entry.ErrorCount,
+					"time":            entry.Time.String(),
+					"scanConsistency": entry.ScanConsistency,
+				})
+				if node != "" {
+					item.SetField("node", node)
+				}
+				if entry.ClientId != "" {
+					item.SetField("clientContextID", entry.ClientId)
+				}
+				if entry.Statement != "" {
+					item.SetField("statement", entry.Statement)
+				}
+				if entry.PreparedName != "" {
+					item.SetField("preparedName", entry.PreparedName)
+					item.SetField("preparedText", entry.PreparedText)
+				}
+				if entry.PhaseTimes != nil {
+					item.SetField("phaseTimes", entry.PhaseTimes)
+				}
+				if entry.PhaseCounts != nil {
+					item.SetField("phaseCounts", entry.PhaseCounts)
+				}
+				if entry.PhaseOperators != nil {
+					item.SetField("phaseOperators", entry.PhaseOperators)
+				}
+				item.SetAttachment("meta", map[string]interface{}{
+					"id": key,
+				})
+				rv = append(rv, value.AnnotatedPair{
+					Name:  key,
+					Value: item,
+				})
 			})
-			if entry.ClientId != "" {
-				item.SetField("ClientContextID", entry.ClientId)
-			}
-			if entry.Statement != "" {
-				item.SetField("Statement", entry.Statement)
-			}
-			if entry.PreparedName != "" {
-				item.SetField("PreparedName", entry.PreparedName)
-				item.SetField("PreparedText", entry.PreparedText)
-			}
-			if entry.PhaseTimes != nil {
-				item.SetField("PhaseTimes", entry.PhaseTimes)
-			}
-			if entry.PhaseCounts != nil {
-				item.SetField("PhaseCounts", entry.PhaseCounts)
-			}
-			if entry.PhaseOperators != nil {
-				item.SetField("PhaseOperators", entry.PhaseOperators)
-			}
-			item.SetAttachment("meta", map[string]interface{}{
-				"id": key,
-			})
-			rv = append(rv, value.AnnotatedPair{
-				Name:  key,
-				Value: item,
-			})
-		})
+		}
 	}
 	return rv, errs
 }
@@ -114,8 +153,26 @@ func (b *requestLogKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.
 }
 
 func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+	var err errors.Error
+
 	for i, name := range deletes {
-		err := accounting.RequestDelete(name)
+		node, localKey := _REMOTEACCESS.SplitKey(name)
+
+		// remote entry
+		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
+
+			_REMOTEACCESS.GetRemoteDoc(node, localKey,
+				"completed_requests", "DELETE",
+				nil,
+
+				// FIXME Delete() doesn't do warnings
+				func(warn errors.Error) {
+				})
+
+			// local entry
+		} else {
+			err = accounting.RequestDelete(localKey)
+		}
 
 		// save memory allocations by making a new slice only on errors
 		if err != nil {
@@ -199,7 +256,13 @@ func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datas
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 	accounting.RequestsForeach(func(id string, entry *accounting.RequestLogEntry) {
+		indexEntry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
+		conn.EntryChannel() <- &indexEntry
+	})
+	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		conn.EntryChannel() <- &indexEntry
+	}, func(warn errors.Error) {
+		conn.Warning(warn)
 	})
 }

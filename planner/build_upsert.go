@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 )
 
 func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
@@ -30,7 +29,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 
 	if stmt.Values() != nil {
 		children = append(children, plan.NewValueScan(stmt.Values()))
-		this.maxParallelism = util.MaxInt(1, len(stmt.Values()))
+		this.maxParallelism = (len(stmt.Values()) + 64) / 64
 	} else if stmt.Select() != nil {
 		sel, err := stmt.Select().Accept(this)
 		if err != nil {

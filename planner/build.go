@@ -56,7 +56,7 @@ type builder struct {
 	delayProjection bool                  // Used to allow ORDER BY non-projected expressions
 	from            algebra.FromTerm      // Used for index selection
 	where           expression.Expression // Used for index selection
-	order           *algebra.Order        // Used to collect aggregates from ORDER BY
+	order           *algebra.Order        // Used to collect aggregates from ORDER BY, and for ORDER pushdown
 	limit           expression.Expression // Used for LIMIT pushdown
 	countAgg        *algebra.Count        // Used for COUNT() pushdown to IndexCountScan
 	minAgg          *algebra.Min          // Used for MIN() pushdown to IndexScan
@@ -64,7 +64,7 @@ type builder struct {
 	children        []plan.Operator
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
-	coveringScan    *plan.IndexScan
+	coveringScans   []plan.Operator
 	countScan       *plan.IndexCountScan
 }
 

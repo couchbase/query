@@ -20,6 +20,168 @@ import (
 
 ///////////////////////////////////////////////////
 //
+// ArrayDateRange
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function ARRAY_DATE_RANGE(expr,expr,part,[n]).
+It returns a range of dates from expr1 to expr2. n and part are used to
+define an interval and duration.
+*/
+type ArrayDateRange struct {
+	FunctionBase
+}
+
+func NewArrayDateRange(operands ...Expression) Function {
+	rv := &ArrayDateRange{
+		*NewFunctionBase("array_date_range", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayDateRange) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayDateRange) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayDateRange) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArrayDateRange) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	// Populate the args
+	startDate := args[0]
+	endDate := args[1]
+	part := args[2]
+
+	// Default value for the increment is 1.
+	n := value.ONE_VALUE
+	if len(args) > 3 {
+		n = args[3]
+	}
+
+	// If input arguments are missing then return missing, and if they arent valid types,
+	// return null.
+	if startDate.Type() == value.MISSING || endDate.Type() == value.MISSING ||
+		n.Type() == value.MISSING || part.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+
+	} else if startDate.Type() != value.STRING || endDate.Type() != value.STRING ||
+		n.Type() != value.NUMBER || part.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Convert start date to time format.
+	da1 := startDate.Actual().(string)
+	t1, fmt1, err := strToTimeFormat(da1)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Convert end date to time format.
+	da2 := endDate.Actual().(string)
+	t2, fmt2, err := strToTimeFormat(da2)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// The dates need to be the same format, if not, return null.
+	if fmt1 != fmt2 {
+		return value.NULL_VALUE, nil
+	}
+
+	// Increment
+	step := n.Actual().(float64)
+
+	// Return null value for decimal increments.
+	if step != math.Trunc(step) {
+		return value.NULL_VALUE, nil
+	}
+
+	// If the two dates are the same, return an empty array.
+	if t1.String() == t2.String() {
+		return value.EMPTY_ARRAY_VALUE, nil
+	}
+
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	val, err := dateDiff(t1, t2, partStr)
+	if val < 0 {
+		val = -val
+	}
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	rv := make([]interface{}, 0, val)
+
+	// If the start date is after the end date
+	if t1.String() > t2.String() {
+
+		// And the increment is positive return empty array. If
+		// the increment is negative, so populate the array with
+		// decresing dates.
+		if step >= 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	} else {
+		// If end date is after start date but the increment is negative.
+		if step < 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	}
+
+	// Max date value is end date/ t2.
+	// Keep incrementing start date by step for part, and add it to
+	// the array to be returned.
+	start := t1
+
+	// Populate the array now
+	// Until you reach the end date
+	for (step > 0.0 && start.String() <= t2.String()) ||
+		(step < 0.0 && start.String() >= t2.String()) {
+		// Compute the new time
+		rv = append(rv, timeToStr(start, fmt1))
+		t, err := dateAdd(start, int(step), partStr)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+
+		start = t
+	}
+
+	return value.NewValue(rv), nil
+
+}
+
+/*
+Minimum input arguments required is 3.
+*/
+func (this *ArrayDateRange) MinArgs() int { return 3 }
+
+/*
+Maximum input arguments allowed is 4.
+*/
+func (this *ArrayDateRange) MaxArgs() int { return 4 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayDateRange) Constructor() FunctionConstructor {
+	return NewArrayDateRange
+}
+
+///////////////////////////////////////////////////
+//
 // ClockMillis
 //
 ///////////////////////////////////////////////////
@@ -151,6 +313,186 @@ Factory method pattern.
 */
 func (this *ClockStr) Constructor() FunctionConstructor {
 	return NewClockStr
+}
+
+///////////////////////////////////////////////////
+//
+// ClockTZ
+//
+///////////////////////////////////////////////////
+/*
+This represents the Date function CLOCK_TZ(timezone, [ fmt ]).
+It returns the system clock at function evaluation time, as a
+string in a supported format and input timezone and varies
+during a query. There are a set of supported formats.
+*/
+type ClockTZ struct {
+	FunctionBase
+}
+
+func NewClockTZ(operands ...Expression) Function {
+	rv := &ClockTZ{
+		*NewFunctionBase("clock_tz", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ClockTZ) Type() value.Type { return value.STRING }
+
+func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ClockTZ) Value() value.Value {
+	return nil
+}
+
+func (this *ClockTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	// Get current time
+	timeVal := time.Now()
+
+	tz := args[0]
+
+	if tz.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if tz.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Get the timezone and the *Location.
+	timeZone := tz.Actual().(string)
+	loc, err := time.LoadLocation(timeZone)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Use the timezone to get corresponding time component.
+	timeVal = timeVal.In(loc)
+
+	// Check format
+	if len(args) > 1 {
+		fv := args[1]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	return value.NewValue(timeToStr(timeVal, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+CLOCK_TZ is 1.
+*/
+func (this *ClockTZ) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowable for the defined function
+CLOCK_TZ is 2.
+*/
+func (this *ClockTZ) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *ClockTZ) Constructor() FunctionConstructor {
+	return NewClockTZ
+}
+
+///////////////////////////////////////////////////
+//
+// ClockUTC
+//
+///////////////////////////////////////////////////
+/*
+This represents the Date function CLOCK_UTC([ fmt ]). It returns
+the system clock at function evaluation time, as a string in a
+supported format in UTC and varies during a query. There are a
+set of supported formats.
+*/
+type ClockUTC struct {
+	FunctionBase
+}
+
+func NewClockUTC(operands ...Expression) Function {
+	rv := &ClockUTC{
+		*NewFunctionBase("clock_utc", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ClockUTC) Type() value.Type { return value.STRING }
+
+func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ClockUTC) Value() value.Value {
+	return nil
+}
+
+func (this *ClockUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	// Get current time in UTC
+	t := time.Now().UTC()
+
+	return value.NewValue(timeToStr(t, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+CLOCK_UTC is 0.
+*/
+func (this *ClockUTC) MinArgs() int { return 0 }
+
+/*
+Maximum input arguments allowable for the defined function
+CLOCK_UTC is 1.
+*/
+func (this *ClockUTC) MaxArgs() int { return 1 }
+
+/*
+Factory method pattern.
+*/
+func (this *ClockUTC) Constructor() FunctionConstructor {
+	return NewClockUTC
 }
 
 ///////////////////////////////////////////////////
@@ -437,6 +779,71 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// DateFormatStr
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DATE_FORMAT_STR(expr, format).
+It returns the input date in the expected format.
+*/
+type DateFormatStr struct {
+	BinaryFunctionBase
+}
+
+func NewDateFormatStr(first, second Expression) Function {
+	rv := &DateFormatStr{
+		*NewBinaryFunctionBase("date_format_str", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DateFormatStr) Type() value.Type { return value.STRING }
+
+func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.BinaryEval(this, item, context)
+}
+
+func (this *DateFormatStr) Apply(context Context, first, second value.Value) (value.Value, error) {
+
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	str := first.Actual().(string)
+	t, err := strToTime(str)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	format := second.Actual().(string)
+
+	return value.NewValue(timeToStr(t, format)), nil
+
+}
+
+/*
+Factory method pattern.
+*/
+func (this *DateFormatStr) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDateFormatStr(operands[0], operands[1])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // DatePartMillis
 //
 ///////////////////////////////////////////////////
@@ -448,12 +855,12 @@ number representing UNIX milliseconds, and part is one of the
 date part strings.
 */
 type DatePartMillis struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewDatePartMillis(first, second Expression) Function {
+func NewDatePartMillis(operands ...Expression) Function {
 	rv := &DatePartMillis{
-		*NewBinaryFunctionBase("date_part_millis", first, second),
+		*NewFunctionBase("date_part_millis", operands...),
 	}
 
 	rv.expr = rv
@@ -470,10 +877,22 @@ func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return this.BinaryEval(this, item, context)
+	return this.Eval(this, item, context)
 }
 
-func (this *DatePartMillis) Apply(context Context, first, second value.Value) (value.Value, error) {
+func (this *DatePartMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	first := args[0]
+	second := args[1]
+
+	// Initialize timezone to nil to avoid processing if not specified.
+	timeZone := _NIL_VALUE
+
+	// Check if time zone is set
+	if len(args) > 2 {
+		timeZone = args[2]
+	}
+
 	if first.Type() == value.MISSING || second.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
@@ -482,7 +901,30 @@ func (this *DatePartMillis) Apply(context Context, first, second value.Value) (v
 
 	millis := first.Actual().(float64)
 	part := second.Actual().(string)
-	rv, err := datePart(millisToTime(millis), part)
+
+	// Convert the input millis to *Time
+	timeVal := millisToTime(millis)
+
+	if timeZone != _NIL_VALUE {
+		// Process the timezone component as it isnt nil
+		if timeZone.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		}
+		if timeZone.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		// Get the timezone and the *Location.
+		tz := timeZone.Actual().(string)
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+		// Use the timezone to get corresponding time component.
+		timeVal = timeVal.In(loc)
+	}
+
+	rv, err := datePart(timeVal, part)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -491,12 +933,20 @@ func (this *DatePartMillis) Apply(context Context, first, second value.Value) (v
 }
 
 /*
+Minimum input arguments required.
+*/
+func (this *DatePartMillis) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *DatePartMillis) MaxArgs() int { return 3 }
+
+/*
 Factory method pattern.
 */
 func (this *DatePartMillis) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewDatePartMillis(operands[0], operands[1])
-	}
+	return NewDatePartMillis
 }
 
 ///////////////////////////////////////////////////
@@ -1065,6 +1515,183 @@ Factory method pattern.
 */
 func (this *NowStr) Constructor() FunctionConstructor {
 	return NewNowStr
+}
+
+///////////////////////////////////////////////////
+//
+// NowTz
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function NOW_TZ(timezone, [fmt]).
+It returns a statement timestamp as a string in
+a supported format for input timezone and does not vary
+during a query.
+*/
+type NowTZ struct {
+	FunctionBase
+}
+
+func NewNowTZ(operands ...Expression) Function {
+	rv := &NowTZ{
+		*NewFunctionBase("now_tz", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NowTZ) Type() value.Type { return value.STRING }
+
+func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *NowTZ) Value() value.Value {
+	return nil
+}
+
+func (this *NowTZ) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+	now := context.Now()
+
+	tz := args[0]
+
+	if tz.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if tz.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Get the timezone and the *Location.
+	timeZone := tz.Actual().(string)
+	loc, err := time.LoadLocation(timeZone)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	// Use the timezone to get corresponding time component.
+	now = now.In(loc)
+
+	// Check format
+	if len(args) > 1 {
+		fv := args[1]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		fmt = fv.Actual().(string)
+	}
+
+	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+is 1.
+*/
+func (this *NowTZ) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments required for the defined function
+is 2.
+*/
+func (this *NowTZ) MaxArgs() int { return 2 }
+
+/*
+Factory method pattern.
+*/
+func (this *NowTZ) Constructor() FunctionConstructor {
+	return NewNowTZ
+}
+
+///////////////////////////////////////////////////
+//
+// NowUTC
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function NOW_STR([fmt]).
+It returns a statement timestamp as a string in
+a supported format and does not vary during a query.
+*/
+type NowUTC struct {
+	FunctionBase
+}
+
+func NewNowUTC(operands ...Expression) Function {
+	rv := &NowUTC{
+		*NewFunctionBase("now_utc", operands...),
+	}
+
+	rv.volatile = true
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NowUTC) Type() value.Type { return value.STRING }
+
+func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *NowUTC) Value() value.Value {
+	return nil
+}
+
+func (this *NowUTC) Apply(context Context, args ...value.Value) (value.Value, error) {
+	fmt := _DEFAULT_FORMAT
+
+	if len(args) > 0 {
+		fv := args[0]
+		if fv.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if fv.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		fmt = fv.Actual().(string)
+	}
+
+	now := context.Now().UTC()
+	return value.NewValue(timeToStr(now, fmt)), nil
+}
+
+/*
+Minimum input arguments required for the defined function
+is 0.
+*/
+func (this *NowUTC) MinArgs() int { return 0 }
+
+/*
+Maximum input arguments required for the defined function
+is 1.
+*/
+func (this *NowUTC) MaxArgs() int { return 1 }
+
+/*
+Factory method pattern.
+*/
+func (this *NowUTC) Constructor() FunctionConstructor {
+	return NewNowUTC
 }
 
 ///////////////////////////////////////////////////
@@ -1792,7 +2419,17 @@ func setDate(d *date, t time.Time) {
 	d.year = t.Year()
 	d.doy = t.YearDay()
 	d.hour, d.minute, d.second = t.Clock()
-	d.millisecond = t.Nanosecond() / 1000000
+	d.millisecond = round(float64(t.Nanosecond()) / 1000000.0)
+}
+
+/*
+Round input float64 value to int.
+*/
+func round(f float64) int {
+	if math.Abs(f) < 0.5 {
+		return 0
+	}
+	return int(f + math.Copysign(0.5, f))
 }
 
 /*

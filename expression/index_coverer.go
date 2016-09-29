@@ -60,11 +60,6 @@ func (this *Coverer) VisitConstant(expr *Constant) (interface{}, error) {
 	return expr, nil
 }
 
-// Subquery
-func (this *Coverer) VisitSubquery(expr Subquery) (interface{}, error) {
-	return expr, nil
-}
-
 // Parameters
 
 func (this *Coverer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {

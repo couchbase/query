@@ -25,7 +25,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
-	prevCoveringScan := this.coveringScan
+	prevCoveringScans := this.coveringScans
 	prevCountScan := this.countScan
 
 	defer func() {
@@ -33,11 +33,11 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
-		this.coveringScan = prevCoveringScan
+		this.coveringScans = prevCoveringScans
 		this.countScan = prevCountScan
 	}()
 
-	this.coveringScan = nil
+	this.coveringScans = make([]plan.Operator, 0, 2)
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
 	this.resetCountMin()
@@ -122,24 +122,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		return nil, err
 	}
 
-	if this.coveringScan != nil {
-		var covers expression.Covers
-		var filterCovers map[*expression.Cover]value.Value
-
-		covers = this.coveringScan.Covers()
-		filterCovers = this.coveringScan.FilterCovers()
-
-		coverer := expression.NewCoverer(covers, filterCovers)
-		err = this.cover.MapExpressions(coverer)
+	if len(this.coveringScans) > 0 {
+		err = this.coverExpressions()
 		if err != nil {
 			return nil, err
-		}
-
-		if this.where != nil {
-			this.where, err = coverer.Map(this.where)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 
@@ -211,6 +197,33 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	if having != nil {
 		this.subChildren = append(this.subChildren, plan.NewFilter(having))
 	}
+}
+
+func (this *builder) coverExpressions() error {
+	var coverer *expression.Coverer
+	for _, o := range this.coveringScans {
+
+		if op, ok := o.(*plan.IndexScan); ok {
+			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
+		} else if op, ok := o.(*plan.IndexJoin); ok {
+			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
+		} else {
+			continue
+		}
+
+		err := this.cover.MapExpressions(coverer)
+		if err != nil {
+			return err
+		}
+
+		if this.where != nil {
+			this.where, err = coverer.Map(this.where)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]algebra.Aggregate, error) {

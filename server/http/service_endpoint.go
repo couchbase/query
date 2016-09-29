@@ -205,7 +205,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 	plan.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
 	accounting.RecordMetrics(acctstore, request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
-		request.Prepared())
+		request.Prepared(), (request.State() != server.COMPLETED),
+		string(request.ScanConsistency()))
 	request.LogRequest(request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount)
 }

@@ -15,35 +15,40 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	node *algebra.IndexJoin) (op *plan.IndexJoin, err error) {
-	index, covers, err := this.buildJoinScan(keyspace, node.Right(), "join")
+	index, covers, fliterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
 	if err != nil {
 		return nil, err
 	}
 
-	return plan.NewIndexJoin(keyspace, node, index, covers), nil
+	scan := plan.NewIndexJoin(keyspace, node, index, covers, fliterCovers)
+	if covers != nil {
+		this.coveringScans = append(this.coveringScans, scan)
+	}
+	return scan, nil
 }
 
 func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	node *algebra.IndexNest) (op *plan.IndexNest, err error) {
-	index, covers, err := this.buildJoinScan(keyspace, node.Right(), "nest")
+	index, _, _, err := this.buildJoinScan(keyspace, node.Right(), "nest")
 	if err != nil {
 		return nil, err
 	}
 
-	return plan.NewIndexNest(keyspace, node, index, covers), nil
+	return plan.NewIndexNest(keyspace, node, index), nil
 }
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
-	datastore.Index, expression.Covers, error) {
-	indexes := _ALL_INDEX_POOL.Get()
-	defer _ALL_INDEX_POOL.Put(indexes)
-	indexes, err := allIndexes(keyspace, indexes)
+	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+	indexes := _INDEX_POOL.Get()
+	defer _INDEX_POOL.Put(indexes)
+	indexes, err := allIndexes(keyspace, nil, indexes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var pred expression.Expression
@@ -51,7 +56,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	dnf := NewDNF(pred)
 	pred, err = dnf.Map(pred)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	subset := pred
@@ -60,7 +65,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		dnf = NewDNF(subset)
 		subset, err = dnf.Map(subset)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -73,51 +78,65 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	minimals, err := minimalIndexes(sargables, pred)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	minimals := minimalIndexes(sargables, false)
 	if len(minimals) == 0 {
-		return nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
+		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}
 
 	return this.buildCoveringJoinScan(minimals, node, op)
 }
 
 func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, op string) (datastore.Index, expression.Covers, error) {
-	if this.cover == nil {
-		for index, _ := range secondaries {
-			return index, nil, nil
-		}
-	}
+	node *algebra.KeyspaceTerm, op string) (datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+	if this.cover != nil && op == "join" {
+		alias := node.Alias()
+		id := expression.NewField(
+			expression.NewMeta(expression.NewIdentifier(alias)),
+			expression.NewFieldName("id", false))
 
-	alias := node.Alias()
-	exprs := this.cover.Expressions()
+		exprs := this.cover.Expressions()
 
-outer:
-	for index, entry := range secondaries {
-		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, entry.keys) {
-				continue outer
+	outer:
+		for index, entry := range secondaries {
+			if indexHasArrayIndexKey(index) {
+				continue
 			}
-		}
 
-		covers := make(expression.Covers, len(entry.keys))
-		for i, key := range entry.keys {
-			covers[i] = expression.NewCover(key)
-		}
+			keys := entry.keys
+			if !index.IsPrimary() {
+				keys = append(keys, id)
+			}
 
-		return index, covers, nil
+			// Include covering expression from index WHERE clause
+			coveringExprs, filterCovers, err := indexKeyExpressions(entry, keys)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			for _, expr := range exprs {
+				if !expr.CoveredBy(alias, coveringExprs) {
+					continue outer
+				}
+			}
+
+			covers := make(expression.Covers, 0, len(keys))
+			for _, key := range keys {
+				covers = append(covers, expression.NewCover(key))
+			}
+
+			return index, covers, filterCovers, nil
+		}
 	}
 
+	secondaries = minimalIndexes(secondaries, true)
 	for index, _ := range secondaries {
-		return index, nil, nil
+		if !indexHasArrayIndexKey(index) {
+			return index, nil, nil, nil
+		}
 	}
 
-	return nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
+	return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 }

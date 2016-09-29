@@ -63,19 +63,14 @@ func (this boolValue) Type() Type {
 	return BOOLEAN
 }
 
-/*
-Cast receiver to bool and return.
-*/
 func (this boolValue) Actual() interface{} {
 	return bool(this)
 }
 
-/*
-If other is a boolValue, compare it with the receiver. If
-it is a parsedValue or annotated value then call Equals
-by parsing other or Values respectively. If it is any other
-type we return false.
-*/
+func (this boolValue) ActualForIndex() interface{} {
+	return bool(this)
+}
+
 func (this boolValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -90,6 +85,16 @@ func (this boolValue) Equals(other Value) Value {
 	}
 
 	return FALSE_VALUE
+}
+
+func (this boolValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case boolValue:
+		return this == other
+	default:
+		return false
+	}
 }
 
 func (this boolValue) Collate(other Value) int {
@@ -224,6 +229,14 @@ func (this boolValue) Successor() Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func (this boolValue) Recycle() {
+}
+
+func (this boolValue) Tokens(set *Set, options Value) *Set {
+	set.Add(this)
+	return set
 }
 
 func (this boolValue) unwrap() Value {

@@ -1,4 +1,15 @@
-# Query README
+<p align="center">
+ <a href="http://www.couchbase.com">
+  <img src="resources/couchbase_logo.png" width="600" height="150"/>
+ </a>
+ <a href="http://www.couchbase.com/n1ql">
+  <img src="resources/n1ql_logo.png" width="150" height="150"/>
+ </a>
+</p>
+
+<a href="http://www.couchbase.com/nosql-databases/downloads">
+  <img src="resources/download.png" width="150" height="50"/>
+</a>
 
 * Latest: [Query README](https://github.com/couchbase/query/blob/master/README.md)
 * Modified: 2015-04-25

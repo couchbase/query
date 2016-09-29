@@ -22,15 +22,15 @@ import (
 )
 
 type IndexJoin struct {
-	base
+	joinBase
 	plan     *plan.IndexJoin
 	joinTime time.Duration
 }
 
 func NewIndexJoin(plan *plan.IndexJoin) *IndexJoin {
 	rv := &IndexJoin{
-		base: newBase(),
-		plan: plan,
+		joinBase: newJoinBase(),
+		plan:     plan,
 	}
 
 	rv.output = rv
@@ -43,8 +43,8 @@ func (this *IndexJoin) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IndexJoin) Copy() Operator {
 	return &IndexJoin{
-		base: this.base.copy(),
-		plan: this.plan,
+		joinBase: this.joinBase.copy(),
+		plan:     this.plan,
 	}
 }
 
@@ -63,7 +63,8 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 		return false
 	}
 
-	found, foundOne := false, false
+	entries := _INDEX_ENTRY_POOL.Get()
+	defer _INDEX_ENTRY_POOL.Put(entries)
 
 	if idv.Type() == value.STRING {
 		var wg sync.WaitGroup
@@ -87,21 +88,30 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 
 			select {
 			case entry, ok = <-conn.EntryChannel():
-				t := time.Now()
-
 				if ok {
-					foundOne, ok = this.joinEntry(item, entry, context)
-					found = found || foundOne
+					entries = append(entries, entry)
 				}
-
-				this.joinTime += time.Since(t)
 			case <-this.stopChannel:
 				return false
 			}
 		}
 	}
 
-	return found || !this.plan.Outer() || this.sendItem(item)
+	if this.plan.Covering() {
+		return this.joinCoveredEntries(item, entries, context)
+	} else {
+		var doc value.AnnotatedJoinPair
+
+		doc.Value = item
+		if len(entries) != 0 {
+			doc.Keys = make([]string, 0, len(entries))
+			for _, entry := range entries {
+				doc.Keys = append(doc.Keys, entry.PrimaryKey)
+			}
+		}
+
+		return this.joinEnbatch(doc, this, context)
+	}
 }
 
 func (this *IndexJoin) scan(id string, context *Context,
@@ -122,50 +132,79 @@ func (this *IndexJoin) scan(id string, context *Context,
 	wg.Done()
 }
 
-func (this *IndexJoin) joinEntry(item value.AnnotatedValue,
-	entry *datastore.IndexEntry, context *Context) (found, ok bool) {
-	var jv value.AnnotatedValue
-	covers := this.plan.Covers()
+func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
+	entries []*datastore.IndexEntry, context *Context) (ok bool) {
+	if len(entries) == 0 {
+		return !this.plan.Outer() || this.sendItem(item)
+	}
 
-	if len(covers) == 0 {
-		jv, ok = this.fetch(entry, context)
-		if jv == nil || !ok {
-			return jv != nil, ok
+	t := time.Now()
+	defer func() {
+		this.joinTime += time.Since(t)
+	}()
+
+	covers := this.plan.Covers()
+	filterCovers := this.plan.FilterCovers()
+
+	for j, entry := range entries {
+		var joined value.AnnotatedValue
+		if j < len(entries)-1 {
+			joined = item.Copy().(value.AnnotatedValue)
+		} else {
+			joined = item
 		}
-	} else {
-		jv = value.NewAnnotatedValue(nil)
+
+		for c, v := range filterCovers {
+			joined.SetCover(c.Text(), v)
+		}
+
+		for i, ek := range entry.EntryKey {
+			joined.SetCover(covers[i].Text(), ek)
+		}
+
+		joined.SetCover(covers[len(covers)-1].Text(),
+			value.NewValue(entry.PrimaryKey))
+
+		// For chained INDEX JOIN's
+		jv := value.NewAnnotatedValue(nil)
 		meta := map[string]interface{}{"id": entry.PrimaryKey}
 		jv.SetAttachment("meta", meta)
 
-		for i, c := range covers {
-			jv.SetCover(c.Text(), entry.EntryKey[i])
+		joined.SetField(this.plan.Term().Alias(), jv)
+
+		if !this.sendItem(joined) {
+			return false
 		}
 	}
 
-	joined := item.Copy().(value.AnnotatedValue)
-	joined.SetField(this.plan.Term().Alias(), jv)
-	return true, this.sendItem(joined)
+	return true
 }
 
-func (this *IndexJoin) fetch(entry *datastore.IndexEntry, context *Context) (
-	value.AnnotatedValue, bool) {
-	// Build list of keys
-	keys := []string{entry.PrimaryKey}
+func (this *IndexJoin) afterItems(context *Context) {
+	if len(this.plan.Covers()) == 0 {
+		this.flushBatch(context)
+	}
+}
 
-	// Fetch
-	pairs, errs := this.plan.Keyspace().Fetch(keys)
+func (this *IndexJoin) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
 
-	fetchOk := true
-	for _, err := range errs {
-		context.Error(err)
-		if err.IsFatal() {
-			fetchOk = false
-		}
+	if len(this.joinBatch) == 0 {
+		return true
 	}
 
-	if len(pairs) == 0 {
-		return nil, fetchOk
-	}
+	timer := time.Now()
 
-	return pairs[0].Value, fetchOk
+	keyCount := _STRING_KEYCOUNT_POOL.Get()
+	pairMap := _STRING_ANNOTATED_POOL.Get()
+
+	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
+	defer _STRING_ANNOTATED_POOL.Put(pairMap)
+	defer func() {
+		this.joinTime += time.Since(timer)
+	}()
+
+	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
+
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
 }

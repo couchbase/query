@@ -78,10 +78,11 @@ func (this sliceValue) Type() Type {
 	return ARRAY
 }
 
-/*
-Cast receiver to an interface and return it.
-*/
 func (this sliceValue) Actual() interface{} {
+	return ([]interface{})(this)
+}
+
+func (this sliceValue) ActualForIndex() interface{} {
 	return ([]interface{})(this)
 }
 
@@ -94,11 +95,27 @@ func (this sliceValue) Equals(other Value) Value {
 		return other
 	case sliceValue:
 		return arrayEquals(this, other)
+	case copiedSliceValue:
+		return arrayEquals(this, other.sliceValue)
 	case *listValue:
 		return arrayEquals(this, other.slice)
+	default:
+		return FALSE_VALUE
 	}
+}
 
-	return FALSE_VALUE
+func (this sliceValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case sliceValue:
+		return arrayEquivalent(this, other)
+	case copiedSliceValue:
+		return arrayEquivalent(this, other.sliceValue)
+	case *listValue:
+		return arrayEquivalent(this, other.slice)
+	default:
+		return false
+	}
 }
 
 func (this sliceValue) Collate(other Value) int {
@@ -106,6 +123,8 @@ func (this sliceValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayCollate(this, other)
+	case copiedSliceValue:
+		return arrayCollate(this, other.sliceValue)
 	case *listValue:
 		return arrayCollate(this, other.slice)
 	default:
@@ -122,6 +141,8 @@ func (this sliceValue) Compare(other Value) Value {
 		return other
 	case sliceValue:
 		return arrayCompare(this, other)
+	case copiedSliceValue:
+		return arrayCompare(this, other.sliceValue)
 	case *listValue:
 		return arrayCompare(this, other.slice)
 	default:
@@ -142,7 +163,7 @@ Call copySlice on the receiver and self and cast it to a
 sliceValue.
 */
 func (this sliceValue) Copy() Value {
-	return sliceValue(copySlice(this, self))
+	return copiedSliceValue{sliceValue: sliceValue(copySlice(this, self))}
 }
 
 /*
@@ -313,6 +334,18 @@ func (this sliceValue) Successor() Value {
 	return sliceValue(append(this, nil))
 }
 
+func (this sliceValue) Recycle() {
+	recycle(this)
+}
+
+func (this sliceValue) Tokens(set *Set, options Value) *Set {
+	for _, v := range this {
+		set = NewValue(v).Tokens(set, options)
+	}
+
+	return set
+}
+
 func (this sliceValue) unwrap() Value {
 	return this
 }
@@ -347,8 +380,16 @@ func (this *listValue) Actual() interface{} {
 	return this.slice.Actual()
 }
 
+func (this *listValue) ActualForIndex() interface{} {
+	return this.slice.ActualForIndex()
+}
+
 func (this *listValue) Equals(other Value) Value {
 	return this.slice.Equals(other)
+}
+
+func (this *listValue) EquivalentTo(other Value) bool {
+	return this.slice.EquivalentTo(other)
 }
 
 func (this *listValue) Collate(other Value) int {
@@ -429,6 +470,13 @@ func (this *listValue) Successor() Value {
 	return this.slice.Successor()
 }
 
+func (this *listValue) Recycle() {
+}
+
+func (this *listValue) Tokens(set *Set, options Value) *Set {
+	return this.slice.Tokens(set, options)
+}
+
 func (this *listValue) unwrap() Value {
 	return this
 }
@@ -460,6 +508,20 @@ func arrayEquals(array1, array2 []interface{}) Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func arrayEquivalent(array1, array2 []interface{}) bool {
+	if len(array1) != len(array2) {
+		return false
+	}
+
+	for i, item1 := range array1 {
+		if !NewValue(item1).EquivalentTo(NewValue(array2[i])) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

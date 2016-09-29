@@ -14,12 +14,14 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
 
 type IndexCountScan struct {
 	base
-	plan *plan.IndexCountScan
+	plan         *plan.IndexCountScan
+	childChannel chan int64
 }
 
 func NewIndexCountScan(plan *plan.IndexCountScan) *IndexCountScan {
@@ -46,8 +48,6 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 
-		keyspaceTerm := this.plan.Term()
-		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
 		timer := time.Now()
 		addTime := func() {
 			t := time.Since(timer) - this.chanTime
@@ -55,20 +55,52 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 			this.plan.AddTime(t)
 		}
 		defer addTime()
+
+		spans := this.plan.Spans()
+		n := len(spans)
+		this.childChannel = make(chan int64, n)
+		keyspaceTerm := this.plan.Term()
+		scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Keyspace())
+
 		var count int64
-		for _, span := range this.plan.Spans() {
-			dspan, err := evalSpan(span, context)
-			if err != nil {
-				context.Error(errors.NewEvaluationError(err, "span"))
-				return
-			}
-			subcount, err := this.plan.Index().Count(dspan, context.ScanConsistency(), scanVector)
-			if err != nil {
-				context.Error(errors.NewEvaluationError(err, "Count()"))
-				return
-			}
-			count = count + subcount
+		var subcount int64
+		for _, span := range spans {
+			go this.scanCount(span, scanVector, context)
 		}
-		this.sendItem(value.NewAnnotatedValue(count))
+
+		for n > 0 {
+			select {
+			case <-this.stopChannel:
+				return
+			default:
+			}
+
+			select {
+			case subcount = <-this.childChannel:
+				count += subcount
+				n--
+			case <-this.stopChannel:
+				return
+			}
+		}
+
+		av := value.NewAnnotatedValue(count)
+		av.InheritCovers(parent)
+		this.sendItem(av)
 	})
+}
+
+func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vector, context *Context) {
+	dspan, err := evalSpan(span, context)
+
+	var count int64
+	if err == nil {
+		count, err = this.plan.Index().Count(dspan, context.ScanConsistency(), scanVector)
+	}
+
+	if err != nil {
+		context.Error(errors.NewEvaluationError(err, "scanCount()"))
+	}
+
+	this.childChannel <- count
 }

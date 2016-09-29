@@ -11,10 +11,10 @@ package value
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"sort"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 )
 
@@ -143,6 +143,10 @@ func (this objectValue) Actual() interface{} {
 	return (map[string]interface{})(this)
 }
 
+func (this objectValue) ActualForIndex() interface{} {
+	return (map[string]interface{})(this)
+}
+
 func (this objectValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other := other.(type) {
@@ -152,9 +156,23 @@ func (this objectValue) Equals(other Value) Value {
 		return other
 	case objectValue:
 		return objectEquals(this, other)
+	case copiedObjectValue:
+		return objectEquals(this, other.objectValue)
+	default:
+		return FALSE_VALUE
 	}
+}
 
-	return FALSE_VALUE
+func (this objectValue) EquivalentTo(other Value) bool {
+	other = other.unwrap()
+	switch other := other.(type) {
+	case objectValue:
+		return objectEquivalent(this, other)
+	case copiedObjectValue:
+		return objectEquivalent(this, other.objectValue)
+	default:
+		return false
+	}
 }
 
 func (this objectValue) Collate(other Value) int {
@@ -162,6 +180,8 @@ func (this objectValue) Collate(other Value) int {
 	switch other := other.(type) {
 	case objectValue:
 		return objectCollate(this, other)
+	case copiedObjectValue:
+		return objectCollate(this, other.objectValue)
 	default:
 		return int(OBJECT - other.Type())
 	}
@@ -176,6 +196,8 @@ func (this objectValue) Compare(other Value) Value {
 		return other
 	case objectValue:
 		return objectCompare(this, other)
+	case copiedObjectValue:
+		return objectCompare(this, other.objectValue)
 	default:
 		return intValue(int(OBJECT - other.Type()))
 	}
@@ -189,7 +211,7 @@ func (this objectValue) Truth() bool {
 }
 
 func (this objectValue) Copy() Value {
-	return objectValue(copyMap(this, self))
+	return copiedObjectValue{objectValue: objectValue(copyMap(this, self))}
 }
 
 func (this objectValue) CopyForUpdate() Value {
@@ -316,6 +338,27 @@ func (this objectValue) Successor() Value {
 	return objectValue(s)
 }
 
+func (this objectValue) Recycle() {
+	recycle(this)
+}
+
+func (this objectValue) Tokens(set *Set, options Value) *Set {
+	names := true
+	if n, ok := options.Field("names"); ok && n.Type() == BOOLEAN {
+		names = n.Truth()
+	}
+
+	for n, v := range this {
+		if names {
+			set = NewValue(n).Tokens(set, options)
+		}
+
+		set = NewValue(v).Tokens(set, options)
+	}
+
+	return set
+}
+
 func (this objectValue) unwrap() Value {
 	return this
 }
@@ -352,6 +395,25 @@ func objectEquals(obj1, obj2 map[string]interface{}) Value {
 	} else {
 		return TRUE_VALUE
 	}
+}
+
+func objectEquivalent(obj1, obj2 map[string]interface{}) bool {
+	if len(obj1) != len(obj2) {
+		return false
+	}
+
+	for name1, val1 := range obj1 {
+		val2, ok := obj2[name1]
+		if !ok {
+			return false
+		}
+
+		if !NewValue(val1).EquivalentTo(NewValue(val2)) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

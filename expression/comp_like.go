@@ -137,6 +137,10 @@ func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
+	/* MB-19230 only add ^ and $ if we are not
+	   starting or ending with %.
+	   turn off $ and . matching \n
+	*/
 	if s != "" && s[0] != '%' && s[0] != '_' {
 		s = "^" + s
 	}
@@ -144,6 +148,7 @@ func likeCompile(s string) (re, part *regexp.Regexp, err error) {
 	if l > 0 && s[l-1] != '%' && s[l-1] != '_' {
 		s = s + "$"
 	}
+	s = "(?ms)" + s
 
 	re, err = regexp.Compile(s)
 	return

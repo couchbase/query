@@ -68,7 +68,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	this.children = append(this.children, scan)
 
-	if this.coveringScan == nil && this.countScan == nil {
+	if len(this.coveringScans) == 0 && this.countScan == nil {
 		fetch := plan.NewFetch(keyspace, node)
 		this.children = append(this.children, fetch)
 	}
@@ -113,7 +113,12 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	}
 
 	join := plan.NewJoin(keyspace, node)
-	this.subChildren = append(this.subChildren, join)
+	if len(this.subChildren) > 0 {
+		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+		this.children = append(this.children, parallel)
+		this.subChildren = make([]plan.Operator, 0, 16)
+	}
+	this.children = append(this.children, join)
 	return nil, nil
 }
 
@@ -171,8 +176,14 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
+	if len(this.subChildren) > 0 {
+		parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+		this.children = append(this.children, parallel)
+		this.subChildren = make([]plan.Operator, 0, 16)
+	}
+
 	nest := plan.NewNest(keyspace, node)
-	this.subChildren = append(this.subChildren, nest)
+	this.children = append(this.children, nest)
 	return nil, nil
 }
 
@@ -219,6 +230,9 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 
 	unnest := plan.NewUnnest(node)
 	this.subChildren = append(this.subChildren, unnest)
+	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
+	this.children = append(this.children, parallel)
+	this.subChildren = make([]plan.Operator, 0, 16)
 	return nil, nil
 }
 

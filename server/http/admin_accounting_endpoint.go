@@ -27,7 +27,8 @@ const (
 	vitalsPrefix     = adminPrefix + "/vitals"
 	preparedsPrefix  = adminPrefix + "/prepareds"
 	requestsPrefix   = adminPrefix + "/active_requests"
-	completedPrefix  = adminPrefix + "/completed_requests"
+	completedsPrefix = adminPrefix + "/completed_requests"
+	indexesPrefix    = adminPrefix + "/indexes"
 	expvarsRoute     = "/debug/vars"
 )
 
@@ -57,24 +58,40 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequests)
 	}
-	completedHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCompletedRequests)
-	}
 	requestHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequest)
+	}
+	completedsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequests)
+	}
+	completedHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequest)
+	}
+	preparedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPreparedIndex)
+	}
+	requestIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doRequestIndex)
+	}
+	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedIndex)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:              {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":  {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                  {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:               {handler: preparedsHandler, methods: []string{"GET"}},
-		preparedsPrefix + "/{name}":   {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
-		requestsPrefix:                {handler: requestsHandler, methods: []string{"GET"}},
-		requestsPrefix + "/{request}": {handler: requestHandler, methods: []string{"GET", "DELETE"}},
-		completedPrefix:               {handler: completedHandler, methods: []string{"GET"}},
+		accountingPrefix:                      {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "DELETE"}},
+		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "DELETE"}},
+		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET"}},
+		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET"}},
+		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -110,15 +127,15 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (
 		}
 		return stats, nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
 func addMetricData(name string, stats map[string]interface{}, metrics map[string]interface{}) {
 	for metric_type, metric_value := range metrics {
 
-		// MB-20521: avoid reusing preallocated buffers
-		stats[name + "." + metric_type] = metric_value
+		// MB-20521 avoid buffers that are reused
+		stats[name+"."+metric_type] = metric_value
 	}
 }
 
@@ -139,7 +156,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (i
 	case "DELETE":
 		return nil, reg.Unregister(name)
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -151,6 +168,7 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	} else {
 		reg.Counter(accounting.INVALID_REQUESTS).Inc(1)
 	}
+
 	return nil, nil
 }
 
@@ -160,7 +178,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) 
 		acctStore := endpoint.server.AccountingStore()
 		return acctStore.Vitals()
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -178,7 +196,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	case "GET":
 		return plan.GetPrepared(value.NewValue(name))
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -187,7 +205,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	case "GET":
 		return plan.SnapshotPrepared(), nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -202,20 +220,21 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		reqMap["requestId"] = request.Id().String()
 		cId := request.ClientID().String()
 		if cId != "" {
-			reqMap["request.clientContextID"] = cId
+			reqMap["clientContextID"] = cId
 		}
 		if request.Statement() != "" {
-			reqMap["request.statement"] = request.Statement()
+			reqMap["statement"] = request.Statement()
 		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
-			reqMap["prepared.name"] = p.Name()
-			reqMap["prepared.statement"] = p.Text()
+			reqMap["preparedName"] = p.Name()
+			reqMap["preparedText"] = p.Text()
 		}
 		reqMap["requestTime"] = request.RequestTime()
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
 		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
 		reqMap["state"] = request.State()
+		reqMap["scanConsistency"] = request.ScanConsistency()
 
 		p := request.Output().FmtPhaseTimes()
 		if p != nil {
@@ -238,7 +257,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 		return true, nil
 	default:
-		return nil, nil
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
@@ -261,20 +280,21 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		requests[i]["requestId"] = request.Id().String()
 		cId := request.ClientID().String()
 		if cId != "" {
-			requests[i]["request.clientContextID"] = cId
+			requests[i]["clientContextID"] = cId
 		}
 		if request.Statement() != "" {
-			requests[i]["request.statement"] = request.Statement()
+			requests[i]["statement"] = request.Statement()
 		}
 		if request.Prepared() != nil {
 			p := request.Prepared()
-			requests[i]["prepared.name"] = p.Name()
-			requests[i]["prepared.statement"] = p.Text()
+			requests[i]["preparedName"] = p.Name()
+			requests[i]["preparedStatement"] = p.Text()
 		}
 		requests[i]["requestTime"] = request.RequestTime()
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
 		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
 		requests[i]["state"] = request.State()
+		requests[i]["scanConsistency"] = request.ScanConsistency()
 
 		p := request.Output().FmtPhaseTimes()
 		if p != nil {
@@ -294,9 +314,58 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return requests, nil
 }
 
+func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	vars := mux.Vars(req)
+	requestId := vars["request"]
+
+	switch req.Method {
+	case "GET":
+		reqMap := map[string]interface{}{}
+		accounting.RequestDo(requestId, func(request *accounting.RequestLogEntry) {
+			reqMap["requestId"] = request.RequestId
+			if request.ClientId != "" {
+				reqMap["clientContextID"] = request.ClientId
+			}
+			reqMap["state"] = request.State
+			reqMap["scanConsistency"] = request.ScanConsistency
+			if request.Statement != "" {
+				reqMap["statement"] = request.Statement
+			}
+			if request.PreparedName != "" {
+				reqMap["preparedName"] = request.PreparedName
+				reqMap["preparedText"] = request.PreparedText
+			}
+			reqMap["requestTime"] = request.Time
+			reqMap["elapsedTime"] = request.ElapsedTime.String()
+			reqMap["serviceTime"] = request.ServiceTime.String()
+			reqMap["resultCount"] = request.ResultCount
+			reqMap["resultSize"] = request.ResultSize
+			reqMap["errorCount"] = request.ErrorCount
+			if request.PhaseTimes != nil {
+				reqMap["phaseTimes"] = request.PhaseTimes
+			}
+			if request.PhaseCounts != nil {
+				reqMap["phaseCounts"] = request.PhaseCounts
+			}
+			if request.PhaseOperators != nil {
+				reqMap["phaseOperators"] = request.PhaseOperators
+			}
+		})
+		return reqMap, nil
+	case "DELETE":
+		err := accounting.RequestDelete(requestId)
+		if err != nil {
+			return nil, err
+		} else {
+			return true, nil
+		}
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
 	numRequests := accounting.RequestsCount()
-
 	requests := make([]map[string]interface{}, numRequests)
 	i := 0
 
@@ -312,6 +381,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 			requests[i]["clientContextID"] = request.ClientId
 		}
 		requests[i]["state"] = request.State
+		requests[i]["scanConsistency"] = request.ScanConsistency
 		if request.Statement != "" {
 			requests[i]["statement"] = request.Statement
 		}
@@ -328,12 +398,57 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		if request.PhaseTimes != nil {
 			requests[i]["phaseTimes"] = request.PhaseTimes
 		}
+		if request.PhaseCounts != nil {
+			requests[i]["phaseCounts"] = request.PhaseCounts
+		}
+		if request.PhaseOperators != nil {
+			requests[i]["phaseOperators"] = request.PhaseOperators
+		}
 
 		// FIXME more stats
 		i++
 	}
 	accounting.RequestsForeach(snapshot)
 	return requests, nil
+}
+
+func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	return plan.NamePrepareds(), nil
+}
+
+func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numEntries, err := endpoint.actives.Count()
+	if err != nil {
+		return nil, err
+	}
+	requests := make([]string, numEntries)
+	i := 0
+	snapshot := func(requestId string, request server.Request) {
+		if i >= numEntries {
+			requests = append(requests, requestId)
+		} else {
+			requests[i] = requestId
+		}
+		i++
+	}
+	endpoint.actives.ForEach(snapshot)
+	return requests, nil
+}
+
+func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
+	numEntries := accounting.RequestsCount()
+	completed := make([]string, numEntries)
+	i := 0
+	snapshot := func(requestId string, request *accounting.RequestLogEntry) {
+		if i >= numEntries {
+			completed = append(completed, requestId)
+		} else {
+			completed[i] = requestId
+		}
+		i++
+	}
+	accounting.RequestsForeach(snapshot)
+	return completed, nil
 }
 
 func getMetricData(metric accounting.Metric) map[string]interface{} {

@@ -121,6 +121,10 @@ func ActiveRequestsDelete(id string) bool {
 	return actives.Delete(id, true)
 }
 
+func ActiveRequestsGet(id string) (Request, errors.Error) {
+	return actives.Get(id)
+}
+
 func ActiveRequestsForEach(f func(string, Request)) {
 	actives.ForEach(f)
 }
@@ -134,6 +138,7 @@ type BaseRequest struct {
 	// of the struct to avoid alignment issues on x86 platforms
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
+	phaseStats    [execution.PHASES]phaseStat
 
 	sync.RWMutex
 	id             *requestIDImpl
@@ -152,7 +157,6 @@ type BaseRequest struct {
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
 	phaseTimes     map[string]time.Duration
-	phaseStats     []phaseStat
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -231,7 +235,6 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	if logging.LogLevel() >= logging.TRACE {
 		rv.phaseTimes = make(map[string]time.Duration, 8)
 	}
-	rv.phaseStats = make([]phaseStat, execution.PHASES)
 
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
@@ -437,13 +440,17 @@ func (this *BaseRequest) AddPhaseOperator(p execution.Phases) {
 func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
 	var p map[string]interface{} = nil
 
-	for k, d := range this.phaseStats {
-		if d.count > 0 {
+	// Use simple iteration rather than a range clause to avoid a spurious
+	// data race report. MB-20692
+	nr := len(this.phaseStats)
+	for i := 0; i < nr; i++ {
+		count := atomic.LoadUint64(&this.phaseStats[i].count)
+		if count > 0 {
 			if p == nil {
 				p = make(map[string]interface{},
 					execution.PHASES)
 			}
-			p[execution.Phases(k).String()] = d.count
+			p[execution.Phases(i).String()] = count
 		}
 	}
 	return p
@@ -452,13 +459,17 @@ func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
 func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
 	var p map[string]interface{} = nil
 
-	for k, d := range this.phaseStats {
-		if d.operators > 0 {
+	// Use simple iteration rather than a range clause to avoid a spurious
+	// data race report. MB-20692
+	nr := len(this.phaseStats)
+	for i := 0; i < nr; i++ {
+		operators := atomic.LoadUint64(&this.phaseStats[i].operators)
+		if operators > 0 {
 			if p == nil {
 				p = make(map[string]interface{},
 					execution.PHASES)
 			}
-			p[execution.Phases(k).String()] = d.operators
+			p[execution.Phases(i).String()] = operators
 		}
 	}
 	return p
@@ -547,7 +558,7 @@ func (this *BaseRequest) LogRequest(requestTime time.Duration, serviceTime time.
 		this.Prepared(), this.FmtPhaseTimes(),
 		this.FmtPhaseCounts(), this.FmtPhaseOperators(),
 		string(this.State()), this.Id().String(),
-		this.ClientID().String())
+		this.ClientID().String(), string(this.ScanConsistency()))
 }
 
 func sendStop(ch chan bool) {

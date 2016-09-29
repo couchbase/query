@@ -29,6 +29,7 @@ var (
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"histfile": Stack_Helper(),
+		"batch":    Stack_Helper(),
 		//"autoconfig": Stack_Helper(),
 	}
 )
@@ -49,6 +50,13 @@ func init() {
 	//var werr error
 
 	err_code, err_str = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+	if err_code != 0 {
+		s_err := HandleError(err_code, err_str)
+		PrintError(s_err)
+
+	}
+
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "batch", BATCH)
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
@@ -208,16 +216,22 @@ func ValToStr(item value.Value) string {
 }
 
 /* Helper function to push or set a value in a stack. */
-func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (err_code int, err_str string) {
+func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) (err_code int, err_str string) {
 	err_code = 0
 	err_str = ""
 
 	st_Val, ok := param[vble]
 
-	v, err_code, err_str := Resolve(value)
+	v, err_code, err_str := Resolve(value_ip)
 	if err_code != 0 {
 		return err_code, err_str
 	} else {
+
+		//if the input value is a BINARY value, then throw an error.
+		if v.Type() == value.BINARY {
+			return errors.INVALID_INPUT_ARGUMENTS, ""
+		}
+
 		//Stack already exists
 		if ok {
 			if set == true {
@@ -295,7 +309,15 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
 	format as expected by godbc/n1ql creds.
 	*/
+
 	for _, i := range cred {
+
+		// Make sure the format of the credentials is correct.
+		// If not return an error.
+		if !strings.Contains(i, ":") {
+			return nil, errors.INVALID_CREDENTIAL, ""
+		}
+
 		up := strings.Split(i, ":")
 
 		//Make sure there are no leading and trailing spaces
@@ -324,6 +346,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[2:]
 
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
+
 		args_str := strings.Join(args[1:], " ")
 
 		err_code, err_str := PushValue_Helper(pushvalue, NamedParam, vble, args_str)
@@ -346,6 +372,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 		vble = vble[1:]
+
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
 
 		vble = strings.ToLower(vble)
 
@@ -407,6 +437,10 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[1:]
 
+		if strings.TrimSpace(vble) == "" {
+			return errors.TOO_FEW_ARGS, ""
+		}
+
 		args_str := strings.Join(args[1:], " ")
 
 		err_code, err_str := PushValue_Helper(pushvalue, UserDefSV, vble, args_str)
@@ -446,6 +480,8 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 					io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
 				}
 			}
+		} else if vble == "batch" {
+			BATCH = args_str
 		}
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)

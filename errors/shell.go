@@ -54,6 +54,8 @@ const (
 	INVALID_USERNAME_MSG   = "Invalid username. "
 	MISSING_CREDENTIAL     = 123
 	MISSING_CREDENTIAL_MSG = "Username missing in -credentials/-c option."
+	INVALID_CREDENTIAL     = 124
+	INVALID_CREDENTIAL_MSG = "Invalid format for credentials. Separate username and password by a :. "
 
 	//Command Errors (136 - 169)
 	NO_SUCH_COMMAND     = 136
@@ -68,26 +70,32 @@ const (
 	STACK_EMPTY_MSG     = "Stack empty."
 	NO_SUCH_ALIAS       = 141
 	NO_SUCH_ALIAS_MSG   = "Alias does not exist "
+	BATCH_MODE          = 142
+	BATCH_MODE_MSG      = "Error when running in batch mode. Incorrect input value"
+	STRING_WRITE        = 143
+	STRING_WRITE_MSG    = "Cannot write to string buffer. "
 
 	//Generic Errors (170 - 199)
-	OPERATION_TIMEOUT     = 170
-	OPERATION_TIMEOUT_MSG = "Operation timed out. Check query service url "
-	ROWS_SCAN             = 171
-	ROWS_SCAN_MSG         = ""
-	JSON_MARSHAL          = 172
-	JSON_MARSHAL_MSG      = ""
-	JSON_UNMARSHAL        = 173
-	JSON_UNMARSHAL_MSG    = ""
-	DRIVER_QUERY          = 174
-	DRIVER_QUERY_MSG      = ""
-	WRITER_OUTPUT         = 175
-	WRITER_OUTPUT_MSG     = "Error with io Writer. "
-	UNBALANCED_PAREN      = 176
-	UNBALANCED_PAREN_MSG  = "Unbalanced parenthesis in the input."
-	ROWS_CLOSE            = 177
-	ROWS_CLOSE_MSG        = ""
-	CMD_LINE_ARG          = 178
-	CMD_LINE_ARG_MSG      = "Place input argument URL at the end, after input flags. "
+	OPERATION_TIMEOUT           = 170
+	OPERATION_TIMEOUT_MSG       = "Operation timed out. Check query service url "
+	ROWS_SCAN                   = 171
+	ROWS_SCAN_MSG               = ""
+	JSON_MARSHAL                = 172
+	JSON_MARSHAL_MSG            = ""
+	JSON_UNMARSHAL              = 173
+	JSON_UNMARSHAL_MSG          = ""
+	DRIVER_QUERY                = 174
+	DRIVER_QUERY_MSG            = ""
+	WRITER_OUTPUT               = 175
+	WRITER_OUTPUT_MSG           = "Error with io Writer. "
+	UNBALANCED_PAREN            = 176
+	UNBALANCED_PAREN_MSG        = "Unbalanced parenthesis in the input."
+	ROWS_CLOSE                  = 177
+	ROWS_CLOSE_MSG              = ""
+	CMD_LINE_ARG                = 178
+	CMD_LINE_ARG_MSG            = "Place input argument URL at the end, after input flags. "
+	INVALID_INPUT_ARGUMENTS     = 179
+	INVALID_INPUT_ARGUMENTS_MSG = "Input Argument format is invalid."
 
 	//Untracked error
 	UNKNOWN_ERROR     = 199
@@ -166,6 +174,11 @@ func NewShellErrorMissingCredential(msg string) Error {
 
 }
 
+func NewShellErrorInvalidCredential(msg string) Error {
+	return &err{level: EXCEPTION, ICode: INVALID_CREDENTIAL, IKey: "shell.invalid.credentials", InternalMsg: INVALID_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
 //Command Errors
 func NewShellErrorNoSuchCommand(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_SUCH_COMMAND, IKey: "shell.no.such.command", InternalMsg: NO_SUCH_COMMAND_MSG + msg, InternalCaller: CallerN(1)}
@@ -190,6 +203,16 @@ func NewShellErrorStackEmpty(msg string) Error {
 
 func NewShellErrorNoSuchAlias(msg string) Error {
 	return &err{level: EXCEPTION, ICode: NO_SUCH_ALIAS, IKey: "shell.alias.does.not.exist", InternalMsg: NO_SUCH_ALIAS_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorBatchMode(msg string) Error {
+	return &err{level: EXCEPTION, ICode: BATCH_MODE, IKey: "batch.mode.incorrect.input", InternalMsg: BATCH_MODE_MSG + msg, InternalCaller: CallerN(1)}
+
+}
+
+func NewShellErrorStringWrite(msg string) Error {
+	return &err{level: EXCEPTION, ICode: STRING_WRITE, IKey: "string.buffer.write.error", InternalMsg: STRING_WRITE_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
@@ -232,4 +255,8 @@ func NewShellErrorCmdLineArgs(msg string) Error {
 
 func NewShellErrorUnkownError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: UNKNOWN_ERROR, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorInvalidInputArguments(msg string) Error {
+	return &err{level: EXCEPTION, ICode: INVALID_INPUT_ARGUMENTS, IKey: "shell.invalid.input.arguments", InternalMsg: INVALID_INPUT_ARGUMENTS_MSG + msg, InternalCaller: CallerN(1)}
 }

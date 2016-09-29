@@ -18,19 +18,18 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type IndexNest struct {
-	base
+	joinBase
 	plan *plan.IndexNest
 }
 
 func NewIndexNest(plan *plan.IndexNest) *IndexNest {
 	rv := &IndexNest{
-		base: newBase(),
-		plan: plan,
+		joinBase: newJoinBase(),
+		plan:     plan,
 	}
 
 	rv.output = rv
@@ -43,8 +42,8 @@ func (this *IndexNest) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *IndexNest) Copy() Operator {
 	return &IndexNest{
-		base: this.base.copy(),
-		plan: this.plan,
+		joinBase: this.joinBase.copy(),
+		plan:     this.plan,
 	}
 }
 
@@ -97,7 +96,17 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		}
 	}
 
-	return this.nestEntries(item, entries, context)
+	var doc value.AnnotatedJoinPair
+
+	doc.Value = item
+	if len(entries) != 0 {
+		doc.Keys = make([]string, 0, len(entries))
+		for _, entry := range entries {
+			doc.Keys = append(doc.Keys, entry.PrimaryKey)
+		}
+	}
+
+	return this.joinEnbatch(doc, this, context)
 }
 
 func (this *IndexNest) scan(id string, context *Context,
@@ -118,83 +127,26 @@ func (this *IndexNest) scan(id string, context *Context,
 	wg.Done()
 }
 
-func (this *IndexNest) nestEntries(item value.AnnotatedValue,
-	entries []*datastore.IndexEntry, context *Context) (ok bool) {
-	var nvs []interface{}
-
-	if len(entries) > 0 {
-		covers := this.plan.Covers()
-		if len(covers) == 0 {
-			nvs, ok = this.fetch(entries, context)
-			if !ok {
-				return ok
-			}
-		} else {
-			nvs = make([]interface{}, len(entries))
-			for i, entry := range entries {
-				nv := value.NewAnnotatedValue(nil)
-				meta := map[string]interface{}{"id": entry.PrimaryKey}
-				nv.SetAttachment("meta", meta)
-
-				for i, c := range covers {
-					nv.SetCover(c.Text(), entry.EntryKey[i])
-				}
-
-				nvs[i] = nv
-			}
-		}
-	}
-
-	if len(nvs) > 0 {
-		item.SetField(this.plan.Term().Alias(), nvs)
-	} else {
-		if !this.plan.Outer() {
-			return true
-		}
-
-		item.SetField(this.plan.Term().Alias(), value.EMPTY_ARRAY_VALUE)
-	}
-
-	return this.sendItem(item)
+func (this *IndexNest) afterItems(context *Context) {
+	this.flushBatch(context)
 }
 
-func (this *IndexNest) fetch(entries []*datastore.IndexEntry, context *Context) (
-	[]interface{}, bool) {
-	// Build list of keys
-	var keys []string
-	if len(entries) <= 16 {
-		keys = _NEST_INDEX_STRING_POOL.Get()
-		defer _NEST_INDEX_STRING_POOL.Put(keys)
-	} else {
-		keys = make([]string, 0, len(entries))
+func (this *IndexNest) flushBatch(context *Context) bool {
+	defer this.releaseBatch()
+
+	if len(this.joinBatch) == 0 {
+		return true
 	}
 
-	for _, e := range entries {
-		keys = append(keys, e.PrimaryKey)
-	}
+	keyCount := _STRING_KEYCOUNT_POOL.Get()
+	pairMap := _STRING_ANNOTATED_POOL.Get()
 
-	// Fetch
-	pairs, errs := this.plan.Keyspace().Fetch(keys)
+	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
+	defer _STRING_ANNOTATED_POOL.Put(pairMap)
 
-	fetchOk := true
-	for _, err := range errs {
-		context.Error(err)
-		if err.IsFatal() {
-			fetchOk = false
-		}
-	}
+	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	if len(pairs) == 0 {
-		return nil, fetchOk
-	}
-
-	nvs := make([]interface{}, 0, len(pairs))
-	for _, pair := range pairs {
-		nvs = append(nvs, pair.Value)
-	}
-
-	return nvs, fetchOk
+	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
 }
 
 var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)
-var _NEST_INDEX_STRING_POOL = util.NewStringPool(16)

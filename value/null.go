@@ -62,17 +62,25 @@ func (this *nullValue) Actual() interface{} {
 	return nil
 }
 
+func (this *nullValue) ActualForIndex() interface{} {
+	return nil
+}
+
 /*
-Returns false.
+Returns MISSING or NULL.
 */
 func (this *nullValue) Equals(other Value) Value {
 	other = other.unwrap()
 	switch other.Type() {
 	case MISSING:
 		return other
+	default:
+		return this
 	}
+}
 
-	return this
+func (this *nullValue) EquivalentTo(other Value) bool {
+	return other.Type() == NULL
 }
 
 /*
@@ -183,7 +191,7 @@ func (this *nullValue) FieldNames(buffer []string) []string {
 /*
 Returns the input buffer as is.
 */
-func (this nullValue) DescendantPairs(buffer []util.IPair) []util.IPair {
+func (this *nullValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	return buffer
 }
 
@@ -192,6 +200,14 @@ NULL is succeeded by FALSE.
 */
 func (this *nullValue) Successor() Value {
 	return FALSE_VALUE
+}
+
+func (this *nullValue) Recycle() {
+}
+
+func (this *nullValue) Tokens(set *Set, options Value) *Set {
+	set.Add(this)
+	return set
 }
 
 func (this *nullValue) unwrap() Value {

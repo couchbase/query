@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
 )
 
 type indexEntry struct {
@@ -28,10 +29,10 @@ type indexEntry struct {
 	exactSpans bool
 }
 
-func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEntry,
+func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
 	if this.cover != nil {
-		scan, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+		scan, err := this.buildCoveringScan(indexes, node, id, pred, limit)
 		if scan != nil || err != nil {
 			return scan, err
 		}
@@ -39,8 +40,16 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 	this.resetCountMin()
 
-	if (this.order != nil || limit != nil) && len(secondaries) > 1 {
-		// This makes InterSectionscan disable limit pushdown, don't use index order
+	indexes = minimalIndexes(indexes, true)
+
+	var err error
+	indexes, err = sargIndexes(indexes, pred)
+	if err != nil {
+		return nil, err
+	}
+
+	if (this.order != nil || limit != nil) && len(indexes) > 1 {
+		// This makes IntersectScan disable limit pushdown, don't use index order
 		this.resetOrderLimit()
 		limit = nil
 	}
@@ -49,9 +58,9 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 		limit = nil
 	}
 
-	scans := make([]plan.Operator, 0, len(secondaries))
+	scans := make([]plan.Operator, 0, len(indexes))
 	var op plan.Operator
-	for index, entry := range secondaries {
+	for index, entry := range indexes {
 		if this.order != nil {
 			if !this.useIndexOrder(entry, entry.keys) {
 				this.resetOrderLimit()
@@ -99,10 +108,10 @@ func (this *builder) buildSecondaryScan(secondaries map[datastore.Index]*indexEn
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, all map[datastore.Index]*indexEntry, err error) {
+	sargables, entries map[datastore.Index]*indexEntry, err error) {
 	var keys expression.Expressions
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
-	all = make(map[datastore.Index]*indexEntry, len(indexes))
+	entries = make(map[datastore.Index]*indexEntry, len(indexes))
 
 	for _, index := range indexes {
 		if index.IsPrimary() {
@@ -159,50 +168,33 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 		n := SargableFor(pred, keys)
 		entry := &indexEntry{keys, keys[0:n], cond, nil, false}
-		all[index] = entry
+		entries[index] = entry
 
 		if n > 0 {
 			sargables[index] = entry
 		}
 	}
 
-	return sargables, all, nil
+	return sargables, entries, nil
 }
 
-func minimalIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
-	map[datastore.Index]*indexEntry, error) {
+func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
 				continue
 			}
 
-			if narrowerOrEquivalent(se, te) {
+			if narrowerOrEquivalent(se, te, shortest) {
 				delete(sargables, t)
 			}
 		}
 	}
 
-	minimals := make(map[datastore.Index]*indexEntry, len(sargables))
-	for s, se := range sargables {
-		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
-		if err != nil || len(spans) == 0 {
-			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
-				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
-			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
-				pred.String(), se.sargKeys.String(), err))
-			return nil, err
-		}
-
-		se.spans = spans
-		se.exactSpans = exactSpans
-		minimals[s] = se
-	}
-
-	return minimals, nil
+	return sargables
 }
 
-func narrowerOrEquivalent(se, te *indexEntry) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
 	}
@@ -223,38 +215,93 @@ outer:
 	}
 
 	return len(se.sargKeys) > len(te.sargKeys) ||
-		len(se.keys) <= len(te.keys)
+		(shortest && (len(se.keys) <= len(te.keys)))
+}
+
+func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
+	map[datastore.Index]*indexEntry, error) {
+	for _, se := range sargables {
+		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
+		if err != nil || len(spans) == 0 {
+			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
+				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
+			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+				pred.String(), se.sargKeys.String(), err))
+			return nil, err
+		}
+
+		se.spans = spans
+		se.exactSpans = exactSpans
+	}
+
+	return sargables, nil
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
-
-	// If it makes DistinctScan don't use index order
 	if len(entry.spans) > 1 {
 		return false
 	}
 
-	if len(keys) < len(this.order.Terms()) {
-		return false
+	var filters map[string]value.Value
+	if entry.cond != nil {
+		filters = entry.cond.FilterCovers(make(map[string]value.Value, 16))
 	}
 
-	for i, orderTerm := range this.order.Terms() {
+	i := 0
+	for _, orderTerm := range this.order.Terms() {
+		// orderTerm is constant
+		if orderTerm.Expression().Static() != nil {
+			continue
+		}
+
+		// non-constant orderTerms are more than index keys
+		if i >= len(keys) {
+			// match with condition EQ terms
+			if equalConditionFilter(filters, orderTerm.Expression().String()) {
+				continue
+			}
+			return false
+		}
+
 		if orderTerm.Descending() {
 			return false
 		}
 
-		if !orderTerm.Expression().EquivalentTo(keys[i]) {
+		if isArray, _ := entry.keys[i].IsArrayIndexKey(); isArray {
 			return false
 		}
 
-		if i < len(entry.sargKeys) {
-			sk := entry.sargKeys[i]
-			if isArray, _ := sk.IsArrayIndexKey(); isArray {
+	loop:
+		for {
+			if orderTerm.Expression().EquivalentTo(keys[i]) {
+				// orderTerm matched with index key
+				i++
+				break loop
+			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
+				// orderTerm matched with Condition EQ
+				break loop
+			} else if equalRangeKey(i, entry.spans[0].Range.Low, entry.spans[0].Range.High) {
+				// orderTerm matched with leading Equal Range key
+				i++
+				if i >= len(keys) {
+					return false
+				}
+			} else {
 				return false
 			}
 		}
 	}
 
 	return true
+}
+
+func equalConditionFilter(filters map[string]value.Value, str string) bool {
+	if filters == nil {
+		return false
+	}
+
+	v, ok := filters[str]
+	return ok && v != nil
 }
 
 func allowedPushDown(entry *indexEntry, pred expression.Expression) bool {

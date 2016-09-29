@@ -17,6 +17,7 @@ import (
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
 
@@ -34,6 +35,7 @@ type base struct {
 }
 
 const _ITEM_CAP = 512
+const _MAP_POOL_CAP = 512
 
 var pipelineCap atomic.AlignedInt64
 
@@ -41,6 +43,8 @@ func init() {
 	atomic.StoreInt64(&pipelineCap, int64(_ITEM_CAP))
 	p := value.NewAnnotatedPool(_BATCH_SIZE)
 	_BATCH_POOL.Store(p)
+	j := value.NewAnnotatedJoinPairPool(_BATCH_SIZE)
+	_JOIN_BATCH_POOL.Store(j)
 }
 
 func SetPipelineCap(cap int) {
@@ -248,6 +252,7 @@ type batcher interface {
 var _BATCH_SIZE = 64
 
 var _BATCH_POOL go_atomic.Value
+var _JOIN_BATCH_POOL go_atomic.Value
 
 func SetPipelineBatch(size int) {
 	if size < 1 {
@@ -256,6 +261,8 @@ func SetPipelineBatch(size int) {
 
 	p := value.NewAnnotatedPool(size)
 	_BATCH_POOL.Store(p)
+	j := value.NewAnnotatedJoinPairPool(size)
+	_JOIN_BATCH_POOL.Store(j)
 }
 
 func PipelineBatchSize() int {
@@ -264,6 +271,10 @@ func PipelineBatchSize() int {
 
 func getBatchPool() *value.AnnotatedPool {
 	return _BATCH_POOL.Load().(*value.AnnotatedPool)
+}
+
+func getJoinBatchPool() *value.AnnotatedJoinPairPool {
+	return _JOIN_BATCH_POOL.Load().(*value.AnnotatedJoinPairPool)
 }
 
 func (this *base) allocateBatch() {
@@ -276,21 +287,20 @@ func (this *base) releaseBatch() {
 }
 
 func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool {
-	if this.batch == nil {
-		this.allocateBatch()
-	} else if len(this.batch) == batchSize {
+	if len(this.batch) >= batchSize {
 		if !b.flushBatch(context) {
 			return false
 		}
+	}
 
-		if len(this.batch) == batchSize {
-			this.allocateBatch()
-		}
+	if this.batch == nil {
+		this.allocateBatch()
 	}
 
 	this.batch = append(this.batch, item)
 	return true
 }
+
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
 	return this.enbatchSize(item, b, cap(this.batch), context)
 }
@@ -320,4 +330,33 @@ func (this *base) requireKey(item value.AnnotatedValue, context *Context) (strin
 			fmt.Sprintf("ID %v of type %T is not a string in value %v", act, act, item)))
 		return "", false
 	}
+}
+
+func (this *base) evaluateKey(keyExpr expression.Expression, item value.AnnotatedValue, context *Context) ([]string, bool) {
+	kv, e := keyExpr.Evaluate(item, context)
+	if e != nil {
+		context.Error(errors.NewEvaluationError(e, "keys"))
+		return nil, false
+	}
+
+	actuals := kv.Actual()
+	switch actuals.(type) {
+	case []interface{}:
+	case nil:
+		actuals = []interface{}(nil)
+	default:
+		actuals = []interface{}{actuals}
+	}
+
+	acts := actuals.([]interface{})
+	keys := make([]string, 0, len(acts))
+	for _, key := range acts {
+		k := value.NewValue(key).Actual()
+		switch k := k.(type) {
+		case string:
+			keys = append(keys, k)
+		}
+	}
+
+	return keys, true
 }

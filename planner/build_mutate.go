@@ -31,18 +31,10 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	this.children = append(this.children, scan)
 
-	if this.coveringScan != nil {
-		coverer := expression.NewCoverer(this.coveringScan.Covers(), this.coveringScan.FilterCovers())
-		err = this.cover.MapExpressions(coverer)
+	if len(this.coveringScans) > 0 {
+		err = this.coverExpressions()
 		if err != nil {
 			return err
-		}
-
-		if this.where != nil {
-			this.where, err = coverer.Map(this.where)
-			if err != nil {
-				return err
-			}
 		}
 	} else {
 		var fetch plan.Operator

@@ -144,13 +144,14 @@ func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, erro
 		return value.NULL_VALUE, nil
 	}
 
-	sum := 0.0
+	sum := value.ZERO_NUMBER
 	count := 0
 	aa := arg.Actual().([]interface{})
 	for _, a := range aa {
 		v := value.NewValue(a)
-		if v.Type() == value.NUMBER {
-			sum += v.Actual().(float64)
+		switch v := v.(type) {
+		case value.NumberValue:
+			sum = sum.Add(v)
 			count++
 		}
 	}
@@ -158,7 +159,7 @@ func (this *ArrayAvg) Apply(context Context, arg value.Value) (value.Value, erro
 	if count == 0 {
 		return value.NULL_VALUE, nil
 	} else {
-		return value.NewValue(sum / float64(count)), nil
+		return value.NewValue(sum.Actual().(float64) / float64(count)), nil
 	}
 }
 
@@ -892,7 +893,7 @@ func (this *ArrayLength) Apply(context Context, arg value.Value) (value.Value, e
 	}
 
 	aa := arg.Actual().([]interface{})
-	return value.NewValue(float64(len(aa))), nil
+	return value.NewValue(len(aa)), nil
 }
 
 /*
@@ -1101,7 +1102,7 @@ func (this *ArrayPosition) Apply(context Context, first, second value.Value) (va
 	for i, f := range fa {
 		fv := value.NewValue(f)
 		if second.Equals(fv).Truth() {
-			return value.NewValue(float64(i)), nil
+			return value.NewValue(i), nil
 		}
 	}
 
@@ -1895,16 +1896,17 @@ func (this *ArraySum) Apply(context Context, arg value.Value) (value.Value, erro
 		return value.NULL_VALUE, nil
 	}
 
-	sum := 0.0
+	sum := value.ZERO_NUMBER
 	aa := arg.Actual().([]interface{})
 	for _, a := range aa {
 		v := value.NewValue(a)
-		if v.Type() == value.NUMBER {
-			sum += v.Actual().(float64)
+		switch v := v.(type) {
+		case value.NumberValue:
+			sum = sum.Add(v)
 		}
 	}
 
-	return value.NewValue(sum), nil
+	return sum, nil
 }
 
 /*
