@@ -10,6 +10,7 @@
 package system
 
 import (
+	"encoding/json"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -27,6 +28,7 @@ const KEYSPACE_NAME_DUAL = "dual"
 const KEYSPACE_NAME_PREPAREDS = "prepareds"
 const KEYSPACE_NAME_REQUESTS = "completed_requests"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
+const KEYSPACE_NAME_USER_ROLES = "user_roles"
 
 type store struct {
 	actualStore              datastore.Datastore
@@ -88,6 +90,20 @@ func (s *store) Inferencer(name datastore.InferenceType) (datastore.Inferencer, 
 
 func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
+}
+
+func (s *store) UserRoles() (value.Value, errors.Error) {
+	// Stub implementation with fixed content.
+	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","roles":[{"role":"cluster_admin"},
+			{"role":"bucket_admin","bucket_name":"default"}]},
+			{"name":"Petr Petrov","id":"petrpetrov","roles":[{"role":"replication_admin"}]}]`
+	jsonData := make([]interface{}, 3)
+	err := json.Unmarshal([]byte(content), &jsonData)
+	if err != nil {
+		return nil, errors.NewServiceErrorInvalidJSON(err)
+	}
+	v := value.NewValue(jsonData)
+	return v, nil
 }
 
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {

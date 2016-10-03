@@ -217,6 +217,11 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return []datastore.Inferencer{s.inferencer}, nil
 }
 
+func (s *store) UserRoles() (value.Value, errors.Error) {
+	// Stub implementation.
+	return nil, nil
+}
+
 func initCbAuth(url string) (*cb.Client, error) {
 
 	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)

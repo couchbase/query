@@ -51,6 +51,15 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get keyspace by name %v", err)
 	}
 
+	// Should be able to get a Value for UserRoles.
+	v, err := s.UserRoles()
+	if err != nil {
+		t.Fatalf("failed to get stub user roles: %v", err)
+	}
+	if v == nil {
+		t.Fatalf("failed to get value for user roles: nil")
+	}
+
 	// Expect count of 2 namespaces for the namespaces keyspace
 	pb_c, err := pb.Count()
 	if err != nil || pb_c != 2 {

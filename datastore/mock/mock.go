@@ -89,6 +89,11 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
+func (s *store) UserRoles() (value.Value, errors.Error) {
+	// Stub implementation.
+	return nil, nil
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store
