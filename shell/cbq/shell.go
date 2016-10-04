@@ -367,6 +367,7 @@ func main() {
 	if errCode != 0 {
 		s_err := command.HandleError(errCode, errStr)
 		command.PrintError(s_err)
+		os.Exit(1)
 	}
 
 	//-engine

@@ -686,34 +686,36 @@ func ParseURL(serverFlag string) (string, int, string) {
 
 	//Parse the url
 	parsedURL, errURL := url.Parse(serverFlag)
-
+	if errURL != nil {
+		return "", errors.INVALID_URL, errURL.Error()
+	}
 	// We now have a valid URL. Check if we have a port
-	_, portNo, _ := net.SplitHostPort(parsedURL.Host)
+	_, portNo, err := net.SplitHostPort(parsedURL.Host)
+	if err != nil {
+		return "", errors.INVALID_URL, errURL.Error()
+	}
 	// couchbase:// and couchbases:// will represent http:// ... :8091 and
 	// https:// ... 18091 respectively. If the port is specified along with
 	// the scheme for this case, we throw an error.
-	if errURL == nil {
-		if portNo == "" {
-			if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
 
-				if strings.ToLower(parsedURL.Scheme) == "couchbase" {
-					parsedURL.Host = net.JoinHostPort(parsedURL.Host, "8091")
-					parsedURL.Scheme = "http"
+	if portNo == "" {
+		if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
 
-				} else {
-					parsedURL.Scheme = "https"
-					parsedURL.Host = net.JoinHostPort(parsedURL.Host, "18091")
-				}
+			if strings.ToLower(parsedURL.Scheme) == "couchbase" {
+				parsedURL.Host = net.JoinHostPort(parsedURL.Host, "8091")
+				parsedURL.Scheme = "http"
 
+			} else {
+				parsedURL.Scheme = "https"
+				parsedURL.Host = net.JoinHostPort(parsedURL.Host, "18091")
 			}
-		} else {
-			// Cannot give port with couchbase:// couchbases://
-			if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
-				return "", errors.INVALID_URL, INVALIDPORT
-			}
+
 		}
 	} else {
-		return "", errors.INVALID_URL, errURL.Error()
+		// Cannot give port with couchbase:// couchbases://
+		if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
+			return "", errors.INVALID_URL, INVALIDPORT
+		}
 	}
 
 	return parsedURL.String(), 0, ""
