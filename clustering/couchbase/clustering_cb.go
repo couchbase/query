@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/util"
 )
 
 const _PREFIX = "couchbase:"
@@ -300,10 +301,26 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 				}
 			}
 		}
-		// if no hostname is present it means this is the localhost
-		if hostname == "" {
-			hostname = "127.0.0.1"
+		// if nodes have non localhost ip address as the node name, all fine
+		// if named localhost, then things get a bit hairy.
+		// when queried from a remote machine, hosts named localhost will return
+		// an actual ip address.
+		// if the cluster has more than one node, you get an actual ip address
+		// even from the local node.
+		// single node and queried locally, they may return a blank name or localhost
+		// thing is, clustering code is hardwired to regard 127.0.0.1 as not part of
+		// a cluster, so we have to fix things by hand.
+		if hostname == "" || hostname == "localhost" || hostname == "127.0.0.1" {
+			localIp, _ := util.ExternalIP()
+			if localIp != "" {
+				hostname = localIp
+			} else {
+
+				// didn't work out, fix it for blank name
+				hostname = "127.0.0.1"
+			}
 		}
+
 		queryNodeNames = append(queryNodeNames, hostname)
 		queryNodes[hostname] = queryServices
 	}
