@@ -118,3 +118,8 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 		InternalMsg: fmt.Sprintf("The scan_vector parameter should not be used for queries accessing more than one keyspace. "+
 			"Use scan_vectors instead. Keyspaces: %v", buckets), InternalCaller: CallerN(1)}
 }
+
+func NewNoValueForKey(key string) Error {
+	return &err{level: EXCEPTION, ICode: 5200, IKey: "execution.no_value_for_key",
+		InternalMsg: fmt.Sprintf("Unable to find a value for key %s.", key), InternalCaller: CallerN(1)}
+}
