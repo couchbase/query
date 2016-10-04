@@ -194,6 +194,9 @@ func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) ma
 	return sargables
 }
 
+/*
+Is se narrower or equivalent to te.
+*/
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 	if len(te.sargKeys) > len(se.sargKeys) {
 		return false
@@ -206,7 +209,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 outer:
 	for _, tk := range te.sargKeys {
 		for _, sk := range se.sargKeys {
-			if SubsetOf(sk, tk) {
+			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
 				continue outer
 			}
 		}
