@@ -126,7 +126,8 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil, nil
 	}
 
-	var rv, rvs value.Values
+	rv := make([]interface{}, 0, n)
+	var rvs value.Values
 	for i := 0; i < n; i++ {
 		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
 		for j, b := range this.bindings {
@@ -153,29 +154,22 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		mv, mvs, e := this.valueMapping.EvaluateForIndex(cv, context)
 		if e != nil {
 			return nil, nil, e
-		} else if mvs != nil {
+		}
+
+		if mv.Type() != value.MISSING {
+			rv = append(rv, mv)
+		}
+
+		if mvs != nil {
 			if rvs == nil {
 				rvs = make(value.Values, 0, n*(1+len(mvs)))
 			}
 			rvs = append(rvs, mvs...)
-		} else if mv != nil && mv.Type() != value.MISSING {
-			if rv == nil {
-				rv = make(value.Values, 0, n)
-			}
-			rv = append(rv, mv)
 		}
 	}
 
-	if rvs != nil {
-		return nil, rvs, nil
-	} else if rv != nil {
-		return nil, rv, nil
-	} else {
-		return nil, _EMPTY_VALUES, nil
-	}
+	return value.NewValue(rv), rvs, nil
 }
-
-var _EMPTY_VALUES = make(value.Values, 0)
 
 func (this *Array) Copy() Expression {
 	return NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
@@ -201,21 +195,10 @@ func (this *Array) identityEvalForIndex(item value.Value, context Context) (valu
 		return nil, nil, err
 	}
 
-	if vals != nil {
-		return nil, vals, nil
-	}
-
 	switch val.Type() {
-	case value.ARRAY:
-		act := val.Actual().([]interface{})
-		vals = make(value.Values, len(act))
-		for i, a := range act {
-			vals[i] = value.NewValue(a)
-		}
-		return nil, vals, nil
-	case value.MISSING:
-		return val, nil, nil
+	case value.ARRAY, value.MISSING:
+		return val, vals, nil
 	default:
-		return value.NULL_VALUE, nil, nil
+		return value.NULL_VALUE, vals, nil
 	}
 }
