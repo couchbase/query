@@ -18,6 +18,7 @@ with this mock datastore.
 package mock
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -90,8 +91,17 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 }
 
 func (s *store) UserRoles() (value.Value, errors.Error) {
-	// Stub implementation.
-	return nil, nil
+	// Stub implementation with fixed content.
+	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","roles":[{"role":"cluster_admin"},
+                        {"role":"bucket_admin","bucket_name":"default"}]},
+                        {"name":"Petr Petrov","id":"petrpetrov","roles":[{"role":"replication_admin"}]}]`
+	jsonData := make([]interface{}, 3)
+	err := json.Unmarshal([]byte(content), &jsonData)
+	if err != nil {
+		return nil, errors.NewServiceErrorInvalidJSON(err)
+	}
+	v := value.NewValue(jsonData)
+	return v, nil
 }
 
 // namespace represents a mock-based Namespace.

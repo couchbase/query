@@ -51,6 +51,11 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get keyspace by name %v", err)
 	}
 
+	ur, err := p.KeyspaceByName("user_roles")
+	if err != nil {
+		t.Fatalf("failed to get keyspace by name %v", err)
+	}
+
 	// Should be able to get a Value for UserRoles.
 	v, err := s.UserRoles()
 	if err != nil {
@@ -72,6 +77,13 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get expected keyspaces keyspace count %v", err)
 	}
 
+	// Expect count of 2 for the user_roles keyspace
+	ur_c, err := ur.Count()
+	if err != nil || ur_c != 2 {
+		t.Fatalf("faied to get expect user_roles keyspace count %v", err)
+
+	}
+
 	// Expect count of 10 for the indexes keyspace (all the primary indexes)
 	ib_c, err := ib.Count()
 	if err != nil || ib_c != 10 {
@@ -90,6 +102,15 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("found unexpected name in index scan")
 	}
 
+	// Scan all Primary Index Entries of the user_roles keyspace
+	ur_e, err := doPrimaryIndexScan(t, ur)
+	if err != nil {
+		t.Fatalf("unable to scan index of system:user_roles: %v", err)
+	}
+	if !ur_e["ivanivanov"] || !ur_e["petrpetrov"] {
+		t.Fatalf("unexpected results from scan of syste:user_roles: %v", ur_e)
+	}
+
 	// Scan all Primary Index entries of the indexes keyspace
 	ib_e, err := doPrimaryIndexScan(t, ib)
 
@@ -104,6 +125,16 @@ func TestSystem(t *testing.T) {
 
 	// Fetch on the keyspaces keyspace - expect to find a value for this key:
 	vals, errs := bb.Fetch([]string{"p0/b1"})
+	if errs != nil {
+		t.Fatalf("errors in key fetch %v", errs)
+	}
+
+	if vals == nil || (len(vals) == 1 && vals[0].Value == nil) {
+		t.Fatalf("failed to fetch expected key from keyspaces keyspace")
+	}
+
+	// Fetch on the user_roles keyspace - expect to find a value for this key:
+	vals, errs = ur.Fetch([]string{"ivanivanov"})
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}

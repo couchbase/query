@@ -218,8 +218,11 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 }
 
 func (s *store) UserRoles() (value.Value, errors.Error) {
-	// Stub implementation.
-	return nil, nil
+	data, err := s.client.GetUserRoles()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err)
+	}
+	return value.NewValue(data), nil
 }
 
 func initCbAuth(url string) (*cb.Client, error) {
