@@ -54,7 +54,7 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 	}
 
 	if vals != nil {
-		return nil, vals, nil
+		return val, vals, nil
 	}
 
 	var rv value.Values
@@ -74,7 +74,7 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 		rv = value.Values{val}
 	}
 
-	return nil, rv, nil
+	return val, rv, nil
 }
 
 var _NULL_ARRAY = value.Values{value.NULL_VALUE}
