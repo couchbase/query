@@ -2388,7 +2388,7 @@ expr
 {
     name := $1.Alias()
     if name == "" {
-        yylex.Error(fmt.Sprintf("Object member has no name: %s", $1.String()))
+        yylex.Error(fmt.Sprintf("Object member missing name or value: %s", $1.String()))
     }
 
     $$ = algebra.NewPair(expression.NewConstant(name), $1)
