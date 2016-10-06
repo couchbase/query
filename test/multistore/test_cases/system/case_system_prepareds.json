@@ -3,7 +3,7 @@
 	"statements": "prepare test from select name, statement, uses from system:prepareds",
 	"results": [
         {
-            "encoded_plan": "H4sIAAAJbogA/5ySQWvjMBCF/4pRLrtgFvbq214WegvkWEos7JdEqSypM+OSNKS/vSMnsUlaCs3Nenrz/M2MDgahiS3aZfI2mMqY0gTbQb8ELHqKCWQlkqkOZjYdzAIvvdZCLe/NxvmWoPWP16Z/vWwiubfsGkx3pczJdZb2i0YJS+NCi52qs3SSVXrGnpNtMnUiJEto+dzIRZ/xngWdqj27sFalxcr2XsyxvP7bf0iz+VnobcTckvUefuzqrrYfghNn/ZziFk1eBYEVeCmgjgc3dikbf9UjYP2nzoD174Hpy3sWq8wI8p2pZ3C+f/o0HRcmJL3ODp2Pe3Uea/DQ6Gkq1TS16u/xNmchBNsNPzDs1sFKT8jV59e35ZiXPcJOUka7nLRYsJNpRUV+tcWKYlcwvDIWOa8sxpyyyPVnxy3n8SMAAP//3FLCCA8DAAA=",
+            "encoded_plan": "H4sIAAAJbogA/5ySQW/iMBCF/0pkLrtStKc95baXlXpD4lhVxEoeYOrY7sykgiL62zsOkAhaVSq3+PnNyzczPhiEJrZol8nbYCpjShNsB/0SsOgpJpCVSKY6mNl0MAu89FoLtbw3G+dbgtY/Xpv+9bKJ5N6yazDdlTIn11naLxolLI0LLXaqztJJVukZe062ydSJkCyh5XMjF33GexZ0qvbswlqVFivbezHH8vpv/yHN5mehtxFzS9Z7+LGru9p+CE6c9XOKWzR5FQRW4KWAOh7c2KVs/FWPgPWfOgPWvwemL+9ZrDIjyHemnsH5/unTdFyYkPQ6O3Q+7tV5rMFDo6epVNPUqr/H25yFEGw3/MCwWwcrPSFXn1/flmNe9gg7SRntctJiwU6mFRX51RYril3B8MpY5LyyGHPKItefHbecx48AAAD//+XxgygPAwAA",
             "name": "test",
             "operator": {
                 "#operator": "Sequence",
@@ -53,7 +53,7 @@
                             ]
                         },
                         "privileges": {
-                            "#system:prepareds": 1
+                            "#system:prepareds": 4
                         }
                     },
                     {

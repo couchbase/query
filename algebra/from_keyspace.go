@@ -80,7 +80,11 @@ Returns all required privileges.
 */
 func (this *KeyspaceTerm) Privileges() (datastore.Privileges, errors.Error) {
 	privs := datastore.NewPrivileges()
-	privs[this.namespace+":"+this.keyspace] = datastore.PRIV_READ
+	if this.namespace == "#system" {
+		privs[this.namespace+":"+this.keyspace] = datastore.PRIV_SYSTEM_READ
+	} else {
+		privs[this.namespace+":"+this.keyspace] = datastore.PRIV_READ
+	}
 	return privs, nil
 }
 

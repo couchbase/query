@@ -96,33 +96,29 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 }
 
 func doAuth(username, password, bucket string, requested datastore.Privilege) (bool, error) {
-
 	logging.Debugf(" Authenticating for bucket %s username %s password %s", bucket, username, password)
 	creds, err := cbauth.Auth(username, password)
 	if err != nil {
 		return false, err
 	}
 
-	if requested == datastore.PRIV_DDL {
-		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].views!write", bucket))
-		if err != nil || authResult == false {
-			return false, err
-		}
-
-	} else if requested == datastore.PRIV_WRITE {
-		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].data!write", bucket))
-		if err != nil || authResult == false {
-			return false, err
-		}
-
-	} else if requested == datastore.PRIV_READ {
-		authResult, err := creds.IsAllowed(fmt.Sprintf("cluster.bucket[%s].data!read", bucket))
-		if err != nil || authResult == false {
-			return false, err
-		}
-
-	} else {
+	var permission string
+	switch requested {
+	case datastore.PRIV_DDL:
+		permission = fmt.Sprintf("cluster.bucket[%s].views!write", bucket)
+	case datastore.PRIV_WRITE:
+		permission = fmt.Sprintf("cluster.bucket[%s].data!write", bucket)
+	case datastore.PRIV_READ:
+		permission = fmt.Sprintf("cluster.bucket[%s].data!read", bucket)
+	case datastore.PRIV_SYSTEM_READ:
+		permission = "cluster!read"
+	default:
 		return false, fmt.Errorf("Invalid Privileges")
+	}
+
+	authResult, err := creds.IsAllowed(permission)
+	if err != nil || authResult == false {
+		return false, err
 	}
 
 	return true, nil
@@ -147,13 +143,7 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 	for keyspace, privilege := range privileges {
 		if strings.Contains(keyspace, ":") {
 			q := strings.Split(keyspace, ":")
-			pool := q[0]
 			keyspace = q[1]
-
-			if strings.EqualFold(pool, "#system") {
-				// trying auth on system keyspace
-				return nil
-			}
 		}
 
 		logging.Debugf("Authenticating for keyspace %s", keyspace)
