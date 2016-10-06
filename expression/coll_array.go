@@ -171,6 +171,19 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 	return value.NewValue(rv), rvs, nil
 }
 
+func (this *Array) DependsOn(other Expression) bool {
+	// If identical except for mapping, check for mapping dependency
+	if o, ok := other.(*Array); ok &&
+		this.bindings.EquivalentTo(o.bindings) &&
+		Equivalent(this.when, o.when) &&
+		Equivalent(this.nameMapping, o.nameMapping) &&
+		this.valueMapping.DependsOn(o.valueMapping) {
+		return true
+	}
+
+	return this.collMapBase.DependsOn(other)
+}
+
 func (this *Array) Copy() Expression {
 	return NewArray(this.valueMapping.Copy(), this.bindings.Copy(), Copy(this.when))
 }
