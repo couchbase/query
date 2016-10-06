@@ -110,10 +110,17 @@ func (this *All) PropagatesNull() bool {
 }
 
 func (this *All) EquivalentTo(other Expression) bool {
-	return this.array.EquivalentTo(other)
+	all, ok := other.(*All)
+	return ok && (this.distinct == all.distinct) &&
+		this.array.EquivalentTo(all.array)
 }
 
 func (this *All) DependsOn(other Expression) bool {
+	// Unwrap other if possible
+	for all, ok := other.(*All); ok && (this.distinct || !all.distinct); all, ok = other.(*All) {
+		other = all.array
+	}
+
 	return this.array.DependsOn(other)
 }
 
