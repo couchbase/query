@@ -147,6 +147,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
+	f.SetAlias(this.As())
 	f.SetKeyspace(keyspace)
 	return
 }

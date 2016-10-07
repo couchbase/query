@@ -122,6 +122,7 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 	}
 
 	f.Allowed().SetField(alias, alias)
+	f.SetAlias(this.right.As())
 	return
 }
 

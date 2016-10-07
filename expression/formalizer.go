@@ -24,6 +24,7 @@ type Formalizer struct {
 	keyspace    string
 	allowed     *value.ScopeValue
 	identifiers *value.ScopeValue
+	aliases     *value.ScopeValue
 	mapSelf     bool // Map SELF to keyspace: used in sarging index
 	mapKeyspace bool // Map keyspace to SELF: used in creating index
 }
@@ -41,9 +42,10 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 }
 
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
-	var pv value.Value
+	var pv, av value.Value
 	if parent != nil {
 		pv = parent.allowed
+		av = parent.aliases
 		mapSelf = mapSelf || parent.mapSelf
 		mapKeyspace = mapKeyspace || parent.mapKeyspace
 	}
@@ -52,6 +54,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		keyspace:    keyspace,
 		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
+		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
 		mapSelf:     mapSelf,
 		mapKeyspace: mapKeyspace,
 	}
@@ -232,6 +235,7 @@ Create new scope containing bindings.
 func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 	allowed := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
 	identifiers := value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
+	aliases := value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
 
 	var expr Expression
 	for _, b := range bindings {
@@ -242,13 +246,16 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 
 		b.SetExpression(expr)
 		allowed.SetField(b.Variable(), value.TRUE_VALUE)
+		aliases.SetField(b.Variable(), value.TRUE_VALUE)
 		if b.NameVariable() != "" {
 			allowed.SetField(b.NameVariable(), value.TRUE_VALUE)
+			aliases.SetField(b.NameVariable(), value.TRUE_VALUE)
 		}
 	}
 
 	this.allowed = allowed
 	this.identifiers = identifiers
+	this.aliases = aliases
 	return nil
 }
 
@@ -258,12 +265,14 @@ Restore scope to parent's scope.
 func (this *Formalizer) PopBindings() {
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
+	this.aliases = this.aliases.Parent().(*value.ScopeValue)
 }
 
 func (this *Formalizer) Copy() *Formalizer {
 	f := NewFormalizer(this.keyspace, nil)
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
 	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
+	f.aliases = this.aliases.Copy().(*value.ScopeValue)
 	f.mapSelf = this.mapSelf
 	f.mapKeyspace = this.mapKeyspace
 	return f
@@ -289,7 +298,17 @@ func (this *Formalizer) Identifiers() *value.ScopeValue {
 	return this.identifiers
 }
 
+func (this *Formalizer) Aliases() *value.ScopeValue {
+	return this.aliases
+}
+
 // Argument must be non-nil
 func (this *Formalizer) SetIdentifiers(identifiers *value.ScopeValue) {
 	this.identifiers = identifiers
+}
+
+func (this *Formalizer) SetAlias(alias string) {
+	if alias != "" {
+		this.aliases.SetField(alias, alias)
+	}
 }

@@ -133,6 +133,7 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 		f.Identifiers().SetField(ident, val)
 	}
 
+	f.SetAlias(this.right.As())
 	return
 }
 
