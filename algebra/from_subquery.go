@@ -85,6 +85,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	}
 
 	f = expression.NewFormalizer(alias, parent)
+	f.SetAlias(this.Alias())
 	return
 }
 

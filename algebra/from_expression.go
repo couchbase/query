@@ -94,9 +94,8 @@ duplicate aliases.
 */
 func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	if this.keyspaceTerm != nil {
-		_, ok := parent.Allowed().Field(this.keyspaceTerm.Keyspace())
+		_, ok := parent.Aliases().Field(this.keyspaceTerm.Keyspace())
 		this.isKeyspace = !ok
-
 	}
 
 	if this.isKeyspace {
@@ -127,6 +126,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	f.Allowed().SetField(alias, alias)
+	f.SetAlias(this.as)
 	return
 }
 
