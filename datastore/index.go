@@ -43,6 +43,19 @@ type Indexer interface {
 	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
 }
 
+type NewIndexer interface {
+	Indexer
+	NewCreateIndex(requestId, name string, seekKey expression.Expressions, // Create a secondary index on this keyspace
+		rangeKey IndexKeys, where expression.Expression, with value.Value) (Index, errors.Error)
+}
+
+type IndexKeys []*IndexKey
+
+type IndexKey struct {
+	Expr expression.Expression
+	Desc bool
+}
+
 type IndexState string
 
 const (
@@ -89,6 +102,11 @@ type Index interface {
 type CountIndex interface {
 	Index
 	Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) // Perform a count on index.
+}
+
+type NewCountIndex interface {
+	CountIndex
+	NewCount(requestId string, span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) // Perform a count on index.
 }
 
 /*
@@ -141,7 +159,7 @@ type NewSpans []*NewSpan
 
 type NewSpan struct {
 	Seek   value.Values
-	Ranges []NewRange
+	Ranges []*NewRange
 }
 
 type NewRange struct {
