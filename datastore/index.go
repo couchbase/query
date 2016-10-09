@@ -130,6 +130,31 @@ type Span struct {
 
 type Spans []*Span
 
+type NewIndex interface {
+	Index
+	NewScan(requestId string, spans NewSpans, reverse, distinct bool,
+		projection *IndexProjection, offset, limit int64,
+		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
+}
+
+type NewSpans []*NewSpan
+
+type NewSpan struct {
+	Seek   value.Values
+	Ranges []NewRange
+}
+
+type NewRange struct {
+	Low       value.Value
+	High      value.Value
+	Inclusion Inclusion
+}
+
+type IndexProjection struct {
+	EntryKeys  []int
+	PrimaryKey bool
+}
+
 type IndexEntry struct {
 	EntryKey   value.Values
 	PrimaryKey string
