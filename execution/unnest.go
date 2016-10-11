@@ -52,10 +52,9 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	actuals := ev.Actual()
 	switch actuals.(type) {
 	case []interface{}:
-	case nil:
-		actuals = []interface{}(nil)
+		// do nothing
 	default:
-		actuals = []interface{}{actuals}
+		actuals = _EMPTY_ACTUALS
 	}
 
 	acts := actuals.([]interface{})
@@ -84,3 +83,5 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 
 	return true
 }
+
+var _EMPTY_ACTUALS []interface{}
