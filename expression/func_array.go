@@ -1917,3 +1917,170 @@ func (this *ArraySum) Constructor() FunctionConstructor {
 		return NewArraySum(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ArraySymdiff
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_SYMDIFF(expr1, expr2 ...).
+It returns a new array based on the set symmetric difference, or
+disjunctive union, of the input arrays. The new array contains only
+those elements that appear in exactly one of the input arrays.
+*/
+type ArraySymdiff struct {
+	FunctionBase
+}
+
+func NewArraySymdiff(operands ...Expression) Function {
+	rv := &ArraySymdiff{
+		*NewFunctionBase("array_symdiff", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArraySymdiff) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArraySymdiff) Type() value.Type { return value.ARRAY }
+
+func (this *ArraySymdiff) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArraySymdiff) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.ARRAY {
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	bag := _ARRAY_BAG_POOL.Get()
+	defer _ARRAY_BAG_POOL.Put(bag)
+	for _, arg := range args {
+		a := arg.Actual().([]interface{})
+		bag.AddAll(a)
+	}
+
+	entries := bag.Entries()
+	rv := make([]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Count == 1 {
+			rv = append(rv, entry.Value)
+		}
+	}
+
+	return value.NewValue(rv), nil
+}
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArraySymdiff) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArraySymdiff) MaxArgs() int { return math.MaxInt16 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArraySymdiff) Constructor() FunctionConstructor {
+	return NewArraySymdiff
+}
+
+///////////////////////////////////////////////////
+//
+// ArrayUnion
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_UNION(expr1, expr2 ...).  It
+returns a new array with the set union of the input arrays.
+*/
+type ArrayUnion struct {
+	FunctionBase
+}
+
+func NewArrayUnion(operands ...Expression) Function {
+	rv := &ArrayUnion{
+		*NewFunctionBase("array_union", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArrayUnion) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayUnion) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayUnion) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArrayUnion) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.ARRAY {
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	set := _ARRAY_SET_POOL.Get()
+	defer _ARRAY_SET_POOL.Put(set)
+	for _, arg := range args {
+		a := arg.Actual().([]interface{})
+		set.AddAll(a)
+	}
+
+	return value.NewValue(set.Items()), nil
+}
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArrayUnion) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArrayUnion) MaxArgs() int { return math.MaxInt16 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArrayUnion) Constructor() FunctionConstructor {
+	return NewArrayUnion
+}
+
+var _ARRAY_SET_POOL = value.NewSetPool(64, true)
+var _ARRAY_BAG_POOL = value.NewBagPool(64)
