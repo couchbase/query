@@ -55,7 +55,7 @@
     ]
     },
     {
-        "statements": "SELECT asin FROM default:catalog WHERE dimensions.height > 1 and ANY gen IN details.genre satisfies gen = \"Thriller\" END",
+        "statements": "SELECT asin FROM default:catalog WHERE dimensions.height > 1 and ANY gen IN details.genre satisfies gen = \"Thriller\" END ORDER BY asin DESC",
         "results": [
         {
             "asin": "B0094QY7HE"
