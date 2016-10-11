@@ -275,3 +275,44 @@ func (this *Bag) Entries() []*BagEntry {
 
 	return rv
 }
+
+func (this *Bag) Clear() {
+	this.nills = nil
+	this.missings = nil
+	this.nulls = nil
+
+	for k, _ := range this.booleans {
+		this.booleans[k] = nil
+		delete(this.booleans, k)
+	}
+
+	for k, _ := range this.floats {
+		this.floats[k] = nil
+		delete(this.floats, k)
+	}
+
+	for k, _ := range this.ints {
+		this.ints[k] = nil
+		delete(this.ints, k)
+	}
+
+	for k, _ := range this.strings {
+		this.strings[k] = nil
+		delete(this.strings, k)
+	}
+
+	for k, _ := range this.arrays {
+		this.arrays[k] = nil
+		delete(this.arrays, k)
+	}
+
+	for k, _ := range this.objects {
+		this.objects[k] = nil
+		delete(this.objects, k)
+	}
+
+	for k, _ := range this.binaries {
+		this.binaries[k] = nil
+		delete(this.binaries, k)
+	}
+}
