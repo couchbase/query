@@ -216,7 +216,9 @@ var _FUNCTIONS = map[string]Function{
 	"array_sort":      &ArraySort{},
 	"array_star":      &ArrayStar{},
 	"array_sum":       &ArraySum{},
-	"array_symdiff":   &ArraySymdiff{},
+	"array_symdiff":   &ArraySymdiff1{},
+	"array_symdiff1":  &ArraySymdiff1{},
+	"array_symdiffn":  &ArraySymdiffn{},
 	"array_union":     &ArrayUnion{},
 
 	// Object

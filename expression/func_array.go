@@ -1920,23 +1920,23 @@ func (this *ArraySum) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
-// ArraySymdiff
+// ArraySymdiff1
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the array function ARRAY_SYMDIFF(expr1, expr2 ...).
+This represents the array function ARRAY_SYMDIFF1(expr1, expr2 ...).
 It returns a new array based on the set symmetric difference, or
 disjunctive union, of the input arrays. The new array contains only
 those elements that appear in exactly one of the input arrays.
 */
-type ArraySymdiff struct {
+type ArraySymdiff1 struct {
 	FunctionBase
 }
 
-func NewArraySymdiff(operands ...Expression) Function {
-	rv := &ArraySymdiff{
-		*NewFunctionBase("array_symdiff", operands...),
+func NewArraySymdiff1(operands ...Expression) Function {
+	rv := &ArraySymdiff1{
+		*NewFunctionBase("array_symdiff1", operands...),
 	}
 
 	rv.expr = rv
@@ -1946,17 +1946,17 @@ func NewArraySymdiff(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArraySymdiff) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySymdiff1) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *ArraySymdiff) Type() value.Type { return value.ARRAY }
+func (this *ArraySymdiff1) Type() value.Type { return value.ARRAY }
 
-func (this *ArraySymdiff) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *ArraySymdiff1) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return this.Eval(this, item, context)
 }
 
-func (this *ArraySymdiff) Apply(context Context, args ...value.Value) (value.Value, error) {
+func (this *ArraySymdiff1) Apply(context Context, args ...value.Value) (value.Value, error) {
 	null := false
 	for _, arg := range args {
 		if arg.Type() == value.MISSING {
@@ -1973,8 +1973,11 @@ func (this *ArraySymdiff) Apply(context Context, args ...value.Value) (value.Val
 	bag := _ARRAY_BAG_POOL.Get()
 	defer _ARRAY_BAG_POOL.Put(bag)
 	for _, arg := range args {
+		set := _ARRAY_SET_POOL.Get()
+		defer _ARRAY_SET_POOL.Put(set)
 		a := arg.Actual().([]interface{})
-		bag.AddAll(a)
+		set.AddAll(a)
+		bag.AddAll(set.Items())
 	}
 
 	entries := bag.Entries()
@@ -1991,18 +1994,108 @@ func (this *ArraySymdiff) Apply(context Context, args ...value.Value) (value.Val
 /*
 Minimum input arguments required is 2.
 */
-func (this *ArraySymdiff) MinArgs() int { return 2 }
+func (this *ArraySymdiff1) MinArgs() int { return 2 }
 
 /*
 Maximum input arguments allowed.
 */
-func (this *ArraySymdiff) MaxArgs() int { return math.MaxInt16 }
+func (this *ArraySymdiff1) MaxArgs() int { return math.MaxInt16 }
 
 /*
 Factory method pattern.
 */
-func (this *ArraySymdiff) Constructor() FunctionConstructor {
-	return NewArraySymdiff
+func (this *ArraySymdiff1) Constructor() FunctionConstructor {
+	return NewArraySymdiff1
+}
+
+///////////////////////////////////////////////////
+//
+// ArraySymdiffn
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the array function ARRAY_SYMDIFFN(expr1, expr2 ...).
+It returns a new array based on the set symmetric difference, or
+disjunctive union, of the input arrays. The new array contains only
+those elements that appear in an odd number of the input arrays.
+*/
+type ArraySymdiffn struct {
+	FunctionBase
+}
+
+func NewArraySymdiffn(operands ...Expression) Function {
+	rv := &ArraySymdiffn{
+		*NewFunctionBase("array_symdiffn", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *ArraySymdiffn) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArraySymdiffn) Type() value.Type { return value.ARRAY }
+
+func (this *ArraySymdiffn) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *ArraySymdiffn) Apply(context Context, args ...value.Value) (value.Value, error) {
+	null := false
+	for _, arg := range args {
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.ARRAY {
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	bag := _ARRAY_BAG_POOL.Get()
+	defer _ARRAY_BAG_POOL.Put(bag)
+	for _, arg := range args {
+		set := _ARRAY_SET_POOL.Get()
+		defer _ARRAY_SET_POOL.Put(set)
+		a := arg.Actual().([]interface{})
+		set.AddAll(a)
+		bag.AddAll(set.Items())
+	}
+
+	entries := bag.Entries()
+	rv := make([]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		if (entry.Count & 1) == 1 {
+			rv = append(rv, entry.Value)
+		}
+	}
+
+	return value.NewValue(rv), nil
+}
+
+/*
+Minimum input arguments required is 2.
+*/
+func (this *ArraySymdiffn) MinArgs() int { return 2 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ArraySymdiffn) MaxArgs() int { return math.MaxInt16 }
+
+/*
+Factory method pattern.
+*/
+func (this *ArraySymdiffn) Constructor() FunctionConstructor {
+	return NewArraySymdiffn
 }
 
 ///////////////////////////////////////////////////
