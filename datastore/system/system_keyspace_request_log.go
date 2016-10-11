@@ -259,10 +259,11 @@ func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datas
 		indexEntry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
 		conn.EntryChannel() <- &indexEntry
 	})
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
-		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
-	}, func(warn errors.Error) {
-		conn.Warning(warn)
-	})
+	// MB-21315
+	//	_REMOTEACCESS.GetRemoteKeys([]string{}, "completed_requests", func(id string) {
+	//		indexEntry := datastore.IndexEntry{PrimaryKey: id}
+	//		conn.EntryChannel() <- &indexEntry
+	//	}, func(warn errors.Error) {
+	//		conn.Warning(warn)
+	//	})
 }

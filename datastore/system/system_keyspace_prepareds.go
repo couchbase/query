@@ -253,10 +253,12 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 		entry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), name)}
 		conn.EntryChannel() <- &entry
 	}
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "prepareds", func(id string) {
-		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
-	}, func(warn errors.Error) {
-		conn.Warning(warn)
-	})
+
+	// MB-21315
+	//	_REMOTEACCESS.GetRemoteKeys([]string{}, "prepareds", func(id string) {
+	//		indexEntry := datastore.IndexEntry{PrimaryKey: id}
+	//		conn.EntryChannel() <- &indexEntry
+	//	}, func(warn errors.Error) {
+	//		conn.Warning(warn)
+	//	})
 }

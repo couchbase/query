@@ -272,10 +272,11 @@ func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons d
 		conn.EntryChannel() <- &entry
 	})
 
-	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
-		indexEntry := datastore.IndexEntry{PrimaryKey: id}
-		conn.EntryChannel() <- &indexEntry
-	}, func(warn errors.Error) {
-		conn.Warning(warn)
-	})
+	// MB-21315
+	//	_REMOTEACCESS.GetRemoteKeys([]string{}, "active_requests", func(id string) {
+	//		indexEntry := datastore.IndexEntry{PrimaryKey: id}
+	//		conn.EntryChannel() <- &indexEntry
+	//	}, func(warn errors.Error) {
+	//		conn.Warning(warn)
+	//	})
 }
