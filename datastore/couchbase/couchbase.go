@@ -27,6 +27,7 @@ import (
 	"sync"
 
 	"github.com/couchbase/cbauth"
+	cbauthi "github.com/couchbase/cbauth/cbauthimpl"
 	cb "github.com/couchbase/go-couchbase"
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	"github.com/couchbase/query/datastore"
@@ -95,13 +96,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return p, nil
 }
 
-func doAuth(username, password, bucket string, requested datastore.Privilege) (bool, error) {
-	logging.Debugf(" Authenticating for bucket %s username %s password %s", bucket, username, password)
-	creds, err := cbauth.Auth(username, password)
-	if err != nil {
-		return false, err
-	}
-
+func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privilege) (bool, error) {
 	var permission string
 	switch requested {
 	case datastore.PRIV_DDL:
@@ -125,7 +120,7 @@ func doAuth(username, password, bucket string, requested datastore.Privilege) (b
 
 }
 
-func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials) errors.Error {
+func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) errors.Error {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
@@ -133,12 +128,43 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 		return nil
 	}
 
-	// Add default authorization -- the privileges every user has.
 	if credentials == nil {
 		credentials = make(datastore.Credentials)
 	}
+	// Add default authorization -- the privileges every user has.
 	credentials[""] = ""
 
+	// Build the credentials list.
+	credentialsList := make([]cbauth.Creds, 0, 2)
+	for username, password := range credentials {
+		var un string
+		userCreds := strings.Split(username, ":")
+		if len(userCreds) == 1 {
+			un = userCreds[0]
+		} else {
+			un = userCreds[1]
+		}
+
+		logging.Debugf(" Credentials for user %v", un)
+		creds, err := cbauth.Auth(un, password)
+		if err != nil {
+			logging.Debugf("Unable to authorize %s:%s.", username, password)
+		} else {
+			credentialsList = append(credentialsList, creds)
+		}
+	}
+
+	// Check for credentials from auth token in request
+	if req != nil && cbauthi.IsAuthTokenPresent(req) {
+		creds, err := cbauth.AuthWebCreds(req)
+		if err != nil {
+			logging.Debugf("Token auth error: %v", err)
+		} else {
+			credentialsList = append(credentialsList, creds)
+		}
+	}
+
+	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
 	for keyspace, privilege := range privileges {
 		if strings.Contains(keyspace, ":") {
@@ -150,18 +176,10 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 
 		thisBucketAuthorized := false
 		var rememberedError error
-		for username, password := range credentials {
-			var un string
-			userCreds := strings.Split(username, ":")
-			if len(userCreds) == 1 {
-				un = userCreds[0]
-			} else {
-				un = userCreds[1]
-			}
 
-			logging.Debugf(" Credentials for user %v", un)
-
-			authResult, err := doAuth(un, password, keyspace, privilege)
+		// Check requested privilege against the list of credentials.
+		for _, creds := range credentialsList {
+			authResult, err := doAuthByCreds(creds, keyspace, privilege)
 
 			// Auth succeeded
 			if authResult == true {

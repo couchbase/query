@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,7 +69,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) errors.Error {
 	return nil
 }
 

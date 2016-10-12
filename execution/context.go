@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -84,13 +85,14 @@ type Context struct {
 	output           Output
 	subplans         *subqueryMap
 	subresults       *subqueryMap
+	httpRequest      *http.Request
 	mutex            sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	namespace string, readonly bool, maxParallelism int, namedArgs map[string]value.Value,
 	positionalArgs value.Values, credentials datastore.Credentials,
-	consistency datastore.ScanConsistency, scanVectorSource timestamp.ScanVectorSource, output Output) *Context {
+	consistency datastore.ScanConsistency, scanVectorSource timestamp.ScanVectorSource, output Output, httpRequest *http.Request) *Context {
 	rv := &Context{
 		requestId:        requestId,
 		datastore:        datastore,
@@ -107,6 +109,7 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 		output:           output,
 		subplans:         nil,
 		subresults:       nil,
+		httpRequest:      httpRequest,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
@@ -114,6 +117,10 @@ func NewContext(requestId string, datastore, systemstore datastore.Datastore,
 	}
 
 	return rv
+}
+
+func (this *Context) OriginalHttpRequest() *http.Request {
+	return this.httpRequest
 }
 
 func (this *Context) RequestId() string {

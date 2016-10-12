@@ -11,6 +11,7 @@ package test
 
 import (
 	"encoding/json"
+	http_base "net/http"
 	"os"
 	"runtime"
 	"time"
@@ -46,6 +47,10 @@ type MockQuery struct {
 type MockServer struct {
 	server    *server.Server
 	acctstore accounting.AccountingStore
+}
+
+func (this *MockQuery) OriginalHttpRequest() *http_base.Request {
+	return nil
 }
 
 func (this *MockQuery) Output() execution.Output {

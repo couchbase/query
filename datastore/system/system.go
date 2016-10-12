@@ -10,6 +10,8 @@
 package system
 
 import (
+	"net/http"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -74,7 +76,7 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 	return s.actualStore.NamespaceByName(name)
 }
 
-func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) errors.Error {
 	logging.Logf(logging.INFO, "System authorize")
 	return nil
 }

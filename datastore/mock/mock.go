@@ -20,6 +20,7 @@ package mock
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,7 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(datastore.Privileges, datastore.Credentials) errors.Error {
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) errors.Error {
 	return nil
 }
 

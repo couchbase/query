@@ -43,6 +43,10 @@ type httpRequest struct {
 	warningCount    int
 }
 
+func (r *httpRequest) OriginalHttpRequest() *http.Request {
+	return r.req
+}
+
 func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, size int) *httpRequest {
 	var httpArgs httpRequestArgs
 	var err errors.Error

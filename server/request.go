@@ -10,6 +10,7 @@
 package server
 
 import (
+	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -75,6 +76,7 @@ type Request interface {
 	Credentials() datastore.Credentials
 	SetTimings(p plan.Operator)
 	GetTimings() plan.Operator
+	OriginalHttpRequest() *http.Request
 }
 
 type RequestID interface {

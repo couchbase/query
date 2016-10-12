@@ -428,7 +428,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
 		this.readonly, maxParallelism, request.NamedArgs(), request.PositionalArgs(),
-		request.Credentials(), request.ScanConsistency(), request.ScanVectorSource(), request.Output())
+		request.Credentials(), request.ScanConsistency(), request.ScanVectorSource(), request.Output(), request.OriginalHttpRequest())
 
 	build := time.Now()
 	operator, er := execution.Build(prepared, context)
