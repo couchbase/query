@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
@@ -30,7 +31,7 @@ var (
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"histfile": Stack_Helper(),
 		"batch":    Stack_Helper(),
-		//"autoconfig": Stack_Helper(),
+		"quiet":    Stack_Helper(),
 	}
 )
 
@@ -63,11 +64,11 @@ func init() {
 
 	}
 
-	/*err_code, err_str = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "quiet", strconv.FormatBool(QUIET))
 	if err_code != 0 {
 		s_err := HandleError(err_code, err_str)
 		PrintError(s_err)
-	}*/
+	}
 }
 
 func SetWriter(Wt io.Writer) {
@@ -481,7 +482,16 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				}
 			}
 		} else if vble == "batch" {
+			if args_str != "on" || args_str != "off" {
+				return errors.BATCH_MODE, ""
+			}
 			BATCH = args_str
+		} else if vble == "quiet" {
+			var errQ error
+			QUIET, errQ = strconv.ParseBool(args_str)
+			if errQ != nil {
+				return errors.INVALID_INPUT_ARGUMENTS, ""
+			}
 		}
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
