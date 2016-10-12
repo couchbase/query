@@ -482,7 +482,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				}
 			}
 		} else if vble == "batch" {
-			if args_str != "on" || args_str != "off" {
+			if args_str != "on" && args_str != "off" {
 				return errors.BATCH_MODE, ""
 			}
 			BATCH = args_str
