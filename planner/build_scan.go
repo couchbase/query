@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -23,10 +22,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	keys := node.Keys()
 	if keys != nil {
 		this.resetOrderLimit()
-		switch keys := keys.(type) {
-		case *expression.ArrayConstruct:
-			this.maxParallelism = util.MaxInt(1, len(keys.Operands()))
-		case *algebra.NamedParameter, *algebra.PositionalParameter:
+		switch keys.(type) {
+		case *expression.ArrayConstruct, *algebra.NamedParameter, *algebra.PositionalParameter:
 			this.maxParallelism = 0
 		default:
 			this.maxParallelism = 1
