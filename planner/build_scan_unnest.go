@@ -24,8 +24,7 @@ Algorithm for exploiting array indexes with UNNEST.
 Consider only INNER UNNESTs. OUTER UNNESTs cannot exploit array
 indexing.
 
-Return the first combination of UNNESTs and array index that works. No
-optimization is performed to find a more optimal combination.
+Return a combination of UNNESTs and array indexes that works.
 
 To consider an array index, the array key must be the first key in the
 array index, and is the only key exploited for UNNEST.
@@ -68,7 +67,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, nil
 	}
 
-	// Enumerate primary UNNESTs.
+	// Enumerate primary UNNESTs
 	primaryUnnests := _UNNEST_POOL.Get()
 	defer _UNNEST_POOL.Put(primaryUnnests)
 	primaryUnnests = collectPrimaryUnnests(from, unnests, primaryUnnests)
@@ -84,11 +83,19 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, nil
 	}
 
+	cops := make(map[datastore.Index]plan.Operator, len(primaryUnnests))
+	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
 	var un *algebra.Unnest
+	n := 0
 	for _, unnest := range primaryUnnests {
 		for _, index := range unnestIndexes {
+			// We already have a covering scan using this index
+			if _, ok := cops[index]; ok {
+				continue
+			}
+
 			mapping := allMap[index]
-			op, un, err = matchUnnest(node, pred, unnest, index, indexes[index], mapping, unnests)
+			op, un, n, err = matchUnnest(node, pred, unnest, index, indexes[index], mapping, unnests)
 			if err != nil {
 				return nil, err
 			}
@@ -98,16 +105,73 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			}
 
 			cop, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], un)
-			if cop != nil || err != nil {
-				return cop, err
+			if err != nil {
+				return nil, err
+			}
+
+			if cop != nil {
+				cops[index] = cop
+			}
+
+			// We already have some covering scan
+			if len(cops) > 0 {
+				continue
+			}
+
+			// Keep the longest match for this index
+			if entry, ok := ops[index]; ok && entry.Len >= n {
+				continue
 			} else {
-				this.resetOrderLimit()
-				return op, nil
+				ops[index] = &opEntry{op, n}
 			}
 		}
 	}
 
-	return nil, nil
+	// Find shortest covering scan
+	n = 0
+	op = nil
+	for index, cop := range cops {
+		if op == nil || len(index.RangeKey()) < n {
+			op = cop
+			n = len(index.RangeKey())
+		}
+	}
+
+	// Return shortest covering scan
+	if op != nil {
+		return op, nil
+	}
+
+	// No UNNEST scan
+	if len(ops) == 0 {
+		return nil, nil
+	}
+
+	// No pushdowns
+	this.resetOrderLimit()
+
+	// Eliminate redundant scans
+	entries := make(map[datastore.Index]*indexEntry, len(ops))
+	for index, _ := range ops {
+		entries[index] = indexes[index]
+	}
+
+	entries = minimalIndexesUnnest(entries, ops)
+	scans := make([]plan.Operator, 0, len(entries))
+	for index, _ := range entries {
+		scans = append(scans, ops[index].Op)
+	}
+
+	if len(scans) == 1 {
+		return scans[0], nil
+	} else {
+		return plan.NewIntersectScan(scans...), nil
+	}
+}
+
+type opEntry struct {
+	Op  plan.Operator
+	Len int
 }
 
 /*
@@ -177,21 +241,21 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 
 func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest *algebra.Unnest,
 	index datastore.Index, entry *indexEntry, mapping *expression.All, unnests []*algebra.Unnest) (
-	plan.Operator, *algebra.Unnest, error) {
+	plan.Operator, *algebra.Unnest, int, error) {
 
 	array, ok := mapping.Array().(*expression.Array)
 	if !ok {
-		return nil, nil, nil
+		return nil, nil, 0, nil
 	}
 
 	if len(array.Bindings()) != 1 {
-		return nil, nil, nil
+		return nil, nil, 0, nil
 	}
 
 	binding := array.Bindings()[0]
 	if unnest.As() != binding.Variable() ||
 		!unnest.Expression().EquivalentTo(binding.Expression()) {
-		return nil, nil, nil
+		return nil, nil, 0, nil
 	}
 
 	arrayMapping := array.ValueMapping()
@@ -204,28 +268,28 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 				continue
 			}
 
-			op, un, err := matchUnnest(node, pred, u, index, entry, nestedMapping, unnests)
+			op, un, n, err := matchUnnest(node, pred, u, index, entry, nestedMapping, unnests)
 			if op != nil || err != nil {
-				return op, un, err
+				return op, un, n + 1, err
 			}
 		}
 
-		return nil, nil, nil
+		return nil, nil, 0, nil
 	} else {
 		mappings := expression.Expressions{array.ValueMapping()}
 		if SargableFor(pred, mappings) == 0 {
-			return nil, nil, nil
+			return nil, nil, 0, nil
 		}
 
 		spans, exactSpans, err := SargFor(pred, mappings, len(mappings))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, 0, err
 		}
 
 		entry.spans = spans
 		entry.exactSpans = exactSpans
 		scan := plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
-		return plan.NewDistinctScan(scan), unnest, nil
+		return plan.NewDistinctScan(scan), unnest, 1, nil
 	}
 }
 
@@ -278,6 +342,50 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers, filterCovers)
 	this.coveringScans = append(this.coveringScans, scan)
 	return plan.NewDistinctScan(scan), nil
+}
+
+func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
+	ops map[datastore.Index]*opEntry) map[datastore.Index]*indexEntry {
+	for s, se := range indexes {
+		for t, te := range indexes {
+			if t == s {
+				continue
+			}
+
+			if narrowerOrEquivalentUnnest(se, te, ops[s], ops[t]) {
+				delete(indexes, t)
+				delete(ops, t)
+			}
+		}
+	}
+
+	return indexes
+}
+
+/*
+Is se narrower or equivalent to te.
+*/
+func narrowerOrEquivalentUnnest(se, te *indexEntry, sop, top *opEntry) bool {
+	if top.Len > sop.Len {
+		return false
+	}
+
+	if te.cond != nil && (se.cond == nil || !SubsetOf(se.cond, te.cond)) {
+		return false
+	}
+
+outer:
+	for _, tk := range te.keys {
+		for _, sk := range se.keys {
+			if SubsetOf(sk, tk) || sk.DependsOn(tk) {
+				continue outer
+			}
+		}
+
+		return false
+	}
+
+	return len(se.keys) <= len(te.keys)
 }
 
 var _UNNEST_POOL = algebra.NewUnnestPool(8)
