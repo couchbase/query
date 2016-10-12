@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -65,7 +66,8 @@ func init() {
 /*
    Option        : -quiet
    Default value : false
-   Enable/Disable startup connection message for the shell
+   Enable/Disable startup connection message for the shell. Also disable echoing queries
+   when using \SOURCE or -f.
 */
 var quietFlag bool
 
@@ -519,7 +521,17 @@ func main() {
 	}
 
 	//Set QUIET to enable/disable histfile path message
+	//If quiet is true
 	command.QUIET = quietFlag
+	if quietFlag {
+		// SET the quiet mode here
+		//SET batch mode here
+		err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "quiet", strconv.FormatBool(quietFlag))
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
+		}
+	}
 
 	if timeoutFlag != "0ms" {
 		n1ql.SetQueryParams("timeout", timeoutFlag)
