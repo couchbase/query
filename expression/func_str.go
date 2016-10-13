@@ -13,6 +13,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -507,6 +508,63 @@ Factory method pattern.
 */
 func (this *Replace) Constructor() FunctionConstructor {
 	return NewReplace
+}
+
+///////////////////////////////////////////////////
+//
+// Reverse
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the string function REVERSE(expr). It returns the
+reverse order of the unicode characters of the string value.
+*/
+type Reverse struct {
+	UnaryFunctionBase
+}
+
+func NewReverse(operand Expression) Function {
+	rv := &Reverse{
+		*NewUnaryFunctionBase("reverse", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Reverse) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Reverse) Type() value.Type { return value.STRING }
+
+func (this *Reverse) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Reverse) Apply(context Context, arg value.Value) (value.Value, error) {
+	if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	s := arg.Actual().(string)
+	r := util.ReversePreservingCombiningCharacters(s)
+	return value.NewValue(r), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *Reverse) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewReverse(operands[0])
+	}
 }
 
 ///////////////////////////////////////////////////
