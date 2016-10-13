@@ -113,3 +113,10 @@ func NewIndexAlreadyExistsError(idx string) Error {
 		InternalMsg:    fmt.Sprintf("The index %s already exists.", idx),
 		InternalCaller: CallerN(1)}
 }
+
+const AMBIGUOUS_META = 4310
+
+func NewAmbiguousMetaError() Error {
+	return &err{level: EXCEPTION, ICode: AMBIGUOUS_META, IKey: "plan.ambiguous_meta",
+		InternalMsg: fmt.Sprintf("META() in query with multiple FROM terms requires an argument."), InternalCaller: CallerN(1)}
+}
