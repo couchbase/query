@@ -1,6 +1,5 @@
 [
 {
-
         "statements": "SELECT  META(contacts) as meta_c FROM default:contacts ORDER BY meta_c",
         "results": [
        {
@@ -36,7 +35,6 @@
    ]
     },
    {
-
         "statements": "SELECT  META(contact) as meta_c FROM default:contacts AS contact UNNEST contact.children AS child WHERE contact.name = \"dave\"",
         "results": [
        {
@@ -51,7 +49,10 @@
         }
    ]
     },
-
+   {
+        "statements": "SELECT  META() as meta_c FROM default:contacts AS contact UNNEST contact.children AS child WHERE contact.name = \"dave\"",
+        "error" : "META() in query with multiple FROM terms requires an argument."
+    },
      {
         "statements": "SELECT BASE64(contacts) AS b64 FROM default:contacts ORDER BY b64",
         "results": [
@@ -87,7 +88,6 @@
         }
   ]
     },
-
      {
         "statements": "select DECODE_BASE64(ENCODE_BASE64({'a': 1, 'b': 2 }))",
         "results": [
@@ -98,5 +98,40 @@
             }
         }
   ]
+    },
+     {
+        "statements": "SELECT  META() as meta_c FROM default:contacts ORDER BY meta_c",
+        "results": [
+       {
+            "meta_c": {
+                "id": "dave"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "earl"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "fred"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "harry"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "ian"
+            }
+        },
+        {
+            "meta_c": {
+                "id": "jane"
+            }
+        }
+   ]
     }
 ]

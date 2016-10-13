@@ -12,6 +12,7 @@ package expression
 import (
 	"fmt"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -206,8 +207,12 @@ Formalize META() functions defined on indexes.
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 	if !this.mapKeyspace {
 		meta, ok := expr.(*Meta)
-		if ok && len(meta.Operands()) == 0 && this.keyspace != "" {
-			return NewMeta(NewIdentifier(this.keyspace)), nil
+		if ok && len(meta.Operands()) == 0 {
+			if this.keyspace != "" {
+				return NewMeta(NewIdentifier(this.keyspace)), nil
+			} else {
+				return nil, errors.NewAmbiguousMetaError()
+			}
 		}
 	}
 
