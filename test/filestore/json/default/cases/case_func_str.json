@@ -514,9 +514,37 @@
             ]
         }
     ]
+    },
+    {
+       "statements": "select REVERSE('')",
+       "results": [
+        {
+            "$1": ""
+        }
+    ]
+    },
+    {
+       "statements": "select REVERSE('a')",
+       "results": [
+        {
+            "$1": "a"
+        }
+    ]
+    },
+    {
+       "statements": "select REVERSE('abc')",
+       "results": [
+        {
+            "$1": "cba"
+        }
+    ]
+    },
+    {
+       "statements": "select REVERSE('abc 123')",
+       "results": [
+        {
+            "$1": "321 cba"
+        }
+    ]
     }
 ]
-
-
-
-

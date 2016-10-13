@@ -148,6 +148,7 @@ var _FUNCTIONS = map[string]Function{
 	"regexp_replace":  &RegexpReplace{},
 	"repeat":          &Repeat{},
 	"replace":         &Replace{},
+	"reverse":         &Reverse{},
 	"rtrim":           &RTrim{},
 	"split":           &Split{},
 	"substr":          &Substr{},

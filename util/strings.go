@@ -9,6 +9,11 @@
 
 package util
 
+import (
+	"unicode"
+	"unicode/utf8"
+)
+
 /*
 Note: The input slices must be sorted beforehand.
 */
@@ -28,4 +33,39 @@ func SortedStringsEqual(a, b []string) bool {
 	}
 
 	return true
+}
+
+/*
+This code copied verbatim from
+http://rosettacode.org/wiki/Reverse_a_string#Go. With gratitude to
+rosettacode.org and the author(s).
+*/
+
+// reversePreservingCombiningCharacters interprets its argument as UTF-8
+// and ignores bytes that do not form valid UTF-8.  return value is UTF-8.
+func ReversePreservingCombiningCharacters(s string) string {
+	if s == "" {
+		return ""
+	}
+	p := []rune(s)
+	r := make([]rune, len(p))
+	start := len(r)
+	for i := 0; i < len(p); {
+		// quietly skip invalid UTF-8
+		if p[i] == utf8.RuneError {
+			i++
+			continue
+		}
+		j := i + 1
+		for j < len(p) && (unicode.Is(unicode.Mn, p[j]) ||
+			unicode.Is(unicode.Me, p[j]) || unicode.Is(unicode.Mc, p[j])) {
+			j++
+		}
+		for k := j - 1; k >= i; k-- {
+			start--
+			r[start] = p[k]
+		}
+		i = j
+	}
+	return (string(r[start:]))
 }
