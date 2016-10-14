@@ -206,6 +206,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 		return false
 	}
 
+	var fc map[string]value.Value
+	if se.cond != nil {
+		fc = se.cond.FilterCovers(make(map[string]value.Value, 16))
+	}
 outer:
 	for _, tk := range te.sargKeys {
 		for _, sk := range se.sargKeys {
@@ -214,7 +218,13 @@ outer:
 			}
 		}
 
-		return false
+		if se.cond == nil {
+			return false
+		}
+
+		if _, ok := fc[tk.String()]; !ok {
+			return false
+		}
 	}
 
 	return len(se.sargKeys) > len(te.sargKeys) ||
