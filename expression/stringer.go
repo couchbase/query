@@ -11,7 +11,6 @@ package expression
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
@@ -436,8 +435,10 @@ func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, 
 			buf.WriteString(", ")
 		}
 
-		nb, _ := json.Marshal(n)
-		buf.Write(nb)
+		// MB-21231 value.stringvalue.String() marshals strings already,
+		// so string values have quotes prepepended.
+		// We must avoid re-marshalling or we'll enter quoting hell.
+		buf.WriteString(n)
 		buf.WriteString(": ")
 		v := expr.bindings[n]
 		buf.WriteString(this.Visit(v))
