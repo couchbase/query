@@ -2,7 +2,7 @@
 
 * Status: DRAFT
 * Latest: [n1ql-select](https://github.com/couchbase/query/blob/master/docs/n1ql-select.md)
-* Modified: 2016-05-25
+* Modified: 2016-10-18
 
 ## Introduction
 
@@ -1518,6 +1518,8 @@ not of the required type.
 
 ### Date functions
 
+__CLOCK\_LOCAL()__ - synonym for __CLOCK\_STR__. Since Couchbase 4.6.
+
 __CLOCK\_MILLIS()__ - system clock at function evaluation time, as
 UNIX milliseconds; varies during a query.
 
@@ -1538,6 +1540,12 @@ formats:
 * __"15:04:05Z07:00"__
 * __"15:04:05.999"__
 * __"15:04:05"__
+
+__CLOCK\_TZ(tz, [ fmt ])__ - same as __CLOCK\_STR__, but in specified
+time zone. Since Couchbase 4.6.
+
+__CLOCK\_UTC(tz [, fmt ])__ - same as __CLOCK\_STR__, but in UTC time
+zone. Since Couchbase 4.6.
 
 __DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
 are used to define an interval or duration, which is then added (or
@@ -1580,6 +1588,9 @@ __DATE\_DIFF\_STR(expr1, expr2, part)__ - date arithmetic. returns the
 elapsed time between two date strings in a supported format, as an
 integer whose unit is _part_.
 
+__DATE\_FORMAT\_STR(expr, fmt)__ - date formatting. See
+__CLOCK\_STR()__ for supported formats. Since Couchbase 4.6.
+
 __DATE\_PART\_MILLIS(expr, part)__ - date part as an integer. The date
 expr is a number representing UNIX milliseconds, and part is one of
 the following date part strings.
@@ -1609,6 +1620,9 @@ __DATE\_PART\_STR(expr, part)__ - date part as an integer. The date
 expr is a string in a supported format, and part is one of the
 supported date part strings.
 
+__DATE\_RANGE\_STR(start, end, part [, step ])__ - similar to
+__ARRAY\_RANGE__, but for date strings. Since Couchbase 4.6.
+
 __DATE\_TRUNC\_MILLIS(expr, part)__ - truncates UNIX timestamp so that
 the given date part string is the least significant.
 
@@ -1618,14 +1632,22 @@ that the given date part string is the least significant.
 __MILLIS(expr), STR\_TO\_MILLIS(expr)__ - converts date in a supported
 format to UNIX milliseconds.
 
+__MILLIS\_TO\_LOCAL(expr [, fmt ])__ - synonym for
+__MILLIS\_TO\_STR__. Since Couchbase 4.6.
+
 __MILLIS\_TO\_STR(expr [, fmt ])__ - converts UNIX milliseconds to
 string in a supported format.
+
+__MILLIS\_TO\_TZ(expr, tz [, fmt ])__ - converts the UNIX timestamp to
+a timezone-specific string in a supported format. Since Couchbase 4.6.
 
 __MILLIS\_TO\_UTC(expr [, fmt ])__ - converts the UNIX timestamp to a
 UTC string in a supported format.
 
-__MILLIS\_TO\_ZONE\_NAME(expr, tz_name [, fmt ])__ - converts the
-UNIX timestamp to a string in the named time zone.
+__MILLIS\_TO\_ZONE\_NAME(expr, tz_name [, fmt ])__ - synonym for
+__MILLIS\_TO\_TZ__.
+
+__NOW\_LOCAL()__ - synonym for __NOW\_STR__. Since Couchbase 4.6.
 
 __NOW\_MILLIS()__ - statement timestamp as UNIX milliseconds; does not
 vary during a query.
@@ -1633,13 +1655,23 @@ vary during a query.
 __NOW\_STR([ fmt ])__ - statement timestamp as a string in a supported
 format; does not vary during a query.
 
+__NOW\_TZ(tz [, fmt ])__ - statement timestamp as a timezone-specific
+string in a supported format; does not vary during a query. Since
+Couchbase 4.6.
+
+__NOW\_UTC([ fmt ])__ - statement timestamp as a UTC-timezone string
+in a supported format; does not vary during a query. Since Couchbase
+4.6.
+
 __STR\_TO\_MILLIS(expr), MILLIS(expr)__ - converts date in a supported
 format to UNIX milliseconds.
 
+__STR\_TO\_TZ(expr, tz)__ - converts the supported timestamp string to
+the named time zone. Since Couchbase 4.6.
+
 __STR\_TO\_UTC(expr)__ - converts the ISO 8601 timestamp to UTC.
 
-__STR\_TO\_ZONE\_NAME(expr, tz_name)__ - converts the supported
-timestamp string to the named time zone.
+__STR\_TO\_ZONE\_NAME(expr, tz_name)__ - synonym for __STR\_TO\_TZ__.
 
 ### String functions
 
@@ -1678,6 +1710,9 @@ __REPLACE(expr, substr, repl [, n ])__ - string with all occurences of
 _substr_ replaced with _repl_. If _n_ is given, at most _n_
 replacements are performed.
 
+__REVERSE(expr)__ - new string with Unicode characters in reverse
+order. Since Couchbase 4.6.
+
 __RTRIM(expr, [, chars ])__ - string with all trailing chars removed
 (whitespace by default).
 
@@ -1690,6 +1725,11 @@ _position_ of the given _length_, or to the end of the string. The
 position is 0-based, i.e. the first position is 0. If _position_ is
 negative, it is counted from the end of the string; -1 is the last
 position in the string.
+
+__SUFFIXES(expr)__ - array of suffixes, useful for partial word
+matching. SUFFIXES("abc") = [ "abc", "bc", "c" ]. Together with array
+indexing, this provides an efficient alternative to LIKE("%b%"). Since
+Couchbase 4.5.1.
 
 __TITLE(expr), INITCAP(expr)__ - converts the string so that the first
 letter of each word is uppercase and every other letter is lowercase.
@@ -1720,6 +1760,10 @@ __DEGREES(expr)__ - radians to degrees.
 __E()__ - base of natural logarithms.
 
 __EXP(expr)__ - _e_\*\*expr.
+
+__IDIV(expr1, expr2)__ - integer division.
+
+__IMOD(expr1, expr2)__ - integer remainder.
 
 __LN(expr)__ - log base _e_.
 
@@ -1760,7 +1804,8 @@ is negative). _digits_ is 0 if not given.
 
 ### Array functions
 
-__ARRAY\_APPEND(expr, value)__ - new array with _value_ appended.
+__ARRAY\_APPEND(expr, value, ...)__ - new array with _values_
+appended.
 
 __ARRAY\_AVG(expr)__ - arithmetic mean (average) of all the non-NULL
 number values in the array, or NULL if there are no such values.
@@ -1778,13 +1823,16 @@ array.
 
 __ARRAY\_FLATTEN(expr, depth)__ - new array with all embedded arrays
 flattened, down to the supplied depth. If depth is negative, flatten
-all descendants.
+all descendants. Since Couchbase 4.5.
 
 __ARRAY\_IFNULL(expr)__ - return the first non-NULL value in the
 array, or NULL.
 
 __ARRAY\_INSERT(expr, pos, value)__ - new array with _value_ inserted
 at position _pos_.
+
+__ARRAY\_INTERSECT(expr1, expr2, ...)__ - set intersection. Since
+Couchbase 4.5.1.
 
 __ARRAY\_LENGTH(expr)__ - number of elements in the array.
 
@@ -1797,10 +1845,11 @@ in N1QL collation order.
 __ARRAY\_POSITION(expr, value)__ - the first position of _value_ within
 the array, or -1. The position is 0-based.
 
-__ARRAY\_PREPEND(value, expr)__ - new array with _value_ prepended.
+__ARRAY\_PREPEND(value1 [ , ... valueN ], expr)__ - new array with
+_values_ prepended.
 
-__ARRAY\_PUT(expr, value)__ - new array with _value_ appended, if
-_value_ is not already present; else unmodified input array.
+__ARRAY\_PUT(expr, value, ...)__ - new array with _values_ appended,
+for each _value_ that is not already present.
 
 __ARRAY\_RANGE(start, end [, step ])__ - new array of numbers, from
 _start_ until the largest number less than _end_. Successive numbers
@@ -1808,8 +1857,8 @@ are incremented by _step_. If _step_ is omitted, it defaults to 1. If
 _step_ is negative, decrements until the smallest number greater than
 _end_.
 
-__ARRAY\_REMOVE(expr, value)__ - new array with all occurences of
-_value_ removed.
+__ARRAY\_REMOVE(expr, value, ...)__ - new array with all occurences of
+_values_ removed.
 
 __ARRAY\_REPEAT(value, n)__ - new array with _value_ repeated _n_
 times.
@@ -1818,8 +1867,7 @@ __ARRAY\_REPLACE(expr, value1, value2 [, n ])__ - new array with all
 occurences of _value1_ replaced with _value2_. If _n_ is given, at
 most _n_ replacements are performed.
 
-__ARRAY\_REVERSE(expr)__ - new array with all elements
-in reverse order.
+__ARRAY\_REVERSE(expr)__ - new array with elements in reverse order.
 
 __ARRAY\_SORT(expr)__ - new array with elements sorted in N1QL
 collation order.
@@ -1827,11 +1875,24 @@ collation order.
 __ARRAY\_SUM(expr)__ - sum of all the non-NULL number values in the
 array, or zero if there are no such values.
 
+__ARRAY\_SYMDIFF1(expr1, expr2, ...)__ - set symmetric
+difference. Returns array of elements that appear in exactly one input
+array. Since Couchbase 4.6.
+
+__ARRAY\_SYMDIFFN(expr1, expr2, ...)__ - set symmetric
+difference. Returns array of elements that appear in an odd number of
+input arrays. Since Couchbase 4.6.
+
+__ARRAY\_UNION(expr1, expr2, ...)__ - set union. Since Couchbase 4.6.
+
 ### Object functions
 
 __OBJECT\_ADD(expr, name, value)__ - if the name is not present in the
 object, add the name-value pair and return the resulting object, or
 else return NULL.
+
+__OBJECT\_CONCAT(expr1, expr2, ...)__ - new object with all the
+name-value pairs of the input objects.
 
 __OBJECT\_LENGTH(expr)__ - number of name-value pairs in the object.
 
@@ -1875,6 +1936,17 @@ value:
 * array - the number of elements in the array
 * object - the number of name/value pairs in the object
 * any other value - NULL
+
+__TOKENS(expr [, options ])__ - array of tokens from the input
+expression. Together with array indexing, provides efficient token
+search.  Numbers, booleans, and nulls tokenize as themselves. Strings
+are further tokenized into words. Arrays and objects have their
+contents further tokenized. options is an optional JSON object to
+control tokenization. It can specify "names", "case", and
+"specials". "names" is a boolean for including object names. "case" is
+either "lower" or "upper", and specifies case folding. "specials" is a
+boolean and specifies preservation of special strings such as email
+addresses and URLs. Since Couchbase 4.6.
 
 ### Comparison functions
 
@@ -2066,7 +2138,7 @@ __SUM(expr)__ - sum of all the number values in the group.
 __SUM(DISTINCT expr)__ - arithmetic sum of all the distinct number
 values in the group.
 
-## Appendix - Keywords
+## Appendix - Reserved words
 
 The following keywords are reserved and cannot be used as unescaped
 identifiers.  All keywords are case-insensitive.
@@ -2667,6 +2739,8 @@ Generator](http://bottlecaps.de/rr/ui/) ![](diagram/.png)
     * Add ARRAY\_FLATTEN function
 * 2016-05-25 - Paths in FROM clause
     * Remove support for paths in FROM clause
+* 2016-10-18 - Functions
+    * Upate list of functions
 
 ### Open issues
 
