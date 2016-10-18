@@ -151,8 +151,9 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 			keyspace = q[1]
 
 			if strings.EqualFold(pool, "#system") {
-				// trying auth on system keyspace
-				return nil
+				// MB-21384 System table requires no authorization, but continue
+				// verifying the rest of the sought permissions.
+				continue
 			}
 		}
 
