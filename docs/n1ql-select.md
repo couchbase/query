@@ -1518,7 +1518,7 @@ not of the required type.
 
 ### Date functions
 
-__CLOCK\_LOCAL()__ - synonym for __CLOCK\_STR__. Since Couchbase 4.6.
+__CLOCK\_LOCAL[ fmt ])__ - synonym for __CLOCK\_STR__. Since Couchbase 4.6.
 
 __CLOCK\_MILLIS()__ - system clock at function evaluation time, as
 UNIX milliseconds; varies during a query.
@@ -1544,7 +1544,7 @@ formats:
 __CLOCK\_TZ(tz, [ fmt ])__ - same as __CLOCK\_STR__, but in specified
 time zone. Since Couchbase 4.6.
 
-__CLOCK\_UTC(tz [, fmt ])__ - same as __CLOCK\_STR__, but in UTC time
+__CLOCK\_UTC([ fmt ])__ - same as __CLOCK\_STR__, but in UTC time
 zone. Since Couchbase 4.6.
 
 __DATE\_ADD\_MILLIS(expr, n, part)__ - date arithmetic. _n_ and _part_
@@ -1647,7 +1647,7 @@ UTC string in a supported format.
 __MILLIS\_TO\_ZONE\_NAME(expr, tz_name [, fmt ])__ - synonym for
 __MILLIS\_TO\_TZ__.
 
-__NOW\_LOCAL()__ - synonym for __NOW\_STR__. Since Couchbase 4.6.
+__NOW\_LOCAL([ fmt ])__ - synonym for __NOW\_STR__. Since Couchbase 4.6.
 
 __NOW\_MILLIS()__ - statement timestamp as UNIX milliseconds; does not
 vary during a query.
@@ -1713,7 +1713,7 @@ replacements are performed.
 __REVERSE(expr)__ - new string with Unicode characters in reverse
 order. Since Couchbase 4.6.
 
-__RTRIM(expr, [, chars ])__ - string with all trailing chars removed
+__RTRIM(expr [, chars ])__ - string with all trailing chars removed
 (whitespace by default).
 
 __SPLIT(expr [, sep ])__ - splits the string into an array of
@@ -1816,7 +1816,7 @@ concatenation of the input arrays.
 __ARRAY\_CONTAINS(expr, value)__ - true if the array contains _value._
 
 __ARRAY\_COUNT(expr)__ - count of all the non-NULL values in the
-array, or zero if there are no such values.
+array, or zero.
 
 __ARRAY\_DISTINCT(expr)__ - new array with distinct elements of input
 array.
@@ -1845,7 +1845,7 @@ in N1QL collation order.
 __ARRAY\_POSITION(expr, value)__ - the first position of _value_ within
 the array, or -1. The position is 0-based.
 
-__ARRAY\_PREPEND(value1 [ , ... valueN ], expr)__ - new array with
+__ARRAY\_PREPEND(value1 [, ... valueN ], expr)__ - new array with
 _values_ prepended.
 
 __ARRAY\_PUT(expr, value, ...)__ - new array with _values_ appended,
@@ -1941,12 +1941,12 @@ __TOKENS(expr [, options ])__ - array of tokens from the input
 expression. Together with array indexing, provides efficient token
 search.  Numbers, booleans, and nulls tokenize as themselves. Strings
 are further tokenized into words. Arrays and objects have their
-contents further tokenized. options is an optional JSON object to
-control tokenization. It can specify "names", "case", and
-"specials". "names" is a boolean for including object names. "case" is
-either "lower" or "upper", and specifies case folding. "specials" is a
-boolean and specifies preservation of special strings such as email
-addresses and URLs. Since Couchbase 4.6.
+contents further tokenized. _options_ is an optional JSON object to
+control tokenization. It can specify _"names", "case",_ and
+_"specials"._ _"names"_ is a boolean for including object
+names. _"case"_ is either "lower" or "upper", and specifies case
+folding. _"specials"_ is a boolean and specifies preservation of
+special strings such as email addresses and URLs. Since Couchbase 4.6.
 
 ### Comparison functions
 
