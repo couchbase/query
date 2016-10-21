@@ -695,14 +695,14 @@ func ParseURL(serverFlag string) (string, int, string) {
 	}
 
 	//Parse the url
-	parsedURL, errURL := url.Parse(serverFlag)
-	if errURL != nil {
-		return "", errors.INVALID_URL, errURL.Error()
+	parsedURL, err := url.Parse(serverFlag)
+	if err != nil {
+		return "", errors.INVALID_URL, err.Error()
 	}
 	// We now have a valid URL. Check if we have a port
 	_, portNo, err := net.SplitHostPort(parsedURL.Host)
 	if err != nil {
-		return "", errors.INVALID_URL, errURL.Error()
+		return "", errors.INVALID_URL, err.Error()
 	}
 	// couchbase:// and couchbases:// will represent http:// ... :8091 and
 	// https:// ... 18091 respectively. If the port is specified along with
