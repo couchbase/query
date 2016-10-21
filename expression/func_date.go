@@ -2367,7 +2367,7 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 		return int64(diff.year) / 10, nil
 	case "century":
 		return int64(diff.year) / 100, nil
-	case "millenium":
+	case "millennium":
 		return int64(diff.year) / 1000, nil
 	default:
 		return 0, fmt.Errorf("Unsupported date diff part %s.", part)
