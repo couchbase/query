@@ -112,38 +112,6 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writer.noMoreData()
 }
 
-type recycleList struct {
-	numElements int
-	elementArr  [1024]value.Value
-}
-
-func (rl *recycleList) addValue(v value.Value) {
-	if rl.numElements < len(rl.elementArr) {
-		rl.elementArr[rl.numElements] = v
-		rl.numElements++
-	}
-	// Do nothing if the array is full.
-}
-
-func (rl *recycleList) emptyList() {
-	for i := 0; i < rl.numElements; i++ {
-		rl.elementArr[i].Recycle()
-		rl.elementArr[i] = nil
-	}
-	rl.numElements = 0
-}
-
-func newRecycleList() interface{} {
-	return &recycleList{}
-}
-
-var recycleListPool = &sync.Pool{New: newRecycleList}
-
-func cleanupRecycleList(rl *recycleList) {
-	rl.emptyList()
-	recycleListPool.Put(rl)
-}
-
 func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
 	this.NotifyStop(stopNotify)
 
@@ -151,9 +119,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 
 	this.setHttpCode(http.StatusOK)
 	this.writePrefix(srvr, signature, prefix, indent)
-	recyclableObjects := (recycleListPool.Get()).(*recycleList)
-	defer cleanupRecycleList(recyclableObjects)
-	stopped := this.writeResults(srvr.Pretty(), recyclableObjects)
+	stopped := this.writeResults(srvr.Pretty())
 
 	state := this.State()
 	this.writeSuffix(srvr.Metrics(), state, prefix, indent)
@@ -218,7 +184,7 @@ func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, strin
 
 // returns true if the request has already been stopped
 // (eg through timeout or delete)
-func (this *httpRequest) writeResults(pretty bool, rl *recycleList) bool {
+func (this *httpRequest) writeResults(pretty bool) bool {
 	var item value.Value
 	var buf bytes.Buffer
 
@@ -241,7 +207,7 @@ func (this *httpRequest) writeResults(pretty bool, rl *recycleList) bool {
 				return true
 			}
 
-			if ok && !this.writeResult(item, &buf, prefix, indent, rl) {
+			if ok && !this.writeResult(item, &buf, prefix, indent) {
 				return false
 			}
 		case <-this.StopExecute():
@@ -257,12 +223,11 @@ func (this *httpRequest) writeResults(pretty bool, rl *recycleList) bool {
 	return false
 }
 
-func (this *httpRequest) writeResult(item value.Value, buf *bytes.Buffer, prefix, indent string, rl *recycleList) bool {
+func (this *httpRequest) writeResult(item value.Value, buf *bytes.Buffer, prefix, indent string) bool {
 	var success bool
 
 	buf.Reset()
 	err := item.WriteJSON(buf, prefix, indent)
-	rl.addValue(item)
 
 	if err != nil {
 		this.Errors() <- errors.NewServiceErrorInvalidJSON(err)
