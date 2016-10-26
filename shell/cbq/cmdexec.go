@@ -352,7 +352,7 @@ func readAndExec(liner *liner.State) (int, string) {
 			// Reached end of file. We are done. So break out of the loop.
 			// Do not require the last line on the file to have a \n.
 
-			if path == "" && final_input == " " {
+			if path == "" && final_input == " " || path == "" && final_input == ";" {
 				break
 			} else {
 				//This means we have some text on the last line
@@ -392,7 +392,11 @@ func readAndExec(liner *liner.State) (int, string) {
 		// Populate the final string to execute
 		final_input = strings.TrimSpace(final_input)
 
-		// Print the query along with printing the
+		if final_input == ";" {
+			continue
+		}
+
+		// Print the query along with printing the results
 		io.WriteString(command.W, final_input+"\n")
 
 		//Remove the ; before sending the query to execute
