@@ -1,6 +1,6 @@
 [
     {
-        "statements" : "SELECT * from default:orders3 INNER JOIN default:contacts ON KEYS orders3.customers ORDER BY orders3.id",
+        "statements" : "SELECT * from default:orders3 INNER JOIN default:contacts ON KEYS orders3.customers ORDER BY orders3.id, contacts.name",
          "results": [
         {
             "contacts": {
@@ -215,6 +215,80 @@
                     {
                         "age": 17,
                         "gender": "m",
+                        "name": "aiden"
+                    },
+                    {
+                        "age": 2,
+                        "gender": "f",
+                        "name": "bill"
+                    }
+                ],
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "dave",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "hobbies": [
+                    "golf",
+                    "surfing"
+                ],
+                "name": "fred",
+                "type": "contact"
+            },
+            "orders3": {
+                "customers": [
+                    "ian",
+                    "jane",
+                    "fred",
+                    "dave"
+                ],
+                "id": "1236",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 1
+                    },
+                    {
+                        "productId": "sugar22",
+                        "qty": 1
+                    }
+                ],
+                "shipped-on": null,
+                "type": "order"
+            }
+        },
+        {
+            "contacts": {
+                "children": [
+                    {
+                        "age": 17,
+                        "gender": "m",
                         "name": "abama"
                     },
                     {
@@ -286,85 +360,11 @@
                 "shipped-on": null,
                 "type": "order"
             }
-        },
-        {
-            "contacts": {
-                "hobbies": [
-                    "golf",
-                    "surfing"
-                ],
-                "name": "fred",
-                "type": "contact"
-            },
-            "orders3": {
-                "customers": [
-                    "ian",
-                    "jane",
-                    "fred",
-                    "dave"
-                ],
-                "id": "1236",
-                "orderlines": [
-                    {
-                        "productId": "coffee01",
-                        "qty": 1
-                    },
-                    {
-                        "productId": "sugar22",
-                        "qty": 1
-                    }
-                ],
-                "shipped-on": null,
-                "type": "order"
-            }
-        },
-        {
-            "contacts": {
-                "children": [
-                    {
-                        "age": 17,
-                        "gender": "m",
-                        "name": "aiden"
-                    },
-                    {
-                        "age": 2,
-                        "gender": "f",
-                        "name": "bill"
-                    }
-                ],
-                "hobbies": [
-                    "golf",
-                    "surfing"
-                ],
-                "name": "dave",
-                "type": "contact"
-            },
-            "orders3": {
-                "customers": [
-                    "ian",
-                    "jane",
-                    "fred",
-                    "dave"
-                ],
-                "id": "1236",
-                "orderlines": [
-                    {
-                        "productId": "coffee01",
-                        "qty": 1
-                    },
-                    {
-                        "productId": "sugar22",
-                        "qty": 1
-                    }
-                ],
-                "shipped-on": null,
-                "type": "order"
-            }
         }
     ]       
     },
     {
-        "statements": "SELECT * FROM default:orders2 INNER JOIN default:contacts AS cont ON  KEYS orders2.custId ORDER BY orders2.id",
+        "statements": "SELECT * FROM default:orders2 INNER JOIN default:contacts AS cont ON  KEYS orders2.custId ORDER BY orders2.id, cont.name",
         "resultset": [
         {
             "cont": {
@@ -840,7 +840,7 @@
        ]
     },
     {
-        "statements": "SELECT META(o).id oid, META(u2).id uid, search.category cat FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.shipped_order_history s INNER JOIN default:users_with_orders o ON KEYS s.order_id INNER JOIN default:users_with_orders u2 ON KEYS META(u).id UNNEST u.search_history search ORDER BY oid",
+        "statements": "SELECT META(o).id oid, META(u2).id uid, search.category cat FROM default:users_with_orders u USE KEYS \"Aide_48687583\" UNNEST u.shipped_order_history s INNER JOIN default:users_with_orders o ON KEYS s.order_id INNER JOIN default:users_with_orders u2 ON KEYS META(u).id UNNEST u.search_history search ORDER BY oid, uid",
 
         "resultset": [
         {

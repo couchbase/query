@@ -1541,7 +1541,7 @@ formats:
 * __"15:04:05.999"__
 * __"15:04:05"__
 
-__CLOCK\_TZ(tz, [ fmt ])__ - same as __CLOCK\_STR__, but in specified
+__CLOCK\_TZ(tz [, fmt ])__ - same as __CLOCK\_STR__, but in specified
 time zone. Since Couchbase 4.6.
 
 __CLOCK\_UTC([ fmt ])__ - same as __CLOCK\_STR__, but in UTC time
@@ -1873,7 +1873,7 @@ __ARRAY\_SORT(expr)__ - new array with elements sorted in N1QL
 collation order.
 
 __ARRAY\_SUM(expr)__ - sum of all the non-NULL number values in the
-array, or zero if there are no such values.
+array, or zero.
 
 __ARRAY\_SYMDIFF1(expr1, expr2, ...)__ - set symmetric
 difference. Returns array of elements that appear in exactly one input
