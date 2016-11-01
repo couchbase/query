@@ -546,5 +546,13 @@
             "$1": "321 cba"
         }
     ]
+    },
+    {
+       "statements": "select SUBSTR('Hello World!', 6, 100)",
+       "results": [
+        {
+            "$1": "World!"
+        }
+    ]
     }
 ]
