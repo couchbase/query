@@ -818,8 +818,12 @@ func (this *Substr) Apply(context Context, args ...value.Value) (value.Value, er
 	}
 
 	length := int(args[2].Actual().(float64))
-	if length < 0 || pos+length > len(str) {
+	if length < 0 {
 		return value.NULL_VALUE, nil
+	}
+
+	if pos+length > len(str) {
+		length = len(str) - pos
 	}
 
 	return value.NewValue(str[pos : pos+length]), nil
