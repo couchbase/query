@@ -190,18 +190,17 @@ func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
 		return false
 	}
 
-	if len(entry.spans) != 1 {
-		return false
-	}
+	for _, span := range entry.spans {
+		if len(span.Range.Low) == 0 {
+			return false
+		}
 
-	span := entry.spans[0].Range
-	if len(span.Low) == 0 {
-		return false
+		low := span.Range.Low[0]
+		if low.Type() < value.NULL || (low.Type() == value.NULL && (span.Range.Inclusion&datastore.LOW) != 0) {
+			return false
+		}
 	}
-
-	low := span.Low[0]
-	return low.Type() > value.NULL ||
-		(low.Type() >= value.NULL && (span.Inclusion&datastore.LOW) == 0)
+	return true
 }
 
 func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
