@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -45,13 +47,26 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 	if this.plan.Projection().Raw() {
 		return this.sendItem(item)
 	} else {
-		terms := this.plan.Terms()
-		result := terms[0].Result()
-		v := item.GetValue()
-		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
-		sv.SetField(result.Alias(), v)
-		if result.As() != "" {
-			sv.SetField(result.As(), v)
+		var v value.Value
+		var err error
+
+		sv := value.NewScopeValue(make(map[string]interface{}, len(this.plan.Terms())), item)
+		for _, term := range this.plan.Terms() {
+			switch term.Result().Expression().(type) {
+			case *algebra.Count:
+				v = item.GetValue()
+			default:
+				v, err = term.Result().Expression().Evaluate(item, context)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err, "projection"))
+					return false
+				}
+			}
+
+			sv.SetField(term.Result().Alias(), v)
+			if term.Result().As() != "" {
+				sv.SetField(term.Result().As(), v)
+			}
 		}
 		av := value.NewAnnotatedValue(sv)
 		return this.sendItem(av)
