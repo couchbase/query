@@ -94,6 +94,10 @@ func (this *ScopeValue) Fields() map[string]interface{} {
 	return rv
 }
 
+func (this *ScopeValue) FieldNames(buffer []string) []string {
+	return sortedNames(this.Fields(), buffer)
+}
+
 /*
 Return the immediate scope.
 */
