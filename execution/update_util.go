@@ -79,8 +79,7 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 		case value.ARRAY, value.OBJECT:
 			// Do nothing
 		default:
-			mismatch = true
-			return
+			bv = value.EMPTY_ARRAY_VALUE
 		}
 
 		if b.NameVariable() == "" {
@@ -101,8 +100,7 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 				}
 				arrays[i] = bv.Actual().([]interface{})
 			default:
-				mismatch = true
-				return
+				arrays[i] = _EMPTY_ARRAY
 			}
 		} else {
 			if pairs == nil {
@@ -126,6 +124,8 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 					for n, v := range bv.Actual().([]interface{}) {
 						bp = append(bp, util.IPair{n, v})
 					}
+				default:
+					// Do nothing, bp is empty slice
 				}
 			}
 
@@ -149,6 +149,8 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 
 	return
 }
+
+var _EMPTY_ARRAY = []interface{}{}
 
 func releaseValsFor(vals []value.Value) {
 	_VALUE_POOL.Put(vals)
