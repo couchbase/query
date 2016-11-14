@@ -566,10 +566,10 @@
     ]
    },
    {
-    "statements":"select DATE_PART_STR(CLOCK_TZ('US/Eastern'),'timezone')",
+    "statements":"select DATE_PART_STR(CLOCK_TZ('US/Arizona'),'timezone')",
     "results": [
         {
-            "$1": -14400
+            "$1": -25200
         }
     ]
    },
@@ -622,10 +622,10 @@
     ]
    },
    {
-    "statements":"select DATE_PART_STR(NOW_TZ('US/Eastern'),'timezone')",
+    "statements":"select DATE_PART_STR(NOW_TZ('US/Arizona'),'timezone')",
     "results": [
         {
-            "$1": -14400
+            "$1": -25200
         }
     ]
    },
