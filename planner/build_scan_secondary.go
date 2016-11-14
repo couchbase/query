@@ -25,6 +25,7 @@ type indexEntry struct {
 	keys       expression.Expressions
 	sargKeys   expression.Expressions
 	cond       expression.Expression
+	origCond   expression.Expression
 	spans      plan.Spans
 	exactSpans bool
 }
@@ -142,6 +143,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 			}
 		}
 
+		var origCond expression.Expression
 		cond := index.Condition()
 		if cond != nil {
 			if subset == nil {
@@ -155,6 +157,8 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 				return nil, nil, err
 			}
 
+			origCond = cond.Copy()
+
 			dnf := NewDNF(cond)
 			cond, err = dnf.Map(cond)
 			if err != nil {
@@ -167,7 +171,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 		}
 
 		n := SargableFor(pred, keys)
-		entry := &indexEntry{keys, keys[0:n], cond, nil, false}
+		entry := &indexEntry{keys, keys[0:n], cond, origCond, nil, false}
 		entries[index] = entry
 
 		if n > 0 {

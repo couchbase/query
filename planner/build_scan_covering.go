@@ -230,6 +230,8 @@ func indexKeyExpressions(entry *indexEntry, keys expression.Expressions) (expres
 	if entry.cond != nil {
 		var err error
 		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc = entry.origCond.FilterCovers(fc)
+
 		filterCovers, err = mapFilterCovers(fc)
 		if err != nil {
 			return nil, nil, err
