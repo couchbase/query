@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type sargAnd struct {
@@ -124,8 +125,16 @@ func constrainSpan(span1, span2 *plan.Span) {
 			low1 := span1.Range.Low[0].Value()
 			low2 := span2.Range.Low[0].Value()
 
-			if span1.Exact && (low1 == nil || low2 == nil) {
-				span1.Exact = false
+			if span1.Exact {
+				if low1 == nil && low2 == nil {
+					span1.Exact = false
+				} else if low1 == nil && (low2.Type() > value.NULL || (span2.Range.Inclusion&datastore.LOW) != 0) {
+					// query parameter, non inclusive null
+					span1.Exact = false
+				} else if low2 == nil && (low1.Type() > value.NULL || (span1.Range.Inclusion&datastore.LOW) != 0) {
+					// non inclusive null, query paramtere
+					span1.Exact = false
+				}
 			}
 
 			var res int
