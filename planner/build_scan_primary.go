@@ -37,7 +37,7 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	}
 
 	keys := expression.Expressions{id}
-	entry := &indexEntry{keys, keys, nil, _EXACT_VALUED_SPANS, true}
+	entry := &indexEntry{keys, keys, nil, nil, _EXACT_VALUED_SPANS, true}
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
