@@ -57,9 +57,11 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
 	r["alias"] = this.alias
+
 	if this.limit != nil {
 		r["limit"] = this.limit
 	}
+
 	if this.duration != 0 {
 		r["#time"] = this.duration.String()
 	}

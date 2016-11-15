@@ -70,7 +70,10 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["alias"] = this.alias
-	r["limit"] = this.limit
+
+	if this.limit != nil {
+		r["limit"] = this.limit
+	}
 
 	if this.key != nil {
 		r["key"] = this.key.String()
