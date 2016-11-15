@@ -238,10 +238,14 @@ func (this *activeHttpRequests) Put(req server.Request) errors.Error {
 	return nil
 }
 
-func (this *activeHttpRequests) Get(id string) (server.Request, errors.Error) {
+func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Error {
 	this.RLock()
 	defer this.RUnlock()
-	return this.requests[id], nil
+	r, ok := this.requests[id]
+	if ok {
+		f(r)
+	}
+	return nil
 }
 
 func (this *activeHttpRequests) Delete(id string, stop bool) bool {

@@ -215,39 +215,40 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 	switch req.Method {
 	case "GET":
-		request, _ := endpoint.actives.Get(requestId)
 		reqMap := map[string]interface{}{}
-		reqMap["requestId"] = request.Id().String()
-		cId := request.ClientID().String()
-		if cId != "" {
-			reqMap["clientContextID"] = cId
-		}
-		if request.Statement() != "" {
-			reqMap["statement"] = request.Statement()
-		}
-		if request.Prepared() != nil {
-			p := request.Prepared()
-			reqMap["preparedName"] = p.Name()
-			reqMap["preparedText"] = p.Text()
-		}
-		reqMap["requestTime"] = request.RequestTime()
-		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
-		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
-		reqMap["state"] = request.State()
-		reqMap["scanConsistency"] = request.ScanConsistency()
+		_ = endpoint.actives.Get(requestId, func(request server.Request) {
+			reqMap["requestId"] = request.Id().String()
+			cId := request.ClientID().String()
+			if cId != "" {
+				reqMap["clientContextID"] = cId
+			}
+			if request.Statement() != "" {
+				reqMap["statement"] = request.Statement()
+			}
+			if request.Prepared() != nil {
+				p := request.Prepared()
+				reqMap["preparedName"] = p.Name()
+				reqMap["preparedText"] = p.Text()
+			}
+			reqMap["requestTime"] = request.RequestTime()
+			reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
+			reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+			reqMap["state"] = request.State()
+			reqMap["scanConsistency"] = request.ScanConsistency()
 
-		p := request.Output().FmtPhaseTimes()
-		if p != nil {
-			reqMap["phaseTimes"] = p
-		}
-		p = request.Output().FmtPhaseCounts()
-		if p != nil {
-			reqMap["phaseCounts"] = p
-		}
-		p = request.Output().FmtPhaseOperators()
-		if p != nil {
-			reqMap["phaseOperators"] = p
-		}
+			p := request.Output().FmtPhaseTimes()
+			if p != nil {
+				reqMap["phaseTimes"] = p
+			}
+			p = request.Output().FmtPhaseCounts()
+			if p != nil {
+				reqMap["phaseCounts"] = p
+			}
+			p = request.Output().FmtPhaseOperators()
+			if p != nil {
+				reqMap["phaseOperators"] = p
+			}
+		})
 
 		return reqMap, nil
 	case "DELETE":

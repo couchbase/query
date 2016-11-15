@@ -107,7 +107,7 @@ type ScanConfiguration interface {
 // API for tracking active requests
 type ActiveRequests interface {
 	Put(Request) errors.Error
-	Get(string) (Request, errors.Error)
+	Get(string, func(Request)) errors.Error
 	Delete(string, bool) bool
 	Count() (int, errors.Error)
 	ForEach(func(string, Request))
@@ -123,8 +123,8 @@ func ActiveRequestsDelete(id string) bool {
 	return actives.Delete(id, true)
 }
 
-func ActiveRequestsGet(id string) (Request, errors.Error) {
-	return actives.Get(id)
+func ActiveRequestsGet(id string, f func(Request)) errors.Error {
+	return actives.Get(id, f)
 }
 
 func ActiveRequestsForEach(f func(string, Request)) {
