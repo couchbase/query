@@ -91,15 +91,12 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 				func(warn errors.Error) {
 				})
 		} else {
+			var item value.AnnotatedValue
 
 			// local entry
-			request, err := server.ActiveRequestsGet(localKey)
+			err := server.ActiveRequestsGet(localKey, func(request server.Request) {
 
-			if err != nil {
-				errs = append(errs, err)
-			}
-			if request != nil {
-				item := value.NewAnnotatedValue(map[string]interface{}{
+				item = value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"requestTime":     request.RequestTime().String(),
 					"elapsedTime":     time.Since(request.RequestTime()).String(),
@@ -134,6 +131,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 					item.SetField("preparedName", p.Name())
 					item.SetField("preparedText", p.Text())
 				}
+			})
+			if err != nil {
+				errs = append(errs, err)
+			} else if item != nil {
 				item.SetAttachment("meta", map[string]interface{}{
 					"id": key,
 				})
