@@ -197,7 +197,11 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["alias"] = this.alias
-	r["limit"] = this.limit
+
+	if this.limit != nil {
+		r["limit"] = this.limit
+	}
+
 	return json.Marshal(r)
 }
 
