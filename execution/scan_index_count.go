@@ -91,10 +91,10 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vector, context *Context) {
-	dspan, err := evalSpan(span, context)
+	dspan, empty, err := evalSpan(span, context)
 
 	var count int64
-	if err == nil {
+	if err == nil && !empty {
 		count, err = this.plan.Index().Count(dspan, context.ScanConsistency(), scanVector)
 	}
 
