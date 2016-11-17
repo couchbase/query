@@ -16,7 +16,6 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -200,9 +199,11 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 	defer context.Recover() // Recover from any panic
 
-	dspan, err := evalSpan(this.span, context)
-	if err != nil {
-		context.Error(errors.NewEvaluationError(err, "span"))
+	dspan, empty, err := evalSpan(this.span, context)
+	if err != nil || empty {
+		if err != nil {
+			context.Error(errors.NewEvaluationError(err, "span"))
+		}
 		close(conn.EntryChannel())
 		return
 	}
@@ -223,47 +224,26 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func evalSpan(ps *plan.Span, context *Context) (*datastore.Span, error) {
+func evalSpan(ps *plan.Span, context *Context) (*datastore.Span, bool, error) {
 	var err error
+	var empty bool
 	ds := &datastore.Span{}
 
-	ds.Seek, err = evalExprs(ps.Seek, context)
-	if err != nil {
-		return nil, err
+	ds.Seek, empty, err = eval(ps.Seek, context, nil)
+	if err != nil || empty {
+		return nil, empty, err
 	}
 
-	ds.Range.Low, err = evalExprs(ps.Range.Low, context)
-	if err != nil {
-		return nil, err
+	ds.Range.Low, empty, err = eval(ps.Range.Low, context, nil)
+	if err != nil || empty {
+		return nil, empty, err
 	}
 
-	ds.Range.High, err = evalExprs(ps.Range.High, context)
-	if err != nil {
-		return nil, err
+	ds.Range.High, empty, err = eval(ps.Range.High, context, nil)
+	if err != nil || empty {
+		return nil, empty, err
 	}
 
 	ds.Range.Inclusion = ps.Range.Inclusion
-	return ds, nil
-}
-
-func evalExprs(exprs expression.Expressions, context *Context) (value.Values, error) {
-	if exprs == nil {
-		return nil, nil
-	}
-
-	values := make(value.Values, len(exprs))
-
-	var err error
-	for i, expr := range exprs {
-		if expr == nil {
-			continue
-		}
-
-		values[i], err = expr.Evaluate(nil, context)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return values, nil
+	return ds, empty, nil
 }

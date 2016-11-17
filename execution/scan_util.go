@@ -11,28 +11,35 @@ package execution
 
 import (
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool) {
+func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool, error) {
 	if cx == nil {
-		return nil, true
+		return nil, false, nil
 	}
 
 	cv := make(value.Values, len(cx))
 	var e error
 	for i, expr := range cx {
+		if expr == nil {
+			continue
+		}
+
 		cv[i], e = expr.Evaluate(parent, context)
 		if e != nil {
-			context.Error(errors.NewEvaluationError(e, "filter term"))
-			return nil, false
+			return nil, false, e
+		}
+
+		if cv[i] != nil && (cv[i].Type() == value.NULL || cv[i].Type() == value.MISSING) &&
+			expr.Value() == nil {
+			return nil, true, nil
 		}
 	}
 
-	return cv, true
+	return cv, false, nil
 }
 
 func notifyConn(stopchannel datastore.StopChannel) {
