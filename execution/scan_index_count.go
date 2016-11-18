@@ -51,7 +51,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		timer := time.Now()
 		addTime := func() {
 			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime("IndexCountScan", t)
+			context.AddPhaseTime(INDEX_COUNT, t)
 			this.plan.AddTime(t)
 		}
 		defer addTime()

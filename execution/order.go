@@ -90,7 +90,7 @@ func (this *Order) afterItems(context *Context) {
 	timer := time.Now()
 	sort.Sort(this)
 	t := time.Since(timer)
-	context.AddPhaseTime("sort", t)
+	context.AddPhaseTime(SORT, t)
 	this.plan.AddTime(t)
 
 	context.SetSortCount(uint64(this.Len()))

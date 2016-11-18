@@ -45,7 +45,7 @@ func (this *Nest) Copy() Operator {
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	t := this.duration - this.chanTime
-	context.AddPhaseTime("nest", t)
+	context.AddPhaseTime(NEST, t)
 	this.plan.AddTime(t)
 }
 

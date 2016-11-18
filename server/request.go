@@ -158,7 +158,6 @@ type BaseRequest struct {
 	pretty         value.Tristate
 	consistency    ScanConfiguration
 	credentials    datastore.Credentials
-	phaseTimes     map[string]time.Duration
 	requestTime    time.Time
 	serviceTime    time.Time
 	state          State
@@ -179,6 +178,7 @@ type requestIDImpl struct {
 type phaseStat struct {
 	count     atomic.AlignedUint64
 	operators atomic.AlignedUint64
+	duration  atomic.AlignedUint64
 }
 
 // requestIDImpl implements the RequestID interface
@@ -233,10 +233,6 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 	}
 
 	rv.results = make(value.ValueChannel, maxParallelism)
-
-	if logging.LogLevel() >= logging.TRACE {
-		rv.phaseTimes = make(map[string]time.Duration, 8)
-	}
 
 	uuid, _ := util.UUID()
 	rv.id = &requestIDImpl{id: uuid}
@@ -477,32 +473,28 @@ func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
 	return p
 }
 
-func (this *BaseRequest) AddPhaseTime(phase string, duration time.Duration) {
-	if this.phaseTimes == nil {
-		return
-	}
-
-	this.Lock()
-	defer this.Unlock()
-	this.phaseTimes[phase] = duration + this.phaseTimes[phase]
-}
-
-func (this *BaseRequest) PhaseTimes() map[string]time.Duration {
-	return this.phaseTimes
+func (this *BaseRequest) AddPhaseTime(phase execution.Phases, duration time.Duration) {
+	atomic.AddUint64(&(this.phaseStats[phase].duration), uint64(duration))
 }
 
 func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
-	if this.phaseTimes == nil {
-		return nil
-	}
+	var p map[string]interface{} = nil
 
-	this.Lock()
-	defer this.Unlock()
-	pT := make(map[string]interface{}, len(this.phaseTimes))
-	for k, d := range this.phaseTimes {
-		pT[k] = d.String()
+	if logging.LogLevel() >= logging.TRACE {
+
+		nr := len(this.phaseStats)
+		for i := 0; i < nr; i++ {
+			duration := atomic.LoadUint64(&this.phaseStats[i].duration)
+			if duration > 0 {
+				if p == nil {
+					p = make(map[string]interface{},
+						execution.PHASES)
+				}
+				p[execution.Phases(i).String()] = time.Duration(duration).String()
+			}
+		}
 	}
-	return pT
+	return p
 }
 
 func (this *BaseRequest) SetTimings(p plan.Operator) {

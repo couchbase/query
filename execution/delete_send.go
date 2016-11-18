@@ -119,7 +119,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	deleted_keys, e := this.plan.Keyspace().Delete(keys)
 
 	t := time.Since(timer)
-	context.AddPhaseTime("delete", t)
+	context.AddPhaseTime(DELETE, t)
 	this.plan.AddTime(t)
 
 	// Update mutation count with number of deleted docs:

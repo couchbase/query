@@ -45,7 +45,7 @@ func (this *Join) Copy() Operator {
 func (this *Join) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	t := this.duration - this.chanTime
-	context.AddPhaseTime("join", t)
+	context.AddPhaseTime(JOIN, t)
 	this.plan.AddTime(t)
 }
 

@@ -115,7 +115,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	pairs, errs := this.plan.Keyspace().Fetch(keys)
 
 	t := time.Since(timer)
-	context.AddPhaseTime("fetch", t)
+	context.AddPhaseTime(FETCH, t)
 	this.plan.AddTime(t)
 
 	fetchOk := true

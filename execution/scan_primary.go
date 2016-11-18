@@ -62,7 +62,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	addTime := func() {
 
 		t := time.Since(timer) - this.chanTime
-		context.AddPhaseTime("scan", t)
+		context.AddPhaseTime(PRIMARY_SCAN, t)
 		this.plan.AddTime(t)
 	}
 	defer addTime()
@@ -134,7 +134,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 	addTime := func() {
 
 		t := time.Since(timer) - this.chanTime
-		context.AddPhaseTime("scan", t)
+		context.AddPhaseTime(PRIMARY_SCAN, t)
 		this.plan.AddTime(t)
 	}
 	defer addTime()
@@ -144,7 +144,14 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 	var entry, lastEntry *datastore.IndexEntry
 
 	ok := true
+
 	nitems := 0
+	var docs uint64 = 0
+	defer func() {
+		if nitems > 0 {
+			context.AddPhaseCount(PRIMARY_SCAN, docs)
+		}
+	}()
 
 	for ok {
 		select {
@@ -162,6 +169,11 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 				ok = this.sendItem(av)
 				lastEntry = entry
 				nitems++
+				docs++
+				if docs > _PHASE_UPDATE_COUNT {
+					context.AddPhaseCount(PRIMARY_SCAN, docs)
+					docs = 0
+				}
 			}
 
 		case <-this.stopChannel:

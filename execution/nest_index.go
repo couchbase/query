@@ -51,7 +51,7 @@ func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 	start := time.Now()
 	this.runConsumer(this, context, parent)
 	t := time.Since(start) - this.chanTime
-	context.AddPhaseTime("index_nest", t)
+	context.AddPhaseTime(INDEX_NEST, t)
 	this.plan.AddTime(t)
 }
 

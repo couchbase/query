@@ -441,9 +441,7 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}
 
-	if logging.LogLevel() >= logging.TRACE {
-		request.Output().AddPhaseTime("instantiate", time.Since(build))
-	}
+	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
 
 	if request.State() == FATAL {
 		request.Failed(this)
@@ -461,10 +459,8 @@ func (this *Server) serviceRequest(request Request) {
 	run := time.Now()
 	operator.RunOnce(context, nil)
 
-	if logging.LogLevel() >= logging.TRACE {
-		request.Output().AddPhaseTime("run", time.Since(run))
-		logPhases(request)
-	}
+	request.Output().AddPhaseTime(execution.RUN, time.Since(run))
+	logPhases(request)
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
@@ -496,10 +492,8 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 			request.SetPrepared(prep)
 		}
 
-		if logging.LogLevel() >= logging.TRACE {
-			request.Output().AddPhaseTime("plan", time.Since(prep))
-			request.Output().AddPhaseTime("parse", prep.Sub(parse))
-		}
+		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
+		request.Output().AddPhaseTime(execution.PARSE, prep.Sub(parse))
 	}
 
 	request.SetTimings(prepared.Operator)
@@ -523,7 +517,7 @@ func logExplain(prepared *plan.Prepared) {
 }
 
 func logPhases(request Request) {
-	phaseTimes := request.Output().PhaseTimes()
+	phaseTimes := request.Output().FmtPhaseTimes()
 	if len(phaseTimes) == 0 {
 		return
 	}

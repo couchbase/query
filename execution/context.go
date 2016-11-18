@@ -30,10 +30,30 @@ import (
 type Phases int
 
 const (
-	FETCH = Phases(iota)
+	// Execution layer
+	AUTHORIZE = Phases(iota)
+	FETCH
 	INDEX_SCAN
 	PRIMARY_SCAN
+	JOIN
+	INDEX_JOIN
+	NEST
+	INDEX_NEST
+	COUNT
+	INDEX_COUNT
 	SORT
+	INSERT
+	DELETE
+	UPDATE
+	UPSERT
+	MERGE
+	INFER
+
+	// Server layer
+	INSTANTIATE
+	PARSE
+	PLAN
+	RUN
 	PHASES // Sizer
 )
 
@@ -42,10 +62,28 @@ func (phase Phases) String() string {
 }
 
 var _PHASE_NAMES = []string{
-	FETCH:        "Fetch",
-	INDEX_SCAN:   "IndexScan",
-	PRIMARY_SCAN: "PrimaryScan",
-	SORT:         "Sort",
+	AUTHORIZE:    "authorize",
+	FETCH:        "fetch",
+	INDEX_SCAN:   "indexScan",
+	PRIMARY_SCAN: "primaryScan",
+	JOIN:         "join",
+	INDEX_JOIN:   "indexJoin",
+	NEST:         "nest",
+	INDEX_NEST:   "indexNest",
+	COUNT:        "count",
+	INDEX_COUNT:  "indexCount",
+	SORT:         "sort",
+	INSERT:       "insert",
+	DELETE:       "delete",
+	UPDATE:       "update",
+	UPSERT:       "upsert",
+	MERGE:        "merge",
+	INFER:        "inferKeySpace",
+
+	INSTANTIATE: "instantiate",
+	PARSE:       "parse",
+	PLAN:        "plan",
+	RUN:         "run",
 }
 
 const _PHASE_UPDATE_COUNT uint64 = 100
@@ -64,8 +102,7 @@ type Output interface {
 	AddPhaseCount(p Phases, c uint64)
 	FmtPhaseCounts() map[string]interface{}
 	FmtPhaseOperators() map[string]interface{}
-	AddPhaseTime(phase string, duration time.Duration)
-	PhaseTimes() map[string]time.Duration
+	AddPhaseTime(phase Phases, duration time.Duration)
 	FmtPhaseTimes() map[string]interface{}
 }
 
@@ -203,7 +240,7 @@ func (this *Context) AddPhaseCount(p Phases, c uint64) {
 	this.output.AddPhaseCount(p, c)
 }
 
-func (this *Context) AddPhaseTime(phase string, duration time.Duration) {
+func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
 }
 

@@ -63,7 +63,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		addTime := func() {
-			context.AddPhaseTime("merge", this.duration)
+			context.AddPhaseTime(MERGE, this.duration)
 			this.plan.AddTime(this.duration)
 		}
 		defer addTime()

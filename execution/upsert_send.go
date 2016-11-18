@@ -127,7 +127,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	dpairs, er = this.plan.Keyspace().Upsert(dpairs)
 
 	t := time.Since(timer)
-	context.AddPhaseTime("upsert", t)
+	context.AddPhaseTime(UPSERT, t)
 	this.plan.AddTime(t)
 
 	// Update mutation count with number of upserted docs

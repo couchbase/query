@@ -128,7 +128,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		addTime := func() {
 
 			t := time.Since(timer) - this.chanTime
-			context.AddPhaseTime("scan", t)
+			context.AddPhaseTime(INDEX_SCAN, t)
 			this.plan.AddTime(t)
 		}
 		defer addTime()
