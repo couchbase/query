@@ -1020,6 +1020,159 @@ func (this *DateRangeStr) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// DateRangeMillis
+//
+///////////////////////////////////////////////////
+
+/*
+This represents the Date function DATE_RANGE_MILLIS(expr,expr,part,[n]).
+It returns a range of dates from expr1 to expr2 in milliseconds. n and part are used to
+define an interval and duration.
+*/
+type DateRangeMillis struct {
+	FunctionBase
+}
+
+func NewDateRangeMillis(operands ...Expression) Function {
+	rv := &DateRangeMillis{
+		*NewFunctionBase("date_range_millis", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DateRangeMillis) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DateRangeMillis) Type() value.Type { return value.ARRAY }
+
+func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.Eval(this, item, context)
+}
+
+func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.Value, error) {
+
+	// Populate the args
+	startDate := args[0]
+	endDate := args[1]
+	part := args[2]
+
+	// Default value for the increment is 1.
+	n := value.ONE_VALUE
+	if len(args) > 3 {
+		n = args[3]
+	}
+
+	// If input arguments are missing then return missing, and if they arent valid types,
+	// return null.
+	if startDate.Type() == value.MISSING || endDate.Type() == value.MISSING ||
+		n.Type() == value.MISSING || part.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+
+	} else if startDate.Type() != value.NUMBER || endDate.Type() != value.NUMBER ||
+		n.Type() != value.NUMBER || part.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// Convert start date to time format.
+	da1 := startDate.Actual().(float64)
+	t1 := millisToTime(da1)
+
+	// Convert end date to time format.
+	da2 := endDate.Actual().(float64)
+	t2 := millisToTime(da2)
+
+	// Increment
+	step := n.Actual().(float64)
+
+	// Return null value for decimal increments.
+	if step != math.Trunc(step) {
+		return value.NULL_VALUE, nil
+	}
+
+	// If the two dates are the same, return an empty array.
+	if t1.String() == t2.String() {
+		return value.EMPTY_ARRAY_VALUE, nil
+	}
+
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	val, err := dateDiff(t1, t2, partStr)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+
+	if val < 0 {
+		val = -val
+	}
+
+	rv := make([]interface{}, 0, val)
+
+	// If the start date is after the end date
+	if t1.String() > t2.String() {
+
+		// And the increment is positive return empty array. If
+		// the increment is negative, so populate the array with
+		// decresing dates.
+		if step >= 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	} else {
+		// If end date is after start date but the increment is negative.
+		if step < 0.0 {
+			return value.EMPTY_ARRAY_VALUE, nil
+		}
+	}
+
+	// Max date value is end date/ t2.
+	// Keep incrementing start date by step for part, and add it to
+	// the array to be returned.
+	start := t1
+
+	// Populate the array now
+	// Until you reach the end date
+	for (step > 0.0 && start.String() < t2.String()) ||
+		(step < 0.0 && start.String() > t2.String()) {
+		// Compute the new time
+		rv = append(rv, float64(timeToMillis(start)))
+		t, err := dateAdd(start, int(step), partStr)
+		if err != nil {
+			return value.NULL_VALUE, nil
+		}
+
+		start = t
+	}
+
+	return value.NewValue(rv), nil
+
+}
+
+/*
+Minimum input arguments required is 3.
+*/
+func (this *DateRangeMillis) MinArgs() int { return 3 }
+
+/*
+Maximum input arguments allowed is 4.
+*/
+func (this *DateRangeMillis) MaxArgs() int { return 4 }
+
+/*
+Factory method pattern.
+*/
+func (this *DateRangeMillis) Constructor() FunctionConstructor {
+	return NewDateRangeMillis
+}
+
+///////////////////////////////////////////////////
+//
 // DateTruncMillis
 //
 ///////////////////////////////////////////////////

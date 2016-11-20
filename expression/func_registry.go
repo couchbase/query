@@ -112,6 +112,7 @@ var _FUNCTIONS = map[string]Function{
 	"date_part_millis":    &DatePartMillis{},
 	"date_part_str":       &DatePartStr{},
 	"date_range_str":      &DateRangeStr{},
+	"date_range_millis":   &DateRangeMillis{},
 	"date_trunc_millis":   &DateTruncMillis{},
 	"date_trunc_str":      &DateTruncStr{},
 	"duration_to_str":     &DurationToStr{},
