@@ -985,8 +985,8 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && start.String() <= t2.String()) ||
-		(step < 0.0 && start.String() >= t2.String()) {
+	for (step > 0.0 && start.String() < t2.String()) ||
+		(step < 0.0 && start.String() > t2.String()) {
 		// Compute the new time
 		rv = append(rv, timeToStr(start, fmt1))
 		t, err := dateAdd(start, int(step), partStr)
