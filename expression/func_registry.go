@@ -98,7 +98,6 @@ var _FUNCTIONS = map[string]Function{
 	"slice":   &Slice{},
 
 	// Date
-	"array_date_range":    &DateRangeStr{},
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
 	"clock_local":         &ClockStr{},

@@ -309,7 +309,7 @@
     ]
    },
    {
-    "statements":"select array_date_range('2015-11-30T15:04:05.999', '2017-04-14T15:04:06.998', 'quarter')",
+    "statements":"select date_range_str('2015-11-30T15:04:05.999', '2017-04-14T15:04:06.998', 'quarter')",
     "results": [
         {
             "$1": [
@@ -324,7 +324,7 @@
     ]
    },
    {
-    "statements":"select array_date_range('2016-01-01T15:04:05.999', '2016-04-14T15:04:05.998', 'day', 1)",
+    "statements":"select date_range_str('2016-01-01T15:04:05.999', '2016-04-14T15:04:05.998', 'day', 1)",
     "results": [
         {
             "$1": [
@@ -437,7 +437,7 @@
     ]
    },
    {
-    "statements":"select array_date_range('2004-01-03','2004-12-03', 'month', 4)",
+    "statements":"select date_range_str('2004-01-03','2004-12-03', 'month', 4)",
     "results": [
         {
             "$1": [
@@ -449,7 +449,7 @@
     ]
    },
    {
-    "statements":"select array_date_range('2016-01-14T15:04:05.999', '2016-01-01T15:04:06.998', 'day', -1)",
+    "statements":"select date_range_str('2016-01-14T15:04:05.999', '2016-01-01T15:04:06.998', 'day', -1)",
     "results": [
         {
             "$1": [
