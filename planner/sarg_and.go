@@ -28,6 +28,12 @@ func newSargAnd(pred *expression.And) *sargAnd {
 			return _SELF_SPANS, nil
 		}
 
+		// MB-21720. For array index keys, sarg for OR instead
+		// of AND, to retain multiple spans.
+		if isArray, _ := expr2.IsArrayIndexKey(); isArray {
+			return sargAndArrayKey(pred, expr2, rv.MissingHigh())
+		}
+
 		exactSpans := true
 		var s plan.Spans
 		for _, op := range pred.Operands() {
@@ -242,4 +248,76 @@ func isEmptySpan(span *plan.Span) bool {
 	}
 
 	return (len(low) == len(high) && (span.Range.Inclusion&datastore.BOTH) == 0)
+}
+
+// MB-21720. For array index keys, sarg for OR instead of AND, to
+// retain multiple spans.  Modified from newSargOr().
+func sargAndArrayKey(pred *expression.And, expr2 expression.Expression, missingHigh bool) (
+	plan.Spans, error) {
+
+	spans := make(plan.Spans, 0, len(pred.Operands()))
+	emptySpan := false
+	valuedSpan := false
+	exactValuedSpan := false
+	nullSpan := false
+	fullSpan := false
+	exactFullSpan := false
+
+	for _, child := range pred.Operands() {
+
+		cspans, err := sargFor(child, expr2, missingHigh)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(cspans) == 0 {
+			continue
+		}
+
+		if cspans[0] == _EXACT_FULL_SPANS[0] {
+			exactFullSpan = true
+		}
+
+		if cspans[0] == _FULL_SPANS[0] {
+			fullSpan = true
+		}
+
+		if cspans[0] == _VALUED_SPANS[0] {
+			valuedSpan = true
+		}
+
+		if cspans[0] == _EXACT_VALUED_SPANS[0] {
+			exactValuedSpan = true
+		}
+
+		if cspans[0] == _EMPTY_SPANS[0] {
+			emptySpan = true
+			continue
+		}
+
+		if cspans[0] == _NULL_SPANS[0] {
+			nullSpan = true
+		}
+
+		if len(spans)+len(cspans) > _FULL_SPAN_FANOUT {
+			fullSpan = true
+			continue
+		}
+
+		spans = append(spans, cspans...)
+	}
+
+	if (exactValuedSpan && nullSpan) || exactFullSpan {
+		return _EXACT_FULL_SPANS, nil
+	}
+
+	if (valuedSpan && nullSpan) || fullSpan {
+		return _FULL_SPANS, nil
+	}
+
+	if emptySpan && len(spans) == 0 {
+		return _EMPTY_SPANS, nil
+	}
+
+	return deDupDiscardEmptySpans(spans), nil
 }
