@@ -48,6 +48,10 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "InitialGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
@@ -59,7 +63,10 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
@@ -126,6 +133,10 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IntermediateGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
@@ -137,7 +148,10 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
@@ -204,6 +218,10 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "FinalGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
@@ -215,7 +233,10 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 		s = append(s, expression.NewStringer().Visit(agg))
 	}
 	r["aggregates"] = s
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {

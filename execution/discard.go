@@ -10,16 +10,21 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type Discard struct {
 	base
+	plan *plan.Discard
 }
 
-func NewDiscard() *Discard {
+func NewDiscard(plan *plan.Discard) *Discard {
 	rv := &Discard{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -31,7 +36,10 @@ func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Discard) Copy() Operator {
-	return &Discard{this.base.copy()}
+	return &Discard{
+		this.base.copy(),
+		this.plan,
+	}
 }
 
 func (this *Discard) RunOnce(context *Context, parent value.Value) {
@@ -40,4 +48,11 @@ func (this *Discard) RunOnce(context *Context, parent value.Value) {
 
 func (this *Discard) processItem(item value.AnnotatedValue, context *Context) bool {
 	return true
+}
+
+func (this *Discard) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

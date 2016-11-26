@@ -10,22 +10,26 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type UnionScan struct {
 	base
+	plan         *plan.UnionScan
 	scans        []Operator
 	keys         map[string]bool
 	childChannel StopChannel
 }
 
-func NewUnionScan(scans []Operator) *UnionScan {
+func NewUnionScan(plan *plan.UnionScan, scans []Operator) *UnionScan {
 	rv := &UnionScan{
 		base:         newBase(),
+		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -39,7 +43,8 @@ func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *UnionScan) Copy() Operator {
-	scans := _INDEX_SCAN_POOL.Get()
+	// FIXME reinstate _INDEX_SCAN_POOL if possible
+	scans := make([]Operator, 0, len(this.scans))
 
 	for i, s := range this.scans {
 		scans[i] = s.Copy()
@@ -47,6 +52,7 @@ func (this *UnionScan) Copy() Operator {
 
 	return &UnionScan{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -57,10 +63,6 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() {
-			_INDEX_SCAN_POOL.Put(this.scans)
-			this.scans = nil
-		}()
 
 		this.keys = _STRING_BOOL_POOL.Get()
 		defer func() {
@@ -141,4 +143,12 @@ func (this *UnionScan) processKey(item value.AnnotatedValue, context *Context) b
 
 	this.keys[key] = true
 	return this.sendItem(item)
+}
+
+func (this *UnionScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["scans"] = this.scans
+	})
+	return json.Marshal(r)
 }

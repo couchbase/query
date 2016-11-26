@@ -73,6 +73,10 @@ func (this *Merge) Insert() Operator {
 }
 
 func (this *Merge) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Merge"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -82,22 +86,20 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 		r["as"] = this.ref.As()
 	}
 
-	if this.update != nil {
-		r["update"] = this.update
+	if f != nil {
+		f(r)
+	} else {
+		if this.update != nil {
+			r["update"] = this.update
+		}
+		if this.delete != nil {
+			r["delete"] = this.delete
+		}
+		if this.insert != nil {
+			r["insert"] = this.insert
+		}
 	}
-
-	if this.delete != nil {
-		r["delete"] = this.delete
-	}
-
-	if this.insert != nil {
-		r["insert"] = this.insert
-	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
-	}
-
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Merge) UnmarshalJSON(body []byte) error {

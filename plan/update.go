@@ -44,11 +44,15 @@ func (this *Clone) Alias() string {
 }
 
 func (this *Clone) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Clone) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Clone"}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Clone) UnmarshalJSON([]byte) error {
@@ -81,9 +85,16 @@ func (this *Set) Node() *algebra.Set {
 }
 
 func (this *Set) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Set"}
 	r["set_terms"] = this.node.Terms()
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Set) UnmarshalJSON(body []byte) error {
@@ -131,9 +142,16 @@ func (this *Unset) Node() *algebra.Unset {
 }
 
 func (this *Unset) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Unset"}
 	r["unset_terms"] = this.node.Terms()
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Unset) UnmarshalJSON(body []byte) error {
@@ -193,6 +211,10 @@ func (this *SendUpdate) Limit() expression.Expression {
 }
 
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendUpdate"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -202,7 +224,10 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 		r["limit"] = this.limit
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *SendUpdate) UnmarshalJSON(body []byte) error {

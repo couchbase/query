@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -116,7 +117,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	t := time.Since(timer)
 	context.AddPhaseTime(FETCH, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 
 	fetchOk := true
 	for _, err := range errs {
@@ -150,6 +151,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	return fetchOk
+}
+
+func (this *Fetch) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 type DummyFetch struct {
@@ -186,4 +194,11 @@ func (this *DummyFetch) processItem(item value.AnnotatedValue, context *Context)
 
 func (this *DummyFetch) afterItems(context *Context) {
 	context.SetSortCount(0)
+}
+
+func (this *DummyFetch) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

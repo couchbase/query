@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -43,6 +45,7 @@ func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
 func (this *Distinct) Copy() Operator {
 	return &Distinct{
 		base: this.base.copy(),
+		plan: this.plan,
 		set:  value.NewSet(_DISTINCT_CAP, false),
 	}
 }
@@ -72,4 +75,11 @@ func (this *Distinct) afterItems(context *Context) {
 
 func (this *Distinct) Set() *value.Set {
 	return this.set
+}
+
+func (this *Distinct) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

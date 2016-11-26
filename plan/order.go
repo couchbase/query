@@ -46,6 +46,10 @@ func (this *Order) Terms() algebra.SortTerms {
 }
 
 func (this *Order) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Order"}
 
 	/* generate sort terms */
@@ -67,10 +71,10 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	if this.limit != nil {
 		r["limit"] = this.limit.Expression().String()
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Order) UnmarshalJSON(body []byte) error {

@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -82,6 +84,13 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	return true
+}
+
+func (this *Unnest) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 var _EMPTY_ACTUALS []interface{}

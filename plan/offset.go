@@ -40,9 +40,16 @@ func (this *Offset) Expression() expression.Expression {
 }
 
 func (this *Offset) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Offset"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Offset) UnmarshalJSON(body []byte) error {

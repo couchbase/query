@@ -54,6 +54,10 @@ func (this *Join) Outer() bool {
 }
 
 func (this *Join) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Join"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
@@ -66,10 +70,10 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Join) UnmarshalJSON(body []byte) error {

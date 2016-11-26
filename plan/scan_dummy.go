@@ -31,7 +31,15 @@ func (this *DummyScan) New() Operator {
 }
 
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{"#operator": "DummyScan"})
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *DummyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+	r := map[string]interface{}{"#operator": "DummyScan"}
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *DummyScan) UnmarshalJSON([]byte) error {

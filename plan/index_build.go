@@ -47,6 +47,10 @@ func (this *BuildIndexes) Node() *algebra.BuildIndexes {
 }
 
 func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *BuildIndexes) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "BuildIndexes"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -56,7 +60,10 @@ func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 		r["indexes"] = this.node.Names()
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *BuildIndexes) UnmarshalJSON(body []byte) error {

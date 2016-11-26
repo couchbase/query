@@ -10,20 +10,25 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 // Collect subquery results
 type Collect struct {
 	base
+	plan   *plan.Collect
 	values []interface{}
 }
 
 const _COLLECT_CAP = 64
 
-func NewCollect() *Collect {
+func NewCollect(plan *plan.Collect) *Collect {
 	rv := &Collect{
 		base:   newBase(),
+		plan:   plan,
 		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 
@@ -38,6 +43,7 @@ func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
 func (this *Collect) Copy() Operator {
 	return &Collect{
 		base:   this.base.copy(),
+		plan:   this.plan,
 		values: make([]interface{}, 0, _COLLECT_CAP),
 	}
 }
@@ -64,4 +70,11 @@ func (this *Collect) ValuesOnce() value.Value {
 
 func (this *Collect) releaseValues() {
 	this.values = nil
+}
+
+func (this *Collect) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

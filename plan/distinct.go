@@ -30,11 +30,15 @@ func (this *Distinct) New() Operator {
 }
 
 func (this *Distinct) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Distinct) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Distinct"}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Distinct) UnmarshalJSON([]byte) error {

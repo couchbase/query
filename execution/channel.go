@@ -44,3 +44,9 @@ func (this *Channel) RunOnce(context *Context, parent value.Value) {
 func (this *Channel) Close() {
 	close(this.itemChannel)
 }
+
+func (this *Channel) MarshalJSON() ([]byte, error) {
+
+	// there's no corresponding plan.Channel, so we have a dummy
+	return nil, nil
+}

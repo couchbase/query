@@ -40,9 +40,16 @@ func (this *Filter) Condition() expression.Expression {
 }
 
 func (this *Filter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Filter"}
 	r["condition"] = expression.NewStringer().Visit(this.cond)
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Filter) UnmarshalJSON(body []byte) error {

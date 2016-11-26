@@ -67,6 +67,10 @@ func (this *InitialProject) StarTermCount() int {
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "InitialProject"}
 
 	if this.projection.Distinct() {
@@ -97,7 +101,10 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 		s = append(s, t)
 	}
 	r["result_terms"] = s
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *InitialProject) UnmarshalJSON(body []byte) error {
@@ -161,8 +168,15 @@ func (this *FinalProject) New() Operator {
 }
 
 func (this *FinalProject) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *FinalProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "FinalProject"}
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *FinalProject) UnmarshalJSON([]byte) error {
@@ -209,6 +223,10 @@ func (this *IndexCountProject) Terms() ProjectTerms {
 }
 
 func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IndexCountProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexCountProject"}
 
 	if this.projection.Raw() {
@@ -231,7 +249,10 @@ func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
 		s = append(s, t)
 	}
 	r["result_terms"] = s
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *IndexCountProject) UnmarshalJSON(body []byte) error {

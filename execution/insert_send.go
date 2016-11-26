@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -158,7 +159,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	t := time.Since(timer)
 	context.AddPhaseTime(INSERT, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(dpairs)))
@@ -184,6 +185,13 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 func (this *SendInsert) readonly() bool {
 	return false
+}
+
+func (this *SendInsert) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 var _INSERT_POOL = value.NewPairPool(_BATCH_SIZE)

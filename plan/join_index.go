@@ -95,6 +95,10 @@ func (this *IndexJoin) Covering() bool {
 }
 
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexJoin"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
@@ -129,10 +133,10 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	}
 
 	r["scan"] = scan
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *IndexJoin) UnmarshalJSON(body []byte) error {

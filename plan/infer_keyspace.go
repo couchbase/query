@@ -48,6 +48,10 @@ func (this *InferKeyspace) Node() *algebra.InferKeyspace {
 }
 
 func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *InferKeyspace) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "InferKeyspace"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -56,11 +60,11 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	if this.node.With() != nil {
 		r["with"] = this.node.With()
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
-	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *InferKeyspace) UnmarshalJSON(body []byte) error {

@@ -53,6 +53,10 @@ func (this *SendDelete) Limit() expression.Expression {
 }
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendDelete"}
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["keyspace"] = this.keyspace.Name()
@@ -62,10 +66,10 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 		r["limit"] = this.limit
 	}
 
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {

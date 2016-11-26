@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	_ "fmt"
 
 	"github.com/couchbase/query/errors"
@@ -74,6 +75,13 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 	})
 
+}
+
+func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 var _ARRAY_NULL_VALUE []interface{} = []interface{}{value.NULL_VALUE}

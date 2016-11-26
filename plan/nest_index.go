@@ -77,6 +77,10 @@ func (this *IndexNest) Index() datastore.Index {
 }
 
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexNest"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
@@ -98,10 +102,10 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	}
 
 	r["scan"] = scan
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *IndexNest) UnmarshalJSON(body []byte) error {

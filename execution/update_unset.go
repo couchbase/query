@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
@@ -126,4 +127,11 @@ func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *C
 	}
 
 	return clone, nil
+}
+
+func (this *Unset) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

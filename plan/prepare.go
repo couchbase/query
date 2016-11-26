@@ -39,9 +39,16 @@ func (this *Prepare) Prepared() value.Value {
 }
 
 func (this *Prepare) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Prepare) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Prepare"}
 	r["prepared"] = this.prepared
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Prepare) UnmarshalJSON(body []byte) error {

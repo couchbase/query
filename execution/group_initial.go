@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
@@ -103,4 +104,11 @@ func (this *InitialGroup) afterItems(context *Context) {
 			return
 		}
 	}
+}
+
+func (this *InitialGroup) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

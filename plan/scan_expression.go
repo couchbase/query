@@ -46,10 +46,17 @@ func (this *ExpressionScan) Alias() string {
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ExpressionScan"}
 	r["expr"] = expression.NewStringer().Visit(this.fromExpr)
 	r["alias"] = this.alias
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {

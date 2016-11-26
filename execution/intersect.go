@@ -10,20 +10,25 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type IntersectAll struct {
 	base
+	plan         *plan.IntersectAll
 	first        Operator
 	second       Operator
 	childChannel StopChannel
 	set          *value.Set
 }
 
-func NewIntersectAll(first, second Operator) *IntersectAll {
+func NewIntersectAll(plan *plan.IntersectAll, first, second Operator) *IntersectAll {
 	rv := &IntersectAll{
 		base:         newBase(),
+		plan:         plan,
 		first:        first,
 		second:       second,
 		childChannel: make(StopChannel, 2),
@@ -40,6 +45,7 @@ func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
 func (this *IntersectAll) Copy() Operator {
 	rv := &IntersectAll{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		first:        this.first.Copy(),
 		second:       this.second.Copy(),
 		childChannel: make(StopChannel, 2),
@@ -53,8 +59,10 @@ func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {
-	distinct := NewDistinct(nil, true)
-	sequence := NewSequence(this.second, distinct)
+
+	// FIXME: this should be handled by the planner
+	distinct := NewDistinct(plan.NewDistinct(), true)
+	sequence := NewSequence(plan.NewSequence(), this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 
@@ -97,4 +105,13 @@ func (this *IntersectAll) afterItems(context *Context) {
 
 func (this *IntersectAll) ChildChannel() StopChannel {
 	return this.childChannel
+}
+
+func (this *IntersectAll) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["first"] = this.first
+		r["second"] = this.second
+	})
+	return json.Marshal(r)
 }

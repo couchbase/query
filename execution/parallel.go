@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"runtime"
 
 	"github.com/couchbase/query/plan"
@@ -57,6 +58,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
 		children := _PARALLEL_POOL.Get()[0:n]
+
 		defer _PARALLEL_POOL.Put(children)
 
 		for i := 1; i < n; i++ {
@@ -90,6 +92,14 @@ func (this *Parallel) runChild(child Operator, context *Context, parent value.Va
 	child.SetParent(this)
 	child.SetStop(nil)
 	child.RunOnce(context, parent)
+}
+
+func (this *Parallel) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["~child"] = this.child
+	})
+	return json.Marshal(r)
 }
 
 var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

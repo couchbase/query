@@ -38,9 +38,17 @@ func (this *IntersectScan) Scans() []Operator {
 }
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IntersectScan"}
-	r["scans"] = this.scans
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["scans"] = this.scans
+	}
+	return r
 }
 
 func (this *IntersectScan) UnmarshalJSON(body []byte) error {

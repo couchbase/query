@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -49,4 +51,11 @@ func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 
 		// Actually alter index
 	})
+}
+
+func (this *AlterIndex) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

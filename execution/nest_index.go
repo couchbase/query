@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"sync"
@@ -52,7 +53,7 @@ func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	t := time.Since(start) - this.chanTime
 	context.AddPhaseTime(INDEX_NEST, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 }
 
 func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -147,6 +148,13 @@ func (this *IndexNest) flushBatch(context *Context) bool {
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
 	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+}
+
+func (this *IndexNest) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)

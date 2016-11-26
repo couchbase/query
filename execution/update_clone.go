@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -49,4 +51,11 @@ func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool
 	clone := item.CopyForUpdate()
 	item.SetAttachment("clone", clone)
 	return this.sendItem(item)
+}
+
+func (this *Clone) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

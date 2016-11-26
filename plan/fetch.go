@@ -46,16 +46,20 @@ func (this *Fetch) Term() *algebra.KeyspaceTerm {
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Fetch"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
@@ -106,13 +110,20 @@ func (this *DummyFetch) Term() *algebra.KeyspaceTerm {
 }
 
 func (this *DummyFetch) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DummyFetch"}
 	r["namespace"] = this.term.Namespace()
 	r["keyspace"] = this.term.Keyspace()
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {

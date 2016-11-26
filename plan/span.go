@@ -44,6 +44,10 @@ func (this *Range) Copy() *Range {
 }
 
 func (this *Range) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Range) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
 		"Inclusion": this.Inclusion,
 	}
@@ -56,7 +60,10 @@ func (this *Range) MarshalJSON() ([]byte, error) {
 		r["High"] = this.High
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Range) UnmarshalJSON(body []byte) error {
@@ -112,6 +119,10 @@ func (this *Span) Copy() *Span {
 }
 
 func (this *Span) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Span) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{
 		"Range": &this.Range,
 	}
@@ -120,7 +131,10 @@ func (this *Span) MarshalJSON() ([]byte, error) {
 		r["Seek"] = this.Seek
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Span) UnmarshalJSON(body []byte) error {

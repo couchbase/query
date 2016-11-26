@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -89,6 +90,13 @@ func (this *IndexScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
+func (this *IndexScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
+}
+
 type spanScan struct {
 	base
 	plan *plan.IndexScan
@@ -129,7 +137,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 			t := time.Since(timer) - this.chanTime
 			context.AddPhaseTime(INDEX_SCAN, t)
-			this.plan.AddTime(t)
+			this.addTime(t)
 		}
 		defer addTime()
 
@@ -246,4 +254,11 @@ func evalSpan(ps *plan.Span, context *Context) (*datastore.Span, bool, error) {
 
 	ds.Range.Inclusion = ps.Range.Inclusion
 	return ds, empty, nil
+}
+
+func (this *spanScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

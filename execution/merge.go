@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -64,7 +65,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		addTime := func() {
 			context.AddPhaseTime(MERGE, this.duration)
-			this.plan.AddTime(this.duration)
+			this.addTime(this.duration)
 		}
 		defer addTime()
 
@@ -233,6 +234,22 @@ func (this *Merge) wrapChild(op Operator) (Operator, *Channel) {
 	op.SetParent(this)
 	op.SetStop(this)
 	return op, ch
+}
+
+func (this *Merge) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		if this.update != nil {
+			r["update"] = this.update
+		}
+		if this.delete != nil {
+			r["delete"] = this.delete
+		}
+		if this.insert != nil {
+			r["insert"] = this.insert
+		}
+	})
+	return json.Marshal(r)
 }
 
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)

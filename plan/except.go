@@ -43,10 +43,18 @@ func (this *ExceptAll) Second() Operator {
 }
 
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ExceptAll"}
-	r["first"] = this.first
-	r["second"] = this.second
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["first"] = this.first
+		r["second"] = this.second
+	}
+	return r
 }
 
 func (this *ExceptAll) UnmarshalJSON(body []byte) error {

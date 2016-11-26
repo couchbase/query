@@ -30,6 +30,7 @@ type base struct {
 	parent      Parent
 	once        sync.Once
 	batch       []value.AnnotatedValue
+	execTime    time.Duration
 	duration    time.Duration
 	chanTime    time.Duration
 }
@@ -359,4 +360,14 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 	}
 
 	return keys, true
+}
+
+func (this *base) addTime(t time.Duration) {
+	go_atomic.AddInt64((*int64)(&this.execTime), int64(t))
+}
+
+func (this *base) marshalTimes(r map[string]interface{}) {
+	if this.execTime != 0 {
+		r["#time"] = this.execTime.String()
+	}
 }

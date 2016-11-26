@@ -38,9 +38,17 @@ func (this *DistinctScan) Scan() Operator {
 }
 
 func (this *DistinctScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DistinctScan"}
-	r["scan"] = this.scan
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["scan"] = this.scan
+	}
+	return r
 }
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {

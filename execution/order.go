@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -91,7 +92,7 @@ func (this *Order) afterItems(context *Context) {
 	sort.Sort(this)
 	t := time.Since(timer)
 	context.AddPhaseTime(SORT, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 
 	context.SetSortCount(uint64(this.Len()))
 	context.AddPhaseCount(SORT, uint64(this.Len()))
@@ -168,4 +169,11 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 
 func (this *Order) Swap(i, j int) {
 	this.values[i], this.values[j] = this.values[j], this.values[i]
+}
+
+func (this *Order) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

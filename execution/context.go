@@ -291,8 +291,9 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 
 	// Collect subquery results
-	collect := NewCollect()
-	sequence := NewSequence(pipeline, collect)
+	// FIXME: this should handled by the planner
+	collect := NewCollect(plan.NewCollect())
+	sequence := NewSequence(plan.NewSequence(), pipeline, collect)
 	sequence.RunOnce(this, parent)
 
 	// Await completion

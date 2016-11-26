@@ -42,9 +42,18 @@ func (this *Sequence) Children() []Operator {
 }
 
 func (this *Sequence) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Sequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Sequence"}
 	r["~children"] = this.children
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["~children"] = this.children
+	}
+	return r
 }
 
 func (this *Sequence) UnmarshalJSON(body []byte) error {

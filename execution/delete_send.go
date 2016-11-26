@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -120,7 +121,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	t := time.Since(timer)
 	context.AddPhaseTime(DELETE, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(deleted_keys)))
@@ -140,4 +141,11 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 func (this *SendDelete) readonly() bool {
 	return false
+}
+
+func (this *SendDelete) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

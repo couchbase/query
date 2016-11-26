@@ -10,16 +10,21 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type Stream struct {
 	base
+	plan *plan.Stream
 }
 
-func NewStream() *Stream {
+func NewStream(plan *plan.Stream) *Stream {
 	rv := &Stream{
 		base: newRedirectBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -31,7 +36,10 @@ func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Stream) Copy() Operator {
-	return &Stream{this.base.copy()}
+	return &Stream{
+		this.base.copy(),
+		this.plan,
+	}
 }
 
 func (this *Stream) RunOnce(context *Context, parent value.Value) {
@@ -44,4 +52,11 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 
 func (this *Stream) afterItems(context *Context) {
 	context.CloseResults()
+}
+
+func (this *Stream) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

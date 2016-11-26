@@ -41,9 +41,16 @@ func (this *KeyScan) Keys() expression.Expression {
 }
 
 func (this *KeyScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "KeyScan"}
 	r["keys"] = expression.NewStringer().Visit(this.keys)
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *KeyScan) UnmarshalJSON(body []byte) error {

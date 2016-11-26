@@ -40,9 +40,16 @@ func (this *Let) Bindings() expression.Bindings {
 }
 
 func (this *Let) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Let"}
 	r["bindings"] = this.bindings
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Let) UnmarshalJSON(body []byte) error {

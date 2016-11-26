@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"sync"
@@ -53,7 +54,7 @@ func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	t := time.Since(start) - this.joinTime - this.chanTime
 	context.AddPhaseTime(INDEX_JOIN, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 }
 
 func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -207,4 +208,11 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
 	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+}
+
+func (this *IndexJoin) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

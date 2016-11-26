@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -68,7 +69,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 		t := time.Since(timer)
 		context.AddPhaseTime(AUTHORIZE, t)
-		this.plan.AddTime(t)
+		this.addTime(t)
 
 		this.child.SetInput(this.input)
 		this.child.SetOutput(this.output)
@@ -92,4 +93,12 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 func (this *Authorize) ChildChannel() StopChannel {
 	return this.childChannel
+}
+
+func (this *Authorize) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	r["child"] = this.child
+	return json.Marshal(r)
 }

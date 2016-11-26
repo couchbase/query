@@ -47,9 +47,16 @@ func (this *DropIndex) Node() *algebra.DropIndex {
 }
 
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropIndex"}
 	r["node"] = this.node
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *DropIndex) UnmarshalJSON(body []byte) error {

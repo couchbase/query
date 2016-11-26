@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
@@ -137,4 +138,11 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 	}
 
 	return clone, nil
+}
+
+func (this *Set) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	_ "fmt"
 
 	"github.com/couchbase/query/errors"
@@ -71,4 +72,11 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 	})
+}
+
+func (this *ValueScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

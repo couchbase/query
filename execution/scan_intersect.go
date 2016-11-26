@@ -10,23 +10,27 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type IntersectScan struct {
 	base
+	plan         *plan.IntersectScan
 	scans        []Operator
 	counts       map[string]int
 	values       map[string]value.AnnotatedValue
 	childChannel StopChannel
 }
 
-func NewIntersectScan(scans []Operator) *IntersectScan {
+func NewIntersectScan(plan *plan.IntersectScan, scans []Operator) *IntersectScan {
 	rv := &IntersectScan{
 		base:         newBase(),
+		plan:         plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -40,7 +44,8 @@ func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntersectScan) Copy() Operator {
-	scans := _INDEX_SCAN_POOL.Get()
+	// FIXME reinstate _INDEX_SCAN_POOL if possible
+	scans := make([]Operator, 0, len(this.scans))
 
 	for _, s := range this.scans {
 		scans = append(scans, s.Copy())
@@ -48,6 +53,7 @@ func (this *IntersectScan) Copy() Operator {
 
 	return &IntersectScan{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		scans:        scans,
 		childChannel: make(StopChannel, len(scans)),
 	}
@@ -59,8 +65,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
 		defer func() {
-			_INDEX_SCAN_POOL.Put(this.scans)
-			this.scans = nil
 			_INDEX_COUNT_POOL.Put(this.counts)
 			this.counts = nil
 			_INDEX_VALUE_POOL.Put(this.values)
@@ -182,4 +186,12 @@ func (this *IntersectScan) notifyScans() {
 		default:
 		}
 	}
+}
+
+func (this *IntersectScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["scans"] = this.scans
+	})
+	return json.Marshal(r)
 }

@@ -22,6 +22,8 @@ type Operator interface {
 	json.Marshaler   // JSON encoding; used by EXPLAIN and PREPARE
 	json.Unmarshaler // JSON decoding: used by EXECUTE
 
+	MarshalBase(f func(map[string]interface{})) map[string]interface{} // JSON encoding helper for execution
+
 	Accept(visitor Visitor) (interface{}, error) // Visitor pattern
 	Readonly() bool                              // Used to determine read-only compliance
 	New() Operator                               // Dynamic constructor; used for unmarshaling

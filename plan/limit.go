@@ -40,9 +40,16 @@ func (this *Limit) Expression() expression.Expression {
 }
 
 func (this *Limit) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Limit"}
 	r["expr"] = expression.NewStringer().Visit(this.expr)
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Limit) UnmarshalJSON(body []byte) error {

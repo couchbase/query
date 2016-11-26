@@ -10,18 +10,23 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type Sequence struct {
 	base
+	plan         *plan.Sequence
 	children     []Operator
 	childChannel StopChannel
 }
 
-func NewSequence(children ...Operator) *Sequence {
+func NewSequence(plan *plan.Sequence, children ...Operator) *Sequence {
 	rv := &Sequence{
 		base:         newBase(),
+		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, 1),
 	}
@@ -35,7 +40,7 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
-	children := _SEQUENCE_POOL.Get()
+	children := make([]Operator, 0, len(this.children))
 
 	for _, child := range this.children {
 		children = append(children, child.Copy())
@@ -43,6 +48,7 @@ func (this *Sequence) Copy() Operator {
 
 	return &Sequence{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		children:     children,
 		childChannel: make(StopChannel, 1),
 	}
@@ -53,10 +59,6 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() {
-			_SEQUENCE_POOL.Put(this.children)
-			this.children = nil
-		}()
 
 		first_child := this.children[0]
 		first_child.SetInput(this.input)
@@ -97,4 +99,13 @@ func (this *Sequence) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-var _SEQUENCE_POOL = NewOperatorPool(32)
+func (this *Sequence) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["~children"] = this.children
+	})
+	return json.Marshal(r)
+}
+
+// FIXME reinstate _SEQUENCE_POOL
+// var _SEQUENCE_POOL = NewOperatorPool(32)

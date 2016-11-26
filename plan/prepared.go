@@ -40,6 +40,10 @@ func NewPrepared(operator Operator, signature value.Value) *Prepared {
 }
 
 func (this *Prepared) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 5)
 	r["operator"] = this.Operator
 	r["signature"] = this.signature
@@ -47,7 +51,10 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 	r["encoded_plan"] = this.encoded_plan
 	r["text"] = this.text
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {

@@ -47,6 +47,10 @@ func (this *Unnest) Alias() string {
 }
 
 func (this *Unnest) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Unnest"}
 
 	if this.term.Outer() {
@@ -58,7 +62,10 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 		r["as"] = this.alias
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {

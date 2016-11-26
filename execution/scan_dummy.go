@@ -10,18 +10,22 @@
 package execution
 
 import (
+	"encoding/json"
 	_ "fmt"
 
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type DummyScan struct {
 	base
+	plan *plan.DummyScan
 }
 
-func NewDummyScan() *DummyScan {
+func NewDummyScan(plan *plan.DummyScan) *DummyScan {
 	rv := &DummyScan{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -33,7 +37,10 @@ func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DummyScan) Copy() Operator {
-	return &DummyScan{this.base.copy()}
+	return &DummyScan{
+		this.base.copy(),
+		this.plan,
+	}
 }
 
 func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
@@ -51,6 +58,13 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 
 		this.sendItem(av)
 	})
+}
+
+func (this *DummyScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }
 
 var _EMPTY_OBJECT = map[string]interface{}{}

@@ -9,17 +9,24 @@
 
 package execution
 
-import "github.com/couchbase/query/value"
+import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/value"
+)
 
 type Prepare struct {
 	base
-	plan value.Value
+	plan     *plan.Prepare
+	prepared value.Value
 }
 
-func NewPrepare(plan value.Value) *Prepare {
+func NewPrepare(plan *plan.Prepare, prepared value.Value) *Prepare {
 	rv := &Prepare{
-		base: newBase(),
-		plan: plan,
+		base:     newBase(),
+		plan:     plan,
+		prepared: prepared,
 	}
 
 	rv.output = rv
@@ -31,7 +38,11 @@ func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Prepare) Copy() Operator {
-	return &Prepare{this.base.copy(), this.plan}
+	return &Prepare{
+		this.base.copy(),
+		this.plan,
+		this.prepared,
+	}
 }
 
 func (this *Prepare) RunOnce(context *Context, parent value.Value) {
@@ -39,8 +50,15 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		value := value.NewAnnotatedValue(this.plan)
+		value := value.NewAnnotatedValue(this.prepared)
 		this.sendItem(value)
 
 	})
+}
+
+func (this *Prepare) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

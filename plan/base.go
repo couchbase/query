@@ -9,31 +9,16 @@
 
 package plan
 
-import (
-	"sync/atomic"
-	"time"
-)
-
 type readonly struct {
-	duration time.Duration
 }
 
 func (this *readonly) Readonly() bool {
 	return true
 }
 
-func (this *readonly) AddTime(t time.Duration) {
-	atomic.AddInt64((*int64)(&this.duration), int64(t))
-}
-
 type readwrite struct {
-	duration time.Duration
 }
 
 func (this *readwrite) Readonly() bool {
 	return false
-}
-
-func (this *readwrite) AddTime(t time.Duration) {
-	atomic.AddInt64((*int64)(&this.duration), int64(t))
 }

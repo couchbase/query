@@ -62,6 +62,10 @@ func (this *PrimaryScan) Limit() expression.Expression {
 }
 
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "PrimaryScan"}
 	r["index"] = this.index.Name()
 	r["namespace"] = this.term.Namespace()
@@ -71,11 +75,11 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	if this.limit != nil {
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
-	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *PrimaryScan) UnmarshalJSON(body []byte) error {

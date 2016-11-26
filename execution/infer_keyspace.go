@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -54,7 +55,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 		addTime := func() {
 			t := time.Since(timer) - this.chanTime
 			context.AddPhaseTime(INFER, t)
-			this.plan.AddTime(t)
+			this.addTime(t)
 		}
 		defer addTime()
 		using := this.plan.Node().Using()
@@ -85,4 +86,11 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 	})
+}
+
+func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

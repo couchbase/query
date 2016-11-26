@@ -74,8 +74,8 @@ type Request interface {
 	State() State
 	Halted() bool
 	Credentials() datastore.Credentials
-	SetTimings(p plan.Operator)
-	GetTimings() plan.Operator
+	SetTimings(o execution.Operator)
+	GetTimings() execution.Operator
 	OriginalHttpRequest() *http.Request
 }
 
@@ -168,7 +168,7 @@ type BaseRequest struct {
 	stopNotify     chan bool // notified when request execution stops
 	stopResult     chan bool // stop consuming results
 	stopExecute    chan bool // stop executing request
-	timings        plan.Operator
+	timings        execution.Operator
 }
 
 type requestIDImpl struct {
@@ -497,11 +497,11 @@ func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 	return p
 }
 
-func (this *BaseRequest) SetTimings(p plan.Operator) {
-	this.timings = p
+func (this *BaseRequest) SetTimings(o execution.Operator) {
+	this.timings = o
 }
 
-func (this *BaseRequest) GetTimings() plan.Operator {
+func (this *BaseRequest) GetTimings() execution.Operator {
 	return this.timings
 }
 

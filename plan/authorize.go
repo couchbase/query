@@ -49,13 +49,18 @@ func (this *Authorize) Child() Operator {
 }
 
 func (this *Authorize) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Authorize"}
 	r["privileges"] = this.privs
-	r["child"] = this.child
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
+	} else {
+		r["child"] = this.child
 	}
-	return json.Marshal(r)
+	return r
 }
 
 func (this *Authorize) UnmarshalJSON(body []byte) error {

@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -46,4 +48,11 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 	av.SetAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
 	return this.sendItem(av)
+}
+
+func (this *Alias) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

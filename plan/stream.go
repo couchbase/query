@@ -28,8 +28,15 @@ func (this *Stream) New() Operator {
 }
 
 func (this *Stream) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Stream"}
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Stream) UnmarshalJSON([]byte) error {

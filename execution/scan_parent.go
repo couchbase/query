@@ -10,16 +10,21 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type ParentScan struct {
 	base
+	plan *plan.ParentScan
 }
 
-func NewParentScan() *ParentScan {
+func NewParentScan(plan *plan.ParentScan) *ParentScan {
 	rv := &ParentScan{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -31,7 +36,10 @@ func (this *ParentScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ParentScan) Copy() Operator {
-	return &ParentScan{this.base.copy()}
+	return &ParentScan{
+		this.base.copy(),
+		this.plan,
+	}
 }
 
 func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
@@ -44,4 +52,11 @@ func (this *ParentScan) RunOnce(context *Context, parent value.Value) {
 		// correlated and annotated aspects
 		this.sendItem(parent.Copy().(value.AnnotatedValue))
 	})
+}
+
+func (this *ParentScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"math"
 	"time"
 
@@ -63,7 +64,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 
 		t := time.Since(timer) - this.chanTime
 		context.AddPhaseTime(PRIMARY_SCAN, t)
-		this.plan.AddTime(t)
+		this.addTime(t)
 	}
 	defer addTime()
 
@@ -135,7 +136,7 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 		t := time.Since(timer) - this.chanTime
 		context.AddPhaseTime(PRIMARY_SCAN, t)
-		this.plan.AddTime(t)
+		this.addTime(t)
 	}
 	defer addTime()
 
@@ -239,4 +240,11 @@ func (this *PrimaryScan) newIndexConnection(context *Context) *datastore.IndexCo
 	}
 
 	return conn
+}
+
+func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

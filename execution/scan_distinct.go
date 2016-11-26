@@ -10,23 +10,27 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type DistinctScan struct {
 	base
+	plan         *plan.DistinctScan
 	scan         Operator
 	keys         map[string]bool
 	childChannel StopChannel
 }
 
-func NewDistinctScan(scan Operator) *DistinctScan {
+func NewDistinctScan(plan *plan.DistinctScan, scan Operator) *DistinctScan {
 	rv := &DistinctScan{
 		base:         newBase(),
+		plan:         plan,
 		scan:         scan,
 		childChannel: make(StopChannel, 1),
 	}
@@ -121,6 +125,14 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue, context *Context
 
 	this.keys[key] = true
 	return this.sendItem(item)
+}
+
+func (this *DistinctScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	r["scan"] = this.scan
+	return json.Marshal(r)
 }
 
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

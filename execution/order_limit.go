@@ -11,6 +11,7 @@ package execution
 
 import (
 	"container/heap"
+	"encoding/json"
 
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -217,4 +218,11 @@ func (this *OrderLimit) Pop() interface{} {
 	item := this.values[index]
 	this.values = this.values[0:index:cap(this.values)]
 	return item
+}
+
+func (this *OrderLimit) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

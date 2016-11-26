@@ -10,20 +10,25 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type ExceptAll struct {
 	base
+	plan         *plan.ExceptAll
 	first        Operator
 	second       Operator
 	childChannel StopChannel
 	set          *value.Set
 }
 
-func NewExceptAll(first, second Operator) *ExceptAll {
+func NewExceptAll(plan *plan.ExceptAll, first, second Operator) *ExceptAll {
 	rv := &ExceptAll{
 		base:         newBase(),
+		plan:         plan,
 		first:        first,
 		second:       second,
 		childChannel: make(StopChannel, 2),
@@ -40,6 +45,7 @@ func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
 func (this *ExceptAll) Copy() Operator {
 	rv := &ExceptAll{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		first:        this.first.Copy(),
 		second:       this.second.Copy(),
 		childChannel: make(StopChannel, 2),
@@ -53,8 +59,10 @@ func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
-	distinct := NewDistinct(nil, true)
-	sequence := NewSequence(this.second, distinct)
+
+	// FIXME: this should be handled by the planner
+	distinct := NewDistinct(plan.NewDistinct(), true)
+	sequence := NewSequence(plan.NewSequence(), this.second, distinct)
 	sequence.SetParent(this)
 	go sequence.RunOnce(context, parent)
 
@@ -93,4 +101,13 @@ func (this *ExceptAll) afterItems(context *Context) {
 
 func (this *ExceptAll) ChildChannel() StopChannel {
 	return this.childChannel
+}
+
+func (this *ExceptAll) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["first"] = this.first
+		r["second"] = this.second
+	})
+	return json.Marshal(r)
 }

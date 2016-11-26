@@ -441,6 +441,7 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}
 
+	request.SetTimings(operator)
 	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
 
 	if request.State() == FATAL {
@@ -496,7 +497,6 @@ func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepar
 		request.Output().AddPhaseTime(execution.PARSE, prep.Sub(parse))
 	}
 
-	request.SetTimings(prepared.Operator)
 	if logging.LogLevel() >= logging.DEBUG {
 		// log EXPLAIN for the request
 		logExplain(prepared)

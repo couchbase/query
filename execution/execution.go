@@ -16,6 +16,8 @@ data-parallel to the extent possible.
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -35,6 +37,7 @@ type Operator interface {
 	SetParent(parent Parent)                      // Can be set
 	Copy() Operator                               // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value) // Uses Once.Do() to run exactly once; never panics
+	json.Marshaler                                // used for profiling
 }
 
 type Parent interface {

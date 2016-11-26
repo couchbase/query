@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -52,7 +53,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		addTime := func() {
 			t := time.Since(timer) - this.chanTime
 			context.AddPhaseTime(INDEX_COUNT, t)
-			this.plan.AddTime(t)
+			this.addTime(t)
 		}
 		defer addTime()
 
@@ -103,4 +104,11 @@ func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vect
 	}
 
 	this.childChannel <- count
+}
+
+func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

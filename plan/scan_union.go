@@ -38,9 +38,17 @@ func (this *UnionScan) Scans() []Operator {
 }
 
 func (this *UnionScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "UnionScan"}
-	r["scans"] = this.scans
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["scans"] = this.scans
+	}
+	return r
 }
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {

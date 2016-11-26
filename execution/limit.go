@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -74,4 +75,10 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 	} else {
 		return false
 	}
+}
+func (this *Limit) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

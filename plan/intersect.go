@@ -43,10 +43,18 @@ func (this *IntersectAll) Second() Operator {
 }
 
 func (this *IntersectAll) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IntersectAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IntersectAll"}
-	r["first"] = this.first
-	r["second"] = this.second
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["first"] = this.first
+		r["second"] = this.second
+	}
+	return r
 }
 
 func (this *IntersectAll) UnmarshalJSON(body []byte) error {

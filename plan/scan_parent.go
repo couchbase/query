@@ -31,8 +31,15 @@ func (this *ParentScan) New() Operator {
 }
 
 func (this *ParentScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *ParentScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ParentScan"}
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *ParentScan) UnmarshalJSON([]byte) error {

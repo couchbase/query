@@ -43,9 +43,16 @@ func (this *ValueScan) Values() algebra.Pairs {
 }
 
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *ValueScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ValueScan"}
 	r["values"] = this.values.Expression().String()
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *ValueScan) UnmarshalJSON(body []byte) error {

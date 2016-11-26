@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/plan"
@@ -51,7 +52,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		t := time.Since(timer)
 		context.AddPhaseTime(COUNT, t)
-		this.plan.AddTime(t)
+		this.addTime(t)
 
 		if e != nil {
 			context.Error(e)
@@ -63,4 +64,11 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 		av.SetAttachment("count", value.NewValue(count))
 		this.sendItem(av)
 	})
+}
+
+func (this *CountScan) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

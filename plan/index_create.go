@@ -50,6 +50,10 @@ func (this *CreateIndex) Node() *algebra.CreateIndex {
 }
 
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "CreateIndex"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -69,7 +73,10 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 		r["with"] = this.node.With()
 	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *CreateIndex) UnmarshalJSON(body []byte) error {

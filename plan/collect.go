@@ -30,8 +30,15 @@ func (this *Collect) New() Operator {
 }
 
 func (this *Collect) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Collect) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Collect"}
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *Collect) UnmarshalJSON([]byte) error {

@@ -54,6 +54,10 @@ func (this *AlterIndex) Keyspace() datastore.Keyspace {
 }
 
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "AlterIndex"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
@@ -61,7 +65,10 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	r["namespace"] = this.keyspace.NamespaceId()
 	r["rename"] = this.node.Rename()
 	r["using"] = this.node.Using()
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *AlterIndex) UnmarshalJSON(body []byte) error {

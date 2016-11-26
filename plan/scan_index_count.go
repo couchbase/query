@@ -66,6 +66,10 @@ func (this *IndexCountScan) Covering() bool {
 }
 
 func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *IndexCountScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexCountScan"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
@@ -78,11 +82,10 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 		r["covers"] = this.covers
 	}
 
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
+	if f != nil {
+		f(r)
 	}
-
-	return json.Marshal(r)
+	return r
 }
 
 func (this *IndexCountScan) UnmarshalJSON(body []byte) error {

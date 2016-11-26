@@ -59,6 +59,10 @@ func (this *SendUpsert) Value() expression.Expression {
 }
 
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "SendUpsert"}
 	r["keyspace"] = this.keyspace.Name()
 	r["namespace"] = this.keyspace.NamespaceId()
@@ -71,11 +75,11 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	if this.value != nil {
 		r["value"] = this.value.String()
 	}
-	if this.duration != 0 {
-		r["#time"] = this.duration.String()
-	}
 
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
 }
 
 func (this *SendUpsert) UnmarshalJSON(body []byte) error {

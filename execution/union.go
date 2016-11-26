@@ -10,18 +10,23 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type UnionAll struct {
 	base
+	plan         *plan.UnionAll
 	children     []Operator
 	childChannel StopChannel
 }
 
-func NewUnionAll(children ...Operator) *UnionAll {
+func NewUnionAll(plan *plan.UnionAll, children ...Operator) *UnionAll {
 	rv := &UnionAll{
 		base:         newBase(),
+		plan:         plan,
 		children:     children,
 		childChannel: make(StopChannel, len(children)),
 	}
@@ -37,10 +42,11 @@ func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
 func (this *UnionAll) Copy() Operator {
 	rv := &UnionAll{
 		base:         this.base.copy(),
+		plan:         this.plan,
 		childChannel: make(StopChannel, len(this.children)),
 	}
 
-	children := _UNION_POOL.Get()
+	children := make([]Operator, 0, len(this.children))
 
 	for _, c := range this.children {
 		children = append(children, c.Copy())
@@ -55,10 +61,6 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() {
-			_UNION_POOL.Put(this.children)
-			this.children = nil
-		}()
 
 		n := len(this.children)
 
@@ -89,4 +91,13 @@ func (this *UnionAll) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-var _UNION_POOL = NewOperatorPool(4)
+func (this *UnionAll) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+		r["children"] = this.children
+	})
+	return json.Marshal(r)
+}
+
+// FIXME reinstate if possible
+// var _UNION_POOL = NewOperatorPool(4)

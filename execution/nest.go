@@ -10,6 +10,7 @@
 package execution
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/plan"
@@ -46,7 +47,7 @@ func (this *Nest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 	t := this.duration - this.chanTime
 	context.AddPhaseTime(NEST, t)
-	this.plan.AddTime(t)
+	this.addTime(t)
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -84,4 +85,11 @@ func (this *Nest) flushBatch(context *Context) bool {
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
 	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+}
+
+func (this *Nest) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

@@ -10,16 +10,21 @@
 package execution
 
 import (
+	"encoding/json"
+
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type FinalProject struct {
 	base
+	plan *plan.FinalProject
 }
 
-func NewFinalProject() *FinalProject {
+func NewFinalProject(plan *plan.FinalProject) *FinalProject {
 	rv := &FinalProject{
 		base: newBase(),
+		plan: plan,
 	}
 
 	rv.output = rv
@@ -31,7 +36,10 @@ func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *FinalProject) Copy() Operator {
-	return &FinalProject{this.base.copy()}
+	return &FinalProject{
+		this.base.copy(),
+		this.plan,
+	}
 }
 
 func (this *FinalProject) RunOnce(context *Context, parent value.Value) {
@@ -46,4 +54,11 @@ func (this *FinalProject) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	return this.sendItem(item)
+}
+
+func (this *FinalProject) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

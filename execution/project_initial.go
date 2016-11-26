@@ -10,6 +10,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -137,4 +139,11 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	}
 
 	return this.sendItem(pv)
+}
+
+func (this *InitialProject) MarshalJSON() ([]byte, error) {
+	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+		this.marshalTimes(r)
+	})
+	return json.Marshal(r)
 }

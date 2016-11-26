@@ -39,10 +39,19 @@ func (this *Explain) Operator() Operator {
 }
 
 func (this *Explain) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.MarshalBase(nil))
+}
+
+func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 2)
 	r["plan"] = this.op
 	r["text"] = this.text
-	return json.Marshal(r)
+	if f != nil {
+		f(r)
+	} else {
+		r["plan"] = this.op
+	}
+	return r
 }
 
 func (this *Explain) UnmarshalJSON(body []byte) error {

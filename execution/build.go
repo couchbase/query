@@ -67,7 +67,7 @@ func (this *builder) VisitPrimaryScan(plan *plan.PrimaryScan) (interface{}, erro
 }
 
 func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
-	return NewParentScan(), nil
+	return NewParentScan(plan), nil
 }
 
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
@@ -105,7 +105,7 @@ func (this *builder) VisitValueScan(plan *plan.ValueScan) (interface{}, error) {
 }
 
 func (this *builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
-	return NewDummyScan(), nil
+	return NewDummyScan(plan), nil
 }
 
 func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
@@ -113,7 +113,8 @@ func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	scans := _INDEX_SCAN_POOL.Get()
+	// FIXME reinstate _INDEX_SCAN_POOL if possible
+	scans := make([]Operator, 0, len(plan.Scans()))
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
@@ -124,11 +125,12 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewIntersectScan(scans), nil
+	return NewIntersectScan(plan, scans), nil
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
-	scans := _INDEX_SCAN_POOL.Get()
+	// FIXME reinstate _INDEX_SCAN_POOL if possible
+	scans := make([]Operator, 0, len(plan.Scans()))
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
@@ -139,7 +141,7 @@ func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
 		scans = append(scans, s.(Operator))
 	}
 
-	return NewUnionScan(scans), nil
+	return NewUnionScan(plan, scans), nil
 }
 
 func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, error) {
@@ -148,7 +150,7 @@ func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, er
 		return nil, err
 	}
 
-	return NewDistinctScan(scan.(Operator)), nil
+	return NewDistinctScan(plan, scan.(Operator)), nil
 }
 
 // Fetch
@@ -211,7 +213,7 @@ func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}
 }
 
 func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
-	return NewFinalProject(), nil
+	return NewFinalProject(plan), nil
 }
 
 func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
@@ -225,7 +227,8 @@ func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 
 // Set operators
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
-	children := _UNION_POOL.Get()
+	// FIXME reinstate _UNION_POOL if possible
+	children := make([]Operator, 0, len(plan.Children()))
 
 	for _, child := range plan.Children() {
 		c, e := child.Accept(this)
@@ -236,7 +239,7 @@ func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
 		children = append(children, c.(Operator))
 	}
 
-	return NewUnionAll(children...), nil
+	return NewUnionAll(plan, children...), nil
 }
 
 func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, error) {
@@ -250,7 +253,7 @@ func (this *builder) VisitIntersectAll(plan *plan.IntersectAll) (interface{}, er
 		return nil, e
 	}
 
-	return NewIntersectAll(first.(Operator), second.(Operator)), nil
+	return NewIntersectAll(plan, first.(Operator), second.(Operator)), nil
 }
 
 func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
@@ -264,7 +267,7 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 		return nil, e
 	}
 
-	return NewExceptAll(first.(Operator), second.(Operator)), nil
+	return NewExceptAll(plan, first.(Operator), second.(Operator)), nil
 }
 
 // Order
@@ -381,7 +384,9 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 
 // Sequence
 func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	children := _SEQUENCE_POOL.Get()
+	children := make([]Operator, 0, len(plan.Children()))
+	//	FIXME reinstate _SEQUENCE_POOL
+	//	children := _SEQUENCE_POOL.Get()
 
 	for _, pchild := range plan.Children() {
 		child, err := pchild.Accept(this)
@@ -392,22 +397,22 @@ func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
 		children = append(children, child.(Operator))
 	}
 
-	return NewSequence(children...), nil
+	return NewSequence(plan, children...), nil
 }
 
 // Discard
 func (this *builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
-	return NewDiscard(), nil
+	return NewDiscard(plan), nil
 }
 
 // Stream
 func (this *builder) VisitStream(plan *plan.Stream) (interface{}, error) {
-	return NewStream(), nil
+	return NewStream(plan), nil
 }
 
 // Collect
 func (this *builder) VisitCollect(plan *plan.Collect) (interface{}, error) {
-	return NewCollect(), nil
+	return NewCollect(plan), nil
 }
 
 // CreateIndex
@@ -437,7 +442,7 @@ func (this *builder) VisitBuildIndexes(plan *plan.BuildIndexes) (interface{}, er
 
 // Prepare
 func (this *builder) VisitPrepare(plan *plan.Prepare) (interface{}, error) {
-	return NewPrepare(plan.Prepared()), nil
+	return NewPrepare(plan, plan.Prepared()), nil
 }
 
 // Explain
