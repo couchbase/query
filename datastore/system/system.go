@@ -29,7 +29,7 @@ const KEYSPACE_NAME_DUAL = "dual"
 const KEYSPACE_NAME_PREPAREDS = "prepareds"
 const KEYSPACE_NAME_REQUESTS = "completed_requests"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
-const KEYSPACE_NAME_USER_ROLES = "user_roles"
+const KEYSPACE_NAME_USER_INFO = "user_info"
 
 type store struct {
 	actualStore              datastore.Datastore
@@ -93,8 +93,8 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "INFER")
 }
 
-func (s *store) UserRoles() (value.Value, errors.Error) {
-	return s.actualStore.UserRoles()
+func (s *store) UserInfo() (value.Value, errors.Error) {
+	return s.actualStore.UserInfo()
 }
 
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {

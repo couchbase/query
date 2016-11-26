@@ -51,18 +51,18 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get keyspace by name %v", err)
 	}
 
-	ur, err := p.KeyspaceByName("user_roles")
+	ui, err := p.KeyspaceByName("user_info")
 	if err != nil {
 		t.Fatalf("failed to get keyspace by name %v", err)
 	}
 
-	// Should be able to get a Value for UserRoles.
-	v, err := s.UserRoles()
+	// Should be able to get a Value for UserInfo.
+	v, err := s.UserInfo()
 	if err != nil {
-		t.Fatalf("failed to get stub user roles: %v", err)
+		t.Fatalf("failed to get stub user info: %v", err)
 	}
 	if v == nil {
-		t.Fatalf("failed to get value for user roles: nil")
+		t.Fatalf("failed to get value for user info: nil")
 	}
 
 	// Expect count of 2 namespaces for the namespaces keyspace
@@ -77,10 +77,10 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get expected keyspaces keyspace count %v", err)
 	}
 
-	// Expect count of 2 for the user_roles keyspace
-	ur_c, err := ur.Count()
-	if err != nil || ur_c != 2 {
-		t.Fatalf("faied to get expect user_roles keyspace count %v", err)
+	// Expect count of 2 for the user_info keyspace
+	ui_c, err := ui.Count()
+	if err != nil || ui_c != 2 {
+		t.Fatalf("faied to get expect user_info keyspace count %v", err)
 
 	}
 
@@ -102,13 +102,13 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("found unexpected name in index scan")
 	}
 
-	// Scan all Primary Index Entries of the user_roles keyspace
-	ur_e, err := doPrimaryIndexScan(t, ur)
+	// Scan all Primary Index Entries of the user_info keyspace
+	ui_e, err := doPrimaryIndexScan(t, ui)
 	if err != nil {
-		t.Fatalf("unable to scan index of system:user_roles: %v", err)
+		t.Fatalf("unable to scan index of system:user_info: %v", err)
 	}
-	if !ur_e["ivanivanov"] || !ur_e["petrpetrov"] {
-		t.Fatalf("unexpected results from scan of syste:user_roles: %v", ur_e)
+	if !ui_e["ivanivanov"] || !ui_e["petrpetrov"] {
+		t.Fatalf("unexpected results from scan of syste:user_info: %v", ui_e)
 	}
 
 	// Scan all Primary Index entries of the indexes keyspace
@@ -133,8 +133,8 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to fetch expected key from keyspaces keyspace")
 	}
 
-	// Fetch on the user_roles keyspace - expect to find a value for this key:
-	vals, errs = ur.Fetch([]string{"ivanivanov"})
+	// Fetch on the user_info keyspace - expect to find a value for this key:
+	vals, errs = ui.Fetch([]string{"ivanivanov"})
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}

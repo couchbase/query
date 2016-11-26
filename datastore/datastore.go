@@ -45,7 +45,7 @@ type Datastore interface {
 	SetLogLevel(level logging.Level)                               // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)      // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                     // List of schema inference providers
-	UserRoles() (value.Value, errors.Error)                        // The users, and their roles. JSON data.
+	UserInfo() (value.Value, errors.Error)                         // The users, and their roles. JSON data.
 }
 
 // Namespace represents a logical boundary that is within a datastore and above

@@ -21,18 +21,18 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-// A single-entry cache for storing the list of users and roles.
+// A single-entry cache for storing the list of users and their info.
 // We are not particularly concerned with performance here, but
 // we do want to make sure make multiple requests for the same data within a query.
 // This requires us to store the data somewhere after retrieval.
-type userRolesCache struct {
+type userInfoCache struct {
 	sync.Mutex
 	curValue     map[string]value.Value
 	whenObtained time.Time
 	datastore    datastore.Datastore // where to get data from
 }
 
-func (cache *userRolesCache) getNumUsers() (int, errors.Error) {
+func (cache *userInfoCache) getNumUsers() (int, errors.Error) {
 	cache.Lock()
 	defer cache.Unlock()
 	err := cache.makeCurrent()
@@ -43,10 +43,10 @@ func (cache *userRolesCache) getNumUsers() (int, errors.Error) {
 }
 
 // Cache should already be locked when this function is called.
-func (cache *userRolesCache) makeCurrent() errors.Error {
+func (cache *userInfoCache) makeCurrent() errors.Error {
 	if cache.curValue == nil || time.Since(cache.whenObtained).Seconds() > 5.0 {
 		// Refresh the cache
-		val, err := cache.datastore.UserRoles()
+		val, err := cache.datastore.UserInfo()
 		if err != nil {
 			cache.whenObtained = time.Now()
 			cache.curValue = nil
@@ -58,18 +58,18 @@ func (cache *userRolesCache) makeCurrent() errors.Error {
 		data := val.Actual()
 		sliceOfUsers, ok := data.([]interface{})
 		if !ok {
-			return errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_roles received from server: %v", data))
+			return errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_info received from server: %v", data))
 		}
 		newMap := make(map[string]value.Value, len(sliceOfUsers))
 		for i, u := range sliceOfUsers {
 			userAsMap, ok := u.(map[string]interface{})
 			if !ok {
-				return errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_roles at position %d: %v", i, u))
+				return errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_info at position %d: %v", i, u))
 			}
 			id := userAsMap["id"]
 			idAsString, ok := id.(string)
 			if !ok {
-				return errors.NewInvalidValueError(fmt.Sprintf("Could not find id in user_roles data at position %d: %v", i, u))
+				return errors.NewInvalidValueError(fmt.Sprintf("Could not find id in user_info data at position %d: %v", i, u))
 			}
 			newMap[idAsString] = value.NewValue(u)
 		}
@@ -79,7 +79,7 @@ func (cache *userRolesCache) makeCurrent() errors.Error {
 	return nil
 }
 
-func (cache *userRolesCache) fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (cache *userInfoCache) fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	cache.Lock()
 	defer cache.Unlock()
 	err := cache.makeCurrent()
@@ -114,7 +114,7 @@ func (cache *userRolesCache) fetch(keys []string) ([]value.AnnotatedPair, []erro
 	return rv, errs
 }
 
-func (cache *userRolesCache) scanEntries(limit int64, channel datastore.EntryChannel) {
+func (cache *userInfoCache) scanEntries(limit int64, channel datastore.EntryChannel) {
 	cache.Lock()
 	err := cache.makeCurrent()
 	if err != nil {
@@ -123,7 +123,7 @@ func (cache *userRolesCache) scanEntries(limit int64, channel datastore.EntryCha
 	}
 
 	// Put the keys into a temporary store, so we can produce them without holding
-	// the lock on userRolesCache. The fetch operator also needs the lock.
+	// the lock on userInfoCache. The fetch operator also needs the lock.
 	size := limit
 	if size < 1 {
 		size = 1
@@ -148,141 +148,141 @@ func (cache *userRolesCache) scanEntries(limit int64, channel datastore.EntryCha
 	}
 }
 
-func newUserRolesCache(ds datastore.Datastore) *userRolesCache {
-	return &userRolesCache{datastore: ds}
+func newUserInfoCache(ds datastore.Datastore) *userInfoCache {
+	return &userInfoCache{datastore: ds}
 }
 
-type userRolesKeyspace struct {
+type userInfoKeyspace struct {
 	namespace *namespace
 	name      string
 	indexer   datastore.Indexer
-	cache     *userRolesCache
+	cache     *userInfoCache
 }
 
-func (b *userRolesKeyspace) Release() {
+func (b *userInfoKeyspace) Release() {
 }
 
-func (b *userRolesKeyspace) NamespaceId() string {
+func (b *userInfoKeyspace) NamespaceId() string {
 	return b.namespace.Id()
 }
 
-func (b *userRolesKeyspace) Id() string {
+func (b *userInfoKeyspace) Id() string {
 	return b.Name()
 }
 
-func (b *userRolesKeyspace) Name() string {
+func (b *userInfoKeyspace) Name() string {
 	return b.name
 }
 
-func (b *userRolesKeyspace) Count() (int64, errors.Error) {
+func (b *userInfoKeyspace) Count() (int64, errors.Error) {
 	v, err := b.cache.getNumUsers()
 	return int64(v), err
 }
 
-func (b *userRolesKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
+func (b *userInfoKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	return b.indexer, nil
 }
 
-func (b *userRolesKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
+func (b *userInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{b.indexer}, nil
 }
 
-func (b *userRolesKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
+func (b *userInfoKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []errors.Error) {
 	vals, errs := b.cache.fetch(keys)
 	return vals, errs
 }
 
-func (b *userRolesKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *userInfoKeyspace) Insert(inserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *userRolesKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
+func (b *userInfoKeyspace) Update(updates []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *userRolesKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
+func (b *userInfoKeyspace) Upsert(upserts []value.Pair) ([]value.Pair, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func (b *userRolesKeyspace) Delete(deletes []string) ([]string, errors.Error) {
+func (b *userInfoKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 	// FIXME
 	return nil, errors.NewSystemNotImplementedError(nil, "")
 }
 
-func newUserRolesKeyspace(p *namespace) (*userRolesKeyspace, errors.Error) {
-	b := new(userRolesKeyspace)
+func newUserInfoKeyspace(p *namespace) (*userInfoKeyspace, errors.Error) {
+	b := new(userInfoKeyspace)
 	b.namespace = p
-	b.name = KEYSPACE_NAME_USER_ROLES
+	b.name = KEYSPACE_NAME_USER_INFO
 
-	primary := &userRolesIndex{name: "#primary", keyspace: b}
+	primary := &userInfoIndex{name: "#primary", keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 
-	b.cache = newUserRolesCache(p.store)
+	b.cache = newUserInfoCache(p.store)
 
 	return b, nil
 }
 
-type userRolesIndex struct {
+type userInfoIndex struct {
 	name     string
-	keyspace *userRolesKeyspace
+	keyspace *userInfoKeyspace
 }
 
-func (pi *userRolesIndex) KeyspaceId() string {
+func (pi *userInfoIndex) KeyspaceId() string {
 	return pi.keyspace.Id()
 }
 
-func (pi *userRolesIndex) Id() string {
+func (pi *userInfoIndex) Id() string {
 	return pi.Name()
 }
 
-func (pi *userRolesIndex) Name() string {
+func (pi *userInfoIndex) Name() string {
 	return pi.name
 }
 
-func (pi *userRolesIndex) Type() datastore.IndexType {
+func (pi *userInfoIndex) Type() datastore.IndexType {
 	return datastore.DEFAULT
 }
 
-func (pi *userRolesIndex) SeekKey() expression.Expressions {
+func (pi *userInfoIndex) SeekKey() expression.Expressions {
 	return nil
 }
 
-func (pi *userRolesIndex) RangeKey() expression.Expressions {
+func (pi *userInfoIndex) RangeKey() expression.Expressions {
 	return nil
 }
 
-func (pi *userRolesIndex) Condition() expression.Expression {
+func (pi *userInfoIndex) Condition() expression.Expression {
 	return nil
 }
 
-func (pi *userRolesIndex) IsPrimary() bool {
+func (pi *userInfoIndex) IsPrimary() bool {
 	return true
 }
 
-func (pi *userRolesIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
+func (pi *userInfoIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
 	return datastore.ONLINE, "", nil
 }
 
-func (pi *userRolesIndex) Statistics(requestId string, span *datastore.Span) (
+func (pi *userInfoIndex) Statistics(requestId string, span *datastore.Span) (
 	datastore.Statistics, errors.Error) {
 	return nil, nil
 }
 
-func (pi *userRolesIndex) Drop(requestId string) errors.Error {
+func (pi *userInfoIndex) Drop(requestId string) errors.Error {
 	return errors.NewSystemIdxNoDropError(nil, "")
 }
 
-func (pi *userRolesIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
+func (pi *userInfoIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	pi.keyspace.cache.scanEntries(limit, conn.EntryChannel())
 }
 
-func (pi *userRolesIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
+func (pi *userInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 

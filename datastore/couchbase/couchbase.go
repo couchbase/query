@@ -107,6 +107,8 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 		permission = fmt.Sprintf("cluster.bucket[%s].data!read", bucket)
 	case datastore.PRIV_SYSTEM_READ:
 		permission = "cluster!read"
+	case datastore.PRIV_SECURITY_READ:
+		permission = "cluster.security!read"
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
@@ -225,7 +227,7 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 	return []datastore.Inferencer{s.inferencer}, nil
 }
 
-func (s *store) UserRoles() (value.Value, errors.Error) {
+func (s *store) UserInfo() (value.Value, errors.Error) {
 	data, err := s.client.GetUserRoles()
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err)
