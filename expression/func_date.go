@@ -2218,7 +2218,7 @@ Convert input milliseconds to time format by multiplying
 with 10^6 and using the Unix method from the time package.
 */
 func millisToTime(millis float64) time.Time {
-	return time.Unix(0, int64(millis*1000000.0))
+	return time.Unix(int64(millis)/1000, int64(math.Mod(millis, 1000)*1000000.0))
 }
 
 /*
@@ -2226,7 +2226,7 @@ Convert input time to milliseconds from nanoseconds returned
 by UnixNano(). Cast it to float64 number and return it.
 */
 func timeToMillis(t time.Time) float64 {
-	return float64(t.UnixNano() / 1000000)
+	return float64((t.Unix()*1000.0 + int64(t.Round(time.Millisecond).Nanosecond())/1000000.0))
 }
 
 /*
