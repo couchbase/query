@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
 	"time"
@@ -73,6 +74,13 @@ var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this fi
 // Monitoring API
 var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
+
+// GOGC
+var _GOGC_PERCENT = 200
+
+func init() {
+	debug.SetGCPercent(_GOGC_PERCENT)
+}
 
 func main() {
 	HideConsole(true)
