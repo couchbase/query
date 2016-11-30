@@ -202,7 +202,7 @@ func (pi *namespaceIndex) Scan(requestId string, span *datastore.Span, distinct 
 }
 
 func (pi *namespaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	namespaceIds, err := pi.keyspace.namespace.store.actualStore.NamespaceIds()

@@ -69,8 +69,8 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) errors.Error {
-	return nil
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+	return nil, nil
 }
 
 func (s *store) SetLogLevel(level logging.Level) {
@@ -659,7 +659,7 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 }
 
 func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	dirEntries, er := ioutil.ReadDir(pi.keyspace.path())

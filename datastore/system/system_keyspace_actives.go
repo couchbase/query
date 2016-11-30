@@ -261,11 +261,11 @@ func (pi *activeRequestsIndex) Drop(requestId string) errors.Error {
 
 func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	pi.ScanEntries(requestId, limit, cons, vector, nil, conn)
 }
 
 func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	server.ActiveRequestsForEach(func(id string, request server.Request) {

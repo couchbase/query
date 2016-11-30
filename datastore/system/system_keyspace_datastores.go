@@ -195,7 +195,7 @@ func (pi *storeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 }
 
 func (pi *storeIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	entry := datastore.IndexEntry{PrimaryKey: pi.keyspace.namespace.store.actualStore.Id()}

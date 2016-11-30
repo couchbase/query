@@ -184,7 +184,7 @@ func (pi *dualIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 }
 
 func (pi *dualIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	entry := datastore.IndexEntry{PrimaryKey: KEYSPACE_NAME_DUAL}
