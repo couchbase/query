@@ -199,8 +199,16 @@ func (this *PrimaryScan) scanEntries(context *Context, conn *datastore.IndexConn
 
 	keyspace := this.plan.Keyspace()
 	scanVector := context.ScanVectorSource().ScanVector(keyspace.NamespaceId(), keyspace.Name())
-	this.plan.Index().ScanEntries(context.RequestId(), limit,
-		context.ScanConsistency(), scanVector, conn)
+
+	index := this.plan.Index()
+	index_us, ok := index.(datastore.PrimaryIndexUserSensitive)
+	if ok {
+		index_us.ScanEntriesForUsers(context.RequestId(), limit,
+			context.ScanConsistency(), scanVector, context.AuthenticatedUsers(), conn)
+	} else {
+		index.ScanEntries(context.RequestId(), limit,
+			context.ScanConsistency(), scanVector, conn)
+	}
 }
 
 func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnection, chunkSize int, indexEntry *datastore.IndexEntry) {

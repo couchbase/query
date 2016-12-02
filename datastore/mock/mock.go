@@ -75,8 +75,8 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) errors.Error {
-	return nil
+func (s *store) Authorize(datastore.Privileges, datastore.Credentials, *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+	return nil, nil
 }
 
 func (s *store) SetLogLevel(level logging.Level) {
