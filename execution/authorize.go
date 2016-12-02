@@ -60,11 +60,12 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 		ds := datastore.GetDatastore()
 		if ds != nil {
-			err := ds.Authorize(this.plan.Privileges(), context.Credentials(), context.OriginalHttpRequest())
+			authenticatedUsers, err := ds.Authorize(this.plan.Privileges(), context.Credentials(), context.OriginalHttpRequest())
 			if err != nil {
 				context.Fatal(err)
 				return
 			}
+			context.authenticatedUsers = authenticatedUsers
 		}
 
 		t := time.Since(timer)
