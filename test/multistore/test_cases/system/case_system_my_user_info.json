@@ -1,0 +1,7 @@
+[
+	{
+	"statements": "select * from system:my_user_info",
+	"results": [
+	]
+	}
+]
