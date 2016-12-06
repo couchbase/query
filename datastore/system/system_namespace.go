@@ -132,5 +132,11 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[userInfo.Name()] = userInfo
 
+	myUserInfo, e := newMyUserInfoKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[myUserInfo.Name()] = myUserInfo
+
 	return nil
 }

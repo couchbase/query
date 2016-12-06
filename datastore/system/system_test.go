@@ -56,6 +56,11 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to get keyspace by name %v", err)
 	}
 
+	mui, err := p.KeyspaceByName("my_user_info")
+	if err != nil {
+		t.Fatalf("failed to get keyspace by name %v", err)
+	}
+
 	// Should be able to get a Value for UserInfo.
 	v, err := s.UserInfo()
 	if err != nil {
@@ -84,6 +89,12 @@ func TestSystem(t *testing.T) {
 
 	}
 
+	// Expect count of 2 for the my_user_info keyspace
+	mui_c, err := mui.Count()
+	if err != nil || mui_c != 2 {
+		t.Fatalf("faied to get expect my_user_info keyspace count %v", err)
+	}
+
 	// Expect count of 10 for the indexes keyspace (all the primary indexes)
 	ib_c, err := ib.Count()
 	if err != nil || ib_c != 10 {
@@ -109,6 +120,16 @@ func TestSystem(t *testing.T) {
 	}
 	if !ui_e["ivanivanov"] || !ui_e["petrpetrov"] {
 		t.Fatalf("unexpected results from scan of syste:user_info: %v", ui_e)
+	}
+
+	// Scan Primary Index Entries of the my_user_info keyspace
+	au := &datastore.AuthenticatedUsers{"ivanivanov"}
+	mui_e, err := doPrimaryIndexScanForUsers(t, mui, *au)
+	if err != nil {
+		t.Fatalf("unable to scan index of system:my_user_info: %v", err)
+	}
+	if !mui_e["ivanivanov"] || mui_e["petrpetrov"] {
+		t.Fatalf("unexpected results from scan of system:my_user_info: %v", ui_e)
 	}
 
 	// Scan all Primary Index entries of the indexes keyspace
@@ -208,6 +229,46 @@ func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, 
 
 	idx := pindexes[0]
 	go idx.ScanEntries("", nitems, datastore.UNBOUNDED, nil, conn)
+	for {
+		v, ok := <-conn.EntryChannel()
+		if !ok {
+			// Channel closed => Scan complete
+			return
+		}
+
+		m[v.PrimaryKey] = true
+	}
+}
+
+func doPrimaryIndexScanForUsers(t *testing.T, b datastore.Keyspace, au datastore.AuthenticatedUsers) (m map[string]bool, excp errors.Error) {
+	conn := datastore.NewIndexConnection(&testingContext{t})
+
+	m = map[string]bool{}
+
+	nitems, excp := b.Count()
+	if excp != nil {
+		t.Fatalf("failed to get keyspace count")
+		return
+	}
+
+	indexers, excp := b.Indexers()
+	if excp != nil {
+		t.Fatalf("failed to retrieve indexers")
+		return
+	}
+
+	pindexes, excp := indexers[0].PrimaryIndexes()
+	if excp != nil || len(pindexes) < 1 {
+		t.Fatalf("failed to retrieve primary indexes")
+		return
+	}
+
+	idx := pindexes[0]
+	idx_u, ok := idx.(datastore.PrimaryIndexUserSensitive)
+	if !ok {
+		return m, errors.NewSystemDatastoreError(nil, "Primary index does not support user-specific ops.")
+	}
+	go idx_u.ScanEntriesForUsers("", nitems, datastore.UNBOUNDED, nil, au, conn)
 	for {
 		v, ok := <-conn.EntryChannel()
 		if !ok {

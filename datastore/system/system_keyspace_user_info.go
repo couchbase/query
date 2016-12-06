@@ -114,7 +114,7 @@ func (cache *userInfoCache) fetch(keys []string) ([]value.AnnotatedPair, []error
 	return rv, errs
 }
 
-func (cache *userInfoCache) scanEntries(limit int64, channel datastore.EntryChannel) {
+func (cache *userInfoCache) scanEntries(limit int64, idApproverFunc func(string) bool, channel datastore.EntryChannel) {
 	cache.Lock()
 	err := cache.makeCurrent()
 	if err != nil {
@@ -134,6 +134,9 @@ func (cache *userInfoCache) scanEntries(limit int64, channel datastore.EntryChan
 	keys := make([]string, 0, size)
 	var numProduced int64 = 0
 	for key, _ := range cache.curValue {
+		if !idApproverFunc(key) {
+			continue // Not an authenticated user. Don't produce it.
+		}
 		if limit > 0 && numProduced > limit {
 			break
 		}
@@ -279,12 +282,12 @@ func (pi *userInfoIndex) Scan(requestId string, span *datastore.Span, distinct b
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	pi.keyspace.cache.scanEntries(limit, conn.EntryChannel())
+	pi.keyspace.cache.scanEntries(limit, func(string) bool { return true }, conn.EntryChannel())
 }
 
 func (pi *userInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
-	pi.keyspace.cache.scanEntries(limit, conn.EntryChannel())
+	pi.keyspace.cache.scanEntries(limit, func(string) bool { return true }, conn.EntryChannel())
 }

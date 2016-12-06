@@ -30,6 +30,7 @@ const KEYSPACE_NAME_PREPAREDS = "prepareds"
 const KEYSPACE_NAME_REQUESTS = "completed_requests"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
 const KEYSPACE_NAME_USER_INFO = "user_info"
+const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
 
 type store struct {
 	actualStore              datastore.Datastore
