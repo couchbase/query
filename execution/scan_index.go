@@ -24,6 +24,7 @@ import (
 type IndexScan struct {
 	base
 	plan         *plan.IndexScan
+	children     []Operator
 	childChannel StopChannel
 }
 
@@ -58,19 +59,18 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		spans := this.plan.Spans()
 		n := len(spans)
 		this.childChannel = make(StopChannel, n)
-		children := _INDEX_SCAN_POOL.Get()
-		defer _INDEX_SCAN_POOL.Put(children)
+		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
-			children = append(children, newSpanScan(this, span))
-			go children[i].RunOnce(context, parent)
+			this.children = append(this.children, newSpanScan(this, span))
+			go this.children[i].RunOnce(context, parent)
 		}
 
 		for n > 0 {
 			select {
 			case <-this.stopChannel:
 				this.notifyStop()
-				notifyChildren(children...)
+				notifyChildren(this.children...)
 			default:
 			}
 
@@ -80,7 +80,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				notifyChildren(children...)
+				notifyChildren(this.children...)
 			}
 		}
 	})
@@ -94,7 +94,14 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
+	r["~children"] = this.children
 	return json.Marshal(r)
+}
+
+func (this *IndexScan) Done() {
+	// we happen to know that there's nothing to be done for the chilren spans
+	_INDEX_SCAN_POOL.Put(this.children)
+	this.children = nil
 }
 
 type spanScan struct {
@@ -261,4 +268,7 @@ func (this *spanScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *spanScan) Done() {
 }

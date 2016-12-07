@@ -22,6 +22,7 @@ type Parallel struct {
 	base
 	plan         *plan.Parallel
 	child        Operator
+	children     []Operator
 	childChannel StopChannel
 }
 
@@ -57,17 +58,15 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		n := util.MinInt(this.plan.MaxParallelism(), context.MaxParallelism())
-		children := _PARALLEL_POOL.Get()[0:n]
-
-		defer _PARALLEL_POOL.Put(children)
+		this.children = _PARALLEL_POOL.Get()[0:n]
 
 		for i := 1; i < n; i++ {
-			children[i] = this.child.Copy()
-			go this.runChild(children[i], context, parent)
+			this.children[i] = this.child.Copy()
+			go this.runChild(this.children[i], context, parent)
 		}
 
-		children[0] = this.child
-		go this.runChild(children[0], context, parent)
+		this.children[0] = this.child
+		go this.runChild(this.children[0], context, parent)
 
 		for n > 0 {
 			select {
@@ -76,7 +75,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 				n--
 			case <-this.stopChannel: // Never closed
 				this.notifyStop()
-				notifyChildren(children...)
+				notifyChildren(this.children...)
 			}
 		}
 	})
@@ -97,9 +96,17 @@ func (this *Parallel) runChild(child Operator, context *Context, parent value.Va
 func (this *Parallel) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
+
+		// TODO this only marshals times for the first child
 		r["~child"] = this.child
 	})
 	return json.Marshal(r)
+}
+
+func (this *Parallel) Done() {
+	this.child.Done()
+	_PARALLEL_POOL.Put(this.children)
+	this.children = nil
 }
 
 var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())

@@ -43,8 +43,7 @@ func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *UnionScan) Copy() Operator {
-	// FIXME reinstate _INDEX_SCAN_POOL if possible
-	scans := make([]Operator, 0, len(this.scans))
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for i, s := range this.scans {
 		scans[i] = s.Copy()
@@ -151,4 +150,12 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 		r["scans"] = this.scans
 	})
 	return json.Marshal(r)
+}
+
+func (this *UnionScan) Done() {
+	for _, scan := range this.scans {
+		scan.Done()
+	}
+	_INDEX_SCAN_POOL.Put(this.scans)
+	this.scans = nil
 }

@@ -122,3 +122,6 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *FinalGroup) Done() {
+}

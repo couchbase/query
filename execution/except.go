@@ -111,3 +111,8 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *ExceptAll) Done() {
+	this.first.Done()
+	this.second.Done()
+}

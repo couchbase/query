@@ -126,6 +126,15 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
+
+	// Request Profiling - signal that request has completed and
+	// resources can be pooled / released as necessary
+	defer func() {
+		timings := request.GetTimings()
+		if timings != nil {
+			timings.Done()
+		}
+	}()
 	defer this.doStats(request)
 
 	if request.State() == server.FATAL {
@@ -260,6 +269,7 @@ func (this *activeHttpRequests) Delete(id string, stop bool) bool {
 		}
 		req.Stop(server.STOPPED)
 	}
+
 	delete(this.requests, id)
 	return true
 }

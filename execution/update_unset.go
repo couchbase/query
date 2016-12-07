@@ -135,3 +135,6 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Unset) Done() {
+}

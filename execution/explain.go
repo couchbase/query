@@ -65,3 +65,6 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Explain) Done() {
+}

@@ -71,3 +71,6 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *CreateIndex) Done() {
+}

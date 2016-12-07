@@ -113,8 +113,7 @@ func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 }
 
 func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, error) {
-	// FIXME reinstate _INDEX_SCAN_POOL if possible
-	scans := make([]Operator, 0, len(plan.Scans()))
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
@@ -129,8 +128,7 @@ func (this *builder) VisitIntersectScan(plan *plan.IntersectScan) (interface{}, 
 }
 
 func (this *builder) VisitUnionScan(plan *plan.UnionScan) (interface{}, error) {
-	// FIXME reinstate _INDEX_SCAN_POOL if possible
-	scans := make([]Operator, 0, len(plan.Scans()))
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, p := range plan.Scans() {
 		s, e := p.Accept(this)
@@ -227,8 +225,7 @@ func (this *builder) VisitDistinct(plan *plan.Distinct) (interface{}, error) {
 
 // Set operators
 func (this *builder) VisitUnionAll(plan *plan.UnionAll) (interface{}, error) {
-	// FIXME reinstate _UNION_POOL if possible
-	children := make([]Operator, 0, len(plan.Children()))
+	children := _UNION_POOL.Get()
 
 	for _, child := range plan.Children() {
 		c, e := child.Accept(this)
@@ -384,9 +381,7 @@ func (this *builder) VisitParallel(plan *plan.Parallel) (interface{}, error) {
 
 // Sequence
 func (this *builder) VisitSequence(plan *plan.Sequence) (interface{}, error) {
-	children := make([]Operator, 0, len(plan.Children()))
-	//	FIXME reinstate _SEQUENCE_POOL
-	//	children := _SEQUENCE_POOL.Get()
+	children := _SEQUENCE_POOL.Get()
 
 	for _, pchild := range plan.Children() {
 		child, err := pchild.Accept(this)

@@ -46,7 +46,7 @@ func (this *UnionAll) Copy() Operator {
 		childChannel: make(StopChannel, len(this.children)),
 	}
 
-	children := make([]Operator, 0, len(this.children))
+	children := _UNION_POOL.Get()
 
 	for _, c := range this.children {
 		children = append(children, c.Copy())
@@ -94,10 +94,17 @@ func (this *UnionAll) ChildChannel() StopChannel {
 func (this *UnionAll) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
-		r["children"] = this.children
+		r["~children"] = this.children
 	})
 	return json.Marshal(r)
 }
 
-// FIXME reinstate if possible
-// var _UNION_POOL = NewOperatorPool(4)
+func (this *UnionAll) Done() {
+	for _, child := range this.children {
+		child.Done()
+	}
+	_UNION_POOL.Put(this.children)
+	this.children = nil
+}
+
+var _UNION_POOL = NewOperatorPool(4)

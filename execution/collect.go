@@ -78,3 +78,6 @@ func (this *Collect) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Collect) Done() {
+}

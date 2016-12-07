@@ -77,3 +77,6 @@ func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *BuildIndexes) Done() {
+}

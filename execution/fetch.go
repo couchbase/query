@@ -160,6 +160,9 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *Fetch) Done() {
+}
+
 type DummyFetch struct {
 	base
 	plan *plan.DummyFetch
@@ -201,4 +204,7 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func (this *DummyFetch) Done() {
 }

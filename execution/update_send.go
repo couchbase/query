@@ -171,4 +171,7 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *SendUpdate) Done() {
+}
+
 var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)

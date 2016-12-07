@@ -67,4 +67,7 @@ func (this *DummyScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *DummyScan) Done() {
+}
+
 var _EMPTY_OBJECT = map[string]interface{}{}
