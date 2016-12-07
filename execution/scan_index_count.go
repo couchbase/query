@@ -112,3 +112,6 @@ func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *IndexCountScan) Done() {
+}

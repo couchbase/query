@@ -83,3 +83,6 @@ func (this *Distinct) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *Distinct) Done() {
+}

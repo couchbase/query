@@ -103,3 +103,7 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 	r["child"] = this.child
 	return json.Marshal(r)
 }
+
+func (this *Authorize) Done() {
+	this.child.Done()
+}

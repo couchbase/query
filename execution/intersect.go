@@ -115,3 +115,8 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *IntersectAll) Done() {
+	this.first.Done()
+	this.second.Done()
+}

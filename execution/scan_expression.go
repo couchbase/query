@@ -84,5 +84,8 @@ func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *ExpressionScan) Done() {
+}
+
 var _ARRAY_NULL_VALUE []interface{} = []interface{}{value.NULL_VALUE}
 var _ARRAY_MISSING_VALUE []interface{} = []interface{}(nil)

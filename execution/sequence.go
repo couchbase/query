@@ -40,7 +40,7 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
-	children := make([]Operator, 0, len(this.children))
+	children := _SEQUENCE_POOL.Get()
 
 	for _, child := range this.children {
 		children = append(children, child.Copy())
@@ -107,5 +107,12 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// FIXME reinstate _SEQUENCE_POOL
-// var _SEQUENCE_POOL = NewOperatorPool(32)
+func (this *Sequence) Done() {
+	for _, child := range this.children {
+		child.Done()
+	}
+	_SEQUENCE_POOL.Put(this.children)
+	this.children = nil
+}
+
+var _SEQUENCE_POOL = NewOperatorPool(32)

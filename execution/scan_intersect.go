@@ -44,8 +44,7 @@ func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *IntersectScan) Copy() Operator {
-	// FIXME reinstate _INDEX_SCAN_POOL if possible
-	scans := make([]Operator, 0, len(this.scans))
+	scans := _INDEX_SCAN_POOL.Get()
 
 	for _, s := range this.scans {
 		scans = append(scans, s.Copy())
@@ -194,4 +193,12 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 		r["scans"] = this.scans
 	})
 	return json.Marshal(r)
+}
+
+func (this *IntersectScan) Done() {
+	for _, scan := range this.scans {
+		scan.Done()
+	}
+	_INDEX_SCAN_POOL.Put(this.scans)
+	this.scans = nil
 }

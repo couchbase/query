@@ -135,4 +135,8 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *DistinctScan) Done() {
+	this.scan.Done()
+}
+
 var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)

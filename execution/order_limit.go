@@ -226,3 +226,6 @@ func (this *OrderLimit) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *OrderLimit) Done() {
+}

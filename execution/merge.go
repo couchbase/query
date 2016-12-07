@@ -25,6 +25,7 @@ type Merge struct {
 	update       Operator
 	delete       Operator
 	insert       Operator
+	children     []Operator
 	childChannel StopChannel
 }
 
@@ -79,27 +80,26 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		delete, deleteInput := this.wrapChild(this.delete)
 		insert, insertInput := this.wrapChild(this.insert)
 
-		children := _MERGE_OPERATOR_POOL.Get()
-		defer _MERGE_OPERATOR_POOL.Put(children)
+		this.children = _MERGE_OPERATOR_POOL.Get()
 		inputs := _MERGE_CHANNEL_POOL.Get()
 		defer _MERGE_CHANNEL_POOL.Put(inputs)
 
 		if update != nil {
-			children = append(children, update)
+			this.children = append(this.children, update)
 			inputs = append(inputs, updateInput)
 		}
 
 		if delete != nil {
-			children = append(children, delete)
+			this.children = append(this.children, delete)
 			inputs = append(inputs, deleteInput)
 		}
 
 		if insert != nil {
-			children = append(children, insert)
+			this.children = append(this.children, insert)
 			inputs = append(inputs, insertInput)
 		}
 
-		for _, child := range children {
+		for _, child := range this.children {
 			go child.RunOnce(context, parent)
 		}
 
@@ -132,7 +132,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Wait for all children
-		n := len(children)
+		n := len(this.children)
 		for n > 0 {
 			select {
 			case <-this.childChannel: // Never closed
@@ -250,6 +250,20 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 		}
 	})
 	return json.Marshal(r)
+}
+
+func (this *Merge) Done() {
+	if this.update != nil {
+		this.update.Done()
+	}
+	if this.delete != nil {
+		this.delete.Done()
+	}
+	if this.insert != nil {
+		this.insert.Done()
+	}
+	_MERGE_OPERATOR_POOL.Put(this.children)
+	this.children = nil
 }
 
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)

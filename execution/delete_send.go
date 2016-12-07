@@ -149,3 +149,6 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
+
+func (this *SendDelete) Done() {
+}
