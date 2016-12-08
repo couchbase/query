@@ -129,6 +129,9 @@ var _OPERATORS = map[string]Operator{
 	"AlterIndex":         &AlterIndex{},
 	"BuildIndexes":       &BuildIndexes{},
 
+	// Roles
+	"GrantRole": &GrantRole{},
+
 	// Explain
 	"Explain": &Explain{},
 
