@@ -38,6 +38,11 @@ type Visitor interface {
 	VisitBuildIndexes(stmt *BuildIndexes) (interface{}, error)
 
 	/*
+	   Visitor for ROLES statements.
+	*/
+	VisitGrantRole(stmt *GrantRole) (interface{}, error)
+
+	/*
 	   Visitor for EXPLAIN statements.
 	*/
 	VisitExplain(stmt *Explain) (interface{}, error)

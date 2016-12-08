@@ -72,6 +72,9 @@ indexType        datastore.IndexType
 inferenceType    datastore.InferenceType
 val              value.Value
 
+role		 algebra.RoleSpec
+roles		 algebra.RoleSpecList
+
 // token offset into the statement
 tokOffset	 int
 }
@@ -348,6 +351,7 @@ tokOffset	 int
 %type <statement>        infer infer_keyspace
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
+%type <statement>        role_stmt grant_role
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list next_values
@@ -381,6 +385,10 @@ tokOffset	 int
 
 %type <inferenceType>    opt_infer_using
 %type <val>              infer_with opt_infer_with
+
+%type <ss>               user_list
+%type <role>		 role_spec
+%type <roles>            role_list
 
 %start input
 
@@ -420,6 +428,8 @@ prepare
 execute
 |
 infer
+|
+role_stmt
 ;
 
 explain:
@@ -532,6 +542,10 @@ merge
 
 ddl_stmt:
 index_stmt
+;
+
+role_stmt:
+grant_role
 ;
 
 index_stmt:
@@ -1669,6 +1683,54 @@ expr opt_where
 }
 ;
 
+/*************************************************
+ *
+ * GRANT ROLE
+ *
+ *************************************************/
+
+grant_role:
+GRANT ROLE role_list TO user_list
+{
+	$$ = algebra.NewGrantRole($3, $5)
+}
+;
+
+role_list:
+role_spec
+{
+	$$ = algebra.RoleSpecList{ $1 }
+}
+|
+role_list COMMA role_spec
+{
+	$$ = append($1, $3)
+}
+;
+
+role_spec:
+IDENT
+{
+	$$ = algebra.RoleSpec{ Role: $1 }
+}
+|
+IDENT LPAREN IDENT RPAREN
+{
+	$$ = algebra.RoleSpec{ Role: $1, Bucket: $3 }
+}
+;
+
+user_list:
+IDENT
+{
+	$$ = []string{ $1 }
+}
+|
+user_list COMMA IDENT
+{
+	$$ = append($1, $3)
+}
+;
 
 /*************************************************
  *

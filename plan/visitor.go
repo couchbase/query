@@ -100,6 +100,8 @@ type Visitor interface {
 	VisitAlterIndex(op *AlterIndex) (interface{}, error)
 	VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
 
+	VisitGrantRole(op *GrantRole) (interface{}, error)
+
 	// Explain
 	VisitExplain(op *Explain) (interface{}, error)
 

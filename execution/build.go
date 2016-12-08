@@ -415,6 +415,11 @@ func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (int
 	return NewCreatePrimaryIndex(plan), nil
 }
 
+// GrantRole
+func (this *builder) VisitGrantRole(plan *plan.GrantRole) (interface{}, error) {
+	return NewGrantRole(plan), nil
+}
+
 // CreateIndex
 func (this *builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
 	return NewCreateIndex(plan), nil
