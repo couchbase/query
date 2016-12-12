@@ -71,23 +71,21 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 		}
 
-		if limit != nil {
-			exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
-			if err != nil {
-				return nil, err
-			}
-
-			if !pred.CoveredBy(node.Alias(), exprs) {
-				this.limit = nil
-				limit = nil
-			}
-		}
-
 		arrayIndex := indexHasArrayIndexKey(index)
 
-		if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
-			limit = nil
-			this.limit = nil
+		if limit != nil {
+			var pushDown bool
+			if !arrayIndex {
+				pushDown, err = allowedPushDown(entry, pred, node.Alias())
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			if arrayIndex || !pushDown {
+				limit = nil
+				this.limit = nil
+			}
 		}
 
 		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
@@ -321,19 +319,18 @@ func equalConditionFilter(filters map[string]value.Value, str string) bool {
 	return ok && v != nil
 }
 
-func allowedPushDown(entry *indexEntry, pred expression.Expression) bool {
+func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string) (bool, error) {
 	if !entry.exactSpans {
-		return false
+		return false, nil
 	}
 
 	// check for non sargable key is in predicate
-	for i := len(entry.sargKeys); i < len(entry.keys); i++ {
-		if pred.DependsOn(entry.keys[i]) {
-			return false
-		}
+	exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
+	if err != nil {
+		return false, err
 	}
 
-	return true
+	return pred.CoveredBy(alias, exprs), nil
 }
 
 func indexHasArrayIndexKey(index datastore.Index) bool {
