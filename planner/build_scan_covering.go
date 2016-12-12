@@ -112,7 +112,13 @@ outer:
 
 	arrayIndex := indexHasArrayIndexKey(index)
 
-	if !arrayIndex && allowedPushDown(entry, pred) {
+	var pushDown bool
+	pushDown, err = allowedPushDown(entry, pred, alias)
+	if err != nil {
+		return nil, err
+	}
+
+	if !arrayIndex && pushDown {
 		if this.countAgg != nil && !pred.MayOverlapSpans() && canPushDownCount(this.countAgg, entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
@@ -131,7 +137,7 @@ outer:
 		}
 	}
 
-	if limit != nil && (arrayIndex || !allowedPushDown(entry, pred)) {
+	if limit != nil && (arrayIndex || !pushDown) {
 		limit = nil
 		this.limit = nil
 	}
