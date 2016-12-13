@@ -326,6 +326,8 @@ const (
 	_CMPTHRESHOLD    = "completed-threshold"
 	_CMPLIMIT        = "completed-limit"
 	_PRETTY          = "pretty"
+	_PROFILE         = "profile"
+	_CONTROLS        = "controls"
 )
 
 type checker func(interface{}) bool
@@ -370,6 +372,7 @@ var _CHECKERS = map[string]checker{
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
 	_PRETTY:          checkBool,
+	_CONTROLS:        checkBool,
 }
 
 type setter func(*server.Server, interface{})
@@ -435,6 +438,17 @@ var _SETTERS = map[string]setter{
 		value, _ := o.(bool)
 		s.SetPretty(value)
 	},
+	_PROFILE: func(s *server.Server, o interface{}) {
+		value, _ := o.(string)
+		prof, ok := server.ParseProfile(value)
+		if ok {
+			s.SetProfile(prof)
+		}
+	},
+	_CONTROLS: func(s *server.Server, o interface{}) {
+		value, _ := o.(bool)
+		s.SetControls(value)
+	},
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request) (interface{}, errors.Error) {
@@ -493,6 +507,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_CMPTHRESHOLD] = accounting.RequestsThreshold()
 	settings[_CMPLIMIT] = accounting.RequestsLimit()
 	settings[_PRETTY] = srvr.Pretty()
+	settings[_PROFILE] = srvr.Profile().String()
+	settings[_CONTROLS] = srvr.Controls()
 	return settings
 }
 
