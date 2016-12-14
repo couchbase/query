@@ -394,3 +394,62 @@ func (this *Set) Clear() {
 		delete(this.binaries, k)
 	}
 }
+
+func (this *Set) Copy() *Set {
+	rv := &Set{}
+
+	rv.collect = this.collect
+	rv.nills = this.nills
+	rv.missings = this.missings
+	rv.nulls = this.nulls
+
+	rv.booleans = make(map[bool]Value, len(this.booleans))
+	rv.floats = make(map[float64]Value, 2*(1+len(this.floats)))
+	rv.ints = make(map[int64]Value, 2*(1+len(this.ints)))
+	rv.strings = make(map[string]Value, 2*(1+len(this.strings)))
+	rv.arrays = make(map[string]Value, 2*(1+len(this.arrays)))
+	rv.objects = make(map[string]Value, 2*(1+len(this.objects)))
+	rv.binaries = make(map[string]Value, 2*(1+len((this.binaries))))
+
+	for k, v := range this.booleans {
+		rv.booleans[k] = v
+	}
+
+	for k, v := range this.floats {
+		rv.floats[k] = v
+	}
+
+	for k, v := range this.ints {
+		rv.ints[k] = v
+	}
+
+	for k, v := range this.strings {
+		rv.strings[k] = v
+	}
+
+	for k, v := range this.arrays {
+		rv.arrays[k] = v
+	}
+
+	for k, v := range this.objects {
+		rv.objects[k] = v
+	}
+
+	for k, v := range this.binaries {
+		rv.binaries[k] = v
+	}
+
+	return rv
+}
+
+func (this *Set) Union(other *Set) {
+	this.AddAll(other.Items())
+}
+
+func (this *Set) Intersect(other *Set) {
+	for _, v := range this.Values() {
+		if !other.Has(v) {
+			this.Remove(v)
+		}
+	}
+}

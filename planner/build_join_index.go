@@ -90,7 +90,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 }
 
 func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, op string) (datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+	node *algebra.KeyspaceTerm, op string) (
+	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+
 	if this.cover != nil && op == "join" {
 		alias := node.Alias()
 		id := expression.NewField(
@@ -111,7 +113,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			// Include covering expression from index WHERE clause
-			coveringExprs, filterCovers, err := indexKeyExpressions(entry, keys)
+			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil)
 			if err != nil {
 				return nil, nil, nil, err
 			}
