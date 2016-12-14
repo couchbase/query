@@ -95,7 +95,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case item, ok = <-channel.ItemChannel():
-				if ok {
+				if ok && n == len(this.scans) {
 					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
@@ -103,6 +103,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					this.notifyScans()
 				}
 				n--
+				break loop
 			case <-this.stopChannel:
 				stopped = true
 				break loop
@@ -125,9 +126,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		if !stopped {
 			this.sendItems()
 		}
-
-		this.values = nil
-		this.counts = nil
 	})
 }
 
