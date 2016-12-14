@@ -106,4 +106,5 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 
 func (this *Authorize) Done() {
 	this.child.Done()
+	this.child = nil
 }

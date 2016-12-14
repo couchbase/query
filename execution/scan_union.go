@@ -153,8 +153,9 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *UnionScan) Done() {
-	for _, scan := range this.scans {
+	for s, scan := range this.scans {
 		scan.Done()
+		this.scans[s] = nil
 	}
 	_INDEX_SCAN_POOL.Put(this.scans)
 	this.scans = nil

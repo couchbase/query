@@ -255,12 +255,15 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 func (this *Merge) Done() {
 	if this.update != nil {
 		this.update.Done()
+		this.update = nil
 	}
 	if this.delete != nil {
 		this.delete.Done()
+		this.delete = nil
 	}
 	if this.insert != nil {
 		this.insert.Done()
+		this.insert = nil
 	}
 	_MERGE_OPERATOR_POOL.Put(this.children)
 	this.children = nil

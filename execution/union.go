@@ -100,8 +100,9 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 }
 
 func (this *UnionAll) Done() {
-	for _, child := range this.children {
+	for c, child := range this.children {
 		child.Done()
+		this.children[c] = nil
 	}
 	_UNION_POOL.Put(this.children)
 	this.children = nil

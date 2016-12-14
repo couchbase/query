@@ -115,4 +115,6 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 func (this *ExceptAll) Done() {
 	this.first.Done()
 	this.second.Done()
+	this.first = nil
+	this.second = nil
 }

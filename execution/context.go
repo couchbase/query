@@ -308,6 +308,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 
 	results := collect.ValuesOnce()
+	sequence.Done()
 
 	// Cache results
 	if !planFound && !query.IsCorrelated() {
