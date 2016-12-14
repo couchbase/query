@@ -113,7 +113,7 @@ func TestServer(t *testing.T) {
 
 	//fmt.Printf(" got primary index %s", pi.name)
 	conn := datastore.NewIndexConnection(nil)
-	go pi[0].ScanEntries("", math.MaxInt64, datastore.UNBOUNDED, nil, nil, conn)
+	go pi[0].ScanEntries("", math.MaxInt64, datastore.UNBOUNDED, nil, conn)
 
 	var entry *datastore.IndexEntry
 

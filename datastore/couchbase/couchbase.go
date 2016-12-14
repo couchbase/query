@@ -122,12 +122,12 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 
 }
 
-func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) (datastore.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(privileges datastore.Privileges, credentials datastore.Credentials, req *http.Request) errors.Error {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
 		logging.Warnf("CbAuth not intialized")
-		return nil, nil
+		return nil
 	}
 
 	if credentials == nil {
@@ -135,8 +135,6 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 	}
 	// Add default authorization -- the privileges every user has.
 	credentials[""] = ""
-
-	authenticatedUsers := make(datastore.AuthenticatedUsers, 0, len(credentials))
 
 	// Build the credentials list.
 	credentialsList := make([]cbauth.Creds, 0, 2)
@@ -155,9 +153,6 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 			logging.Debugf("Unable to authorize %s:%s.", username, password)
 		} else {
 			credentialsList = append(credentialsList, creds)
-			if un != "" {
-				authenticatedUsers = append(authenticatedUsers, un)
-			}
 		}
 	}
 
@@ -198,12 +193,12 @@ func (s *store) Authorize(privileges datastore.Privileges, credentials datastore
 		}
 
 		if !thisBucketAuthorized {
-			return nil, errors.NewDatastoreAuthorizationError(rememberedError, "Keyspace "+keyspace)
+			return errors.NewDatastoreAuthorizationError(rememberedError, "Keyspace "+keyspace)
 		}
 	}
 
 	// If we got this far, every bucket is authorized. Success!
-	return authenticatedUsers, nil
+	return nil
 }
 
 func (s *store) SetLogLevel(level logging.Level) {
@@ -990,6 +985,6 @@ func (pi *primaryIndex) Scan(requestId string, span *datastore.Span, distinct bo
 }
 
 func (pi *primaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, authenticatedUsers datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
-	pi.viewIndex.ScanEntries(requestId, limit, cons, vector, authenticatedUsers, conn)
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.viewIndex.ScanEntries(requestId, limit, cons, vector, conn)
 }

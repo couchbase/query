@@ -44,8 +44,3 @@ func (this Privileges) Add(other Privileges) {
 Type Credentials maps users to passwords.
 */
 type Credentials map[string]string
-
-/*
-Type AuthenticatedUsers is a list of users whose credentials checked out.
-*/
-type AuthenticatedUsers []string

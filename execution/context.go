@@ -107,24 +107,23 @@ type Output interface {
 }
 
 type Context struct {
-	requestId          string
-	datastore          datastore.Datastore
-	systemstore        datastore.Datastore
-	namespace          string
-	readonly           bool
-	maxParallelism     int
-	now                time.Time
-	namedArgs          map[string]value.Value
-	positionalArgs     value.Values
-	credentials        datastore.Credentials
-	consistency        datastore.ScanConsistency
-	scanVectorSource   timestamp.ScanVectorSource
-	output             Output
-	subplans           *subqueryMap
-	subresults         *subqueryMap
-	httpRequest        *http.Request
-	authenticatedUsers datastore.AuthenticatedUsers
-	mutex              sync.RWMutex
+	requestId        string
+	datastore        datastore.Datastore
+	systemstore      datastore.Datastore
+	namespace        string
+	readonly         bool
+	maxParallelism   int
+	now              time.Time
+	namedArgs        map[string]value.Value
+	positionalArgs   value.Values
+	credentials      datastore.Credentials
+	consistency      datastore.ScanConsistency
+	scanVectorSource timestamp.ScanVectorSource
+	output           Output
+	subplans         *subqueryMap
+	subresults       *subqueryMap
+	httpRequest      *http.Request
+	mutex            sync.RWMutex
 }
 
 func NewContext(requestId string, datastore, systemstore datastore.Datastore,
@@ -215,10 +214,6 @@ func (this *Context) ScanConsistency() datastore.ScanConsistency {
 
 func (this *Context) ScanVectorSource() timestamp.ScanVectorSource {
 	return this.scanVectorSource
-}
-
-func (this *Context) AuthenticatedUsers() datastore.AuthenticatedUsers {
-	return this.authenticatedUsers
 }
 
 func (this *Context) AddMutationCount(i uint64) {

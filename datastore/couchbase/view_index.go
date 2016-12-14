@@ -370,7 +370,7 @@ func (vi *viewIndex) Statistics(requestId string, span *datastore.Span) (
 }
 
 func (vi *viewIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	vi.Scan(requestId, nil, false, limit, cons, vector, conn)
 }
 

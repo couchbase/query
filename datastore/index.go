@@ -115,7 +115,7 @@ PrimaryIndex represents primary key indexes.
 type PrimaryIndex interface {
 	Index
 	ScanEntries(requestId string, limit int64, cons ScanConsistency,
-		vector timestamp.Vector, au AuthenticatedUsers, conn *IndexConnection) // Perform a scan of all the entries in this index
+		vector timestamp.Vector, conn *IndexConnection) // Perform a scan of all the entries in this index
 }
 
 type SizedIndex interface {

@@ -247,7 +247,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 }
 
 func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
-	vector timestamp.Vector, au datastore.AuthenticatedUsers, conn *datastore.IndexConnection) {
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
 
 	var numProduced int64 = 0
