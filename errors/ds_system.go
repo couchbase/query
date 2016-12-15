@@ -68,3 +68,8 @@ func NewSystemUnableToRetrieveError(e error) Error {
 	return &err{level: EXCEPTION, ICode: 11009, IKey: "datastore.system.unable_to_retrieve", ICause: e,
 		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1)}
 }
+
+func NewSystemUnableToUpdateError(e error) Error {
+	return &err{level: EXCEPTION, ICode: 11010, IKey: "datastore.system.unable_to_update", ICause: e,
+		InternalMsg: "System datastore : unable to update user information in server", InternalCaller: CallerN(1)}
+}

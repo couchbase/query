@@ -109,6 +109,8 @@ func doAuthByCreds(creds cbauth.Creds, bucket string, requested datastore.Privil
 		permission = "cluster!read"
 	case datastore.PRIV_SECURITY_READ:
 		permission = "cluster.security!read"
+	case datastore.PRIV_SECURITY_WRITE:
+		permission = "cluster.security!write"
 	default:
 		return false, fmt.Errorf("Invalid Privileges")
 	}
@@ -238,6 +240,41 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 		return nil, errors.NewSystemUnableToRetrieveError(err)
 	}
 	return value.NewValue(data), nil
+}
+
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+	sourceUsers, err := s.client.GetUserInfoAll()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err)
+	}
+	resultUsers := make([]datastore.User, len(sourceUsers))
+	for i, u := range sourceUsers {
+		resultUsers[i].Name = u.Name
+		resultUsers[i].Id = u.Id
+		roles := make([]datastore.Role, len(u.Roles))
+		for j, r := range u.Roles {
+			roles[j].Name = r.Role
+			roles[j].Bucket = r.BucketName
+		}
+		resultUsers[i].Roles = roles
+	}
+	return resultUsers, nil
+}
+
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+	var outputUser cb.User
+	outputUser.Name = u.Name
+	outputUser.Id = u.Id
+	outputUser.Roles = make([]cb.Role, len(u.Roles))
+	for i, r := range u.Roles {
+		outputUser.Roles[i].Role = r.Name
+		outputUser.Roles[i].BucketName = r.Bucket
+	}
+	err := s.client.PutUserInfo(&outputUser)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err)
+	}
+	return nil
 }
 
 func initCbAuth(url string) (*cb.Client, error) {

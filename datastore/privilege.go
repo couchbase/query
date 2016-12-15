@@ -14,11 +14,12 @@ import ()
 type Privilege int
 
 const (
-	PRIV_READ          Privilege = 1
-	PRIV_WRITE         Privilege = 2
-	PRIV_DDL           Privilege = 3
-	PRIV_SYSTEM_READ   Privilege = 4 // Access to tables in the system namespace, such as system:keyspaces.
-	PRIV_SECURITY_READ Privilege = 5 // Access to system:user_info, specifically.
+	PRIV_READ           Privilege = 1
+	PRIV_WRITE          Privilege = 2
+	PRIV_DDL            Privilege = 3
+	PRIV_SYSTEM_READ    Privilege = 4 // Access to tables in the system namespace, such as system:keyspaces.
+	PRIV_SECURITY_READ  Privilege = 5 // Reading user information.
+	PRIV_SECURITY_WRITE Privilege = 6 // Updating user information.
 )
 
 /*
