@@ -72,7 +72,7 @@ func (this *ExpressionTerm) Privileges() (datastore.Privileges, errors.Error) {
 	if this.isKeyspace {
 		return this.keyspaceTerm.Privileges()
 	}
-	return nil, nil
+	return datastore.NewPrivileges(), nil
 }
 
 /*
