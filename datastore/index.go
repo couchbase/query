@@ -43,19 +43,6 @@ type Indexer interface {
 	SetLogLevel(level logging.Level)                            // Set log level for in-process logging
 }
 
-type NewIndexer interface {
-	Indexer
-	NewCreateIndex(requestId, name string, seekKey expression.Expressions, // Create a secondary index on this keyspace
-		rangeKey IndexKeys, where expression.Expression, with value.Value) (Index, errors.Error)
-}
-
-type IndexKeys []*IndexKey
-
-type IndexKey struct {
-	Expr expression.Expression
-	Desc bool
-}
-
 type IndexState string
 
 const (
@@ -64,6 +51,7 @@ const (
 	PENDING  IndexState = "pending"  // The index is in progress but is not yet ready for use
 	ONLINE   IndexState = "online"   // The index is available for use
 	OFFLINE  IndexState = "offline"  // The index requires manual intervention
+	ABRIDGED IndexState = "abridged" // The index is missing some entries, e.g. due to size limits
 )
 
 func (indexState IndexState) String() string {
@@ -76,6 +64,31 @@ const (
 	UNBOUNDED ScanConsistency = "unbounded"
 	SCAN_PLUS ScanConsistency = "scan_plus"
 	AT_PLUS   ScanConsistency = "at_plus"
+)
+
+type Spans []*Span
+
+type Span struct {
+	Seek  value.Values
+	Range Range
+}
+
+type Ranges []*Range
+
+type Range struct {
+	Low       value.Values
+	High      value.Values
+	Inclusion Inclusion
+}
+
+// Inclusion controls how the boundary values of a range are treated.
+type Inclusion int
+
+const (
+	NEITHER Inclusion = 0x00
+	LOW               = 0x01
+	HIGH              = 0x01 << 1
+	BOTH              = LOW | HIGH
 )
 
 type Indexes []Index
@@ -95,18 +108,15 @@ type Index interface {
 	State() (state IndexState, msg string, err errors.Error)            // Obtain state of this index
 	Statistics(requestId string, span *Span) (Statistics, errors.Error) // Obtain statistics for this index
 	Drop(requestId string) errors.Error                                 // Drop / delete this index
+	// Perform a scan on this index. Distinct and limit are hints.
 	Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency,
-		vector timestamp.Vector, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
+		vector timestamp.Vector, conn *IndexConnection)
 }
 
 type CountIndex interface {
 	Index
-	Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) // Perform a count on index.
-}
-
-type NewCountIndex interface {
-	CountIndex
-	NewCount(requestId string, span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error) // Perform a count on index.
+	// Perform a count on index
+	Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error)
 }
 
 /*
@@ -114,8 +124,9 @@ PrimaryIndex represents primary key indexes.
 */
 type PrimaryIndex interface {
 	Index
+	// Perform a scan of all the entries in this index
 	ScanEntries(requestId string, limit int64, cons ScanConsistency,
-		vector timestamp.Vector, conn *IndexConnection) // Perform a scan of all the entries in this index
+		vector timestamp.Vector, conn *IndexConnection)
 }
 
 type PrimaryIndexUserSensitive interface {
@@ -130,46 +141,36 @@ type SizedIndex interface {
 	SizeFromStatistics(requestId string) (int64, errors.Error)
 }
 
-type Range struct {
-	Low       value.Values
-	High      value.Values
-	Inclusion Inclusion
+////////////////////////////////////////////////////////////////////////
+//
+// Index API2 introduced in Spock for more efficient index pushdowns.
+//
+////////////////////////////////////////////////////////////////////////
+
+type IndexKeys []*IndexKey
+
+type IndexKey struct {
+	Expr expression.Expression
+	Desc bool
 }
 
-type Ranges []*Range
-
-// Inclusion controls how the boundary values of a range are treated.
-type Inclusion int
-
-const (
-	NEITHER Inclusion = 0x00
-	LOW               = 0x01
-	HIGH              = 0x01 << 1
-	BOTH              = LOW | HIGH
-)
-
-type Span struct {
-	Seek  value.Values
-	Range Range
+type Indexer2 interface {
+	Indexer
+	// Create a secondary index on this keyspace
+	CreateIndex2(requestId, name string, seekKey expression.Expressions,
+		rangeKey IndexKeys, where expression.Expression, with value.Value) (Index, errors.Error)
 }
 
-type Spans []*Span
+type Spans2 []*Span2
 
-type NewIndex interface {
-	Index
-	NewScan(requestId string, spans NewSpans, reverse, distinct bool,
-		projection *IndexProjection, offset, limit int64,
-		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) // Perform a scan on this index. Distinct and limit are hints.
-}
-
-type NewSpans []*NewSpan
-
-type NewSpan struct {
+type Span2 struct {
 	Seek   value.Values
-	Ranges []*NewRange
+	Ranges Ranges2
 }
 
-type NewRange struct {
+type Ranges2 []*Range2
+
+type Range2 struct {
 	Low       value.Value
 	High      value.Value
 	Inclusion Inclusion
@@ -179,6 +180,26 @@ type IndexProjection struct {
 	EntryKeys  []int
 	PrimaryKey bool
 }
+
+type Index2 interface {
+	Index
+	// Perform a scan on this index. Distinct and limit are hints.
+	Scan2(requestId string, spans Spans2, reverse, distinct, ordered bool,
+		projection *IndexProjection, offset, limit int64,
+		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+}
+
+type CountIndex2 interface {
+	CountIndex
+	// Perform a count on index
+	Count2(requestId string, spans Span2, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of Index API2.
+//
+////////////////////////////////////////////////////////////////////////
 
 type IndexEntry struct {
 	EntryKey   value.Values

@@ -75,6 +75,10 @@ var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this fi
 var COMPLETED_THRESHOLD = flag.Int("completed-threshold", 1000, "cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", 4000, "maximum number of completed requests")
 
+// Profiling
+var PROFILE = flag.String("profile", "off", "Profiling state: off, phases, timings")
+var CONTROLS = flag.Bool("controls", false, "Response to include controls section")
+
 // GOGC
 var _GOGC_PERCENT = 200
 
@@ -171,9 +175,11 @@ func main() {
 		os.Exit(1)
 	}
 	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
+	prof, _ := server.ParseProfile(*PROFILE)
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
-		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE, *PRETTY)
+		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
+		*PRETTY, prof, *CONTROLS)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

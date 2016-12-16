@@ -108,6 +108,8 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeWarnings(prefix, indent)
 	this.writeState("", prefix)
 	this.writeMetrics(srvr.Metrics(), prefix, indent)
+	this.writeProfile(srvr.Profile(), prefix, indent)
+	this.writeControls(srvr.Controls(), prefix, indent)
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
 }
@@ -122,7 +124,7 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, sto
 	stopped := this.writeResults(srvr.Pretty())
 
 	state := this.State()
-	this.writeSuffix(srvr.Metrics(), state, prefix, indent)
+	this.writeSuffix(srvr, state, prefix, indent)
 	this.writer.noMoreData()
 	if stopped {
 		this.Close()
@@ -270,12 +272,14 @@ func (this *httpRequest) writeValue(item value.Value, prefix, indent string) boo
 	return this.writeString(string(bytes))
 }
 
-func (this *httpRequest) writeSuffix(metrics bool, state server.State, prefix, indent string) bool {
+func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, prefix, indent string) bool {
 	return this.writeString("\n") && this.writeString(prefix) && this.writeString("]") &&
 		this.writeErrors(prefix, indent) &&
 		this.writeWarnings(prefix, indent) &&
 		this.writeState(state, prefix) &&
-		this.writeMetrics(metrics, prefix, indent) &&
+		this.writeMetrics(srvr.Metrics(), prefix, indent) &&
+		this.writeProfile(srvr.Profile(), prefix, indent) &&
+		this.writeControls(srvr.Controls(), prefix, indent) &&
 		this.writeString("\n}\n")
 }
 
@@ -440,11 +444,134 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		return false
 	}
 
-	if logging.LogLevel() == logging.DEBUG {
+	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+		return false
+	}
+	return this.writeString("}")
+
+}
+
+func (this *httpRequest) writeControls(controls bool, prefix, indent string) bool {
+	var newPrefix string
+	var e []byte
+	var err error
+
+	needComma := false
+	c := this.Controls()
+	if c == value.FALSE || (c == value.NONE && !controls) {
+		return true
+	}
+
+	namedArgs := this.NamedArgs()
+	positionalArgs := this.PositionalArgs()
+	if namedArgs == nil && positionalArgs == nil {
+		return true
+	}
+
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	rv := this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"controls\": {")
+	if !rv {
+		return false
+	}
+	if namedArgs != nil {
+		if indent != "" {
+			e, err = json.MarshalIndent(namedArgs, "\t", indent)
+		} else {
+			e, err = json.Marshal(namedArgs)
+		}
+		if err != nil || !this.writeString(fmt.Sprintf("%s\"namedArgs\": %s", newPrefix, e)) {
+			logging.Infop("Error writing namedArgs", logging.Pair{"error", err})
+		}
+		needComma = true
+	}
+	if positionalArgs != nil {
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if indent != "" {
+			e, err = json.MarshalIndent(positionalArgs, "\t", indent)
+		} else {
+			e, err = json.Marshal(positionalArgs)
+		}
+		if err != nil || !this.writeString(fmt.Sprintf("%s\"positionalArgs\": %s", newPrefix, e)) {
+			logging.Infop("Error writing positional args", logging.Pair{"error", err})
+		}
+	}
+	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+		return false
+	}
+	return this.writeString("}")
+}
+
+func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent string) bool {
+	var newPrefix string
+	var e []byte
+	var err error
+
+	needComma := false
+	p := this.Profile()
+	if p == server.ProfUnset {
+		p = profile
+	}
+	if p == server.ProfOff {
+		return true
+	}
+
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	rv := this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"profile\": {")
+	if !rv {
+		return false
+	}
+	if p != server.ProfOff {
+		phaseTimes := this.FmtPhaseTimes()
+		if phaseTimes != nil {
+			if indent != "" {
+				e, err = json.MarshalIndent(phaseTimes, "\t", indent)
+			} else {
+				e, err = json.Marshal(phaseTimes)
+			}
+			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseTimes\": %s", newPrefix, e)) {
+				logging.Infop("Error writing phase times", logging.Pair{"error", err})
+			}
+			needComma = true
+		}
+		phaseCounts := this.FmtPhaseCounts()
+		if phaseCounts != nil {
+			if needComma && !this.writeString(",") {
+				return false
+			}
+			if indent != "" {
+				e, err = json.MarshalIndent(phaseCounts, "\t", indent)
+			} else {
+				e, err = json.Marshal(phaseCounts)
+			}
+			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseCounts\": %s", newPrefix, e)) {
+				logging.Infop("Error writing phase counts", logging.Pair{"error", err})
+			}
+			needComma = true
+		}
+		phaseOperators := this.FmtPhaseOperators()
+		if phaseOperators != nil {
+			if needComma && !this.writeString(",") {
+				return false
+			}
+			if indent != "" {
+				e, err = json.MarshalIndent(phaseOperators, "\t", indent)
+			} else {
+				e, err = json.Marshal(phaseOperators)
+			}
+			if err != nil || !this.writeString(fmt.Sprintf("%s\"phaseOperators\": %s", newPrefix, e)) {
+				logging.Infop("Error writing phase operators", logging.Pair{"error", err})
+			}
+		}
+	}
+	if p == server.ProfOn {
 		timings := this.GetTimings()
 		if timings != nil {
-			var e []byte
-			var err error
 			if indent != "" {
 				e, err = json.MarshalIndent(timings, "\t", indent)
 			} else {
@@ -455,12 +582,10 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 			}
 		}
 	}
-
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
 		return false
 	}
 	return this.writeString("}")
-
 }
 
 // responseDataManager is an interface for managing response data. It is used by httpRequest to take care of

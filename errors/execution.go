@@ -123,3 +123,8 @@ func NewNoValueForKey(key string) Error {
 	return &err{level: EXCEPTION, ICode: 5200, IKey: "execution.no_value_for_key",
 		InternalMsg: fmt.Sprintf("Unable to find a value for key %s.", key), InternalCaller: CallerN(1)}
 }
+
+func NewUserNotFoundError(u string) Error {
+	return &err{level: EXCEPTION, ICode: 5210, IKey: "execution.user_not_found",
+		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
+}

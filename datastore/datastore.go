@@ -46,6 +46,8 @@ type Datastore interface {
 	Inferencer(name InferenceType) (Inferencer, errors.Error)                            // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                                           // List of schema inference providers
 	UserInfo() (value.Value, errors.Error)                                               // The users, and their roles. JSON data.
+	GetUserInfoAll() ([]User, errors.Error)                                              // Get information about all the users.
+	PutUserInfo(u *User) errors.Error                                                    // Set information for a specific user.
 }
 
 // Namespace represents a logical boundary that is within a datastore and above
@@ -126,4 +128,19 @@ func GetKeyspace(namespace, keyspace string) (Keyspace, errors.Error) {
 	}
 
 	return ns.KeyspaceByName(keyspace)
+}
+
+// These structures are generic representations of users and their roles.
+// Very similar structures exist in go-couchbase, but to keep open the
+// possibility of connecting to other back ends, the query engine
+// uses its own representation.
+type User struct {
+	Name  string
+	Id    string
+	Roles []Role
+}
+
+type Role struct {
+	Name   string
+	Bucket string
 }

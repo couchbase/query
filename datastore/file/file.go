@@ -90,6 +90,14 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return nil, nil
 }
 
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
+}
+
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
+}
+
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

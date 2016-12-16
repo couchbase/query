@@ -22,6 +22,7 @@ import (
 )
 
 type indexEntry struct {
+	index      datastore.Index
 	keys       expression.Expressions
 	sargKeys   expression.Expressions
 	cond       expression.Expression
@@ -169,7 +170,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 		}
 
 		n := SargableFor(pred, keys)
-		entry := &indexEntry{keys, keys[0:n], cond, origCond, nil, false}
+		entry := &indexEntry{index, keys, keys[0:n], cond, origCond, nil, false}
 		entries[index] = entry
 
 		if n > 0 {
@@ -325,7 +326,7 @@ func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string
 	}
 
 	// check for non sargable key is in predicate
-	exprs, _, err := indexKeyExpressions(entry, entry.sargKeys)
+	exprs, _, err := indexCoverExpressions(entry, entry.sargKeys, pred)
 	if err != nil {
 		return false, err
 	}

@@ -104,7 +104,10 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Parallel) Done() {
-	this.child.Done()
+	for c, child := range this.children {
+		child.Done()
+		this.children[c] = nil
+	}
 	_PARALLEL_POOL.Put(this.children)
 	this.children = nil
 }

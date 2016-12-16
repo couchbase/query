@@ -135,7 +135,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			timings.Done()
 		}
 	}()
-	defer this.doStats(request)
+	defer this.doStats(request, this.server.Profile(), this.server.Controls())
 
 	if request.State() == server.FATAL {
 		// There was problems creating the request: Fail it and return
@@ -204,7 +204,7 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 		http.FileServer(http.Dir(pathValue))))
 }
 
-func (this *HttpEndpoint) doStats(request *httpRequest) {
+func (this *HttpEndpoint) doStats(request *httpRequest, prof server.Profile, ctrl bool) {
 
 	// Update metrics:
 	service_time := time.Since(request.ServiceTime())
@@ -216,6 +216,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest) {
 		request.resultSize, request.errorCount, request.warningCount, request.Statement(),
 		request.Prepared(), (request.State() != server.COMPLETED),
 		string(request.ScanConsistency()))
+
 	request.LogRequest(request_time, service_time, request.resultCount,
 		request.resultSize, request.errorCount)
 }

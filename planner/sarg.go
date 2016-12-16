@@ -134,6 +134,7 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 			}
 		}
 	}
+
 	return true
 }
 

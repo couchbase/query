@@ -20,7 +20,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -59,6 +58,7 @@ type Request interface {
 	Metrics() value.Tristate
 	Signature() value.Tristate
 	Pretty() value.Tristate
+	Controls() value.Tristate
 	ScanConsistency() datastore.ScanConsistency
 	ScanVectorSource() timestamp.ScanVectorSource
 	RequestTime() time.Time
@@ -136,7 +136,7 @@ func SetActives(ar ActiveRequests) {
 }
 
 type BaseRequest struct {
-	// Aligned ints need to be delared right at the top
+	// Aligned ints need to be declared right at the top
 	// of the struct to avoid alignment issues on x86 platforms
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
@@ -169,6 +169,8 @@ type BaseRequest struct {
 	stopResult     chan bool // stop consuming results
 	stopExecute    chan bool // stop executing request
 	timings        execution.Operator
+	controls       value.Tristate
+	profile        Profile
 }
 
 type requestIDImpl struct {
@@ -226,6 +228,8 @@ func NewBaseRequest(statement string, prepared *plan.Prepared, namedArgs map[str
 		closeNotify:    make(chan bool, 1),
 		stopResult:     make(chan bool, 1),
 		stopExecute:    make(chan bool, 1),
+		profile:        ProfUnset,
+		controls:       value.NONE,
 	}
 
 	if maxParallelism <= 0 {
@@ -334,7 +338,7 @@ func (this *BaseRequest) SetState(state State) {
 	// Once we transition to TIMEOUT or CLOSE, we don't transition
 	// to STOPPED or COMPLETED to allow the request to close
 	// gracefully on timeout or network errors and report the
-	//right state
+	// right state
 	if (this.state == TIMEOUT || this.state == CLOSED) &&
 		(state == STOPPED || state == COMPLETED) {
 		return
@@ -480,18 +484,15 @@ func (this *BaseRequest) AddPhaseTime(phase execution.Phases, duration time.Dura
 func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 	var p map[string]interface{} = nil
 
-	if logging.LogLevel() >= logging.TRACE {
-
-		nr := len(this.phaseStats)
-		for i := 0; i < nr; i++ {
-			duration := atomic.LoadUint64(&this.phaseStats[i].duration)
-			if duration > 0 {
-				if p == nil {
-					p = make(map[string]interface{},
-						execution.PHASES)
-				}
-				p[execution.Phases(i).String()] = time.Duration(duration).String()
+	nr := len(this.phaseStats)
+	for i := 0; i < nr; i++ {
+		duration := atomic.LoadUint64(&this.phaseStats[i].duration)
+		if duration > 0 {
+			if p == nil {
+				p = make(map[string]interface{},
+					execution.PHASES)
 			}
+			p[execution.Phases(i).String()] = time.Duration(duration).String()
 		}
 	}
 	return p
@@ -503,6 +504,22 @@ func (this *BaseRequest) SetTimings(o execution.Operator) {
 
 func (this *BaseRequest) GetTimings() execution.Operator {
 	return this.timings
+}
+
+func (this *BaseRequest) SetControls(c value.Tristate) {
+	this.controls = c
+}
+
+func (this *BaseRequest) Controls() value.Tristate {
+	return this.controls
+}
+
+func (this *BaseRequest) SetProfile(p Profile) {
+	this.profile = p
+}
+
+func (this *BaseRequest) Profile() Profile {
+	return this.profile
 }
 
 func (this *BaseRequest) Results() value.ValueChannel {
@@ -547,6 +564,8 @@ func (this *BaseRequest) Close() {
 
 func (this *BaseRequest) LogRequest(requestTime time.Duration, serviceTime time.Duration,
 	resultCount int, resultSize int, errorCount int) {
+
+	// TODO Monitoring + Profiling: namedArgs, positionalArgs and timings
 	accounting.LogRequest(requestTime, serviceTime, resultCount,
 		resultSize, errorCount, this.Statement(),
 		this.Prepared(), this.FmtPhaseTimes(),

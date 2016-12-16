@@ -119,4 +119,6 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 func (this *IntersectAll) Done() {
 	this.first.Done()
 	this.second.Done()
+	this.first = nil
+	this.second = nil
 }

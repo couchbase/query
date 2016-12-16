@@ -15,6 +15,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,34 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/value"
 )
+
+type Profile int
+
+const (
+	ProfUnset = Profile(iota)
+	ProfOff
+	ProfPhases
+	ProfOn
+)
+
+var _PROFILE_MAP = map[string]Profile{
+	"off":     ProfOff,
+	"phases":  ProfPhases,
+	"timings": ProfOn,
+}
+
+var _PROFILE_DEFAULT = ProfOff
+
+var _PROFILE_NAMES = []string{
+	ProfUnset:  "",
+	ProfOff:    "off",
+	ProfPhases: "phases",
+	ProfOn:     "timings",
+}
+
+func (profile Profile) String() string {
+	return _PROFILE_NAMES[profile]
+}
 
 type Server struct {
 	// due to alignment issues on x86 platforms these atomic
@@ -61,6 +90,8 @@ type Server struct {
 	cpuprofile  string
 	enterprise  bool
 	pretty      bool
+	srvprofile  Profile
+	srvcontrols bool
 }
 
 // Default Keep Alive Length
@@ -70,7 +101,8 @@ const KEEP_ALIVE_DEFAULT = 1024 * 16
 func NewServer(store datastore.Datastore, sys datastore.Datastore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	channel, plusChannel RequestChannel, servicers, plusServicers, maxParallelism int,
-	timeout time.Duration, signature, metrics, enterprise, pretty bool) (*Server, errors.Error) {
+	timeout time.Duration, signature, metrics, enterprise, pretty bool,
+	srvprofile Profile, srvcontrols bool) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:   store,
 		systemstore: sys,
@@ -87,6 +119,8 @@ func NewServer(store datastore.Datastore, sys datastore.Datastore, config cluste
 		plusDone:    make(chan bool),
 		enterprise:  enterprise,
 		pretty:      pretty,
+		srvcontrols: srvcontrols,
+		srvprofile:  srvprofile,
 	}
 
 	// special case handling for the atomic specfic stuff
@@ -330,6 +364,31 @@ func (this *Server) SetTimeout(timeout time.Duration) {
 	this.timeout = timeout
 }
 
+func (this *Server) Profile() Profile {
+	return this.srvprofile
+}
+
+func (this *Server) SetProfile(srvprofile Profile) {
+	this.srvprofile = srvprofile
+}
+
+func (this *Server) Controls() bool {
+	return this.srvcontrols
+}
+
+func (this *Server) SetControls(srvcontrols bool) {
+	this.srvcontrols = srvcontrols
+}
+
+func ParseProfile(name string) (Profile, bool) {
+	prof, ok := _PROFILE_MAP[strings.ToLower(name)]
+	if ok {
+		return prof, ok
+	} else {
+		return _PROFILE_DEFAULT, ok
+	}
+}
+
 func (this *Server) Enterprise() bool {
 	return this.enterprise
 }
@@ -461,7 +520,6 @@ func (this *Server) serviceRequest(request Request) {
 	operator.RunOnce(context, nil)
 
 	request.Output().AddPhaseTime(execution.RUN, time.Since(run))
-	logPhases(request)
 }
 
 func (this *Server) getPrepared(request Request, namespace string) (*plan.Prepared, errors.Error) {
@@ -514,19 +572,4 @@ func logExplain(prepared *plan.Prepared) {
 	}
 
 	logging.Tracep("Explain ", logging.Pair{"explain", string(explain)})
-}
-
-func logPhases(request Request) {
-	phaseTimes := request.Output().FmtPhaseTimes()
-	if len(phaseTimes) == 0 {
-		return
-	}
-
-	pairs := make([]logging.Pair, 0, len(phaseTimes)+1)
-	pairs = append(pairs, logging.Pair{"_id", request.Id()})
-	for k, v := range phaseTimes {
-		pairs = append(pairs, logging.Pair{k, v})
-	}
-
-	logging.Tracep("Phase aggregates", pairs...)
 }

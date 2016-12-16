@@ -98,6 +98,14 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return s.actualStore.UserInfo()
 }
 
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
+}
+
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
+}
+
 func NewDatastore(actualStore datastore.Datastore) (datastore.Datastore, errors.Error) {
 	s := &store{actualStore: actualStore}
 

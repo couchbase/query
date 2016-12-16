@@ -108,8 +108,9 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Sequence) Done() {
-	for _, child := range this.children {
+	for c, child := range this.children {
 		child.Done()
+		this.children[c] = nil
 	}
 	_SEQUENCE_POOL.Put(this.children)
 	this.children = nil

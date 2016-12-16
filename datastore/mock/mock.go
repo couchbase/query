@@ -105,6 +105,14 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 	return v, nil
 }
 
+func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
+}
+
+func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
+}
+
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

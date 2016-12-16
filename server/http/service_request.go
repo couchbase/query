@@ -213,8 +213,17 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 		client_id, err = getClientID(httpArgs)
 	}
 
+	var controls value.Tristate
+	if err == nil {
+		controls, err = httpArgs.getTristate(CONTROLS)
+	}
+
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
 		max_parallelism, readonly, metrics, signature, pretty, consistency, client_id, creds)
+	base.SetControls(controls)
+
+	prof, err := getProfile(httpArgs)
+	base.SetProfile(prof)
 
 	rv := &httpRequest{
 		BaseRequest: *base,
@@ -257,6 +266,8 @@ const ( // Request argument names
 	SCAN_VECTORS      = "scan_vectors"
 	CREDS             = "creds"
 	CLIENT_CONTEXT_ID = "client_context_id"
+	PROFILE           = "profile"
+	CONTROLS          = "controls"
 )
 
 var _PARAMETERS = []string{
@@ -280,6 +291,8 @@ var _PARAMETERS = []string{
 	SIGNATURE,
 	PRETTY,
 	CLIENT_CONTEXT_ID,
+	PROFILE,
+	CONTROLS,
 }
 
 func isValidParameter(a string) bool {
@@ -516,6 +529,10 @@ func getClientID(a httpRequestArgs) (string, errors.Error) {
 		}
 	}
 	return client_id, nil
+}
+
+func getProfile(a httpRequestArgs) (server.Profile, errors.Error) {
+	return server.ProfUnset, nil
 }
 
 const acceptType = "application/json"

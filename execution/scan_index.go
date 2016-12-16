@@ -99,7 +99,10 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 }
 
 func (this *IndexScan) Done() {
-	// we happen to know that there's nothing to be done for the chilren spans
+	for c, _ := range this.children {
+		// we happen to know that there's nothing to be done for the chilren spans
+		this.children[c] = nil
+	}
 	_INDEX_SCAN_POOL.Put(this.children)
 	this.children = nil
 }
