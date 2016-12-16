@@ -372,6 +372,7 @@ var _CHECKERS = map[string]checker{
 	_CMPTHRESHOLD:    checkNumber,
 	_CMPLIMIT:        checkNumber,
 	_PRETTY:          checkBool,
+	_PROFILE:         checkString,
 	_CONTROLS:        checkBool,
 }
 
