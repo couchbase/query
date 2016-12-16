@@ -158,7 +158,8 @@ type Indexer2 interface {
 	Indexer
 	// Create a secondary index on this keyspace
 	CreateIndex2(requestId, name string, seekKey expression.Expressions,
-		rangeKey IndexKeys, where expression.Expression, with value.Value) (Index, errors.Error)
+		rangeKey IndexKeys, where expression.Expression, with value.Value) (
+		Index, errors.Error)
 }
 
 type Spans2 []*Span2
@@ -192,7 +193,8 @@ type Index2 interface {
 type CountIndex2 interface {
 	CountIndex
 	// Perform a count on index
-	Count2(requestId string, spans Span2, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error)
+	Count2(requestId string, spans Spans2, cons ScanConsistency, vector timestamp.Vector) (
+		int64, errors.Error)
 }
 
 ////////////////////////////////////////////////////////////////////////
