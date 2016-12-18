@@ -20,12 +20,12 @@ import (
 
 func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	node *algebra.IndexJoin) (op *plan.IndexJoin, err error) {
-	index, covers, fliterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
+	index, covers, filterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
 	if err != nil {
 		return nil, err
 	}
 
-	scan := plan.NewIndexJoin(keyspace, node, index, covers, fliterCovers)
+	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers)
 	if covers != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
