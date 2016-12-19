@@ -304,7 +304,7 @@ func doNoSuchPrepared(t *testing.T, name string) {
 			t.Errorf("Expected error condition: no such prepared. Recieved: %v", err)
 		}
 	default:
-		t.Errorf("Expected error: %v no such prepared", errors.NO_SUCH_PREPARED)
+		t.Errorf("Expected error: %v no such prepared, got %v", errors.NO_SUCH_PREPARED, err)
 	}
 }
 
@@ -379,7 +379,7 @@ func makeMockServer() *server.Server {
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)
 	server, err := server.NewServer(store, nil, nil, nil, "default",
-		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true)
+		false, channel, plusChannel, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
 	if err != nil {
 		logging.Errorp(err.Error())
 		os.Exit(1)

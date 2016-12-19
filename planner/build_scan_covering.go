@@ -31,7 +31,7 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	covering := _COVERING_POOL.Get()
 	defer _COVERING_POOL.Put(covering)
 
-	// Remember filter covers
+	// Remember covers and filter covers
 	fc := make(map[datastore.Index]map[*expression.Cover]value.Value, len(indexes))
 
 outer:
@@ -119,11 +119,11 @@ outer:
 
 	covers := make(expression.Covers, 0, len(keys))
 	for _, key := range keys {
-		if _, ok := key.(*expression.All); !ok {
-			covers = append(covers, expression.NewCover(key))
-		} else {
+		if _, ok := key.(*expression.All); ok {
 			arrayIndex = true
 		}
+
+		covers = append(covers, expression.NewCover(key))
 	}
 
 	var pushDown bool

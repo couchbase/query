@@ -220,10 +220,15 @@ func newHttpRequest(resp http.ResponseWriter, req *http.Request, bp BufferPool, 
 
 	base := server.NewBaseRequest(statement, prepared, namedArgs, positionalArgs, namespace,
 		max_parallelism, readonly, metrics, signature, pretty, consistency, client_id, creds)
-	base.SetControls(controls)
 
-	prof, err := getProfile(httpArgs)
-	base.SetProfile(prof)
+	var prof server.Profile
+	if err == nil {
+		base.SetControls(controls)
+		prof, err = getProfile(httpArgs)
+		if err == nil {
+			base.SetProfile(prof)
+		}
+	}
 
 	rv := &httpRequest{
 		BaseRequest: *base,
@@ -532,7 +537,17 @@ func getClientID(a httpRequestArgs) (string, errors.Error) {
 }
 
 func getProfile(a httpRequestArgs) (server.Profile, errors.Error) {
-	return server.ProfUnset, nil
+	profile, err := a.getString(PROFILE, "")
+	if err == nil && profile != "" {
+		prof, ok := server.ParseProfile(profile)
+		if ok {
+			return prof, nil
+		} else {
+			err = errors.NewServiceErrorUnrecognizedValue(PROFILE, profile)
+		}
+
+	}
+	return server.ProfUnset, err
 }
 
 const acceptType = "application/json"
