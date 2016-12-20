@@ -65,17 +65,20 @@ type builder struct {
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
 	coveringScans   []plan.Operator
+	coveredUnnests  map[*algebra.Unnest]bool
 	countScan       *plan.IndexCountScan
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {
-	return &builder{
+	rv := &builder{
 		datastore:       datastore,
 		systemstore:     systemstore,
 		namespace:       namespace,
 		subquery:        subquery,
 		delayProjection: false,
 	}
+
+	return rv
 }
 
 func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keyspace, error) {

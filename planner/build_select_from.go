@@ -244,6 +244,11 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		return nil, err
 	}
 
+	_, found := this.coveredUnnests[node]
+	if found {
+		return nil, nil
+	}
+
 	unnest := plan.NewUnnest(node)
 	this.subChildren = append(this.subChildren, unnest)
 	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
