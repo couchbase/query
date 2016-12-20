@@ -13,40 +13,32 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetLE struct {
-	subsetDefault
-	le *expression.LE
-}
+func (this *subset) VisitLE(expr *expression.LE) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
 
-func newSubsetLE(le *expression.LE) *subsetLE {
-	rv := &subsetLE{
-		subsetDefault: *newSubsetDefault(le),
-		le:            le,
+	case *expression.LE:
+		if expr.First().EquivalentTo(expr2.First()) {
+			return LessThanOrEquals(expr.Second(), expr2.Second()), nil
+		}
+
+		if expr.Second().EquivalentTo(expr2.Second()) {
+			return LessThanOrEquals(expr2.First(), expr.First()), nil
+		}
+
+		return false, nil
+
+	case *expression.LT:
+		if expr.First().EquivalentTo(expr2.First()) {
+			return LessThan(expr.Second(), expr2.Second()), nil
+		}
+
+		if expr.Second().EquivalentTo(expr2.Second()) {
+			return LessThan(expr2.First(), expr.First()), nil
+		}
+
+		return false, nil
+
+	default:
+		return this.visitDefault(expr)
 	}
-
-	return rv
-}
-
-func (this *subsetLE) VisitLE(expr *expression.LE) (interface{}, error) {
-	if this.le.First().EquivalentTo(expr.First()) {
-		return LessThanOrEquals(this.le.Second(), expr.Second()), nil
-	}
-
-	if this.le.Second().EquivalentTo(expr.Second()) {
-		return LessThanOrEquals(expr.First(), this.le.First()), nil
-	}
-
-	return false, nil
-}
-
-func (this *subsetLE) VisitLT(expr *expression.LT) (interface{}, error) {
-	if this.le.First().EquivalentTo(expr.First()) {
-		return LessThan(this.le.Second(), expr.Second()), nil
-	}
-
-	if this.le.Second().EquivalentTo(expr.Second()) {
-		return LessThan(expr.First(), this.le.First()), nil
-	}
-
-	return false, nil
 }

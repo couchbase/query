@@ -13,42 +13,39 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetAnd struct {
-	predicate
-}
+func (this *subset) VisitAnd(expr *expression.And) (interface{}, error) {
+	expr2 := this.expr2
+	value2 := expr2.Value()
+	if value2 != nil {
+		return value2.Truth(), nil
+	}
 
-func newSubsetAnd(expr *expression.And) *subsetAnd {
-	rv := &subsetAnd{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if expr.EquivalentTo(expr2) {
+	if expr.EquivalentTo(expr2) {
+		return true, nil
+	}
+
+	for _, child := range expr.Operands() {
+		if SubsetOf(child, expr2) {
 			return true, nil
 		}
+	}
 
-		for _, child := range expr.Operands() {
-			if SubsetOf(child, expr2) {
+	switch expr2 := expr2.(type) {
+	case *expression.And:
+		for _, child2 := range expr2.Operands() {
+			if !SubsetOf(expr, child2) {
+				return false, nil
+			}
+		}
+
+		return true, nil
+	case *expression.Or:
+		for _, child2 := range expr2.Operands() {
+			if SubsetOf(expr, child2) {
 				return true, nil
 			}
 		}
-
-		switch expr2 := expr2.(type) {
-		case *expression.And:
-			for _, child2 := range expr2.Operands() {
-				if !SubsetOf(expr, child2) {
-					return false, nil
-				}
-			}
-
-			return true, nil
-		case *expression.Or:
-			for _, child2 := range expr2.Operands() {
-				if SubsetOf(expr, child2) {
-					return true, nil
-				}
-			}
-		}
-
-		return false, nil
 	}
 
-	return rv
+	return false, nil
 }

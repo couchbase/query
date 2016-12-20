@@ -13,33 +13,18 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetIn struct {
-	subsetDefault
-	in *expression.In
-}
-
-func newSubsetIn(in *expression.In) *subsetIn {
-	rv := &subsetIn{
-		subsetDefault: *newSubsetDefault(in),
-		in:            in,
+func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
+	case *expression.IsNotMissing:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	case *expression.IsNotNull:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	case *expression.IsValued:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	case *expression.Within:
+		return expr.First().EquivalentTo(expr2.First()) &&
+			expr.Second().EquivalentTo(expr2.Second()), nil
+	default:
+		return this.visitDefault(expr)
 	}
-
-	return rv
-}
-
-func (this *subsetIn) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	return expr.Operand().DependsOn(this.in.First()), nil
-}
-
-func (this *subsetIn) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	return expr.Operand().DependsOn(this.in.First()), nil
-}
-
-func (this *subsetIn) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	return expr.Operand().DependsOn(this.in.First()), nil
-}
-
-func (this *subsetIn) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return this.in.First().EquivalentTo(expr.First()) &&
-		this.in.Second().EquivalentTo(expr.Second()), nil
 }

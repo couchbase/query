@@ -13,26 +13,15 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetAny struct {
-	subsetDefault
-	any *expression.Any
-}
-
-func newSubsetAny(any *expression.Any) *subsetAny {
-	rv := &subsetAny{
-		subsetDefault: *newSubsetDefault(any),
-		any:           any,
+func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
+	case *expression.Any:
+		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
+			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+	case *expression.AnyEvery:
+		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
+			SubsetOf(expr.Satisfies(), expr2.Satisfies()), nil
+	default:
+		return this.visitDefault(expr)
 	}
-
-	return rv
-}
-
-func (this *subsetAny) VisitAny(expr *expression.Any) (interface{}, error) {
-	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
-		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
-}
-
-func (this *subsetAny) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
-	return this.any.Bindings().SubsetOf(expr.Bindings()) &&
-		SubsetOf(this.any.Satisfies(), expr.Satisfies()), nil
 }
