@@ -84,9 +84,40 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	}
 
 	cops := make(map[datastore.Index]plan.Operator, len(primaryUnnests))
-	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
-	var un *algebra.Unnest
+	cuns := make(map[datastore.Index]map[*algebra.Unnest]bool, len(primaryUnnests))
+
+	for _, index := range unnestIndexes {
+		cop, cun, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], allMap[index], unnests)
+		if err != nil {
+			return nil, err
+		}
+
+		if cop != nil {
+			cops[index] = cop
+			cuns[index] = cun
+		}
+	}
+
+	// Find shortest covering scan
 	n := 0
+	op = nil
+	var cun map[*algebra.Unnest]bool
+	for index, cop := range cops {
+		if op == nil || len(index.RangeKey()) < n {
+			op = cop
+			cun = cuns[index]
+			n = len(index.RangeKey())
+		}
+	}
+
+	// Return shortest covering scan
+	if op != nil {
+		this.coveringScans = append(this.coveringScans, op)
+		this.coveredUnnests = cun
+		return plan.NewDistinctScan(op), nil
+	}
+
+	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
 	for _, unnest := range primaryUnnests {
 		for _, index := range unnestIndexes {
 			// We already have a covering scan using this index
@@ -95,26 +126,12 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			}
 
 			mapping := allMap[index]
-			op, un, n, err = matchUnnest(node, pred, unnest, index, indexes[index], mapping, unnests)
+			op, _, n, err = matchUnnest(node, pred, unnest, index, indexes[index], mapping, unnests)
 			if err != nil {
 				return nil, err
 			}
 
 			if op == nil {
-				continue
-			}
-
-			cop, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], un)
-			if err != nil {
-				return nil, err
-			}
-
-			if cop != nil {
-				cops[index] = cop
-			}
-
-			// We already have some covering scan
-			if len(cops) > 0 {
 				continue
 			}
 
@@ -127,21 +144,6 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		}
 	}
 
-	// Find shortest covering scan
-	n = 0
-	op = nil
-	for index, cop := range cops {
-		if op == nil || len(index.RangeKey()) < n {
-			op = cop
-			n = len(index.RangeKey())
-		}
-	}
-
-	// Return shortest covering scan
-	if op != nil {
-		return op, nil
-	}
-
 	// No UNNEST scan
 	if len(ops) == 0 {
 		return nil, nil
@@ -149,6 +151,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 
 	// No pushdowns
 	this.resetOrderLimit()
+	this.resetCountMin()
 
 	// Eliminate redundant scans
 	entries := make(map[datastore.Index]*indexEntry, len(ops))
@@ -294,11 +297,15 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 }
 
 func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred expression.Expression,
-	index datastore.Index, entry *indexEntry, unnest *algebra.Unnest) (plan.Operator, error) {
+	index datastore.Index, entry *indexEntry, mapping *expression.All, unnests []*algebra.Unnest) (
+	plan.Operator, map[*algebra.Unnest]bool, error) {
+
+	// Statement to be covered
 	if this.cover == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
+	// Include META().id in covering expressions
 	alias := node.Alias()
 	id := expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(alias)),
@@ -306,42 +313,69 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 
 	keys := append(entry.keys, id)
 
-	// Include covering expression from index WHERE clause
-	coveringExprs := keys
+	// Covering expressions from index keys
+	coveringExprs := make(expression.Expressions, 0, len(keys))
+	for _, key := range keys {
+		key = unrollArrayKeys(key)
+		coveringExprs = append(coveringExprs, key)
+	}
+
+	// Include covering expressions from index WHERE clause
 	var filterCovers map[*expression.Cover]value.Value
 
 	if entry.cond != nil {
 		var err error
 		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc = entry.origCond.FilterCovers(fc)
 		filterCovers, err = mapFilterCovers(fc)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		coveringExprs = make(expression.Expressions, len(keys), len(keys)+len(filterCovers))
-		copy(coveringExprs, keys)
 		for c, _ := range filterCovers {
 			coveringExprs = append(coveringExprs, c.Covered())
 		}
 	}
 
+	// Array index covers matching UNNEST expressions
+	bindings := coveredUnnestBindings(entry)
+	coveredUnnests := make(map[*algebra.Unnest]bool, len(unnests))
+	coveredExprs := make(map[expression.Expression]bool, len(unnests))
+
+	for _, unnest := range unnests {
+		unnestExpr := unnest.Expression()
+		bindingExpr, ok := bindings[unnest.As()]
+		if ok && unnestExpr.EquivalentTo(bindingExpr) {
+			coveredUnnests[unnest] = true
+			coveredExprs[unnestExpr] = true
+		}
+	}
+
+	// Is the statement covered by this index?
 	exprs := this.cover.Expressions()
 	for _, expr := range exprs {
-		if !expr.CoveredBy(alias, coveringExprs) {
-			return nil, nil
+		_, ok := coveredExprs[expr]
+		if !ok && !expr.CoveredBy(alias, coveringExprs) {
+			return nil, nil, nil
 		}
 	}
 
 	covers := make(expression.Covers, 0, len(keys))
-	for _, key := range keys {
-		covers = append(covers, expression.NewCover(key))
+	for i, _ := range keys {
+		covers = append(covers, expression.NewCover(coveringExprs[i]))
 	}
 
 	this.resetOrderLimit()
+	this.resetCountMin()
+
+	// Sarg and populate spans
+	_, _, _, err := matchUnnest(node, pred, unnests[0], index, entry, mapping, unnests)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	scan := plan.NewIndexScan(index, node, entry.spans, false, nil, covers, filterCovers)
-	this.coveringScans = append(this.coveringScans, scan)
-	return plan.NewDistinctScan(scan), nil
+	return scan, coveredUnnests, nil
 }
 
 func minimalIndexesUnnest(indexes map[datastore.Index]*indexEntry,
@@ -386,6 +420,36 @@ outer:
 	}
 
 	return len(se.keys) <= len(te.keys)
+}
+
+func unrollArrayKeys(expr expression.Expression) expression.Expression {
+	for all, ok := expr.(*expression.All); ok && !all.Distinct(); all, ok = expr.(*expression.All) {
+		if array, ok := all.Array().(*expression.Array); ok && len(array.Bindings()) == 1 {
+			expr = array.ValueMapping()
+		} else {
+			break
+		}
+	}
+
+	return expr
+}
+
+func coveredUnnestBindings(entry *indexEntry) map[string]expression.Expression {
+	bindings := make(map[string]expression.Expression, 8)
+
+	for _, key := range entry.keys {
+		for all, ok := key.(*expression.All); ok && !all.Distinct(); all, ok = key.(*expression.All) {
+			if array, ok := all.Array().(*expression.Array); ok && len(array.Bindings()) == 1 {
+				binding := array.Bindings()[0]
+				bindings[binding.Variable()] = binding.Expression()
+				key = array.ValueMapping()
+			} else {
+				break
+			}
+		}
+	}
+
+	return bindings
 }
 
 var _UNNEST_POOL = algebra.NewUnnestPool(8)
