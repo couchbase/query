@@ -1,0 +1,38 @@
+[
+  {
+        "statements": "SELECT rs.formatted_address, rs.geometry FROM CURL(\"GET\",\"https://maps.googleapis.com/maps/api/geocode/json\",{\"data\":\"address=Half+Moon+Bay\"} ).results rs",
+        "results": [
+        {
+            "formatted_address": "Half Moon Bay, CA, USA",
+            "geometry": {
+                "bounds": {
+                    "northeast": {
+                        "lat": 37.5226389,
+                        "lng": -122.4165183
+                    },
+                    "southwest": {
+                        "lat": 37.4249286,
+                        "lng": -122.4778879
+                    }
+                },
+                "location": {
+                    "lat": 37.4635519,
+                    "lng": -122.4285862
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                    "northeast": {
+                        "lat": 37.5226389,
+                        "lng": -122.4165183
+                    },
+                    "southwest": {
+                        "lat": 37.4249286,
+                        "lng": -122.4774494
+                    }
+                }
+            }
+        }
+    ]
+        
+    }
+  ]
