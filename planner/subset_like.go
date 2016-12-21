@@ -15,10 +15,6 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitLike(expr *expression.Like) (interface{}, error) {
-	return this.visitLike(expr)
-}
-
 func (this *subset) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	expr2 := this.expr2
 	value2 := expr2.Value()

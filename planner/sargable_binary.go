@@ -13,18 +13,9 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableBinary struct {
-	predicate
-}
-
-func newSargableBinary(pred expression.BinaryFunction) *sargableBinary {
-	rv := &sargableBinary{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return pred.First().EquivalentTo(expr2) ||
-				pred.Second().EquivalentTo(expr2) ||
-				defaultSargable(pred, expr2),
-			nil
-	}
-
-	return rv
+func (this *sargable) visitBinary(pred expression.BinaryFunction) (bool, error) {
+	return pred.First().EquivalentTo(this.key) ||
+			pred.Second().EquivalentTo(this.key) ||
+			this.defaultSargable(pred),
+		nil
 }
