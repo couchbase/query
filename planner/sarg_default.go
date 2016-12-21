@@ -22,6 +22,8 @@ var _EMPTY_SPANS plan.Spans
 var _EXACT_FULL_SPANS plan.Spans
 var _EXACT_VALUED_SPANS plan.Spans
 
+var _NULL_EXPRS = expression.Expressions{expression.NULL_EXPR}
+
 func init() {
 	sspan := &plan.Span{}
 	sspan.Range.Low = expression.Expressions{expression.TRUE_EXPR}
@@ -51,11 +53,11 @@ func init() {
 	_EXACT_VALUED_SPANS[0].Exact = true
 }
 
-type sargDefault struct {
-	sargBase
-}
+func (this *sarg) visitDefault(pred expression.Expression) (plan.Spans, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
+	}
 
-func newSargDefault(pred expression.Expression) *sargDefault {
 	var spans plan.Spans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
@@ -63,18 +65,9 @@ func newSargDefault(pred expression.Expression) *sargDefault {
 		spans = _FULL_SPANS
 	}
 
-	rv := &sargDefault{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if spans != nil && pred.DependsOn(expr2) {
-			return spans, nil
-		}
-
-		return nil, nil
+	if spans != nil && pred.DependsOn(this.key) {
+		return spans, nil
 	}
 
-	return rv
+	return nil, nil
 }

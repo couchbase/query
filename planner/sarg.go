@@ -138,28 +138,16 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 	return true
 }
 
-func sargFor(pred, expr expression.Expression, missingHigh bool) (plan.Spans, error) {
-	s := newSarg(pred)
-	s.SetMissingHigh(missingHigh)
+func sargFor(pred, key expression.Expression, missingHigh bool) (plan.Spans, error) {
+	s := &sarg{key, missingHigh}
 
-	r, err := expr.Accept(s)
+	r, err := pred.Accept(s)
 	if err != nil || r == nil {
 		return nil, err
 	}
 
 	rs := r.(plan.Spans)
 	return rs, nil
-}
-
-func newSarg(pred expression.Expression) sarg {
-	s, _ := pred.Accept(_SARG_FACTORY)
-	return s.(sarg)
-}
-
-type sarg interface {
-	expression.Visitor
-	SetMissingHigh(bool)
-	MissingHigh() bool
 }
 
 /*
@@ -170,15 +158,15 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 	[]plan.Spans, bool, error) {
 
 	n := len(sargKeys)
-	s := newSarg(pred)
-	s.SetMissingHigh(n < total)
+	missingHigh := n < total
 
 	exactSpan := true
 	sargSpans := make([]plan.Spans, n)
 
 	// Sarg compositive indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		r, err := sargKeys[i].Accept(s)
+		s := &sarg{sargKeys[i], missingHigh}
+		r, err := pred.Accept(s)
 		if err != nil || r == nil {
 			return nil, false, err
 		}
@@ -209,10 +197,10 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 
 		// Notify prev key that this key is missing a high bound
 		if i > 0 {
-			s.SetMissingHigh(false)
+			missingHigh = false
 			for _, prev := range rs {
 				if len(prev.Range.High) == 0 {
-					s.SetMissingHigh(true)
+					missingHigh = true
 					break
 				}
 			}

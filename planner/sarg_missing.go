@@ -11,26 +11,16 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-type sargNotMissing struct {
-	sargBase
-}
-
-func newSargNotMissing(pred *expression.IsNotMissing) *sargNotMissing {
-	rv := &sargNotMissing{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if pred.Operand().EquivalentTo(expr2) {
-			return _EXACT_FULL_SPANS, nil
-		}
-
-		return nil, nil
+func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	if pred.Operand().EquivalentTo(this.key) {
+		return _EXACT_FULL_SPANS, nil
+	}
+
+	return nil, nil
 }

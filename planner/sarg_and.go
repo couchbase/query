@@ -17,66 +17,59 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type sargAnd struct {
-	sargBase
-}
-
-func newSargAnd(pred *expression.And) *sargAnd {
-	rv := &sargAnd{}
-	rv.sarger = func(expr2 expression.Expression) (spans plan.Spans, err error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		// MB-21720. For array index keys, sarg for OR instead
-		// of AND, to retain multiple spans.
-		if isArray, _ := expr2.IsArrayIndexKey(); isArray {
-			return sargAndArrayKey(pred, expr2, rv.MissingHigh())
-		}
-
-		exactSpans := true
-		var s plan.Spans
-		for _, op := range pred.Operands() {
-
-			s, err = sargFor(op, expr2, rv.MissingHigh())
-			if err != nil {
-				return nil, err
-			}
-
-			if len(s) == 0 {
-				if op.DependsOn(expr2) {
-					exactSpans = false
-				}
-
-				continue
-			}
-
-			if s[0] == _EMPTY_SPANS[0] {
-				spans = _EMPTY_SPANS
-				return
-			}
-
-			if len(spans) == 0 {
-				spans = s.Copy()
-			} else {
-				spans = constrainSpans(spans, s)
-				if spans[0] == _EMPTY_SPANS[0] {
-					spans = _EMPTY_SPANS
-					return
-				}
-			}
-		}
-
-		if !exactSpans {
-			for _, span := range spans {
-				span.Exact = false
-			}
-		}
-
-		return
+func (this *sarg) VisitAnd(pred *expression.And) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	// MB-21720. For array index keys, sarg for OR instead
+	// of AND, to retain multiple spans.
+	if isArray, _ := this.key.IsArrayIndexKey(); isArray {
+		return sargAndArrayKey(pred, this.key, this.missingHigh)
+	}
+
+	var spans plan.Spans
+	var err error
+	exactSpans := true
+	var s plan.Spans
+
+	for _, op := range pred.Operands() {
+		s, err = sargFor(op, this.key, this.missingHigh)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(s) == 0 {
+			if op.DependsOn(this.key) {
+				exactSpans = false
+			}
+
+			continue
+		}
+
+		if s[0] == _EMPTY_SPANS[0] {
+			spans = _EMPTY_SPANS
+			return spans, err
+		}
+
+		if len(spans) == 0 {
+			spans = s.Copy()
+		} else {
+			spans = constrainSpans(spans, s)
+			if spans[0] == _EMPTY_SPANS[0] {
+				spans = _EMPTY_SPANS
+				return spans, err
+			}
+		}
+	}
+
+	if !exactSpans {
+		for _, span := range spans {
+			span.Exact = false
+		}
+	}
+
+	return spans, err
 }
 
 func constrainSpans(spans1, spans2 plan.Spans) plan.Spans {
@@ -252,7 +245,7 @@ func isEmptySpan(span *plan.Span) bool {
 
 // MB-21720. For array index keys, sarg for OR instead of AND, to
 // retain multiple spans.  Modified from newSargOr().
-func sargAndArrayKey(pred *expression.And, expr2 expression.Expression, missingHigh bool) (
+func sargAndArrayKey(pred *expression.And, key expression.Expression, missingHigh bool) (
 	plan.Spans, error) {
 
 	spans := make(plan.Spans, 0, len(pred.Operands()))
@@ -264,8 +257,7 @@ func sargAndArrayKey(pred *expression.And, expr2 expression.Expression, missingH
 	exactFullSpan := false
 
 	for _, child := range pred.Operands() {
-
-		cspans, err := sargFor(child, expr2, missingHigh)
+		cspans, err := sargFor(child, key, missingHigh)
 		if err != nil {
 			return nil, err
 		}
