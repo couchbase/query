@@ -17,14 +17,10 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-type sargLike struct {
-	sargBase
-}
-
 var _EMPTY_STRING = expression.Expressions{expression.EMPTY_STRING_EXPR}
 var _EMPTY_ARRAY = expression.Expressions{expression.EMPTY_ARRAY_EXPR}
 
-func newSargLike(pred expression.LikeFunction) expression.Visitor {
+func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	prefix := ""
 	re := pred.Regexp()
 
@@ -33,49 +29,44 @@ func newSargLike(pred expression.LikeFunction) expression.Visitor {
 		prefix, complete = re.LiteralPrefix()
 		if complete {
 			eq := expression.NewEq(pred.First(), expression.NewConstant(prefix))
-			return newSargEq(eq.(*expression.Eq))
+			return eq.Accept(this)
 		}
 	}
 
-	rv := &sargLike{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
+	}
 
-		if !pred.First().EquivalentTo(expr2) {
-			if pred.DependsOn(expr2) {
-				return _VALUED_SPANS, nil
-			} else {
-				return nil, nil
-			}
-		}
-
-		if re == nil {
-			return likeSpans(pred), nil
-		}
-
-		span := &plan.Span{}
-		span.Exact = false
-		span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
-
-		last := len(prefix) - 1
-		if last >= 0 && prefix[last] < math.MaxUint8 {
-			bytes := []byte(prefix)
-			bytes[last]++
-			span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
-			if re.NumSubexp() == 1 && re.String()[len(prefix):] == "(.*)" {
-				span.Exact = true
-			}
+	if !pred.First().EquivalentTo(this.key) {
+		if pred.DependsOn(this.key) {
+			return _VALUED_SPANS, nil
 		} else {
-			span.Range.High = _EMPTY_ARRAY
+			return nil, nil
 		}
-
-		span.Range.Inclusion = datastore.LOW
-		return plan.Spans{span}, nil
 	}
 
-	return rv
+	if re == nil {
+		return likeSpans(pred), nil
+	}
+
+	span := &plan.Span{}
+	span.Exact = false
+	span.Range.Low = expression.Expressions{expression.NewConstant(prefix)}
+
+	last := len(prefix) - 1
+	if last >= 0 && prefix[last] < math.MaxUint8 {
+		bytes := []byte(prefix)
+		bytes[last]++
+		span.Range.High = expression.Expressions{expression.NewConstant(string(bytes))}
+		if re.NumSubexp() == 1 && re.String()[len(prefix):] == "(.*)" {
+			span.Exact = true
+		}
+	} else {
+		span.Range.High = _EMPTY_ARRAY
+	}
+
+	span.Range.Inclusion = datastore.LOW
+	return plan.Spans{span}, nil
 }
 
 func likeSpans(pred expression.LikeFunction) plan.Spans {

@@ -14,11 +14,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-type sargAnyEvery struct {
-	sargDefault
-}
-
-func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
+func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
 	var spans plan.Spans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
@@ -26,38 +22,33 @@ func newSargAnyEvery(pred *expression.AnyEvery) *sargAnyEvery {
 		spans = _FULL_SPANS
 	}
 
-	rv := &sargAnyEvery{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		sp := spans
-		if !pred.DependsOn(expr2) {
-			sp = nil
-		}
-
-		all, ok := expr2.(*expression.All)
-		if !ok {
-			return sp, nil
-		}
-
-		array, ok := all.Array().(*expression.Array)
-		if !ok {
-			return sp, nil
-		}
-
-		if !pred.Bindings().SubsetOf(array.Bindings()) {
-			return sp, nil
-		}
-
-		if array.When() != nil &&
-			!SubsetOf(pred.Satisfies(), array.When()) {
-			return sp, nil
-		}
-
-		return sargFor(pred.Satisfies(), array.ValueMapping(), rv.MissingHigh())
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
 	}
 
-	return rv
+	sp := spans
+	if !pred.DependsOn(this.key) {
+		sp = nil
+	}
+
+	all, ok := this.key.(*expression.All)
+	if !ok {
+		return sp, nil
+	}
+
+	array, ok := all.Array().(*expression.Array)
+	if !ok {
+		return sp, nil
+	}
+
+	if !pred.Bindings().SubsetOf(array.Bindings()) {
+		return sp, nil
+	}
+
+	if array.When() != nil &&
+		!SubsetOf(pred.Satisfies(), array.When()) {
+		return sp, nil
+	}
+
+	return sargFor(pred.Satisfies(), array.ValueMapping(), this.missingHigh)
 }

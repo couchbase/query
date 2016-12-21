@@ -11,232 +11,182 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-type sargBase struct {
-	sarger      sargFunc
+type sarg struct {
+	key         expression.Expression
 	missingHigh bool
 }
 
-func (this *sargBase) SetMissingHigh(v bool) {
+func (this *sarg) SetMissingHigh(v bool) {
 	this.missingHigh = v
 }
 
-func (this *sargBase) MissingHigh() bool {
+func (this *sarg) MissingHigh() bool {
 	return this.missingHigh
 }
 
-type sargFunc func(expression.Expression) (plan.Spans, error)
-
 // Arithmetic
 
-func (this *sargBase) VisitAdd(expr *expression.Add) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitAdd(pred *expression.Add) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitDiv(expr *expression.Div) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitDiv(pred *expression.Div) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitMod(expr *expression.Mod) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitMod(pred *expression.Mod) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitMult(expr *expression.Mult) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitMult(pred *expression.Mult) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitNeg(expr *expression.Neg) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitNeg(pred *expression.Neg) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitSub(expr *expression.Sub) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSub(pred *expression.Sub) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Case
 
-func (this *sargBase) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSearchedCase(pred *expression.SearchedCase) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSimpleCase(pred *expression.SimpleCase) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Collection
 
-func (this *sargBase) VisitAny(expr *expression.Any) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitArray(pred *expression.Array) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitArray(expr *expression.Array) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitEvery(pred *expression.Every) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitEvery(expr *expression.Every) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitExists(pred *expression.Exists) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitFirst(pred *expression.First) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitExists(expr *expression.Exists) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitFirst(expr *expression.First) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitObject(expr *expression.Object) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIn(expr *expression.In) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitWithin(expr *expression.Within) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitObject(pred *expression.Object) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Comparison
 
-func (this *sargBase) VisitBetween(expr *expression.Between) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitBetween(pred *expression.Between) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitEq(expr *expression.Eq) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitLike(pred *expression.Like) (interface{}, error) {
+	return this.visitLike(pred)
 }
 
-func (this *sargBase) VisitLE(expr *expression.LE) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitLike(expr *expression.Like) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitLT(expr *expression.LT) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Concat
-func (this *sargBase) VisitConcat(expr *expression.Concat) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitConcat(pred *expression.Concat) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Constant
-func (this *sargBase) VisitConstant(expr *expression.Constant) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitConstant(pred *expression.Constant) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Identifier
-func (this *sargBase) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitIdentifier(pred *expression.Identifier) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Construction
 
-func (this *sargBase) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitArrayConstruct(pred *expression.ArrayConstruct) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitObjectConstruct(pred *expression.ObjectConstruct) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Logic
 
-func (this *sargBase) VisitAnd(expr *expression.And) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitNot(expr *expression.Not) (interface{}, error) {
-	return this.sarger(expr)
-}
-
-func (this *sargBase) VisitOr(expr *expression.Or) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitNot(pred *expression.Not) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Navigation
 
-func (this *sargBase) VisitElement(expr *expression.Element) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitElement(pred *expression.Element) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitField(expr *expression.Field) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitField(pred *expression.Field) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitFieldName(expr *expression.FieldName) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitFieldName(pred *expression.FieldName) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
-func (this *sargBase) VisitSlice(expr *expression.Slice) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSlice(pred *expression.Slice) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Self
-func (this *sargBase) VisitSelf(expr *expression.Self) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSelf(pred *expression.Self) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Function
-func (this *sargBase) VisitFunction(expr expression.Function) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
+	switch pred := pred.(type) {
+	case *expression.RegexpLike:
+		return this.visitLike(pred)
+	}
+
+	return this.visitDefault(pred)
 }
 
 // Subquery
-func (this *sargBase) VisitSubquery(expr expression.Subquery) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitSubquery(pred expression.Subquery) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // NamedParameter
-func (this *sargBase) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // PositionalParameter
-func (this *sargBase) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitPositionalParameter(pred expression.PositionalParameter) (interface{}, error) {
+	return this.visitDefault(pred)
 }
 
 // Cover
-func (this *sargBase) VisitCover(expr *expression.Cover) (interface{}, error) {
-	return expr.Covered().Accept(this)
+func (this *sarg) VisitCover(pred *expression.Cover) (interface{}, error) {
+	return pred.Covered().Accept(this)
 }
 
 // All
-func (this *sargBase) VisitAll(expr *expression.All) (interface{}, error) {
-	return this.sarger(expr)
+func (this *sarg) VisitAll(pred *expression.All) (interface{}, error) {
+	return pred.Array().Accept(this)
 }
