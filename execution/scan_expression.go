@@ -49,6 +49,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		ev, e := this.plan.FromExpr().Evaluate(parent, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "ExpressionScan"))
+			return
 		}
 
 		actuals := ev.Actual()
