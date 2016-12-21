@@ -13,104 +13,94 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetEq struct {
-	subsetDefault
-	eq *expression.Eq
-}
+func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
 
-func newSubsetEq(eq *expression.Eq) *subsetEq {
-	rv := &subsetEq{
-		subsetDefault: *newSubsetDefault(eq),
-		eq:            eq,
-	}
-
-	return rv
-}
-
-func (this *subsetEq) VisitLE(expr *expression.LE) (interface{}, error) {
-	if this.eq.First().EquivalentTo(expr.First()) {
-		return LessThanOrEquals(this.eq.Second(), expr.Second()), nil
-	}
-
-	if this.eq.Second().EquivalentTo(expr.First()) {
-		return LessThanOrEquals(this.eq.First(), expr.Second()), nil
-	}
-
-	if this.eq.First().EquivalentTo(expr.Second()) {
-		return LessThanOrEquals(expr.First(), this.eq.Second()), nil
-	}
-
-	if this.eq.Second().EquivalentTo(expr.Second()) {
-		return LessThanOrEquals(expr.First(), this.eq.First()), nil
-	}
-
-	return false, nil
-}
-
-func (this *subsetEq) VisitLT(expr *expression.LT) (interface{}, error) {
-	if this.eq.First().EquivalentTo(expr.First()) {
-		return LessThan(this.eq.Second(), expr.Second()), nil
-	}
-
-	if this.eq.Second().EquivalentTo(expr.First()) {
-		return LessThan(this.eq.First(), expr.Second()), nil
-	}
-
-	if this.eq.First().EquivalentTo(expr.Second()) {
-		return LessThan(expr.First(), this.eq.Second()), nil
-	}
-
-	if this.eq.Second().EquivalentTo(expr.Second()) {
-		return LessThan(expr.First(), this.eq.First()), nil
-	}
-
-	return false, nil
-}
-
-func (this *subsetEq) VisitIn(expr *expression.In) (interface{}, error) {
-	acons, ok := expr.Second().(*expression.ArrayConstruct)
-	if !ok {
-		return false, nil
-	}
-
-	var rhs expression.Expression
-	if this.eq.First().EquivalentTo(expr.First()) {
-		rhs = this.eq.Second()
-	} else if this.eq.Second().EquivalentTo(expr.First()) {
-		rhs = this.eq.First()
-	} else {
-		return false, nil
-	}
-
-	for _, op := range acons.Operands() {
-		if rhs.EquivalentTo(op) {
-			return true, nil
+	case *expression.LE:
+		if expr.First().EquivalentTo(expr2.First()) {
+			return LessThanOrEquals(expr.Second(), expr2.Second()), nil
 		}
-	}
 
-	return false, nil
-}
-
-func (this *subsetEq) VisitWithin(expr *expression.Within) (interface{}, error) {
-	acons, ok := expr.Second().(*expression.ArrayConstruct)
-	if !ok {
-		return false, nil
-	}
-
-	var rhs expression.Expression
-	if this.eq.First().EquivalentTo(expr.First()) {
-		rhs = this.eq.Second()
-	} else if this.eq.Second().EquivalentTo(expr.First()) {
-		rhs = this.eq.First()
-	} else {
-		return false, nil
-	}
-
-	for _, op := range acons.Operands() {
-		if rhs.EquivalentTo(op) {
-			return true, nil
+		if expr.Second().EquivalentTo(expr2.First()) {
+			return LessThanOrEquals(expr.First(), expr2.Second()), nil
 		}
-	}
 
-	return false, nil
+		if expr.First().EquivalentTo(expr2.Second()) {
+			return LessThanOrEquals(expr2.First(), expr.Second()), nil
+		}
+
+		if expr.Second().EquivalentTo(expr2.Second()) {
+			return LessThanOrEquals(expr2.First(), expr.First()), nil
+		}
+
+		return false, nil
+
+	case *expression.LT:
+		if expr.First().EquivalentTo(expr2.First()) {
+			return LessThan(expr.Second(), expr2.Second()), nil
+		}
+
+		if expr.Second().EquivalentTo(expr2.First()) {
+			return LessThan(expr.First(), expr2.Second()), nil
+		}
+
+		if expr.First().EquivalentTo(expr2.Second()) {
+			return LessThan(expr2.First(), expr.Second()), nil
+		}
+
+		if expr.Second().EquivalentTo(expr2.Second()) {
+			return LessThan(expr2.First(), expr.First()), nil
+		}
+
+		return false, nil
+
+	case *expression.In:
+		acons, ok := expr2.Second().(*expression.ArrayConstruct)
+		if !ok {
+			return false, nil
+		}
+
+		var rhs expression.Expression
+		if expr.First().EquivalentTo(expr2.First()) {
+			rhs = expr.Second()
+		} else if expr.Second().EquivalentTo(expr2.First()) {
+			rhs = expr.First()
+		} else {
+			return false, nil
+		}
+
+		for _, op := range acons.Operands() {
+			if rhs.EquivalentTo(op) {
+				return true, nil
+			}
+		}
+
+		return false, nil
+
+	case *expression.Within:
+		acons, ok := expr2.Second().(*expression.ArrayConstruct)
+		if !ok {
+			return false, nil
+		}
+
+		var rhs expression.Expression
+		if expr.First().EquivalentTo(expr2.First()) {
+			rhs = expr.Second()
+		} else if expr.Second().EquivalentTo(expr2.First()) {
+			rhs = expr.First()
+		} else {
+			return false, nil
+		}
+
+		for _, op := range acons.Operands() {
+			if rhs.EquivalentTo(op) {
+				return true, nil
+			}
+		}
+
+		return false, nil
+
+	default:
+		return this.visitDefault(expr)
+	}
 }

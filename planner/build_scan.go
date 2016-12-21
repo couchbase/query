@@ -196,6 +196,12 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 			return nil, err
 		}
 
+		// refresh indexer
+		_, err = indexer.Indexes()
+		if err != nil {
+			return nil, err
+		}
+
 		index, err := indexer.IndexByName(hint.Name())
 		if err != nil {
 			return nil, err

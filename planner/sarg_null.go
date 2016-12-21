@@ -26,64 +26,46 @@ func init() {
 	_NULL_SPANS = plan.Spans{span}
 }
 
-type sargNull struct {
-	sargBase
-}
+func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
+	}
 
-func newSargNull(pred *expression.IsNull) *sargNull {
+	if pred.Operand().EquivalentTo(this.key) {
+		return _NULL_SPANS, nil
+	}
+
 	var spans plan.Spans
-	if pred.PropagatesMissing() {
+	if pred.Operand().PropagatesMissing() {
 		spans = _FULL_SPANS
 	}
 
-	rv := &sargNull{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if pred.Operand().EquivalentTo(expr2) {
-			return _NULL_SPANS, nil
-		}
-
-		if pred.Operand().DependsOn(expr2) {
-			return spans, nil
-		}
-
-		return nil, nil
+	if spans != nil && pred.Operand().DependsOn(this.key) {
+		return spans, nil
 	}
 
-	return rv
+	return nil, nil
 }
 
-type sargNotNull struct {
-	sargBase
-}
+func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
+	if SubsetOf(pred, this.key) {
+		return _SELF_SPANS, nil
+	}
 
-func newSargNotNull(pred *expression.IsNotNull) *sargNotNull {
+	if pred.Operand().EquivalentTo(this.key) {
+		return _EXACT_VALUED_SPANS, nil
+	}
+
 	var spans plan.Spans
-	if pred.PropagatesNull() {
+	if pred.Operand().PropagatesNull() {
 		spans = _VALUED_SPANS
-	} else if pred.PropagatesMissing() {
+	} else if pred.Operand().PropagatesMissing() {
 		spans = _FULL_SPANS
 	}
 
-	rv := &sargNotNull{}
-	rv.sarger = func(expr2 expression.Expression) (plan.Spans, error) {
-		if SubsetOf(pred, expr2) {
-			return _SELF_SPANS, nil
-		}
-
-		if pred.Operand().EquivalentTo(expr2) {
-			return _EXACT_VALUED_SPANS, nil
-		}
-
-		if pred.Operand().DependsOn(expr2) {
-			return spans, nil
-		}
-
-		return nil, nil
+	if spans != nil && pred.Operand().DependsOn(this.key) {
+		return spans, nil
 	}
 
-	return rv
+	return nil, nil
 }

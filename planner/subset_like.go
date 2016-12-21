@@ -15,25 +15,31 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetLike struct {
-	predicate
-}
+func (this *subset) visitLike(expr expression.LikeFunction) (interface{}, error) {
+	expr2 := this.expr2
+	value2 := expr2.Value()
+	if value2 != nil {
+		return value2.Truth(), nil
+	}
 
-func newSubsetLike(expr expression.LikeFunction) expression.Visitor {
+	if expr.EquivalentTo(expr2) {
+		return true, nil
+	}
+
 	re := expr.Regexp()
 	if re == nil {
 		// Pattern is not a constant
-		return newSubsetDefault(expr)
+		return this.visitDefault(expr)
 	}
 
 	prefix, complete := re.LiteralPrefix()
 	if complete {
 		eq := expression.NewEq(expr.First(), expression.NewConstant(prefix))
-		return newSubsetEq(eq.(*expression.Eq))
+		return eq.Accept(this)
 	}
 
 	if prefix == "" {
-		return newSubsetDefault(expr)
+		return this.visitDefault(expr)
 	}
 
 	var and expression.Expression
@@ -51,16 +57,5 @@ func newSubsetLike(expr expression.LikeFunction) expression.Visitor {
 			expression.EMPTY_ARRAY_EXPR))
 	}
 
-	sand := newSubsetAnd(and.(*expression.And))
-
-	rv := &subsetLike{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if expr.EquivalentTo(expr2) {
-			return true, nil
-		}
-
-		return sand.test(expr2)
-	}
-
-	return rv
+	return and.Accept(this)
 }

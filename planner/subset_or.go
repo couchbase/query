@@ -13,25 +13,22 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetOr struct {
-	predicate
-}
+func (this *subset) VisitOr(expr *expression.Or) (interface{}, error) {
+	expr2 := this.expr2
+	value2 := expr2.Value()
+	if value2 != nil {
+		return value2.Truth(), nil
+	}
 
-func newSubsetOr(expr *expression.Or) *subsetOr {
-	rv := &subsetOr{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		if expr.EquivalentTo(expr2) {
-			return true, nil
-		}
-
-		for _, child := range expr.Operands() {
-			if !SubsetOf(child, expr2) {
-				return false, nil
-			}
-		}
-
+	if expr.EquivalentTo(expr2) {
 		return true, nil
 	}
 
-	return rv
+	for _, child := range expr.Operands() {
+		if !SubsetOf(child, expr2) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

@@ -13,28 +13,15 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type subsetWithin struct {
-	subsetDefault
-	within *expression.Within
-}
-
-func newSubsetWithin(within *expression.Within) *subsetWithin {
-	rv := &subsetWithin{
-		subsetDefault: *newSubsetDefault(within),
-		within:        within,
+func (this *subset) VisitWithin(expr *expression.Within) (interface{}, error) {
+	switch expr2 := this.expr2.(type) {
+	case *expression.IsNotMissing:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	case *expression.IsNotNull:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	case *expression.IsValued:
+		return expr2.Operand().DependsOn(expr.First()), nil
+	default:
+		return this.visitDefault(expr)
 	}
-
-	return rv
-}
-
-func (this *subsetWithin) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
-	return expr.Operand().DependsOn(this.within.First()), nil
-}
-
-func (this *subsetWithin) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
-	return expr.Operand().DependsOn(this.within.First()), nil
-}
-
-func (this *subsetWithin) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
-	return expr.Operand().DependsOn(this.within.First()), nil
 }
