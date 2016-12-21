@@ -97,9 +97,6 @@ var _FUNCTIONS = map[string]Function{
 	"field":   &Field{},
 	"slice":   &Slice{},
 
-	// Curl
-	"curl": &Curl{},
-
 	// Date
 	"clock_millis":        &ClockMillis{},
 	"clock_str":           &ClockStr{},
