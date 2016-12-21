@@ -13,17 +13,8 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableUnary struct {
-	predicate
-}
-
-func newSargableUnary(pred expression.UnaryFunction) *sargableUnary {
-	rv := &sargableUnary{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return pred.Operand().EquivalentTo(expr2) ||
-				defaultSargable(pred, expr2),
-			nil
-	}
-
-	return rv
+func (this *sargable) visitUnary(pred expression.UnaryFunction) (bool, error) {
+	return pred.Operand().EquivalentTo(this.key) ||
+			this.defaultSargable(pred),
+		nil
 }

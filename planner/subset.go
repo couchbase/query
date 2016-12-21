@@ -92,6 +92,10 @@ func (this *subset) VisitBetween(expr *expression.Between) (interface{}, error) 
 	return this.visitDefault(expr)
 }
 
+func (this *subset) VisitLike(expr *expression.Like) (interface{}, error) {
+	return this.visitLike(expr)
+}
+
 func (this *subset) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
 	return this.visitDefault(expr)
 }

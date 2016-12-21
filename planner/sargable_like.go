@@ -13,17 +13,8 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-type sargableLike struct {
-	predicate
-}
-
-func newSargableLike(pred expression.LikeFunction) *sargableLike {
-	rv := &sargableLike{}
-	rv.test = func(expr2 expression.Expression) (bool, error) {
-		return pred.First().EquivalentTo(expr2) ||
-				defaultSargable(pred, expr2),
-			nil
-	}
-
-	return rv
+func (this *sargable) visitLike(pred expression.LikeFunction) (bool, error) {
+	return pred.First().EquivalentTo(this.key) ||
+			this.defaultSargable(pred),
+		nil
 }
