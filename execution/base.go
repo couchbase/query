@@ -33,6 +33,7 @@ type base struct {
 	execTime    time.Duration
 	duration    time.Duration
 	chanTime    time.Duration
+	stopped     bool
 }
 
 const _ITEM_CAP = 512
@@ -132,6 +133,10 @@ func (this *base) sendItem(item value.AnnotatedValue) bool {
 	}
 	defer addTime()
 
+	if this.stopped {
+		return false
+	}
+
 	select {
 	case <-this.stopChannel: // Never closed
 		return false
@@ -174,9 +179,11 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 	loop:
 		for ok {
 			t := time.Now()
+
 			select {
 			case <-this.stopChannel: // Never closed
 				this.chanTime += time.Since(t)
+				this.stopped = true
 				break loop
 			default:
 			}
@@ -188,8 +195,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 				}
 			case <-this.stopChannel: // Never closed
 				this.chanTime += time.Since(t)
+				this.stopped = true
 				break loop
 			}
+
 			this.chanTime += time.Since(t)
 		}
 
