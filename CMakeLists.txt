@@ -37,9 +37,12 @@ ENDIF()
 IF (NOT CBQ_ONLY)
   GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
+  GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
   GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
     GOPATH "${PROJECT_SOURCE_DIR}/../../../.." "${GODEPSDIR}"
     DEPENDS n1ql-yacc INSTALL_PATH bin
+    CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR}"
+    CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR}"
     GOVERSION ${GOVERSION}
     GOTAGS ${_gotags})
 
