@@ -10,6 +10,7 @@
 package system
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -73,14 +74,20 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
 			_REMOTEACCESS.GetRemoteDoc(node, localKey,
-				"active_requests", "GET",
+				"active_requests", "POST",
 				func(doc map[string]interface{}) {
 
+					meta := map[string]interface{}{
+						"id": key,
+					}
+					t, ok := doc["timings"]
+					if ok {
+						meta["plan"] = t
+						delete(doc, "timings")
+					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id": key,
-					})
+					remoteValue.SetAttachment("meta", meta)
 					rv = append(rv, value.AnnotatedPair{
 						Name:  key,
 						Value: remoteValue,
@@ -114,11 +121,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 				if request.Statement() != "" {
 					item.SetField("statement", request.Statement())
 				}
-				p := request.Output().FmtPhaseTimes()
-				if p != nil {
-					item.SetField("phaseTimes", p)
-				}
-				p = request.Output().FmtPhaseCounts()
+				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)
 				}
@@ -131,13 +134,47 @@ func (b *activeRequestsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []
 					item.SetField("preparedName", p.Name())
 					item.SetField("preparedText", p.Text())
 				}
+				prof := request.Profile()
+				if prof == server.ProfUnset {
+					prof = _REMOTEACCESS.GetProfile()
+				}
+				if prof != server.ProfOff {
+					item.SetField("phaseTimes", request.Output().FmtPhaseTimes())
+				}
+
+				var ctrl bool
+				ctr := request.Controls()
+				if ctr == value.NONE {
+					ctrl = _REMOTEACCESS.GetControls()
+				} else {
+					ctrl = (ctr == value.TRUE)
+				}
+				if ctrl {
+					na := request.NamedArgs()
+					if na != nil {
+						item.SetField("namedArgs", na)
+					}
+					pa := request.PositionalArgs()
+					if pa != nil {
+						item.SetField("positionalArgs", pa)
+					}
+				}
+
+				meta := map[string]interface{}{
+					"id": key,
+				}
+
+				t := request.GetTimings()
+				if prof == server.ProfOn && t != nil {
+					bytes, _ := json.Marshal(t)
+					meta["plan"] = bytes
+				}
+
+				item.SetAttachment("meta", meta)
 			})
 			if err != nil {
 				errs = append(errs, err)
 			} else if item != nil {
-				item.SetAttachment("meta", map[string]interface{}{
-					"id": key,
-				})
 				rv = append(rv, value.AnnotatedPair{
 					Name:  key,
 					Value: item,

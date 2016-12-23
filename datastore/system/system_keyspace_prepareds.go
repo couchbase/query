@@ -73,7 +73,7 @@ func (b *preparedsKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []error
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
 			_REMOTEACCESS.GetRemoteDoc(node, localKey,
-				"prepareds", "GET",
+				"prepareds", "POST",
 				func(doc map[string]interface{}) {
 
 					plan := doc["operator"]

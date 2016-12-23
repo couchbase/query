@@ -62,6 +62,3 @@ func (this *Prepare) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Prepare) Done() {
-}

@@ -56,6 +56,3 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Alias) Done() {
-}

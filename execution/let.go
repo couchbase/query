@@ -69,6 +69,3 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Let) Done() {
-}

@@ -81,6 +81,3 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *KeyScan) Done() {
-}

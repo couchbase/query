@@ -93,6 +93,3 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Join) Done() {
-}

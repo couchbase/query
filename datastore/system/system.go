@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/value"
 )
 
@@ -137,7 +138,9 @@ type SystemRemoteAccess interface {
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
 		warnFn func(warn errors.Error)) // collect a document for a keyspace from a remote node
-	WhoAmI() string // local node name, if known
+	WhoAmI() string             // local node name, if known
+	GetControls() bool          // Controls systemwide setting
+	GetProfile() server.Profile // Profile systemwide setting
 }
 
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()

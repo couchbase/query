@@ -70,6 +70,3 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *CreatePrimaryIndex) Done() {
-}

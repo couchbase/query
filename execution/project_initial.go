@@ -147,6 +147,3 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *InitialProject) Done() {
-}

@@ -60,6 +60,3 @@ func (this *ParentScan) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *ParentScan) Done() {
-}

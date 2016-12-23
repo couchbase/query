@@ -59,6 +59,3 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Clone) Done() {
-}

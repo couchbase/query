@@ -83,6 +83,3 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Offset) Done() {
-}

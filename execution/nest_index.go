@@ -157,7 +157,4 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *IndexNest) Done() {
-}
-
 var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)

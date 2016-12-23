@@ -161,7 +161,7 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	request.LogRequest(0, 0, request.resultCount, 0, 0)
+	request.CompleteRequest(0, 0, request.resultCount, 0, 0, this.server)
 }
 
 func Run(mockServer *MockServer, p bool, q string) ([]interface{}, []errors.Error, errors.Error) {
@@ -229,7 +229,7 @@ func Start(site, pool string) *MockServer {
 	}
 
 	// Start the completed requests log - keep it small and busy
-	accounting.RequestsInit(0, 8)
+	server.RequestsInit(0, 8)
 
 	channel := make(server.RequestChannel, 10)
 	plusChannel := make(server.RequestChannel, 10)

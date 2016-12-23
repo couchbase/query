@@ -82,6 +82,3 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Limit) Done() {
-}

@@ -93,7 +93,4 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *Unnest) Done() {
-}
-
 var _EMPTY_ACTUALS []interface{}
