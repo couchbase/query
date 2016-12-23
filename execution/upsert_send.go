@@ -60,8 +60,13 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		return true
 	}
 
-	dpairs := _UPSERT_POOL.Get()
-	defer _UPSERT_POOL.Put(dpairs)
+	var dpairs []value.Pair
+	if _UPSERT_POOL.Size() >= len(this.batch) {
+		dpairs = _UPSERT_POOL.Get()
+		defer _UPSERT_POOL.Put(dpairs)
+	} else {
+		dpairs = make([]value.Pair, 0, len(this.batch))
+	}
 
 	keyExpr := this.plan.Key()
 	valExpr := this.plan.Value()
