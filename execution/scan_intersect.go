@@ -63,15 +63,16 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
-		defer func() {
-			_INDEX_COUNT_POOL.Put(this.counts)
-			this.counts = nil
-			_INDEX_VALUE_POOL.Put(this.values)
-			this.values = nil
-		}()
 
 		this.counts = _INDEX_COUNT_POOL.Get()
 		this.values = _INDEX_VALUE_POOL.Get()
+
+		defer func() {
+			_INDEX_COUNT_POOL.Put(this.counts)
+			_INDEX_VALUE_POOL.Put(this.values)
+			this.counts = nil
+			this.values = nil
+		}()
 
 		channel := NewChannel()
 		defer channel.Close()
@@ -98,7 +99,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 			select {
 			case item, ok = <-channel.ItemChannel():
-				if ok && n == len(this.scans) {
+				if ok {
 					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
@@ -106,7 +107,6 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					this.notifyScans()
 				}
 				n--
-				break loop
 			case <-this.stopChannel:
 				stopped = true
 				break loop
