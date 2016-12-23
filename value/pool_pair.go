@@ -42,3 +42,7 @@ func (this *PairPool) Put(s []Pair) {
 
 	this.pool.Put(s[0:0])
 }
+
+func (this *PairPool) Size() int {
+	return this.size
+}
