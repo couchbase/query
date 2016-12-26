@@ -251,6 +251,7 @@ var _FUNCTIONS = map[string]Function{
 	"encoded_size": &EncodedSize{},
 	"json_decode":  &JSONDecode{},
 	"json_encode":  &JSONEncode{},
+	"pairs":        &Pairs{},
 	"poly_length":  &PolyLength{},
 	"tokens":       &Tokens{},
 
