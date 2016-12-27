@@ -114,7 +114,12 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if op != nil {
 		this.coveringScans = append(this.coveringScans, op)
 		this.coveredUnnests = cun
-		return plan.NewDistinctScan(op), nil
+
+		if len(cun) > 0 {
+			return op, nil
+		} else {
+			return plan.NewDistinctScan(op), nil
+		}
 	}
 
 	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
@@ -351,6 +356,10 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 		if ok && unnestExpr.EquivalentTo(bindingExpr) {
 			coveredUnnests[unnest] = true
 			coveredExprs[unnestExpr] = true
+		} else {
+			coveredUnnests = nil
+			coveredExprs = make(map[expression.Expression]bool, 0)
+			break
 		}
 	}
 
@@ -372,8 +381,8 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 	this.resetCountMin()
 
 	// Sarg and populate spans
-	_, _, _, err := matchUnnest(node, pred, unnests[0], index, entry, mapping, unnests)
-	if err != nil {
+	op, _, _, err := matchUnnest(node, pred, unnests[0], index, entry, mapping, unnests)
+	if op == nil || err != nil {
 		return nil, nil, err
 	}
 
