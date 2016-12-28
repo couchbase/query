@@ -92,8 +92,13 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		return true
 	}
 
-	pairs := _UPDATE_POOL.Get()
-	defer _UPDATE_POOL.Put(pairs)
+	var pairs []value.Pair
+	if _UPDATE_POOL.Size() >= len(this.batch) {
+		pairs = _UPDATE_POOL.Get()
+		defer _UPDATE_POOL.Put(pairs)
+	} else {
+		pairs = make([]value.Pair, 0, len(this.batch))
+	}
 
 	for i, item := range this.batch {
 		uv, ok := item.Field(this.plan.Alias())

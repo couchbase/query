@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -203,20 +204,79 @@ func (this *EncodedSize) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// Pairs
+//
+///////////////////////////////////////////////////
+
+/*
+Dynamic index for data platforms.
+*/
+type Pairs struct {
+	UnaryFunctionBase
+}
+
+func NewPairs(operand Expression) Function {
+	rv := &Pairs{
+		*NewUnaryFunctionBase("pairs", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *Pairs) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Pairs) Type() value.Type { return value.ARRAY }
+
+func (this *Pairs) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return this.UnaryEval(this, item, context)
+}
+
+func (this *Pairs) Apply(context Context, arg value.Value) (value.Value, error) {
+	var bufcap int
+
+	actual := arg.Actual()
+	if arg.Type() == value.OBJECT {
+		bufcap = 2 * len(actual.(map[string]interface{}))
+	} else if arg.Type() == value.ARRAY {
+		bufcap = 2 * len(actual.([]interface{}))
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else {
+		return value.NULL_VALUE, nil
+	}
+
+	buffer := traversePairs(actual, make([]interface{}, 0, bufcap))
+	return value.NewValue(buffer), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *Pairs) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewPairs(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
 // PolyLength
 //
 ///////////////////////////////////////////////////
 
 /*
-This represents the json function POLY_LENGTH(expr).
-It returns the length of the value after evaluating
-the expression. The exact meaning of length depends
-on the type of the value. For missing, null it returns
-a missing and null, for a string it returns the length
-of the string, for array it returns the number of
-elements, for objects it returns the number of
-name/value pairs in the object and for any other value
-it returns a NULL.
+This represents the json function POLY_LENGTH(expr). It returns the
+length of the value after evaluating the expression. The exact meaning
+of length depends on the type of the value. For a string it returns
+the length of the string, for array it returns the number of elements,
+for objects it returns the number of name/value pairs in the object
+and for any other value it returns NULL or MISSING.
 */
 type PolyLength struct {
 	UnaryFunctionBase
@@ -345,6 +405,57 @@ Factory method pattern.
 */
 func (this *Tokens) Constructor() FunctionConstructor {
 	return NewTokens
+}
+
+func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
+	length := 0
+
+	switch actual := actual.(type) {
+	case map[string]interface{}:
+		length = len(actual)
+	case []interface{}:
+		length = len(actual)
+	default:
+		// Do nothing
+	}
+
+	if length == 0 {
+		return buffer
+	}
+
+	buffer = ensureBuffer(buffer, len(buffer)+length)
+
+	switch actual := actual.(type) {
+	case map[string]interface{}:
+		for n, v := range actual {
+			buffer = append(buffer, []interface{}{n, v})
+
+			switch v := v.(type) {
+			case []interface{}:
+				buffer = ensureBuffer(buffer, len(buffer)+len(v))
+				for _, vv := range v {
+					buffer = append(buffer, []interface{}{n, vv})
+				}
+			}
+
+			buffer = traversePairs(v, buffer)
+		}
+	case []interface{}:
+		for _, v := range actual {
+			buffer = traversePairs(v, buffer)
+		}
+	}
+
+	return buffer
+}
+
+func ensureBuffer(buffer []interface{}, length int) []interface{} {
+	if cap(buffer) >= length {
+		return buffer
+	}
+
+	buffer2 := make([]interface{}, 0, util.MaxInt(length, 2*cap(buffer)))
+	return append(buffer2, buffer...)
 }
 
 var _SET_POOL = value.NewSetPool(64, true)

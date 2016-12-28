@@ -91,8 +91,13 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		return true
 	}
 
-	dpairs := _INSERT_POOL.Get()
-	defer _INSERT_POOL.Put(dpairs)
+	var dpairs []value.Pair
+	if _INSERT_POOL.Size() >= len(this.batch) {
+		dpairs = _INSERT_POOL.Get()
+		defer _INSERT_POOL.Put(dpairs)
+	} else {
+		dpairs = make([]value.Pair, 0, len(this.batch))
+	}
 
 	keyExpr := this.plan.Key()
 	valExpr := this.plan.Value()
