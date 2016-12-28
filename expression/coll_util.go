@@ -32,6 +32,9 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 			return
 		default:
 			null = true
+		}
+
+		if null {
 			continue
 		}
 
@@ -98,6 +101,10 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 		if b != nil && (n < 0 || len(b) < n) {
 			n = len(b)
 		}
+	}
+
+	if n < 0 {
+		null = true
 	}
 
 	return
