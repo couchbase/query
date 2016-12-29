@@ -33,6 +33,7 @@ func NewObjectConstruct(mapping map[Expression]Expression) Expression {
 	}
 
 	rv.expr = rv
+	rv.Value() // Initialize value
 	return rv
 }
 
@@ -74,11 +75,11 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 }
 
 func (this *ObjectConstruct) PropagatesMissing() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ObjectConstruct) PropagatesNull() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ObjectConstruct) EquivalentTo(other Expression) bool {

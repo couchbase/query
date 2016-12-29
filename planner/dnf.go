@@ -138,6 +138,14 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 
 		and := expression.NewAnd(operands...)
 		return this.VisitAnd(and)
+	case *expression.In:
+		second := operand.Second()
+		if acons, ok := second.(*expression.ArrayConstruct); ok &&
+			len(acons.Operands()) <= _FULL_SPAN_FANOUT {
+			return this.visitNotIn(operand.First(), acons)
+		}
+
+		return expr, nil
 	case *expression.Eq:
 		exp = expression.NewOr(expression.NewLT(operand.First(), operand.Second()),
 			expression.NewLT(operand.Second(), operand.First()))
@@ -189,6 +197,19 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 	}
 
 	return exp, nil
+}
+
+func (this *DNF) visitNotIn(first expression.Expression, second *expression.ArrayConstruct) (
+	interface{}, error) {
+
+	neqs := make([]expression.Expression, 0, len(second.Operands()))
+	for _, s := range second.Operands() {
+		neq := expression.NewNE(first, s)
+		neqs = append(neqs, neq)
+	}
+
+	and := expression.NewAnd(neqs...)
+	return this.VisitAnd(and)
 }
 
 func flattenOr(or *expression.Or) (*expression.Or, bool) {
