@@ -28,6 +28,7 @@ func NewArrayConstruct(operands ...Expression) Function {
 	}
 
 	rv.expr = rv
+	rv.Value() // Initialize value
 	return rv
 }
 
@@ -45,11 +46,11 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 }
 
 func (this *ArrayConstruct) PropagatesMissing() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ArrayConstruct) PropagatesNull() bool {
-	return false
+	return this.value != nil && *this.value != nil
 }
 
 func (this *ArrayConstruct) Apply(context Context, args ...value.Value) (value.Value, error) {
