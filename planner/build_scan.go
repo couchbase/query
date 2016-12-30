@@ -74,7 +74,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewMeta(expression.NewIdentifier(node.Alias())),
 		expression.NewFieldName("id", false))
 
-	// Handle covering primary scan
+	// First handle covering primary scan
 	if this.cover != nil && pred == nil && !isSystem {
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hints)
 		if scan != nil || err != nil {
@@ -137,7 +137,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	sargables, entries, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {
 		return nil, nil, er
 	}
@@ -158,7 +158,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	// Try UNNEST scan
 	if this.from != nil {
-		unnest, err := this.buildUnnestScan(node, this.from, pred, entries)
+		unnest, err := this.buildUnnestScan(node, this.from, pred, all)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -166,27 +166,52 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		if unnest != nil {
 			this.resetCountMin()
 
-			if secondary == nil || len(this.coveringScans) > 0 {
+			if len(this.coveringScans) > 0 {
 				return unnest, nil, err
+			}
+
+			if secondary == nil {
+				secondary = unnest
 			} else {
-				return plan.NewIntersectScan(secondary, unnest), nil, err
+				secondary = plan.NewIntersectScan(secondary, unnest)
 			}
 		}
 	}
 
+	/*
+		// Try dynamic scan
+		dynamic, err := this.buildDynamicScan(node, pred, all)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if dynamic != nil {
+			if secondary == nil {
+				secondary = dynamic
+			} else {
+				secondary = plan.NewIntersectScan(secondary, dynamic)
+			}
+		}
+	*/
+
+	// Return secondary scan if any
 	if secondary != nil {
-		return secondary, nil, err
+		return secondary, nil, nil
 	}
 
+	// No secondary scan, try primary scan
 	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	// PrimaryScan with predicates -- disable pushdown
+	// Primary scan with predicates -- disable pushdown
 	if primary != nil {
 		this.resetCountMin()
 		this.resetOrderLimit()
 	}
 
-	return nil, primary, err
+	return nil, primary, nil
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) ([]datastore.Index, error) {

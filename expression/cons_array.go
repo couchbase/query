@@ -42,6 +42,10 @@ func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayConstruct) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if this.value != nil && *this.value != nil {
+		return *this.value, nil
+	}
+
 	return this.Eval(this, item, context)
 }
 

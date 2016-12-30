@@ -47,6 +47,10 @@ func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectConstruct) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if this.value != nil && *this.value != nil {
+		return *this.value, nil
+	}
+
 	m := make(map[string]interface{}, len(this.mapping))
 
 	for name, val := range this.mapping {

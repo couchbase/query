@@ -22,20 +22,24 @@ import (
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
+	prevWhere := this.where
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
+	prevCoveredLets := this.coveredLets
 	prevCountScan := this.countScan
 
 	defer func() {
 		this.cover = prevCover
+		this.where = prevWhere
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
+		this.coveredLets = prevCoveredLets
 		this.countScan = prevCountScan
 	}()
 
@@ -49,12 +53,29 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = node
 	}
 
+	this.where = node.Where()
+
+	if node.Let() == nil {
+		this.coveredLets = nil
+	} else {
+		// LET variables are implicitly covered
+		this.coveredLets = node.Let().Identifiers()
+
+		if node.Where() != nil {
+			// Inline LET expressions for index selection
+			inliner := expression.NewInliner(node.Let().Mappings())
+			var err error
+			this.where, err = inliner.Map(node.Where().Copy())
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	aggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
 	}
-
-	this.where = node.Where()
 
 	group := node.Group()
 	if group == nil && len(aggs) > 0 {
@@ -67,7 +88,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		groupKeys := group.By()
 		letting := group.Letting()
 		if letting != nil {
-			groupKeys = append(groupKeys, letting.Identifiers()...)
+			identifiers := letting.Identifiers()
+			groupKeys = append(groupKeys, identifiers...)
+
+			if this.coveredLets == nil {
+				this.coveredLets = identifiers
+			} else {
+				this.coveredLets = append(this.coveredLets, identifiers...)
+			}
 		}
 
 		proj := node.Projection().Terms()
@@ -97,6 +125,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if len(aggs) == 1 && group.By() == nil {
+	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
@@ -106,7 +135,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			default:
 				if expr.Value() == nil {
 					this.resetCountMin()
-					break
+					break loop
 				}
 			}
 		}

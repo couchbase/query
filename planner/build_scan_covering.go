@@ -62,7 +62,8 @@ outer:
 
 		// Use the first available covering index
 		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, coveringExprs) {
+			if !expr.CoveredBy(alias, coveringExprs) &&
+				(this.coveredLets == nil || !expr.CoveredBy(alias, this.coveredLets)) {
 				continue outer
 			}
 		}
@@ -110,11 +111,7 @@ outer:
 	}
 
 	// Include covering expression from index WHERE clause
-	_, filterCovers, err := indexCoverExpressions(entry, keys, pred)
-	if err != nil {
-		return nil, err
-	}
-
+	filterCovers := fc[index]
 	arrayIndex := false
 
 	covers := make(expression.Covers, 0, len(keys))
@@ -126,8 +123,7 @@ outer:
 		covers = append(covers, expression.NewCover(key))
 	}
 
-	var pushDown bool
-	pushDown, err = allowedPushDown(entry, pred, alias)
+	pushDown, err := allowedPushDown(entry, pred, alias)
 	if err != nil {
 		return nil, err
 	}
