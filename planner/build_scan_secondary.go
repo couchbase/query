@@ -108,10 +108,11 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, entries map[datastore.Index]*indexEntry, err error) {
-	var keys expression.Expressions
+	sargables, all map[datastore.Index]*indexEntry, err error) {
+
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
-	entries = make(map[datastore.Index]*indexEntry, len(indexes))
+	all = make(map[datastore.Index]*indexEntry, len(indexes))
+	var keys expression.Expressions
 
 	for _, index := range indexes {
 		if index.IsPrimary() {
@@ -171,14 +172,14 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 		n := SargableFor(pred, keys)
 		entry := &indexEntry{index, keys, keys[0:n], cond, origCond, nil, false}
-		entries[index] = entry
+		all[index] = entry
 
 		if n > 0 {
 			sargables[index] = entry
 		}
 	}
 
-	return sargables, entries, nil
+	return sargables, all, nil
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {

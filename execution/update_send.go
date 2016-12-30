@@ -11,6 +11,7 @@ package execution
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/couchbase/query/errors"
@@ -69,15 +70,20 @@ func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
-	switch l := limit.Actual().(type) {
+	l := limit.ActualForIndex() // Exact number
+	switch l := l.(type) {
+	case int64:
+		this.limit = l
+		return true
 	case float64:
-		this.limit = int64(l)
-	default:
-		context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
-		return false
+		if math.Trunc(l) == l {
+			this.limit = int64(l)
+			return true
+		}
 	}
 
-	return true
+	context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
+	return false
 }
 
 func (this *SendUpdate) afterItems(context *Context) {
