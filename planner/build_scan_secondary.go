@@ -60,7 +60,14 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		limit = nil
 	}
 
-	scans := make([]plan.Operator, 0, len(indexes))
+	var scanBuf [16]plan.Operator
+	var scans []plan.Operator
+	if len(indexes) <= len(scanBuf) {
+		scans = scanBuf[0:0]
+	} else {
+		scans = make([]plan.Operator, 0, len(indexes))
+	}
+
 	var op plan.Operator
 	for index, entry := range indexes {
 		if this.order != nil {
@@ -99,10 +106,10 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		scans = append(scans, op)
 	}
 
-	if len(scans) > 1 {
-		return plan.NewIntersectScan(scans...), nil
-	} else {
+	if len(scans) == 1 {
 		return scans[0], nil
+	} else {
+		return plan.NewIntersectScan(scans...), nil
 	}
 }
 
@@ -212,7 +219,9 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 
 	var fc map[string]value.Value
 	if se.cond != nil {
-		fc = se.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc = _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(fc)
+		fc = se.cond.FilterCovers(fc)
 	}
 outer:
 	for _, tk := range te.sargKeys {
@@ -261,7 +270,9 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 
 	var filters map[string]value.Value
 	if entry.cond != nil {
-		filters = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		filters = _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(filters)
+		filters = entry.cond.FilterCovers(filters)
 	}
 
 	i := 0
