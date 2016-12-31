@@ -28,7 +28,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevMinAgg := this.minAgg
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
-	prevCoveredLets := this.coveredLets
 	prevCountScan := this.countScan
 
 	defer func() {
@@ -39,7 +38,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.minAgg = prevMinAgg
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
-		this.coveredLets = prevCoveredLets
 		this.countScan = prevCountScan
 	}()
 
@@ -53,23 +51,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = node
 	}
 
-	this.where = node.Where()
-
-	if node.Let() == nil {
-		this.coveredLets = nil
-	} else {
-		// LET variables are implicitly covered
-		this.coveredLets = node.Let().Identifiers()
-
-		if node.Where() != nil {
-			// Inline LET expressions for index selection
-			inliner := expression.NewInliner(node.Let().Mappings())
-			var err error
-			this.where, err = inliner.Map(node.Where().Copy())
-			if err != nil {
-				return nil, err
-			}
+	// Inline LET expressions for index selection
+	if node.Let() != nil && node.Where() != nil {
+		var err error
+		inliner := expression.NewInliner(node.Let().Mappings())
+		this.where, err = inliner.Map(node.Where().Copy())
+		if err != nil {
+			return nil, err
 		}
+	} else {
+		this.where = node.Where()
 	}
 
 	aggs, err := allAggregates(node, this.order)
@@ -90,12 +81,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		if letting != nil {
 			identifiers := letting.Identifiers()
 			groupKeys = append(groupKeys, identifiers...)
-
-			if this.coveredLets == nil {
-				this.coveredLets = identifiers
-			} else {
-				this.coveredLets = append(this.coveredLets, identifiers...)
-			}
 		}
 
 		proj := node.Projection().Terms()

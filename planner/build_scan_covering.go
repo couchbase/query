@@ -31,7 +31,7 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	covering := _COVERING_POOL.Get()
 	defer _COVERING_POOL.Put(covering)
 
-	// Remember covers and filter covers
+	// Remember filter covers
 	fc := make(map[datastore.Index]map[*expression.Cover]value.Value, len(indexes))
 
 outer:
@@ -62,8 +62,7 @@ outer:
 
 		// Use the first available covering index
 		for _, expr := range exprs {
-			if !expr.CoveredBy(alias, coveringExprs) &&
-				(this.coveredLets == nil || !expr.CoveredBy(alias, this.coveredLets)) {
+			if !expr.CoveredBy(alias, coveringExprs) {
 				continue outer
 			}
 		}
@@ -247,7 +246,9 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 	exprs := keys
 	if entry.cond != nil {
 		var err error
-		fc := entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc := _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(fc)
+		fc = entry.cond.FilterCovers(fc)
 		fc = entry.origCond.FilterCovers(fc)
 		filterCovers, err = mapFilterCovers(fc)
 		if err != nil {
@@ -288,3 +289,4 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 }
 
 var _COVERING_POOL = datastore.NewIndexPool(256)
+var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
