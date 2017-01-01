@@ -949,19 +949,6 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
-	// Date Part
-	partStr := part.Actual().(string)
-
-	//Define capacity of the slice using dateDiff
-	val, err := dateDiff(t1, t2, partStr)
-	if val < 0 {
-		val = -val
-	}
-	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-	rv := make([]interface{}, 0, val)
-
 	// If the start date is after the end date
 	if t1.String() > t2.String() {
 
@@ -977,6 +964,19 @@ func (this *DateRangeStr) Apply(context Context, args ...value.Value) (value.Val
 			return value.EMPTY_ARRAY_VALUE, nil
 		}
 	}
+
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	capacity, err := dateDiff(t1, t2, partStr)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	if capacity < 0 {
+		capacity = -capacity
+	}
+	rv := make([]interface{}, 0, capacity)
 
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to
@@ -1100,21 +1100,6 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
-	// Date Part
-	partStr := part.Actual().(string)
-
-	//Define capacity of the slice using dateDiff
-	val, err := dateDiff(t1, t2, partStr)
-	if err != nil {
-		return value.NULL_VALUE, nil
-	}
-
-	if val < 0 {
-		val = -val
-	}
-
-	rv := make([]interface{}, 0, val)
-
 	// If the start date is after the end date
 	if t1.String() > t2.String() {
 
@@ -1130,6 +1115,19 @@ func (this *DateRangeMillis) Apply(context Context, args ...value.Value) (value.
 			return value.EMPTY_ARRAY_VALUE, nil
 		}
 	}
+
+	// Date Part
+	partStr := part.Actual().(string)
+
+	//Define capacity of the slice using dateDiff
+	capacity, err := dateDiff(t1, t2, partStr)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	if capacity < 0 {
+		capacity = -capacity
+	}
+	rv := make([]interface{}, 0, capacity)
 
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to

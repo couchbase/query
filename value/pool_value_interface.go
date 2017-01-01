@@ -36,7 +36,7 @@ func (this *ValueInterfacePool) Get() map[Value]interface{} {
 }
 
 func (this *ValueInterfacePool) Put(s map[Value]interface{}) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

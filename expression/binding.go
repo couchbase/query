@@ -64,7 +64,7 @@ func (this *Binding) Descend() bool {
 }
 
 func (this *Binding) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]interface{}, 4)
 	if this.nameVariable != "" {
 		r["name_var"] = this.nameVariable
 	}

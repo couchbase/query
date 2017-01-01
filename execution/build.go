@@ -23,7 +23,7 @@ func Build(plan plan.Operator, context *Context) (Operator, error) {
 	var m map[scannedIndex]bool
 	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
 		// Collect scanned indexes.
-		m = make(map[scannedIndex]bool)
+		m = make(map[scannedIndex]bool, 8)
 	}
 	builder := &builder{context, m}
 	x, err := plan.Accept(builder)
@@ -32,7 +32,7 @@ func Build(plan plan.Operator, context *Context) (Operator, error) {
 		return nil, err
 	}
 
-	if builder.scannedIndexes != nil && len(builder.scannedIndexes) > 1 {
+	if len(builder.scannedIndexes) > 1 {
 		scannedIndexArr := make([]string, len(builder.scannedIndexes))
 		for si := range builder.scannedIndexes {
 			scannedIndexArr = append(scannedIndexArr, fmt.Sprintf("%s:%s", si.namespace, si.keyspace))

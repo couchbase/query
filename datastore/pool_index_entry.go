@@ -36,7 +36,7 @@ func (this *IndexEntryPool) Get() []*IndexEntry {
 }
 
 func (this *IndexEntryPool) Put(s []*IndexEntry) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

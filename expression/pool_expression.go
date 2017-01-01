@@ -50,7 +50,7 @@ func (this *ExpressionPool) GetSized(length int) []Expression {
 }
 
 func (this *ExpressionPool) Put(s []Expression) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

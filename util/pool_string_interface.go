@@ -35,8 +35,16 @@ func (this *StringInterfacePool) Get() map[string]interface{} {
 	return this.pool.Get().(map[string]interface{})
 }
 
+func (this *StringInterfacePool) GetCapped(capacity int) map[string]interface{} {
+	if capacity <= this.size {
+		return this.Get()
+	} else {
+		return make(map[string]interface{}, capacity)
+	}
+}
+
 func (this *StringInterfacePool) Put(s map[string]interface{}) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 
