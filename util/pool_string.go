@@ -35,6 +35,14 @@ func (this *StringPool) Get() []string {
 	return this.pool.Get().([]string)
 }
 
+func (this *StringPool) GetCapped(capacity int) []string {
+	if capacity > this.size {
+		return make([]string, 0, capacity)
+	} else {
+		return this.Get()
+	}
+}
+
 func (this *StringPool) GetSized(length int) []string {
 	if length > this.size {
 		return make([]string, length)
@@ -50,7 +58,7 @@ func (this *StringPool) GetSized(length int) []string {
 }
 
 func (this *StringPool) Put(s []string) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

@@ -7,22 +7,22 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package datastore
+package util
 
 import (
 	"sync"
 )
 
-type IndexPool struct {
+type BoolPool struct {
 	pool *sync.Pool
 	size int
 }
 
-func NewIndexPool(size int) *IndexPool {
-	rv := &IndexPool{
+func NewBoolPool(size int) *BoolPool {
+	rv := &BoolPool{
 		pool: &sync.Pool{
 			New: func() interface{} {
-				return make([]Index, 0, size)
+				return make([]bool, 0, size)
 			},
 		},
 		size: size,
@@ -31,11 +31,33 @@ func NewIndexPool(size int) *IndexPool {
 	return rv
 }
 
-func (this IndexPool) Get() []Index {
-	return this.pool.Get().([]Index)
+func (this *BoolPool) Get() []bool {
+	return this.pool.Get().([]bool)
 }
 
-func (this IndexPool) Put(s []Index) {
+func (this *BoolPool) GetCapped(capacity int) []bool {
+	if capacity > this.size {
+		return make([]bool, 0, capacity)
+	} else {
+		return this.Get()
+	}
+}
+
+func (this *BoolPool) GetSized(length int) []bool {
+	if length > this.size {
+		return make([]bool, length)
+	}
+
+	rv := this.Get()
+	rv = rv[0:length]
+	for i := 0; i < length; i++ {
+		rv[i] = false
+	}
+
+	return rv
+}
+
+func (this *BoolPool) Put(s []bool) {
 	if cap(s) != this.size {
 		return
 	}

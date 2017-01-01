@@ -110,10 +110,6 @@ func (this *ObjectConstruct) EquivalentTo(other Expression) bool {
 	return true
 }
 
-/*
-Range over the bindings and append each value to a slice of
-expressions. Return this slice.
-*/
 func (this *ObjectConstruct) Children() Expressions {
 	rv := make(Expressions, 0, 2*len(this.mapping))
 	for name, value := range this.mapping {
@@ -123,10 +119,6 @@ func (this *ObjectConstruct) Children() Expressions {
 	return rv
 }
 
-/*
-Range over the bindings and map the expressions to another expression.
-Reset the expression to be the new expression at its corresponding key.
-*/
 func (this *ObjectConstruct) MapChildren(mapper Mapper) (err error) {
 	mapped := make(map[Expression]Expression, len(this.mapping))
 

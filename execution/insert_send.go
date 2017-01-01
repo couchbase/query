@@ -177,7 +177,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	for _, dp := range dpairs {
 		dv := value.NewAnnotatedValue(dp.Value)
 		dv.SetAttachment("meta", map[string]interface{}{"id": dp.Name})
-		av := value.NewAnnotatedValue(make(map[string]interface{}))
+		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.SetAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)
 		if !this.sendItem(av) {

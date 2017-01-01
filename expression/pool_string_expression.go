@@ -36,7 +36,7 @@ func (this *StringExpressionPool) Get() map[string]Expression {
 }
 
 func (this *StringExpressionPool) Put(s map[string]Expression) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

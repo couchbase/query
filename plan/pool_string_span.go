@@ -36,7 +36,7 @@ func (this *StringSpanPool) Get() map[string]*Span {
 }
 
 func (this *StringSpanPool) Put(s map[string]*Span) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

@@ -50,7 +50,7 @@ func (this *ValuePool) GetSized(length int) []Value {
 }
 
 func (this *ValuePool) Put(s []Value) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

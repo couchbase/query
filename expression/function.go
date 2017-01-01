@@ -12,6 +12,7 @@ package expression
 import (
 	"math"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -134,7 +135,6 @@ func (this *FunctionBase) Eval(applied Applied, item value.Value, context Contex
 	result value.Value, err error) {
 	var buf [8]value.Value
 	var args []value.Value
-
 	if len(this.operands) <= len(buf) {
 		args = buf[0:len(this.operands)]
 	} else {
@@ -197,7 +197,15 @@ func (this *FunctionBase) Copy() Expression {
 		return function.Constructor()()
 	}
 
-	copies := make(Expressions, len(operands))
+	var buf [8]Expression
+	var copies Expressions
+	if len(operands) <= len(buf) {
+		copies = buf[0:len(operands)]
+	} else {
+		copies = _COPY_POOL.GetSized(len(operands))
+		defer _COPY_POOL.Put(copies)
+	}
+
 	for i, op := range operands {
 		if op != nil {
 			copies[i] = op.Copy()
@@ -228,6 +236,7 @@ Return the operands of the function.
 func (this *FunctionBase) Operands() Expressions { return this.operands }
 
 var _ARGS_POOL = value.NewValuePool(64)
+var _COPY_POOL = NewExpressionPool(64)
 
 /*
 A Nullary function doesnt have any input operands. Type
@@ -554,7 +563,14 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 		return false
 	}
 
-	found := make([]bool, len(this.operands))
+	var buf [8]bool
+	var found []bool
+	if len(this.operands) <= len(buf) {
+		found = buf[0:len(this.operands)]
+	} else {
+		found = _FOUND_POOL.GetSized(len(this.operands))
+		defer _FOUND_POOL.Put(found)
+	}
 
 	for _, first := range this.operands {
 		for j, second := range that.Operands() {
@@ -585,6 +601,8 @@ MaxInt16  = 1<<15 - 1. This is defined using the
 math package.
 */
 func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
+
+var _FOUND_POOL = util.NewBoolPool(64)
 
 /*
 Used to define Apply methods for general functions. The

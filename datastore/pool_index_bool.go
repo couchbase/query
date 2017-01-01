@@ -36,7 +36,7 @@ func (this *IndexBoolPool) Get() map[Index]bool {
 }
 
 func (this *IndexBoolPool) Put(s map[Index]bool) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

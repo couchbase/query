@@ -352,6 +352,7 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 	actuals := kv.Actual()
 	switch actuals.(type) {
 	case []interface{}:
+		// Do nothing
 	case nil:
 		actuals = []interface{}(nil)
 	default:

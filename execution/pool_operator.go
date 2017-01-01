@@ -36,7 +36,7 @@ func (this *OperatorPool) Get() []Operator {
 }
 
 func (this *OperatorPool) Put(s []Operator) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

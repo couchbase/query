@@ -38,13 +38,12 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 
 	array, ok := aval.Actual().([]interface{})
 	if ok {
-		array = _WITHIN_POOL.GetSized(len(array))
+		array = _WITHIN_POOL.GetCapped(len(array))
 	} else {
-		array = _WITHIN_POOL.GetSized(_WITHIN_POOL_SIZE)
+		array = _WITHIN_POOL.GetCapped(_WITHIN_POOL_SIZE)
 	}
 	defer _WITHIN_POOL.Put(array)
 
-	array = array[0:0]
 	array = aval.Descendants(array)
 	if len(array) == 0 {
 		return _EMPTY_SPANS, nil
@@ -80,6 +79,6 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 	return spans, nil
 }
 
-const _WITHIN_POOL_SIZE = 1024
+const _WITHIN_POOL_SIZE = 64
 
 var _WITHIN_POOL = util.NewInterfacePool(_WITHIN_POOL_SIZE)
