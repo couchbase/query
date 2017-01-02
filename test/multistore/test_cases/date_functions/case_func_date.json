@@ -55,10 +55,10 @@
     ]
     },
     {
-      "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"year\")",
+      "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"century\")",
       "results": [
         {
-            "$1": 2016
+            "$1": 21
         }
      ]
     },
@@ -96,14 +96,6 @@
             ]
             },
         "text": "select CLOCK_STR(\"2006-01-02\")"
-        }
-    ]
-    },
-    {
-      "statements":"select DATE_ADD_MILLIS(DATE_PART_MILLIS(CLOCK_MILLIS(),\"year\"),1,\"year\")", 
-      "results": [
-        {
-            "$1": 31536002016
         }
     ]
     },

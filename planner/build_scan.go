@@ -137,64 +137,27 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
-	if er != nil {
-		return nil, nil, er
+	sargLength := 0
+
+	// Prefer covering scan
+	secondary, sargLength, err = this.buildTermScan(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+	if err != nil || (secondary != nil && len(this.coveringScans) > 0) {
+		return secondary, nil, err
 	}
 
-	minimals := minimalIndexes(sargables, false)
-
-	// Try secondary scan
-	if len(minimals) > 0 {
-		secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
+	// Prefer OR scan if orSargLength is longer
+	if or, ok := pred.(*expression.Or); ok {
+		scan, orSargLength, err := this.buildOrScan(keyspace, node, id, or, limit, indexes, primaryKey, formalizer)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
-			return secondary, nil, err
+		if scan != nil && orSargLength > sargLength {
+			return scan, nil, nil
 		}
 	}
 
-	// Try UNNEST scan
-	if this.from != nil {
-		unnest, err := this.buildUnnestScan(node, this.from, pred, all)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if unnest != nil {
-			this.resetCountMin()
-
-			if len(this.coveringScans) > 0 {
-				return unnest, nil, err
-			}
-
-			if secondary == nil {
-				secondary = unnest
-			} else {
-				secondary = plan.NewIntersectScan(secondary, unnest)
-			}
-		}
-	}
-
-	/*
-		// Try dynamic scan
-		dynamic, err := this.buildDynamicScan(node, pred, all)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if dynamic != nil {
-			if secondary == nil {
-				secondary = dynamic
-			} else {
-				secondary = plan.NewIntersectScan(secondary, dynamic)
-			}
-		}
-	*/
-
-	// Return secondary scan if any
+	// Prefer secondary scan
 	if secondary != nil {
 		return secondary, nil, nil
 	}
@@ -212,6 +175,76 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	}
 
 	return nil, primary, nil
+}
+
+func (this *builder) buildTermScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	id, pred, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	secondary plan.Operator, sargLength int, err error) {
+
+	sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	if er != nil {
+		return nil, 0, er
+	}
+
+	minimals := minimalIndexes(sargables, false)
+
+	// Try secondary scan
+	if len(minimals) > 0 {
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
+			return secondary, sargLength, nil
+		}
+	}
+
+	// Try UNNEST scan
+	if this.from != nil {
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if unnest != nil {
+			this.resetCountMin()
+
+			if len(this.coveringScans) > 0 {
+				return unnest, unnestSargLength, err
+			}
+
+			if secondary == nil {
+				secondary = unnest
+				sargLength = unnestSargLength
+			} else {
+				secondary = plan.NewIntersectScan(secondary, unnest)
+				if sargLength < unnestSargLength {
+					sargLength = unnestSargLength
+				}
+			}
+		}
+	}
+
+	/*
+		// Try dynamic scan
+		dynamic, err := this.buildDynamicScan(node, pred, all)
+		if err != nil {
+			return nil, err
+		}
+
+		if dynamic != nil {
+			if secondary == nil {
+				secondary = dynamic
+			} else {
+				secondary = plan.NewIntersectScan(secondary, dynamic)
+			}
+		}
+	*/
+
+	// Return secondary scan, if any
+	return secondary, sargLength, nil
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) ([]datastore.Index, error) {
