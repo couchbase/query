@@ -420,6 +420,11 @@ func (this *builder) VisitGrantRole(plan *plan.GrantRole) (interface{}, error) {
 	return NewGrantRole(plan), nil
 }
 
+// RevokeRole
+func (this *builder) VisitRevokeRole(plan *plan.RevokeRole) (interface{}, error) {
+	return NewRevokeRole(plan), nil
+}
+
 // CreateIndex
 func (this *builder) VisitCreateIndex(plan *plan.CreateIndex) (interface{}, error) {
 	return NewCreateIndex(plan), nil

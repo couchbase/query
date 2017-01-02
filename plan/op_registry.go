@@ -130,7 +130,8 @@ var _OPERATORS = map[string]Operator{
 	"BuildIndexes":       &BuildIndexes{},
 
 	// Roles
-	"GrantRole": &GrantRole{},
+	"GrantRole":  &GrantRole{},
+	"RevokeRole": &RevokeRole{},
 
 	// Explain
 	"Explain": &Explain{},
