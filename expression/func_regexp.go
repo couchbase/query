@@ -113,6 +113,7 @@ type RegexpLike struct {
 	BinaryFunctionBase
 	re   *regexp.Regexp
 	part *regexp.Regexp
+	err  error
 }
 
 func NewRegexpLike(first, second Expression) Function {
@@ -120,10 +121,11 @@ func NewRegexpLike(first, second Expression) Function {
 		*NewBinaryFunctionBase("regexp_like", first, second),
 		nil,
 		nil,
+		nil,
 	}
 
 	rv.re, _ = precompileRegexp(second.Value(), true)
-	rv.part, _ = precompileRegexp(second.Value(), false)
+	rv.part, rv.err = precompileRegexp(second.Value(), false)
 	rv.expr = rv
 	return rv
 }
@@ -162,16 +164,30 @@ func (this *RegexpLike) Apply(context Context, first, second value.Value) (value
 	f := first.Actual().(string)
 	s := second.Actual().(string)
 
-	re := this.re
-	if re == nil {
+	fullRe := this.re
+	partRe := this.part
+
+	/* MB-20677 make sure full regexp doesn't skew RegexpLike
+	   into accepting wrong partial regexps
+	*/
+	if this.err != nil {
+		return nil, this.err
+	}
+	if partRe == nil {
 		var err error
-		re, err = regexp.Compile("^" + s + "$")
+
+		/* MB-20677 ditto */
+		partRe, err = regexp.Compile(s)
+		if err != nil {
+			return nil, err
+		}
+		fullRe, err = regexp.Compile("^" + s + "$")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return value.NewValue(re.MatchString(f)), nil
+	return value.NewValue(fullRe.MatchString(f)), nil
 }
 
 /*
