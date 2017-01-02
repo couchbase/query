@@ -137,29 +137,18 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	sargLength := 0
-
-	// Prefer covering scan
-	secondary, sargLength, err = this.buildTermScan(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
-	if err != nil || (secondary != nil && len(this.coveringScans) > 0) {
-		return secondary, nil, err
-	}
-
-	// Prefer OR scan if orSargLength is longer
+	// Prefer OR scan
 	if or, ok := pred.(*expression.Or); ok {
-		scan, orSargLength, err := this.buildOrScan(keyspace, node, id, or, limit, indexes, primaryKey, formalizer)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if scan != nil && orSargLength > sargLength {
-			return scan, nil, nil
+		scan, _, err := this.buildOrScan(keyspace, node, id, or, limit, indexes, primaryKey, formalizer)
+		if scan != nil || err != nil {
+			return scan, nil, err
 		}
 	}
 
 	// Prefer secondary scan
-	if secondary != nil {
-		return secondary, nil, nil
+	secondary, _, err = this.buildTermScan(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+	if secondary != nil || err != nil {
+		return secondary, nil, err
 	}
 
 	// No secondary scan, try primary scan

@@ -64,6 +64,10 @@ func (this *IndexScan) Spans() Spans {
 	return this.spans
 }
 
+func (this *IndexScan) SetSpans(spans Spans) {
+	this.spans = spans
+}
+
 func (this *IndexScan) Distinct() bool {
 	return this.distinct
 }
