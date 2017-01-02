@@ -41,7 +41,8 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	secondaries := map[datastore.Index]*indexEntry{primary: entry}
 
 	pred := expression.NewIsNotNull(id)
-	return this.buildCoveringScan(secondaries, node, id, pred, limit)
+	op, _, err := this.buildCoveringScan(secondaries, node, id, pred, limit)
+	return op, err
 }
 
 func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, force bool) (

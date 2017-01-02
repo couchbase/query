@@ -57,14 +57,15 @@ dimension.
 
 */
 func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (op plan.Operator, err error) {
+	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
+	op plan.Operator, sargLength int, err error) {
 
 	// Enumerate INNER UNNESTs
 	unnests := _UNNEST_POOL.Get()
 	defer _UNNEST_POOL.Put(unnests)
 	unnests = collectInnerUnnests(from, unnests)
 	if len(unnests) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// Enumerate primary UNNESTs
@@ -72,7 +73,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	defer _UNNEST_POOL.Put(primaryUnnests)
 	primaryUnnests = collectPrimaryUnnests(from, unnests, primaryUnnests)
 	if len(primaryUnnests) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// Enumerate candidate array indexes
@@ -80,7 +81,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	defer _INDEX_POOL.Put(unnestIndexes)
 	unnestIndexes, arrayKeys := collectUnnestIndexes(pred, indexes, unnestIndexes)
 	if len(unnestIndexes) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// INNER UNNESTs cannot be MISSING
@@ -105,7 +106,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	for _, index := range unnestIndexes {
 		cop, cun, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], arrayKeys[index], unnests)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		if cop != nil {
@@ -123,6 +124,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			op = cop
 			cun = cuns[index]
 			n = len(index.RangeKey())
+			sargLength = len(indexes[index].sargKeys)
 		}
 	}
 
@@ -132,9 +134,9 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		this.coveredUnnests = cun
 
 		if len(cun) > 0 {
-			return op, nil
+			return op, sargLength, nil
 		} else {
-			return plan.NewDistinctScan(op), nil
+			return plan.NewDistinctScan(op), sargLength, nil
 		}
 	}
 
@@ -149,7 +151,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			arrayKey := arrayKeys[index]
 			op, _, n, err = matchUnnest(node, pred, unnest, index, indexes[index], arrayKey, unnests)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
 			if op == nil {
@@ -167,7 +169,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 
 	// No UNNEST scan
 	if len(ops) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// No pushdowns
@@ -190,14 +192,17 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		scans = make([]plan.Operator, 0, len(entries))
 	}
 
-	for index, _ := range entries {
+	for index, entry := range entries {
 		scans = append(scans, ops[index].Op)
+		if len(entry.sargKeys) > sargLength {
+			sargLength = len(entry.sargKeys)
+		}
 	}
 
 	if len(scans) == 1 {
-		return scans[0], nil
+		return scans[0], sargLength, nil
 	} else {
-		return plan.NewIntersectScan(scans...), nil
+		return plan.NewIntersectScan(scans...), sargLength, nil
 	}
 }
 

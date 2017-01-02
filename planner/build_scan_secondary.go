@@ -32,11 +32,13 @@ type indexEntry struct {
 }
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	plan.Operator, int, error) {
+
 	if this.cover != nil {
-		scan, err := this.buildCoveringScan(indexes, node, id, pred, limit)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, limit)
 		if scan != nil || err != nil {
-			return scan, err
+			return scan, sargLength, err
 		}
 	}
 
@@ -47,7 +49,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	var err error
 	indexes, err = sargIndexes(indexes, pred)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if (this.order != nil || limit != nil) && len(indexes) > 1 {
@@ -68,6 +70,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		scans = make([]plan.Operator, 0, len(indexes))
 	}
 
+	sargLength := 0
 	var op plan.Operator
 	for index, entry := range indexes {
 		if this.order != nil {
@@ -86,7 +89,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			if !arrayIndex {
 				pushDown, err = allowedPushDown(entry, pred, node.Alias())
 				if err != nil {
-					return nil, err
+					return nil, 0, err
 				}
 			}
 
@@ -104,12 +107,16 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 
 		scans = append(scans, op)
+
+		if len(entry.sargKeys) > sargLength {
+			sargLength = len(entry.sargKeys)
+		}
 	}
 
 	if len(scans) == 1 {
-		return scans[0], nil
+		return scans[0], sargLength, nil
 	} else {
-		return plan.NewIntersectScan(scans...), nil
+		return plan.NewIntersectScan(scans...), sargLength, nil
 	}
 }
 

@@ -19,9 +19,11 @@ import (
 )
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	plan.Operator, int, error) {
+
 	if this.cover == nil {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	alias := node.Alias()
@@ -44,7 +46,7 @@ outer:
 		// Sarg to set exact spans
 		_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		keys := entry.keys
@@ -57,7 +59,7 @@ outer:
 		// Include filter covers
 		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		// Use the first available covering index
@@ -77,7 +79,7 @@ outer:
 
 	// No covering index available
 	if len(covering) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	// Avoid array indexes if possible
@@ -102,6 +104,7 @@ outer:
 	}
 
 	entry := indexes[index]
+	sargLength := len(entry.sargKeys)
 	keys := entry.keys
 
 	// Matches execution.spanScan.RunOnce()
@@ -124,7 +127,7 @@ outer:
 
 	pushDown, err := allowedPushDown(entry, pred, alias)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if !arrayIndex && pushDown {
@@ -133,7 +136,7 @@ outer:
 			if ok {
 				this.maxParallelism = 1
 				this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
-				return this.countScan, nil
+				return this.countScan, sargLength, nil
 			}
 		}
 
@@ -142,7 +145,7 @@ outer:
 			limit = expression.ONE_EXPR
 			scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
 			this.coveringScans = append(this.coveringScans, scan)
-			return scan, nil
+			return scan, sargLength, nil
 		}
 	}
 
@@ -165,10 +168,10 @@ outer:
 
 	if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
 		// Use DistinctScan to de-dup array index scans, multiple spans
-		return plan.NewDistinctScan(scan), nil
+		return plan.NewDistinctScan(scan), sargLength, nil
 	}
 
-	return scan, nil
+	return scan, sargLength, nil
 }
 
 func mapFilterCovers(fc map[string]value.Value) (map[*expression.Cover]value.Value, error) {
