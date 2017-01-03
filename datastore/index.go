@@ -108,6 +108,7 @@ type Index interface {
 	State() (state IndexState, msg string, err errors.Error)            // Obtain state of this index
 	Statistics(requestId string, span *Span) (Statistics, errors.Error) // Obtain statistics for this index
 	Drop(requestId string) errors.Error                                 // Drop / delete this index
+
 	// Perform a scan on this index. Distinct and limit are hints.
 	Scan(requestId string, span *Span, distinct bool, limit int64, cons ScanConsistency,
 		vector timestamp.Vector, conn *IndexConnection)
@@ -115,6 +116,7 @@ type Index interface {
 
 type CountIndex interface {
 	Index
+
 	// Perform a count on index
 	Count(span *Span, cons ScanConsistency, vector timestamp.Vector) (int64, errors.Error)
 }
@@ -124,6 +126,7 @@ PrimaryIndex represents primary key indexes.
 */
 type PrimaryIndex interface {
 	Index
+
 	// Perform a scan of all the entries in this index
 	ScanEntries(requestId string, limit int64, cons ScanConsistency,
 		vector timestamp.Vector, conn *IndexConnection)
@@ -131,6 +134,7 @@ type PrimaryIndex interface {
 
 type PrimaryIndexUserSensitive interface {
 	PrimaryIndex
+
 	// Perform a scan of all the entries in this index for authenticated users
 	ScanEntriesForUsers(requestId string, limit int64, cons ScanConsistency,
 		vector timestamp.Vector, au AuthenticatedUsers, conn *IndexConnection)
@@ -138,6 +142,7 @@ type PrimaryIndexUserSensitive interface {
 
 type SizedIndex interface {
 	Index
+
 	SizeFromStatistics(requestId string) (int64, errors.Error)
 }
 
@@ -156,6 +161,7 @@ type IndexKey struct {
 
 type Indexer2 interface {
 	Indexer
+
 	// Create a secondary index on this keyspace
 	CreateIndex2(requestId, name string, seekKey expression.Expressions,
 		rangeKey IndexKeys, where expression.Expression, with value.Value) (
@@ -184,6 +190,9 @@ type IndexProjection struct {
 
 type Index2 interface {
 	Index
+
+	RangeKey2() IndexKeys // Range keys
+
 	// Perform a scan on this index. Distinct and limit are hints.
 	Scan2(requestId string, spans Spans2, reverse, distinct, ordered bool,
 		projection *IndexProjection, offset, limit int64,
@@ -192,6 +201,7 @@ type Index2 interface {
 
 type CountIndex2 interface {
 	CountIndex
+
 	// Perform a count on index
 	Count2(requestId string, spans Spans2, distinct bool,
 		cons ScanConsistency, vector timestamp.Vector) (
@@ -255,6 +265,7 @@ func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, err
 	if size <= 0 {
 		return nil, errors.NewIndexScanSizeError(size)
 	}
+
 	maxSize := GetScanCap()
 	if (maxSize > 0) && (size > maxSize) {
 		size = maxSize
