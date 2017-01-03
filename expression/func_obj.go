@@ -13,6 +13,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -239,15 +240,24 @@ func (this *ObjectInnerPairs) Apply(context Context, arg value.Value) (value.Val
 	}
 
 	oa := removeMissing(arg)
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(oa) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(oa))
+		defer _NAME_POOL.Put(names)
 	}
 
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = map[string]interface{}{"name": k, "val": oa[k]}
+	for name, _ := range oa {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	for i, n := range names {
+		ra[i] = map[string]interface{}{"name": n, "val": oa[n]}
 	}
 
 	return value.NewValue(ra), nil
@@ -317,15 +327,24 @@ func (this *ObjectInnerValues) Apply(context Context, arg value.Value) (value.Va
 	}
 
 	oa := removeMissing(arg)
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(oa) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(oa))
+		defer _NAME_POOL.Put(names)
 	}
 
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = oa[k]
+	for name, _ := range oa {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	for i, n := range names {
+		ra[i] = oa[n]
 	}
 
 	return value.NewValue(ra), nil
@@ -441,15 +460,24 @@ func (this *ObjectNames) Apply(context Context, arg value.Value) (value.Value, e
 	}
 
 	oa := arg.Actual().(map[string]interface{})
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(oa) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(oa))
+		defer _NAME_POOL.Put(names)
 	}
 
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = k
+	for name, _ := range oa {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	for i, n := range names {
+		ra[i] = n
 	}
 
 	return value.NewValue(ra), nil
@@ -519,15 +547,24 @@ func (this *ObjectPairs) Apply(context Context, arg value.Value) (value.Value, e
 	}
 
 	oa := arg.Actual().(map[string]interface{})
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(oa) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(oa))
+		defer _NAME_POOL.Put(names)
 	}
 
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = map[string]interface{}{"name": k, "val": oa[k]}
+	for name, _ := range oa {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	for i, n := range names {
+		ra[i] = map[string]interface{}{"name": n, "val": oa[n]}
 	}
 
 	return value.NewValue(ra), nil
@@ -832,15 +869,24 @@ func (this *ObjectValues) Apply(context Context, arg value.Value) (value.Value, 
 	}
 
 	oa := arg.Actual().(map[string]interface{})
-	keys := make(sort.StringSlice, 0, len(oa))
-	for key, _ := range oa {
-		keys = append(keys, key)
+
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(oa) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(oa))
+		defer _NAME_POOL.Put(names)
 	}
 
-	sort.Sort(keys)
-	ra := make([]interface{}, len(keys))
-	for i, k := range keys {
-		ra[i] = oa[k]
+	for name, _ := range oa {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	ra := make([]interface{}, len(names))
+	for i, n := range names {
+		ra[i] = oa[n]
 	}
 
 	return value.NewValue(ra), nil
@@ -865,22 +911,26 @@ func removeMissing(arg value.Value) map[string]interface{} {
 	}
 
 	oa := arg.Copy().Actual().(map[string]interface{})
-	for key, val := range oa {
+	for name, val := range oa {
 		valSlice, ok := val.([]interface{})
 		if !ok {
 			continue
 		}
 		newSlice := make([]interface{}, 0, len(valSlice))
-		for i, subVal := range valSlice {
+		for _, subVal := range valSlice {
 			if value.NewValue(subVal).Type() != value.MISSING {
-				newSlice = append(newSlice, valSlice[i])
+				newSlice = append(newSlice, subVal)
 			}
 		}
-		if len(newSlice) != 1 {
-			oa[key] = newSlice
+		if len(newSlice) == 1 {
+			oa[name] = newSlice[0]
 		} else {
-			oa[key] = newSlice[0]
+			oa[name] = newSlice
 		}
 	}
 	return oa
 }
+
+const _NAME_CAP = 16
+
+var _NAME_POOL = util.NewStringPool(256)

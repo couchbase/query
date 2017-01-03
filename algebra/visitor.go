@@ -41,6 +41,7 @@ type Visitor interface {
 	   Visitor for ROLES statements.
 	*/
 	VisitGrantRole(stmt *GrantRole) (interface{}, error)
+	VisitRevokeRole(stmt *RevokeRole) (interface{}, error)
 
 	/*
 	   Visitor for EXPLAIN statements.

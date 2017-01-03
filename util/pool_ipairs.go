@@ -50,7 +50,7 @@ func (this *IPairsPool) GetSized(length int) [][]IPair {
 }
 
 func (this *IPairsPool) Put(s [][]IPair) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

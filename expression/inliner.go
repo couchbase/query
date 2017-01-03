@@ -7,38 +7,30 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package datastore
+package expression
 
-import (
-	"sync"
-)
-
-type IndexPool struct {
-	pool *sync.Pool
-	size int
+/*
+Inliner is a mapper that inlines bindings, e.g. of a LET clause.
+*/
+type Inliner struct {
+	MapperBase
+	mappings map[string]Expression
 }
 
-func NewIndexPool(size int) *IndexPool {
-	rv := &IndexPool{
-		pool: &sync.Pool{
-			New: func() interface{} {
-				return make([]Index, 0, size)
-			},
-		},
-		size: size,
+func NewInliner(mappings map[string]Expression) *Inliner {
+	rv := &Inliner{
+		mappings: mappings,
 	}
 
+	rv.mapper = rv
 	return rv
 }
 
-func (this IndexPool) Get() []Index {
-	return this.pool.Get().([]Index)
-}
-
-func (this IndexPool) Put(s []Index) {
-	if cap(s) != this.size {
-		return
+func (this *Inliner) VisitIdentifier(id *Identifier) (interface{}, error) {
+	repl, ok := this.mappings[id.Identifier()]
+	if ok {
+		return repl, nil
+	} else {
+		return id, nil
 	}
-
-	this.pool.Put(s[0:0])
 }

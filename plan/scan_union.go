@@ -56,6 +56,7 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 		_     string            `json:"#operator"`
 		Scans []json.RawMessage `json:"scans"`
 	}
+
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err

@@ -36,7 +36,7 @@ func (this *IPairPool) Get() []IPair {
 }
 
 func (this *IPairPool) Put(s []IPair) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

@@ -388,7 +388,7 @@ func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
 
 // Identifier
 func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, len(expr.identifier)+2))
+	buf := bytes.NewBuffer(make([]byte, 0, len(expr.identifier)+3))
 	buf.WriteString("`")
 	buf.WriteString(expr.identifier)
 	buf.WriteString("`")
@@ -423,11 +423,20 @@ func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, 
 	buf.WriteString("{")
 
 	// Sort names
-	names := make(sort.StringSlice, 0, len(expr.bindings))
+	var nameBuf [_NAME_CAP]string
+	var names []string
+	if len(expr.bindings) <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(len(expr.bindings))
+		defer _NAME_POOL.Put(names)
+	}
+
 	for name, _ := range expr.bindings {
 		names = append(names, name)
 	}
-	names.Sort()
+
+	sort.Strings(names)
 
 	i := 0
 	for _, n := range names {
@@ -529,7 +538,7 @@ func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 }
 
 func (this *Stringer) VisitFieldName(expr *FieldName) (interface{}, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, len(expr.name)+2))
+	buf := bytes.NewBuffer(make([]byte, 0, len(expr.name)+3))
 	buf.WriteString("`")
 	buf.WriteString(expr.name)
 	buf.WriteString("`")

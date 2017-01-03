@@ -103,6 +103,7 @@ type Visitor interface {
 
 	// Roles
 	VisitGrantRole(op *GrantRole) (interface{}, error)
+	VisitRevokeRole(op *RevokeRole) (interface{}, error)
 
 	// Explain
 	VisitExplain(op *Explain) (interface{}, error)

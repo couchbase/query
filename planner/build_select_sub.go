@@ -22,6 +22,7 @@ import (
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
 	prevCover := this.cover
+	prevWhere := this.where
 	prevCorrelated := this.correlated
 	prevCountAgg := this.countAgg
 	prevMinAgg := this.minAgg
@@ -31,6 +32,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	defer func() {
 		this.cover = prevCover
+		this.where = prevWhere
 		this.correlated = prevCorrelated
 		this.countAgg = prevCountAgg
 		this.minAgg = prevMinAgg
@@ -49,12 +51,22 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = node
 	}
 
+	// Inline LET expressions for index selection
+	if node.Let() != nil && node.Where() != nil {
+		var err error
+		inliner := expression.NewInliner(node.Let().Mappings())
+		this.where, err = inliner.Map(node.Where().Copy())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		this.where = node.Where()
+	}
+
 	aggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
 	}
-
-	this.where = node.Where()
 
 	group := node.Group()
 	if group == nil && len(aggs) > 0 {
@@ -67,7 +79,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		groupKeys := group.By()
 		letting := group.Letting()
 		if letting != nil {
-			groupKeys = append(groupKeys, letting.Identifiers()...)
+			identifiers := letting.Identifiers()
+			groupKeys = append(groupKeys, identifiers...)
 		}
 
 		proj := node.Projection().Terms()
@@ -97,6 +110,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if len(aggs) == 1 && group.By() == nil {
+	loop:
 		for _, term := range node.Projection().Terms() {
 			switch expr := term.Expression().(type) {
 			case *algebra.Count:
@@ -106,7 +120,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			default:
 				if expr.Value() == nil {
 					this.resetCountMin()
-					break
+					break loop
 				}
 			}
 		}
@@ -133,13 +147,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if this.countScan == nil {
-		if node.Let() != nil {
-			this.subChildren = append(this.subChildren, plan.NewLet(node.Let()))
-		}
-
-		if node.Where() != nil {
-			this.subChildren = append(this.subChildren, plan.NewFilter(node.Where()))
-		}
+		this.addLetPredicate(node.Let(), node.Where())
 
 		if group != nil {
 			this.visitGroup(group, aggs)
@@ -173,6 +181,33 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	return plan.NewSequence(this.children...), nil
 }
 
+func (this *builder) addLetPredicate(let expression.Bindings, pred expression.Expression) {
+	if let != nil && pred != nil {
+	outer:
+		for {
+			identifiers := let.Identifiers()
+			for _, id := range identifiers {
+				if pred.DependsOn(id) {
+					break outer
+				}
+			}
+
+			// Predicate does NOT depend on LET
+			this.subChildren = append(this.subChildren, plan.NewFilter(pred))
+			this.subChildren = append(this.subChildren, plan.NewLet(let))
+			return
+		}
+	}
+
+	if let != nil {
+		this.subChildren = append(this.subChildren, plan.NewLet(let))
+	}
+
+	if pred != nil {
+		this.subChildren = append(this.subChildren, plan.NewFilter(pred))
+	}
+}
+
 func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Aggregate) {
 	aggn := make(sort.StringSlice, 0, len(aggs))
 	for n, _ := range aggs {
@@ -191,15 +226,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	letting := group.Letting()
-	if letting != nil {
-		this.subChildren = append(this.subChildren, plan.NewLet(letting))
-	}
-
-	having := group.Having()
-	if having != nil {
-		this.subChildren = append(this.subChildren, plan.NewFilter(having))
-	}
+	this.addLetPredicate(group.Letting(), group.Having())
 }
 
 func (this *builder) coverExpressions() error {

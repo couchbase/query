@@ -36,7 +36,7 @@ func (this *StringIntPool) Get() map[string]int {
 }
 
 func (this *StringIntPool) Put(s map[string]int) {
-	if s == nil || len(s) > 2*this.size {
+	if s == nil || len(s) > this.size {
 		return
 	}
 

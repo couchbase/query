@@ -32,6 +32,9 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 			return
 		default:
 			null = true
+		}
+
+		if null {
 			continue
 		}
 
@@ -62,8 +65,17 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 			} else {
 				switch bv.Type() {
 				case value.OBJECT:
-					names := _NAME_POOL.GetSized(len(bv.Fields()))
-					defer _NAME_POOL.Put(names)
+					fields := bv.Fields()
+
+					var nameBuf [_NAME_CAP]string
+					var names []string
+					if len(fields) <= len(nameBuf) {
+						names = nameBuf[0:0]
+					} else {
+						names := _NAME_POOL.GetCapped(len(fields))
+						defer _NAME_POOL.Put(names)
+					}
+
 					for _, n := range bv.FieldNames(names) {
 						v, _ := bv.Field(n)
 						bp = append(bp, util.IPair{n, v})
@@ -98,6 +110,10 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 		if b != nil && (n < 0 || len(b) < n) {
 			n = len(b)
 		}
+	}
+
+	if n < 0 {
+		null = true
 	}
 
 	return
@@ -135,5 +151,3 @@ var _IPAIR_POOL = util.NewIPairPool(1024)
 
 var _INTERFACES_POOL = util.NewInterfacesPool(8)
 var _IPAIRS_POOL = util.NewIPairsPool(8)
-
-var _NAME_POOL = util.NewStringPool(64)

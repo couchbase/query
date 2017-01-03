@@ -35,6 +35,14 @@ func (this *InterfacePool) Get() []interface{} {
 	return this.pool.Get().([]interface{})
 }
 
+func (this *InterfacePool) GetCapped(capacity int) []interface{} {
+	if capacity > this.size {
+		return make([]interface{}, 0, capacity)
+	} else {
+		return this.Get()
+	}
+}
+
 func (this *InterfacePool) GetSized(length int) []interface{} {
 	if length > this.size {
 		return make([]interface{}, length)
@@ -50,7 +58,7 @@ func (this *InterfacePool) GetSized(length int) []interface{} {
 }
 
 func (this *InterfacePool) Put(s []interface{}) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

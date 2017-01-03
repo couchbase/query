@@ -86,8 +86,10 @@ func (s *store) Inferencers() ([]datastore.Inferencer, errors.Error) {
 }
 
 func (s *store) UserInfo() (value.Value, errors.Error) {
-	// Stub implementation.
-	return nil, nil
+	// Return an array of no users.
+	jsonData := make([]interface{}, 0)
+	v := value.NewValue(jsonData)
+	return v, nil
 }
 
 func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {

@@ -351,7 +351,7 @@ tokOffset	 int
 %type <statement>        infer infer_keyspace
 %type <statement>        insert upsert delete update merge
 %type <statement>        index_stmt create_index drop_index alter_index build_index
-%type <statement>        role_stmt grant_role
+%type <statement>        role_stmt grant_role revoke_role
 
 %type <keyspaceRef>      keyspace_ref
 %type <pairs>            values values_list next_values
@@ -546,6 +546,8 @@ index_stmt
 
 role_stmt:
 grant_role
+|
+revoke_role
 ;
 
 index_stmt:
@@ -1731,6 +1733,20 @@ user_list COMMA IDENT
 	$$ = append($1, $3)
 }
 ;
+
+/*************************************************
+ *
+ * REVOKE ROLE
+ *
+ *************************************************/
+
+revoke_role:
+REVOKE ROLE role_list FROM user_list
+{
+	$$ = algebra.NewRevokeRole($3, $5)
+}
+;
+
 
 /*************************************************
  *

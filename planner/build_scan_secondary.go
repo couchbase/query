@@ -32,11 +32,13 @@ type indexEntry struct {
 }
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (plan.Operator, error) {
+	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
+	plan.Operator, int, error) {
+
 	if this.cover != nil {
-		scan, err := this.buildCoveringScan(indexes, node, id, pred, limit)
+		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, limit)
 		if scan != nil || err != nil {
-			return scan, err
+			return scan, sargLength, err
 		}
 	}
 
@@ -47,7 +49,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	var err error
 	indexes, err = sargIndexes(indexes, pred)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if (this.order != nil || limit != nil) && len(indexes) > 1 {
@@ -60,7 +62,15 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		limit = nil
 	}
 
-	scans := make([]plan.Operator, 0, len(indexes))
+	var scanBuf [16]plan.Operator
+	var scans []plan.Operator
+	if len(indexes) <= len(scanBuf) {
+		scans = scanBuf[0:0]
+	} else {
+		scans = make([]plan.Operator, 0, len(indexes))
+	}
+
+	sargLength := 0
 	var op plan.Operator
 	for index, entry := range indexes {
 		if this.order != nil {
@@ -79,7 +89,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			if !arrayIndex {
 				pushDown, err = allowedPushDown(entry, pred, node.Alias())
 				if err != nil {
-					return nil, err
+					return nil, 0, err
 				}
 			}
 
@@ -97,21 +107,26 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		}
 
 		scans = append(scans, op)
+
+		if len(entry.sargKeys) > sargLength {
+			sargLength = len(entry.sargKeys)
+		}
 	}
 
-	if len(scans) > 1 {
-		return plan.NewIntersectScan(scans...), nil
+	if len(scans) == 1 {
+		return scans[0], sargLength, nil
 	} else {
-		return scans[0], nil
+		return plan.NewIntersectScan(scans...), sargLength, nil
 	}
 }
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, entries map[datastore.Index]*indexEntry, err error) {
-	var keys expression.Expressions
+	sargables, all map[datastore.Index]*indexEntry, err error) {
+
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
-	entries = make(map[datastore.Index]*indexEntry, len(indexes))
+	all = make(map[datastore.Index]*indexEntry, len(indexes))
+	var keys expression.Expressions
 
 	for _, index := range indexes {
 		if index.IsPrimary() {
@@ -171,14 +186,14 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 		n := SargableFor(pred, keys)
 		entry := &indexEntry{index, keys, keys[0:n], cond, origCond, nil, false}
-		entries[index] = entry
+		all[index] = entry
 
 		if n > 0 {
 			sargables[index] = entry
 		}
 	}
 
-	return sargables, entries, nil
+	return sargables, all, nil
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {
@@ -211,7 +226,9 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool) bool {
 
 	var fc map[string]value.Value
 	if se.cond != nil {
-		fc = se.cond.FilterCovers(make(map[string]value.Value, 16))
+		fc = _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(fc)
+		fc = se.cond.FilterCovers(fc)
 	}
 outer:
 	for _, tk := range te.sargKeys {
@@ -260,7 +277,9 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 
 	var filters map[string]value.Value
 	if entry.cond != nil {
-		filters = entry.cond.FilterCovers(make(map[string]value.Value, 16))
+		filters = _FILTER_COVERS_POOL.Get()
+		defer _FILTER_COVERS_POOL.Put(filters)
+		filters = entry.cond.FilterCovers(filters)
 	}
 
 	i := 0

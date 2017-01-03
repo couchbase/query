@@ -36,7 +36,7 @@ func (this *AnnotatedJoinPairPool) Get() AnnotatedJoinPairs {
 }
 
 func (this *AnnotatedJoinPairPool) Put(s AnnotatedJoinPairs) {
-	if cap(s) < this.size || cap(s) > 2*this.size {
+	if cap(s) != this.size {
 		return
 	}
 

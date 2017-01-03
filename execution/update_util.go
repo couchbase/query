@@ -114,8 +114,17 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 			} else {
 				switch bv.Type() {
 				case value.OBJECT:
-					names := _NAME_POOL.GetSized(len(bv.Fields()))
-					defer _NAME_POOL.Put(names)
+					fields := bv.Fields()
+
+					var nameBuf [_NAME_CAP]string
+					var names []string
+					if len(fields) <= len(nameBuf) {
+						names = nameBuf[0:0]
+					} else {
+						names := _NAME_POOL.GetCapped(len(fields))
+						defer _NAME_POOL.Put(names)
+					}
+
 					for _, n := range bv.FieldNames(names) {
 						v, _ := bv.Field(n)
 						bp = append(bp, util.IPair{n, v})
@@ -189,4 +198,6 @@ var _VALUE_POOL = value.NewValuePool(1024)
 var _INTERFACES_POOL = util.NewInterfacesPool(64)
 var _IPAIRS_POOL = util.NewIPairsPool(64)
 
-var _NAME_POOL = util.NewStringPool(64)
+const _NAME_CAP = 16
+
+var _NAME_POOL = util.NewStringPool(256)

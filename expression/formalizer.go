@@ -244,18 +244,28 @@ func (this *Formalizer) PushBindings(bindings Bindings) (err error) {
 
 	var expr Expression
 	for _, b := range bindings {
+		if _, ok := allowed.Field(b.Variable()); ok {
+			return fmt.Errorf("Duplicate variable %v already in scope.", b.Variable())
+		}
+
+		allowed.SetField(b.Variable(), value.TRUE_VALUE)
+		aliases.SetField(b.Variable(), value.TRUE_VALUE)
+
+		if b.NameVariable() != "" {
+			if _, ok := allowed.Field(b.Variable()); ok {
+				return fmt.Errorf("Duplicate variable %v already in scope.", b.NameVariable())
+			}
+
+			allowed.SetField(b.NameVariable(), value.TRUE_VALUE)
+			aliases.SetField(b.NameVariable(), value.TRUE_VALUE)
+		}
+
 		expr, err = this.Map(b.Expression())
 		if err != nil {
 			return err
 		}
 
 		b.SetExpression(expr)
-		allowed.SetField(b.Variable(), value.TRUE_VALUE)
-		aliases.SetField(b.Variable(), value.TRUE_VALUE)
-		if b.NameVariable() != "" {
-			allowed.SetField(b.NameVariable(), value.TRUE_VALUE)
-			aliases.SetField(b.NameVariable(), value.TRUE_VALUE)
-		}
 	}
 
 	this.allowed = allowed

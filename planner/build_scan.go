@@ -74,7 +74,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		expression.NewMeta(expression.NewIdentifier(node.Alias())),
 		expression.NewFieldName("id", false))
 
-	// Handle covering primary scan
+	// First handle covering primary scan
 	if this.cover != nil && pred == nil && !isSystem {
 		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, limit, hints)
 		if scan != nil || err != nil {
@@ -137,56 +137,103 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer, force bool) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
 
-	sargables, entries, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	// Prefer OR scan
+	if or, ok := pred.(*expression.Or); ok {
+		scan, _, err := this.buildOrScan(keyspace, node, id, or, limit, indexes, primaryKey, formalizer)
+		if scan != nil || err != nil {
+			return scan, nil, err
+		}
+	}
+
+	// Prefer secondary scan
+	secondary, _, err = this.buildTermScan(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+	if secondary != nil || err != nil {
+		return secondary, nil, err
+	}
+
+	// No secondary scan, try primary scan
+	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Primary scan with predicates -- disable pushdown
+	if primary != nil {
+		this.resetCountMin()
+		this.resetOrderLimit()
+	}
+
+	return nil, primary, nil
+}
+
+func (this *builder) buildTermScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
+	id, pred, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	secondary plan.Operator, sargLength int, err error) {
+
+	sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {
-		return nil, nil, er
+		return nil, 0, er
 	}
 
 	minimals := minimalIndexes(sargables, false)
 
 	// Try secondary scan
 	if len(minimals) > 0 {
-		secondary, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
+		secondary, sargLength, err = this.buildSecondaryScan(minimals, node, id, pred, limit)
 		if err != nil {
-			return nil, nil, err
+			return nil, 0, err
 		}
 
 		if secondary != nil && (len(this.coveringScans) > 0 || this.countScan != nil) {
-			return secondary, nil, err
+			return secondary, sargLength, nil
 		}
 	}
 
 	// Try UNNEST scan
 	if this.from != nil {
-		unnest, err := this.buildUnnestScan(node, this.from, pred, entries)
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all)
 		if err != nil {
-			return nil, nil, err
+			return nil, 0, err
 		}
 
 		if unnest != nil {
 			this.resetCountMin()
 
-			if secondary == nil || len(this.coveringScans) > 0 {
-				return unnest, nil, err
+			if len(this.coveringScans) > 0 {
+				return unnest, unnestSargLength, err
+			}
+
+			if secondary == nil {
+				secondary = unnest
+				sargLength = unnestSargLength
 			} else {
-				return plan.NewIntersectScan(secondary, unnest), nil, err
+				secondary = plan.NewIntersectScan(secondary, unnest)
+				if sargLength < unnestSargLength {
+					sargLength = unnestSargLength
+				}
 			}
 		}
 	}
 
-	if secondary != nil {
-		return secondary, nil, err
-	}
+	/*
+		// Try dynamic scan
+		dynamic, err := this.buildDynamicScan(node, pred, all)
+		if err != nil {
+			return nil, err
+		}
 
-	primary, err = this.buildPrimaryScan(keyspace, node, nil, indexes, force)
+		if dynamic != nil {
+			if secondary == nil {
+				secondary = dynamic
+			} else {
+				secondary = plan.NewIntersectScan(secondary, dynamic)
+			}
+		}
+	*/
 
-	// PrimaryScan with predicates -- disable pushdown
-	if primary != nil {
-		this.resetCountMin()
-		this.resetOrderLimit()
-	}
-
-	return nil, primary, err
+	// Return secondary scan, if any
+	return secondary, sargLength, nil
 }
 
 func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) ([]datastore.Index, error) {
