@@ -50,6 +50,11 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover()       // Recover from any panic
 		defer close(this.itemChannel) // Broadcast that I have stopped
 		defer this.notify()           // Notify that I have stopped
+		err := plan.AddPrepared(this.plan.Plan())
+		if err != nil {
+			context.Fatal(err)
+			return
+		}
 		value := value.NewAnnotatedValue(this.prepared)
 		this.sendItem(value)
 
