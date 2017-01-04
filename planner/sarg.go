@@ -211,13 +211,15 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, t
 	nspans := 1
 	i := 0
 	for _, spans := range sargSpans {
-		if len(spans) == 0 ||
-			(nspans > 1 && nspans*len(spans) > _FULL_SPAN_FANOUT) {
+		length := len(spans)
+
+		if length == 0 ||
+			(nspans > 1 && length > 1 && nspans*length > _FULL_SPAN_FANOUT) {
 			exactSpan = false
 			break
 		}
 
-		nspans *= len(spans)
+		nspans *= length
 		i++
 	}
 
