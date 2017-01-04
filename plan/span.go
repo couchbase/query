@@ -120,6 +120,10 @@ func (this *Span) MarshalJSON() ([]byte, error) {
 		r["Seek"] = this.Seek
 	}
 
+	if this.Exact {
+		r["Exact"] = this.Exact
+	}
+
 	return json.Marshal(r)
 }
 
@@ -127,6 +131,7 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Seek  []string
 		Range *Range
+		Exact bool
 	}
 
 	_unmarshalled.Range = &this.Range
@@ -145,6 +150,8 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 			}
 		}
 	}
+
+	this.Exact = _unmarshalled.Exact
 
 	return nil
 }

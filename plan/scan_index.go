@@ -76,6 +76,10 @@ func (this *IndexScan) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *IndexScan) SetLimit(limit expression.Expression) {
+	this.limit = limit
+}
+
 func (this *IndexScan) Covers() expression.Covers {
 	return this.covers
 }
