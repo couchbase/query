@@ -54,12 +54,28 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	}
 
 	if array == nil {
-		acons, ok := pred.Second().(*expression.ArrayConstruct)
-		if !ok {
+		second := pred.Second()
+		if acons, ok := second.(*expression.ArrayConstruct); ok {
+			array = acons.Operands()
+		} else if second.Static() == nil {
 			return _VALUED_SPANS, nil
-		}
+		} else {
+			static := second.Static()
 
-		array = acons.Operands()
+			span := &plan.Span{}
+			span.Range.Low = expression.Expressions{expression.NewArrayMin(static)}
+			if this.missingHigh {
+				span.Range.High = expression.Expressions{
+					expression.NewSuccessor(expression.NewArrayMax(static))}
+				span.Range.Inclusion = datastore.LOW
+			} else {
+				span.Range.High = expression.Expressions{expression.NewArrayMax(static)}
+				span.Range.Inclusion = datastore.BOTH
+			}
+
+			span.Exact = false
+			return plan.Spans{span}, nil
+		}
 	}
 
 	if len(array) == 0 {
@@ -87,7 +103,8 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			span.Range.High = span.Range.Low
 			span.Range.Inclusion = datastore.BOTH
 		}
-		span.Exact = true
+
+		span.Exact = (val != nil)
 		spans = append(spans, span)
 	}
 
