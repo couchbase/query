@@ -381,3 +381,11 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 		r["#time"] = this.execTime.String()
 	}
 }
+
+// execution destructor is empty by default
+// IMPORTANT - please remember to override this method
+// in individual operators whenever there are actions
+// to be taken on destruction, so as to contain memory
+// consumption
+func (this *base) Done() {
+}

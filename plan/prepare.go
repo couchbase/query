@@ -18,11 +18,13 @@ import (
 type Prepare struct {
 	readonly
 	prepared value.Value
+	plan     *Prepared
 }
 
-func NewPrepare(prepared value.Value) *Prepare {
+func NewPrepare(prepared value.Value, plan *Prepared) *Prepare {
 	return &Prepare{
 		prepared: prepared,
+		plan:     plan,
 	}
 }
 
@@ -36,6 +38,10 @@ func (this *Prepare) New() Operator {
 
 func (this *Prepare) Prepared() value.Value {
 	return this.prepared
+}
+
+func (this *Prepare) Plan() *Prepared {
+	return this.plan
 }
 
 func (this *Prepare) MarshalJSON() ([]byte, error) {
@@ -56,11 +62,20 @@ func (this *Prepare) UnmarshalJSON(body []byte) error {
 		_        string          `json:"#operator"`
 		Prepared json.RawMessage `json:"prepared"`
 	}
+	var plan *Prepared
+
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
 	}
 
 	this.prepared = value.NewValue(_unmarshalled.Prepared)
+
+	// I cannot foresee any use of the below, but for completeness
+	err = json.Unmarshal(_unmarshalled.Prepared, &plan)
+	if err != nil {
+		return err
+	}
+	this.plan = plan
 	return nil
 }

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
-	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -59,6 +58,7 @@ type Request interface {
 	Signature() value.Tristate
 	Pretty() value.Tristate
 	Controls() value.Tristate
+	Profile() Profile
 	ScanConsistency() datastore.ScanConsistency
 	ScanVectorSource() timestamp.ScanVectorSource
 	RequestTime() time.Time
@@ -562,16 +562,20 @@ func (this *BaseRequest) Close() {
 	sendStop(this.closeNotify)
 }
 
-func (this *BaseRequest) LogRequest(requestTime time.Duration, serviceTime time.Duration,
-	resultCount int, resultSize int, errorCount int) {
+// this logs the request if needed and takes any other action required to
+// put this request to rest
+func (this *BaseRequest) CompleteRequest(requestTime time.Duration, serviceTime time.Duration,
+	resultCount int, resultSize int, errorCount int, server *Server) {
 
-	// TODO Monitoring + Profiling: namedArgs, positionalArgs and timings
-	accounting.LogRequest(requestTime, serviceTime, resultCount,
-		resultSize, errorCount, this.Statement(),
-		this.Prepared(), this.FmtPhaseTimes(),
-		this.FmtPhaseCounts(), this.FmtPhaseOperators(),
-		string(this.State()), this.Id().String(),
-		this.ClientID().String(), string(this.ScanConsistency()))
+	LogRequest(requestTime, serviceTime, resultCount,
+		resultSize, errorCount, this, server)
+
+	// Request Profiling - signal that request has completed and
+	// resources can be pooled / released as necessary
+	if this.timings != nil {
+		this.timings.Done()
+		this.timings = nil
+	}
 }
 
 func sendStop(ch chan bool) {

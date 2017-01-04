@@ -50,6 +50,3 @@ func (this *Channel) MarshalJSON() ([]byte, error) {
 	// there's no corresponding plan.Channel, so we have a dummy
 	return nil, nil
 }
-
-func (this *Channel) Done() {
-}

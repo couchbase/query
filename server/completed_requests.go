@@ -8,9 +8,7 @@
 //  and limitations under the License.
 
 /*
- Package accounting provides a common API for workload and monitoring data - metrics, statistics, events.
-
- Request_log provides a way to track completed requests that satisfy certain conditions
+ Completed_requests provides a way to track completed requests that satisfy certain conditions
  (Currently - they last more than a certain threshold).
  The log itself is written in such a way to be of little burden to the operation of the engine.
  As an example - scanning the log is done acquiring and releasing the relevant mutex for each
@@ -19,14 +17,16 @@
  view - the advantage being that the service can continue to operate uninterrupted, rather than
  halt waiting for the scan to be completed.
 */
-package accounting
+package server
 
 import (
 	"time"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type RequestLogEntry struct {
@@ -47,6 +47,9 @@ type RequestLogEntry struct {
 	PhaseTimes      map[string]interface{}
 	PhaseCounts     map[string]interface{}
 	PhaseOperators  map[string]interface{}
+	Timings         execution.Operator
+	NamedArgs       map[string]value.Value
+	PositionalArgs  value.Values
 }
 
 const _CACHE_SIZE = 1 << 10
@@ -96,7 +99,13 @@ func RequestDo(id string, f func(*RequestLogEntry)) {
 }
 
 func RequestDelete(id string) errors.Error {
-	if requestLog.cache.Delete(id, nil) {
+	if requestLog.cache.Delete(id, func(r interface{}) {
+		re := r.(*RequestLogEntry)
+		if re.Timings != nil {
+			re.Timings.Done()
+			re.Timings = nil
+		}
+	}) {
 		return nil
 	} else {
 		return errors.NewSystemStmtNotFoundError(nil, id)
@@ -119,41 +128,70 @@ func RequestsForeach(f func(string, *RequestLogEntry)) {
 }
 
 func LogRequest(request_time time.Duration, service_time time.Duration,
-	result_count int, result_size int,
-	error_count int, stmt string,
-	plan *plan.Prepared,
-	phaseTimes map[string]interface{},
-	phaseCounts map[string]interface{},
-	phaseOperators map[string]interface{},
-	state string, id string, clientId string,
-	scanConsistency string) {
+	result_count int, result_size int, error_count int,
+	request *BaseRequest, server *Server) {
 
 	if requestLog.threshold >= 0 && request_time < time.Millisecond*requestLog.threshold {
 		return
 	}
 
+	id := request.Id().String()
 	re := &RequestLogEntry{
 		RequestId:       id,
-		ClientId:        clientId,
-		State:           state,
+		ClientId:        request.ClientID().String(),
+		State:           string(request.State()),
 		ElapsedTime:     request_time,
 		ServiceTime:     service_time,
 		ResultCount:     result_count,
 		ResultSize:      result_size,
 		ErrorCount:      error_count,
 		Time:            time.Now(),
-		ScanConsistency: scanConsistency,
+		ScanConsistency: string(request.ScanConsistency()),
 	}
+	stmt := request.Statement()
 	if stmt != "" {
 		re.Statement = stmt
 	}
+	plan := request.Prepared()
 	if plan != nil {
 		re.PreparedName = plan.Name()
 		re.PreparedText = plan.Text()
 	}
-	re.PhaseTimes = phaseTimes
-	re.PhaseCounts = phaseCounts
-	re.PhaseOperators = phaseOperators
+	re.PhaseCounts = request.FmtPhaseCounts()
+	re.PhaseOperators = request.FmtPhaseOperators()
+
+	// in order not to bloat service memory, we only
+	// store timings if they are turned on at the service
+	// or request level when the request completes.
+	// this may yield inconsistent output if different nodes
+	// have different settings, but it's better than ever growing
+	// memory because we are storing every plan in completed_requests
+	// once timings get stored in completed_requests, it's this
+	// module that's responsible for cleaning after them, hence
+	// we nillify request.timings to signal that
+	prof := request.Profile()
+	if prof == ProfUnset {
+		prof = server.Profile()
+	}
+	if prof != ProfOff {
+		re.PhaseTimes = request.FmtPhaseTimes()
+	}
+	if prof == ProfOn {
+		re.Timings = request.GetTimings()
+		request.SetTimings(nil)
+	}
+
+	var ctrl bool
+	ctr := request.Controls()
+	if ctr == value.NONE {
+		ctrl = server.Controls()
+	} else {
+		ctrl = (ctr == value.TRUE)
+	}
+	if ctrl {
+		re.NamedArgs = request.NamedArgs()
+		re.PositionalArgs = request.PositionalArgs()
+	}
 
 	requestLog.cache.Add(re, id)
 }

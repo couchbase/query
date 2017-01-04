@@ -163,7 +163,7 @@ func main() {
 	}
 
 	// Start the completed requests log
-	accounting.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
+	server.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
 	numProcs := runtime.GOMAXPROCS(0)
 	channel := make(server.RequestChannel, *REQUEST_CAP*numProcs)
@@ -174,7 +174,6 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
-	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
 	prof, _ := server.ParseProfile(*PROFILE)
 	server, err := server.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, channel, plusChannel, *SERVICERS, *PLUS_SERVICERS,
@@ -184,6 +183,7 @@ func main() {
 		logging.Errorp(err.Error())
 		os.Exit(1)
 	}
+	system.SetRemoteAccess(http.NewSystemRemoteAccess(configstore, server))
 
 	datastore_package.SetSystemstore(server.Systemstore())
 

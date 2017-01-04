@@ -131,6 +131,10 @@ func (this *Span) MarshalBase(f func(map[string]interface{})) map[string]interfa
 		r["Seek"] = this.Seek
 	}
 
+	if this.Exact {
+		r["Exact"] = this.Exact
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -141,6 +145,7 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Seek  []string
 		Range *Range
+		Exact bool
 	}
 
 	_unmarshalled.Range = &this.Range
@@ -159,6 +164,8 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 			}
 		}
 	}
+
+	this.Exact = _unmarshalled.Exact
 
 	return nil
 }

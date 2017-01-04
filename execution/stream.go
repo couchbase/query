@@ -60,6 +60,3 @@ func (this *Stream) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Stream) Done() {
-}

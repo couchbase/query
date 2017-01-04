@@ -56,6 +56,3 @@ func (this *Discard) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Discard) Done() {
-}

@@ -199,7 +199,4 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *SendInsert) Done() {
-}
-
 var _INSERT_POOL = value.NewPairPool(_BATCH_SIZE)

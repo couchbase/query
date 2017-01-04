@@ -62,6 +62,3 @@ func (this *FinalProject) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *FinalProject) Done() {
-}

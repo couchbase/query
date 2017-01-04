@@ -139,14 +139,14 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	// Prefer OR scan
 	if or, ok := pred.(*expression.Or); ok {
-		scan, _, err := this.buildOrScan(keyspace, node, id, or, limit, indexes, primaryKey, formalizer)
+		scan, _, err := this.buildOrScan(node, id, or, limit, indexes, primaryKey, formalizer)
 		if scan != nil || err != nil {
 			return scan, nil, err
 		}
 	}
 
 	// Prefer secondary scan
-	secondary, _, err = this.buildTermScan(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+	secondary, _, err = this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
 	if secondary != nil || err != nil {
 		return secondary, nil, err
 	}
@@ -166,8 +166,8 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	return nil, primary, nil
 }
 
-func (this *builder) buildTermScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id, pred, limit expression.Expression, indexes []datastore.Index,
+func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
+	limit expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.Operator, sargLength int, err error) {
 
@@ -218,16 +218,20 @@ func (this *builder) buildTermScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	/*
 		// Try dynamic scan
-		dynamic, err := this.buildDynamicScan(node, pred, all)
+		dynamic, dynamicSargLength, err := this.buildDynamicScan(node, id, pred, all, primaryKey, formalizer)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		if dynamic != nil {
 			if secondary == nil {
 				secondary = dynamic
+				sargLength = dynamicSargLength
 			} else {
 				secondary = plan.NewIntersectScan(secondary, dynamic)
+				if sargLength < dynamicSargLength {
+					sargLength = dynamicSargLength
+				}
 			}
 		}
 	*/

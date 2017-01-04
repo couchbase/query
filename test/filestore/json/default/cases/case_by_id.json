@@ -23,6 +23,7 @@
                                 "namespace": "default",
                                 "spans": [
                                     {
+                                        "Exact": true,
                                         "Range": {
                                             "High": [
                                                 "\"damien\""

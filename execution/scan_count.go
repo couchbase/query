@@ -72,6 +72,3 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *CountScan) Done() {
-}

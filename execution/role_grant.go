@@ -116,6 +116,3 @@ func (this *GrantRole) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *GrantRole) Done() {
-}

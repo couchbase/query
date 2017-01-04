@@ -131,7 +131,8 @@ outer:
 	}
 
 	if !arrayIndex && pushDown {
-		if this.countAgg != nil && !pred.MayOverlapSpans() && canPushDownCount(this.countAgg, entry) {
+		if this.countAgg != nil && (len(entry.spans) == 1 || !pred.MayOverlapSpans()) &&
+			canPushDownCount(this.countAgg, entry) {
 			countIndex, ok := index.(datastore.CountIndex)
 			if ok {
 				this.maxParallelism = 1
@@ -218,6 +219,7 @@ func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
 			return false
 		}
 	}
+
 	return true
 }
 

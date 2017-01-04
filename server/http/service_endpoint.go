@@ -127,15 +127,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false)
 
-	// Request Profiling - signal that request has completed and
-	// resources can be pooled / released as necessary
-	defer func() {
-		timings := request.GetTimings()
-		if timings != nil {
-			timings.Done()
-		}
-	}()
-	defer this.doStats(request, this.server.Profile(), this.server.Controls())
+	defer this.doStats(request, this.server)
 
 	if request.State() == server.FATAL {
 		// There was problems creating the request: Fail it and return
@@ -204,7 +196,7 @@ func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
 		http.FileServer(http.Dir(pathValue))))
 }
 
-func (this *HttpEndpoint) doStats(request *httpRequest, prof server.Profile, ctrl bool) {
+func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	// Update metrics:
 	service_time := time.Since(request.ServiceTime())
@@ -217,8 +209,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest, prof server.Profile, ctr
 		request.Prepared(), (request.State() != server.COMPLETED),
 		string(request.ScanConsistency()))
 
-	request.LogRequest(request_time, service_time, request.resultCount,
-		request.resultSize, request.errorCount)
+	request.CompleteRequest(request_time, service_time, request.resultCount,
+		request.resultSize, request.errorCount, srvr)
 }
 
 func ServicePrefix() string {

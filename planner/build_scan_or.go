@@ -16,24 +16,39 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) buildOrScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id expression.Expression, pred *expression.Or, limit expression.Expression,
-	indexes []datastore.Index, primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expression,
+	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	plan.Operator, int, error) {
 
-	tryPushdowns := this.cover != nil || this.order != nil || this.limit != nil ||
-		this.offset != nil || this.countAgg != nil || this.minAgg != nil
-
-	if tryPushdowns {
-		return this.buildOrScanTryPushdowns(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+	if this.countAgg != nil {
+		return this.buildOrScanTryCountPushdown(node, id, pred, limit, indexes, primaryKey, formalizer)
 	} else {
-		return this.buildOrScanNoPushdowns(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	}
 }
 
-func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id expression.Expression, pred *expression.Or, limit expression.Expression,
-	indexes []datastore.Index, primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+func (this *builder) buildOrScanTryCountPushdown(node *algebra.KeyspaceTerm, id expression.Expression,
+	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+	plan.Operator, int, error) {
+
+	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	switch scan.(type) {
+	case *plan.IndexCountScan:
+		return scan, sargLength, nil
+	default:
+		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
+	}
+}
+
+func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
+	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	plan.Operator, int, error) {
 
 	where := this.where
@@ -42,6 +57,7 @@ func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *
 	}()
 
 	coveringScans := this.coveringScans
+	this.countAgg = nil
 
 	var buf [16]plan.Operator
 	var scans []plan.Operator
@@ -53,11 +69,10 @@ func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *
 
 	var index datastore.Index
 	minSargLength := 0
-	distinct := false
 
 	for _, op := range pred.Operands() {
 		this.where = op
-		scan, termSargLength, err := this.buildTermScan(keyspace, node, id, op, limit, indexes, primaryKey, formalizer)
+		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, indexes, primaryKey, formalizer)
 		if scan == nil || err != nil {
 			this.coveringScans = coveringScans
 			return nil, 0, err
@@ -65,7 +80,6 @@ func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *
 
 		if distinctScan, ok := scan.(*plan.DistinctScan); ok {
 			scan = distinctScan.Scan()
-			distinct = true
 		}
 
 		if indexScan, ok := scan.(*plan.IndexScan); ok {
@@ -86,7 +100,7 @@ func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *
 
 		// TODO: Some work is duplicated here if no scan is performing pushdowns
 		this.coveringScans = coveringScans
-		return this.buildOrScanNoPushdowns(keyspace, node, id, pred, limit, indexes, primaryKey, formalizer)
+		return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	}
 
 	spans := make(plan.Spans, 0, 2*len(scans))
@@ -103,16 +117,18 @@ func (this *builder) buildOrScanTryPushdowns(keyspace datastore.Keyspace, node *
 		this.coveringScans = append(coveringScans, indexScan0)
 	}
 
-	if distinct || len(spans) > 1 {
+	if len(spans) > 1 {
+		this.resetOrderLimit()
+		indexScan0.SetLimit(nil)
 		return plan.NewDistinctScan(indexScan0), minSargLength, nil
 	} else {
 		return indexScan0, minSargLength, nil
 	}
 }
 
-func (this *builder) buildOrScanNoPushdowns(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id expression.Expression, pred *expression.Or, limit expression.Expression,
-	indexes []datastore.Index, primaryKey expression.Expressions, formalizer *expression.Formalizer) (
+func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
+	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
+	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	plan.Operator, int, error) {
 
 	where := this.where
@@ -128,8 +144,6 @@ func (this *builder) buildOrScanNoPushdowns(keyspace datastore.Keyspace, node *a
 	if this.order != nil {
 		this.resetOrderLimit()
 		limit = nil
-	} else {
-		this.order = nil
 	}
 
 	var buf [16]plan.Operator
@@ -144,7 +158,7 @@ func (this *builder) buildOrScanNoPushdowns(keyspace datastore.Keyspace, node *a
 
 	for _, op := range pred.Operands() {
 		this.where = op
-		scan, termSargLength, err := this.buildTermScan(keyspace, node, id, op, limit, indexes, primaryKey, formalizer)
+		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, indexes, primaryKey, formalizer)
 		if scan == nil || err != nil {
 			return nil, 0, err
 		}

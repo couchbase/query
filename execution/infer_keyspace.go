@@ -94,6 +94,3 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *InferKeyspace) Done() {
-}

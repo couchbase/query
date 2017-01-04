@@ -93,6 +93,3 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *Nest) Done() {
-}

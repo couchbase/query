@@ -10,10 +10,12 @@
 package system
 
 import (
-	"github.com/couchbase/query/accounting"
+	"encoding/json"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -49,7 +51,7 @@ func (b *requestLogKeyspace) Count() (int64, errors.Error) {
 
 		// FIXME Count does not handle warnings
 	})
-	return int64(accounting.RequestsCount() + count), nil
+	return int64(server.RequestsCount() + count), nil
 }
 
 func (b *requestLogKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
@@ -70,14 +72,20 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 		// remote entry
 		if len(node) != 0 && node != _REMOTEACCESS.WhoAmI() {
 			_REMOTEACCESS.GetRemoteDoc(node, localKey,
-				"completed_requests", "GET",
+				"completed_requests", "POST",
 				func(doc map[string]interface{}) {
 
+					meta := map[string]interface{}{
+						"id": key,
+					}
+					t, ok := doc["timings"]
+					if ok {
+						meta["plan"] = t
+						delete(doc, "timings")
+					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					remoteValue.SetAttachment("meta", map[string]interface{}{
-						"id": key,
-					})
+					remoteValue.SetAttachment("meta", meta)
 					rv = append(rv, value.AnnotatedPair{
 						Name:  key,
 						Value: remoteValue,
@@ -90,7 +98,7 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 		} else {
 
 			// local entry
-			accounting.RequestDo(localKey, func(entry *accounting.RequestLogEntry) {
+			server.RequestDo(localKey, func(entry *server.RequestLogEntry) {
 				item := value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"state":           entry.State,
@@ -124,9 +132,20 @@ func (b *requestLogKeyspace) Fetch(keys []string) ([]value.AnnotatedPair, []erro
 				if entry.PhaseOperators != nil {
 					item.SetField("phaseOperators", entry.PhaseOperators)
 				}
-				item.SetAttachment("meta", map[string]interface{}{
+				if entry.PositionalArgs != nil {
+					item.SetField("positionalArgs", entry.PositionalArgs)
+				}
+				if entry.NamedArgs != nil {
+					item.SetField("namedArgs", entry.NamedArgs)
+				}
+				meta := map[string]interface{}{
 					"id": key,
-				})
+				}
+				if entry.Timings != nil {
+					bytes, _ := json.Marshal(entry.Timings)
+					meta["plan"] = bytes
+				}
+				item.SetAttachment("meta", meta)
 				rv = append(rv, value.AnnotatedPair{
 					Name:  key,
 					Value: item,
@@ -171,7 +190,7 @@ func (b *requestLogKeyspace) Delete(deletes []string) ([]string, errors.Error) {
 
 			// local entry
 		} else {
-			err = accounting.RequestDelete(localKey)
+			err = server.RequestDelete(localKey)
 		}
 
 		// save memory allocations by making a new slice only on errors
@@ -255,7 +274,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer close(conn.EntryChannel())
-	accounting.RequestsForeach(func(id string, entry *accounting.RequestLogEntry) {
+	server.RequestsForeach(func(id string, entry *server.RequestLogEntry) {
 		indexEntry := datastore.IndexEntry{PrimaryKey: _REMOTEACCESS.MakeKey(_REMOTEACCESS.WhoAmI(), id)}
 		conn.EntryChannel() <- &indexEntry
 	})

@@ -116,6 +116,3 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	})
 	return json.Marshal(r)
 }
-
-func (this *IntermediateGroup) Done() {
-}

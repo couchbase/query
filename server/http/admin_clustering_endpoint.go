@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -429,11 +428,11 @@ var _SETTERS = map[string]setter{
 	},
 	_CMPTHRESHOLD: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		accounting.RequestsSetThreshold(int(value))
+		server.RequestsSetThreshold(int(value))
 	},
 	_CMPLIMIT: func(s *server.Server, o interface{}) {
 		value, _ := o.(float64)
-		accounting.RequestsSetLimit(int(value))
+		server.RequestsSetLimit(int(value))
 	},
 	_PRETTY: func(s *server.Server, o interface{}) {
 		value, _ := o.(bool)
@@ -505,8 +504,8 @@ func fillSettings(settings map[string]interface{}, srvr *server.Server) map[stri
 	settings[_TIMEOUT] = srvr.Timeout()
 	settings[_KEEPALIVELENGTH] = srvr.KeepAlive()
 	settings[_LOGLEVEL] = srvr.LogLevel()
-	settings[_CMPTHRESHOLD] = accounting.RequestsThreshold()
-	settings[_CMPLIMIT] = accounting.RequestsLimit()
+	settings[_CMPTHRESHOLD] = server.RequestsThreshold()
+	settings[_CMPLIMIT] = server.RequestsLimit()
 	settings[_PRETTY] = srvr.Pretty()
 	settings[_PROFILE] = srvr.Profile().String()
 	settings[_CONTROLS] = srvr.Controls()
