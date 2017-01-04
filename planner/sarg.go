@@ -125,17 +125,19 @@ keys:
 }
 
 func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) bool {
+	rv := true
 
 	for _, prev := range ns {
 		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
 			if !equalRangeKey(i, prev.Range.Low, prev.Range.High) {
-				return false
+				prev.Exact = false
+				rv = false
 			}
 		}
 	}
 
-	return true
+	return rv
 }
 
 func sargFor(pred, key expression.Expression, missingHigh bool) (plan.Spans, error) {
