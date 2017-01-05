@@ -38,6 +38,8 @@ type store struct {
 	path           string
 	namespaces     map[string]*namespace
 	namespaceNames []string
+
+	users map[string]*datastore.User
 }
 
 func (s *store) Id() string {
@@ -93,11 +95,16 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 }
 
 func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
+	ret := make([]datastore.User, 0, len(s.users))
+	for _, v := range s.users {
+		ret = append(ret, *v)
+	}
+	return ret, nil
 }
 
 func (s *store) PutUserInfo(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
+	s.users[u.Id] = u
+	return nil
 }
 
 // NewStore creates a new file-based store for the given filepath.
@@ -107,7 +114,7 @@ func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 		return nil, errors.NewFileDatastoreError(er, "")
 	}
 
-	fs := &store{path: path}
+	fs := &store{path: path, users: make(map[string]*datastore.User, 4)}
 
 	e = fs.loadNamespaces()
 	if e != nil {

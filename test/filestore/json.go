@@ -47,6 +47,7 @@ type MockQuery struct {
 type MockServer struct {
 	server    *server.Server
 	acctstore accounting.AccountingStore
+	dstore    datastore.Datastore
 }
 
 func (this *MockQuery) OriginalHttpRequest() *http_base.Request {
@@ -250,5 +251,6 @@ func Start(site, pool string) *MockServer {
 	go server.Serve()
 	mockServer.server = server
 	mockServer.acctstore = acctstore
+	mockServer.dstore = datastore
 	return mockServer
 }
