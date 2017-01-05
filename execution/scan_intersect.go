@@ -166,8 +166,9 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 }
 
 func (this *IntersectScan) sendItems() {
-	for _, av := range this.values {
-		if !this.sendItem(av) {
+	n := len(this.scans)
+	for k, av := range this.values {
+		if this.counts[k] == n && !this.sendItem(av) {
 			return
 		}
 	}
