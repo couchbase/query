@@ -41,7 +41,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.countScan = prevCountScan
 	}()
 
-	this.coveringScans = make([]plan.Operator, 0, 2)
+	this.coveringScans = make([]plan.CoveringOperator, 0, 4)
 	this.coveredUnnests = nil
 	this.countScan = nil
 	this.correlated = node.IsCorrelated()
@@ -230,16 +230,8 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 }
 
 func (this *builder) coverExpressions() error {
-	var coverer *expression.Coverer
-	for _, o := range this.coveringScans {
-
-		if op, ok := o.(*plan.IndexScan); ok {
-			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
-		} else if op, ok := o.(*plan.IndexJoin); ok {
-			coverer = expression.NewCoverer(op.Covers(), op.FilterCovers())
-		} else {
-			continue
-		}
+	for _, op := range this.coveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 
 		err := this.cover.MapExpressions(coverer)
 		if err != nil {
@@ -253,6 +245,7 @@ func (this *builder) coverExpressions() error {
 			}
 		}
 	}
+
 	return nil
 }
 

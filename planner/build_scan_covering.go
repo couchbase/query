@@ -164,12 +164,48 @@ outer:
 		this.maxParallelism = 1
 	}
 
-	scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-	this.coveringScans = append(this.coveringScans, scan)
+	var scan plan.Operator
+	if arrayIndex {
+		// Array index may include spans to be intersected
+		iscans := make([]plan.Operator, 0, len(entry.spans)) // For intersect spans
+		spans := make([]*plan.Span, 0, len(entry.spans))     // For non-intersect  spans
+		var indexScan *plan.IndexScan
 
-	if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
-		// Use DistinctScan to de-dup array index scans, multiple spans
-		return plan.NewDistinctScan(scan), sargLength, nil
+		for _, span := range entry.spans {
+			if span.Intersect {
+				indexScan = plan.NewIndexScan(index, node, plan.Spans{span}, false, nil, covers, filterCovers)
+				scan = plan.NewDistinctScan(indexScan)
+				iscans = append(iscans, scan)
+			} else {
+				spans = append(spans, span)
+			}
+		}
+
+		if len(iscans) > 0 {
+			this.resetOrderLimit()
+
+			if len(spans) > 0 {
+				indexScan = plan.NewIndexScan(index, node, spans, false, nil, covers, filterCovers)
+				scan = plan.NewDistinctScan(indexScan)
+				iscans = append(iscans, scan)
+			}
+
+			this.coveringScans = append(this.coveringScans, indexScan)
+			scan = plan.NewIntersectScan(iscans...)
+		} else {
+			indexScan := plan.NewIndexScan(index, node, spans, false, nil, covers, filterCovers)
+			this.coveringScans = append(this.coveringScans, indexScan)
+			scan = plan.NewDistinctScan(indexScan)
+		}
+	} else {
+		indexScan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
+		this.coveringScans = append(this.coveringScans, indexScan)
+
+		if len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans()) {
+			scan = plan.NewDistinctScan(indexScan)
+		} else {
+			scan = indexScan
+		}
 	}
 
 	return scan, sargLength, nil

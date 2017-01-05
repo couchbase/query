@@ -100,7 +100,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	}
 	pred = expression.NewAnd(andTerms...)
 
-	cops := make(map[datastore.Index]plan.Operator, len(primaryUnnests))
+	cops := make(map[datastore.Index]plan.CoveringOperator, len(primaryUnnests))
 	cuns := make(map[datastore.Index]map[*algebra.Unnest]bool, len(primaryUnnests))
 
 	for _, index := range unnestIndexes {
@@ -117,11 +117,11 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 
 	// Find shortest covering scan
 	n := 0
-	op = nil
+	var cop plan.CoveringOperator
 	var cun map[*algebra.Unnest]bool
-	for index, cop := range cops {
-		if op == nil || len(index.RangeKey()) < n {
-			op = cop
+	for index, c := range cops {
+		if cop == nil || len(index.RangeKey()) < n {
+			cop = c
 			cun = cuns[index]
 			n = len(index.RangeKey())
 			sargLength = len(indexes[index].sargKeys)
@@ -129,14 +129,14 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	}
 
 	// Return shortest covering scan
-	if op != nil {
-		this.coveringScans = append(this.coveringScans, op)
+	if cop != nil {
+		this.coveringScans = append(this.coveringScans, cop)
 		this.coveredUnnests = cun
 
 		if len(cun) > 0 {
-			return op, sargLength, nil
+			return cop, sargLength, nil
 		} else {
-			return plan.NewDistinctScan(op), sargLength, nil
+			return plan.NewDistinctScan(cop), sargLength, nil
 		}
 	}
 
@@ -336,7 +336,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 
 func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred expression.Expression,
 	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
-	plan.Operator, map[*algebra.Unnest]bool, error) {
+	plan.CoveringOperator, map[*algebra.Unnest]bool, error) {
 
 	// Statement to be covered
 	if this.cover == nil {

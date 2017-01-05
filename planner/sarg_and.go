@@ -311,5 +311,14 @@ func sargAndArrayKey(pred *expression.And, key expression.Expression, missingHig
 		return _EMPTY_SPANS, nil
 	}
 
-	return deDupDiscardEmptySpans(spans), nil
+	spans = deDupDiscardEmptySpans(spans)
+
+	if len(spans) > 1 {
+		spans = spans.Copy()
+		for _, span := range spans {
+			span.Intersect = true
+		}
+	}
+
+	return spans, nil
 }
