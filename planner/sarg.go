@@ -132,7 +132,7 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 	for _, prev := range ns {
 		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
-			prev.Exact = prev.Exact && !equalRangeKey(i, prev.Range.Low, prev.Range.High)
+			prev.Exact = prev.Exact && equalRangeKey(i, prev.Range.Low, prev.Range.High)
 			rv = rv && prev.Exact
 		}
 	}
