@@ -131,7 +131,6 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
 			if !equalRangeKey(i, prev.Range.Low, prev.Range.High) {
-				prev.Exact = false
 				rv = false
 			}
 		}

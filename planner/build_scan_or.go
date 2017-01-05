@@ -33,8 +33,11 @@ func (this *builder) buildOrScanTryCountPushdown(node *algebra.KeyspaceTerm, id 
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	plan.Operator, int, error) {
 
+	coveringScans := this.coveringScans
+
 	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
 	if err != nil {
+		this.coveringScans = coveringScans
 		return nil, 0, err
 	}
 
@@ -42,6 +45,7 @@ func (this *builder) buildOrScanTryCountPushdown(node *algebra.KeyspaceTerm, id 
 	case *plan.IndexCountScan:
 		return scan, sargLength, nil
 	default:
+		this.coveringScans = coveringScans
 		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	}
 }
@@ -68,33 +72,38 @@ func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expr
 	}
 
 	var index datastore.Index
+	termIndexes := indexes
 	minSargLength := 0
 
 	for _, op := range pred.Operands() {
 		this.where = op
-		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, indexes, primaryKey, formalizer)
-		if scan == nil || err != nil {
+
+		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, termIndexes, primaryKey, formalizer)
+		if err != nil || (scan == nil && index == nil) {
 			this.coveringScans = coveringScans
 			return nil, 0, err
 		}
 
-		if distinctScan, ok := scan.(*plan.DistinctScan); ok {
-			scan = distinctScan.Scan()
-		}
-
-		if indexScan, ok := scan.(*plan.IndexScan); ok {
-			if index == nil {
-				index = indexScan.Index()
+		if scan != nil {
+			if distinctScan, ok := scan.(*plan.DistinctScan); ok {
+				scan = distinctScan.Scan()
 			}
 
-			if index == indexScan.Index() {
-				scans = append(scans, scan)
-
-				if minSargLength == 0 || minSargLength > termSargLength {
-					minSargLength = termSargLength
+			if indexScan, ok := scan.(*plan.IndexScan); ok {
+				if index == nil {
+					index = indexScan.Index()
+					termIndexes = []datastore.Index{index}
 				}
 
-				continue
+				if index == indexScan.Index() {
+					scans = append(scans, scan)
+
+					if minSargLength == 0 || minSargLength > termSargLength {
+						minSargLength = termSargLength
+					}
+
+					continue
+				}
 			}
 		}
 
