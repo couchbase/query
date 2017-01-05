@@ -177,18 +177,21 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 				in case this is set. This is handled in the beginning.
 			*/
 			case "show-error":
+				break
 			/*
 				get: Send the -d data with a HTTP GET (H)
 				Since we set the curl method as the first argument, it is
 				important to note that providing this option does nothing.
 			*/
 			case "get":
+				break
 			/*
 			   request: Specify request method to use. Since we set
 			   the curl method as the first argument, it is important
 			   to note that providing this option does nothing.
 			*/
 			case "request":
+				break
 			/*
 				data: HTTP POST data (H). However in some cases in CURL
 				this can be issued with a GET as well. In these cases, the
@@ -262,6 +265,70 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 			*/
 			case "user":
 				this.curlAuth(value.NewValue(val).String())
+			/*
+				basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
+				we error out.
+			*/
+			case "basic":
+				if value.NewValue(val).Type() != value.BOOLEAN {
+					if show_error == true {
+						return nil, fmt.Errorf(" Incorrect type for basic option in CURL ")
+					} else {
+						return nil, nil
+					}
+				}
+				if value.NewValue(val).Actual().(bool) == true {
+					var CURLAUTH_BASIC = (1 << 0) /* Basic (default) */
+					this.myCurl.Setopt(curl.OPT_HTTPAUTH, CURLAUTH_BASIC)
+				}
+			/*
+				anyauth: curl to figure out authentication method by itself, and use the most secure one.
+				It has to be a boolean, otherwise we error out.
+			*/
+			case "anyauth":
+				if value.NewValue(val).Type() != value.BOOLEAN {
+					if show_error == true {
+						return nil, fmt.Errorf(" Incorrect type for anyauth option in CURL ")
+					} else {
+						return nil, nil
+					}
+				}
+				if value.NewValue(val).Actual().(bool) == true {
+					var CURLAUTH_ANY = ^(0) /* all types set */
+					this.myCurl.Setopt(curl.OPT_HTTPAUTH, CURLAUTH_ANY)
+				}
+			/*
+				insecure: Allow connections to SSL sites without certs (H). It has to be a boolean,
+				otherwise we error out.
+			*/
+			case "insecure":
+				if value.NewValue(val).Type() != value.BOOLEAN {
+					if show_error == true {
+						return nil, fmt.Errorf(" Incorrect type for insecure option in CURL ")
+					} else {
+						return nil, nil
+					}
+				}
+				insecure := value.NewValue(val).Actual().(bool)
+				if insecure == true {
+					this.myCurl.Setopt(curl.OPT_SSL_VERIFYPEER, insecure)
+				}
+			/*
+				keepalive-time: TODO.
+			*/
+			case "keepalive-time":
+				if value.NewValue(val).Type() != value.NUMBER {
+					return nil, fmt.Errorf(" Incorrect type for keepalive-time option in CURL ")
+				}
+				this.curlKeepAlive(value.NewValue(val).Actual().(float64))
+			/*
+				max-redirs: Maximum number of redirects allowed (H)
+			*/
+			case "max-redirs":
+				if value.NewValue(val).Type() != value.NUMBER {
+					return nil, fmt.Errorf(" Incorrect type for max-redirs option in CURL ")
+				}
+				this.curlMaxRedirs(value.NewValue(val).Actual().(float64))
 			}
 
 		}
@@ -351,3 +418,24 @@ func (this *Curl) curlMaxTime(val float64) {
 	myCurl := this.myCurl
 	myCurl.Setopt(curl.OPT_TIMEOUT, val)
 }
+
+func (this *Curl) curlMaxRedirs(val float64) {
+	myCurl := this.myCurl
+	myCurl.Setopt(curl.OPT_MAXREDIRS, val)
+}
+
+func (this *Curl) curlKeepAlive(val float64) {
+	myCurl := this.myCurl
+	myCurl.Setopt(curl.OPT_TCP_KEEPALIVE, 1.0)
+	myCurl.Setopt(curl.OPT_TCP_KEEPIDLE, val)
+	myCurl.Setopt(curl.OPT_TCP_KEEPINTVL, val)
+}
+
+/* Other auth values
+var (
+			CURLAUTH_NONE    = 0        /* nothing
+			CURLAUTH_BASIC   = (1 << 0) /* Basic (default)
+			CURLAUTH_DIGEST  = (1 << 1) /* Digest
+			CURLAUTH_ANYSAFE = (^CURLAUTH_BASIC)
+		)
+*/
