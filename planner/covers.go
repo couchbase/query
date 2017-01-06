@@ -16,7 +16,9 @@ import (
 
 // Return the filterCovers for a query predicate and index keys. This
 // allows array indexes to cover ANY predicates.
-func CoversFor(pred expression.Expression, keys expression.Expressions) (map[*expression.Cover]value.Value, error) {
+func CoversFor(pred expression.Expression, keys expression.Expressions) (
+	map[*expression.Cover]value.Value, error) {
+
 	cov := &covers{keys}
 	rv, err := pred.Accept(cov)
 	if rv == nil || err != nil {

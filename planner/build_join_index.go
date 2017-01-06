@@ -20,6 +20,7 @@ import (
 
 func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 	node *algebra.IndexJoin) (op *plan.IndexJoin, err error) {
+
 	index, covers, filterCovers, err := this.buildJoinScan(keyspace, node.Right(), "join")
 	if err != nil {
 		return nil, err
@@ -34,6 +35,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 
 func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 	node *algebra.IndexNest) (op *plan.IndexNest, err error) {
+
 	index, _, _, err := this.buildJoinScan(keyspace, node.Right(), "nest")
 	if err != nil {
 		return nil, err
@@ -44,6 +46,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (
 	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
+
 	indexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(indexes)
 	indexes, err := allIndexes(keyspace, nil, indexes)
@@ -76,7 +79,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	sargables, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
+	sargables, _, _, err := sargableIndexes(indexes, pred, subset, primaryKey, formalizer)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -153,13 +153,17 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 
 func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	sargables, all map[datastore.Index]*indexEntry, err error) {
+	sargables, all, arrays map[datastore.Index]*indexEntry, err error) {
 
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
 	all = make(map[datastore.Index]*indexEntry, len(indexes))
+	arrays = make(map[datastore.Index]*indexEntry, len(indexes))
+
 	var keys expression.Expressions
 
 	for _, index := range indexes {
+		isArray := false
+
 		if index.IsPrimary() {
 			if primaryKey != nil {
 				keys = primaryKey
@@ -175,16 +179,20 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 				key, err = formalizer.Map(key)
 				if err != nil {
-					return nil, nil, err
+					return
 				}
 
 				dnf := NewDNF(key)
 				key, err = dnf.Map(key)
 				if err != nil {
-					return nil, nil, err
+					return
 				}
 
 				keys[i] = key
+
+				if !isArray {
+					isArray, _ = key.IsArrayIndexKey()
+				}
 			}
 		}
 
@@ -199,7 +207,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 
 			cond, err = formalizer.Map(cond)
 			if err != nil {
-				return nil, nil, err
+				return
 			}
 
 			origCond = cond.Copy()
@@ -207,7 +215,7 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 			dnf := NewDNF(cond)
 			cond, err = dnf.Map(cond)
 			if err != nil {
-				return nil, nil, err
+				return
 			}
 
 			if !SubsetOf(subset, cond) {
@@ -222,12 +230,17 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 		if n > 0 {
 			sargables[index] = entry
 		}
+
+		if isArray {
+			arrays[index] = entry
+		}
 	}
 
-	return sargables, all, nil
+	return sargables, all, arrays, nil
 }
 
 func minimalIndexes(sargables map[datastore.Index]*indexEntry, shortest bool) map[datastore.Index]*indexEntry {
+
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
@@ -370,7 +383,9 @@ func equalConditionFilter(filters map[string]value.Value, str string) bool {
 	return ok && v != nil
 }
 
-func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string) (bool, error) {
+func allowedPushDown(entry *indexEntry, pred expression.Expression, alias string) (
+	bool, error) {
+
 	if !entry.exactSpans {
 		return false, nil
 	}
