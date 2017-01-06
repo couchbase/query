@@ -19,6 +19,7 @@ import (
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	limit expression.Expression) (op plan.Operator, err error) {
+
 	keys := node.Keys()
 	if keys != nil {
 		this.resetOrderLimit()
@@ -48,6 +49,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, limit expression.Expression) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
 	var hints []datastore.Index
 	if len(node.Indexes()) > 0 {
 		hints = _HINT_POOL.Get()
@@ -98,6 +100,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	id, pred, limit expression.Expression, hints []datastore.Index) (
 	secondary plan.Operator, primary *plan.PrimaryScan, err error) {
+
 	// Handle constant FALSE predicate
 	cpred := pred.Value()
 	if cpred != nil && !cpred.Truth() {
@@ -171,7 +174,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	secondary plan.Operator, sargLength int, err error) {
 
-	sargables, all, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
+	sargables, all, arrays, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {
 		return nil, 0, er
 	}
@@ -216,9 +219,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 		}
 	}
 
-	/*
-		// Try dynamic scan
-		dynamic, dynamicSargLength, err := this.buildDynamicScan(node, id, pred, all, primaryKey, formalizer)
+	// Try dynamic scan
+	if len(arrays) > 0 {
+		dynamic, dynamicSargLength, err :=
+			this.buildDynamicScan(node, id, pred, arrays, primaryKey, formalizer)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -234,13 +238,15 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 				}
 			}
 		}
-	*/
+	}
 
 	// Return secondary scan, if any
 	return secondary, sargLength, nil
 }
 
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) ([]datastore.Index, error) {
+func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []datastore.Index) (
+	[]datastore.Index, error) {
+
 	for _, hint := range hints {
 		indexer, err := keyspace.Indexer(hint.Using())
 		if err != nil {
@@ -273,7 +279,9 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, indexes []da
 	return indexes, nil
 }
 
-func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) ([]datastore.Index, error) {
+func allIndexes(keyspace datastore.Keyspace, skip, indexes []datastore.Index) (
+	[]datastore.Index, error) {
+
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		return nil, err
