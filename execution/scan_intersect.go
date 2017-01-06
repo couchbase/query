@@ -85,6 +85,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 		var item value.AnnotatedValue
 		n := len(this.scans)
+		nscans := len(this.scans)
 		stopped := false
 		ok := true
 
@@ -100,7 +101,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			select {
 			case item, ok = <-channel.ItemChannel():
 				if ok {
-					ok = this.processKey(item, context, n)
+					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
 				n--
@@ -108,7 +109,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				stopped = true
 				break loop
 			default:
-				if n == 0 {
+				if n == 0 || (n < nscans && len(this.values) == 0) {
 					break loop
 				}
 			}
@@ -130,7 +131,7 @@ func (this *IntersectScan) ChildChannel() StopChannel {
 	return this.childChannel
 }
 
-func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Context, n int) bool {
+func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Context) bool {
 	m := item.GetAttachment("meta")
 	meta, ok := m.(map[string]interface{})
 	if !ok {
@@ -147,27 +148,20 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 		return false
 	}
 
-	nscans := len(this.scans)
 	count := this.counts[key]
 
-	if count >= nscans-n {
-		if count+1 == nscans {
-			delete(this.values, key)
-			return this.sendItem(item)
-		}
-
-		this.counts[key] = count + 1
-
-		// Only add new items if all scans are still active
-		if count == 0 && n == nscans {
-			this.values[key] = item
-		}
-	} else {
-		// Prune items that can never reach nscans
+	if count+1 == len(this.scans) {
 		delete(this.values, key)
+		return this.sendItem(item)
 	}
 
-	return len(this.values) > 0
+	this.counts[key] = count + 1
+
+	if count == 0 {
+		this.values[key] = item
+	}
+
+	return true
 }
 
 func (this *IntersectScan) sendItems() {
