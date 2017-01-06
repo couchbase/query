@@ -20,7 +20,6 @@ type IntersectScan struct {
 	base
 	scans        []Operator
 	counts       map[string]int
-	values       map[string]value.AnnotatedValue
 	childChannel StopChannel
 }
 
@@ -60,15 +59,11 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		this.counts = _INDEX_COUNT_POOL.Get()
-		this.values = _INDEX_VALUE_POOL.Get()
-
 		defer func() {
 			_INDEX_SCAN_POOL.Put(this.scans)
 			this.scans = nil
 			_INDEX_COUNT_POOL.Put(this.counts)
-			_INDEX_VALUE_POOL.Put(this.values)
 			this.counts = nil
-			this.values = nil
 		}()
 
 		channel := NewChannel()
@@ -103,7 +98,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			case <-this.stopChannel:
 				break loop
 			default:
-				if n == 0 || (n < nscans && len(this.values) == 0) {
+				if n == 0 || (n < nscans && len(this.counts) == 0) {
 					break loop
 				}
 			}
@@ -141,15 +136,11 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 	count := this.counts[key]
 
 	if count+1 == len(this.scans) {
-		delete(this.values, key)
+		delete(this.counts, key)
 		return this.sendItem(item)
 	}
 
 	this.counts[key] = count + 1
-
-	if count == 0 {
-		this.values[key] = item
-	}
 
 	return true
 }
