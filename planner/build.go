@@ -68,6 +68,7 @@ type builder struct {
 	coveringScans   []plan.CoveringOperator
 	coveredUnnests  map[*algebra.Unnest]bool
 	countScan       *plan.IndexCountScan
+	skipDynamic     bool
 }
 
 func newBuilder(datastore, systemstore datastore.Datastore, namespace string, subquery bool) *builder {

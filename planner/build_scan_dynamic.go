@@ -26,6 +26,15 @@ func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	op plan.Operator, sargLength int, err error) {
 
+	// Prevent infinite recursion
+	if this.skipDynamic {
+		return nil, 0, nil
+	}
+
+	skipDynamic := this.skipDynamic
+	defer func() { this.skipDynamic = skipDynamic }()
+	this.skipDynamic = true
+
 	var index datastore.Index
 	var dk *dynamicKey
 	alias := expression.NewIdentifier(node.Alias())
@@ -48,12 +57,12 @@ outer:
 		return nil, 0, nil
 	}
 
-	dpred, err := DynamicFor(pred, dk.variable, dk.pairs)
-	if err != nil || dpred.EquivalentTo(pred) {
+	newPred, err := DynamicFor(pred, dk.variable, dk.pairs)
+	if err != nil || newPred.EquivalentTo(pred) {
 		return nil, 0, err
 	}
 
-	return this.buildTermScan(node, id, pred, nil, []datastore.Index{index}, primaryKey, formalizer)
+	return this.buildTermScan(node, id, newPred, nil, []datastore.Index{index}, primaryKey, formalizer)
 }
 
 func toDynamicKey(alias *expression.Identifier, pred, key expression.Expression) *dynamicKey {
