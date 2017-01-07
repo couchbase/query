@@ -13,25 +13,50 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(pred expression.Expression, keys expression.Expressions) int {
+func SargableFor(pred expression.Expression, keys expression.Expressions) (
+	min, sum int) {
+
+	if or, ok := pred.(*expression.Or); ok {
+		return sargableForOr(or, keys)
+	}
+
 	n := len(keys)
 
 	i := 0
 	for ; i < n; i++ {
 		// Terminate on statically-valued expression
 		if keys[i].Value() != nil {
-			return i
+			return i, i
 		}
 
 		s := &sargable{keys[i]}
 
 		r, err := pred.Accept(s)
 		if err != nil || !r.(bool) {
-			return i
+			return i, i
 		}
 	}
 
-	return i
+	return i, i
+}
+
+func sargableForOr(or *expression.Or, keys expression.Expressions) (
+	min, sum int) {
+
+	for _, c := range or.Operands() {
+		cmin, csum := SargableFor(c, keys)
+		if cmin == 0 || csum < cmin {
+			return 0, 0
+		}
+
+		if min == 0 || cmin < min {
+			min = cmin
+		}
+
+		sum += csum
+	}
+
+	return
 }
 
 type sargable struct {

@@ -25,6 +25,8 @@ type indexEntry struct {
 	index      datastore.Index
 	keys       expression.Expressions
 	sargKeys   expression.Expressions
+	minKeys    int
+	sumKeys    int
 	cond       expression.Expression
 	origCond   expression.Expression
 	spans      plan.Spans
@@ -223,11 +225,13 @@ func sargableIndexes(indexes []datastore.Index, pred, subset expression.Expressi
 			}
 		}
 
-		n := SargableFor(pred, keys)
-		entry := &indexEntry{index, keys, keys[0:n], cond, origCond, nil, false}
+		min, sum := SargableFor(pred, keys)
+		entry := &indexEntry{
+			index, keys, keys[0:min], min, sum, cond, origCond, nil, false,
+		}
 		all[index] = entry
 
-		if n > 0 {
+		if min > 0 {
 			sargables[index] = entry
 		}
 
@@ -291,7 +295,7 @@ outer:
 		}
 	}
 
-	return len(se.sargKeys) > len(te.sargKeys) ||
+	return se.sumKeys > te.sumKeys ||
 		(shortest && (len(se.keys) <= len(te.keys)))
 }
 

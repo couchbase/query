@@ -72,10 +72,11 @@ func (this *covers) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, e
 
 func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 	for _, k := range this.keys {
-		if all, ok := k.(*expression.All); ok &&
-			SargableFor(expr, expression.Expressions{all}) > 0 {
-			return map[*expression.Cover]value.Value{
-				expression.NewCover(expr): value.TRUE_VALUE}, nil
+		if all, ok := k.(*expression.All); ok {
+			if min, _ := SargableFor(expr, expression.Expressions{all}); min > 0 {
+				return map[*expression.Cover]value.Value{
+					expression.NewCover(expr): value.TRUE_VALUE}, nil
+			}
 		}
 	}
 

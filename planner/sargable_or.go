@@ -20,7 +20,7 @@ func (this *sargable) VisitOr(pred *expression.Or) (interface{}, error) {
 
 	keys := expression.Expressions{this.key}
 	for _, child := range pred.Operands() {
-		if SargableFor(child, keys) <= 0 {
+		if min, _ := SargableFor(child, keys); min <= 0 {
 			return false, nil
 		}
 	}

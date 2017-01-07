@@ -38,5 +38,6 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	return SargableFor(pred.Satisfies(), mappings) > 0, nil
+	min, _ := SargableFor(pred.Satisfies(), mappings)
+	return min > 0, nil
 }
