@@ -318,7 +318,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 		return nil, nil, 0, nil
 	} else {
 		mappings := expression.Expressions{array.ValueMapping()}
-		if SargableFor(pred, mappings) == 0 {
+		if min, _ := SargableFor(pred, mappings); min == 0 {
 			return nil, nil, 0, nil
 		}
 

@@ -73,7 +73,7 @@ outer:
 			arrayIndexCount++
 		}
 
-		covering = append(covering, index)
+		covering[index] = true
 		fc[index] = filterCovers
 	}
 
@@ -84,19 +84,31 @@ outer:
 
 	// Avoid array indexes if possible
 	if arrayIndexCount > 0 && arrayIndexCount < len(covering) {
-		for i, c := range covering {
+		for c, _ := range covering {
 			if indexHasArrayIndexKey(c) {
-				covering[i] = nil
+				delete(covering, c)
 			}
 		}
 	}
 
-	// Use shortest covering index
-	index := covering[0]
-	for _, c := range covering[1:] {
-		if c == nil {
-			continue
-		} else if index == nil {
+	// Keep indexes with max sumKeys
+	sumKeys := 0
+	for c, _ := range covering {
+		if max := indexes[c].sumKeys; max > sumKeys {
+			sumKeys = max
+		}
+	}
+
+	for c, _ := range covering {
+		if indexes[c].sumKeys < sumKeys {
+			delete(covering, c)
+		}
+	}
+
+	// Use shortest remaining index
+	var index datastore.Index
+	for c, _ := range covering {
+		if index == nil {
 			index = c
 		} else if len(c.RangeKey()) < len(index.RangeKey()) {
 			index = c
@@ -329,5 +341,5 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 	return exprs, filterCovers, nil
 }
 
-var _COVERING_POOL = datastore.NewIndexPool(256)
+var _COVERING_POOL = datastore.NewIndexBoolPool(64)
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
