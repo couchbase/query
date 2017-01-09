@@ -169,6 +169,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 
 	} else {
 		// We have options that have been set.
+		// It is important to set the url here.
+		this.myCurl.Setopt(curl.OPT_URL, url)
+
 		for k, val := range options {
 			// Only support valid options.
 			switch k {
@@ -359,10 +362,9 @@ func (this *Curl) handleCurl(curl_method string, url string, options map[string]
 
 	if b.Len() != 0 {
 		var dat map[string]interface{}
-
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {
 			if show_error == true {
-				return nil, err
+				return nil, fmt.Errorf("Invalid JSON endpoint %v", url)
 			} else {
 				return nil, nil
 			}
