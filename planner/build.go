@@ -65,7 +65,7 @@ type builder struct {
 	children        []plan.Operator
 	subChildren     []plan.Operator
 	cover           expression.HasExpressions
-	coveringScans   []plan.Operator
+	coveringScans   []plan.CoveringOperator
 	coveredUnnests  map[*algebra.Unnest]bool
 	countScan       *plan.IndexCountScan
 }

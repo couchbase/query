@@ -95,6 +95,7 @@ keys:
 				}
 
 				if add {
+					pre.Intersect = pre.Intersect || next.Intersect
 					pn = append(pn, pre)
 				} else {
 					exactSpan = false
@@ -117,8 +118,9 @@ keys:
 		return _EMPTY_SPANS, true, nil
 	}
 
-	if exactSpan && len(sargKeys) > 1 {
-		exactSpan = exactSpansForCompositeKeys(ns, sargKeys)
+	if len(sargKeys) > 1 {
+		ns = ns.Copy()
+		exactSpan = exactSpansForCompositeKeys(ns, sargKeys) && exactSpan
 	}
 
 	return ns, exactSpan, nil
@@ -130,10 +132,8 @@ func exactSpansForCompositeKeys(ns plan.Spans, sargKeys expression.Expressions) 
 	for _, prev := range ns {
 		// Except last key all leading keys needs to be EQ
 		for i := 0; i < len(sargKeys)-1; i++ {
-			if !equalRangeKey(i, prev.Range.Low, prev.Range.High) {
-				prev.Exact = false
-				rv = false
-			}
+			prev.Exact = prev.Exact && equalRangeKey(i, prev.Range.Low, prev.Range.High)
+			rv = rv && prev.Exact
 		}
 	}
 

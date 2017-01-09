@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/dustin/go-jsonpointer"
 )
 
@@ -34,6 +35,132 @@ func TestSyntaxErr(t *testing.T) {
 	r, _, err = Run(qc, true, "") // empty string query
 	if err == nil || len(r) != 0 {
 		t.Errorf("expected err")
+	}
+}
+
+func TestRoleStatements(t *testing.T) {
+	qc := start()
+
+	pete := datastore.User{Name: "Peter Peterson", Id: "pete",
+		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "customer"}}}
+	sam := datastore.User{Name: "Sam Samson", Id: "sam",
+		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Bucket: "orders"}}}
+
+	ds := qc.dstore
+	ds.PutUserInfo(&pete)
+	ds.PutUserInfo(&sam)
+
+	r, _, err := Run(qc, true, "GRANT ROLE cluster_admin, bucket_admin(product) TO pete, sam")
+	if err != nil {
+		t.Fatalf("Unable to run GRANT ROLE: %s", err.Error())
+	}
+	if len(r) != 0 {
+		t.Fatalf("Expected no return, got %v", r)
+	}
+
+	users, err := ds.GetUserInfoAll()
+	if err != nil {
+		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
+	}
+
+	expectedAfterGrant := []datastore.User{
+		datastore.User{
+			Name: "Peter Peterson",
+			Id:   "pete",
+			Roles: []datastore.Role{
+				datastore.Role{Name: "cluster_admin"},
+				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
+				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+			},
+		},
+		datastore.User{
+			Name: "Sam Samson",
+			Id:   "sam",
+			Roles: []datastore.Role{
+				datastore.Role{Name: "replication_admin"},
+				datastore.Role{Name: "cluster_admin"},
+				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
+				datastore.Role{Name: "bucket_admin", Bucket: "product"},
+			},
+		},
+	}
+	compareUserLists(&expectedAfterGrant, &users, t)
+
+	r, _, err = Run(qc, true, "REVOKE ROLE cluster_admin, bucket_admin(product) FROM pete, sam")
+	if err != nil {
+		t.Fatalf("Unable to run REVOKE ROLE: %s", err.Error())
+	}
+	if len(r) != 0 {
+		t.Fatalf("Expected no return, got %v", r)
+	}
+
+	users, err = ds.GetUserInfoAll()
+	if err != nil {
+		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
+	}
+
+	expectedAfterRevoke := []datastore.User{
+		datastore.User{
+			Name: "Peter Peterson",
+			Id:   "pete",
+			Roles: []datastore.Role{
+				datastore.Role{Name: "bucket_admin", Bucket: "customer"},
+			},
+		},
+		datastore.User{
+			Name: "Sam Samson",
+			Id:   "sam",
+			Roles: []datastore.Role{
+				datastore.Role{Name: "replication_admin"},
+				datastore.Role{Name: "bucket_admin", Bucket: "orders"},
+			},
+		},
+	}
+	compareUserLists(&expectedAfterRevoke, &users, t)
+}
+
+func compareUserLists(expected *[]datastore.User, result *[]datastore.User, t *testing.T) {
+	if len(*expected) != len(*result) {
+		t.Errorf("Expected length %d, got length %d", len(*expected), len(*result))
+	}
+
+	for _, expectedUser := range *expected {
+		foundUser := false
+		var matchResultUser datastore.User
+		for _, resultUser := range *result {
+			if resultUser.Id == expectedUser.Id {
+				foundUser = true
+				matchResultUser = resultUser
+				break
+			}
+		}
+		if foundUser {
+			if expectedUser.Name != matchResultUser.Name {
+				t.Errorf("Expected user name %s, got %s", expectedUser.Name, matchResultUser.Name)
+			}
+			compareRoleLists(&expectedUser.Roles, &matchResultUser.Roles, t)
+		} else {
+			t.Errorf("Unable to find expected user id %s", expectedUser.Id)
+		}
+	}
+}
+
+func compareRoleLists(expected *[]datastore.Role, result *[]datastore.Role, t *testing.T) {
+	if len(*expected) != len(*result) {
+		t.Errorf("Mismatching length of role lists. Expected %v, got %v.", *expected, *result)
+		return
+	}
+	for _, expRole := range *expected {
+		found := false
+		for _, resultRole := range *result {
+			if expRole == resultRole {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Result list does not contain expected role. Expected role %v, result list %v.", expRole, *result)
+		}
 	}
 }
 

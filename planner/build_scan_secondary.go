@@ -71,7 +71,7 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	}
 
 	sargLength := 0
-	var op plan.Operator
+	var scan plan.Operator
 	for index, entry := range indexes {
 		if this.order != nil {
 			if !this.useIndexOrder(entry, entry.keys) {
@@ -99,14 +99,45 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 		}
 
-		op = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
+		if arrayIndex {
+			// Array index may include spans to be intersected
+			iscans := make([]plan.Operator, 0, len(entry.spans)) // For intersect spans
+			spans := make([]*plan.Span, 0, len(entry.spans))     // For non-intersect  spans
 
-		if arrayIndex || (len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans())) {
-			// Use DistinctScan to de-dup array index scans, multiple spans
-			op = plan.NewDistinctScan(op)
+			for _, span := range entry.spans {
+				if span.Intersect {
+					scan = plan.NewIndexScan(index, node, plan.Spans{span}, false, nil, nil, nil)
+					scan = plan.NewDistinctScan(scan)
+					iscans = append(iscans, scan)
+				} else {
+					spans = append(spans, span)
+				}
+			}
+
+			if len(iscans) > 0 {
+				this.resetOrderLimit()
+
+				if len(spans) > 0 {
+					scan = plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
+					scan = plan.NewDistinctScan(scan)
+					iscans = append(iscans, scan)
+				}
+
+				scans = append(scans, iscans...)
+			} else {
+				scan = plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
+				scan = plan.NewDistinctScan(scan)
+				scans = append(scans, scan)
+			}
+		} else {
+			scan = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
+
+			if len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans()) {
+				scan = plan.NewDistinctScan(scan)
+			}
+
+			scans = append(scans, scan)
 		}
-
-		scans = append(scans, op)
 
 		if len(entry.sargKeys) > sargLength {
 			sargLength = len(entry.sargKeys)

@@ -23,7 +23,6 @@ type IntersectScan struct {
 	plan         *plan.IntersectScan
 	scans        []Operator
 	counts       map[string]int
-	values       map[string]value.AnnotatedValue
 	childChannel StopChannel
 }
 
@@ -65,13 +64,9 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		defer this.notify()           // Notify that I have stopped
 
 		this.counts = _INDEX_COUNT_POOL.Get()
-		this.values = _INDEX_VALUE_POOL.Get()
-
 		defer func() {
 			_INDEX_COUNT_POOL.Put(this.counts)
-			_INDEX_VALUE_POOL.Put(this.values)
 			this.counts = nil
-			this.values = nil
 		}()
 
 		channel := NewChannel()
@@ -85,14 +80,13 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 
 		var item value.AnnotatedValue
 		n := len(this.scans)
-		stopped := false
+		nscans := len(this.scans)
 		ok := true
 
 	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
-				stopped = true
 				break loop
 			default:
 			}
@@ -103,31 +97,20 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 					ok = this.processKey(item, context)
 				}
 			case <-this.childChannel:
-				if n == len(this.scans) {
-					this.notifyScans()
-				}
 				n--
 			case <-this.stopChannel:
-				stopped = true
 				break loop
 			default:
-				if n < len(this.scans) {
+				if n == 0 || (n < nscans && len(this.counts) == 0) {
 					break loop
 				}
 			}
 		}
 
-		if n == len(this.scans) {
-			this.notifyScans()
-		}
-
 		// Await children
+		this.notifyScans()
 		for ; n > 0; n-- {
 			<-this.childChannel
-		}
-
-		if !stopped {
-			this.sendItems()
 		}
 	})
 }
@@ -154,26 +137,15 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 	}
 
 	count := this.counts[key]
-	this.counts[key] = count + 1
 
 	if count+1 == len(this.scans) {
-		delete(this.values, key)
+		delete(this.counts, key)
 		return this.sendItem(item)
 	}
 
-	if count == 0 {
-		this.values[key] = item
-	}
+	this.counts[key] = count + 1
 
 	return true
-}
-
-func (this *IntersectScan) sendItems() {
-	for _, av := range this.values {
-		if !this.sendItem(av) {
-			return
-		}
-	}
 }
 
 func (this *IntersectScan) notifyScans() {
