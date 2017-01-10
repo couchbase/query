@@ -43,6 +43,12 @@ func (this *Range) Copy() *Range {
 	}
 }
 
+func (this *Range) EquivalentTo(other *Range) bool {
+	return this.Inclusion == other.Inclusion &&
+		expression.Equivalents(this.Low, other.Low) &&
+		expression.Equivalents(this.High, other.High)
+}
+
 func (this *Range) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -105,19 +111,23 @@ func (this *Range) UnmarshalJSON(body []byte) error {
 type Spans []*Span
 
 type Span struct {
-	Seek      expression.Expressions
-	Range     Range
-	Exact     bool
-	Intersect bool
+	Seek  expression.Expressions
+	Range Range
+	Exact bool
 }
 
 func (this *Span) Copy() *Span {
 	return &Span{
-		Seek:      expression.CopyExpressions(this.Seek),
-		Range:     *(this.Range.Copy()),
-		Exact:     this.Exact,
-		Intersect: this.Intersect,
+		Seek:  expression.CopyExpressions(this.Seek),
+		Range: *(this.Range.Copy()),
+		Exact: this.Exact,
 	}
+}
+
+func (this *Span) EquivalentTo(other *Span) bool {
+	return this.Exact == other.Exact &&
+		expression.Equivalents(this.Seek, other.Seek) &&
+		this.Range.EquivalentTo(&other.Range)
 }
 
 func (this *Span) MarshalJSON() ([]byte, error) {
@@ -137,10 +147,6 @@ func (this *Span) MarshalBase(f func(map[string]interface{})) map[string]interfa
 		r["Exact"] = this.Exact
 	}
 
-	if this.Intersect {
-		r["Intersect"] = this.Intersect
-	}
-
 	if f != nil {
 		f(r)
 	}
@@ -149,10 +155,9 @@ func (this *Span) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Span) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Seek      []string
-		Range     *Range
-		Exact     bool
-		Intersect bool
+		Seek  []string
+		Range *Range
+		Exact bool
 	}
 
 	_unmarshalled.Range = &this.Range
@@ -173,7 +178,6 @@ func (this *Span) UnmarshalJSON(body []byte) error {
 	}
 
 	this.Exact = _unmarshalled.Exact
-	this.Intersect = _unmarshalled.Intersect
 
 	return nil
 }

@@ -92,6 +92,11 @@ func (this *IndexScan) Covering() bool {
 	return len(this.covers) > 0
 }
 
+func (this *IndexScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
+}
+
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

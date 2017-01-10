@@ -52,5 +52,5 @@ func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
 	}
 
 	span.Exact = true
-	return plan.Spans{span}, nil
+	return NewTermSpans(span), nil
 }

@@ -43,6 +43,8 @@ type AnnotatedValue interface {
 	SetCover(key string, val Value)
 	InheritCovers(val Value)
 	SetAnnotations(av AnnotatedValue)
+	Bit() uint8
+	SetBit(b uint8)
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -73,6 +75,7 @@ type annotatedValue struct {
 	Value
 	attachments map[string]interface{}
 	covers      Value
+	bit         uint8
 }
 
 func (this *annotatedValue) String() string {
@@ -182,4 +185,12 @@ func (this *annotatedValue) InheritCovers(val Value) {
 func (this *annotatedValue) SetAnnotations(av AnnotatedValue) {
 	this.attachments = av.Attachments()
 	this.covers = av.Covers()
+}
+
+func (this *annotatedValue) Bit() uint8 {
+	return this.bit
+}
+
+func (this *annotatedValue) SetBit(b uint8) {
+	this.bit = b
 }

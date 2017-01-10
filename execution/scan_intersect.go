@@ -23,6 +23,8 @@ type IntersectScan struct {
 	plan         *plan.IntersectScan
 	scans        []Operator
 	counts       map[string]int
+	values       map[string]value.AnnotatedValue
+	bits         map[string]int64
 	childChannel StopChannel
 }
 
@@ -69,6 +71,21 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			this.counts = nil
 		}()
 
+		if len(this.scans) <= 64 {
+			this.values = _INDEX_VALUE_POOL.Get()
+			this.bits = _INDEX_BIT_POOL.Get()
+			defer func() {
+				_INDEX_VALUE_POOL.Put(this.values)
+				_INDEX_BIT_POOL.Put(this.bits)
+				this.values = nil
+				this.bits = nil
+			}()
+
+			for i, scan := range this.scans {
+				scan.SetBit(uint8(i))
+			}
+		}
+
 		channel := NewChannel()
 		defer channel.Close()
 
@@ -81,12 +98,16 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		var item value.AnnotatedValue
 		n := len(this.scans)
 		nscans := len(this.scans)
+		stopped := false
 		ok := true
+		childBit := 0
+		childBits := int64(0)
 
 	loop:
 		for ok {
 			select {
 			case <-this.stopChannel:
+				stopped = true
 				break loop
 			default:
 			}
@@ -96,21 +117,27 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				if ok {
 					ok = this.processKey(item, context)
 				}
-			case <-this.childChannel:
+			case childBit = <-this.childChannel:
 				n--
+				childBits |= int64(0x01) << uint(childBit)
 			case <-this.stopChannel:
+				stopped = true
 				break loop
 			default:
-				if n == 0 || (n < nscans && len(this.counts) == 0) {
+				if n == 0 || (n < nscans && (this.values != nil || len(this.counts) == 0)) {
 					break loop
 				}
 			}
 		}
 
 		// Await children
-		this.notifyScans()
+		notifyChildren(this.scans...)
 		for ; n > 0; n-- {
 			<-this.childChannel
+		}
+
+		if !stopped && len(this.values) > 0 {
+			this.sendItems(childBits)
 		}
 	})
 }
@@ -140,19 +167,34 @@ func (this *IntersectScan) processKey(item value.AnnotatedValue, context *Contex
 
 	if count+1 == len(this.scans) {
 		delete(this.counts, key)
+		if this.values != nil {
+			delete(this.values, key)
+			delete(this.bits, key)
+		}
+
+		item.SetBit(this.bit)
 		return this.sendItem(item)
 	}
 
 	this.counts[key] = count + 1
 
+	if this.values != nil {
+		this.bits[key] = this.bits[key] | (int64(0x01) << item.Bit())
+		if count == 0 {
+			this.values[key] = item
+		}
+	}
+
 	return true
 }
 
-func (this *IntersectScan) notifyScans() {
-	for _, s := range this.scans {
-		select {
-		case s.StopChannel() <- false:
-		default:
+func (this *IntersectScan) sendItems(childBits int64) {
+	for key, val := range this.values {
+		if ((this.bits[key] & childBits) ^ childBits) == 0 {
+			val.SetBit(this.bit)
+			if !this.sendItem(val) {
+				return
+			}
 		}
 	}
 }

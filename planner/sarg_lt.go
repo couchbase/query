@@ -42,5 +42,5 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 
 	span.Exact = true
 	span.Range.Inclusion = datastore.NEITHER
-	return plan.Spans{span}, nil
+	return NewTermSpans(span), nil
 }

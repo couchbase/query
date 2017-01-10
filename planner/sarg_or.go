@@ -11,7 +11,6 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
 func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
@@ -19,12 +18,13 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 		return _SELF_SPANS, nil
 	}
 
-	spans := make(plan.Spans, 0, len(pred.Operands()))
+	spans := make([]SargSpans, 0, len(pred.Operands()))
 	emptySpan := false
 	valuedSpan := false
 	exactValuedSpan := false
 	nullSpan := false
 	fullSpan := false
+	size := 0
 
 	for _, child := range pred.Operands() {
 		cspans, err := sargFor(child, this.key, this.missingHigh)
@@ -32,40 +32,41 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 			return nil, err
 		}
 
-		if len(cspans) == 0 {
+		if cspans == nil || cspans.Size() == 0 {
 			return cspans, nil
 		}
 
-		if cspans[0] == _EXACT_FULL_SPANS[0] {
+		if cspans == _EXACT_FULL_SPANS {
 			return cspans, nil
 		}
 
-		if cspans[0] == _FULL_SPANS[0] {
+		if cspans == _FULL_SPANS {
 			fullSpan = true
 		}
 
-		if cspans[0] == _VALUED_SPANS[0] {
+		if cspans == _VALUED_SPANS {
 			valuedSpan = true
 		}
 
-		if cspans[0] == _EXACT_VALUED_SPANS[0] {
+		if cspans == _EXACT_VALUED_SPANS {
 			exactValuedSpan = true
 		}
 
-		if cspans[0] == _EMPTY_SPANS[0] {
+		if cspans == _EMPTY_SPANS {
 			emptySpan = true
 			continue
 		}
 
-		if cspans[0] == _NULL_SPANS[0] {
+		if cspans == _NULL_SPANS {
 			nullSpan = true
 		}
 
-		if len(spans)+len(cspans) > _FULL_SPAN_FANOUT {
+		size += cspans.Size()
+		if size > _FULL_SPAN_FANOUT {
 			return _FULL_SPANS, nil
 		}
 
-		spans = append(spans, cspans...)
+		spans = append(spans, cspans)
 	}
 
 	if exactValuedSpan && nullSpan {
@@ -80,5 +81,6 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 		return _EMPTY_SPANS, nil
 	}
 
-	return deDupDiscardEmptySpans(spans), nil
+	rv := NewUnionSpans(spans...)
+	return rv.Streamline(), nil
 }

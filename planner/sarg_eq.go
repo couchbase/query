@@ -45,5 +45,5 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 	}
 
 	span.Exact = true
-	return plan.Spans{span}, nil
+	return NewTermSpans(span), nil
 }

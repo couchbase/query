@@ -20,7 +20,7 @@ import (
 
 func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
-	plan.Operator, int, error) {
+	plan.SecondaryScan, int, error) {
 
 	if this.cover == nil {
 		return nil, 0, nil
@@ -28,7 +28,9 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 
 	alias := node.Alias()
 	exprs := this.cover.Expressions()
-	arrayIndexCount := 0
+
+	arrays := _ARRAY_POOL.Get()
+	defer _ARRAY_POOL.Put(arrays)
 
 	covering := _COVERING_POOL.Get()
 	defer _COVERING_POOL.Put(covering)
@@ -39,11 +41,11 @@ func (this *builder) buildCoveringScan(indexes map[datastore.Index]*indexEntry,
 outer:
 	for index, entry := range indexes {
 		hasArrayKey := indexHasArrayIndexKey(index)
-		if hasArrayKey && (arrayIndexCount < len(covering)) {
+		if hasArrayKey && (len(arrays) < len(covering)) {
 			continue
 		}
 
-		// Sarg to set exact spans
+		// Sarg to set spans
 		_, err := sargIndexes(map[datastore.Index]*indexEntry{index: entry}, pred)
 		if err != nil {
 			return nil, 0, err
@@ -62,7 +64,7 @@ outer:
 			return nil, 0, err
 		}
 
-		// Use the first available covering index
+		// Skip non-covering index
 		for _, expr := range exprs {
 			if !expr.CoveredBy(alias, coveringExprs) {
 				continue outer
@@ -70,7 +72,7 @@ outer:
 		}
 
 		if hasArrayKey {
-			arrayIndexCount++
+			arrays[index] = true
 		}
 
 		covering[index] = true
@@ -83,11 +85,9 @@ outer:
 	}
 
 	// Avoid array indexes if possible
-	if arrayIndexCount > 0 && arrayIndexCount < len(covering) {
-		for c, _ := range covering {
-			if indexHasArrayIndexKey(c) {
-				delete(covering, c)
-			}
+	if len(arrays) < len(covering) {
+		for a, _ := range arrays {
+			delete(covering, a)
 		}
 	}
 
@@ -126,41 +126,42 @@ outer:
 
 	// Include covering expression from index WHERE clause
 	filterCovers := fc[index]
-	arrayIndex := false
 
+	// Include covering expression from index keys
 	covers := make(expression.Covers, 0, len(keys))
 	for _, key := range keys {
-		if _, ok := key.(*expression.All); ok {
-			arrayIndex = true
-		}
-
 		covers = append(covers, expression.NewCover(key))
 	}
 
+	arrayIndex := arrays[index]
 	pushDown, err := allowedPushDown(entry, pred, alias)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	if !arrayIndex && pushDown {
-		if this.countAgg != nil && (len(entry.spans) == 1 || !pred.MayOverlapSpans()) &&
-			canPushDownCount(this.countAgg, entry) {
-			countIndex, ok := index.(datastore.CountIndex)
-			if ok {
-				this.maxParallelism = 1
-				this.countScan = plan.NewIndexCountScan(countIndex, node, entry.spans, covers)
-				return this.countScan, sargLength, nil
+		if this.countAgg != nil && canPushDownCount(this.countAgg, entry) {
+			if countIndex, ok := index.(datastore.CountIndex); ok {
+				if termSpans, ok := entry.spans.(*TermSpans); ok && (termSpans.Size() == 1 || !pred.MayOverlapSpans()) {
+					this.maxParallelism = 1
+					this.countScan = plan.NewIndexCountScan(countIndex, node, termSpans.Spans(), covers, filterCovers)
+					return this.countScan, sargLength, nil
+				}
 			}
 		}
 
 		if this.minAgg != nil && canPushDownMin(this.minAgg, entry) {
 			this.maxParallelism = 1
 			limit = expression.ONE_EXPR
-			scan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-			this.coveringScans = append(this.coveringScans, scan)
+			scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+			if scan != nil {
+				this.coveringScans = append(this.coveringScans, scan)
+			}
 			return scan, sargLength, nil
 		}
 	}
+
+	this.resetCountMin()
 
 	if limit != nil && (arrayIndex || !pushDown) {
 		limit = nil
@@ -176,50 +177,10 @@ outer:
 		this.maxParallelism = 1
 	}
 
-	var scan plan.Operator
-	if arrayIndex {
-		// Array index may include spans to be intersected
-		iscans := make([]plan.Operator, 0, len(entry.spans)) // For intersect spans
-		spans := make([]*plan.Span, 0, len(entry.spans))     // For non-intersect  spans
-		var indexScan *plan.IndexScan
-
-		for _, span := range entry.spans {
-			if span.Intersect {
-				indexScan = plan.NewIndexScan(index, node, plan.Spans{span}, false, nil, covers, filterCovers)
-				scan = plan.NewDistinctScan(indexScan)
-				iscans = append(iscans, scan)
-			} else {
-				spans = append(spans, span)
-			}
-		}
-
-		if len(iscans) > 0 {
-			this.resetOrderLimit()
-
-			if len(spans) > 0 {
-				indexScan = plan.NewIndexScan(index, node, spans, false, nil, covers, filterCovers)
-				scan = plan.NewDistinctScan(indexScan)
-				iscans = append(iscans, scan)
-			}
-
-			this.coveringScans = append(this.coveringScans, indexScan)
-			scan = plan.NewIntersectScan(iscans...)
-		} else {
-			indexScan := plan.NewIndexScan(index, node, spans, false, nil, covers, filterCovers)
-			this.coveringScans = append(this.coveringScans, indexScan)
-			scan = plan.NewDistinctScan(indexScan)
-		}
-	} else {
-		indexScan := plan.NewIndexScan(index, node, entry.spans, false, limit, covers, filterCovers)
-		this.coveringScans = append(this.coveringScans, indexScan)
-
-		if len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans()) {
-			scan = plan.NewDistinctScan(indexScan)
-		} else {
-			scan = indexScan
-		}
+	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, covers, filterCovers)
+	if scan != nil {
+		this.coveringScans = append(this.coveringScans, scan)
 	}
-
 	return scan, sargLength, nil
 }
 
@@ -257,18 +218,7 @@ func canPushDownCount(countAgg *algebra.Count, entry *indexEntry) bool {
 		return false
 	}
 
-	for _, span := range entry.spans {
-		if len(span.Range.Low) == 0 {
-			return false
-		}
-
-		low := span.Range.Low[0]
-		if low.Type() < value.NULL || (low.Type() == value.NULL && (span.Range.Inclusion&datastore.LOW) != 0) {
-			return false
-		}
-	}
-
-	return true
+	return entry.spans.SkipsLeadingNulls()
 }
 
 func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
@@ -277,19 +227,7 @@ func canPushDownMin(minAgg *algebra.Min, entry *indexEntry) bool {
 		return false
 	}
 
-	if len(entry.spans) != 1 {
-		return false
-	}
-
-	span := entry.spans[0].Range
-	if len(span.Low) == 0 {
-		return false
-	}
-
-	low := span.Low[0]
-	return low != nil &&
-		(low.Type() > value.NULL ||
-			(low.Type() >= value.NULL && (span.Inclusion&datastore.LOW) == 0))
+	return entry.spans.CanUseIndexOrder() && entry.spans.SkipsLeadingNulls()
 }
 
 func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred expression.Expression) (
@@ -341,5 +279,6 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred 
 	return exprs, filterCovers, nil
 }
 
+var _ARRAY_POOL = datastore.NewIndexBoolPool(64)
 var _COVERING_POOL = datastore.NewIndexBoolPool(64)
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)

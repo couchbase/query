@@ -172,7 +172,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 	limit expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	secondary plan.Operator, sargLength int, err error) {
+	secondary plan.SecondaryScan, sargLength int, err error) {
 
 	sargables, all, arrays, er := sargableIndexes(indexes, pred, pred, primaryKey, formalizer)
 	if er != nil {

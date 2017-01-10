@@ -11,15 +11,18 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 // IntersectScan scans multiple indexes and intersects the results.
 type IntersectScan struct {
 	readonly
-	scans []Operator
+	scans []SecondaryScan
 }
 
-func NewIntersectScan(scans ...Operator) *IntersectScan {
+func NewIntersectScan(scans ...SecondaryScan) *IntersectScan {
 	return &IntersectScan{
 		scans: scans,
 	}
@@ -33,8 +36,25 @@ func (this *IntersectScan) New() Operator {
 	return &IntersectScan{}
 }
 
-func (this *IntersectScan) Scans() []Operator {
+func (this *IntersectScan) Covers() expression.Covers {
+	return this.scans[0].Covers()
+}
+
+func (this *IntersectScan) FilterCovers() map[*expression.Cover]value.Value {
+	return this.scans[0].FilterCovers()
+}
+
+func (this *IntersectScan) Covering() bool {
+	return this.scans[0].Covering()
+}
+
+func (this *IntersectScan) Scans() []SecondaryScan {
 	return this.scans
+}
+
+func (this *IntersectScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
@@ -62,7 +82,7 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.scans = make([]Operator, 0, len(_unmarshalled.Scans))
+	this.scans = make([]SecondaryScan, 0, len(_unmarshalled.Scans))
 
 	for _, raw_scan := range _unmarshalled.Scans {
 		var scan_type struct {
@@ -79,8 +99,8 @@ func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		this.scans = append(this.scans, scan_op)
+		this.scans = append(this.scans, scan_op.(SecondaryScan))
 	}
 
-	return err
+	return nil
 }

@@ -19,126 +19,45 @@ import (
 func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, id expression.Expression,
 	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.Operator, int, error) {
+	plan.SecondaryScan, int, error) {
 
-	if this.countAgg != nil {
-		return this.buildOrScanTryCountPushdown(node, id, pred, limit, indexes, primaryKey, formalizer)
+	tryPushdowns := this.cover != nil || this.limit != nil
+
+	if tryPushdowns {
+		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	} else {
-		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
-	}
-}
-
-func (this *builder) buildOrScanTryCountPushdown(node *algebra.KeyspaceTerm, id expression.Expression,
-	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
-	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.Operator, int, error) {
-
-	coveringScans := this.coveringScans
-
-	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
-	if err != nil {
-		this.coveringScans = coveringScans
-		return nil, 0, err
-	}
-
-	switch scan.(type) {
-	case *plan.IndexCountScan:
-		return scan, sargLength, nil
-	default:
-		this.coveringScans = coveringScans
-		return this.buildOrScanTryPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
+		return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	}
 }
 
 func (this *builder) buildOrScanTryPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
 	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.Operator, int, error) {
-
-	where := this.where
-	defer func() {
-		this.where = where
-	}()
+	plan.SecondaryScan, int, error) {
 
 	coveringScans := this.coveringScans
-	this.countAgg = nil
 
-	var buf [16]plan.Operator
-	var scans []plan.Operator
-	if len(pred.Operands()) <= len(buf) {
-		scans = buf[0:0]
-	} else {
-		scans = make([]plan.Operator, 0, len(pred.Operands()))
+	scan, sargLength, err := this.buildTermScan(node, id, pred, limit, indexes, primaryKey, formalizer)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	var index datastore.Index
-	termIndexes := indexes
-	minSargLength := 0
+	if scan != nil {
+		foundPushdown := len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
+			this.order != nil || this.limit != nil
 
-	for _, op := range pred.Operands() {
-		this.where = op
-
-		scan, termSargLength, err := this.buildTermScan(node, id, op, limit, termIndexes, primaryKey, formalizer)
-		if err != nil || (scan == nil && index == nil) {
-			this.coveringScans = coveringScans
-			return nil, 0, err
+		if foundPushdown {
+			return scan, sargLength, nil
 		}
-
-		if scan != nil {
-			if distinctScan, ok := scan.(*plan.DistinctScan); ok {
-				scan = distinctScan.Scan()
-			}
-
-			if indexScan, ok := scan.(*plan.IndexScan); ok {
-				if index == nil {
-					index = indexScan.Index()
-					termIndexes = []datastore.Index{index}
-				}
-
-				if index == indexScan.Index() {
-					scans = append(scans, scan)
-
-					if minSargLength == 0 || minSargLength > termSargLength {
-						minSargLength = termSargLength
-					}
-
-					continue
-				}
-			}
-		}
-
-		// TODO: Some work is duplicated here if no scan is performing pushdowns
-		this.coveringScans = coveringScans
-		return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 	}
 
-	spans := make(plan.Spans, 0, 2*len(scans))
-	for _, scan := range scans {
-		indexScan := scan.(*plan.IndexScan)
-		spans = append(spans, indexScan.Spans()...)
-	}
-
-	spans = deDupDiscardEmptySpans(spans)
-	indexScan0 := scans[0].(*plan.IndexScan)
-	indexScan0.SetSpans(spans)
-
-	if len(this.coveringScans) > len(coveringScans) {
-		this.coveringScans = append(coveringScans, indexScan0)
-	}
-
-	if len(spans) > 1 {
-		this.resetOrderLimit()
-		indexScan0.SetLimit(nil)
-		return plan.NewDistinctScan(indexScan0), minSargLength, nil
-	} else {
-		return indexScan0, minSargLength, nil
-	}
+	return this.buildOrScanNoPushdowns(node, id, pred, limit, indexes, primaryKey, formalizer)
 }
 
 func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
 	pred *expression.Or, limit expression.Expression, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	plan.Operator, int, error) {
+	plan.SecondaryScan, int, error) {
 
 	where := this.where
 	cover := this.cover
@@ -155,12 +74,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		limit = nil
 	}
 
-	var buf [16]plan.Operator
-	var scans []plan.Operator
+	var buf [16]plan.SecondaryScan
+	var scans []plan.SecondaryScan
 	if len(pred.Operands()) <= len(buf) {
 		scans = buf[0:0]
 	} else {
-		scans = make([]plan.Operator, 0, len(pred.Operands()))
+		scans = make([]plan.SecondaryScan, 0, len(pred.Operands()))
 	}
 
 	minSargLength := 0
@@ -179,5 +98,6 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		}
 	}
 
-	return plan.NewUnionScan(scans...), minSargLength, nil
+	rv := plan.NewUnionScan(scans...)
+	return rv.Streamline(), minSargLength, nil
 }
