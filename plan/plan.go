@@ -14,6 +14,7 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -32,6 +33,13 @@ type Operator interface {
 
 type CoveringOperator interface {
 	Operator
+
 	Covers() expression.Covers
 	FilterCovers() map[*expression.Cover]value.Value
+	Covering() bool
+}
+
+type SecondaryScan interface {
+	CoveringOperator
+	fmt.Stringer
 }

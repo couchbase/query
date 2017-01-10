@@ -7,31 +7,43 @@
 //  either express or implied. See the License for the specific language governing permissions
 //  and limitations under the License.
 
-package planner
+package util
 
 import (
-	"github.com/couchbase/query/expression"
+	"sync"
 )
 
-func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
-	if SubsetOf(pred, this.key) {
-		return _SELF_SPANS, nil
+type StringInt64Pool struct {
+	pool *sync.Pool
+	size int
+}
+
+func NewStringInt64Pool(size int) *StringInt64Pool {
+	rv := &StringInt64Pool{
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make(map[string]int64, size)
+			},
+		},
+		size: size,
 	}
 
-	if pred.Operand().EquivalentTo(this.key) {
-		return _EXACT_VALUED_SPANS, nil
+	return rv
+}
+
+func (this *StringInt64Pool) Get() map[string]int64 {
+	return this.pool.Get().(map[string]int64)
+}
+
+func (this *StringInt64Pool) Put(s map[string]int64) {
+	if s == nil || len(s) > this.size {
+		return
 	}
 
-	var spans SargSpans
-	if pred.Operand().PropagatesNull() {
-		spans = _VALUED_SPANS
-	} else if pred.Operand().PropagatesMissing() {
-		spans = _FULL_SPANS
+	for k, _ := range s {
+		s[k] = 0
+		delete(s, k)
 	}
 
-	if spans != nil && pred.Operand().DependsOn(this.key) {
-		return spans, nil
-	}
-
-	return nil, nil
+	this.pool.Put(s)
 }

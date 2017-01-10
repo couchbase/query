@@ -112,7 +112,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writer.noMoreData()
 }
 
-func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
+func (this *httpRequest) Execute(srvr *server.Server, signature value.Value, stopNotify chan int) {
 	this.NotifyStop(stopNotify)
 
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)

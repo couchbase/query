@@ -66,7 +66,7 @@ type Request interface {
 	CloseNotify() chan bool
 	Servicing()
 	Fail(err errors.Error)
-	Execute(server *Server, signature value.Value, notifyStop chan bool)
+	Execute(server *Server, signature value.Value, notifyStop chan int)
 	Failed(server *Server)
 	Expire(state State, timeout time.Duration)
 	SortCount() uint64
@@ -164,7 +164,7 @@ type BaseRequest struct {
 	errors         errors.ErrorChannel
 	warnings       errors.ErrorChannel
 	closeNotify    chan bool // implement http.CloseNotifier
-	stopNotify     chan bool // notified when request execution stops
+	stopNotify     chan int  // notified when request execution stops
 	stopResult     chan bool // stop consuming results
 	stopExecute    chan bool // stop executing request
 	timings        plan.Operator
@@ -523,13 +523,13 @@ func (this *BaseRequest) Warnings() errors.ErrorChannel {
 	return this.warnings
 }
 
-func (this *BaseRequest) NotifyStop(ch chan bool) {
+func (this *BaseRequest) NotifyStop(ch chan int) {
 	this.Lock()
 	defer this.Unlock()
 	this.stopNotify = ch
 }
 
-func (this *BaseRequest) StopNotify() chan bool {
+func (this *BaseRequest) StopNotify() chan int {
 	this.RLock()
 	defer this.RUnlock()
 	return this.stopNotify
@@ -540,11 +540,15 @@ func (this *BaseRequest) StopExecute() chan bool {
 }
 
 func (this *BaseRequest) Stop(state State) {
-	defer sendStop(this.StopNotify())
 	defer sendStop(this.stopResult)
 	defer sendStop(this.stopExecute)
 
 	this.SetState(state)
+
+	select {
+	case this.StopNotify() <- 0:
+	default:
+	}
 }
 
 func (this *BaseRequest) Close() {

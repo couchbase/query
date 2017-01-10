@@ -76,7 +76,7 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 		spans = append(spans, span)
 	}
 
-	return spans, nil
+	return NewTermSpans(spans...), nil
 }
 
 const _WITHIN_POOL_SIZE = 64

@@ -11,15 +11,19 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 // UnionScan scans multiple indexes and unions the results.
 type UnionScan struct {
 	readonly
-	scans []Operator
+	scans []SecondaryScan
 }
 
-func NewUnionScan(scans ...Operator) *UnionScan {
+func NewUnionScan(scans ...SecondaryScan) *UnionScan {
 	return &UnionScan{
 		scans: scans,
 	}
@@ -33,8 +37,48 @@ func (this *UnionScan) New() Operator {
 	return &UnionScan{}
 }
 
-func (this *UnionScan) Scans() []Operator {
+func (this *UnionScan) Covers() expression.Covers {
+	return this.scans[0].Covers()
+}
+
+func (this *UnionScan) FilterCovers() map[*expression.Cover]value.Value {
+	return this.scans[0].FilterCovers()
+}
+
+func (this *UnionScan) Covering() bool {
+	return this.scans[0].Covering()
+}
+
+func (this *UnionScan) Scans() []SecondaryScan {
 	return this.scans
+}
+
+func (this *UnionScan) Streamline() SecondaryScan {
+	scans := make([]SecondaryScan, 0, len(this.scans))
+	hash := _STRING_SCANS_POOL.Get()
+	defer _STRING_SCANS_POOL.Put(hash)
+
+	for _, scan := range this.scans {
+		s := scan.String()
+		if _, ok := hash[s]; !ok {
+			hash[s] = true
+			scans = append(scans, scan)
+		}
+	}
+
+	switch len(scans) {
+	case 1:
+		return scans[0]
+	case len(this.scans):
+		return this
+	default:
+		return NewUnionScan(scans...)
+	}
+}
+
+func (this *UnionScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *UnionScan) MarshalJSON() ([]byte, error) {
@@ -54,7 +98,7 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.scans = make([]Operator, 0, len(_unmarshalled.Scans))
+	this.scans = make([]SecondaryScan, 0, len(_unmarshalled.Scans))
 
 	for _, raw_scan := range _unmarshalled.Scans {
 		var scan_type struct {
@@ -71,8 +115,10 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		this.scans = append(this.scans, scan_op)
+		this.scans = append(this.scans, scan_op.(SecondaryScan))
 	}
 
-	return err
+	return nil
 }
+
+var _STRING_SCANS_POOL = util.NewStringBoolPool(16)

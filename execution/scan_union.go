@@ -105,9 +105,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		notifyChildren(this.scans...)
-
 		// Await children
+		notifyChildren(this.scans...)
 		for ; n > 0; n-- {
 			<-this.childChannel
 		}
@@ -140,5 +139,6 @@ func (this *UnionScan) processKey(item value.AnnotatedValue, context *Context) b
 	}
 
 	this.keys[key] = true
+	item.SetBit(this.bit)
 	return this.sendItem(item)
 }

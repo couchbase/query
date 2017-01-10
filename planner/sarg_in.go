@@ -74,7 +74,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			}
 
 			span.Exact = false
-			return plan.Spans{span}, nil
+			return NewTermSpans(span), nil
 		}
 	}
 
@@ -108,5 +108,5 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		spans = append(spans, span)
 	}
 
-	return spans, nil
+	return NewTermSpans(spans...), nil
 }

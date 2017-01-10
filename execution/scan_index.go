@@ -61,7 +61,9 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		defer _INDEX_SCAN_POOL.Put(children)
 
 		for i, span := range spans {
-			children = append(children, newSpanScan(this, span))
+			scan := newSpanScan(this, span)
+			scan.SetBit(this.bit)
+			children = append(children, scan)
 			go children[i].RunOnce(context, parent)
 		}
 
@@ -112,7 +114,11 @@ func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *spanScan) Copy() Operator {
-	return &spanScan{this.base.copy(), this.plan, this.span}
+	return &spanScan{
+		base: this.base.copy(),
+		plan: this.plan,
+		span: this.span,
+	}
 }
 
 func (this *spanScan) RunOnce(context *Context, parent value.Value) {
@@ -181,6 +187,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 						av.SetField(this.plan.Term().Alias(), av)
 					}
 
+					av.SetBit(this.bit)
 					ok = this.sendItem(av)
 					docs++
 					if docs > _PHASE_UPDATE_COUNT {

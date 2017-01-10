@@ -11,15 +11,18 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan Operator
+	scan SecondaryScan
 }
 
-func NewDistinctScan(scan Operator) *DistinctScan {
+func NewDistinctScan(scan SecondaryScan) *DistinctScan {
 	return &DistinctScan{
 		scan: scan,
 	}
@@ -33,8 +36,25 @@ func (this *DistinctScan) New() Operator {
 	return &DistinctScan{}
 }
 
-func (this *DistinctScan) Scan() Operator {
+func (this *DistinctScan) Covers() expression.Covers {
+	return this.scan.Covers()
+}
+
+func (this *DistinctScan) FilterCovers() map[*expression.Cover]value.Value {
+	return this.scan.FilterCovers()
+}
+
+func (this *DistinctScan) Covering() bool {
+	return this.scan.Covering()
+}
+
+func (this *DistinctScan) Scan() SecondaryScan {
 	return this.scan
+}
+
+func (this *DistinctScan) String() string {
+	bytes, _ := this.MarshalJSON()
+	return string(bytes)
 }
 
 func (this *DistinctScan) MarshalJSON() ([]byte, error) {
@@ -62,6 +82,11 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.scan, err = MakeOperator(scan_type.Operator, _unmarshalled.Scan)
-	return err
+	scan_op, err := MakeOperator(scan_type.Operator, _unmarshalled.Scan)
+	if err != nil {
+		return err
+	}
+
+	this.scan = scan_op.(SecondaryScan)
+	return nil
 }

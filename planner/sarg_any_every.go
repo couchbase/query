@@ -11,11 +11,10 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
 func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
-	var spans plan.Spans
+	var spans SargSpans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if pred.PropagatesMissing() {

@@ -66,10 +66,10 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	}
 
 	span.Range.Inclusion = datastore.LOW
-	return plan.Spans{span}, nil
+	return NewTermSpans(span), nil
 }
 
-func likeSpans(pred expression.LikeFunction) plan.Spans {
+func likeSpans(pred expression.LikeFunction) SargSpans {
 	span := &plan.Span{}
 	span.Exact = false
 
@@ -86,5 +86,5 @@ func likeSpans(pred expression.LikeFunction) plan.Spans {
 	}
 
 	span.Range.Inclusion = datastore.LOW
-	return plan.Spans{span}
+	return NewTermSpans(span)
 }

@@ -120,6 +120,7 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue, context *Context
 	}
 
 	this.keys[key] = true
+	item.SetBit(this.bit)
 	return this.sendItem(item)
 }
 

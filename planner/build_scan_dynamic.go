@@ -24,7 +24,7 @@ type dynamicKey struct {
 func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
 	id, pred expression.Expression, arrays map[datastore.Index]*indexEntry,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
-	op plan.Operator, sargLength int, err error) {
+	op plan.SecondaryScan, sargLength int, err error) {
 
 	// Prevent infinite recursion
 	if this.skipDynamic {

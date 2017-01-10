@@ -29,13 +29,13 @@ type indexEntry struct {
 	sumKeys    int
 	cond       expression.Expression
 	origCond   expression.Expression
-	spans      plan.Spans
+	spans      SargSpans
 	exactSpans bool
 }
 
 func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, id, pred, limit expression.Expression) (
-	plan.Operator, int, error) {
+	plan.SecondaryScan, int, error) {
 
 	if this.cover != nil {
 		scan, sargLength, err := this.buildCoveringScan(indexes, node, id, pred, limit)
@@ -59,21 +59,22 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 		this.resetOrderLimit()
 		limit = nil
 	}
+
 	if this.order != nil && this.maxParallelism > 1 {
 		this.resetOrderLimit()
 		limit = nil
 	}
 
-	var scanBuf [16]plan.Operator
-	var scans []plan.Operator
+	var scanBuf [16]plan.SecondaryScan
+	var scans []plan.SecondaryScan
 	if len(indexes) <= len(scanBuf) {
 		scans = scanBuf[0:0]
 	} else {
-		scans = make([]plan.Operator, 0, len(indexes))
+		scans = make([]plan.SecondaryScan, 0, len(indexes))
 	}
 
 	sargLength := 0
-	var scan plan.Operator
+	var scan plan.SecondaryScan
 	for index, entry := range indexes {
 		if this.order != nil {
 			if !this.useIndexOrder(entry, entry.keys) {
@@ -84,10 +85,10 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 		}
 
-		arrayIndex := indexHasArrayIndexKey(index)
-
 		if limit != nil {
-			var pushDown bool
+			pushDown := false
+			arrayIndex := indexHasArrayIndexKey(index)
+
 			if !arrayIndex {
 				pushDown, err = allowedPushDown(entry, pred, node.Alias())
 				if err != nil {
@@ -96,50 +97,13 @@ func (this *builder) buildSecondaryScan(indexes map[datastore.Index]*indexEntry,
 			}
 
 			if arrayIndex || !pushDown {
-				limit = nil
 				this.limit = nil
+				limit = nil
 			}
 		}
 
-		if arrayIndex {
-			// Array index may include spans to be intersected
-			iscans := make([]plan.Operator, 0, len(entry.spans)) // For intersect spans
-			spans := make([]*plan.Span, 0, len(entry.spans))     // For non-intersect  spans
-
-			for _, span := range entry.spans {
-				if span.Intersect {
-					scan = plan.NewIndexScan(index, node, plan.Spans{span}, false, nil, nil, nil)
-					scan = plan.NewDistinctScan(scan)
-					iscans = append(iscans, scan)
-				} else {
-					spans = append(spans, span)
-				}
-			}
-
-			if len(iscans) > 0 {
-				this.resetOrderLimit()
-
-				if len(spans) > 0 {
-					scan = plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
-					scan = plan.NewDistinctScan(scan)
-					iscans = append(iscans, scan)
-				}
-
-				scans = append(scans, iscans...)
-			} else {
-				scan = plan.NewIndexScan(index, node, spans, false, nil, nil, nil)
-				scan = plan.NewDistinctScan(scan)
-				scans = append(scans, scan)
-			}
-		} else {
-			scan = plan.NewIndexScan(index, node, entry.spans, false, limit, nil, nil)
-
-			if len(entry.spans) > 1 && (!entry.exactSpans || pred.MayOverlapSpans()) {
-				scan = plan.NewDistinctScan(scan)
-			}
-
-			scans = append(scans, scan)
-		}
+		scan = entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), false, limit, nil, nil)
+		scans = append(scans, scan)
 
 		if len(entry.sargKeys) > sargLength {
 			sargLength = len(entry.sargKeys)
@@ -302,8 +266,8 @@ outer:
 func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expression) (
 	map[datastore.Index]*indexEntry, error) {
 	for _, se := range sargables {
-		spans, exactSpans, err := SargFor(pred, se.sargKeys, len(se.keys))
-		if err != nil || len(spans) == 0 {
+		spans, exactSpans, err := SargFor(pred, se.keys, se.minKeys, len(se.keys))
+		if err != nil || spans.Size() == 0 {
 			logging.Errorp("Sargable index not sarged", logging.Pair{"pred", pred},
 				logging.Pair{"sarg_keys", se.sargKeys}, logging.Pair{"error", err})
 			return nil, errors.NewPlanError(nil, fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
@@ -319,7 +283,7 @@ func sargIndexes(sargables map[datastore.Index]*indexEntry, pred expression.Expr
 }
 
 func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) bool {
-	if len(entry.spans) > 1 {
+	if !entry.spans.CanUseIndexOrder() {
 		return false
 	}
 
@@ -331,6 +295,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	}
 
 	i := 0
+outer:
 	for _, orderTerm := range this.order.Terms() {
 		// orderTerm is constant
 		if orderTerm.Expression().Static() != nil {
@@ -341,7 +306,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		if i >= len(keys) {
 			// match with condition EQ terms
 			if equalConditionFilter(filters, orderTerm.Expression().String()) {
-				continue
+				continue outer
 			}
 			return false
 		}
@@ -354,17 +319,16 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 			return false
 		}
 
-	loop:
 		for {
 			if orderTerm.Expression().EquivalentTo(keys[i]) {
 				// orderTerm matched with index key
 				i++
-				break loop
+				continue outer
 			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
 				// orderTerm matched with Condition EQ
-				break loop
-			} else if equalRangeKey(i, entry.spans[0].Range.Low, entry.spans[0].Range.High) {
-				// orderTerm matched with leading Equal Range key
+				continue outer
+			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
+				// orderTerm not yet matched, but can skip equivalence range key
 				i++
 				if i >= len(keys) {
 					return false

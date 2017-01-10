@@ -15,7 +15,9 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-var _NULL_SPANS plan.Spans
+var _NULL_EXPRS = expression.Expressions{expression.NULL_EXPR}
+
+var _NULL_SPANS SargSpans
 
 func init() {
 	span := &plan.Span{}
@@ -23,7 +25,7 @@ func init() {
 	span.Range.High = span.Range.Low
 	span.Range.Inclusion = datastore.BOTH
 	span.Exact = true
-	_NULL_SPANS = plan.Spans{span}
+	_NULL_SPANS = NewTermSpans(span)
 }
 
 func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
@@ -35,7 +37,7 @@ func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 		return _NULL_SPANS, nil
 	}
 
-	var spans plan.Spans
+	var spans SargSpans
 	if pred.Operand().PropagatesMissing() {
 		spans = _FULL_SPANS
 	}
@@ -56,7 +58,7 @@ func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error
 		return _EXACT_VALUED_SPANS, nil
 	}
 
-	var spans plan.Spans
+	var spans SargSpans
 	if pred.Operand().PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if pred.Operand().PropagatesMissing() {

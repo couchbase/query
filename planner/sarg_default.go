@@ -10,55 +10,15 @@
 package planner
 
 import (
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 )
 
-var _SELF_SPANS plan.Spans
-var _FULL_SPANS plan.Spans
-var _VALUED_SPANS plan.Spans
-var _EMPTY_SPANS plan.Spans
-var _EXACT_FULL_SPANS plan.Spans
-var _EXACT_VALUED_SPANS plan.Spans
-
-var _NULL_EXPRS = expression.Expressions{expression.NULL_EXPR}
-
-func init() {
-	sspan := &plan.Span{}
-	sspan.Range.Low = expression.Expressions{expression.TRUE_EXPR}
-	sspan.Range.Inclusion = datastore.LOW
-	_SELF_SPANS = plan.Spans{sspan}
-
-	fspan := &plan.Span{}
-	fspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
-	fspan.Range.Inclusion = datastore.LOW
-	_FULL_SPANS = plan.Spans{fspan}
-
-	vspan := &plan.Span{}
-	vspan.Range.Low = expression.Expressions{expression.NULL_EXPR}
-	vspan.Range.Inclusion = datastore.NEITHER
-	_VALUED_SPANS = plan.Spans{vspan}
-
-	espan := &plan.Span{}
-	espan.Range.High = expression.Expressions{expression.NULL_EXPR}
-	espan.Range.Inclusion = datastore.NEITHER
-	espan.Exact = true
-	_EMPTY_SPANS = plan.Spans{espan}
-
-	_EXACT_FULL_SPANS = _FULL_SPANS.Copy()
-	_EXACT_FULL_SPANS[0].Exact = true
-
-	_EXACT_VALUED_SPANS = _VALUED_SPANS.Copy()
-	_EXACT_VALUED_SPANS[0].Exact = true
-}
-
-func (this *sarg) visitDefault(pred expression.Expression) (plan.Spans, error) {
+func (this *sarg) visitDefault(pred expression.Expression) (SargSpans, error) {
 	if SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 
-	var spans plan.Spans
+	var spans SargSpans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
 	} else if pred.PropagatesMissing() {

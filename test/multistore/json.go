@@ -75,7 +75,7 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopNotify chan bool) {
+func (this *MockQuery) Execute(srvr *server.Server, signature value.Value, stopNotify chan int) {
 	defer this.stopAndClose(server.COMPLETED)
 
 	this.NotifyStop(stopNotify)

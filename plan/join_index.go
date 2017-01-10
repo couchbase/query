@@ -188,7 +188,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if _unmarshalled.Scan.Covers != nil {
+	if len(_unmarshalled.Scan.Covers) > 0 {
 		this.covers = make(expression.Covers, len(_unmarshalled.Scan.Covers))
 		for i, c := range _unmarshalled.Scan.Covers {
 			expr, err := parser.Parse(c)
