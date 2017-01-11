@@ -63,11 +63,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.where = node.Where()
 	}
 
+	// Infer WHERE clause from UNNEST
+	if node.From() != nil {
+		this.inferUnnestPredicates(node.From())
+	}
+
 	aggs, err := allAggregates(node, this.order)
 	if err != nil {
 		return nil, err
 	}
 
+	// Infer WHERE clause from aggregates
 	group := node.Group()
 	if group == nil && len(aggs) > 0 {
 		group = algebra.NewGroup(nil, nil, nil)
@@ -109,6 +115,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
+	// Identify aggregates for index pushdown
 	if len(aggs) == 1 && group.By() == nil {
 	loop:
 		for _, term := range node.Projection().Terms() {
@@ -147,7 +154,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	if this.countScan == nil {
-		this.addLetPredicate(node.Let(), node.Where())
+		this.addLetAndPredicate(node.Let(), node.Where())
 
 		if group != nil {
 			this.visitGroup(group, aggs)
@@ -181,7 +188,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	return plan.NewSequence(this.children...), nil
 }
 
-func (this *builder) addLetPredicate(let expression.Bindings, pred expression.Expression) {
+func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
 	if let != nil && pred != nil {
 	outer:
 		for {
@@ -226,7 +233,7 @@ func (this *builder) visitGroup(group *algebra.Group, aggs map[string]algebra.Ag
 	this.children = append(this.children, plan.NewFinalGroup(group.By(), aggv))
 	this.subChildren = make([]plan.Operator, 0, 8)
 
-	this.addLetPredicate(group.Letting(), group.Having())
+	this.addLetAndPredicate(group.Letting(), group.Having())
 }
 
 func (this *builder) coverExpressions() error {
@@ -247,6 +254,36 @@ func (this *builder) coverExpressions() error {
 	}
 
 	return nil
+}
+
+func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
+	// Enumerate INNER UNNESTs
+	unnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(unnests)
+	unnests = collectInnerUnnests(from, unnests)
+	if len(unnests) == 0 {
+		return
+	}
+
+	// INNER UNNESTs cannot be MISSING, so add to WHERE clause
+	var andBuf [16]expression.Expression
+	var andTerms []expression.Expression
+	if 1+len(unnests) <= len(andBuf) {
+		andTerms = andBuf[0:0]
+	} else {
+		andTerms = _AND_POOL.Get()
+		defer _AND_POOL.Put(andTerms)
+	}
+
+	if this.where != nil {
+		andTerms = append(andTerms, this.where)
+	}
+
+	for _, unnest := range unnests {
+		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+	}
+
+	this.where = expression.NewAnd(andTerms...)
 }
 
 func allAggregates(node *algebra.Subselect, order *algebra.Order) (map[string]algebra.Aggregate, error) {
