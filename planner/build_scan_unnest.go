@@ -84,22 +84,6 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, 0, nil
 	}
 
-	// INNER UNNESTs cannot be MISSING
-	var andBuf [16]expression.Expression
-	var andTerms []expression.Expression
-	if 1+len(unnests) <= len(andBuf) {
-		andTerms = andBuf[0 : 1+len(unnests)]
-	} else {
-		andTerms = _AND_POOL.GetSized(1 + len(unnests))
-		defer _AND_POOL.Put(andTerms)
-	}
-
-	andTerms[0] = pred
-	for i, unnest := range unnests {
-		andTerms[i+1] = expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias()))
-	}
-	pred = expression.NewAnd(andTerms...)
-
 	cops := make(map[datastore.Index]plan.SecondaryScan, len(primaryUnnests))
 	cuns := make(map[datastore.Index]map[*algebra.Unnest]bool, len(primaryUnnests))
 
