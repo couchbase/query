@@ -238,7 +238,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection) {
 		if context.ScanConsistency() == datastore.UNBOUNDED || this.plan.Covers() != nil {
 			lv, err := this.plan.Limit().Evaluate(nil, context)
 			if err == nil && lv.Type() == value.NUMBER {
-				limit = int64(lv.Actual().(float64))
+				limit = lv.(value.NumberValue).Int64()
 			}
 		}
 	}
