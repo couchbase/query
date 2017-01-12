@@ -265,10 +265,18 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 		return
 	}
 
+	// Enumerate primary UNNESTs
+	primaryUnnests := _UNNEST_POOL.Get()
+	defer _UNNEST_POOL.Put(primaryUnnests)
+	primaryUnnests = collectPrimaryUnnests(from, unnests, primaryUnnests)
+	if len(primaryUnnests) == 0 {
+		return
+	}
+
 	// INNER UNNESTs cannot be MISSING, so add to WHERE clause
 	var andBuf [16]expression.Expression
 	var andTerms []expression.Expression
-	if 1+len(unnests) <= len(andBuf) {
+	if 1+len(primaryUnnests) <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
 		andTerms = _AND_POOL.Get()
@@ -279,8 +287,8 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 		andTerms = append(andTerms, this.where)
 	}
 
-	for _, unnest := range unnests {
-		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+	for _, unnest := range primaryUnnests {
+		andTerms = append(andTerms, expression.NewIsNotMissing(unnest.Expression()))
 	}
 
 	this.where = expression.NewAnd(andTerms...)

@@ -84,6 +84,30 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 		return nil, 0, nil
 	}
 
+	// Add INNER UNNESTs predicates for index selection
+	var andBuf [16]expression.Expression
+	var andTerms []expression.Expression
+	if 1+len(unnests) <= len(andBuf) {
+		andTerms = andBuf[0:0]
+	} else {
+		andTerms = _AND_POOL.Get()
+		defer _AND_POOL.Put(andTerms)
+	}
+
+	if pred != nil {
+		andTerms = append(andTerms, pred.Copy())
+	}
+
+	for _, unnest := range unnests {
+		andTerms = append(andTerms, expression.NewIsNotMissing(expression.NewIdentifier(unnest.Alias())))
+	}
+
+	pred = expression.NewAnd(andTerms...)
+	pred, err = NewDNF(pred).Map(pred)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	cops := make(map[datastore.Index]plan.SecondaryScan, len(primaryUnnests))
 	cuns := make(map[datastore.Index]map[*algebra.Unnest]bool, len(primaryUnnests))
 
