@@ -108,5 +108,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		spans = append(spans, span)
 	}
 
+	if len(spans) == 0 {
+		return _EMPTY_SPANS, nil
+	}
+
 	return NewTermSpans(spans...), nil
 }
