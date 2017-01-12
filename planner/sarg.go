@@ -38,7 +38,7 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 		rs := sargSpans[i]
 
 		// Reset
-		if rs.Size() == 0 {
+		if rs == nil || rs.Size() == 0 {
 			ns = nil
 			continue
 		}
@@ -65,7 +65,7 @@ func SargFor(pred expression.Expression, keys expression.Expressions, min, total
 		}
 	}
 
-	if ns.Size() == 0 {
+	if ns == nil || ns.Size() == 0 {
 		return _EMPTY_SPANS, true, nil
 	}
 
