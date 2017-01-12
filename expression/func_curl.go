@@ -41,6 +41,7 @@ func NewCurl(operands ...Expression) Function {
 		nil,
 	}
 
+	rv.volatile = true
 	rv.expr = rv
 	return rv
 }
@@ -120,6 +121,10 @@ func (this *Curl) Apply(context Context, args ...value.Value) (value.Value, erro
 	}
 
 	return value.NewValue(result), nil
+}
+
+func (this *Curl) Indexable() bool {
+	return false
 }
 
 func (this *Curl) MinArgs() int { return 2 }
