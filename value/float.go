@@ -371,3 +371,7 @@ func (this floatValue) Neg() NumberValue {
 func (this floatValue) Sub(n NumberValue) NumberValue {
 	return floatValue(float64(this) - n.Actual().(float64))
 }
+
+func (this floatValue) Int64() int64 {
+	return int64(this)
+}

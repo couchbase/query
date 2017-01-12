@@ -57,7 +57,7 @@ dimension.
 
 */
 func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
+	pred, limit expression.Expression, indexes map[datastore.Index]*indexEntry) (
 	op plan.SecondaryScan, sargLength int, err error) {
 
 	// Enumerate INNER UNNESTs
@@ -112,7 +112,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	cuns := make(map[datastore.Index]map[*algebra.Unnest]bool, len(primaryUnnests))
 
 	for _, index := range unnestIndexes {
-		cop, cun, err := this.buildUnnestCoveringScan(node, pred, index, indexes[index], arrayKeys[index], unnests)
+		cop, cun, err := this.buildUnnestCoveringScan(node, pred, limit, index, indexes[index], arrayKeys[index], unnests)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -140,14 +140,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	if cop != nil {
 		this.coveringScans = append(this.coveringScans, cop)
 		this.coveredUnnests = cun
-
-		if len(cun) > 0 {
-			// Array key is covered using filter covers
-			return cop, sargLength, nil
-		} else {
-			// Array key is covered using index key
-			return plan.NewDistinctScan(cop), sargLength, nil
-		}
+		return cop, sargLength, nil
 	}
 
 	ops := make(map[datastore.Index]*opEntry, len(primaryUnnests))
@@ -159,7 +152,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 			}
 
 			arrayKey := arrayKeys[index]
-			op, _, n, err = matchUnnest(node, pred, unnest, index, indexes[index], arrayKey, unnests)
+			op, _, n, err = matchUnnest(node, pred, limit, unnest, index, indexes[index], arrayKey, unnests)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -290,7 +283,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 	return unnestIndexes, arrayKeys
 }
 
-func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest *algebra.Unnest,
+func matchUnnest(node *algebra.KeyspaceTerm, pred, limit expression.Expression, unnest *algebra.Unnest,
 	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, *algebra.Unnest, int, error) {
 
@@ -319,7 +312,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 				continue
 			}
 
-			op, un, n, err := matchUnnest(node, pred, u, index, entry, nestedArrayKey, unnests)
+			op, un, n, err := matchUnnest(node, pred, limit, u, index, entry, nestedArrayKey, unnests)
 			if op != nil || err != nil {
 				return op, un, n + 1, err
 			}
@@ -344,7 +337,7 @@ func matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest 
 	}
 }
 
-func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred expression.Expression,
+func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred, limit expression.Expression,
 	index datastore.Index, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, map[*algebra.Unnest]bool, error) {
 
@@ -440,12 +433,13 @@ func (this *builder) buildUnnestCoveringScan(node *algebra.KeyspaceTerm, pred ex
 	this.resetCountMin()
 
 	// Sarg and populate spans
-	op, _, _, err := matchUnnest(node, pred, unnests[0], index, entry, arrayKey, unnests)
+	op, _, _, err := matchUnnest(node, pred, limit, unnests[0], index, entry, arrayKey, unnests)
 	if op == nil || err != nil {
 		return nil, nil, err
 	}
 
-	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), true, nil, covers, filterCovers)
+	array := len(coveredUnnests) > 0
+	scan := entry.spans.CreateScan(index, node, false, pred.MayOverlapSpans(), array, limit, covers, filterCovers)
 	return scan, coveredUnnests, nil
 }
 

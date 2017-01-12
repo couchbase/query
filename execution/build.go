@@ -148,7 +148,7 @@ func (this *builder) VisitDistinctScan(plan *plan.DistinctScan) (interface{}, er
 		return nil, err
 	}
 
-	return NewDistinctScan(scan.(Operator)), nil
+	return NewDistinctScan(plan, scan.(Operator)), nil
 }
 
 // Fetch

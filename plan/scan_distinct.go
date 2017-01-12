@@ -13,18 +13,21 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
 )
 
 // DistinctScan scans multiple indexes and distincts the results.
 type DistinctScan struct {
 	readonly
-	scan SecondaryScan
+	scan  SecondaryScan
+	limit expression.Expression
 }
 
-func NewDistinctScan(scan SecondaryScan) *DistinctScan {
+func NewDistinctScan(scan SecondaryScan, limit expression.Expression) *DistinctScan {
 	return &DistinctScan{
-		scan: scan,
+		scan:  scan,
+		limit: limit,
 	}
 }
 
@@ -52,6 +55,10 @@ func (this *DistinctScan) Scan() SecondaryScan {
 	return this.scan
 }
 
+func (this *DistinctScan) Limit() expression.Expression {
+	return this.limit
+}
+
 func (this *DistinctScan) String() string {
 	bytes, _ := this.MarshalJSON()
 	return string(bytes)
@@ -60,14 +67,22 @@ func (this *DistinctScan) String() string {
 func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"#operator": "DistinctScan"}
 	r["scan"] = this.scan
+
+	if this.limit != nil {
+		r["limit"] = expression.NewStringer().Visit(this.limit)
+	}
+
 	return json.Marshal(r)
+
 }
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string          `json:"#operator"`
-		Scan json.RawMessage `json:"scan"`
+		_     string          `json:"#operator"`
+		Scan  json.RawMessage `json:"scan"`
+		Limit string          `json:"limit"`
 	}
+
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
 		return err
@@ -88,5 +103,13 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.scan = scan_op.(SecondaryScan)
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

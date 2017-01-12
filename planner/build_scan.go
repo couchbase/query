@@ -195,7 +195,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm, id, pred,
 
 	// Try UNNEST scan
 	if this.from != nil {
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all)
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, limit, all)
 		if err != nil {
 			return nil, 0, err
 		}

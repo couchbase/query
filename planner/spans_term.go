@@ -37,10 +37,15 @@ func (this *TermSpans) CreateScan(
 	array bool, limit expression.Expression, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value) plan.SecondaryScan {
 
-	if (len(this.spans) > 1 && (overlap || !this.Exact())) ||
+	exact := this.Exact()
+	if !exact {
+		limit = nil
+	}
+
+	if (len(this.spans) > 1 && (overlap || !exact)) ||
 		(!array && indexHasArrayIndexKey(index)) {
 		scan := plan.NewIndexScan(index, term, this.spans, distinct, nil, covers, filterCovers)
-		return plan.NewDistinctScan(scan)
+		return plan.NewDistinctScan(scan, limit)
 	} else {
 		return plan.NewIndexScan(index, term, this.spans, distinct, limit, covers, filterCovers)
 	}
@@ -401,7 +406,7 @@ func isEmptySpan(span *plan.Span) bool {
 func streamline(cspans plan.Spans) SargSpans {
 	switch len(cspans) {
 	case 0:
-		return NewTermSpans(cspans...)
+		return _EMPTY_SPANS
 	case 1:
 		if isEmptySpan(cspans[0]) {
 			return _EMPTY_SPANS
